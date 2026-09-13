@@ -8,31 +8,14 @@ import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Columns3,
-  Eraser,
-  Eye,
-  Highlighter,
-  Layers3,
-  Minus,
-  MoveDown,
-  MoveUp,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Star,
-  X,
-} from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
+import { contextualNflScore } from '@/lib/nflContextScore'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
@@ -51,6 +34,9 @@ type PlayerRow = SidelinePlayer & {
   sportsbookRank: number | null
   performanceRank: number | null
   mm: number | null
+  baseIndex?: number
+  contextLabel?: string
+  contextProp?: string
 }
 type MarketSpec = {
   key: string
@@ -112,7 +98,11 @@ const ROLE_OPTIONS: { id: RoleFilter; label: string; positions: string[] }[] = [
   { id: 'receiving', label: 'Receivers', positions: ['WR', 'TE'] },
   { id: 'rushing', label: 'Backfield', positions: ['RB', 'FB'] },
   { id: 'kicking', label: 'Kickers', positions: ['K', 'PK'] },
-  { id: 'defense', label: 'Defense', positions: ['DEF', 'DST', 'CB', 'DB', 'FS', 'SS', 'LB', 'OLB', 'ILB', 'MLB', 'DE', 'DT', 'NT'] },
+  {
+    id: 'defense',
+    label: 'Defense',
+    positions: ['DEF', 'DST', 'CB', 'DB', 'FS', 'SS', 'LB', 'OLB', 'ILB', 'MLB', 'DE', 'DT', 'NT'],
+  },
 ]
 const PREFERRED_BOOKS: BookSpec[] = [
   { id: 'fanduel', short: 'FD' },
@@ -123,72 +113,202 @@ const PREFERRED_BOOKS: BookSpec[] = [
   { id: 'betrivers', short: 'BR' },
 ]
 const FEATURED_MARKETS = [
-  { prop: 'first_td', label: 'FTD', title: 'First touchdown scorer', group: 'touchdowns' as const, width: 88 },
-  { prop: 'anytime_td', label: 'ATD', title: 'Anytime touchdown scorer', group: 'touchdowns' as const, width: 88 },
-  { prop: 'anytime_td_1h', label: '1H TD', title: 'Anytime touchdown in the first half', group: 'touchdowns' as const, width: 88 },
-  { prop: 'receptions', label: 'REC', title: 'Receptions', group: 'props' as const, width: 104 },
-  { prop: 'receiving_yards', label: 'REC YDS', title: 'Receiving yards', group: 'props' as const, width: 108 },
-  { prop: 'rushing_yards', label: 'RUSH YDS', title: 'Rushing yards', group: 'props' as const, width: 108 },
-  { prop: 'rushing_attempts', label: 'RUSH ATT', title: 'Rushing attempts', group: 'props' as const, width: 104 },
-  { prop: 'rushing_receiving_yards', label: 'R+R YDS', title: 'Rushing plus receiving yards', group: 'props' as const, width: 110 },
-  { prop: 'passing_yards', label: 'PASS YDS', title: 'Passing yards', group: 'props' as const, width: 108 },
-  { prop: 'passing_tds', label: 'PASS TD', title: 'Passing touchdowns', group: 'props' as const, width: 104 },
-  { prop: 'passing_attempts', label: 'ATT', title: 'Passing attempts', group: 'props' as const, width: 100 },
-  { prop: 'passing_completions', label: 'COMP', title: 'Passing completions', group: 'props' as const, width: 100 },
-  { prop: 'longest_reception', label: 'LONG REC', title: 'Longest reception', group: 'props' as const, width: 106 },
-  { prop: 'longest_rush', label: 'LONG RUSH', title: 'Longest rush', group: 'props' as const, width: 106 },
+  {
+    prop: 'first_td',
+    label: 'FTD',
+    title: 'First touchdown scorer',
+    group: 'touchdowns' as const,
+    width: 88,
+  },
+  {
+    prop: 'anytime_td',
+    label: 'ATD',
+    title: 'Anytime touchdown scorer',
+    group: 'touchdowns' as const,
+    width: 88,
+  },
+  {
+    prop: 'anytime_td_1h',
+    label: '1H TD',
+    title: 'Anytime touchdown in the first half',
+    group: 'touchdowns' as const,
+    width: 88,
+  },
+  {
+    prop: 'receptions',
+    label: 'REC',
+    title: 'Receptions',
+    group: 'props' as const,
+    width: 104,
+  },
+  {
+    prop: 'receiving_yards',
+    label: 'REC YDS',
+    title: 'Receiving yards',
+    group: 'props' as const,
+    width: 108,
+  },
+  {
+    prop: 'rushing_yards',
+    label: 'RUSH YDS',
+    title: 'Rushing yards',
+    group: 'props' as const,
+    width: 108,
+  },
+  {
+    prop: 'rushing_attempts',
+    label: 'RUSH ATT',
+    title: 'Rushing attempts',
+    group: 'props' as const,
+    width: 104,
+  },
+  {
+    prop: 'rushing_receiving_yards',
+    label: 'R+R YDS',
+    title: 'Rushing plus receiving yards',
+    group: 'props' as const,
+    width: 110,
+  },
+  {
+    prop: 'passing_yards',
+    label: 'PASS YDS',
+    title: 'Passing yards',
+    group: 'props' as const,
+    width: 108,
+  },
+  {
+    prop: 'passing_tds',
+    label: 'PASS TD',
+    title: 'Passing touchdowns',
+    group: 'props' as const,
+    width: 104,
+  },
+  {
+    prop: 'passing_attempts',
+    label: 'ATT',
+    title: 'Passing attempts',
+    group: 'props' as const,
+    width: 100,
+  },
+  {
+    prop: 'passing_completions',
+    label: 'COMP',
+    title: 'Passing completions',
+    group: 'props' as const,
+    width: 100,
+  },
+  {
+    prop: 'longest_reception',
+    label: 'LONG REC',
+    title: 'Longest reception',
+    group: 'props' as const,
+    width: 106,
+  },
+  {
+    prop: 'longest_rush',
+    label: 'LONG RUSH',
+    title: 'Longest rush',
+    group: 'props' as const,
+    width: 106,
+  },
 ]
-const GAME_DAY_PROP_TYPES = new Set([
-  'first_td',
-  'anytime_td',
-  'receptions',
-  'receiving_yards',
-  'rushing_yards',
-  'rushing_receiving_yards',
-  'passing_yards',
-  'passing_tds',
-])
-const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS
-  .filter(market => GAME_DAY_PROP_TYPES.has(market.prop))
-  .map(market => ({
-    propType: market.prop,
-    label: market.label,
-    group: market.group,
-    width: Math.max(96, market.width),
-  }))
+const GAME_DAY_PROP_TYPES = new Set(['first_td', 'anytime_td', 'receptions', 'receiving_yards', 'rushing_yards', 'rushing_receiving_yards', 'passing_yards', 'passing_tds'])
+const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS.filter(market => GAME_DAY_PROP_TYPES.has(market.prop)).map(market => ({
+  propType: market.prop,
+  label: market.label,
+  group: market.group,
+  width: Math.max(96, market.width),
+}))
 const GAME_DAY_FOUNDATIONS = new Set(['player', 'index', 'mm'])
 const COMPACT_GAME_DAY = new Set(['player', 'index', 'mm', 'picks:first_td', 'fanduel:primary:first_td', 'ftdPct', 'picks:anytime_td', 'fanduel:primary:anytime_td', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio', 'roleMarket', 'atdRoleRatio', 'roleOpps', 'roleShare', 'roleYards', 'touchdowns', 'redZoneLooks', 'breakaway'])
 const GAME_DAY_ALWAYS_VISIBLE = new Set([
   ...GAME_DAY_FOUNDATIONS,
-  'ftdPct', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio',
-  'atdRecRatio', 'atdRecYdsRatio', 'atdRushYdsRatio', 'atdScrimYdsRatio',
-  'roleOpps', 'redZoneLooks',
+  'ftdPct',
+  'atdPct',
+  'ftdAtdRatio',
+  'atdTeamMlRatio',
+  'atdRecRatio',
+  'atdRecYdsRatio',
+  'atdRushYdsRatio',
+  'atdScrimYdsRatio',
+  'roleOpps',
+  'redZoneLooks',
   // FTD and ATD are the permanent TD anchors. Other PublicPicks columns appear as
   // soon as that market has captures, avoiding empty game-day table sections.
-  'picks:first_td', 'picks:anytime_td',
+  'picks:first_td',
+  'picks:anytime_td',
 ])
-const POSITION_ORDER: Record<string, number> = { QB: 0, RB: 1, FB: 2, WR: 3, TE: 4, K: 5, DEF: 6, DST: 6 }
+const POSITION_ORDER: Record<string, number> = {
+  QB: 0,
+  RB: 1,
+  FB: 2,
+  WR: 3,
+  TE: 4,
+  K: 5,
+  DEF: 6,
+  DST: 6,
+}
 const PREFS_KEY = 'slipsurge:sideline:columns:v2'
 
 function normalizedTeam(value: string) {
   const upper = value.toUpperCase()
-  return ({ LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' } as Record<string, string>)[upper] ?? upper
+  return (
+    (
+      {
+        LA: 'LAR',
+        JAC: 'JAX',
+        OAK: 'LV',
+        SD: 'LAC',
+        STL: 'LAR',
+        WAS: 'WSH',
+      } as Record<string, string>
+    )[upper] ?? upper
+  )
+}
+
+function marketExpectation(row: PlayerRow) {
+  const propType = row.contextProp ?? 'anytime_td'
+  const market = findMarket(row.market, propType)
+  if (!market) return null
+  const expectations = market.offers.flatMap(offer => {
+    const odds = offerCurrent(offer)
+    const probability = americanImpliedProbability(odds)
+    if (probability == null) return []
+    if (propType.includes('td')) return [probability]
+    const line = offer.line ?? market.line
+    return [line == null ? probability : line + (probability - 0.5) * Math.max(Math.abs(line), 1) * 0.35]
+  })
+  return expectations.length ? expectations.reduce((sum, value) => sum + value, 0) / expectations.length : null
 }
 
 function addNflMmRanks(rows: PlayerRow[]) {
-  const sportsbook = rows
-    .map(row => ({ row, probability: americanImpliedProbability(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null) }))
-    .filter((item): item is { row: PlayerRow; probability: number } => item.probability != null)
-    .sort((a, b) => b.probability - a.probability || a.row.name.localeCompare(b.row.name))
-  const performance = rows
-    .filter(row => row.hasTracking)
-    .sort((a, b) => b.index - a.index || a.name.localeCompare(b.name))
-  const sportsbookRanks = new Map(sportsbook.map((item, index) => [item.row.id, index + 1]))
-  const performanceRanks = new Map(performance.map((row, index) => [row.id, index + 1]))
+  const sportsbookRanks = new Map<string, number>()
+  const performanceRanks = new Map<string, number>()
+  const groups = new Map<string, PlayerRow[]>()
+  for (const row of rows) {
+    const key = row.contextProp ?? 'anytime_td'
+    groups.set(key, [...(groups.get(key) ?? []), row])
+  }
+  for (const group of groups.values()) {
+    group
+      .map(row => ({ row, expectation: marketExpectation(row) }))
+      .filter((item): item is { row: PlayerRow; expectation: number } => item.expectation != null)
+      .sort((a, b) => b.expectation - a.expectation || a.row.name.localeCompare(b.row.name))
+      .forEach((item, index) => sportsbookRanks.set(item.row.id, index + 1))
+    group
+      .filter(row => row.hasTracking)
+      .sort((a, b) => b.index - a.index || a.name.localeCompare(b.name))
+      .forEach((row, index) => performanceRanks.set(row.id, index + 1))
+  }
   return rows.map(row => {
     const sportsbookRank = sportsbookRanks.get(row.id) ?? null
     const performanceRank = performanceRanks.get(row.id) ?? null
-    return { ...row, sportsbookRank, performanceRank, mm: sportsbookRank != null && performanceRank != null ? sportsbookRank - performanceRank : null }
+    return {
+      ...row,
+      sportsbookRank,
+      performanceRank,
+      mm: sportsbookRank != null && performanceRank != null ? sportsbookRank - performanceRank : null,
+    }
   })
 }
 
@@ -257,15 +377,18 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
     }
   }
   const categoryRank: Record<NflPlayerMarket['category'], number> = {
-    touchdowns: 0, passing: 1, receiving: 2, rushing: 3, kicking: 4, defense: 5, other: 6,
+    touchdowns: 0,
+    passing: 1,
+    receiving: 2,
+    rushing: 3,
+    kicking: 4,
+    defense: 5,
+    other: 6,
   }
   return Array.from(seen.values()).sort((a, b) => {
     const aFeatured = featured.get(a.propType)?.index ?? 999
     const bFeatured = featured.get(b.propType)?.index ?? 999
-    return categoryRank[a.category] - categoryRank[b.category]
-      || aFeatured - bFeatured
-      || a.label.localeCompare(b.label)
-      || (a.line ?? -Infinity) - (b.line ?? -Infinity)
+    return categoryRank[a.category] - categoryRank[b.category] || aFeatured - bFeatured || a.label.localeCompare(b.label) || (a.line ?? -Infinity) - (b.line ?? -Infinity)
   })
 }
 
@@ -307,7 +430,16 @@ function sportsbookCatalog(boards: SidelineOddsBoard[]): BookSpec[] {
     board.players.forEach(player => player.markets.forEach(market => market.offers.forEach(offer => ids.add(offer.vendor))))
   })
   const preferred = new Map(PREFERRED_BOOKS.map((book, index) => [book.id, { ...book, index }]))
-  return Array.from(ids).map(id => ({ id, short: preferred.get(id)?.short ?? id.replace(/bet|sportsbook/gi, '').slice(0, 4).toUpperCase() }))
+  return Array.from(ids)
+    .map(id => ({
+      id,
+      short:
+        preferred.get(id)?.short ??
+        id
+          .replace(/bet|sportsbook/gi, '')
+          .slice(0, 4)
+          .toUpperCase(),
+    }))
     .sort((a, b) => (preferred.get(a.id)?.index ?? 999) - (preferred.get(b.id)?.index ?? 999) || a.id.localeCompare(b.id))
 }
 
@@ -317,12 +449,12 @@ function findOffer(market: NflPlayerMarket | null, vendor: string) {
 
 function offerCurrent(offer: NflMarketOffer | null) {
   if (!offer) return null
-  return offer.type === 'milestone' ? offer.current.odds ?? null : offer.current.over ?? null
+  return offer.type === 'milestone' ? (offer.current.odds ?? null) : (offer.current.over ?? null)
 }
 
 function offerOpening(offer: NflMarketOffer | null) {
   if (!offer?.opening) return null
-  return offer.type === 'milestone' ? offer.opening.odds ?? null : offer.opening.over ?? null
+  return offer.type === 'milestone' ? (offer.opening.odds ?? null) : (offer.opening.over ?? null)
 }
 
 function offerSummary(offer: NflMarketOffer, phase: 'current' | 'opening') {
@@ -352,15 +484,22 @@ function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vend
 function RatioCell({ numerator, denominator, detail }: { numerator: number | null; denominator: number | null; detail: string }) {
   const ratio = impliedProbabilityRatio(numerator, denominator)
   if (ratio == null) return <span className={styles.empty}>-</span>
-  return <span className={styles.ratioValue} aria-label={`${detail}: ${ratio.toFixed(2)}`}><b>{ratio.toFixed(2)}</b><small>IMPLIED P</small></span>
+  return (
+    <span className={styles.ratioValue} aria-label={`${detail}: ${ratio.toFixed(2)}`}>
+      <b>{ratio.toFixed(2)}</b>
+      <small>IMPLIED P</small>
+    </span>
+  )
 }
 
 function bestOffer(market: NflPlayerMarket | null) {
   if (!market) return null
-  return market.offers
-    .map(offer => ({ offer, current: offerCurrent(offer) }))
-    .filter((entry): entry is { offer: NflMarketOffer; current: number } => entry.current != null)
-    .sort((a, b) => b.current - a.current)[0] ?? null
+  return (
+    market.offers
+      .map(offer => ({ offer, current: offerCurrent(offer) }))
+      .filter((entry): entry is { offer: NflMarketOffer; current: number } => entry.current != null)
+      .sort((a, b) => b.current - a.current)[0] ?? null
+  )
 }
 
 function BestMarketCell({ player, propType }: { player: PlayerRow; propType: string }) {
@@ -369,12 +508,14 @@ function BestMarketCell({ player, propType }: { player: PlayerRow; propType: str
   if (!market || !best) return <span className={styles.empty}>-</span>
   const opening = offerOpening(best.offer)
   const moved = opening == null ? 0 : best.current - opening
-  return <span className={styles.bestMarketValue}>
-    <BookLogo vendor={best.offer.vendor} size={15} />
-    <b>{oddsLabel(best.current)}</b>
-    <small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small>
-    {moved ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
-  </span>
+  return (
+    <span className={styles.bestMarketValue}>
+      <BookLogo vendor={best.offer.vendor} size={15} />
+      <b>{oddsLabel(best.current)}</b>
+      <small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small>
+      {moved ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
+    </span>
+  )
 }
 
 function roleOpportunity(row: PlayerRow) {
@@ -407,7 +548,17 @@ function BaselineCell({ player, propType }: { player: NflOddsPlayer | null; prop
   if (baseline?.deltaPct == null || baseline.sampleGames < 2) return <span className={styles.empty}>-</span>
   const value = baseline.deltaPct * 100
   const tone = value <= -5 ? styles.baselineAdvertised : value >= 5 ? styles.baselineHidden : styles.baselineFlat
-  return <span className={`${styles.baselineValue} ${tone}`} aria-label={`Current FanDuel price versus this player's ${baseline.sampleGames}-game average: ${value.toFixed(1)} percent`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)}%</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
+  return (
+    <span className={`${styles.baselineValue} ${tone}`} aria-label={`Current FanDuel price versus this player's ${baseline.sampleGames}-game average: ${value.toFixed(1)} percent`}>
+      <b>
+        {value > 0 ? '+' : ''}
+        {value.toFixed(1)}%
+      </b>
+      <small>
+        {baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}
+      </small>
+    </span>
+  )
 }
 
 function scoreTone(value: number) {
@@ -419,8 +570,12 @@ function scoreTone(value: number) {
 
 function heatStyle(value: number | undefined): CSSProperties | undefined {
   if (value == null) return undefined
-  const distance = Math.abs(value - .5) * 2
-  return { '--cell-heat': value, '--heat-rgb': value >= .5 ? '80, 220, 142' : '245, 91, 113', '--heat-alpha': .04 + distance * .24 } as CSSProperties
+  const distance = Math.abs(value - 0.5) * 2
+  return {
+    '--cell-heat': value,
+    '--heat-rgb': value >= 0.5 ? '80, 220, 142' : '245, 91, 113',
+    '--heat-alpha': 0.04 + distance * 0.24,
+  } as CSSProperties
 }
 
 function roleProp(row: PlayerRow) {
@@ -435,7 +590,11 @@ function metricDisplay(value: number, suffix = '', decimals = 0) {
 function TeamLogo({ team, size = 28 }: { team: SidelineTeam; size?: number }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
   if (team.logo && team.logo !== failedSource) return <Image unoptimized className={styles.teamLogo} src={team.logo} alt={`${team.name} logo`} width={size} height={size} onError={() => setFailedSource(team.logo)} />
-  return <span className={styles.teamFallback} style={{ width: size, height: size, background: team.color }}>{team.abbr.slice(0, 2)}</span>
+  return (
+    <span className={styles.teamFallback} style={{ width: size, height: size, background: team.color }}>
+      {team.abbr.slice(0, 2)}
+    </span>
+  )
 }
 
 function PlayerAvatar({ player, team }: { player: PlayerRow; team: SidelineTeam }) {
@@ -444,20 +603,29 @@ function PlayerAvatar({ player, team }: { player: PlayerRow; team: SidelineTeam 
   const [failedTeamLogo, setFailedTeamLogo] = useState<string | null>(null)
   const source = sources.find(candidate => !failedSources.includes(candidate)) ?? null
   return (
-    <span className={styles.avatar} style={{ background: `linear-gradient(145deg, ${team.color}, ${team.color2 || '#111820'})` }}>
-      {source ? <Image unoptimized={!source.startsWith('https://static.www.nfl.com/')} src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => current.includes(source) ? current : [...current, source])} /> : <b>{player.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
+    <span
+      className={styles.avatar}
+      style={{
+        background: `linear-gradient(145deg, ${team.color}, ${team.color2 || '#111820'})`,
+      }}
+    >
+      {source ? (
+        <Image unoptimized={!source.startsWith('https://static.www.nfl.com/')} src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => (current.includes(source) ? current : [...current, source]))} />
+      ) : (
+        <b>
+          {player.name
+            .split(' ')
+            .map(part => part[0])
+            .slice(0, 2)
+            .join('')}
+        </b>
+      )}
       {team.logo && team.logo !== failedTeamLogo ? <Image unoptimized className={styles.avatarTeam} src={team.logo} alt={`${team.name} logo`} width={17} height={17} onError={() => setFailedTeamLogo(team.logo)} /> : null}
     </span>
   )
 }
 
-function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
-  player: PlayerRow
-  marketKey: string
-  vendor: string
-  saved: boolean
-  onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void
-}) {
+function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: { player: PlayerRow; marketKey: string; vendor: string; saved: boolean; onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void }) {
   const market = findMarketByKey(player.market, marketKey, vendor)
   const offer = findOffer(market, vendor)
   if (!market || !offer) return <span className={styles.empty}>—</span>
@@ -466,15 +634,23 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
   const moved = current != null && opening != null ? current - opening : 0
   return (
     <span className={styles.marketValue}>
-      <b>{market.line != null && !['anytime_td', 'first_td', 'last_td'].includes(market.propType) ? <i>{market.line}</i> : null}{oddsLabel(current)}</b>
+      <b>
+        {market.line != null && !['anytime_td', 'first_td', 'last_td'].includes(market.propType) ? <i>{market.line}</i> : null}
+        {oddsLabel(current)}
+      </b>
       <small>{opening != null ? `OPEN ${oddsLabel(opening)}` : 'OPEN -'}</small>
       {moved !== 0 ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
       <button
         type="button"
         className={saved ? styles.marketSaved : styles.marketSave}
         aria-label={`${saved ? 'Remove' : 'Add'} ${player.name} ${market.label} ${vendor} ${saved ? 'from' : 'to'} watchlist`}
-        onClick={event => { event.stopPropagation(); onToggleSaved(player, market.key, vendor) }}
-      ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
+        onClick={event => {
+          event.stopPropagation()
+          onToggleSaved(player, market.key, vendor)
+        }}
+      >
+        <Star size={10} fill={saved ? 'currentColor' : 'none'} />
+      </button>
     </span>
   )
 }
@@ -507,6 +683,7 @@ function buildEmptyPlayer(market: NflOddsPlayer): SidelinePlayer {
     passAttempts: 0,
     completions: 0,
     passingYards: 0,
+    passingTouchdowns: 0,
     touchdowns: 0,
     targetShare: 0,
     carryShare: 0,
@@ -528,11 +705,7 @@ function buildEmptyPlayer(market: NflOddsPlayer): SidelinePlayer {
 
 function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | null): SidelinePlayer {
   if (!market) return player
-  const fallbacks = Array.from(new Set([
-    ...(player.headshotFallbacks ?? []),
-    ...(market.headshotFallbacks ?? []),
-    market.headshot,
-  ].filter((source): source is string => Boolean(source && source !== player.headshot))))
+  const fallbacks = Array.from(new Set([...(player.headshotFallbacks ?? []), ...(market.headshotFallbacks ?? []), market.headshot].filter((source): source is string => Boolean(source && source !== player.headshot))))
   return {
     ...player,
     name: market.name || player.name,
@@ -547,26 +720,9 @@ function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | nul
   }
 }
 
-function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedKeys, onToggleSaved }: {
-  markets: MarketSpec[]
-  pickMarkets: PublicPickSpec[]
-  books: BookSpec[]
-  board: SidelineOddsBoard
-  game: SidelineGame
-  savedKeys: Set<string>
-  onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void
-}) {
+function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedKeys, onToggleSaved }: { markets: MarketSpec[]; pickMarkets: PublicPickSpec[]; books: BookSpec[]; board: SidelineOddsBoard; game: SidelineGame; savedKeys: Set<string>; onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void }) {
   return useMemo<ColumnDefinition[]>(() => {
-    const metric = (
-      id: string,
-      label: string,
-      title: string,
-      group: ColumnGroup,
-      width: number,
-      get: (row: PlayerRow) => number,
-      suffix = '',
-      decimals = 0,
-    ): ColumnDefinition => ({
+    const metric = (id: string, label: string, title: string, group: ColumnGroup, width: number, get: (row: PlayerRow) => number, suffix = '', decimals = 0): ColumnDefinition => ({
       id,
       label,
       title,
@@ -574,16 +730,17 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       width,
       heat: 'high',
       roleHeat: !['index', 'volume', 'geometry', 'redZone', 'breakaway'].includes(id),
-      value: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null,
-      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} aria-label="Not available in this statistical sample">-</span>,
+      value: row => (row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null),
+      render: row =>
+        row.hasTracking && !row.unavailableMetrics?.includes(id) ? (
+          <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b>
+        ) : (
+          <span className={styles.empty} aria-label="Not available in this statistical sample">
+            -
+          </span>
+        ),
     })
-    const teamMetric = (
-      id: string,
-      label: string,
-      title: string,
-      get: (row: PlayerRow) => number | null,
-      inverse = false,
-    ): ColumnDefinition => ({
+    const teamMetric = (id: string, label: string, title: string, get: (row: PlayerRow) => number | null, inverse = false): ColumnDefinition => ({
       id,
       label,
       title,
@@ -600,77 +757,157 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
     })
     const columns: ColumnDefinition[] = [
       {
-        id: 'player', label: 'Player / role', title: 'Player, team and position', group: 'core', width: 250, sticky: true,
+        id: 'player',
+        label: 'Player / role',
+        title: 'Player, team and position',
+        group: 'core',
+        width: 250,
+        sticky: true,
         value: row => row.name,
         render: () => null,
       },
-      { ...metric('index', 'Score', 'SlipSurge Score for the selected NFL window', 'core', 118, row => row.index), brand: true },
       {
-        id: 'mm', label: 'MM', title: 'Sportsbook ATD rank minus selected-window performance rank across both teams', group: 'core', width: 62, heat: 'high',
-        value: row => row.mm,
-        render: row => row.mm == null ? <span className={styles.empty}>-</span> : <b className={row.mm > 0 ? styles.mmPositive : row.mm < 0 ? styles.mmNegative : styles.mmFlat}>{row.mm > 0 ? '+' : ''}{row.mm}</b>,
+        ...metric('index', 'Score', 'SlipSurge Score for the selected NFL window', 'core', 118, row => row.index),
+        brand: true,
       },
       {
-        id: 'lane', label: 'Role', title: 'Primary usage role in the selected window', group: 'core', width: 116,
+        id: 'mm', label: 'MM',
+        title: 'Sportsbook ATD rank minus selected-window performance rank across both teams',
+        group: 'core',
+        width: 62,
+        heat: 'high',
+        value: row => row.mm,
+        render: row =>
+          row.mm == null ? (
+            <span className={styles.empty}>-</span>
+          ) : (
+            <b className={row.mm > 0 ? styles.mmPositive : row.mm < 0 ? styles.mmNegative : styles.mmFlat}>
+              {row.mm > 0 ? '+' : ''}
+              {row.mm}
+            </b>
+          ),
+      },
+      {
+        id: 'lane',
+        label: 'Role',
+        title: 'Primary usage role in the selected window',
+        group: 'core',
+        width: 116,
         value: row => row.lane,
         render: row => <span className={styles.lane}>{row.lane}</span>,
       },
       {
-        id: 'bestFtd', label: 'Best FTD', title: 'Best currently available first-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'high', propType: 'first_td',
+        id: 'bestFtd',
+        label: 'Best FTD',
+        title: 'Best currently available first-touchdown price',
+        group: 'core',
+        width: 106,
+        aggregate: true,
+        heat: 'high',
+        propType: 'first_td',
         value: row => americanImpliedProbability(bestOffer(findMarket(row.market, 'first_td'))?.current ?? null),
         render: row => <BestMarketCell player={row} propType="first_td" />,
       },
       {
-        id: 'bestAtd', label: 'Best ATD', title: 'Best currently available anytime-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'high', propType: 'anytime_td',
+        id: 'bestAtd',
+        label: 'Best ATD',
+        title: 'Best currently available anytime-touchdown price',
+        group: 'core',
+        width: 106,
+        aggregate: true,
+        heat: 'high',
+        propType: 'anytime_td',
         value: row => americanImpliedProbability(bestOffer(findMarket(row.market, 'anytime_td'))?.current ?? null),
         render: row => <BestMarketCell player={row} propType="anytime_td" />,
       },
       {
-        id: 'ftdPct', label: 'FTD%', title: "Current FanDuel first-touchdown price versus this player's historical average", group: 'touchdowns', width: 116,
+        id: 'ftdPct',
+        label: 'FTD%',
+        title: "Current FanDuel first-touchdown price versus this player's historical average",
+        group: 'touchdowns',
+        width: 116,
         value: row => baselineMove(row.market, 'first_td')?.deltaPct ?? null,
         render: row => <BaselineCell player={row.market} propType="first_td" />,
       },
       {
-        id: 'atdPct', label: 'ATD%', title: "Current FanDuel anytime-touchdown price versus this player's historical average", group: 'touchdowns', width: 116,
+        id: 'atdPct',
+        label: 'ATD%',
+        title: "Current FanDuel anytime-touchdown price versus this player's historical average",
+        group: 'touchdowns',
+        width: 116,
         value: row => baselineMove(row.market, 'anytime_td')?.deltaPct ?? null,
         render: row => <BaselineCell player={row.market} propType="anytime_td" />,
       },
       {
-        id: 'ftdAtdRatio', label: 'FTD:ATD', title: 'FanDuel first-TD implied probability divided by anytime-TD implied probability', group: 'core', width: 92, heat: 'high',
+        id: 'ftdAtdRatio',
+        label: 'FTD:ATD',
+        title: 'FanDuel first-TD implied probability divided by anytime-TD implied probability',
+        group: 'core',
+        width: 92,
+        heat: 'high',
         value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'first_td')?.odds ?? null, primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null),
         render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'first_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} detail="FanDuel FTD implied probability / ATD implied probability" />,
       },
-      ...([
-        ['atdRecRatio', 'ATD:REC', 'receptions', 'Anytime TD / receptions'],
-        ['atdRecYdsRatio', 'ATD:REC YDS', 'receiving_yards', 'Anytime TD / receiving yards'],
-        ['atdRushYdsRatio', 'ATD:RUSH YDS', 'rushing_yards', 'Anytime TD / rushing yards'],
-        ['atdScrimYdsRatio', 'ATD:R+R YDS', 'rushing_receiving_yards', 'Anytime TD / scrimmage yards'],
-      ] as const).map(([id, label, propType, title]): ColumnDefinition => ({
-        id, label, title: `${title} FanDuel implied-probability ratio`, group: 'core', width: 108, heat: 'high',
+      ...(
+        [
+          ['atdRecRatio', 'ATD:REC', 'receptions', 'Anytime TD / receptions'],
+          ['atdRecYdsRatio', 'ATD:REC YDS', 'receiving_yards', 'Anytime TD / receiving yards'],
+          ['atdRushYdsRatio', 'ATD:RUSH YDS', 'rushing_yards', 'Anytime TD / rushing yards'],
+          ['atdScrimYdsRatio', 'ATD:R+R YDS', 'rushing_receiving_yards', 'Anytime TD / scrimmage yards'],
+        ] as const
+      ).map(([id, label, propType, title]): ColumnDefinition => ({
+        id,
+        label,
+        title: `${title} FanDuel implied-probability ratio`,
+        group: 'core',
+        width: 108,
+        heat: 'high',
         value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, primaryMarketOffer(row.market, propType)?.odds ?? null),
         render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, propType)?.odds ?? null} detail={`${title} using FanDuel prices`} />,
       })),
       {
-        id: 'atdTeamMlRatio', label: 'ATD:TEAM ML', title: 'FanDuel anytime-TD implied probability divided by team moneyline implied probability', group: 'core', width: 108, heat: 'high',
+        id: 'atdTeamMlRatio',
+        label: 'ATD:TEAM ML',
+        title: 'FanDuel anytime-TD implied probability divided by team moneyline implied probability',
+        group: 'core',
+        width: 108,
+        heat: 'high',
         value: row => {
           const line = board.gameLines.find(item => normalizedName(item.vendor) === 'fanduel') ?? board.gameLines[0]
-          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? line?.moneylineHome ?? null : line?.moneylineAway ?? null
+          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? (line?.moneylineHome ?? null) : (line?.moneylineAway ?? null)
           return impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, teamMl)
         },
         render: row => {
           const line = board.gameLines.find(item => normalizedName(item.vendor) === 'fanduel') ?? board.gameLines[0]
-          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? line?.moneylineHome ?? null : line?.moneylineAway ?? null
+          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? (line?.moneylineHome ?? null) : (line?.moneylineAway ?? null)
           return <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={teamMl} detail="FanDuel ATD implied probability / team moneyline implied probability" />
         },
       },
       metric('volume', 'VOL', 'Volume score', 'core', 70, row => row.volume),
       {
-        id: 'roleMarket', label: 'YDS LINE', title: 'FanDuel primary yards line: passing for QBs, rushing for backs, receiving for receivers', group: 'core', width: 78, heat: 'high', roleHeat: true,
+        id: 'roleMarket',
+        label: 'YDS LINE',
+        title: 'FanDuel primary yards line: passing for QBs, rushing for backs, receiving for receivers',
+        group: 'core',
+        width: 78,
+        heat: 'high',
+        roleHeat: true,
         value: row => findMarketByKey(row.market, `primary:${roleProp(row)}`, 'fanduel')?.line ?? null,
-        render: row => <span className={styles.roleMarket}><small>{row.position === 'QB' ? 'PASS' : ['RB', 'FB'].includes(row.position) ? 'RUSH' : 'REC'}</small><MarketCell player={row} marketKey={`primary:${roleProp(row)}`} vendor="fanduel" saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${findMarketByKey(row.market, `primary:${roleProp(row)}`, 'fanduel')?.key}:fanduel`)} onToggleSaved={onToggleSaved} /></span>,
+        render: row => (
+          <span className={styles.roleMarket}>
+            <small>{row.position === 'QB' ? 'PASS' : ['RB', 'FB'].includes(row.position) ? 'RUSH' : 'REC'}</small>
+            <MarketCell player={row} marketKey={`primary:${roleProp(row)}`} vendor="fanduel" saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${findMarketByKey(row.market, `primary:${roleProp(row)}`, 'fanduel')?.key}:fanduel`)} onToggleSaved={onToggleSaved} />
+          </span>
+        ),
       },
       {
-        id: 'atdRoleRatio', label: 'ATD:YDS', title: 'FanDuel ATD / role-specific yards implied-probability ratio; see YDS LINE for the contract', group: 'core', width: 64, heat: 'high', roleHeat: true,
+        id: 'atdRoleRatio',
+        label: 'ATD:YDS',
+        title: 'FanDuel ATD / role-specific yards implied-probability ratio; see YDS LINE for the contract',
+        group: 'core',
+        width: 64,
+        heat: 'high',
+        roleHeat: true,
         value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, primaryMarketOffer(row.market, roleProp(row))?.odds ?? null),
         render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, roleProp(row))?.odds ?? null} detail={`FanDuel ATD / ${roleProp(row)}`} />,
       },
@@ -690,6 +927,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       metric('receivingYards', 'REC YDS', 'Receiving yards in selected window', 'usage', 84, row => row.receivingYards),
       metric('rushingYards', 'RUSH YDS', 'Rushing yards in selected window', 'usage', 88, row => row.rushingYards),
       metric('passingYards', 'PASS YDS', 'Passing yards in selected window', 'usage', 88, row => row.passingYards),
+      metric('passingTouchdowns', 'PASS TD', 'Passing touchdowns in selected window', 'usage', 82, row => row.passingTouchdowns),
       metric('touchdowns', 'TD', 'Rushing and receiving touchdowns scored', 'usage', 64, row => row.touchdowns),
       metric('airYards', 'aDOT', 'Average intended air yards', 'tracking', 72, row => row.airYards, '', 1),
       metric('airYardsShare', 'AIR%', 'Share of intended team air yards', 'tracking', 74, row => row.airYardsShare, '%', 1),
@@ -724,9 +962,14 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
         value: row => publicPickCount(row.market, market.propType),
         render: row => {
           const count = publicPickCount(row.market, market.propType)
-          return count == null
-            ? <span className={styles.empty}>-</span>
-            : <span className={styles.publicPickValue}><b>{count.toLocaleString()}</b><small>PICKS</small></span>
+          return count == null ? (
+            <span className={styles.empty}>-</span>
+          ) : (
+            <span className={styles.publicPickValue}>
+              <b>{count.toLocaleString()}</b>
+              <small>PICKS</small>
+            </span>
+          )
         },
       })
     }
@@ -747,7 +990,16 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
             const best = bestOffer(target)
             if (!target || !best) return <span className={styles.empty}>-</span>
             const opening = offerOpening(best.offer)
-            return <span className={styles.bestMarketValue}><BookLogo vendor={best.offer.vendor} size={15} /><b>{target.line != null ? <i>{target.line}</i> : null}{oddsLabel(best.current)}</b><small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small></span>
+            return (
+              <span className={styles.bestMarketValue}>
+                <BookLogo vendor={best.offer.vendor} size={15} />
+                <b>
+                  {target.line != null ? <i>{target.line}</i> : null}
+                  {oddsLabel(best.current)}
+                </b>
+                <small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small>
+              </span>
+            )
           },
         })
       }
@@ -771,12 +1023,29 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
     const propRank = new Map(FEATURED_MARKETS.map((market, index) => [market.prop, index]))
     const bookRank = new Map(PREFERRED_BOOKS.map((book, index) => [book.id, index]))
     const fixedRank = new Map([
-      ['player', 0], ['index', 1], ['mm', 2], ['lane', 3],
-      ['ftdPct', 80], ['atdPct', 180], ['ftdAtdRatio', 190], ['atdTeamMlRatio', 195],
-      ['atdRecRatio', 196], ['atdRecYdsRatio', 197], ['atdRushYdsRatio', 198], ['atdScrimYdsRatio', 199],
-      ['volume', 9000], ['geometry', 9001], ['redZone', 9002], ['breakaway', 9003],
-      ['roleOpps', 9004], ['roleShare', 9005], ['roleYards', 9006], ['redZoneLooks', 9007],
-      ['roleMarket', 200], ['atdRoleRatio', 201], ['touchdowns', 9008],
+      ['player', 0],
+      ['index', 1],
+      ['mm', 2],
+      ['lane', 3],
+      ['ftdPct', 80],
+      ['atdPct', 180],
+      ['ftdAtdRatio', 190],
+      ['atdTeamMlRatio', 195],
+      ['atdRecRatio', 196],
+      ['atdRecYdsRatio', 197],
+      ['atdRushYdsRatio', 198],
+      ['atdScrimYdsRatio', 199],
+      ['volume', 9000],
+      ['geometry', 9001],
+      ['redZone', 9002],
+      ['breakaway', 9003],
+      ['roleOpps', 9004],
+      ['roleShare', 9005],
+      ['roleYards', 9006],
+      ['redZoneLooks', 9007],
+      ['roleMarket', 200],
+      ['atdRoleRatio', 201],
+      ['touchdowns', 9008],
     ])
     const rank = (column: ColumnDefinition) => {
       const fixed = fixedRank.get(column.id)
@@ -788,50 +1057,101 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
         if (column.aggregate) return section + 11
         if (column.vendor) return section + 20 + (bookRank.get(column.vendor) ?? 20)
       }
-      const groupRank: Record<ColumnGroup, number> = { core: 900, touchdowns: 1000, props: 2000, usage: 3000, tracking: 4000, team: 5000 }
+      const groupRank: Record<ColumnGroup, number> = {
+        core: 900,
+        touchdowns: 1000,
+        props: 2000,
+        usage: 3000,
+        tracking: 4000,
+        team: 5000,
+      }
       return groupRank[column.group] + columns.indexOf(column)
     }
     return [...columns].sort((a, b) => rank(a) - rank(b))
   }, [board, books, game.home.abbr, markets, onToggleSaved, pickMarkets, savedKeys])
 }
 
-function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: {
-  team: SidelineTeam
-  opponent: SidelineTeam
-  rows: PlayerRow[]
-  board: SidelineOddsBoard
-  selectedWindow: SidelineWindow
-  side: 'away' | 'home'
-  savedCount: number
-  collapsed: boolean
-  onToggle: () => void
-  onSelectWindow: (window: SidelineWindow) => void
-}) {
+function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: { team: SidelineTeam; opponent: SidelineTeam; rows: PlayerRow[]; board: SidelineOddsBoard; selectedWindow: SidelineWindow; side: 'away' | 'home'; savedCount: number; collapsed: boolean; onToggle: () => void; onSelectWindow: (window: SidelineWindow) => void }) {
   const topScore = [...rows].filter(row => row.hasTracking).sort((a, b) => b.index - a.index)[0]
-  const movers = rows.map(row => ({ row, move: marketMove(row.market) })).filter(item => item.move != null) as { row: PlayerRow; move: number }[]
+  const contextLabels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
+  const contextLabel = contextLabels.length === 1 ? contextLabels[0]! : 'Role'
+  const movers = rows.map(row => ({ row, move: marketMove(row.market, row.contextProp ?? 'anytime_td') })).filter(item => item.move != null) as { row: PlayerRow; move: number }[]
   const advertised = movers.filter(item => item.move < 0).sort((a, b) => a.move - b.move)[0]
   const hidden = movers.filter(item => item.move > 0).sort((a, b) => b.move - a.move)[0]
   const fanduel = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const moneyline = side === 'home' ? fanduel?.moneylineHome : fanduel?.moneylineAway
   const signal = (item: { row: PlayerRow; move: number } | undefined) => {
     if (!item) return <b className={styles.noSignal}>No qualifying move</b>
-    const offer = primaryMarketOffer(item.row.market, 'anytime_td')
-    return <b className={styles.signalValue}><span>{item.move > 0 ? '+' : ''}{item.move.toFixed(1)}%</span><strong>{item.row.name}</strong>{offer ? <em><BookLogo vendor={offer.offer.vendor} size={13} />{oddsLabel(offer.odds)}</em> : null}</b>
+    const offer = primaryMarketOffer(item.row.market, item.row.contextProp ?? 'anytime_td')
+    return (
+      <b className={styles.signalValue}>
+        <span>
+          {item.move > 0 ? '+' : ''}
+          {item.move.toFixed(1)}%
+        </span>
+        <strong>{item.row.name}</strong>
+        {offer ? (
+          <em>
+            <BookLogo vendor={offer.offer.vendor} size={13} />
+            {oddsLabel(offer.odds)}
+          </em>
+        ) : null}
+      </b>
+    )
   }
   return (
-    <header className={styles.teamHeader} style={{ '--team-color': team.color, '--team-color-2': team.color2 || team.color } as CSSProperties}>
+    <header
+      className={styles.teamHeader}
+      style={
+        {
+          '--team-color': team.color,
+          '--team-color-2': team.color2 || team.color,
+        } as CSSProperties
+      }
+    >
       <div className={styles.teamIdentity}>
-        <button type="button" className={`${styles.collapseTeam} ${collapsed ? styles.teamCollapsed : ''}`} onClick={onToggle} aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${team.name}`}><ChevronDown size={16} /></button>
+        <button type="button" className={`${styles.collapseTeam} ${collapsed ? styles.teamCollapsed : ''}`} onClick={onToggle} aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${team.name}`}>
+          <ChevronDown size={16} />
+        </button>
         <TeamLogo team={team} size={34} />
-        <div><strong>{team.name}</strong><span>vs {opponent.abbr} · {rows.filter(row => row.market).length} priced · {rows.filter(row => row.hasTracking).length} with production</span></div>
+        <div>
+          <strong>{team.name}</strong>
+          <span>
+            vs {opponent.abbr} · {rows.filter(row => row.market).length} priced · {rows.filter(row => row.hasTracking).length} with production
+          </span>
+        </div>
       </div>
       <div className={styles.teamSignals}>
-        <div className={styles.teamWindows}><small>WINDOW</small><span>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>{option.label.replace('Last ', 'L')}</button>)}</span></div>
-        <div><small>TOP SLIPSURGE SCORE</small><b>{topScore ? `${topScore.name} ${topScore.index}` : 'Syncing'}</b></div>
-        <div className={styles.advertised}><small>MOST ADVERTISED · ATD</small>{signal(advertised)}</div>
-        <div className={styles.hidden}><small>MOST HIDDEN · ATD</small>{signal(hidden)}</div>
-        <div><small>TEAM ML</small><b>{oddsLabel(moneyline)}</b></div>
-        <div><small>SAVED MARKETS</small><b>{savedCount}</b></div>
+        <div className={styles.teamWindows}>
+          <small>WINDOW</small>
+          <span>
+            {WINDOW_OPTIONS.map(option => (
+              <button type="button" key={option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>
+                {option.label.replace('Last ', 'L')}
+              </button>
+            ))}
+          </span>
+        </div>
+        <div>
+          <small>TOP {contextLabel.toUpperCase()} SCORE</small>
+          <b>{topScore ? `${topScore.name} ${topScore.index}` : 'Syncing'}</b>
+        </div>
+        <div className={styles.advertised}>
+          <small>MOST ADVERTISED · {contextLabel.toUpperCase()}</small>
+          {signal(advertised)}
+        </div>
+        <div className={styles.hidden}>
+          <small>MOST HIDDEN · {contextLabel.toUpperCase()}</small>
+          {signal(hidden)}
+        </div>
+        <div>
+          <small>TEAM ML</small>
+          <b>{oddsLabel(moneyline)}</b>
+        </div>
+        <div>
+          <small>SAVED MARKETS</small>
+          <b>{savedCount}</b>
+        </div>
       </div>
     </header>
   )
@@ -844,34 +1164,78 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
       <header className={styles.gameLinesHeader}>
         <div>
           <small>GAME LINES</small>
-          <strong>{game.away.abbr} at {game.home.abbr}</strong>
+          <strong>
+            {game.away.abbr} at {game.home.abbr}
+          </strong>
           <p>Compare both sides at every live book.</p>
         </div>
         <div className={styles.gameLineMarketKeys} aria-label="Available game markets">
-          <span>Moneyline</span><span>Spread</span><span>Total</span>
+          <span>Moneyline</span>
+          <span>Spread</span>
+          <span>Total</span>
         </div>
-        <span className={styles.liveBookCount}><b>{board.gameLines.length}</b> live books</span>
+        <span className={styles.liveBookCount}>
+          <b>{board.gameLines.length}</b> live books
+        </span>
       </header>
       <div className={styles.gameLineRail}>
         {board.gameLines.map(line => (
           <article className={styles.gameLineCard} data-vendor={normalizeVendor(line.vendor)} data-opening-only={line.isOpeningOnly ? '' : undefined} key={line.vendor}>
             <header>
-              <span className={styles.bookMark}><BookLogo vendor={line.vendor} size={24} /></span>
-              <div><b>{line.vendor}</b><small>{line.isOpeningOnly ? 'Opening line' : 'Live market'}</small></div>
+              <span className={styles.bookMark}>
+                <BookLogo vendor={line.vendor} size={24} />
+              </span>
+              <div>
+                <b>{line.vendor}</b>
+                <small>{line.isOpeningOnly ? 'Opening line' : 'Live market'}</small>
+              </div>
               <i aria-hidden="true" />
             </header>
             <dl className={styles.gameLineMarkets}>
               <div className={styles.gameLineMarket}>
                 <dt>Moneyline</dt>
-                <dd><span><small>{game.away.abbr}</small><b>{oddsLabel(line.moneylineAway)}</b><em>Open {openOdds(line.opening?.moneylineAway)}</em></span><span><small>{game.home.abbr}</small><b>{oddsLabel(line.moneylineHome)}</b><em>Open {openOdds(line.opening?.moneylineHome)}</em></span></dd>
+                <dd>
+                  <span>
+                    <small>{game.away.abbr}</small>
+                    <b>{oddsLabel(line.moneylineAway)}</b>
+                    <em>Open {openOdds(line.opening?.moneylineAway)}</em>
+                  </span>
+                  <span>
+                    <small>{game.home.abbr}</small>
+                    <b>{oddsLabel(line.moneylineHome)}</b>
+                    <em>Open {openOdds(line.opening?.moneylineHome)}</em>
+                  </span>
+                </dd>
               </div>
               <div className={styles.gameLineMarket}>
                 <dt>Spread</dt>
-                <dd><span><small>{game.away.abbr}</small><b>{spreadValue(line.spreadAway, line.spreadAwayOdds)}</b><em>Open {spreadValue(line.opening?.spreadAway, line.opening?.spreadAwayOdds)}</em></span><span><small>{game.home.abbr}</small><b>{spreadValue(line.spreadHome, line.spreadHomeOdds)}</b><em>Open {spreadValue(line.opening?.spreadHome, line.opening?.spreadHomeOdds)}</em></span></dd>
+                <dd>
+                  <span>
+                    <small>{game.away.abbr}</small>
+                    <b>{spreadValue(line.spreadAway, line.spreadAwayOdds)}</b>
+                    <em>Open {spreadValue(line.opening?.spreadAway, line.opening?.spreadAwayOdds)}</em>
+                  </span>
+                  <span>
+                    <small>{game.home.abbr}</small>
+                    <b>{spreadValue(line.spreadHome, line.spreadHomeOdds)}</b>
+                    <em>Open {spreadValue(line.opening?.spreadHome, line.opening?.spreadHomeOdds)}</em>
+                  </span>
+                </dd>
               </div>
               <div className={styles.gameLineMarket}>
                 <dt>Total</dt>
-                <dd><span><small>OVER</small><b>{totalValue('O', line.total, line.totalOverOdds)}</b><em>Open {totalValue('O', line.opening?.total, line.opening?.totalOverOdds)}</em></span><span><small>UNDER</small><b>{totalValue('U', line.total, line.totalUnderOdds)}</b><em>Open {totalValue('U', line.opening?.total, line.opening?.totalUnderOdds)}</em></span></dd>
+                <dd>
+                  <span>
+                    <small>OVER</small>
+                    <b>{totalValue('O', line.total, line.totalOverOdds)}</b>
+                    <em>Open {totalValue('O', line.opening?.total, line.opening?.totalOverOdds)}</em>
+                  </span>
+                  <span>
+                    <small>UNDER</small>
+                    <b>{totalValue('U', line.total, line.totalUnderOdds)}</b>
+                    <em>Open {totalValue('U', line.opening?.total, line.opening?.totalUnderOdds)}</em>
+                  </span>
+                </dd>
               </div>
             </dl>
           </article>
@@ -881,16 +1245,7 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
   )
 }
 
-function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onClose, gameSeason }: {
-  player: PlayerRow
-  players: PlayerRow[]
-  team: SidelineTeam
-  lens: SidelineLens
-  initialWindow: SidelineWindow
-  gameSeason: number
-  onSelect: (player: PlayerRow) => void
-  onClose: () => void
-}) {
+function PlayerModal({ player, players, team, lens, board, game, initialWindow, onSelect, onClose, gameSeason }: { player: PlayerRow; players: PlayerRow[]; team: SidelineTeam; lens: SidelineLens; board: SidelineOddsBoard; game: SidelineGame; initialWindow: SidelineWindow; gameSeason: number; onSelect: (player: PlayerRow) => void; onClose: () => void }) {
   const [tab, setTab] = useState<'matchup' | 'tracking' | 'markets'>('matchup')
   const [detailWindow, setDetailWindow] = useState<SidelineWindow>(initialWindow)
   const playerIndex = players.findIndex(candidate => candidate.id === player.id)
@@ -898,45 +1253,163 @@ function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onC
   const nextPlayer = playerIndex >= 0 && playerIndex < players.length - 1 ? players[playerIndex + 1] : null
   const activePlayer = useMemo<PlayerRow>(() => {
     const found = lens.windows[detailWindow].players.find(candidate => normalizedTeam(candidate.team) === normalizedTeam(player.team) && normalizedName(candidate.name) === normalizedName(player.name))
-    return found ? { ...player, ...found } : player
-  }, [detailWindow, lens.windows, player])
+    if (!found) return player
+    const windowData = lens.windows[detailWindow]
+    const teamProfile = windowData.teams.find(profile => normalizedTeam(profile.team.abbr) === normalizedTeam(player.team)) ?? null
+    const opponentProfile = windowData.teams.find(profile => normalizedTeam(profile.team.abbr) !== normalizedTeam(player.team)) ?? null
+    const merged = {
+      ...player,
+      ...found,
+      market: player.market,
+      teamProfile,
+      opponentProfile,
+      hasTracking: true,
+    }
+    const gameLine = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
+    const moneyline = normalizedTeam(player.team) === normalizedTeam(game.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
+    const result = contextualNflScore(merged, player.contextProp ?? 'role', americanImpliedProbability(moneyline ?? null), gameLine?.total ?? null)
+    return {
+      ...merged,
+      index: result.score,
+      contextLabel: result.context.label,
+      contextProp: result.context.propType,
+    }
+  }, [board.gameLines, detailWindow, game.home.abbr, lens.windows, player])
   const markets = player.market?.markets ?? []
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
   }, [onClose])
   return (
-    <div className={styles.modalBackdrop} role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) onClose() }}>
+    <div
+      className={styles.modalBackdrop}
+      role="presentation"
+      onMouseDown={event => {
+        if (event.currentTarget === event.target) onClose()
+      }}
+    >
       <section className={styles.playerModal} role="dialog" aria-modal="true" aria-label={`${player.name} NFL breakdown`}>
         <header>
-          <div className={styles.modalPlayer}><PlayerAvatar player={player} team={team} /><div><small>{team.abbr} · {player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small><h2>{player.name}</h2></div></div>
+          <div className={styles.modalPlayer}>
+            <PlayerAvatar player={player} team={team} />
+            <div>
+              <small>
+                {team.abbr} · {player.position}
+                {player.jersey ? ` · #${player.jersey}` : ''}
+              </small>
+              <h2>{player.name}</h2>
+            </div>
+          </div>
           <div className={styles.modalHeaderActions}>
-            <button type="button" disabled={!previousPlayer} onClick={() => previousPlayer && onSelect(previousPlayer)} aria-label="Previous player"><ChevronLeft size={18} /></button>
-            <button type="button" disabled={!nextPlayer} onClick={() => nextPlayer && onSelect(nextPlayer)} aria-label="Next player"><ChevronRight size={18} /></button>
-            <button type="button" onClick={onClose}><X size={19} /> Close</button>
+            <button type="button" disabled={!previousPlayer} onClick={() => previousPlayer && onSelect(previousPlayer)} aria-label="Previous player">
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" disabled={!nextPlayer} onClick={() => nextPlayer && onSelect(nextPlayer)} aria-label="Next player">
+              <ChevronRight size={18} />
+            </button>
+            <button type="button" onClick={onClose}>
+              <X size={19} /> Close
+            </button>
           </div>
         </header>
         <nav>
-          {(['matchup', 'tracking', 'markets'] as const).map(item => <button key={item} type="button" className={tab === item ? styles.modalTabActive : ''} onClick={() => setTab(item)}>{item === 'matchup' ? 'Matchup' : item === 'tracking' ? 'NFL Tracking' : 'Sportsbooks'}</button>)}
+          {(['matchup', 'tracking', 'markets'] as const).map(item => (
+            <button key={item} type="button" className={tab === item ? styles.modalTabActive : ''} onClick={() => setTab(item)}>
+              {item === 'matchup' ? 'Matchup' : item === 'tracking' ? 'NFL Tracking' : 'Sportsbooks'}
+            </button>
+          ))}
         </nav>
         <div className={styles.modalBody}>
-          <div className={styles.modalWindows}>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>{option.label}</button>)}</div>
+          <div className={styles.modalWindows}>
+            {WINDOW_OPTIONS.map(option => (
+              <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>
+                {option.label}
+              </button>
+            ))}
+          </div>
           {tab === 'matchup' ? (
             <>
-              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === gameSeason ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === gameSeason ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p></div></div>
+              <div className={styles.modalHero}>
+                <div className={styles.scoreRing}>
+                  <Image src="/brand-bolt.png" alt="" width={13} height={18} />
+                  <b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b>
+                  <span>{activePlayer.contextLabel ?? 'ROLE'} SCORE</span>
+                </div>
+                <div>
+                  <small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small>
+                  <strong>{activePlayer.lane}</strong>
+                  <div className={styles.identityBadges}>
+                    {activePlayer.rookieSeason === gameSeason ? <span>ROOKIE</span> : null}
+                    {activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}
+                    {activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}
+                  </div>
+                  <p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === gameSeason ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p>
+                </div>
+              </div>
               <div className={styles.metricCards}>
-                {[['Volume', activePlayer.volume], ['Geometry', activePlayer.geometry], ['Red zone', activePlayer.redZone], ['Breakaway', activePlayer.breakaway], ['Evidence', activePlayer.evidence], ['RZ looks', activePlayer.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b></div>)}
+                {[
+                  ['Volume', activePlayer.volume],
+                  ['Geometry', activePlayer.geometry],
+                  ['Red zone', activePlayer.redZone],
+                  ['Breakaway', activePlayer.breakaway],
+                  ['Evidence', activePlayer.evidence],
+                  ['RZ looks', activePlayer.redZoneLooks],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <small>{label}</small>
+                    <b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b>
+                  </div>
+                ))}
               </div>
             </>
           ) : tab === 'tracking' ? (
             <div className={styles.metricCards}>
-              {[['Targets', activePlayer.targets], ['Receptions', activePlayer.receptions], ['Target share', `${activePlayer.targetShare}%`], ['Carries', activePlayer.carries], ['Carry share', `${activePlayer.carryShare}%`], ['aDOT', activePlayer.airYards], ['Separation', activePlayer.separation], ['YACOE', activePlayer.yacAboveExpected], ['RYOE/A', activePlayer.rushOverExpected], ['Explosives', activePlayer.explosivePlays], ['Pass yards', activePlayer.passingYards], ['CPOE', activePlayer.cpoe]].map(([label, value]) => <div key={label}><small>{label}</small><b>{activePlayer.hasTracking ? value : '-'}</b></div>)}
+              {[
+                ['Targets', activePlayer.targets],
+                ['Receptions', activePlayer.receptions],
+                ['Target share', `${activePlayer.targetShare}%`],
+                ['Carries', activePlayer.carries],
+                ['Carry share', `${activePlayer.carryShare}%`],
+                ['aDOT', activePlayer.airYards],
+                ['Separation', activePlayer.separation],
+                ['YACOE', activePlayer.yacAboveExpected],
+                ['RYOE/A', activePlayer.rushOverExpected],
+                ['Explosives', activePlayer.explosivePlays],
+                ['Pass yards', activePlayer.passingYards],
+                ['CPOE', activePlayer.cpoe],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <small>{label}</small>
+                  <b>{activePlayer.hasTracking ? value : '-'}</b>
+                </div>
+              ))}
             </div>
           ) : (
             <div className={styles.modalMarkets}>
-              {markets.map(market => <article key={market.key}><header><strong>{market.label}</strong>{market.line != null ? <span>Line {market.line}</span> : null}</header><div>{market.offers.map(offer => <span key={offer.vendor}><BookLogo vendor={offer.vendor} size={19} /><b>{offerSummary(offer, 'current')}</b><small>{offer.openingLine != null && offer.openingLine !== offer.line ? `OPEN ${offer.openingLine} · ${offerSummary(offer, 'opening')}` : `OPEN ${offerSummary(offer, 'opening')}`}</small></span>)}</div></article>)}
+              {markets.map(market => (
+                <article key={market.key}>
+                  <header>
+                    <strong>{market.label}</strong>
+                    {market.line != null ? <span>Line {market.line}</span> : null}
+                  </header>
+                  <div>
+                    {market.offers.map(offer => (
+                      <span key={offer.vendor}>
+                        <BookLogo vendor={offer.vendor} size={19} />
+                        <b>{offerSummary(offer, 'current')}</b>
+                        <small>{offer.openingLine != null && offer.openingLine !== offer.line ? `OPEN ${offer.openingLine} · ${offerSummary(offer, 'opening')}` : `OPEN ${offerSummary(offer, 'opening')}`}</small>
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
               {!markets.length ? <p className={styles.noData}>No player markets posted in this capture.</p> : null}
             </div>
           )}
@@ -946,45 +1419,77 @@ function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onC
   )
 }
 
-function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset, onClose }: {
-  columns: ColumnDefinition[]
-  visibleIds: Set<string>
-  order: string[]
-  onVisible: (id: string) => void
-  onMove: (id: string, direction: -1 | 1) => void
-  onReset: () => void
-  onClose: () => void
-}) {
+function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset, onClose }: { columns: ColumnDefinition[]; visibleIds: Set<string>; order: string[]; onVisible: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onReset: () => void; onClose: () => void }) {
   const ordered = order.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
   return (
-    <div className={styles.modalBackdrop} role="presentation" onMouseDown={event => { if (event.currentTarget === event.target) onClose() }}>
+    <div
+      className={styles.modalBackdrop}
+      role="presentation"
+      onMouseDown={event => {
+        if (event.currentTarget === event.target) onClose()
+      }}
+    >
       <section className={styles.columnModal} role="dialog" aria-modal="true" aria-label="Customize NFL board columns">
-        <header><div><small>THE SIDELINE</small><h2>Customize columns</h2><p>Your NFL layout is saved separately from TheDugout.</p></div><button type="button" onClick={onClose}><X size={19} /> Close</button></header>
+        <header>
+          <div>
+            <small>THE SIDELINE</small>
+            <h2>Customize columns</h2>
+            <p>Your NFL layout is saved separately from TheDugout.</p>
+          </div>
+          <button type="button" onClick={onClose}>
+            <X size={19} /> Close
+          </button>
+        </header>
         <div className={styles.columnList}>
-          {ordered.map((column, index) => <article key={column.id}>
-            <label><input type="checkbox" checked={visibleIds.has(column.id)} disabled={column.id === 'player'} onChange={() => onVisible(column.id)} /><span><b>{column.label}</b><small>{column.title}</small></span></label>
-            <em>{column.group}</em>
-            <div><button type="button" disabled={index === 0} onClick={() => onMove(column.id, -1)} aria-label={`Move ${column.label} left`}><MoveUp size={15} /></button><button type="button" disabled={index === ordered.length - 1} onClick={() => onMove(column.id, 1)} aria-label={`Move ${column.label} right`}><MoveDown size={15} /></button></div>
-          </article>)}
+          {ordered.map((column, index) => (
+            <article key={column.id}>
+              <label>
+                <input type="checkbox" checked={visibleIds.has(column.id)} disabled={column.id === 'player'} onChange={() => onVisible(column.id)} />
+                <span>
+                  <b>{column.label}</b>
+                  <small>{column.title}</small>
+                </span>
+              </label>
+              <em>{column.group}</em>
+              <div>
+                <button type="button" disabled={index === 0} onClick={() => onMove(column.id, -1)} aria-label={`Move ${column.label} left`}>
+                  <MoveUp size={15} />
+                </button>
+                <button type="button" disabled={index === ordered.length - 1} onClick={() => onMove(column.id, 1)} aria-label={`Move ${column.label} right`}>
+                  <MoveDown size={15} />
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
-        <footer><button type="button" onClick={onReset}><RotateCcw size={15} /> Reset NFL layout</button><button type="button" className={styles.primaryButton} onClick={onClose}>Done</button></footer>
+        <footer>
+          <button type="button" onClick={onReset}>
+            <RotateCcw size={15} /> Reset NFL layout
+          </button>
+          <button type="button" className={styles.primaryButton} onClick={onClose}>
+            Done
+          </button>
+        </footer>
       </section>
     </div>
   )
 }
 
-function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
-  players: PlayerRow[]
-  teams: SidelineTeam[]
-  window: SidelineWindow
-  board: SidelineOddsBoard
-  onRemove: (id: string) => void
-  onClear: () => void
-}) {
+function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: { players: PlayerRow[]; teams: SidelineTeam[]; window: SidelineWindow; board: SidelineOddsBoard; onRemove: (id: string) => void; onClear: () => void }) {
   if (!players.length) return null
   return (
     <section className={styles.comparison}>
-      <header><div><small>PLAYER COMPARISON</small><h2>{players.length}/4 selected · {WINDOW_OPTIONS.find(item => item.id === window)?.label}</h2></div><button type="button" onClick={onClear}>Clear</button></header>
+      <header>
+        <div>
+          <small>PLAYER COMPARISON</small>
+          <h2>
+            {players.length}/4 selected · {WINDOW_OPTIONS.find(item => item.id === window)?.label}
+          </h2>
+        </div>
+        <button type="button" onClick={onClear}>
+          Clear
+        </button>
+      </header>
       <div className={styles.comparisonGrid}>
         {players.map(player => {
           const team = teams.find(item => normalizedTeam(item.abbr) === normalizedTeam(player.team)) ?? teams[0]
@@ -996,29 +1501,104 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
           const ftdBaseline = baselineMove(marketPlayer, 'first_td')
           const atdBaseline = baselineMove(marketPlayer, 'anytime_td')
           const ftdAtd = impliedProbabilityRatio(offerCurrent(ftd), offerCurrent(atd))
-          const comparisonMarkets = ['first_td', 'anytime_td', 'receptions', 'receiving_yards', 'rushing_yards', 'rushing_receiving_yards', 'passing_yards', 'passing_tds']
-            .map(propType => findMarket(marketPlayer, propType))
-            .filter(Boolean) as NflPlayerMarket[]
-          return <article key={player.id}>
-            <header><div><PlayerAvatar player={player} team={team} /><span><b>{player.name}</b><small>{player.team} · {player.position}</small></span></div><button type="button" onClick={() => onRemove(player.id)} aria-label={`Remove ${player.name} from comparison`}><X size={14} /></button></header>
-            <div className={styles.compareScore}>
-              <span><small><Image src="/brand-bolt.png" alt="" width={9} height={13} /> SLIPSURGE SCORE</small><b className={scoreTone(player.index)}>{player.hasTracking ? player.index : '-'}</b></span>
-              <span><small><span className={styles.comparePublicPicks}>$</span> FTD PICKS</small><b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b></span>
-              <span><small><BookLogo vendor="fanduel" size={13} /> FTD</small><b>{oddsLabel(offerCurrent(ftd))}</b><i>{ftdBaseline?.deltaPct == null ? 'FTD% -' : `FTD% ${(ftdBaseline.deltaPct * 100).toFixed(1)}%`}</i></span>
-              <span><small><span className={styles.comparePublicPicks}>$</span> ATD PICKS</small><b>{publicPickCount(marketPlayer, 'anytime_td')?.toLocaleString() ?? '-'}</b></span>
-              <span><small><BookLogo vendor="fanduel" size={13} /> ATD</small><b>{oddsLabel(offerCurrent(atd))}</b><i>{atdBaseline?.deltaPct == null ? 'ATD% -' : `ATD% ${(atdBaseline.deltaPct * 100).toFixed(1)}%`}</i></span>
-              <span><small>FTD:ATD</small><b>{ftdAtd?.toFixed(2) ?? '-'}</b><i>IMPLIED P</i></span>
-            </div>
-            <div className={styles.compareMetrics}><span><small>Volume</small><b>{player.volume}</b></span><span><small>RZ</small><b>{player.redZone}</b></span><span><small>Tgt%</small><b>{player.targetShare}%</b></span><span><small>RZ looks</small><b>{player.redZoneLooks}</b></span></div>
-            <div className={styles.compareMarkets}>
-              {comparisonMarkets.map(market => (
-                <div key={market.key}>
-                  <small>{market.label}{publicPickCount(marketPlayer, market.propType) != null ? <b>{publicPickCount(marketPlayer, market.propType)!.toLocaleString()} PICKS</b> : null}</small>
-                  <span>{market.offers.map(offer => <em key={offer.vendor}><BookLogo vendor={offer.vendor} size={14} /><b>{market.line != null ? `${market.line} ` : ''}{oddsLabel(offerCurrent(offer))}</b><i>{offerOpening(offer) == null ? 'OPEN -' : `OPEN ${oddsLabel(offerOpening(offer))}`}</i></em>)}</span>
+          const comparisonMarkets = ['first_td', 'anytime_td', 'receptions', 'receiving_yards', 'rushing_yards', 'rushing_receiving_yards', 'passing_yards', 'passing_tds'].map(propType => findMarket(marketPlayer, propType)).filter(Boolean) as NflPlayerMarket[]
+          return (
+            <article key={player.id}>
+              <header>
+                <div>
+                  <PlayerAvatar player={player} team={team} />
+                  <span>
+                    <b>{player.name}</b>
+                    <small>
+                      {player.team} · {player.position}
+                    </small>
+                  </span>
                 </div>
-              ))}
-            </div>
-          </article>
+                <button type="button" onClick={() => onRemove(player.id)} aria-label={`Remove ${player.name} from comparison`}>
+                  <X size={14} />
+                </button>
+              </header>
+              <div className={styles.compareScore}>
+                <span>
+                  <small>
+                    <Image src="/brand-bolt.png" alt="" width={9} height={13} /> {player.contextLabel ?? 'ROLE'} SCORE
+                  </small>
+                  <b className={scoreTone(player.index)}>{player.hasTracking ? player.index : '-'}</b>
+                </span>
+                <span>
+                  <small>
+                    <span className={styles.comparePublicPicks}>$</span> FTD PICKS
+                  </small>
+                  <b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b>
+                </span>
+                <span>
+                  <small>
+                    <BookLogo vendor="fanduel" size={13} /> FTD
+                  </small>
+                  <b>{oddsLabel(offerCurrent(ftd))}</b>
+                  <i>{ftdBaseline?.deltaPct == null ? 'FTD% -' : `FTD% ${(ftdBaseline.deltaPct * 100).toFixed(1)}%`}</i>
+                </span>
+                <span>
+                  <small>
+                    <span className={styles.comparePublicPicks}>$</span> ATD PICKS
+                  </small>
+                  <b>{publicPickCount(marketPlayer, 'anytime_td')?.toLocaleString() ?? '-'}</b>
+                </span>
+                <span>
+                  <small>
+                    <BookLogo vendor="fanduel" size={13} /> ATD
+                  </small>
+                  <b>{oddsLabel(offerCurrent(atd))}</b>
+                  <i>{atdBaseline?.deltaPct == null ? 'ATD% -' : `ATD% ${(atdBaseline.deltaPct * 100).toFixed(1)}%`}</i>
+                </span>
+                <span>
+                  <small>FTD:ATD</small>
+                  <b>{ftdAtd?.toFixed(2) ?? '-'}</b>
+                  <i>IMPLIED P</i>
+                </span>
+              </div>
+              <div className={styles.compareMetrics}>
+                <span>
+                  <small>Volume</small>
+                  <b>{player.volume}</b>
+                </span>
+                <span>
+                  <small>RZ</small>
+                  <b>{player.redZone}</b>
+                </span>
+                <span>
+                  <small>Tgt%</small>
+                  <b>{player.targetShare}%</b>
+                </span>
+                <span>
+                  <small>RZ looks</small>
+                  <b>{player.redZoneLooks}</b>
+                </span>
+              </div>
+              <div className={styles.compareMarkets}>
+                {comparisonMarkets.map(market => (
+                  <div key={market.key}>
+                    <small>
+                      {market.label}
+                      {publicPickCount(marketPlayer, market.propType) != null ? <b>{publicPickCount(marketPlayer, market.propType)!.toLocaleString()} PICKS</b> : null}
+                    </small>
+                    <span>
+                      {market.offers.map(offer => (
+                        <em key={offer.vendor}>
+                          <BookLogo vendor={offer.vendor} size={14} />
+                          <b>
+                            {market.line != null ? `${market.line} ` : ''}
+                            {oddsLabel(offerCurrent(offer))}
+                          </b>
+                          <i>{offerOpening(offer) == null ? 'OPEN -' : `OPEN ${oddsLabel(offerOpening(offer))}`}</i>
+                        </em>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          )
         })}
       </div>
     </section>
@@ -1031,16 +1611,25 @@ function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
 }
 
 function gameStatusCopy(game: SidelineGame, state: SidelineGameState | null) {
-  if (!state) return { headline: game.gametime ?? 'TBD', detail: `${game.gameType} · Week ${game.week}` }
-  if (state.statusState === 'final') return {
-    headline: `${game.away.abbr} ${state.awayScore ?? '-'} · ${game.home.abbr} ${state.homeScore ?? '-'}`,
-    detail: state.summary ?? 'Final',
+  if (!state)
+    return {
+      headline: game.gametime ?? 'TBD',
+      detail: `${game.gameType} · Week ${game.week}`,
+    }
+  if (state.statusState === 'final')
+    return {
+      headline: `${game.away.abbr} ${state.awayScore ?? '-'} · ${game.home.abbr} ${state.homeScore ?? '-'}`,
+      detail: state.summary ?? 'Final',
+    }
+  if (state.statusState === 'in_progress')
+    return {
+      headline: `${game.away.abbr} ${state.awayScore ?? 0} · ${game.home.abbr} ${state.homeScore ?? 0}`,
+      detail: state.status || 'Live',
+    }
+  return {
+    headline: state.status || game.gametime || 'TBD',
+    detail: `${game.gameType} · Week ${game.week}`,
   }
-  if (state.statusState === 'in_progress') return {
-    headline: `${game.away.abbr} ${state.awayScore ?? 0} · ${game.home.abbr} ${state.homeScore ?? 0}`,
-    detail: state.status || 'Live',
-  }
-  return { headline: state.status || game.gametime || 'TBD', detail: `${game.gameType} · Week ${game.week}` }
 }
 
 function periodScoreCopy(state: SidelineGameState | null) {
@@ -1063,21 +1652,14 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline, initialCapture }: {
-  games: SidelineGame[]
-  selectedId: string
-  lens: SidelineLens
-  odds: SidelineOddsBoard | PackedOdds
-  gameState: SidelineGameState | null
-  timeline: string[]
-  initialCapture?: string | null
-}) {
+export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; timeline: string[]; initialCapture?: string | null }) {
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const initialOdds = useMemo(()=>unpackSidelineBoard(odds),[odds])
+  const [activeProp, setActiveProp] = useState('receiving_yards')
+  const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
   const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, timeline, initialCapture)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
@@ -1097,50 +1679,60 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
   const board = marketStory.board
   const currentBoard = marketStory.current
-  const sourceBoards = useMemo(() => currentBoard === board ? [board] : [currentBoard, board], [currentBoard, board])
+  const sourceBoards = useMemo(() => (currentBoard === board ? [board] : [currentBoard, board]), [currentBoard, board])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availablePickMarkets = useMemo(() => publicPickCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
   const savedItems = useMemo(() => watchlistItems.filter(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === selected.id), [selected.id, watchlistItems])
   const savedKeys = useMemo(() => new Set(savedItems.map(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}`)), [savedItems])
-  const toggleSavedMarket = useCallback((player: PlayerRow, marketKey: string, vendor: string) => {
-    const market = findMarketByKey(player.market, marketKey, vendor)
-    const offer = findOffer(market, vendor)
-    if (!market || !offer) return
-    const key = `${normalizedTeam(player.team)}:${normalizedName(player.name)}:${market.key}:${vendor}`
-    const existing = savedItems.find(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}` === key)
-    if (existing) {
-      void removeWatchlist(existing.id).catch(error => console.error('[the-sideline] failed to remove saved market', error))
-      return
-    }
-    const oddsByBook = Object.fromEntries(market.offers.flatMap(candidate => {
-      const price = offerCurrent(candidate)
-      return price == null ? [] : [[candidate.vendor, price]]
-    }))
-    void addWatchlist({
-      sport: 'nfl',
-      game_pk: selected.id,
-      game_date: selected.gameday,
-      mlb_id: null,
-      player_name: player.name,
-      team: player.team,
-      position: player.position,
-      headshot_url: player.headshot,
-      prop_key: `nfl:${market.key}`,
-      prop_label: market.label,
-      line: market.line == null ? null : String(market.line),
-      book: vendor,
-      odds: offerCurrent(offer),
-      odds_by_book: oddsByBook,
-    }).catch(error => console.error('[the-sideline] failed to save market', error))
-  }, [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id])
-  const columns = useColumnDefinitions({ markets: availableMarkets, pickMarkets: availablePickMarkets, books: availableBooks, board, game: selected, savedKeys, onToggleSaved: toggleSavedMarket })
+  const toggleSavedMarket = useCallback(
+    (player: PlayerRow, marketKey: string, vendor: string) => {
+      const market = findMarketByKey(player.market, marketKey, vendor)
+      const offer = findOffer(market, vendor)
+      if (!market || !offer) return
+      const key = `${normalizedTeam(player.team)}:${normalizedName(player.name)}:${market.key}:${vendor}`
+      const existing = savedItems.find(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}` === key)
+      if (existing) {
+        void removeWatchlist(existing.id).catch(error => console.error('[the-sideline] failed to remove saved market', error))
+        return
+      }
+      const oddsByBook = Object.fromEntries(
+        market.offers.flatMap(candidate => {
+          const price = offerCurrent(candidate)
+          return price == null ? [] : [[candidate.vendor, price]]
+        }),
+      )
+      void addWatchlist({
+        sport: 'nfl',
+        game_pk: selected.id,
+        game_date: selected.gameday,
+        mlb_id: null,
+        player_name: player.name,
+        team: player.team,
+        position: player.position,
+        headshot_url: player.headshot,
+        prop_key: `nfl:${market.key}`,
+        prop_label: market.label,
+        line: market.line == null ? null : String(market.line),
+        book: vendor,
+        odds: offerCurrent(offer),
+        odds_by_book: oddsByBook,
+      }).catch(error => console.error('[the-sideline] failed to save market', error))
+    },
+    [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id],
+  )
+  const columns = useColumnDefinitions({
+    markets: availableMarkets,
+    pickMarkets: availablePickMarkets,
+    books: availableBooks,
+    board,
+    game: selected,
+    savedKeys,
+    onToggleSaved: toggleSavedMarket,
+  })
   const columnSignature = columns.map(column => column.id).join('|')
   const defaultOrder = useMemo(() => columnSignature.split('|'), [columnSignature])
-  const defaultVisible = useMemo(() => new Set(columns.filter(column =>
-    GAME_DAY_ALWAYS_VISIBLE.has(column.id)
-    || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
-  ).map(column => column.id)), [columns])
+  const defaultVisible = useMemo(() => new Set(columns.filter(column => GAME_DAY_ALWAYS_VISIBLE.has(column.id) || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))).map(column => column.id)), [columns])
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultOrder)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(defaultVisible)
   const windowData = lens.windows[windowId]
@@ -1149,15 +1741,22 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
     let active = true
     const loadMatrices = async () => {
       try {
-        const response = await fetch('/api/nfl-matrices', { cache: 'no-store' })
+        const response = await fetch('/api/nfl-matrices', {
+          cache: 'no-store',
+        })
         if (!response.ok) return
-        const payload = await response.json() as { matrices?: NflMatrix[] }
+        const payload = (await response.json()) as { matrices?: NflMatrix[] }
         if (active) setMatrices(payload.matrices ?? [])
-      } catch { /* signed-out and unavailable matrix states are non-fatal */ }
+      } catch {
+        /* signed-out and unavailable matrix states are non-fatal */
+      }
     }
     void loadMatrices()
     window.addEventListener('ss:nfl-matrices-updated', loadMatrices)
-    return () => { active = false; window.removeEventListener('ss:nfl-matrices-updated', loadMatrices) }
+    return () => {
+      active = false
+      window.removeEventListener('ss:nfl-matrices-updated', loadMatrices)
+    }
   }, [])
 
   useEffect(() => {
@@ -1165,28 +1764,43 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       try {
         const raw = window.localStorage.getItem(PREFS_KEY)
         if (raw) {
-          const prefs = JSON.parse(raw) as { order?: string[]; visible?: string[] }
+          const prefs = JSON.parse(raw) as {
+            order?: string[]
+            visible?: string[]
+          }
           const known = new Set(defaultOrder)
           const savedOrder = (prefs.order ?? []).filter(id => known.has(id))
           setColumnOrder([...savedOrder, ...defaultOrder.filter(id => !savedOrder.includes(id))])
           if (prefs.visible?.length) setVisibleIds(new Set(['player', ...prefs.visible.filter(id => known.has(id))]))
         }
-      } catch { /* local preferences are optional */ }
-      finally { setPreferencesReady(true) }
+      } catch {
+        /* local preferences are optional */
+      } finally {
+        setPreferencesReady(true)
+      }
     })
     return () => window.cancelAnimationFrame(animationFrame)
   }, [defaultOrder])
 
   useEffect(() => {
     if (!preferencesReady) return
-    try { window.localStorage.setItem(PREFS_KEY, JSON.stringify({ order: columnOrder, visible: Array.from(visibleIds) })) } catch { /* private mode */ }
+    try {
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify({ order: columnOrder, visible: Array.from(visibleIds) }))
+    } catch {
+      /* private mode */
+    }
   }, [columnOrder, preferencesReady, visibleIds])
 
   useEffect(() => {
     const key = `slipsurge:sideline:highlights:v1:${selectedId}`
     const animationFrame = window.requestAnimationFrame(() => {
-      try { setHighlights(JSON.parse(window.localStorage.getItem(key) ?? '{}')) } catch { setHighlights({}) }
-      finally { setHighlightsReady(true) }
+      try {
+        setHighlights(JSON.parse(window.localStorage.getItem(key) ?? '{}'))
+      } catch {
+        setHighlights({})
+      } finally {
+        setHighlightsReady(true)
+      }
     })
     return () => window.cancelAnimationFrame(animationFrame)
   }, [selectedId])
@@ -1194,10 +1808,14 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   useEffect(() => {
     if (!highlightsReady) return
     const key = `slipsurge:sideline:highlights:v1:${selectedId}`
-    try { window.localStorage.setItem(key, JSON.stringify(highlights)) } catch { /* private mode */ }
+    try {
+      window.localStorage.setItem(key, JSON.stringify(highlights))
+    } catch {
+      /* private mode */
+    }
   }, [highlights, highlightsReady, selectedId])
 
-  const rows = useMemo(() => {
+  const baseRows = useMemo(() => {
     const matchupTeams = new Set([selected.away.abbr, selected.home.abbr].map(normalizedTeam))
     const marketPlayers = board.players.filter(player => matchupTeams.has(normalizedTeam(player.team)))
     const trackingById = new Map(windowData.players.map(player => [player.id, player]))
@@ -1219,7 +1837,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
           id,
           market,
           hasTracking: Boolean(tracked),
-          sampleTeam: tracked && normalizedTeam(tracked.team) !== normalizedTeam(market.team) ? tracked.team : tracked?.sampleTeam ?? null,
+          sampleTeam: tracked && normalizedTeam(tracked.team) !== normalizedTeam(market.team) ? tracked.team : (tracked?.sampleTeam ?? null),
           teamProfile: profileFor(market.team),
           opponentProfile: opponentFor(market.team),
           sportsbookRank: null,
@@ -1236,7 +1854,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         byId.set(player.id, {
           ...player,
           team: currentTeam,
-          sampleTeam: normalizedTeam(player.team) !== currentTeam ? player.team : player.sampleTeam ?? null,
+          sampleTeam: normalizedTeam(player.team) !== currentTeam ? player.team : (player.sampleTeam ?? null),
           market: null,
           hasTracking: true,
           teamProfile: profileFor(currentTeam),
@@ -1247,8 +1865,26 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         })
       }
     }
-    return addNflMmRanks(Array.from(byId.values()))
+    return Array.from(byId.values())
   }, [board, selected.away.abbr, selected.home.abbr, windowData.players, windowData.teams])
+
+  const scoreProp = view === 'core' || view === 'touchdowns' ? 'anytime_td' : view === 'props' ? activeProp : roleFilter === 'passing' ? 'passing_yards' : roleFilter === 'receiving' ? 'receiving_yards' : roleFilter === 'rushing' ? 'rushing_yards' : 'role'
+  const rows = useMemo(() => {
+    const gameLine = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
+    return addNflMmRanks(
+      baseRows.map(row => {
+        const teamMoneyline = normalizedTeam(row.team) === normalizedTeam(selected.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
+        const result = contextualNflScore(row, scoreProp, americanImpliedProbability(teamMoneyline ?? null), gameLine?.total ?? null)
+        return {
+          ...row,
+          baseIndex: row.index,
+          index: result.score,
+          contextLabel: result.context.label,
+          contextProp: result.context.propType,
+        }
+      }),
+    )
+  }, [baseRows, board.gameLines, scoreProp, selected.home.abbr])
 
   const matrixMatches = useMemo(() => {
     if (!matrices.length) return new Map<string, NflMatrix[]>()
@@ -1289,25 +1925,47 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         }
         if (!windowPlayer) return null
         const values: Record<string, number> = {
-          index: windowPlayer.index, volume: windowPlayer.volume, geometry: windowPlayer.geometry, redZone: windowPlayer.redZone,
-          breakaway: windowPlayer.breakaway, evidence: windowPlayer.evidence, targets: windowPlayer.targets,
-          targetShare: windowPlayer.targetShare, receptions: windowPlayer.receptions, receivingYards: windowPlayer.receivingYards,
-          carries: windowPlayer.carries, carryShare: windowPlayer.carryShare, rushingYards: windowPlayer.rushingYards,
-          passAttempts: windowPlayer.passAttempts, completions: windowPlayer.completions, passingYards: windowPlayer.passingYards,
-          touchdowns: windowPlayer.touchdowns, redZoneLooks: windowPlayer.redZoneLooks, goalLineLooks: windowPlayer.goalLineLooks,
-          airYards: windowPlayer.airYards, airYardsShare: windowPlayer.airYardsShare, separation: windowPlayer.separation,
-          yacAboveExpected: windowPlayer.yacAboveExpected, rushOverExpected: windowPlayer.rushOverExpected,
-          catchRate: windowPlayer.catchRate, completionRate: windowPlayer.completionRate, cpoe: windowPlayer.cpoe,
-          timeToThrow: windowPlayer.timeToThrow, explosivePlays: windowPlayer.explosivePlays,
+          index: windowPlayer.index,
+          volume: windowPlayer.volume,
+          geometry: windowPlayer.geometry,
+          redZone: windowPlayer.redZone,
+          breakaway: windowPlayer.breakaway,
+          evidence: windowPlayer.evidence,
+          targets: windowPlayer.targets,
+          targetShare: windowPlayer.targetShare,
+          receptions: windowPlayer.receptions,
+          receivingYards: windowPlayer.receivingYards,
+          carries: windowPlayer.carries,
+          carryShare: windowPlayer.carryShare,
+          rushingYards: windowPlayer.rushingYards,
+          passAttempts: windowPlayer.passAttempts,
+          completions: windowPlayer.completions,
+          passingYards: windowPlayer.passingYards,
+          passingTouchdowns: windowPlayer.passingTouchdowns,
+          touchdowns: windowPlayer.touchdowns,
+          redZoneLooks: windowPlayer.redZoneLooks,
+          goalLineLooks: windowPlayer.goalLineLooks,
+          airYards: windowPlayer.airYards,
+          airYardsShare: windowPlayer.airYardsShare,
+          separation: windowPlayer.separation,
+          yacAboveExpected: windowPlayer.yacAboveExpected,
+          rushOverExpected: windowPlayer.rushOverExpected,
+          catchRate: windowPlayer.catchRate,
+          completionRate: windowPlayer.completionRate,
+          cpoe: windowPlayer.cpoe,
+          timeToThrow: windowPlayer.timeToThrow,
+          explosivePlays: windowPlayer.explosivePlays,
         }
         return values[factor.field] ?? null
       },
     })
     const candidates = rows.map(candidateFor)
     const result = new Map<string, NflMatrix[]>()
-    matrices.filter(matrix => matrix.enabled).forEach(matrix => {
-      evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
-    })
+    matrices
+      .filter(matrix => matrix.enabled)
+      .forEach(matrix => {
+        evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
+      })
     return result
   }, [currentBoard, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
 
@@ -1320,38 +1978,96 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
     if (view === 'all') return ordered.filter(hasValue)
     if (view === 'core') {
       if (roleFilter === 'kicking' || roleFilter === 'defense') return ordered.filter(hasValue)
-      return columns.filter(column => COMPACT_GAME_DAY.has(column.id) && hasValue(column)).map(column => ({ ...column, width: column.id === 'player' ? 204 : column.id === 'roleMarket' ? 82 : column.id.startsWith('picks:') ? 56 : column.id === 'index' ? 54 : 64 }))
+      return columns
+        .filter(column => COMPACT_GAME_DAY.has(column.id) && hasValue(column))
+        .map(column => ({
+          ...column,
+          width: column.id === 'player' ? 204 : column.id === 'roleMarket' ? 82 : column.id.startsWith('picks:') ? 56 : column.id === 'index' ? 54 : 64,
+        }))
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
   }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds])
 
+  const scoreContextLabel = useMemo(() => {
+    const labels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
+    return labels.length === 1 ? labels[0]! : 'Role'
+  }, [rows])
+  const scoreContextAbbr =
+    (
+      {
+        'Anytime TD': 'ATD',
+        'First TD': 'FTD',
+        'Receiving yards': 'REC YDS',
+        Receptions: 'REC',
+        'Rushing yards': 'RUSH YDS',
+        'Rushing attempts': 'RUSH ATT',
+        'Passing yards': 'PASS YDS',
+        'Passing TDs': 'PASS TD',
+        'Passing attempts': 'PASS ATT',
+        Completions: 'COMP',
+        'Scrimmage yards': 'R+R YDS',
+      } as Record<string, string>
+    )[scoreContextLabel] ?? scoreContextLabel.toUpperCase()
+  const displayColumns = useMemo(
+    () =>
+      resolvedColumns.map(column =>
+        column.id === 'index'
+          ? { ...column, label: `${scoreContextAbbr} SCORE`, title: `SlipSurge score for ${scoreContextLabel.toLowerCase()} using role, matchup, DvP, game environment and selected-window production` }
+          : column.id === 'mm'
+            ? { ...column, title: `Consensus sportsbook ${scoreContextLabel.toLowerCase()} rank minus the matching contextual analytics rank` }
+            : column,
+      ),
+    [resolvedColumns, scoreContextAbbr, scoreContextLabel],
+  )
+
   const columnById = useMemo(() => new Map(columns.map(column => [column.id, column])), [columns])
-  const sortedRows = (team: string) => rows
-    .filter(row => {
-      if (normalizedTeam(row.team) !== normalizedTeam(team) || erased.has(row.id)) return false
-      if (view === 'core' && roleFilter === 'all' && !['QB', 'RB', 'FB', 'WR', 'TE'].includes(row.position)) return false
-      const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
-      return !positions.length || positions.includes(row.position)
-    })
-    .sort((a, b) => {
-      for (const sort of sorts) {
-        const column = columnById.get(sort.id)
-        if (!column) continue
-        const av = column.value(a)
-        const bv = column.value(b)
-        if (av == null && bv == null) continue
-        if (av == null) return 1
-        if (bv == null) return -1
-        const difference = typeof av === 'string' || typeof bv === 'string' ? String(av).localeCompare(String(bv)) : av - bv
-        if (difference) return sort.direction === 'asc' ? difference : -difference
-      }
-      return (POSITION_ORDER[a.position] ?? 20) - (POSITION_ORDER[b.position] ?? 20) || a.name.localeCompare(b.name)
-    })
+  const sortedRows = (team: string) =>
+    rows
+      .filter(row => {
+        if (normalizedTeam(row.team) !== normalizedTeam(team) || erased.has(row.id)) return false
+        if (view === 'core' && roleFilter === 'all' && !['QB', 'RB', 'FB', 'WR', 'TE'].includes(row.position)) return false
+        const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
+        return !positions.length || positions.includes(row.position)
+      })
+      .sort((a, b) => {
+        for (const sort of sorts) {
+          const column = columnById.get(sort.id)
+          if (!column) continue
+          const av = column.value(a)
+          const bv = column.value(b)
+          if (av == null && bv == null) continue
+          if (av == null) return 1
+          if (bv == null) return -1
+          const difference = typeof av === 'string' || typeof bv === 'string' ? String(av).localeCompare(String(bv)) : av - bv
+          if (difference) return sort.direction === 'asc' ? difference : -difference
+        }
+        return (POSITION_ORDER[a.position] ?? 20) - (POSITION_ORDER[b.position] ?? 20) || a.name.localeCompare(b.name)
+      })
 
   const awayRows = sortedRows(selected.away.abbr)
   const homeRows = sortedRows(selected.home.abbr)
-  const heat = buildBoardHeat(resolvedColumns, [...awayRows, ...homeRows])
+  const heat = buildBoardHeat(displayColumns, [...awayRows, ...homeRows])
   const comparePlayers = compareIds.map(id => rows.find(row => row.id === id)).filter(Boolean) as PlayerRow[]
+  const ladderScores = useMemo(
+    () =>
+      new Map(
+        rows.flatMap(row =>
+          row.market
+            ? [
+                [
+                  row.market.id,
+                  {
+                    score: row.index,
+                    mm: row.mm,
+                    label: row.contextLabel ?? 'Score',
+                  },
+                ] as const,
+              ]
+            : [],
+        ),
+      ),
+    [rows],
+  )
   const allTeams = [selected.away, selected.home]
 
   const changeSort = (id: string) => {
@@ -1359,12 +2075,12 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       const existing = current.find(item => item.id === id)
       if (!stickySort) return [{ id, direction: existing?.direction === 'desc' ? 'asc' : 'desc' }]
       if (!existing) return [...current, { id, direction: 'desc' }]
-      if (existing.direction === 'desc') return current.map(item => item.id === id ? { ...item, direction: 'asc' } : item)
+      if (existing.direction === 'desc') return current.map(item => (item.id === id ? { ...item, direction: 'asc' } : item))
       return current.filter(item => item.id !== id)
     })
   }
 
-  const toggleCompare = (id: string) => setCompareIds(current => current.includes(id) ? current.filter(item => item !== id) : current.length < 4 ? [...current, id] : current)
+  const toggleCompare = (id: string) => setCompareIds(current => (current.includes(id) ? current.filter(item => item !== id) : current.length < 4 ? [...current, id] : current))
   const toggleHighlight = (row: PlayerRow, column: ColumnDefinition) => {
     if (!highlighter || column.id === 'player') return
     const key = `${row.id}:${column.id}`
@@ -1375,114 +2091,417 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       return next
     })
   }
-  const moveColumn = (id: string, direction: -1 | 1) => setColumnOrder(current => {
-    const index = current.indexOf(id)
-    const next = index + direction
-    if (index < 0 || next < 0 || next >= current.length) return current
-    const copy = [...current]
-    ;[copy[index], copy[next]] = [copy[next], copy[index]]
-    return copy
-  })
+  const moveColumn = (id: string, direction: -1 | 1) =>
+    setColumnOrder(current => {
+      const index = current.indexOf(id)
+      const next = index + direction
+      if (index < 0 || next < 0 || next >= current.length) return current
+      const copy = [...current]
+      ;[copy[index], copy[next]] = [copy[next], copy[index]]
+      return copy
+    })
 
   if (!selected) return null
   const frameTime = marketStory.capturedAt ?? board.capturedAt
-  const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
+  const capturedLabel = frameTime
+    ? new Date(frameTime).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/New_York',
+      }) + ' ET'
+    : 'Awaiting markets'
   const statusCopy = gameStatusCopy(selected, marketStory.gameState)
   const periodScores = periodScoreCopy(marketStory.gameState)
   return (
     <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
       <section className={styles.controlBar}>
-        <div className={styles.matchupMini}><TeamLogo team={selected.away} size={28} /><b>{selected.away.abbr}</b><span>@</span><TeamLogo team={selected.home} size={28} /><b>{selected.home.abbr}</b></div>
-        <div className={styles.windowTabs}>{WINDOW_OPTIONS.map(option => <button key={option.id} type="button" className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>{option.label}</button>)}</div>
-        <button type="button" onClick={() => setColumnsOpen(true)}><Columns3 size={15} /> Columns</button>
-        <button type="button" className={toolsOpen ? styles.activeControl : ''} onClick={() => setToolsOpen(value => !value)}><Sparkles size={15} /> Tools</button>
+        <div className={styles.matchupMini}>
+          <TeamLogo team={selected.away} size={28} />
+          <b>{selected.away.abbr}</b>
+          <span>@</span>
+          <TeamLogo team={selected.home} size={28} />
+          <b>{selected.home.abbr}</b>
+        </div>
+        <div className={styles.windowTabs}>
+          {WINDOW_OPTIONS.map(option => (
+            <button key={option.id} type="button" className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={() => setColumnsOpen(true)}>
+          <Columns3 size={15} /> Columns
+        </button>
+        <button type="button" className={toolsOpen ? styles.activeControl : ''} onClick={() => setToolsOpen(value => !value)}>
+          <Sparkles size={15} /> Tools
+        </button>
       </section>
 
       <section className={styles.storyGrid}>
-        <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}><small>STADIUM / CONDITIONS</small><strong>{selected.stadium ?? 'Stadium TBD'}</strong><span>{selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : selected.roof ?? 'Roof TBD'} · {selected.surface ?? 'Surface TBD'}</span></article>
-        <article><small>GAME STATUS</small><strong>{statusCopy.headline}</strong><span>{periodScores ?? statusCopy.detail}</span></article>
-        <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
+        <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}>
+          <small>STADIUM / CONDITIONS</small>
+          <strong>{selected.stadium ?? 'Stadium TBD'}</strong>
+          <span>
+            {selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : (selected.roof ?? 'Roof TBD')} · {selected.surface ?? 'Surface TBD'}
+          </span>
+        </article>
+        <article>
+          <small>GAME STATUS</small>
+          <strong>{statusCopy.headline}</strong>
+          <span>{periodScores ?? statusCopy.detail}</span>
+        </article>
+        <article>
+          <small>FANDUEL GAME LINE</small>
+          <strong>
+            {selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}
+          </strong>
+          <span>{board.gameLines.length} sportsbooks captured</span>
+        </article>
         <article className={styles.marketStory}>
-          <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
-          {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
+          <div>
+            <small>MARKET STORY</small>
+            <strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong>
+          </div>
+          {marketStory.error ? (
+            <span role="alert">
+              {marketStory.error}{' '}
+              <button type="button" onClick={marketStory.retry}>
+                Retry
+              </button>
+            </span>
+          ) : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span className={marketStory.loading ? styles.captureLoading : undefined}>{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}</span>
+          <span className={marketStory.loading ? styles.captureLoading : undefined}>
+            {history.length} captures · {capturedLabel}
+            {board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}
+          </span>
         </article>
       </section>
 
-      {board.status !== 'ready' ? <section className={styles.marketStatus}>
-        <div><strong>{board.status === 'not-posted' ? 'Player markets have not posted yet' : 'Sportsbook feed is temporarily unavailable'}</strong><span>{board.status === 'not-posted' ? 'Tracking, matchup and team context remain available. Odds columns will appear automatically when books publish this game.' : 'The board is showing the last valid context without inventing or zero-filling missing prices.'}</span></div>
-      </section> : null}
+      {board.status !== 'ready' ? (
+        <section className={styles.marketStatus}>
+          <div>
+            <strong>{board.status === 'not-posted' ? 'Player markets have not posted yet' : 'Sportsbook feed is temporarily unavailable'}</strong>
+            <span>{board.status === 'not-posted' ? 'Tracking, matchup and team context remain available. Odds columns will appear automatically when books publish this game.' : 'The board is showing the last valid context without inventing or zero-filling missing prices.'}</span>
+          </div>
+        </section>
+      ) : null}
 
       <details className={styles.gameLinesDisclosure}>
-        <summary>Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span></summary>
+        <summary>
+          Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span>
+        </summary>
         <GameLines game={selected} board={board} />
       </details>
 
-      {toolsOpen ? <section className={styles.toolsPanel}>
-        <button type="button" className={stickySort ? styles.toolActive : ''} onClick={() => setStickySort(value => !value)}><Layers3 size={15} /> Sticky sort {stickySort ? 'on' : 'off'}</button>
-        <button type="button" className={highlighter ? styles.toolActive : ''} onClick={() => { setHighlighter(value => !value); setEraser(false) }}><Highlighter size={15} /> Highlighter</button>
-        <div className={styles.palette}>{(['lime', 'cyan', 'amber', 'rose'] as HighlightColor[]).map(color => <button key={color} type="button" className={`${styles[color]} ${highlightColor === color ? styles.paletteActive : ''}`} onClick={() => { setHighlightColor(color); setHighlighter(true); setEraser(false) }} aria-label={`${color} highlighter`} />)}</div>
-        <button type="button" className={eraser ? styles.eraseActive : ''} onClick={() => { setEraser(value => !value); setHighlighter(false) }}><Eraser size={15} /> Eraser</button>
-        <button type="button" onClick={() => { setSorts([{ id: 'index', direction: 'desc' }]); setHighlights({}); setErased(new Set()) }}><RotateCcw size={15} /> Clear board tools</button>
-      </section> : null}
-
-      <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">{VIEW_OPTIONS.map(option => <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>{option.label}</button>)}</nav>
-      <nav className={styles.roleTabs} aria-label="NFL position lanes">{ROLE_OPTIONS.map(option => <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>{option.label}</button>)}</nav>
-
-      {view === 'props' ? <LadderBoard board={board} onPlayer={id => { const row=rows.find(row=>row.market?.id===id); if(row)setExpanded(row) }} /> : [{ team: selected.away, opponent: selected.home, rows: awayRows, side: 'away' as const }, { team: selected.home, opponent: selected.away, rows: homeRows, side: 'home' as const }].map(section => (
-        <section className={styles.teamBoard} key={section.team.abbr} style={{ '--team-color': section.team.color } as CSSProperties}>
-          <TeamSummary
-            team={section.team}
-            opponent={section.opponent}
-            rows={section.rows}
-            board={board}
-            selectedWindow={windowId}
-            side={section.side}
-            savedCount={savedItems.filter(item => normalizedTeam(item.team ?? '') === normalizedTeam(section.team.abbr)).length}
-            collapsed={collapsedTeams.has(section.team.abbr)}
-            onToggle={() => setCollapsedTeams(current => {
-              const next = new Set(current)
-              if (next.has(section.team.abbr)) next.delete(section.team.abbr)
-              else next.add(section.team.abbr)
-              return next
-            })}
-            onSelectWindow={setWindowId}
-          />
-          {!collapsedTeams.has(section.team.abbr) ? <div className={styles.tableScroller} key={`${view}:${roleFilter}`}>
-            <table className={styles.boardTable} style={{ minWidth: resolvedColumns.reduce((total, column) => total + column.width, 0) }}>
-              <thead><tr>{resolvedColumns.map(column => {
-                const sort = sorts.find(item => item.id === column.id)
-                const rank = sorts.findIndex(item => item.id === column.id)
-                const isPublicPicks = column.id.startsWith('picks:')
-                return <th key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`} style={{ width: column.width, minWidth: column.width }}><button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>{column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}<span>{column.label}</span>{sort ? <em>{sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}{stickySort ? rank + 1 : ''}</em> : null}</button></th>
-              })}</tr></thead>
-              <tbody>{section.rows.map((player, index) => {
-                const compareActive = compareIds.includes(player.id)
-                return <tr key={player.id} className={eraser ? styles.eraserRow : ''} onClick={() => { if (eraser) setErased(current => new Set([...current, player.id])) }}>
-                  {resolvedColumns.map(column => {
-                    const highlight = highlights[`${player.id}:${column.id}`]
-                    const automaticHeat = heatStyle(heat.get(`${player.id}:${column.id}`))
-                    const matches = matrixMatches.get(player.id) ?? []
-                    return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
-                      {column.id === 'player' && matches.length ? <span className={styles.matrixRail} aria-label={`Matches ${matches.map(matrix => matrix.name).join(', ')}`}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
-                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === selected.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}{availabilityLabel(player) ? <mark className={styles.availabilityBadge} aria-label={player.market?.availability?.injury ?? availabilityLabel(player) ?? undefined}>{availabilityLabel(player)}</mark> : null}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
-                    </td>
-                  })}
-                </tr>
-              })}</tbody>
-            </table>
-            {!section.rows.length ? <div className={styles.emptyTeam}><Eye size={18} /><span>No posted player markets or tracking rows for {section.team.abbr} in this capture.</span></div> : null}
-          </div> : null}
+      {toolsOpen ? (
+        <section className={styles.toolsPanel}>
+          <button type="button" className={stickySort ? styles.toolActive : ''} onClick={() => setStickySort(value => !value)}>
+            <Layers3 size={15} /> Sticky sort {stickySort ? 'on' : 'off'}
+          </button>
+          <button
+            type="button"
+            className={highlighter ? styles.toolActive : ''}
+            onClick={() => {
+              setHighlighter(value => !value)
+              setEraser(false)
+            }}
+          >
+            <Highlighter size={15} /> Highlighter
+          </button>
+          <div className={styles.palette}>
+            {(['lime', 'cyan', 'amber', 'rose'] as HighlightColor[]).map(color => (
+              <button
+                key={color}
+                type="button"
+                className={`${styles[color]} ${highlightColor === color ? styles.paletteActive : ''}`}
+                onClick={() => {
+                  setHighlightColor(color)
+                  setHighlighter(true)
+                  setEraser(false)
+                }}
+                aria-label={`${color} highlighter`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className={eraser ? styles.eraseActive : ''}
+            onClick={() => {
+              setEraser(value => !value)
+              setHighlighter(false)
+            }}
+          >
+            <Eraser size={15} /> Eraser
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSorts([{ id: 'index', direction: 'desc' }])
+              setHighlights({})
+              setErased(new Set())
+            }}
+          >
+            <RotateCcw size={15} /> Clear board tools
+          </button>
         </section>
-      ))}
+      ) : null}
+
+      <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">
+        {VIEW_OPTIONS.map(option => (
+          <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>
+            {option.label}
+          </button>
+        ))}
+      </nav>
+      <nav className={styles.roleTabs} aria-label="NFL position lanes">
+        {ROLE_OPTIONS.map(option => (
+          <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>
+            {option.label}
+          </button>
+        ))}
+      </nav>
+
+      {view === 'props' ? (
+        <LadderBoard
+          board={board}
+          prop={activeProp}
+          onProp={setActiveProp}
+          scores={ladderScores}
+          onPlayer={id => {
+            const row = rows.find(row => row.market?.id === id)
+            if (row) setExpanded(row)
+          }}
+        />
+      ) : (
+        [
+          {
+            team: selected.away,
+            opponent: selected.home,
+            rows: awayRows,
+            side: 'away' as const,
+          },
+          {
+            team: selected.home,
+            opponent: selected.away,
+            rows: homeRows,
+            side: 'home' as const,
+          },
+        ].map(section => (
+          <section className={styles.teamBoard} key={section.team.abbr} style={{ '--team-color': section.team.color } as CSSProperties}>
+            <TeamSummary
+              team={section.team}
+              opponent={section.opponent}
+              rows={section.rows}
+              board={board}
+              selectedWindow={windowId}
+              side={section.side}
+              savedCount={savedItems.filter(item => normalizedTeam(item.team ?? '') === normalizedTeam(section.team.abbr)).length}
+              collapsed={collapsedTeams.has(section.team.abbr)}
+              onToggle={() =>
+                setCollapsedTeams(current => {
+                  const next = new Set(current)
+                  if (next.has(section.team.abbr)) next.delete(section.team.abbr)
+                  else next.add(section.team.abbr)
+                  return next
+                })
+              }
+              onSelectWindow={setWindowId}
+            />
+            {!collapsedTeams.has(section.team.abbr) ? (
+              <div className={styles.tableScroller} key={`${view}:${roleFilter}`}>
+                <table
+                  className={styles.boardTable}
+                  style={{
+                    minWidth: displayColumns.reduce((total, column) => total + column.width, 0),
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {displayColumns.map(column => {
+                        const sort = sorts.find(item => item.id === column.id)
+                        const rank = sorts.findIndex(item => item.id === column.id)
+                        const isPublicPicks = column.id.startsWith('picks:')
+                        return (
+                          <th
+                            key={column.id}
+                            className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`}
+                            style={{
+                              width: column.width,
+                              minWidth: column.width,
+                            }}
+                          >
+                            <button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>
+                              {column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}
+                              <span>{column.label}</span>
+                              {sort ? (
+                                <em>
+                                  {sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+                                  {stickySort ? rank + 1 : ''}
+                                </em>
+                              ) : null}
+                            </button>
+                          </th>
+                        )
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.rows.map((player, index) => {
+                      const compareActive = compareIds.includes(player.id)
+                      return (
+                        <tr
+                          key={player.id}
+                          className={eraser ? styles.eraserRow : ''}
+                          onClick={() => {
+                            if (eraser) setErased(current => new Set([...current, player.id]))
+                          }}
+                        >
+                          {displayColumns.map(column => {
+                            const highlight = highlights[`${player.id}:${column.id}`]
+                            const automaticHeat = heatStyle(heat.get(`${player.id}:${column.id}`))
+                            const matches = matrixMatches.get(player.id) ?? []
+                            return (
+                              <td
+                                key={column.id}
+                                className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`}
+                                style={{
+                                  width: column.width,
+                                  minWidth: column.width,
+                                  ...automaticHeat,
+                                }}
+                                onClick={() => toggleHighlight(player, column)}
+                              >
+                                {column.id === 'player' && matches.length ? (
+                                  <span className={styles.matrixRail} aria-label={`Matches ${matches.map(matrix => matrix.name).join(', ')}`}>
+                                    {matches.slice(0, 5).map(matrix => (
+                                      <i key={matrix.id} style={{ background: matrix.color }} />
+                                    ))}
+                                    {matches.length > 5 ? <b>+{matches.length - 5}</b> : null}
+                                  </span>
+                                ) : null}
+                                {column.id === 'player' ? (
+                                  <div className={styles.playerCell}>
+                                    <span className={styles.depth}>{index + 1}</span>
+                                    <PlayerAvatar player={player} team={section.team} />
+                                    <button
+                                      type="button"
+                                      className={styles.playerName}
+                                      onClick={event => {
+                                        event.stopPropagation()
+                                        setExpanded(player)
+                                      }}
+                                    >
+                                      <b>{player.name}</b>
+                                      <small>
+                                        {player.position}
+                                        {player.jersey ? ` · #${player.jersey}` : ''}
+                                        {player.rookieSeason === selected.season ? ' · ROOKIE' : ''}
+                                        {player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}
+                                        {availabilityLabel(player) ? (
+                                          <mark className={styles.availabilityBadge} aria-label={player.market?.availability?.injury ?? availabilityLabel(player) ?? undefined}>
+                                            {availabilityLabel(player)}
+                                          </mark>
+                                        ) : null}
+                                      </small>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={compareActive ? styles.compareActive : ''}
+                                      onClick={event => {
+                                        event.stopPropagation()
+                                        toggleCompare(player.id)
+                                      }}
+                                      aria-label={`Compare ${player.name}`}
+                                    >
+                                      {compareActive ? <Minus size={14} /> : <Plus size={14} />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={event => {
+                                        event.stopPropagation()
+                                        setExpanded(player)
+                                      }}
+                                      aria-label={`Open ${player.name}`}
+                                    >
+                                      <ChevronDown size={14} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  column.render(player)
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {!section.rows.length ? (
+                  <div className={styles.emptyTeam}>
+                    <Eye size={18} />
+                    <span>No posted player markets or tracking rows for {section.team.abbr} in this capture.</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ))
+      )}
 
       <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
 
-      {(expanded || columnsOpen) ? createPortal(<div className={styles.modalTheme}>
-        {expanded ? <PlayerModal player={rows.find(row=>row.id===expanded.id) ?? { ...expanded, market: null }} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} gameSeason={selected.season} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
-        {columnsOpen ? <ColumnManager columns={columns} visibleIds={visibleIds} order={columnOrder} onVisible={id => setVisibleIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); next.add('player'); return next })} onMove={moveColumn} onReset={() => { setColumnOrder(defaultOrder); setVisibleIds(defaultVisible) }} onClose={() => setColumnsOpen(false)} /> : null}
-      </div>, document.body) : null}
+      {expanded || columnsOpen
+        ? createPortal(
+            <div className={styles.modalTheme}>
+              {expanded ? (
+                <PlayerModal
+                  player={
+                    rows.find(row => row.id === expanded.id) ?? {
+                      ...expanded,
+                      market: null,
+                    }
+                  }
+                  players={rows}
+                  team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away}
+                  lens={lens}
+                  board={board}
+                  game={selected}
+                  gameSeason={selected.season}
+                  initialWindow={windowId}
+                  onSelect={setExpanded}
+                  onClose={() => setExpanded(null)}
+                />
+              ) : null}
+              {columnsOpen ? (
+                <ColumnManager
+                  columns={columns}
+                  visibleIds={visibleIds}
+                  order={columnOrder}
+                  onVisible={id =>
+                    setVisibleIds(current => {
+                      const next = new Set(current)
+                      if (next.has(id)) next.delete(id)
+                      else next.add(id)
+                      next.add('player')
+                      return next
+                    })
+                  }
+                  onMove={moveColumn}
+                  onReset={() => {
+                    setColumnOrder(defaultOrder)
+                    setVisibleIds(defaultVisible)
+                  }}
+                  onClose={() => setColumnsOpen(false)}
+                />
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

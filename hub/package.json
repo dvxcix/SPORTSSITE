@@ -29,6 +29,7 @@
     "test:dugout-visual": "node --experimental-strip-types scripts/dugout-visual-regression.mts",
     "test:weather-orientation": "node --experimental-strip-types --test scripts/weather-field-orientation.test.mts",
     "test:sideline-odds": "tsx --test scripts/sideline-odds-production.test.mts",
+    "test:sideline-context": "tsx --test scripts/nfl-context-score.test.mts",
     "test:sideline-matrices": "node --experimental-strip-types --test scripts/nfl-matrix.test.mts",
     "test:sideline-pikkit": "tsx --test scripts/nfl-pikkit.test.mts",
     "test:sideline-kickoff": "tsx --test scripts/sideline-kickoff.test.mts",

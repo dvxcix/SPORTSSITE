@@ -28,7 +28,16 @@ export type SidelineGame = {
 
 export type SidelineGameState = {
   status: string
-  statusState: 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'canceled' | 'delayed' | 'suspended' | 'abandoned' | 'unknown'
+  statusState:
+    | 'scheduled'
+    | 'in_progress'
+    | 'final'
+    | 'postponed'
+    | 'canceled'
+    | 'delayed'
+    | 'suspended'
+    | 'abandoned'
+    | 'unknown'
   awayScore: number | null
   homeScore: number | null
   awayByPeriod: Array<number | null>
@@ -88,6 +97,7 @@ export type SidelinePlayer = {
   passAttempts: number
   completions: number
   passingYards: number
+  passingTouchdowns: number
   touchdowns: number
   targetShare: number
   carryShare: number
@@ -103,6 +113,8 @@ export type SidelinePlayer = {
   redZoneLooks: number
   goalLineLooks: number
   explosivePlays: number
+  /** Opponent DvP percentage differences keyed by canonical stat category. */
+  dvp?: Record<string, number>
   lane: string
 }
 

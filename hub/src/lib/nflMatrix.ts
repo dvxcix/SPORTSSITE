@@ -70,6 +70,7 @@ export const NFL_MATRIX_FIELDS: NflMatrixField[] = [
   ['usage', 'passAttempts', 'Pass attempts'],
   ['usage', 'completions', 'Completions'],
   ['usage', 'passingYards', 'Passing yards'],
+  ['usage', 'passingTouchdowns', 'Passing touchdowns'],
   ['usage', 'touchdowns', 'Touchdowns'],
   ['usage', 'redZoneLooks', 'Red-zone looks'],
   ['usage', 'goalLineLooks', 'Goal-line looks'],

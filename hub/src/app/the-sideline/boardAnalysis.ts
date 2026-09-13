@@ -3,15 +3,7 @@ import { nflSampleReference, type NflSample } from '@/lib/nflSample'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getNflBdlCurrentSeasonStats, type NflBdlPlayerStat } from '@/lib/nflOdds'
-import type {
-  SidelineGame,
-  SidelineLens,
-  SidelinePlayer,
-  SidelineTeamProfile,
-  SidelineWindow,
-  SidelineWindowData,
-  SidelineRosterPlayer,
-} from './types'
+import type { SidelineGame, SidelineLens, SidelinePlayer, SidelineTeamProfile, SidelineWindow, SidelineWindowData, SidelineRosterPlayer } from './types'
 
 type Row = Record<string, unknown>
 
@@ -21,9 +13,16 @@ const numeric = (value: unknown) => {
 }
 const truthy = (value: unknown) => value === true || value === 1 || value === '1' || value === 'true'
 const clamp = (value: number, minimum = 0, maximum = 100) => Math.min(maximum, Math.max(minimum, value))
-const percent = (part: number, total: number) => total > 0 ? Math.round((part / total) * 1000) / 10 : 0
+const percent = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 1000) / 10 : 0)
 const round1 = (value: number) => Math.round(value * 10) / 10
-const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' }
+const TEAM_ALIASES: Record<string, string> = {
+  LA: 'LAR',
+  JAC: 'JAX',
+  OAK: 'LV',
+  SD: 'LAC',
+  STL: 'LAR',
+  WAS: 'WSH',
+}
 const canonicalTeam = (value: unknown) => {
   const upper = String(value ?? '').toUpperCase()
   return TEAM_ALIASES[upper] ?? upper
@@ -60,8 +59,8 @@ function profileTeam(team: SidelineGame['home'], rows: Row[]): SidelineTeamProfi
   const redZoneScores = redZone.filter(row => truthy(row.pass_touchdown) || truthy(row.rush_touchdown))
   const thirdDown = offense.filter(row => numeric(row.down) === 3)
   const thirdDownWins = thirdDown.filter(row => truthy(row.success) || numeric(row.yards_gained) >= numeric(row.ydstogo))
-  const explosive = offense.filter(row => truthy(row.pass_attempt) ? numeric(row.yards_gained) >= 20 : numeric(row.yards_gained) >= 10)
-  const defenseExplosive = defense.filter(row => truthy(row.pass_attempt) ? numeric(row.yards_gained) >= 20 : numeric(row.yards_gained) >= 10)
+  const explosive = offense.filter(row => (truthy(row.pass_attempt) ? numeric(row.yards_gained) >= 20 : numeric(row.yards_gained) >= 10))
+  const defenseExplosive = defense.filter(row => (truthy(row.pass_attempt) ? numeric(row.yards_gained) >= 20 : numeric(row.yards_gained) >= 10))
 
   return {
     team,
@@ -93,6 +92,7 @@ type PlayerAccumulator = {
   passAttempts: number
   completions: number
   passingYards: number
+  passingTouchdowns: number
   touchdowns: number
   airYardsWeight: number
   airYardsTotal: number
@@ -133,6 +133,7 @@ function ensurePlayer(map: Map<string, PlayerAccumulator>, row: Row, fallbackPos
     passAttempts: 0,
     completions: 0,
     passingYards: 0,
+    passingTouchdowns: 0,
     touchdowns: 0,
     airYardsWeight: 0,
     airYardsTotal: 0,
@@ -169,10 +170,22 @@ export function buildPlayers(
   passing: Row[],
   pbp: Row[],
   teams: SidelineGame['home'][],
-  bio: Map<string, { headshot: string | null; headshotFallbacks: string[]; jersey: number | null; position: string | null; rookieSeason: number | null; latestTeam: string | null; rosterStatus: string | null }>,
+  bio: Map<
+    string,
+    {
+      headshot: string | null
+      headshotFallbacks: string[]
+      jersey: number | null
+      position: string | null
+      rookieSeason: number | null
+      latestTeam: string | null
+      rosterStatus: string | null
+    }
+  >,
   rosterTeams: Map<string, string>,
   currentStats: CurrentStatRow[],
   roster: SidelineRosterPlayer[],
+  dvpRows: Row[],
 ): SidelinePlayer[] {
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
@@ -219,6 +232,7 @@ export function buildPlayers(
     player.passAttempts += attempts
     player.completions += numeric(row.completions)
     player.passingYards += numeric(row.pass_yards)
+    player.passingTouchdowns += numeric(row.pass_touchdowns)
     addWeighted(player, 'airYardsTotal', 'airYardsWeight', row.avg_intended_air_yards, attempts)
     addWeighted(player, 'cpoeTotal', 'cpoeWeight', row.completion_percentage_above_expectation, attempts)
     addWeighted(player, 'timeToThrowTotal', 'timeToThrowWeight', row.avg_time_to_throw, attempts)
@@ -231,9 +245,11 @@ export function buildPlayers(
     for (const player of playerMap.values()) {
       if (!teams.some(team => team.abbr === player.team)) continue
       player.games.clear()
-      player.targets = player.receptions = player.receivingYards = player.carries = player.rushingYards = player.passAttempts = player.completions = player.passingYards = player.touchdowns = 0
+      player.targets = player.receptions = player.receivingYards = player.carries = player.rushingYards = player.passAttempts = player.completions = player.passingYards = player.passingTouchdowns = player.touchdowns = 0
     }
-    teamTargets.clear(); teamCarries.clear(); teamPassAttempts.clear()
+    teamTargets.clear()
+    teamCarries.clear()
+    teamPassAttempts.clear()
     for (const row of pbp) {
       const team = String(row.posteam ?? '')
       if (!teams.some(item => item.abbr === team)) continue
@@ -244,24 +260,56 @@ export function buildPlayers(
         const existing = playerMap.get(id)
         if (existing) return existing
         const identity = roster.find(player => player.id === id)
-        return identity ? ensurePlayer(playerMap, { player_gsis_id: id, player_display_name: identity.name, player_position: identity.position, team_abbr: team }, identity.position) : null
+        return identity
+          ? ensurePlayer(
+              playerMap,
+              {
+                player_gsis_id: id,
+                player_display_name: identity.name,
+                player_position: identity.position,
+                team_abbr: team,
+              },
+              identity.position,
+            )
+          : null
       }
       const week = numeric(row.week)
       const yards = numeric(row.yards_gained)
       if (truthy(row.pass_attempt) && receiverId) {
         teamTargets.set(team, (teamTargets.get(team) ?? 0) + 1)
         const player = findPlayer(receiverId)
-        if (player) { player.games.add(week); player.targets++; if (truthy(row.complete_pass)) { player.receptions++; player.receivingYards += yards } if (truthy(row.pass_touchdown)) player.touchdowns++ }
+        if (player) {
+          player.games.add(week)
+          player.targets++
+          if (truthy(row.complete_pass)) {
+            player.receptions++
+            player.receivingYards += yards
+          }
+          if (truthy(row.pass_touchdown)) player.touchdowns++
+        }
       }
       if (truthy(row.rush_attempt) && rusherId) {
         teamCarries.set(team, (teamCarries.get(team) ?? 0) + 1)
         const player = findPlayer(rusherId)
-        if (player) { player.games.add(week); player.carries++; player.rushingYards += yards; if (truthy(row.rush_touchdown)) player.touchdowns++ }
+        if (player) {
+          player.games.add(week)
+          player.carries++
+          player.rushingYards += yards
+          if (truthy(row.rush_touchdown)) player.touchdowns++
+        }
       }
       if (truthy(row.pass_attempt) && passerId && !truthy(row.sack)) {
         teamPassAttempts.set(team, (teamPassAttempts.get(team) ?? 0) + 1)
         const player = findPlayer(passerId)
-        if (player) { player.games.add(week); player.passAttempts++; if (truthy(row.complete_pass)) { player.completions++; player.passingYards += yards } }
+        if (player) {
+          player.games.add(week)
+          player.passAttempts++
+          if (truthy(row.complete_pass)) {
+            player.completions++
+            player.passingYards += yards
+          }
+          if (truthy(row.pass_touchdown)) player.passingTouchdowns++
+        }
       }
     }
   }
@@ -288,12 +336,16 @@ export function buildPlayers(
       if (!rosterPlayer) continue
       let player = currentByPlayer.get(rosterPlayer.id)
       if (!player) {
-        player = ensurePlayer(new Map(), {
-          player_gsis_id: rosterPlayer.id,
-          player_display_name: rosterPlayer.name,
-          player_position: rosterPlayer.position,
-          team_abbr: rosterPlayer.team,
-        }, rosterPlayer.position)!
+        player = ensurePlayer(
+          new Map(),
+          {
+            player_gsis_id: rosterPlayer.id,
+            player_display_name: rosterPlayer.name,
+            player_position: rosterPlayer.position,
+            team_abbr: rosterPlayer.team,
+          },
+          rosterPlayer.position,
+        )!
         currentByPlayer.set(rosterPlayer.id, player)
       }
       player.team = statTeam
@@ -306,6 +358,7 @@ export function buildPlayers(
       player.passAttempts += passAttempts
       player.completions += numeric(row.passing_completions)
       player.passingYards += numeric(row.passing_yards)
+      player.passingTouchdowns += numeric(row.passing_touchdowns)
       // ATD/FTD concern touchdowns scored by the player, not QB passing TDs.
       player.touchdowns += numeric(row.receiving_touchdowns) + numeric(row.rushing_touchdowns)
     }
@@ -323,6 +376,7 @@ export function buildPlayers(
         historical.passAttempts = current.passAttempts
         historical.completions = current.completions
         historical.passingYards = current.passingYards
+        historical.passingTouchdowns = current.passingTouchdowns
         historical.touchdowns = current.touchdowns
       } else {
         playerMap.set(id, current)
@@ -352,10 +406,7 @@ export function buildPlayers(
   }
 
   return Array.from(playerMap.values())
-    .filter(player => (
-      teams.some(team => team.abbr === player.team)
-      || teams.some(team => team.abbr === rosterTeams.get(player.id))
-    ) && player.targets + player.carries + player.passAttempts > 0)
+    .filter(player => (teams.some(team => team.abbr === player.team) || teams.some(team => team.abbr === rosterTeams.get(player.id))) && player.targets + player.carries + player.passAttempts > 0)
     .map(player => {
       const playerBio = bio.get(player.id)
       const sampleTeam = player.team
@@ -374,39 +425,24 @@ export function buildPlayers(
       const cpoe = player.cpoeWeight ? player.cpoeTotal / player.cpoeWeight : 0
       const timeToThrow = player.timeToThrowWeight ? player.timeToThrowTotal / player.timeToThrowWeight : 0
       const isQuarterback = player.position === 'QB' || player.passAttempts > touches
-      const volume = clamp(isQuarterback ? 34 + passShare * .62 : targetShare * 1.5 + carryShare * .9)
-      const geometry = clamp(isQuarterback
-        ? 38 + airYards * 2.2 + Math.max(-5, cpoe) * 1.4
-        : 32 + airYards * 2.35 + separation * 5.2 + Math.max(0, rushOverExpected) * 11)
+      const resolvedPosition = String(playerBio?.position ?? player.position).toUpperCase()
+      const opponent = teams.find(team => team.abbr !== player.team)?.abbr ?? ''
+      const dvp = Object.fromEntries(dvpRows.filter(row => canonicalTeam(row.opponent_team) === opponent && String(row.position ?? '').toUpperCase() === resolvedPosition).map(row => [String(row.stat_category), numeric(row.pct_diff)]))
+      const volume = clamp(isQuarterback ? 34 + passShare * 0.62 : targetShare * 1.5 + carryShare * 0.9)
+      const geometry = clamp(isQuarterback ? 38 + airYards * 2.2 + Math.max(-5, cpoe) * 1.4 : 32 + airYards * 2.35 + separation * 5.2 + Math.max(0, rushOverExpected) * 11)
       const redZone = clamp(22 + player.redZoneLooks * 4.8 + player.goalLineLooks * 6.5 + player.redZoneScores * 8)
       const breakaway = clamp(28 + player.explosivePlays * 3.8 + Math.max(0, yacAboveExpected) * 8 + Math.max(0, rushOverExpected) * 9)
       const sampleVolume = touches + player.passAttempts
       const evidence = clamp(22 + Math.sqrt(sampleVolume) * 7)
-      const index = Math.round(volume * .3 + geometry * .24 + redZone * .18 + breakaway * .16 + evidence * .12)
-      const lane = redZone >= Math.max(volume, geometry, breakaway)
-        ? 'Red-zone role'
-        : geometry >= Math.max(volume, breakaway)
-          ? isQuarterback ? 'Vertical passing' : 'Route geometry'
-          : breakaway > volume
-            ? 'Explosive lane'
-            : isQuarterback ? 'Dropback volume' : 'Volume lane'
+      const index = Math.round(volume * 0.3 + geometry * 0.24 + redZone * 0.18 + breakaway * 0.16 + evidence * 0.12)
+      const lane = redZone >= Math.max(volume, geometry, breakaway) ? 'Red-zone role' : geometry >= Math.max(volume, breakaway) ? (isQuarterback ? 'Vertical passing' : 'Route geometry') : breakaway > volume ? 'Explosive lane' : isQuarterback ? 'Dropback volume' : 'Volume lane'
 
       return {
         id: player.id,
-        unavailableMetrics: [
-          ...(!hasTeamSample ? ['targetShare', 'carryShare'] : []),
-          ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []),
-          ...(!player.airYardsWeight ? ['airYards'] : []),
-          ...(!player.airShareWeight ? ['airYardsShare'] : []),
-          ...(!player.separationWeight ? ['separation'] : []),
-          ...(!player.yacWeight ? ['yacAboveExpected'] : []),
-          ...(!player.rushOeWeight ? ['rushOverExpected'] : []),
-          ...(!player.cpoeWeight ? ['cpoe'] : []),
-          ...(!player.timeToThrowWeight ? ['timeToThrow'] : []),
-        ],
+        unavailableMetrics: [...(!hasTeamSample ? ['targetShare', 'carryShare'] : []), ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []), ...(!player.airYardsWeight ? ['airYards'] : []), ...(!player.airShareWeight ? ['airYardsShare'] : []), ...(!player.separationWeight ? ['separation'] : []), ...(!player.yacWeight ? ['yacAboveExpected'] : []), ...(!player.rushOeWeight ? ['rushOverExpected'] : []), ...(!player.cpoeWeight ? ['cpoe'] : []), ...(!player.timeToThrowWeight ? ['timeToThrow'] : [])],
         name: player.name,
         team: player.team,
-        position: playerBio?.position ?? player.position,
+        position: resolvedPosition,
         headshot: playerBio?.headshot ?? null,
         headshotFallbacks: playerBio?.headshotFallbacks ?? [],
         jersey: playerBio?.jersey ?? null,
@@ -429,6 +465,7 @@ export function buildPlayers(
         passAttempts: player.passAttempts,
         completions: player.completions,
         passingYards: player.passingYards,
+        passingTouchdowns: player.passingTouchdowns,
         touchdowns: player.touchdowns,
         targetShare,
         carryShare,
@@ -444,6 +481,7 @@ export function buildPlayers(
         redZoneLooks: player.redZoneLooks,
         goalLineLooks: player.goalLineLooks,
         explosivePlays: player.explosivePlays,
+        dvp,
         lane,
       }
     })
@@ -466,59 +504,57 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
   const loadPlays = async () => {
     const rows: Row[] = []
     for (let offset = 0; offset < 20000; offset += 500) {
-      const result = await admin.from('nfl_pbp')
-      .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,complete_pass,sack,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
-        .eq('season', season).eq('season_type', phase).lt('game_date', game.gameday)
+      const result = await admin
+        .from('nfl_pbp')
+        .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,complete_pass,sack,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+        .eq('season', season)
+        .eq('season_type', phase)
+        .lt('game_date', game.gameday)
         .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
-        .order('game_id').order('play_id').range(offset, offset + 499)
+        .order('game_id')
+        .order('play_id')
+        .range(offset, offset + 499)
       if (result.error) throw new Error(`NFL play sample unavailable: ${result.error.message}`)
       rows.push(...result.data)
       if (result.data.length < 500) return { data: rows }
     }
     throw new Error('NFL play sample exceeded paging bound; refusing a partial sample')
   }
-  const [pbpResult, receivingResult, rushingResult, passingResult, currentStatsRaw] = await Promise.all([
+  const [pbpResult, receivingResult, rushingResult, passingResult, dvpResult, currentStatsRaw] = await Promise.all([
     loadPlays(),
-    admin.from('nfl_ngs_receiving')
-      .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
-      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
-    admin.from('nfl_ngs_rushing')
-      .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
-      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
-    admin.from('nfl_ngs_passing')
-      .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
-      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
+    admin.from('nfl_ngs_receiving').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
+    admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
+    admin.from('nfl_ngs_passing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
+    admin.from('nfl_dvp').select('position,opponent_team,stat_category,pct_diff,games').eq('season', season).in('opponent_team', teams),
     getNflBdlCurrentSeasonStats(season, teamIds, phase === 'PRE' ? 1 : 2).catch(error => {
       console.error('[the-sideline] current-season BDL stats unavailable', game.id, error)
       return []
     }),
   ])
 
-  const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving')
-    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
-    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
-  const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing')
-    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
-    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
-  const rosterPassing = rosterIds.length ? await admin.from('nfl_ngs_passing')
-    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
-    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
+  const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
+  const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
+  const rosterPassing = rosterIds.length ? await admin.from('nfl_ngs_passing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
 
   const uniqueRows = (rows: Row[]) => Array.from(new Map(rows.map(row => [`${row.player_gsis_id}:${row.week}`, row])).values())
-  const receiving = uniqueRows([...(receivingResult.data ?? []) as Row[], ...(rosterReceiving.data ?? []) as Row[]])
-  const rushing = uniqueRows([...(rushingResult.data ?? []) as Row[], ...(rosterRushing.data ?? []) as Row[]])
-  const passing = uniqueRows([...(passingResult.data ?? []) as Row[], ...(rosterPassing.data ?? []) as Row[]])
-  const actualIds = Array.from(new Set([
-    ...receiving.map(row => String(row.player_gsis_id ?? '')),
-    ...rushing.map(row => String(row.player_gsis_id ?? '')),
-    ...passing.map(row => String(row.player_gsis_id ?? '')),
-    ...rosterIds,
-  ].filter(Boolean)))
-  const bioResult = actualIds.length
-    ? await admin.from('nfl_players').select('gsis_id,headshot,jersey_number,position,rookie_season,last_season,latest_team,status,espn_id').in('gsis_id', actualIds)
-    : { data: [] }
+  const receiving = uniqueRows([...((receivingResult.data ?? []) as Row[]), ...((rosterReceiving.data ?? []) as Row[])])
+  const rushing = uniqueRows([...((rushingResult.data ?? []) as Row[]), ...((rosterRushing.data ?? []) as Row[])])
+  const passing = uniqueRows([...((passingResult.data ?? []) as Row[]), ...((rosterPassing.data ?? []) as Row[])])
+  const actualIds = Array.from(new Set([...receiving.map(row => String(row.player_gsis_id ?? '')), ...rushing.map(row => String(row.player_gsis_id ?? '')), ...passing.map(row => String(row.player_gsis_id ?? '')), ...rosterIds].filter(Boolean)))
+  const bioResult = actualIds.length ? await admin.from('nfl_players').select('gsis_id,headshot,jersey_number,position,rookie_season,last_season,latest_team,status,espn_id').in('gsis_id', actualIds) : { data: [] }
 
-  const bio = new Map<string, { headshot: string | null; headshotFallbacks: string[]; jersey: number | null; position: string | null; rookieSeason: number | null; latestTeam: string | null; rosterStatus: string | null }>()
+  const bio = new Map<
+    string,
+    {
+      headshot: string | null
+      headshotFallbacks: string[]
+      jersey: number | null
+      position: string | null
+      rookieSeason: number | null
+      latestTeam: string | null
+      rosterStatus: string | null
+    }
+  >()
   for (const row of bioResult.data ?? []) {
     const espn = row.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${row.espn_id}.png` : null
     const headshotFallbacks = Array.from(new Set([row.headshot, espn].filter((value): value is string => Boolean(value))))
@@ -533,8 +569,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     })
   }
   const eligibleStats = currentStatsRaw.filter(row => row.game?.date && row.game.date.slice(0, 10) < game.gameday)
-  const currentGameKeys = Array.from(new Set(eligibleStats.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`)))
-    .sort((a, b) => a.localeCompare(b))
+  const currentGameKeys = Array.from(new Set(eligibleStats.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`))).sort((a, b) => a.localeCompare(b))
   const sampleIndex = new Map(currentGameKeys.map((key, index) => [key, index + 1]))
   const currentStats: CurrentStatRow[] = eligibleStats.map(row => ({
     ...row,
@@ -549,18 +584,14 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     rosterTeams: new Map(roster.map(player => [player.id, player.team])),
     currentStats,
     roster,
+    dvpRows: (dvpResult.data ?? []) as Row[],
   }
 }
 
 function availableWeeks(data: Awaited<ReturnType<typeof querySeason>>) {
   const currentSamples = Array.from(new Set(data.currentStats.map(row => row.sampleIndex).filter(index => index > 0))).sort((a, b) => b - a)
   if (currentSamples.length && !data.receiving.length && !data.rushing.length && !data.passing.length) return currentSamples
-  return Array.from(new Set([
-    ...data.pbp.map(row => numeric(row.week)),
-    ...data.receiving.map(row => numeric(row.week)),
-    ...data.rushing.map(row => numeric(row.week)),
-    ...data.passing.map(row => numeric(row.week)),
-  ].filter(week => week > 0))).sort((a, b) => b - a)
+  return Array.from(new Set([...data.pbp.map(row => numeric(row.week)), ...data.receiving.map(row => numeric(row.week)), ...data.rushing.map(row => numeric(row.week)), ...data.passing.map(row => numeric(row.week))].filter(week => week > 0))).sort((a, b) => b - a)
 }
 
 function rowsForWeeks(rows: Row[], weeks: number[] | null) {
@@ -577,33 +608,29 @@ function rowsForWeeks(rows: Row[], weeks: number[] | null) {
 
 function buildWindow(game: SidelineGame, data: Awaited<ReturnType<typeof querySeason>>, weeks: number[] | null): SidelineWindowData {
   const currentSample = data.currentStats.length > 0 && !data.receiving.length && !data.rushing.length && !data.passing.length
-  const historicalWeeks = currentSample && weeks != null
-    ? Array.from(new Set(data.pbp.map(row => numeric(row.week)).filter(week => week > 0))).sort((a, b) => b - a).slice(0, weeks.length)
-    : weeks
+  const historicalWeeks =
+    currentSample && weeks != null
+      ? Array.from(new Set(data.pbp.map(row => numeric(row.week)).filter(week => week > 0)))
+          .sort((a, b) => b - a)
+          .slice(0, weeks.length)
+      : weeks
   const pbp = historicalWeeks == null ? data.pbp : rowsForWeeks(data.pbp, historicalWeeks)
-  const currentStats = weeks == null
-    ? data.currentStats
-    : data.currentStats.filter(row => new Set(weeks).has(row.sampleIndex))
+  const currentStats = weeks == null ? data.currentStats : data.currentStats.filter(row => new Set(weeks).has(row.sampleIndex))
   return {
     plays: pbp.length,
     weeks: weeks ?? availableWeeks(data),
     teams: [profileTeam(game.away, pbp), profileTeam(game.home, pbp)],
-    players: buildPlayers(
-      rowsForWeeks(data.receiving, historicalWeeks),
-      rowsForWeeks(data.rushing, historicalWeeks),
-      rowsForWeeks(data.passing, historicalWeeks),
-      pbp,
-      [game.away, game.home],
-      data.bio,
-      data.rosterTeams,
-      currentStats,
-      data.roster,
-    ),
+    players: buildPlayers(rowsForWeeks(data.receiving, historicalWeeks), rowsForWeeks(data.rushing, historicalWeeks), rowsForWeeks(data.passing, historicalWeeks), pbp, [game.away, game.home], data.bio, data.rosterTeams, currentStats, data.roster, data.dvpRows),
   }
 }
 
 function emptyWindow(game: SidelineGame): SidelineWindowData {
-  return { plays: 0, weeks: [], teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)], players: [] }
+  return {
+    plays: 0,
+    weeks: [],
+    teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)],
+    players: [],
+  }
 }
 
 export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineRosterPlayer[] = [], sample: NflSample = 'previous'): Promise<SidelineLens> {
@@ -620,11 +647,14 @@ export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineR
       l5: buildWindow(game, data, weeks.slice(0, 5)),
       l10: buildWindow(game, data, weeks.slice(0, 10)),
     }
-    const headline = windows.season.plays > 0 ? buildHeadline(windows.season.teams[0], windows.season.teams[1]) : {
-      script: 'Play-by-play unavailable',
-      detail: 'Box-score production may be available, but this sample cannot establish defensive tendencies or red-zone context.',
-      aggressor: game.away.abbr,
-    }
+    const headline =
+      windows.season.plays > 0
+        ? buildHeadline(windows.season.teams[0], windows.season.teams[1])
+        : {
+            script: 'Play-by-play unavailable',
+            detail: 'Box-score production may be available, but this sample cannot establish defensive tendencies or red-zone context.',
+            aggressor: game.away.abbr,
+          }
     const hasData = Object.values(windows).some(window => window.plays || window.players.length)
     const currentProductionGames = new Set(data.currentStats.map(row => row.game?.id).filter(Boolean)).size
     const hasCurrentProduction = currentProductionGames > 0
