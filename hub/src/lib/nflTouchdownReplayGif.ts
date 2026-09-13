@@ -91,7 +91,7 @@ async function remoteDataUri(url: string | null) {
   } catch { return '' }
 }
 
-async function loadSharpWithBundledFont() {
+async function loadSharpWithBundledFont(): Promise<typeof import('sharp').default> {
   const fontPath = join(process.cwd(), 'node_modules', 'next', 'dist', 'compiled', '@vercel', 'og', 'Geist-Regular.ttf')
   const configDir = join(tmpdir(), 'slipsurge-nfl-fontconfig')
   const configPath = join(configDir, 'fonts.conf')
@@ -109,9 +109,10 @@ async function loadSharpWithBundledFont() {
 </fontconfig>`)
   process.env.FONTCONFIG_FILE = configPath
   process.env.FONTCONFIG_PATH = configDir
-  const sharp = await loadSharpWithBundledFont()
-  sharp.concurrency(1)
-  return sharp
+  const sharpFactory: typeof import('sharp').default = (await import('sharp')).default
+  sharpFactory.cache(false)
+  sharpFactory.concurrency(1)
+  return sharpFactory
 }
 
 function marketTitle(quote: NflTouchdownMarketQuote) {
@@ -196,8 +197,7 @@ function frameSvg(event: NflTouchdownEvent, progress: number, assets: Assets) {
 export async function renderNflTouchdownReplayGif(event: NflTouchdownEvent) {
   const assets = await buildAssets(event)
   if (!assets.brand) throw new Error('SlipSurge brand logo is unavailable; refusing to render an unbranded replay.')
-  const sharp = (await import('sharp')).default
-  sharp.cache(false)
+  const sharp = await loadSharpWithBundledFont()
   const encoder = GIFEncoder()
   for (let index = 0; index < FRAMES; index += 1) {
     const rgba = await sharp(frameSvg(event, index / (FRAMES - 1), assets)).ensureAlpha().raw().toBuffer()
