@@ -1117,6 +1117,8 @@ test('product experience audit tracks every completed route dimension', async ()
   const audit = await read('src/lib/productExperienceAudit.ts')
   const roadmap = await read('src/lib/productRoadmap.ts')
   const roadmapUi = await read('src/app/admin/product-audit/RoadmapProgress.tsx')
+  const qualityQueue = await read('src/app/admin/product-audit/LiveQualityQueue.tsx')
+  const auditPage = await read('src/app/admin/product-audit/page.tsx')
   assert.ok(audit.includes("accessibility: 'complete'"))
   assert.ok(audit.includes("'/admin/product-audit'"))
   assert.ok(!audit.includes("accessibility: 'missing'"))
@@ -1124,6 +1126,10 @@ test('product experience audit tracks every completed route dimension', async ()
   assert.ok(roadmap.includes("id: 'account', label: 'Account Journey', status: 'complete'"))
   assert.ok(roadmap.includes("id: 'quality', label: 'Quality & Release', status: 'active'"))
   assert.ok(roadmapUi.includes('PRODUCT_ROADMAP_PHASES.map'))
+  assert.ok(qualityQueue.includes('Routes needing attention'))
+  assert.ok(qualityQueue.includes('row.p95Ms'))
+  assert.ok(auditPage.includes('routeHealth'))
+  assert.ok(auditPage.includes('b.failures - a.failures'))
 })
 
 test('settings editors expose programmatic field names and announced failures', async () => {
@@ -1827,7 +1833,7 @@ test('shared dense-data grids preserve columns, density, sorting, bounded rows, 
   assert.match(styles, /content-visibility:auto/)
   assert.match(styles, /\.mobile\{display:grid/)
   assert.match(styles, /prefers-reduced-motion:reduce/)
-  assert.match(audit, /<DataGrid ariaLabel="Product experience route audit"/)
+  assert.match(audit, /<DataGrid[\s\S]*ariaLabel="Product experience route audit"/)
 })
 
 test('product telemetry is privacy-minimal, bounded, admin-only, and retained for 90 days', async () => {
