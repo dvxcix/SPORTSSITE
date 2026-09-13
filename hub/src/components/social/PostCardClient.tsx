@@ -163,7 +163,15 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [isDeleted, setIsDeleted] = useState(false)
   const [isEditingPost, setIsEditingPost] = useState(false)
   const [editPostText, setEditPostText] = useState(initialPost.content ?? '')
-  const [renderedAt] = useState(() => Date.now())
+  // Reading the wall clock during render can make the server and browser
+  // disagree when hydration crosses a minute boundary. Keep the initial
+  // markup deterministic, then enable relative times after hydration.
+  const [renderedAt, setRenderedAt] = useState<number | null>(null)
+  const displayNowMs = renderedAt ?? new Date(initialPost.created_at).getTime()
+
+  useEffect(() => {
+    setRenderedAt(Date.now())
+  }, [])
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
   const post = { ...initialPost, pick_data: pickData, content }
 
@@ -186,7 +194,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // Edit window matches the "edit within 10 minutes" behavior the rest of
   // the app doesn't otherwise enforce anywhere — delete has no such limit,
   // same as every mainstream social app (X included).
-  const canEditPost = isOwnPost && renderedAt - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
+  const canEditPost = isOwnPost && renderedAt !== null && renderedAt - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
 
   async function suppressFromFeed(targetType: 'post' | 'author', targetId: string) {
     if (!user) return
@@ -656,7 +664,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     @{post.author.username}
                   </Link>
                   <span style={{ color: 'var(--text-4)', fontSize: 12 }}>·</span>
-                  <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at, renderedAt)}</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at, displayNowMs)}</span>
                 </div>
 
                 {/* More menu */}
@@ -1047,7 +1055,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 key={node.id}
                 node={node}
                 depth={0}
-                nowMs={renderedAt}
+                nowMs={displayNowMs}
                 currentUserId={user?.id}
                 currentUserAvatar={profile?.avatar_url}
                 currentUserDisplay={profile?.display_name || profile?.username}
