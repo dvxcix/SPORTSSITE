@@ -2,14 +2,25 @@ import { unstable_cache } from 'next/cache'
 import { bdlHeaders } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
+import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
+
+export type NflTouchdownMarketQuote = {
+  propType: string
+  label: string
+  vendor: string
+  line: number | null
+  odds: number
+  openingOdds: number | null
+}
 
 export type NflTouchdownEvent = {
   id: string; gameId: string; gameDate: string; bdlGameId: number | null; playerName: string; playerId: string | null; bdlPlayerId: number | null
-  headshot: string | null; position: string | null; team: string; opponent: string; teamLogo: string | null
+  headshot: string | null; position: string | null; team: string; opponent: string; awayTeam: string; homeTeam: string; teamLogo: string | null
   quarter: number; clock: string; kind: 'receiving' | 'rushing' | 'return' | 'defense' | 'other'; yards: number | null
   passerName: string | null; text: string; awayScore: number; homeScore: number; isFirstTdOfGame: boolean; playerTdNumber: number
   gameStatus: string; occurredAt: string | null; startYardLine: number | null; endYardLine: number | null
-  startYardsToEndzone: number | null; endYardsToEndzone: number | null
+  startYardsToEndzone: number | null; endYardsToEndzone: number | null; teamColor: string | null; opponentLogo: string | null
+  marketQuotes: NflTouchdownMarketQuote[]
 }
 
 type ScheduleRow = { game_id: string; season: number; week: number; game_type: string; gameday: string; away_team: string; home_team: string }
@@ -26,6 +37,7 @@ type BdlPlay = {
   participants?: BdlParticipant[] | null; wallclock?: string | null
 }
 type PlayerRow = { gsis_id: string; display_name: string; position: string | null; headshot: string | null; latest_team: string | null }
+type BoardRow = { game_id: string; board: SidelineOddsBoard; captured_at?: string }
 const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' }
 const canonicalTeam = (value: string) => TEAM_ALIASES[value.toUpperCase()] ?? value.toUpperCase()
 const numberOrNull = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : null
@@ -72,16 +84,41 @@ function matchGame(games: ApiGame[], row: ScheduleRow) {
   return candidates.reduce((best, game) => Math.abs(Date.parse(game.date) - target) < Math.abs(Date.parse(best.date) - target) ? game : best)
 }
 
+function findBoardPlayer(board: SidelineOddsBoard, playerName: string, team: string, bdlPlayerId: number | null) {
+  const normalized = normalizeNflPlayerName(playerName)
+  return board.players.find(player => (bdlPlayerId != null && player.id === bdlPlayerId) || (canonicalTeam(player.team) === team && normalizeNflPlayerName(player.name) === normalized))
+    ?? board.players.find(player => normalizeNflPlayerName(player.name) === normalized)
+}
+
+function touchdownQuotes(boards: SidelineOddsBoard[], playerName: string, team: string, bdlPlayerId: number | null) {
+  const quotes = new Map<string, NflTouchdownMarketQuote>()
+  for (const board of boards) {
+    const player: NflOddsPlayer | undefined = findBoardPlayer(board, playerName, team, bdlPlayerId)
+    for (const market of player?.markets ?? []) {
+      if (!(market.propType === 'first_td' || market.propType.startsWith('anytime_td'))) continue
+      for (const offer of market.offers) {
+        const odds = offer.current.odds ?? offer.current.over
+        if (odds == null) continue
+        const key = `${market.propType}:${market.line ?? offer.line ?? ''}:${offer.vendor}`
+        const quote = { propType: market.propType, label: market.label, vendor: offer.vendor, line: market.line ?? offer.line, odds, openingOdds: offer.opening?.odds ?? offer.opening?.over ?? null }
+        if (!quotes.has(key)) quotes.set(key, quote)
+      }
+    }
+  }
+  return [...quotes.values()]
+}
+
 export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent[]> {
   const admin = createAdminClient()
   const [{ data: schedule, error: scheduleError }, { data: teams }] = await Promise.all([
     admin.from('nfl_schedule').select('game_id,season,week,game_type,gameday,away_team,home_team').eq('gameday', date).limit(24).abortSignal(AbortSignal.timeout(10_000)),
-    admin.from('nfl_teams').select('team_abbr,team_logo_espn').abortSignal(AbortSignal.timeout(10_000)),
+    admin.from('nfl_teams').select('team_abbr,team_logo_espn,team_color').abortSignal(AbortSignal.timeout(10_000)),
   ])
   if (scheduleError) throw scheduleError
   const rows = (schedule ?? []) as ScheduleRow[]
   if (!rows.length) return []
   const teamLogos = new Map((teams ?? []).map(row => [canonicalTeam(String(row.team_abbr)), row.team_logo_espn as string | null]))
+  const teamColors = new Map((teams ?? []).map(row => [canonicalTeam(String(row.team_abbr)), row.team_color as string | null]))
   const pools = new Map<string, ApiGame[]>()
   await Promise.all(Array.from(new Set(rows.map(row => `${row.season}:${row.week}`))).map(async key => {
     const [season, week] = key.split(':').map(Number)
@@ -97,6 +134,21 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
   }))
   const touchdownPlays = playResults.flatMap(({ row, game, plays }) => plays.filter(isNflTouchdownPlay).map(play => ({ row, game, play })))
   if (!touchdownPlays.length) return []
+  const gameIds = Array.from(new Set(matched.map(({ row }) => row.game_id)))
+  const [{ data: oddsRows, error: oddsError }, { data: fanduelRows, error: fanduelError }] = await Promise.all([
+    admin.from('nfl_odds_current').select('game_id,board,captured_at').in('game_id', gameIds).abortSignal(AbortSignal.timeout(10_000)),
+    admin.from('nfl_fanduel_capture_history').select('game_id,board,captured_at').in('game_id', gameIds).order('captured_at', { ascending: false }).limit(250).abortSignal(AbortSignal.timeout(10_000)),
+  ])
+  if (oddsError) console.error('[nfl-touchdowns] odds receipt lookup failed', { date, error: oddsError.message })
+  if (fanduelError) console.error('[nfl-touchdowns] FanDuel receipt lookup failed', { date, error: fanduelError.message })
+  const boardsByGame = new Map<string, SidelineOddsBoard[]>()
+  for (const row of (oddsRows ?? []) as BoardRow[]) boardsByGame.set(row.game_id, [{ ...row.board, capturedAt: row.captured_at ?? row.board.capturedAt }])
+  const seenFanduel = new Set<string>()
+  for (const row of (fanduelRows ?? []) as BoardRow[]) {
+    if (seenFanduel.has(row.game_id)) continue
+    seenFanduel.add(row.game_id)
+    boardsByGame.set(row.game_id, [...(boardsByGame.get(row.game_id) ?? []), { ...row.board, capturedAt: row.captured_at ?? row.board.capturedAt }])
+  }
   const scorerNames = Array.from(new Set(touchdownPlays.map(({ play }) => scorerFromText(play.short_text?.trim() || play.text?.trim() || '')).filter(Boolean)))
   const { data: playerRows, error: playerError } = await admin.from('nfl_players').select('gsis_id,display_name,position,headshot,latest_team').in('display_name', scorerNames).limit(250).abortSignal(AbortSignal.timeout(10_000))
   if (playerError) console.error('[nfl-touchdowns] player identity lookup failed', { date, error: playerError.message })
@@ -118,12 +170,14 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
     const bdlPlayerId = numberOrNull(play.participants?.find(participant => participant.type === scorerRole)?.player_id ?? play.participants?.find(participant => !String(participant.type).includes('kicker') && participant.type !== 'passer')?.player_id)
     events.push({
       id: String(play.id), gameId: row.game_id, gameDate: row.gameday, bdlGameId: game.id, playerName, playerId: player?.gsis_id ?? null, bdlPlayerId,
-      headshot: player?.headshot ?? null, position: player?.position ?? null, team,
+      headshot: player?.headshot ?? null, position: player?.position ?? null, team, awayTeam: canonicalTeam(row.away_team), homeTeam: canonicalTeam(row.home_team),
       opponent: team === canonicalTeam(row.away_team) ? canonicalTeam(row.home_team) : canonicalTeam(row.away_team), teamLogo: teamLogos.get(team) ?? null,
       quarter: Number(play.period ?? 0), clock: play.clock_display ?? '', kind, yards: numberOrNull(play.stat_yardage), passerName: passerFromText(shortText), text: shortText,
       awayScore: Number(play.away_score ?? 0), homeScore: Number(play.home_score ?? 0), isFirstTdOfGame: false, playerTdNumber: 0,
       gameStatus: game.status ?? game.status_state ?? '', occurredAt: play.wallclock ?? null, startYardLine: numberOrNull(play.start_yard_line), endYardLine: numberOrNull(play.end_yard_line),
-      startYardsToEndzone: numberOrNull(play.start_yards_to_endzone), endYardsToEndzone: numberOrNull(play.end_yards_to_endzone),
+      startYardsToEndzone: numberOrNull(play.start_yards_to_endzone), endYardsToEndzone: numberOrNull(play.end_yards_to_endzone), teamColor: teamColors.get(team) ?? null,
+      opponentLogo: teamLogos.get(team === canonicalTeam(row.away_team) ? canonicalTeam(row.home_team) : canonicalTeam(row.away_team)) ?? null,
+      marketQuotes: touchdownQuotes(boardsByGame.get(row.game_id) ?? [], playerName, team, bdlPlayerId),
     })
   }
   events.sort((a, b) => Date.parse(a.occurredAt ?? '') - Date.parse(b.occurredAt ?? '') || a.quarter - b.quarter)

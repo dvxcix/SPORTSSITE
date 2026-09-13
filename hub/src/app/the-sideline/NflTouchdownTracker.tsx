@@ -11,6 +11,14 @@ const KIND_LABELS: Record<NflTouchdownEvent['kind'], string> = {
   receiving: 'Receiving TD', rushing: 'Rushing TD', return: 'Return TD', defense: 'Defensive TD', other: 'Touchdown',
 }
 
+function american(value: number) { return value > 0 ? `+${value}` : String(value) }
+
+function receiptQuotes(event: NflTouchdownEvent) {
+  return event.marketQuotes
+    .filter(quote => quote.vendor === 'fanduel' && (quote.propType === 'first_td' ? event.isFirstTdOfGame : quote.propType === 'anytime_td' && (quote.line ?? .5) <= .5))
+    .slice(0, 2)
+}
+
 function Avatar({ event }: { event: NflTouchdownEvent }) {
   const [failed, setFailed] = useState(false)
   return <span className={styles.avatar}>
@@ -55,13 +63,16 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
             {(['all', 'receiving', 'rushing', 'return', 'defense'] as const).map(kind => <button key={kind} type="button" className={filter === kind ? styles.active : ''} onClick={() => setFilter(kind)}>{kind === 'all' ? 'All TDs' : KIND_LABELS[kind]}</button>)}
           </nav>
           <div className={styles.list}>
-            {!visible.length ? <div className={styles.empty}>No touchdowns in this view yet.</div> : visible.map(event => <article key={event.id}>
+            {!visible.length ? <div className={styles.empty}>No touchdowns in this view yet.</div> : visible.map(event => {
+              const quotes = receiptQuotes(event)
+              return <article key={event.id}>
               <button type="button" className={styles.eventButton} onClick={() => { onJumpToGame(event.gameId); setOpen(false) }} aria-label={`Open ${event.team} versus ${event.opponent} in The Sideline`}>
                 <Avatar event={event} />
                 <span className={styles.identity}>
                   <span><strong>{event.playerName}</strong>{event.isFirstTdOfGame ? <mark>1ST</mark> : null}{event.playerTdNumber > 1 ? <mark>{event.playerTdNumber} TD</mark> : null}</span>
                   <small>{event.team} · {KIND_LABELS[event.kind]}{event.yards != null ? ` · ${event.yards} YD` : ''}</small>
                   <em>{event.text}</em>
+                  {quotes.length ? <span className={styles.marketStrip}>{quotes.map(quote => <span key={`${quote.propType}:${quote.line}`}><b>{quote.propType === 'first_td' ? 'FTD' : 'ATD'}</b> {american(quote.odds)}</span>)}</span> : null}
                 </span>
                 <span className={styles.moment}>
                   <b>Q{event.quarter} · {event.clock}</b>
@@ -73,7 +84,7 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
                 <span className={styles.field} aria-hidden="true"><i style={{ '--start': `${Math.max(3, 100 - (event.startYardsToEndzone ?? event.yards ?? 20))}%`, '--finish': `${Math.min(97, 100 - (event.endYardsToEndzone ?? 0))}%` } as CSSProperties} /></span>
                 <a href={`/the-sideline/touchdown-replay?date=${encodeURIComponent(event.gameDate)}&event=${encodeURIComponent(event.id)}`}><Download size={12} /> GIF replay</a>
               </div>
-            </article>)}
+            </article>})}
           </div>
           <footer>Updates with The Sideline&apos;s live game refresh.</footer>
         </section>
