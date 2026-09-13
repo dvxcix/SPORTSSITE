@@ -12,6 +12,7 @@ const isLocalTarget = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(baseU
 const browser = await chromium.launch({ executablePath: edgePath, headless: true })
 const failures = []
 const captureDir = process.env.RESPONSIVE_CAPTURE_DIR || ''
+const authenticatedStorage = process.env.SMOKE_AUTH_STORAGE || ''
 if (captureDir) await mkdir(captureDir, { recursive: true })
 
 function excerpt(value) {
@@ -31,6 +32,9 @@ async function verifyPage(context, path, expectedText, options = {}) {
       timeout: 30_000,
     })
     const status = response?.status() ?? 0
+    if (options.requireAuthenticated && page.url().includes('/auth/login')) {
+      routeFailures.push('authenticated session was redirected to login')
+    }
 
     if (expectedText) {
       try {
@@ -267,6 +271,34 @@ try {
     ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/pricing', 'Ultimate'], ['/support', 'Support'],
   ], 2, ([path, expected]) => verifyPage(narrow, path, expected, { label: 'narrow', checkOverflow: true, checkTouchTargets: true, captureName: `narrow-${path}` }))
   await narrow.close()
+
+  if (authenticatedStorage) {
+    const authenticatedRoutes = [
+      '/feed', '/profile/parlayparty', '/notifications', '/messages', '/community', '/groups', '/channels',
+      '/settings/profile', '/dugout', '/slate-breakdown', '/the-public', '/the-sideline', '/research',
+    ]
+    const deviceMatrix = [
+      { label: 'auth-desktop', viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
+      { label: 'auth-tablet', viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+      { label: 'auth-mobile', viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
+      { label: 'auth-fold', viewport: { width: 884, height: 1104 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+      { label: 'auth-narrow', viewport: { width: 320, height: 700 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+    ]
+    for (const device of deviceMatrix) {
+      const context = await browser.newContext({ ...device, storageState: authenticatedStorage, colorScheme: 'dark' })
+      await runInBatches(authenticatedRoutes, 3, path => verifyPage(context, path, null, {
+        label: device.label,
+        requireAuthenticated: true,
+        checkOverflow: true,
+        checkPerformance: true,
+        checkTouchTargets: device.hasTouch,
+        captureName: `${device.label}-${path}`,
+      }))
+      await context.close()
+    }
+  } else {
+    console.log('SKIP authenticated route matrix (set SMOKE_AUTH_STORAGE to a Playwright storage-state file)')
+  }
 } finally {
   await browser.close()
 }
