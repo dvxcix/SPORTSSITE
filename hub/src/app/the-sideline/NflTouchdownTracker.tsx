@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { Flame, Radio, X } from 'lucide-react'
+import { Download, Flame, Radio, X } from 'lucide-react'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import styles from './touchdownTracker.module.css'
 
@@ -69,6 +69,10 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
                   <em>{event.awayScore}–{event.homeScore}</em>
                 </span>
               </button>
+              <div className={styles.replayRow}>
+                <span className={styles.field} aria-hidden="true"><i style={{ '--start': `${Math.max(3, 100 - (event.startYardsToEndzone ?? event.yards ?? 20))}%`, '--finish': `${Math.min(97, 100 - (event.endYardsToEndzone ?? 0))}%` } as CSSProperties} /></span>
+                <a href={`/the-sideline/touchdown-replay?date=${encodeURIComponent(event.gameDate)}&event=${encodeURIComponent(event.id)}`}><Download size={12} /> GIF replay</a>
+              </div>
             </article>)}
           </div>
           <footer>Updates with The Sideline&apos;s live game refresh.</footer>
