@@ -25,6 +25,7 @@ import {
   type MemberRingStyle,
 } from "@/components/social/MemberAvatar";
 import { LinkifiedText } from "@/components/social/LinkifiedText";
+import { EmojiText } from "@/components/social/EmojiText";
 import { EmojiPicker } from "@/components/social/EmojiPicker";
 import { GifPicker } from "@/components/social/GifPicker";
 import { SafeImage } from "@/components/ui/SafeImage";
@@ -593,7 +594,7 @@ export function GroupDMRoom({
                     }
                   >
                     <Reply size={10} />
-                    <p>{reply.content}</p>
+                    <p><EmojiText text={reply.content || ""} /></p>
                   </button>
                 )}
                 <div
@@ -712,7 +713,7 @@ export function GroupDMRoom({
             <Reply size={12} />
             <div>
               <span>Replying to message</span>
-              <p>{replyingTo.content}</p>
+              <p><EmojiText text={replyingTo.content || ""} /></p>
             </div>
             <button
               type="button"

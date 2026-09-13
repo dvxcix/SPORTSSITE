@@ -20,6 +20,7 @@ import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
 import { hasCreatorAccess } from '@/lib/creator'
 import type { Metadata } from 'next'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -351,8 +352,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 {replies.length ? replies.map(reply => (
                   <Link key={reply.id} href={`/posts/${reply.post_id}`} className="group block rounded-2xl border border-white/[.075] bg-white/[.018] p-4 transition hover:border-lime-400/25 hover:bg-white/[.035]">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500"><MessageCircleReply size={13} className="text-lime-300"/><span>Replied to {reply.post?.author?.display_name || `@${reply.post?.author?.username || 'a post'}`}</span><time className="ml-auto">{new Date(reply.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time></div>
-                    <p className="mt-2 text-sm leading-6 text-zinc-200">{reply.content}</p>
-                    {reply.post?.content ? <p className="mt-3 line-clamp-2 border-l-2 border-white/[.09] pl-3 text-xs leading-5 text-zinc-500">{reply.post.content}</p> : null}
+                    <p className="mt-2 text-sm leading-6 text-zinc-200"><LinkifiedText text={reply.content} /></p>
+                    {reply.post?.content ? <p className="mt-3 line-clamp-2 border-l-2 border-white/[.09] pl-3 text-xs leading-5 text-zinc-500"><LinkifiedText text={reply.post.content} /></p> : null}
                   </Link>
                 )) : <ProfileEmpty icon={<MessageCircleReply size={24}/>} title="No replies yet" />}
               </div>

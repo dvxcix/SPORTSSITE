@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { CalendarClock, CalendarDays, Check, Clock3, Edit3, FileText, Loader2, Send, Trash2, X } from 'lucide-react'
 import styles from './ScheduledPostPlanner.module.css'
+import { EmojiText } from '@/components/social/EmojiText'
 
 export type ScheduledPost = { id: string; content: string; post_type: string; sport: string | null; visibility: string; scheduled_for: string; status: string; published_post_id: string | null; attempts: number; created_at: string; updated_at?: string }
 
@@ -99,7 +100,7 @@ export function ScheduledPostPlanner({ posts }: { posts: ScheduledPost[] }) {
 
   const row = (post: ScheduledPost) => <div key={post.id} className={styles.queueRow} data-editing={editingId === post.id}>
     <span className={styles[post.status] || ''}>{post.status}</span>
-    <div><strong>{post.content}</strong><small>{post.sport || 'All sports'} · {post.visibility} · {post.status === 'draft' ? 'Unscheduled' : new Date(post.scheduled_for).toLocaleString()}</small></div>
+    <div><strong><EmojiText text={post.content} /></strong><small>{post.sport || 'All sports'} · {post.visibility} · {post.status === 'draft' ? 'Unscheduled' : new Date(post.scheduled_for).toLocaleString()}</small></div>
     <div className={styles.rowActions}>
       <button type="button" onClick={() => edit(post)} disabled={Boolean(busy)} aria-label={'Edit ' + post.content}><Edit3 size={13}/></button>
       {post.status === 'scheduled' ? <button type="button" onClick={() => void cancel(post)} disabled={busy === post.id} aria-label="Cancel scheduled post">{busy === post.id ? <Loader2 className="animate-spin" size={13}/> : <X size={13}/>}</button>

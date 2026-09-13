@@ -7,6 +7,7 @@ import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Use
 import { useCustomEmojis } from '@/lib/emoji'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { EmojiText } from '@/components/social/EmojiText'
 import styles from './NotificationsList.module.css'
 
 export const NOTIF_ICONS: Record<string, LucideIcon> = {
@@ -238,7 +239,7 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
       <div className={styles.copy}>
         <p>
           {actorName && <strong>{actorName} </strong>}
-          {n.message || n.body || 'interacted with you'}
+          <EmojiText text={n.message || n.body || 'interacted with you'} />
         </p>
         <time>{timeAgo(n.created_at, nowMs)}</time>
       </div>

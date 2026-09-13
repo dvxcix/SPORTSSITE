@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Images, Pin, Search, X } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { EmojiText } from '@/components/social/EmojiText'
 import type { DMMessage } from './DMRoom'
 import styles from './DMConversationTools.module.css'
 
@@ -49,7 +50,7 @@ export function DMConversationTools({ mode, messages, pinnedMessageIds, onModeCh
         ) : (
           <button key={message.id} type="button" className={styles.result} onClick={() => onJump(message.id)}>
             <span><time>{new Date(message.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time>{pinnedMessageIds.has(message.id) && <Pin size={10} />}</span>
-            <p>{message.content || (message.media_urls?.length ? 'Shared media' : 'Message')}</p>
+            <p><EmojiText text={message.content || (message.media_urls?.length ? 'Shared media' : 'Message')} /></p>
           </button>
         ))}
       </div>

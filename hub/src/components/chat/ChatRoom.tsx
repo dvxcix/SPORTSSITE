@@ -10,6 +10,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { sendDesktopNotification } from '@/lib/desktopNotifications'
 import { MentionInput } from '@/components/social/MentionInput'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { EmojiText } from '@/components/social/EmojiText'
 import { notifyMentions } from '@/lib/mentions'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -224,7 +225,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
           ) : <time>{stamp}</time>}
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}
-            {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p>{replyTarget.content}</p></button>}
+            {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
             {message.is_deleted ? <p className="ss-chat-deleted">Message deleted</p> : message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} />{message.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
             {!message.is_deleted && message.media_urls?.[0] && <SafeImage src={message.media_urls[0]} alt="" className="ss-chat-media"/>}
             <MessageReactionBar reactions={reactions[message.id]} disabled={!currentUserId || message.is_deleted} onToggle={emoji => void toggleReaction(message.id, emoji)}/>
@@ -241,7 +242,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     {typingUsers.length > 0 && <div className="ss-chat-typing" role="status"><i/><i/><i/><span>{typingUsers.length > 1 ? `${typingUsers.length} members are typing` : 'Someone is typing'}</span></div>}
     {!atBottom && <button type="button" className="ss-chat-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
     <div className="ss-chat-composer-wrap">
-      {editingMessage ? <div className="ss-chat-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setInput('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
+      {editingMessage ? <div className="ss-chat-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setInput('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
       {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
       {readOnly ? <p className="ss-chat-signin">Only community staff can post in this channel.</p> : !currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
         <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); notifyTyping(); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {

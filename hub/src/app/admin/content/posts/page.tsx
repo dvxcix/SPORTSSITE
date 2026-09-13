@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { EmojiText } from '@/components/social/EmojiText'
 import { AdminPostActions } from '@/components/admin/AdminPostActions'
 import { Search } from 'lucide-react'
 import Link from 'next/link'
@@ -138,7 +139,7 @@ export default async function AdminPostsPage({
                 </td>
                 <td className="px-4 py-3 text-sm text-zinc-300 max-w-xs">
                   <Link href={`/posts/${p.id}`} target="_blank" className="hover:underline">
-                    <p className="line-clamp-2">{p.content || <span className="text-zinc-600 italic">(no text)</span>}</p>
+                    <p className="line-clamp-2">{p.content ? <EmojiText text={p.content} /> : <span className="text-zinc-600 italic">(no text)</span>}</p>
                   </Link>
                 </td>
                 <td className="px-4 py-3">

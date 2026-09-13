@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { EmojiText } from '@/components/social/EmojiText'
 import { AdminDeleteRowAction } from '@/components/admin/AdminDeleteRowAction'
 import { SafeImage } from '@/components/ui/SafeImage'
 
@@ -47,7 +48,7 @@ export default async function AdminStoriesPage() {
                           <p className="text-xs text-zinc-400 line-clamp-2">{s.caption}</p>
                         </div>
                       ) : (
-                        <p className="text-xs text-zinc-400 line-clamp-2">{s.content}</p>
+                        <p className="text-xs text-zinc-400 line-clamp-2"><EmojiText text={s.content || ''} /></p>
                       )}
                     </td>
                     <td className="px-4 py-3">

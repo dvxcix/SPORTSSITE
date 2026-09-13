@@ -15,6 +15,7 @@ import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl'
 
@@ -475,7 +476,7 @@ export function SearchClient() {
                       )}
                       {p.post_type === 'parlay' && <span className="text-[10px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
                     </div>
-                    <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2">{p.content}</p>
+                    <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2"><LinkifiedText text={p.content || ''} /></p>
                     {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />

@@ -2,6 +2,7 @@
 
 import { Heart, MessageCircle, Repeat2, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 
 export interface Post {
   id: string
@@ -33,7 +34,7 @@ export function PostCard({ post }: PostCardProps) {
             <span className="text-zinc-600 text-xs ml-auto">{post.createdAt}</span>
           </div>
 
-          <p className="mt-1.5 text-sm text-zinc-200 leading-relaxed">{post.content}</p>
+          <p className="mt-1.5 text-sm text-zinc-200 leading-relaxed"><LinkifiedText text={post.content} /></p>
 
           {post.pick && (
             <div className={`mt-3 rounded-lg border p-3 ${

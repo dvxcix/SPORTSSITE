@@ -9,6 +9,7 @@ import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { EmojiText } from '@/components/social/EmojiText'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { GifPicker } from '@/components/social/GifPicker'
@@ -283,7 +284,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
                 <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} ringStyle={partner.avatar_ring_style} ringColor={partner.avatar_ring_color} />
               )}
               <div className="ss-dm-bubble-wrap">
-                {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p>{replyTarget.content}</p></button>}
+                {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
                 {m.forwarded_from_id ? <span className="ss-dm-forwarded"><Forward size={10}/> Forwarded</span> : null}<div className={`ss-dm-bubble ${m.is_deleted ? 'is-deleted' : ''}`}>{m.is_deleted ? 'Message deleted' : <><LinkifiedText text={m.content || ''} />{m.edited_at ? <small className="ss-chat-edited">edited</small> : null}</>}</div>
                 {!m.is_deleted && m.media_urls?.[0] && <SafeImage src={m.media_urls[0]} alt="" className="ss-dm-media"/>}
                 <MessageReactionBar reactions={reactions[m.id]} disabled={m.is_deleted} onToggle={emoji => void toggleReaction(m.id, emoji)}/>
@@ -300,7 +301,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
 
       {/* Input */}
       <div className="ss-dm-composer">
-        {editingMessage ? <div className="ss-dm-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setText('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-dm-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : partner.display_name || partner.username}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
+        {editingMessage ? <div className="ss-dm-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setText('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-dm-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : partner.display_name || partner.username}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
         {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
         <div className="ss-dm-composer-row">
           <textarea

@@ -23,6 +23,7 @@ import {
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminStatCard } from '@/components/admin/AdminStatCard'
 import { Badge } from '@/components/ui/badge'
+import { EmojiText } from '@/components/social/EmojiText'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -215,7 +216,7 @@ export default async function AdminDashboard() {
             {recentPosts.length > 0 ? recentPosts.map(post => (
               <article key={post.id} className="px-4 py-3 transition-colors hover:bg-[var(--surface-hover)] sm:px-5">
                 <div className="mb-1 flex items-center justify-between gap-3"><p className="truncate text-xs font-bold text-[var(--accent-primary)]">@{post.author?.username || 'unknown'}</p><time className="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{relativeTime(post.created_at)}</time></div>
-                <p className="line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{post.content || 'Post has no text content.'}</p>
+                <p className="line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]"><EmojiText text={post.content || 'Post has no text content.'} /></p>
               </article>
             )) : <EmptyRow label="No recent posts" />}
           </div>

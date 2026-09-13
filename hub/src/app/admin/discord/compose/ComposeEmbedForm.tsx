@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { EmojiText } from '@/components/social/EmojiText'
 
 const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 font-mono'
 const labelClass = 'block text-xs font-bold text-zinc-400 mb-1.5'
@@ -178,7 +179,7 @@ export function ComposeEmbedForm() {
       <div className="lg:sticky lg:top-6 self-start">
         <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Preview</p>
         <div className="bg-[#313338] rounded-lg p-4 space-y-2">
-          {content && <p className="text-[#dbdee1] text-sm whitespace-pre-wrap break-words">{content}</p>}
+          {content && <p className="text-[#dbdee1] text-sm whitespace-pre-wrap break-words"><EmojiText text={content} /></p>}
           {hasEmbed && (
             <div className="flex rounded overflow-hidden max-w-[440px]" style={{ background: '#2b2d31' }}>
               <div className="w-1 shrink-0" style={{ background: color }} />

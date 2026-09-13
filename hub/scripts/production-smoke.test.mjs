@@ -2017,3 +2017,35 @@ test('social composer and member previews use viewport-safe portaled surfaces', 
   assert.match(post, /className="ss-post-avatar-trigger"/)
   assert.match(styles, /\.ss-post-avatar-trigger\{align-self:flex-start/)
 })
+
+test('social GIF discovery is server-backed and custom emoji shortcodes render across public surfaces', async () => {
+  const route = await read('src/app/api/gifs/route.ts')
+  const picker = await read('src/components/social/GifPicker.tsx')
+  const emojiText = await read('src/components/social/EmojiText.tsx')
+  const styles = await read('src/app/community.css')
+  const renderers = await Promise.all([
+    'src/components/social/PostCard.tsx',
+    'src/components/social/PostCardClient.tsx',
+    'src/components/chat/ChatRoom.tsx',
+    'src/components/chat/DMRoom.tsx',
+    'src/components/chat/GroupDMRoom.tsx',
+    'src/components/social/MessageInbox.tsx',
+    'src/components/social/NotificationsList.tsx',
+    'src/components/search/SearchClient.tsx',
+    'src/app/profile/[username]/page.tsx',
+  ].map(read))
+  assert.match(route, /requireTier\('free'\)/)
+  assert.match(route, /process\.env\.TENOR_API_KEY/)
+  assert.match(route, /contentfilter', 'medium'/)
+  assert.match(route, /AbortSignal\.timeout\(6_000\)/)
+  assert.match(route, /registershare/)
+  assert.doesNotMatch(picker, /TENOR_API_KEY|tenor\.googleapis\.com/)
+  assert.match(picker, /Search thousands of GIFs/)
+  assert.match(picker, /\/api\/gifs/)
+  assert.match(picker, /function loadMore/)
+  assert.match(picker, /Powered by Tenor/)
+  assert.match(picker, /mobileSheet/)
+  assert.match(emojiText, /parseEmojiShortcodes\(text, customEmojis\)/)
+  assert.match(styles, /\.ss-gif-grid\{display:grid;grid-template-columns:repeat\(2/)
+  assert.ok(renderers.every(source => /LinkifiedText|EmojiText/.test(source)))
+})

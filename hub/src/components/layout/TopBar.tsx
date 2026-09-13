@@ -17,6 +17,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FloatingSurface } from '@/components/ui/FloatingSurface'
+import { EmojiText } from '@/components/social/EmojiText'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
@@ -97,7 +98,7 @@ function TopbarNotificationEntry({
         <span className="ss-topbar-notification-badge">{badge}</span>
       </div>
       <span className="ss-topbar-notification-copy">
-        <span>{message}</span>
+        <span><EmojiText text={message} /></span>
         <small>{compactTimeAgo(notification.created_at)}</small>
       </span>
       {unread ? <span className="ss-topbar-notification-unread" aria-label="Unread" /> : null}
@@ -480,7 +481,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     style={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>@{p.author?.username}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.content}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><EmojiText text={p.content || ''} /></span>
                   </button>
                 ))}
                 <button type="button" onClick={() => goTo(`/search?q=${encodeURIComponent(search.trim())}`)} style={{

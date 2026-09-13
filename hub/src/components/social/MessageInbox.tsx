@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Check, MessageCircle, Search, UserRoundPlus, X } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { EmojiText } from '@/components/social/EmojiText'
 import { createClient } from '@/lib/supabase/client'
 
 type Conversation = {
@@ -96,7 +97,7 @@ export function MessageInbox({ conversations, currentUserId }: { conversations: 
                 <MemberAvatar src={partner.avatarUrl} name={partner.displayName || partner.username} size={46} ringStyle={partner.avatarRingStyle ?? undefined} ringColor={partner.avatarRingColor ?? undefined} />
                 <div className="ss-conversation-copy">
                   <div><strong>{partner.displayName || partner.username}</strong><span>@{partner.username}</span></div>
-                  <p>{conversation.lastIsMine ? 'You: ' : ''}{conversation.content || 'Open conversation'}</p>
+                  <p>{conversation.lastIsMine ? 'You: ' : ''}<EmojiText text={conversation.content || 'Open conversation'} /></p>
                 </div>
                 <div className="ss-conversation-meta">
                   <span>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, LoaderCircle, MessageCircle, Send, UserMinus, UserPlus, UsersRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 import styles from './WorkspaceCollaboration.module.css'
 
 type Workspace = { id: string; user_id: string; name: string }
@@ -77,7 +78,7 @@ export function WorkspaceCollaboration({ workspace, userId }: { workspace: Works
       {members.map(member => { const user = profile(member.users); return <div key={member.user_id}><span className={activeIds.has(member.user_id) ? styles.activeAvatar : ''}><MemberAvatar src={user?.avatar_url} name={user?.display_name || user?.username || 'Member'} size={28} /></span><span><strong>{user?.display_name || user?.username || 'Member'}</strong><small>{member.role}</small></span>{(isOwner || member.user_id === userId) ? <button type="button" onClick={() => void remove(member.user_id)} aria-label={`Remove ${user?.display_name || user?.username || 'member'}`}>{busy === member.user_id ? <LoaderCircle className={styles.spin} /> : <UserMinus />}</button> : null}</div>})}
       {!members.length ? <p className={styles.empty}>Invite someone to research together.</p> : null}
     </div>
-    <div className={styles.thread}><div className={styles.threadTitle}><MessageCircle /> Board comments</div>{comments.map(item => { const user = profile(item.users); return <article key={item.id}><MemberAvatar src={user?.avatar_url} name={user?.display_name || user?.username || 'Member'} size={25} /><div><strong>{user?.display_name || user?.username || 'Member'}</strong><p>{item.body}</p><time>{new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></div></article>})}{!comments.length ? <p className={styles.empty}>No board comments yet.</p> : null}</div>
+    <div className={styles.thread}><div className={styles.threadTitle}><MessageCircle /> Board comments</div>{comments.map(item => { const user = profile(item.users); return <article key={item.id}><MemberAvatar src={user?.avatar_url} name={user?.display_name || user?.username || 'Member'} size={25} /><div><strong>{user?.display_name || user?.username || 'Member'}</strong><p><LinkifiedText text={item.body} /></p><time>{new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></div></article>})}{!comments.length ? <p className={styles.empty}>No board comments yet.</p> : null}</div>
     <div className={styles.composer}><textarea value={body} onChange={event => setBody(event.target.value)} placeholder="Add context to this board" maxLength={2000} aria-label="Workspace comment" /><button type="button" onClick={() => void comment()} disabled={!body.trim() || busy === 'comment'}>{busy === 'comment' ? <LoaderCircle className={styles.spin} /> : <Send />}<span className="sr-only">Post comment</span></button></div>
     {notice ? <div className={styles.notice} role="status">{notice.includes('updated') ? <Check /> : null}{notice}</div> : null}
   </section>

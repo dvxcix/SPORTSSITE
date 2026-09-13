@@ -9,6 +9,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
+import { EmojiText } from '@/components/social/EmojiText'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,7 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
             const name = post.author?.display_name || post.author?.username || 'Member'
             return <Link href={`/posts/${post.id}`} key={post.id} className="ss-hot-pick">
               <header><MemberAvatar src={post.author?.avatar_url} name={name} size={28} /><span>{name}</span><Flame size={13} /></header>
-              <div>{logo && <Image src={logo} alt="" width={34} height={34} />}<strong>{pick.pick || post.content || 'Community pick'}</strong></div>
+              <div>{logo && <Image src={logo} alt="" width={34} height={34} />}<strong><EmojiText text={pick.pick || post.content || 'Community pick'} /></strong></div>
               <footer><span>{post.sport}</span><span>{post.reaction_count ?? 0} reactions</span></footer>
             </Link>
           })}
