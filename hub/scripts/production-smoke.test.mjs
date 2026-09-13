@@ -113,7 +113,10 @@ test('contextual tooltips remain portaled, branded, and touch-safe', async () =>
 
 test('onboarding completion performs one durable handoff to the feed', async () => {
   const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')
-  assert.ok(onboarding.includes("window.location.replace('/feed')"), 'completed onboarding must hard-navigate to the feed')
+  assert.ok(/window\.location\.replace\(["']\/feed["']\)/.test(onboarding), 'completed onboarding must hard-navigate to the feed')
+  assert.ok(/window\.location\.replace\(["']\/pricing["']\)/.test(onboarding), 'membership destination must hard-navigate without racing the feed')
+  assert.ok(onboarding.includes('favoritePlayers'), 'onboarding must retain player personalization')
+  assert.ok(onboarding.includes('suggestedGroups'), 'onboarding must include community discovery')
   assert.ok(onboarding.includes("keepalive: true"), 'welcome notification should survive the document navigation')
   assert.ok(!/^\s*router\.push\('\/feed'\)/m.test(onboarding), 'onboarding must not start a competing client navigation')
   assert.ok(!/^\s*router\.refresh\(\)/m.test(onboarding), 'onboarding must not race a refresh against its redirect')
@@ -1400,6 +1403,7 @@ test('authentication and onboarding recover without exposing provider failures',
   const whopComplete = await read('src/app/auth/whop/complete/page.tsx')
   const security = await read('src/components/settings/SecuritySettingsForm.tsx')
   const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')
+  const onboardingPage = await read('src/app/onboarding/page.tsx')
   const onboardingSave = await read('src/app/api/account/onboarding/route.ts')
   assert.ok(login.includes("setError('Email or password is incorrect.')"))
   assert.ok(login.includes('autoComplete="current-password"'))
@@ -1425,7 +1429,7 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(!security.includes('setError(removeError.message)'))
   assert.ok(!security.includes('setError(signOutError.message)'))
   assert.ok(security.includes("role={error ? 'alert' : 'status'}"))
-  assert.ok(onboarding.includes("fetch('/api/account/onboarding'"))
+  assert.ok(/fetch\(["']\/api\/account\/onboarding["']/.test(onboarding))
   assert.ok(!onboarding.includes("supabase.from('users').update"))
   assert.ok(onboarding.includes("setError('We could not save your profile."))
   assert.ok(onboarding.includes('aria-pressed={sports.includes(sport)}'))
@@ -1434,6 +1438,9 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(onboardingSave.includes('createAdminClient()'))
   assert.ok(onboardingSave.includes("safeApiError('account-onboarding-save'"))
   assert.ok(onboardingSave.includes("'Cache-Control': 'private, no-store, max-age=0'"))
+  assert.ok(onboardingSave.includes('favorite_players: favoritePlayers(body.favoritePlayers)'))
+  assert.ok(onboardingSave.includes('banner_url: safeImageUrl(body.bannerUrl)'))
+  assert.ok(onboardingPage.includes(".from('groups')"))
 })
 
 test('saved posts hydrate consistently across feed and profile refreshes', async () => {

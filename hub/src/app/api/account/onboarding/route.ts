@@ -29,6 +29,21 @@ function safeImageUrl(value: unknown) {
   }
 }
 
+function favoritePlayers(value: unknown) {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<number>()
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object') return []
+    const player = item as Record<string, unknown>
+    const mlbId = Number(player.mlb_id)
+    const name = typeof player.name === 'string' ? player.name.trim().slice(0, 100) : ''
+    const team = typeof player.team === 'string' ? player.team.trim().slice(0, 12) : ''
+    if (!Number.isInteger(mlbId) || mlbId <= 0 || !name || seen.has(mlbId)) return []
+    seen.add(mlbId)
+    return [{ mlb_id: mlbId, name, team }]
+  }).slice(0, 8)
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -73,7 +88,9 @@ export async function POST(request: Request) {
     display_name: displayName || undefined,
     bio: bio || undefined,
     avatar_url: safeImageUrl(body.avatarUrl) || undefined,
+    banner_url: safeImageUrl(body.bannerUrl) || undefined,
     favorite_teams: teams,
+    favorite_players: favoritePlayers(body.favoritePlayers),
     favorite_sports: sports,
     interest_settings: { ...interests, content_mix: contentMix, market_focus: marketFocus, discovery_mode: interests.discovery_mode ?? 'balanced' },
     is_private: body.isPrivate === true,

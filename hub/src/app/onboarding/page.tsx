@@ -10,9 +10,9 @@ export default async function OnboardingPage() {
   if (!user) redirect('/auth/login')
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: suggested }, { data: nflTeams }] = await Promise.all([
+  const [{ data: profile }, { data: suggested }, { data: nflTeams }, { data: suggestedGroups }] = await Promise.all([
     admin.from('users')
-      .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, interest_settings, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
+      .select('username, display_name, bio, avatar_url, banner_url, favorite_teams, favorite_players, account_type, tier, favorite_sports, interest_settings, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
       .eq('id', user.id)
       .single(),
     supabase.from('users')
@@ -21,6 +21,11 @@ export default async function OnboardingPage() {
       .order('follower_count', { ascending: false })
       .limit(6),
     admin.from('nfl_teams').select('team_abbr,team_name,team_logo_espn').order('team_name'),
+    supabase.from('groups')
+      .select('id,slug,name,description,avatar_url,emoji,member_count')
+      .eq('is_public', true)
+      .order('member_count', { ascending: false })
+      .limit(3),
   ])
 
   // The proxy gate sends anyone with onboarding_completed_at still null
@@ -39,6 +44,7 @@ export default async function OnboardingPage() {
           initialProfile={profile}
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}
+          suggestedGroups={suggestedGroups ?? []}
           nflTeams={nflTeams ?? []}
         />
       </div>
