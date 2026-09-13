@@ -1,54 +1,130 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useState, type CSSProperties } from 'react'
+import { ArrowUpDown, Gauge, Route, Shield, Sparkles, Target } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import type { NflMarketOffer, NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import type { SidelineLens, SidelinePlayerGameLine } from './SidelineClient'
+import type { SidelineLens, SidelinePlayer, SidelinePlayerGameLine, Team } from './SidelineClient'
 import { PlayerIdentity } from './SidelineResearchClient'
 import styles from './sidelineCheatsheets.module.css'
 
 type View = 'edge' | 'hits' | 'explosives' | 'gaps' | 'defense'
 type LogField = Exclude<keyof SidelinePlayerGameLine, 'gameId'>
+type SortDirection = 'asc' | 'desc'
+type HitSummary = { hits: number; total: number; rate: number } | null
 
 const PROP_FIELDS: Record<string, LogField> = {
   receptions: 'receptions', receiving_yards: 'receivingYards', rushing_attempts: 'carries', rushing_yards: 'rushingYards',
-  passing_attempts: 'passAttempts', completions: 'completions', passing_yards: 'passingYards', anytime_td: 'touchdowns', first_td: 'firstTouchdowns',
+  passing_attempts: 'passAttempts', completions: 'completions', passing_yards: 'passingYards', passing_tds: 'touchdowns',
+  anytime_td: 'touchdowns', first_td: 'firstTouchdowns',
 }
 const PROP_LABELS: Record<string, string> = {
-  anytime_td: 'Anytime TD', first_td: 'First TD', receptions: 'Receptions', receiving_yards: 'Receiving yards', rushing_attempts: 'Rush attempts', rushing_yards: 'Rushing yards', passing_attempts: 'Pass attempts', completions: 'Completions', passing_yards: 'Passing yards',
+  anytime_td: 'Anytime TD', first_td: 'First TD', passing_tds: 'Passing TDs', receptions: 'Receptions',
+  receiving_yards: 'Receiving Yards', rushing_attempts: 'Rush Attempts', rushing_yards: 'Rushing Yards',
+  passing_attempts: 'Pass Attempts', completions: 'Completions', passing_yards: 'Passing Yards',
 }
+const PROJECTION_KEYS: Record<string, string> = {
+  receiving_yards: 'receiving-yards', rushing_yards: 'rushing-yards', rushing_attempts: 'rush-attempts',
+  passing_yards: 'passing-yards', passing_attempts: 'pass-attempts', receptions: 'receptions',
+  completions: 'completions', passing_tds: 'touchdown', anytime_td: 'touchdown', first_td: 'touchdown',
+}
+const VIEW_META = [
+  ['edge', 'Market Edge', Gauge], ['hits', 'Exact-Line Hits', Target], ['explosives', 'Explosive Plays', Sparkles],
+  ['gaps', 'Run Gaps', Route], ['defense', 'Defense / DvP', Shield],
+] as const
 const cleanTeam = (value: string) => ({ LA: 'LAR', JAC: 'JAX', OAK: 'LV', WAS: 'WSH' }[value.toUpperCase()] ?? value.toUpperCase())
+const playerKey = (name: string, team: string) => `${cleanTeam(team)}:${normalizeNflPlayerName(name)}`
 const price = (value: number | null) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
-const percent = (value: number | null) => value == null ? '—' : `${value.toFixed(1)}%`
 const currentPrice = (offer: NflMarketOffer | undefined) => offer?.current.over ?? offer?.current.odds ?? null
 const openingPrice = (offer: NflMarketOffer | undefined) => offer?.opening?.over ?? offer?.opening?.odds ?? null
-const playerKey = (name: string, team: string) => `${cleanTeam(team)}:${normalizeNflPlayerName(name)}`
+const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value))
+const titleCase = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase()).replace(/\bTd(s)?\b/g, 'TD$1').replace(/\bQb\b/g, 'QB').replace(/\bWr\b/g, 'WR').replace(/\bRb\b/g, 'RB').replace(/\bTe\b/g, 'TE')
 
 function matchingOffer(player: NflOddsPlayer, prop: string, vendor: string) {
   const market = nflPrimaryMarket(player, prop, vendor)
   return { market, offer: market?.offers.find(item => item.vendor === vendor && !item.isOpeningOnly) }
 }
-
-function picks(player: NflOddsPlayer, prop: string, line: number | null) {
+function pickCount(player: NflOddsPlayer, prop: string, line: number | null) {
   const rows = (player.publicPicks ?? []).filter(row => row.propType === prop && (line == null || row.line == null || row.line === line))
   return rows.length ? Math.max(...rows.map(row => row.picks)) : null
 }
 
-function hitRate(log: SidelinePlayerGameLine[], field: LogField, line: number, count: number, milestone: boolean) {
-  const sample = log.slice(0, count)
+function isHit(value: number, line: number, milestone: boolean) {
+  return milestone ? value >= line : value > line
+}
+
+function hitSummary(log: SidelinePlayerGameLine[], field: LogField, line: number, count: number | null, milestone: boolean): HitSummary {
+  const sample = count == null ? log : log.slice(0, count)
   if (!sample.length) return null
-  const hits = sample.filter(row => milestone ? row[field] >= line : row[field] > line).length
-  return hits / sample.length * 100
+  const hits = sample.filter(row => isHit(Number(row[field]), line, milestone)).length
+  return { hits, total: sample.length, rate: hits / sample.length * 100 }
+}
+
+function projectedValue(stats: SidelinePlayer, prop: string) {
+  const field = PROP_FIELDS[prop]
+  const projection = stats.projections.find(item => item.key === PROJECTION_KEYS[prop])
+  if (!field || !stats.gameLog.length) return null
+  const milestone = prop.includes('td')
+  const season = milestone
+    ? stats.gameLog.filter(row => Number(row[field]) >= 1).length / stats.gameLog.length * 100
+    : average(stats.gameLog.map(row => Number(row[field])))
+  const recent3 = milestone
+    ? stats.gameLog.slice(0, 3).filter(row => Number(row[field]) >= 1).length / Math.min(3, stats.gameLog.length) * 100
+    : average(stats.gameLog.slice(0, 3).map(row => Number(row[field])))
+  const recent5 = milestone
+    ? stats.gameLog.slice(0, 5).filter(row => Number(row[field]) >= 1).length / Math.min(5, stats.gameLog.length) * 100
+    : average(stats.gameLog.slice(0, 5).map(row => Number(row[field])))
+  if (season == null || recent3 == null || recent5 == null) return null
+  const adjustment = clamp(((projection?.matchup ?? 0) + (projection?.pace ?? 0)) / 100, -.25, .25)
+  return Math.max(0, (season * .5 + recent3 * .3 + recent5 * .2) * (1 + adjustment))
+}
+
+function modelProbability(stats: SidelinePlayer, prop: string, line: number, milestone: boolean) {
+  const field = PROP_FIELDS[prop]
+  if (!field || !stats.gameLog.length) return null
+  const season = hitSummary(stats.gameLog, field, line, null, milestone)?.rate
+  const l3 = hitSummary(stats.gameLog, field, line, 3, milestone)?.rate
+  const l5 = hitSummary(stats.gameLog, field, line, 5, milestone)?.rate
+  if (season == null || l3 == null || l5 == null) return null
+  const projection = stats.projections.find(item => item.key === PROJECTION_KEYS[prop])
+  const adjustment = clamp(((projection?.matchup ?? 0) + (projection?.pace ?? 0)) * .2, -5, 5)
+  return clamp(season * .5 + l3 * .3 + l5 * .2 + adjustment, 0, 100)
 }
 
 function tone(value: number | null) {
-  if (value == null) return 'neutral'
-  if (value >= 12) return 'strong'
-  if (value <= -12) return 'weak'
-  return 'neutral'
+  if (value == null || Math.abs(value) < 5) return 'neutral'
+  return value > 0 ? 'positive' : 'negative'
+}
+
+function formatProjection(value: number | null, prop: string) {
+  if (value == null) return '—'
+  if (prop.includes('td')) return `${value.toFixed(1)}%`
+  const unit = prop.includes('yards') ? ' yd' : ''
+  return `${value < 10 ? value.toFixed(1) : value.toFixed(0)}${unit}`
+}
+
+function HitCell({ value }: { value: HitSummary }) {
+  if (!value) return <span className={styles.missing}>—</span>
+  return <span className={styles.hitCell} style={{ '--heat': value.rate / 100 } as CSSProperties}><b>{value.hits}/{value.total}</b><small>{value.rate.toFixed(1)}%</small></span>
+}
+
+function SortButton({ label, active, direction, onClick }: { label: string; active: boolean; direction: SortDirection; onClick: () => void }) {
+  return <button type="button" className={styles.sortButton} data-active={active} onClick={onClick}>{label}<ArrowUpDown size={12} aria-hidden />{active && <span>{direction === 'desc' ? '↓' : '↑'}</span>}</button>
+}
+
+function TeamBadge({ team }: { team: Team | undefined }) {
+  if (!team) return null
+  return <span className={styles.teamBadge}>{team.logo ? <Image src={team.logo} alt="" width={28} height={28} unoptimized /> : <i style={{ background: team.color }}>{team.abbr.slice(0, 2)}</i>}<b>{team.abbr}</b></span>
+}
+
+function PlayerChips({ players }: { players: NflOddsPlayer[] }) {
+  if (!players.length) return <span className={styles.missing}>No matched active role</span>
+  return <div className={styles.playerChips}>{players.slice(0, 4).map(player => <a href={player.gsisId ? `/nfl/players/${player.gsisId}` : '#'} key={player.id}>{player.headshot ? <Image src={player.headshot} alt="" width={26} height={26} unoptimized /> : <i>{player.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</i>}<span><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></span></a>)}</div>
 }
 
 export function SidelineCheatsheets({ lens, board }: { lens: SidelineLens; board: SidelineOddsBoard }) {
@@ -56,42 +132,119 @@ export function SidelineCheatsheets({ lens, board }: { lens: SidelineLens; board
   const [prop, setProp] = useState('anytime_td')
   const [vendor, setVendor] = useState('fanduel')
   const [team, setTeam] = useState('all')
+  const [sort, setSort] = useState('edge')
+  const [direction, setDirection] = useState<SortDirection>('desc')
   const teams = lens.teams.map(item => item.team)
   const statsById = useMemo(() => new Map(lens.players.map(player => [player.id, player])), [lens.players])
   const statsByName = useMemo(() => new Map(lens.players.map(player => [playerKey(player.name, player.team), player])), [lens.players])
+  const statsByLooseName = useMemo(() => new Map(lens.players.map(player => [normalizeNflPlayerName(player.name), player])), [lens.players])
   const paired = useMemo(() => board.players
     .filter(market => team === 'all' || market.team === team)
-    .map(market => ({ market, stats: (market.gsisId ? statsById.get(market.gsisId) : undefined) ?? statsByName.get(playerKey(market.name, market.team)) })), [board.players, statsById, statsByName, team])
+    .map(market => ({ market, stats: (market.gsisId ? statsById.get(market.gsisId) : undefined) ?? statsByName.get(playerKey(market.name, market.team)) ?? statsByLooseName.get(normalizeNflPlayerName(market.name)) })),
+  [board.players, statsById, statsByLooseName, statsByName, team])
   const props = useMemo(() => Array.from(new Set(board.players.flatMap(player => player.markets.map(market => market.propType)).filter(key => PROP_FIELDS[key]))).sort((a, b) => (PROP_LABELS[a] ?? a).localeCompare(PROP_LABELS[b] ?? b)), [board.players])
   const vendors = useMemo(() => Array.from(new Set(board.players.flatMap(player => player.markets.flatMap(market => market.offers.map(offer => offer.vendor))))).sort(), [board.players])
+  const changeSort = (key: string) => {
+    if (sort === key) setDirection(current => current === 'desc' ? 'asc' : 'desc')
+    else { setSort(key); setDirection('desc') }
+  }
 
-  const marketRows = useMemo(() => paired.flatMap(({ stats, market }) => {
-    const found = matchingOffer(market, prop, vendor)
-    if (!found.market || !found.offer) return []
-    const now = currentPrice(found.offer)
-    const open = openingPrice(found.offer)
-    const nowProbability = americanImpliedProbability(now)
-    const openProbability = americanImpliedProbability(open)
-    const field = PROP_FIELDS[prop]
-    const line = found.offer.line ?? found.market.line ?? (prop.includes('td') ? 1 : null)
-    const observed = stats && field && line != null ? hitRate(stats.gameLog, field, line, stats.gameLog.length, found.offer.type === 'milestone' || prop.includes('td')) : null
-    const gap = observed != null && nowProbability != null ? observed - nowProbability * 100 : null
-    const move = nowProbability != null && openProbability != null ? (nowProbability - openProbability) * 100 : null
-    const own = stats?.projections.find(item => item.key === ({ receiving_yards: 'receiving-yards', rushing_yards: 'rushing-yards', rushing_attempts: 'rush-attempts', passing_yards: 'passing-yards', passing_attempts: 'pass-attempts', receptions: 'receptions', completions: 'completions', anytime_td: 'touchdown', first_td: 'touchdown' } as Record<string, string>)[prop])
-    return [{ stats, market, offer: found.offer, line, now, open, observed, gap, move, pickCount: picks(market, prop, line), projection: own?.mean ?? null }]
-  }).sort((a, b) => Math.abs(b.gap ?? -1) - Math.abs(a.gap ?? -1) || (b.pickCount ?? -1) - (a.pickCount ?? -1)), [paired, prop, vendor])
+  const marketRows = useMemo(() => {
+    const rows = paired.flatMap(({ stats, market }) => {
+      const found = matchingOffer(market, prop, vendor)
+      if (!found.market || !found.offer) return []
+      const now = currentPrice(found.offer)
+      const open = openingPrice(found.offer)
+      const nowProbability = americanImpliedProbability(now)
+      const openProbability = americanImpliedProbability(open)
+      const field = PROP_FIELDS[prop]
+      const line = found.offer.line ?? found.market.line ?? (prop.includes('td') ? 1 : null)
+      const milestone = found.offer.type === 'milestone' || prop.includes('td')
+      const season = stats && field && line != null ? hitSummary(stats.gameLog, field, line, null, milestone) : null
+      const modeled = stats && line != null ? modelProbability(stats, prop, line, milestone) : null
+      const edge = modeled != null && nowProbability != null ? modeled - nowProbability * 100 : null
+      const move = nowProbability != null && openProbability != null ? (nowProbability - openProbability) * 100 : null
+      return [{ stats, market, offer: found.offer, line, now, open, move, season, modeled, edge, pickCount: pickCount(market, prop, line), projection: stats ? projectedValue(stats, prop) : null }]
+    })
+    const value = (row: typeof rows[number], key: string) => key === 'player' ? row.market.name : key === 'line' ? row.line : key === 'current' ? row.now : key === 'open' ? row.open : key === 'move' ? row.move : key === 'public' ? row.pickCount : key === 'projection' ? row.projection : key === 'season' ? row.season?.rate : row.edge
+    return rows.sort((a, b) => {
+      const left = value(a, sort), right = value(b, sort)
+      const result = typeof left === 'string' || typeof right === 'string' ? String(left ?? '').localeCompare(String(right ?? '')) : (Number(left ?? -Infinity) - Number(right ?? -Infinity))
+      return direction === 'asc' ? result : -result
+    })
+  }, [direction, paired, prop, sort, vendor])
+
+  const explosiveRows = useMemo(() => {
+    const rows = paired.filter((row): row is typeof row & { stats: NonNullable<typeof row.stats> } => Boolean(row.stats))
+    const explosiveValue = (stats: SidelinePlayer, key: string) => ({
+      'x-games': stats.games, 'x-deep': stats.deepTargets, 'x-rec20': stats.receiving20, 'x-rec30': stats.receiving30,
+      'x-rec40': stats.receiving40, 'x-rush10': stats.rushing10, 'x-rush20': stats.rushing20,
+      'x-rush30': stats.rushing30, 'x-rush40': stats.rushing40,
+    } as Record<string, number>)[key] ?? (stats.receiving20 + stats.rushing10)
+    return rows.sort((a, b) => {
+      const result = explosiveValue(a.stats, sort) - explosiveValue(b.stats, sort)
+      return direction === 'asc' ? result : -result
+    })
+  }, [direction, paired, sort])
+  const explosiveMax = useMemo(() => Math.max(1, ...explosiveRows.flatMap(({ stats }) => [stats.deepTargets, stats.receiving20, stats.receiving30, stats.receiving40, stats.rushing10, stats.rushing20, stats.rushing30, stats.rushing40].map(value => value / Math.max(1, stats.games)))), [explosiveRows])
+  const rosterByTeam = useMemo(() => new Map(teams.map(current => [current.abbr, board.players.filter(player => player.team === current.abbr)])), [board.players, teams])
+  const rushRoles = (abbr: string) => (rosterByTeam.get(abbr) ?? []).filter(player => ['RB', 'FB', 'QB'].includes(player.position) && player.availability?.didNotPlay !== true).sort((a, b) => {
+    const left = statsByLooseName.get(normalizeNflPlayerName(a.name))?.carryShare ?? 0
+    const right = statsByLooseName.get(normalizeNflPlayerName(b.name))?.carryShare ?? 0
+    return right - left
+  })
+  const offenseForDefense = (defense: string) => teams.find(item => item.abbr !== defense)?.abbr ?? ''
+  const affectedPlayers = (defense: string, position: string) => (rosterByTeam.get(offenseForDefense(defense)) ?? []).filter(player => player.position === position && player.availability?.didNotPlay !== true)
+  const dvpRows = useMemo(() => {
+    const rows = lens.dvp.filter(row => team === 'all' || row.defense === team)
+    const value = (row: typeof rows[number]) => sort === 'd-defense' ? row.defense : sort === 'd-position' ? row.position : sort === 'd-stat' ? row.stat : sort === 'd-games' ? row.games : row.pctDiff
+    return rows.sort((a, b) => {
+      const left = value(a), right = value(b)
+      const result = typeof left === 'string' || typeof right === 'string' ? String(left).localeCompare(String(right)) : Number(left) - Number(right)
+      return direction === 'asc' ? result : -result
+    })
+  }, [direction, lens.dvp, sort, team])
 
   return <div className={styles.root}>
-    <header className={styles.hero}><div><span>NFL INTELLIGENCE DESK</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {lens.season} sample · {lens.plays.toLocaleString()} charted plays</p></div><div className={styles.pulse}>{lens.status === 'calculated' ? 'LIVE DATA READY' : 'SYNC PENDING'}</div></header>
-    <nav className={styles.views} aria-label="Cheatsheet views">{([['edge', 'Market Edge'], ['hits', 'Exact-Line Hits'], ['explosives', 'Explosive Plays'], ['gaps', 'Run Gaps'], ['defense', 'Defense / DvP']] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)}>{label}</button>)}</nav>
-    <section className={styles.controls} aria-label="Cheatsheet controls"><label>Team<select value={team} onChange={event => setTeam(event.target.value)}><option value="all">Both teams</option>{teams.map(item => <option key={item.abbr} value={item.abbr}>{item.name}</option>)}</select></label>{(view === 'edge' || view === 'hits') && <><label>Market<select value={prop} onChange={event => setProp(event.target.value)}>{props.map(key => <option value={key} key={key}>{PROP_LABELS[key] ?? key.replaceAll('_', ' ')}</option>)}</select></label><label>Book<select value={vendor} onChange={event => setVendor(event.target.value)}>{vendors.map(value => <option key={value} value={value}>{value}</option>)}</select></label></>}<strong>{view === 'edge' || view === 'hits' ? `${marketRows.length} exact contracts` : `${paired.filter(row => row.stats).length} players`}</strong></section>
+    <header className={styles.hero}><div><span>NFL INTELLIGENCE</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {lens.season} regular season · {lens.plays.toLocaleString()} complete charted plays</p></div><div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div></header>
+    <nav className={styles.views} aria-label="Cheatsheet views">{VIEW_META.map(([key, label, Icon]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); setDirection('desc'); setSort(key === 'explosives' ? 'x-total' : key === 'defense' ? 'd-edge' : 'edge') }}><Icon size={15} />{label}</button>)}</nav>
+    <section className={styles.controls} aria-label="Cheatsheet controls">
+      <label><span>Team</span><select value={team} onChange={event => setTeam(event.target.value)}><option value="all">Both Teams</option>{teams.map(item => <option key={item.abbr} value={item.abbr}>{item.name}</option>)}</select></label>
+      {(view === 'edge' || view === 'hits') && <><label><span>Market</span><select value={prop} onChange={event => { setProp(event.target.value); setSort('edge') }}>{props.map(key => <option value={key} key={key}>{PROP_LABELS[key] ?? titleCase(key)}</option>)}</select></label><label><span>Sportsbook</span><div className={styles.bookSelect}><BookLogo vendor={vendor} size={20} /><select value={vendor} onChange={event => setVendor(event.target.value)}>{vendors.map(value => <option key={value} value={value}>{titleCase(value)}</option>)}</select></div></label></>}
+      <strong>{view === 'edge' || view === 'hits' ? `${marketRows.length} live contracts` : `${paired.filter(row => row.stats).length} matched players`}</strong>
+    </section>
 
-    {(view === 'edge' || view === 'hits') && <div className={styles.tableWrap}><table><thead><tr><th>Player</th><th>Line</th><th>Current</th><th>Open</th><th>Move</th><th>Public</th><th>Projection</th><th>Season</th>{view === 'hits' && <><th>L10</th><th>L5</th><th>L3</th></>}<th>Model − market</th></tr></thead><tbody>{marketRows.map(row => <tr key={`${row.market.id}:${prop}`} data-tone={tone(row.gap)}><td><PlayerIdentity player={row.market} team={teams.find(item => item.abbr === row.market.team)} /></td><td><b>{row.line ?? '—'}</b><small>{PROP_LABELS[prop] ?? prop}</small></td><td className={styles.price}><BookLogo vendor={vendor} size={18} />{price(row.now)}</td><td>{price(row.open)}</td><td className={(row.move ?? 0) > 0 ? styles.up : (row.move ?? 0) < 0 ? styles.down : ''}>{row.move == null ? '—' : `${row.move > 0 ? '+' : ''}${row.move.toFixed(1)}pp`}</td><td>{row.pickCount?.toLocaleString() ?? '—'}</td><td>{row.projection ?? '—'}</td><td>{percent(row.observed)}</td>{view === 'hits' && <><td>{row.line == null || !row.stats ? '—' : percent(hitRate(row.stats.gameLog, PROP_FIELDS[prop], row.line, 10, row.offer.type === 'milestone' || prop.includes('td')))}</td><td>{row.line == null || !row.stats ? '—' : percent(hitRate(row.stats.gameLog, PROP_FIELDS[prop], row.line, 5, row.offer.type === 'milestone' || prop.includes('td')))}</td><td>{row.line == null || !row.stats ? '—' : percent(hitRate(row.stats.gameLog, PROP_FIELDS[prop], row.line, 3, row.offer.type === 'milestone' || prop.includes('td')))}</td></>}<td className={styles.gap}>{row.gap == null ? '—' : `${row.gap > 0 ? '+' : ''}${row.gap.toFixed(1)}pp`}</td></tr>)}</tbody></table>{!marketRows.length && <p className={styles.empty}>No exact {vendor} contracts are captured for this market.</p>}</div>}
+    {(view === 'edge' || view === 'hits') && <div className={styles.tableWrap}><table><thead><tr>
+      {['player', 'line', 'current', 'open', 'move', 'public', 'projection'].map(key => <th key={key}><SortButton label={({ player: 'Player', line: 'Line', current: 'Current', open: 'Open', move: 'Open → Now', public: 'Public Picks', projection: 'Projection' } as Record<string, string>)[key]} active={sort === key} direction={direction} onClick={() => changeSort(key)} /></th>)}
+      <th><SortButton label="Season" active={sort === 'season'} direction={direction} onClick={() => changeSort('season')} /></th>
+      {view === 'hits' && <><th>Last 10</th><th>Last 5</th><th>Last 3</th><th>Last 1</th></>}
+      <th><SortButton label="Hit Rate − Price" active={sort === 'edge'} direction={direction} onClick={() => changeSort('edge')} /></th>
+    </tr></thead><tbody>{marketRows.map(row => <tr key={`${row.market.id}:${prop}`} data-tone={tone(row.edge)}>
+      <td><PlayerIdentity player={row.market} team={teams.find(item => item.abbr === row.market.team)} /></td>
+      <td><b>{row.line ?? '—'}</b><small>{PROP_LABELS[prop] ?? titleCase(prop)}</small></td>
+      <td className={styles.price}><BookLogo vendor={vendor} size={18} />{price(row.now)}</td><td>{price(row.open)}</td>
+      <td className={row.move == null ? '' : row.move > 0 ? styles.up : row.move < 0 ? styles.down : ''}>{row.move == null ? '—' : `${row.move > 0 ? '+' : ''}${row.move.toFixed(1)}pp`}</td>
+      <td><b>{row.pickCount?.toLocaleString() ?? '—'}</b></td><td><b>{formatProjection(row.projection, prop)}</b></td><td><HitCell value={row.season} /></td>
+      {view === 'hits' && <>{[10, 5, 3, 1].map(count => <td key={count}><HitCell value={row.line == null || !row.stats ? null : hitSummary(row.stats.gameLog, PROP_FIELDS[prop], row.line, count, row.offer.type === 'milestone' || prop.includes('td'))} /></td>)}</>}
+      <td className={row.edge == null ? '' : row.edge >= 0 ? styles.up : styles.down}><b>{row.edge == null ? '—' : `${row.edge > 0 ? '+' : ''}${row.edge.toFixed(1)}pp`}</b><small>{row.modeled == null ? '' : `${row.modeled.toFixed(1)}% modeled`}</small></td>
+    </tr>)}</tbody></table>{!marketRows.length && <p className={styles.empty}>No captured {titleCase(vendor)} contracts match this market and game.</p>}</div>}
 
-    {view === 'explosives' && <div className={styles.tableWrap}><table><thead><tr><th>Player</th><th>Games</th><th>Deep targets</th><th>REC 20+</th><th>REC 30+</th><th>REC 40+</th><th>RUSH 10+</th><th>RUSH 20+</th><th>RUSH 30+</th><th>RUSH 40+</th></tr></thead><tbody>{paired.filter((row): row is typeof row & { stats: NonNullable<typeof row.stats> } => Boolean(row.stats)).sort((a, b) => (b.stats.receiving20 + b.stats.rushing10) - (a.stats.receiving20 + a.stats.rushing10)).map(({ stats, market }) => <tr key={stats.id}><td><PlayerIdentity player={market} team={teams.find(item => item.abbr === stats.team)} /></td><td>{stats.games}</td><td>{stats.deepTargets}</td><td>{stats.receiving20}</td><td>{stats.receiving30}</td><td>{stats.receiving40}</td><td>{stats.rushing10}</td><td>{stats.rushing20}</td><td>{stats.rushing30}</td><td>{stats.rushing40}</td></tr>)}</tbody></table></div>}
+    {view === 'explosives' && <div className={styles.tableWrap}><table><thead><tr><th>Player</th>{[['x-games', 'Games'], ['x-deep', 'Deep Targets'], ['x-rec20', 'REC 20+'], ['x-rec30', 'REC 30+'], ['x-rec40', 'REC 40+'], ['x-rush10', 'RUSH 10+'], ['x-rush20', 'RUSH 20+'], ['x-rush30', 'RUSH 30+'], ['x-rush40', 'RUSH 40+']].map(([key, label]) => <th key={key}><SortButton label={label} active={sort === key} direction={direction} onClick={() => changeSort(key)} /></th>)}</tr></thead><tbody>{explosiveRows.map(({ stats, market }) => {
+      const values = [stats.deepTargets, stats.receiving20, stats.receiving30, stats.receiving40, stats.rushing10, stats.rushing20, stats.rushing30, stats.rushing40]
+      return <tr key={stats.id}><td><PlayerIdentity player={market} team={teams.find(item => item.abbr === stats.team)} /></td><td><b>{stats.games}</b></td>{values.map((value, index) => { const perGame = value / Math.max(1, stats.games); return <td key={index}><span className={styles.explosiveCell} style={{ '--heat': perGame / explosiveMax } as CSSProperties}><b>{value}</b><small>{perGame.toFixed(2)}/G</small></span></td> })}</tr>
+    })}</tbody></table></div>}
 
-    {view === 'gaps' && <div className={styles.cards}>{lens.runGaps.filter(row => team === 'all' || row.team === team).map(row => <article key={`${row.team}:${row.gap}`} style={{ '--team': teams.find(item => item.abbr === row.team)?.color ?? '#61dafb' } as CSSProperties}><span>{row.team} → {row.gap.toUpperCase()}</span><strong>{row.edge > 0 ? '+' : ''}{row.edge.toFixed(1)} EDGE</strong><div><b>{row.yardsPerCarry}</b><small>offense YPC</small><b>{row.defenseYardsPerCarry || '—'}</b><small>{row.opponent} allowed YPC</small><b>{row.successRate}%</b><small>success</small><b>{row.explosiveRate}%</b><small>explosive</small></div><footer>{row.attempts} offense rushes · {row.defenseAttempts || 0} defense rushes faced</footer></article>)}</div>}
+    {view === 'gaps' && <div className={styles.cards}>{lens.runGaps.filter(row => row.gap !== 'unspecified' && (team === 'all' || row.team === team)).map(row => {
+      const currentTeam = teams.find(item => item.abbr === row.team)
+      return <article key={`${row.team}:${row.gap}`} data-edge={tone(row.edge)} style={{ '--team': currentTeam?.color ?? '#61dafb' } as CSSProperties}>
+        <header><TeamBadge team={currentTeam} /><div><span>{titleCase(row.gap)} Runs</span><strong>{row.edge > 0 ? '+' : ''}{row.edge.toFixed(1)} Edge</strong></div></header>
+        <div className={styles.roleBlock}><small>Today’s Ball Carriers</small><PlayerChips players={rushRoles(row.team)} /></div>
+        <div className={styles.gapMetrics}><span><b>{row.yardsPerCarry.toFixed(1)}</b><small>{row.team} YPC</small></span><span><b>{row.defenseAttempts ? row.defenseYardsPerCarry.toFixed(1) : '—'}</b><small>{row.opponent} Allowed YPC</small></span><span><b>{row.successRate.toFixed(1)}%</b><small>Success</small></span><span><b>{row.explosiveRate.toFixed(1)}%</b><small>Explosive</small></span></div>
+        <footer>{row.attempts} offense attempts · {row.defenseAttempts} opponent-defense attempts in the {lens.season} sample</footer>
+      </article>
+    })}</div>}
 
-    {view === 'defense' && <><section className={styles.teamStrip}>{lens.teams.filter(row => team === 'all' || row.team.abbr === team).map(row => <article key={row.team.abbr} style={{ '--team': row.team.color } as CSSProperties}><b>{row.team.abbr}</b><span>{row.defenseSuccessAllowed.toFixed(1)}% success allowed</span><span>{row.defenseExplosiveAllowed.toFixed(1)}% explosive allowed</span><span>{row.redZoneTdRate.toFixed(1)}% offense RZ TD</span></article>)}</section><div className={styles.tableWrap}><table><thead><tr><th>Defense</th><th>Position</th><th>Stat</th><th>Vs league</th><th>Games</th></tr></thead><tbody>{lens.dvp.filter(row => team === 'all' || row.defense === team).sort((a, b) => b.pctDiff - a.pctDiff).map(row => <tr key={`${row.defense}:${row.position}:${row.stat}`} data-tone={tone(row.pctDiff)}><td><b>{row.defense}</b></td><td>{row.position}</td><td>{row.stat.replaceAll('_', ' ')}</td><td className={styles.gap}>{row.pctDiff > 0 ? '+' : ''}{row.pctDiff.toFixed(1)}%</td><td>{row.games}</td></tr>)}</tbody></table></div></>}
+    {view === 'defense' && <><section className={styles.teamStrip}>{lens.teams.filter(row => team === 'all' || row.team.abbr === team).map(row => <article key={row.team.abbr} style={{ '--team': row.team.color } as CSSProperties}><TeamBadge team={row.team} /><span><b>{row.defenseSuccessAllowed.toFixed(1)}%</b>Success Allowed</span><span><b>{row.defenseExplosiveAllowed.toFixed(1)}%</b>Explosive Allowed</span><span><b>{row.redZoneTdRate.toFixed(1)}%</b>Offense Red-Zone TD</span></article>)}</section>
+      <div className={styles.tableWrap}><table><thead><tr>{[['d-defense', 'Defense'], ['d-position', 'Position'], ['d-stat', 'Stat']].map(([key, label]) => <th key={key}><SortButton label={label} active={sort === key} direction={direction} onClick={() => changeSort(key)} /></th>)}<th>Affected Players Today</th><th><SortButton label="Vs. League" active={sort === 'd-edge'} direction={direction} onClick={() => changeSort('d-edge')} /></th><th><SortButton label="Games" active={sort === 'd-games'} direction={direction} onClick={() => changeSort('d-games')} /></th></tr></thead><tbody>{dvpRows.map(row => <tr key={`${row.defense}:${row.position}:${row.stat}`} data-tone={tone(row.pctDiff)}><td><TeamBadge team={teams.find(item => item.abbr === row.defense)} /></td><td><b>{row.position}</b></td><td><b>{titleCase(row.stat)}</b></td><td><PlayerChips players={affectedPlayers(row.defense, row.position)} /></td><td className={row.pctDiff >= 0 ? styles.up : styles.down}><b>{row.pctDiff > 0 ? '+' : ''}{row.pctDiff.toFixed(1)}%</b></td><td>{row.games}</td></tr>)}</tbody></table></div></>}
   </div>
 }

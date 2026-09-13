@@ -729,14 +729,28 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
 async function querySeason(game: SidelineGame, season: number) {
   const admin = createAdminClient()
   const teams = [game.away.abbr, game.home.abbr]
+  const loadPbp = async () => {
+    const rows: Row[] = []
+    const pageSize = 1000
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await admin
+        .from('nfl_pbp')
+        .select('game_id,play_id,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,run_location,run_gap,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+        .eq('season', season)
+        .eq('season_type', 'REG')
+        .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
+        .order('game_id', { ascending: false })
+        .order('play_id', { ascending: true })
+        .range(offset, offset + pageSize - 1)
+        .abortSignal(AbortSignal.timeout(15000))
+      if (error) throw error
+      rows.push(...((data ?? []) as Row[]))
+      if ((data?.length ?? 0) < pageSize) break
+    }
+    return rows
+  }
   const [pbpResult, receivingResult, rushingResult, passingResult, dvpResult] = await Promise.all([
-    admin
-      .from('nfl_pbp')
-      .select('game_id,play_id,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,run_location,run_gap,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
-      .eq('season', season)
-      .eq('season_type', 'REG')
-      .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
-      .limit(5000),
+    loadPbp(),
     admin
       .from('nfl_ngs_receiving')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,avg_separation,avg_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
@@ -766,7 +780,7 @@ async function querySeason(game: SidelineGame, season: number) {
   ])
 
   return {
-    pbp: (pbpResult.data ?? []) as Row[],
+    pbp: pbpResult,
     receiving: (receivingResult.data ?? []) as Row[],
     rushing: (rushingResult.data ?? []) as Row[],
     passing: (passingResult.data ?? []) as Row[],
