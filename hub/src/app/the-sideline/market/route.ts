@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { createClient } from '@/lib/supabase/server'
 import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
+import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -31,14 +32,15 @@ export async function GET(request: Request) {
     // Current-board polling also needs the slider index. Returning both in
     // one authenticated response avoids a second Function invocation every
     // 30 seconds for every open Sideline tab.
-    const [bundle, timeline] = await Promise.all([
+    const [bundle, timeline, touchdowns] = await Promise.all([
       getSidelineOddsBundle(game),
       getSidelineTimeline(game),
+      getNflTouchdownFeed(game.gameday),
     ])
     return NextResponse.json(
       params.get('packed') === '1'
-        ? { odds: packSidelineBoard(bundle.odds), gameState: bundle.gameState, timeline }
-        : { ...bundle, timeline },
+        ? { odds: packSidelineBoard(bundle.odds), gameState: bundle.gameState, touchdowns, timeline }
+        : { ...bundle, touchdowns, timeline },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {

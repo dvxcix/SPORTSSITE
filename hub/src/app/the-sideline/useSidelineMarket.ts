@@ -5,16 +5,19 @@ import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineOddsFrame } from './types'
 import type { SidelineGameState } from './types'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
+import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 
 export function useSidelineMarket(
   gameId: string,
   initialOdds: SidelineOddsBoard,
   initialGameState: SidelineGameState | null,
+  initialTouchdowns: NflTouchdownEvent[],
   initialTimeline: string[],
   initialCapture?: string | null,
 ) {
   const [current, setCurrent] = useState(initialOdds)
   const [gameState, setGameState] = useState(initialGameState)
+  const [touchdowns, setTouchdowns] = useState(initialTouchdowns)
   const [times, setTimes] = useState<string[]>(initialTimeline)
   const [selectedAt, setSelectedAt] = useState<string | null>(initialCapture ?? null)
   const [frame, setFrame] = useState<SidelineOddsFrame | null>(null)
@@ -74,6 +77,7 @@ export function useSidelineMarket(
         setTimes(previous => { const next: string[]=currentData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
         if (currentData.odds) { const next=unpackSidelineBoard(currentData.odds); setCurrent(previous => JSON.stringify(previous)===JSON.stringify(next) ? previous : next) }
         if ('gameState' in currentData) setGameState(currentData.gameState ?? null)
+        if (Array.isArray(currentData.touchdowns)) setTouchdowns(currentData.touchdowns)
       } catch {
         if (!controller.signal.aborted) setError('Refresh unavailable. Showing the last loaded capture.')
       }
@@ -131,7 +135,7 @@ export function useSidelineMarket(
   const retry = () => { setError(''); setRefreshKey(value => value + 1) }
   const board = selectedAt == null ? current : frame?.board ?? current
   return {
-    board, current, gameState, timeline, index, select, retry, error,
+    board, current, gameState, touchdowns, timeline, index, select, retry, error,
     loading: selectedAt != null && frame?.capturedAt !== selectedAt && !error,
     capturedAt: selectedAt == null ? current.capturedAt : frame?.capturedAt ?? current.capturedAt,
   }

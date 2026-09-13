@@ -12,6 +12,7 @@ import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getSidelin
 import { CalendarOff } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
+import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,7 +53,10 @@ export default async function SidelinePage({ searchParams }: {
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
-  const market = await getSidelineOddsBundle(selected)
+  const [market, touchdownFeed] = await Promise.all([
+    getSidelineOddsBundle(selected),
+    getNflTouchdownFeed(date),
+  ])
   if (mode === 'cheatsheets') {
     const lens = await getCachedSidelineCheatsheetLens(selected)
     return <>{navigation}<SidelineCheatsheets key={selected.id} lens={lens} board={market.odds} /></>
@@ -71,5 +75,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={[]} initialCapture={requestedCapture} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
 }

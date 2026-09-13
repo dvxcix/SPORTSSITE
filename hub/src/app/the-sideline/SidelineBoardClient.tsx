@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
@@ -13,11 +14,13 @@ import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
+import { NflTouchdownTracker } from './NflTouchdownTracker'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
 
@@ -1652,7 +1655,8 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; timeline: string[]; initialCapture?: string | null }) {
+export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[]; timeline: string[]; initialCapture?: string | null }) {
+  const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
@@ -1660,7 +1664,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
   const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
-  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, timeline, initialCapture)
+  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -2137,6 +2141,10 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         <button type="button" className={toolsOpen ? styles.activeControl : ''} onClick={() => setToolsOpen(value => !value)}>
           <Sparkles size={15} /> Tools
         </button>
+        <NflTouchdownTracker
+          events={marketStory.touchdowns}
+          onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
+        />
       </section>
 
       <section className={styles.storyGrid}>
