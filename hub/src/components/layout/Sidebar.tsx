@@ -208,7 +208,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <button
             onClick={e => { e.preventDefault(); onClose() }}
             className="ss-sidebar-close md:hidden"
-            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+            style={{ width: 44, minWidth: 44, height: 44, minHeight: 44, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
             aria-label="Close menu"
           >
             <X size={18} />

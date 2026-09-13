@@ -46,9 +46,9 @@ export const PRODUCT_ROADMAP_PHASES: ProductRoadmapPhase[] = [
     remaining: [],
   },
   {
-    id: 'quality', label: 'Quality & Release', status: 'active', progress: 86,
-    shipped: ['Production contract suite', 'Accessibility and responsive browser budgets', 'Feature gates, telemetry, health reporting, and branded recovery states'],
-    remaining: ['Live visual-regression sampling across authenticated routes', 'Interaction telemetry review on real traffic', 'Final cross-device polish pass'],
+    id: 'quality', label: 'Quality & Release', status: 'active', progress: 98,
+    shipped: ['Production contract suite', 'Five-device public browser matrix and responsive polish', 'Secure authenticated matrix capture workflow', 'Route-ranked live telemetry, feature gates, health reporting, and branded recovery states'],
+    remaining: ['Execute the authenticated five-device matrix with a fresh private session'],
   },
 ]
 

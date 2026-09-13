@@ -1920,7 +1920,18 @@ test('browser release QA enforces performance, overflow, touch, and responsive d
   assert.match(browser, /viewport: \{ width: 768, height: 1024 \}/)
   assert.match(browser, /viewport: \{ width: 320, height: 700 \}/)
   assert.match(browser, /RESPONSIVE_CAPTURE_DIR/)
+  assert.match(browser, /SMOKE_AUTH_STORAGE/)
   assert.match(manifest, /"test:responsive": "node scripts\/browser-smoke\.mjs"/)
+})
+
+test('authenticated browser release state stays local and supports safe capture', async () => {
+  const ignore = await read('.gitignore')
+  const scripts = await read('package.json')
+  const capture = await read('scripts/capture-browser-auth.mjs')
+  assert.match(ignore, /\/\.auth\//)
+  assert.match(scripts, /test:browser:auth:capture/)
+  assert.match(capture, /storageState\(\{ path: outputPath \}\)/)
+  assert.doesNotMatch(capture, /password|service_role|SUPABASE_SERVICE/)
 })
 
 test('live research boards preserve only bounded in-session snapshots and label stale data', async () => {

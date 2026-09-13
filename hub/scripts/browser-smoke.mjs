@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core'
-import { mkdir } from 'node:fs/promises'
+import { access, mkdir } from 'node:fs/promises'
 
 const productionTarget = process.argv.includes('--production')
 const baseUrl = (
@@ -12,7 +12,9 @@ const isLocalTarget = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(baseU
 const browser = await chromium.launch({ executablePath: edgePath, headless: true })
 const failures = []
 const captureDir = process.env.RESPONSIVE_CAPTURE_DIR || ''
-const authenticatedStorage = process.env.SMOKE_AUTH_STORAGE || ''
+const defaultAuthenticatedStorage = '.auth/smoke-state.json'
+const hasDefaultAuthenticatedStorage = await access(defaultAuthenticatedStorage).then(() => true).catch(() => false)
+const authenticatedStorage = process.env.SMOKE_AUTH_STORAGE || (hasDefaultAuthenticatedStorage ? defaultAuthenticatedStorage : '')
 if (captureDir) await mkdir(captureDir, { recursive: true })
 
 function excerpt(value) {
@@ -98,12 +100,24 @@ async function verifyPage(context, path, expectedText, options = {}) {
     }
 
     if (options.checkOverflow) {
-      const overflow = await page.evaluate(() => ({
-        viewport: document.documentElement.clientWidth,
-        content: document.documentElement.scrollWidth,
-      }))
+      const overflow = await page.evaluate(() => {
+        const viewport = document.documentElement.clientWidth
+        const offenders = [...document.querySelectorAll('body *')].map(element => {
+          const rect = element.getBoundingClientRect()
+          const style = getComputedStyle(element)
+          return { element, rect, style }
+        }).filter(({ rect, style }) => style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && (rect.right > viewport + 2 || rect.left < -2)).slice(0, 5).map(({ element, rect }) => ({
+          tag: element.tagName.toLowerCase(),
+          id: element.id,
+          className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        }))
+        return { viewport, content: document.documentElement.scrollWidth, offenders }
+      })
       if (overflow.content > overflow.viewport + 2) {
-        routeFailures.push(`horizontal overflow ${overflow.content}px > ${overflow.viewport}px viewport`)
+        routeFailures.push(`horizontal overflow ${overflow.content}px > ${overflow.viewport}px viewport; ${JSON.stringify(overflow.offenders)}`)
       }
     }
 
@@ -130,8 +144,16 @@ async function verifyPage(context, path, expectedText, options = {}) {
         const accessibleText = element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])')?.getAttribute('alt') || ''
         const iconOnly = !accessibleText && Boolean(element.getAttribute('aria-label') || element.getAttribute('title'))
         return iconOnly && (rect.width < 32 || rect.height < 32)
-      }).length)
-      if (undersized) routeFailures.push(`${undersized} icon actions are smaller than 32px`)
+      }).slice(0, 5).map(element => {
+        const rect = element.getBoundingClientRect()
+        return {
+          label: element.getAttribute('aria-label') || element.getAttribute('title'),
+          className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+      }))
+      if (undersized.length) routeFailures.push(`${undersized.length} icon actions are smaller than 32px; ${JSON.stringify(undersized)}`)
     }
 
     if (captureDir && options.captureName) {

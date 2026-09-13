@@ -44,3 +44,7 @@ next-env.d.ts
 .env.local
 .vercel
 /.swc
+
+# local browser authentication and visual QA artifacts
+/.auth/
+/.responsive-captures/

@@ -684,7 +684,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="ss-topbar-guest-actions" style={{ display: 'flex', gap: 8 }}>
             <Link href="/auth/login" style={{
               padding: '7px 14px', borderRadius: 8,
               fontSize: 12, fontWeight: 700, color: 'var(--text-2)',
