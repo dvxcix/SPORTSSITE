@@ -221,6 +221,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
             currentUserId={user.id}
             placeholder={composerMode === 'pick' ? 'Add your read on this pick…' : composerMode === 'poll' ? 'Ask the community…' : composerMode === 'research' ? 'Share the signal, chart, or board context…' : 'What are you seeing?'}
             maxLength={charLimit}
+            aria-label="Post text"
             rows={content.length > 80 ? 3 : 2}
             style={{
               width: '100%', background: 'transparent',

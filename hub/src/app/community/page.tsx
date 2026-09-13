@@ -49,15 +49,15 @@ export default async function CommunityPage() {
         </div>
       ) : <ProductPanel padded className="text-center"><Users size={24} className="mx-auto text-[var(--text-3)]" /><p className="mt-3 text-sm font-black text-[var(--text-1)]">Communities are being prepared</p></ProductPanel>}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,.8fr)]">
-        <section>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,.8fr)]">
+        <section className="min-w-0">
           <ProductSectionHeader title="Join the conversation" meta="Rooms and discussions" />
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
             {(channels ?? []).slice(0, 3).map(channel => <CompactRow key={channel.id} href={`/channels/${channel.slug}`} icon={channel.icon || '#'} title={channel.name} detail={channel.description || 'Live community room'} meta={`${channel.member_count ?? 0} members`} />)}
             {(discussions ?? []).slice(0, 3).map(category => <CompactRow key={category.id} href={`/forum/${category.slug}`} icon={category.icon || '◆'} title={category.name} detail={category.description || 'Community discussion'} meta={`${category.thread_count ?? 0} threads`} />)}
           </div>
         </section>
-        <section>
+        <section className="min-w-0">
           <ProductSectionHeader title="Upcoming" meta="Community events" />
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
             {(events?.length ?? 0) > 0 ? (events ?? []).map(event => {

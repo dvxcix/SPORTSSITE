@@ -448,7 +448,7 @@ export function ProfileForm({ profile }: { profile: any }) {
               <div key={p.mlb_id} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full pl-1.5 pr-2 py-1">
                 <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={24} />
                 <span className="text-xs font-bold text-white">{p.name}</span>
-                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} aria-label={`Remove ${p.name} from favorite players`} className="text-zinc-500 hover:text-red-400"><X size={12} /></button>
+                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} aria-label={`Remove ${p.name} from favorite players`} className="grid size-8 shrink-0 place-items-center rounded-full text-zinc-500 transition hover:bg-red-400/10 hover:text-red-400"><X size={13} /></button>
               </div>
             ))}
           </div>
