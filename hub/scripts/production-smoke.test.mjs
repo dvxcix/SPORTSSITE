@@ -2055,6 +2055,20 @@ test('social composer and member previews use viewport-safe portaled surfaces', 
   assert.match(styles, /\.ss-post-avatar-trigger\{align-self:flex-start/)
 })
 
+test('Sideline expanded boards stay roster-anchored and viewport-contained', async () => {
+  const board = await read('src/app/the-sideline/SidelineBoardClient.tsx')
+  const styles = await read('src/app/the-sideline/sidelineBoard.module.css')
+  assert.match(board, /The posted game board owns row membership/)
+  assert.match(board, /const marketPlayers = board\.players\.filter/)
+  assert.match(board, /if \(marketPlayers\.length\)/)
+  assert.doesNotMatch(board, /for \(const player of windowData\.players\) \{\s*const market = board\.players\.find/s)
+  assert.match(board, /\{ id: 'all', label: 'All' \}/)
+  assert.match(styles, /\.page \{[\s\S]*?overflow-x: clip;/)
+  assert.match(styles, /\.tableScroller \{[\s\S]*?overflow-x: auto;[\s\S]*?overscroll-behavior-x: contain;/)
+  assert.match(styles, /\.boardTable \{[\s\S]*?width: max-content;[\s\S]*?min-width: 100%;/)
+  assert.match(styles, /\.playerModal \{[\s\S]*?height: 100dvh;[\s\S]*?border-radius: 20px 0 0 20px;/)
+})
+
 test('social GIF discovery is server-backed and custom emoji shortcodes render across public surfaces', async () => {
   const route = await read('src/app/api/gifs/route.ts')
   const picker = await read('src/components/social/GifPicker.tsx')

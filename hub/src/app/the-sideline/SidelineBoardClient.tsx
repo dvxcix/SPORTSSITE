@@ -9,7 +9,6 @@ const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.
 import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import {
-  BarChart3,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -104,6 +103,7 @@ const VIEW_OPTIONS: { id: BoardView; label: string }[] = [
   { id: 'usage', label: 'Usage' },
   { id: 'tracking', label: 'Tracking' },
   { id: 'team', label: 'Team' },
+  { id: 'all', label: 'All' },
   { id: 'custom', label: 'Custom' },
 ]
 const ROLE_OPTIONS: { id: RoleFilter; label: string; positions: string[] }[] = [
@@ -535,6 +535,9 @@ function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | nul
   ].filter((source): source is string => Boolean(source && source !== player.headshot))))
   return {
     ...player,
+    name: market.name || player.name,
+    team: normalizedTeam(market.team || player.latestTeam || player.team),
+    position: market.position || player.position,
     headshot: player.headshot ?? market.headshot ?? fallbacks[0] ?? null,
     headshotFallbacks: fallbacks,
     jersey: player.jersey ?? market.jersey ?? null,
@@ -1195,28 +1198,54 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   }, [highlights, highlightsReady, selectedId])
 
   const rows = useMemo(() => {
-    const tracking = new Map(windowData.players.map(player => [`${normalizedTeam(player.team)}:${normalizedName(player.name)}`, player]))
+    const matchupTeams = new Set([selected.away.abbr, selected.home.abbr].map(normalizedTeam))
+    const marketPlayers = board.players.filter(player => matchupTeams.has(normalizedTeam(player.team)))
+    const trackingById = new Map(windowData.players.map(player => [player.id, player]))
+    const trackingByName = new Map(windowData.players.map(player => [normalizedName(player.name), player]))
     const teamProfiles = new Map(windowData.teams.map(profile => [normalizedTeam(profile.team.abbr), profile]))
     const profileFor = (team: string) => teamProfiles.get(normalizedTeam(team)) ?? null
     const opponentFor = (team: string) => profileFor(normalizedTeam(team) === normalizedTeam(selected.away.abbr) ? selected.home.abbr : selected.away.abbr)
     const byId = new Map<string, PlayerRow>()
-    for (const player of windowData.players) {
-      const market = board.players.find(candidate => candidate.gsisId === player.id) ?? findMarketPlayer(board, player)
-      const identified = mergePlayerIdentity(player, market)
-      byId.set(player.id, { ...identified, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team), sportsbookRank: null, performanceRank: null, mm: null })
-    }
-    for (const market of board.players) {
-      if (![selected.away.abbr, selected.home.abbr].map(normalizedTeam).includes(normalizedTeam(market.team))) continue
-      const tracked = tracking.get(`${normalizedTeam(market.team)}:${normalizedName(market.name)}`)
-      if (tracked) continue
-      const trackedById = market.gsisId ? byId.get(market.gsisId) : null
-      if (trackedById) {
-        const identified = mergePlayerIdentity(trackedById, market)
-        byId.set(market.gsisId!, { ...trackedById, ...identified, market })
-        continue
+    if (marketPlayers.length) {
+      // The posted game board owns row membership. Historical samples enrich
+      // those players, but must never pull a former player into a current team.
+      for (const market of marketPlayers) {
+        const tracked = (market.gsisId ? trackingById.get(market.gsisId) : null) ?? trackingByName.get(normalizedName(market.name)) ?? null
+        const base = tracked ?? buildEmptyPlayer(market)
+        const identified = mergePlayerIdentity(base, market)
+        const id = market.gsisId ?? base.id
+        byId.set(id, {
+          ...identified,
+          id,
+          market,
+          hasTracking: Boolean(tracked),
+          sampleTeam: tracked && normalizedTeam(tracked.team) !== normalizedTeam(market.team) ? tracked.team : tracked?.sampleTeam ?? null,
+          teamProfile: profileFor(market.team),
+          opponentProfile: opponentFor(market.team),
+          sportsbookRank: null,
+          performanceRank: null,
+          mm: null,
+        })
       }
-      const empty = buildEmptyPlayer(market)
-      byId.set(empty.id, { ...empty, market, hasTracking: false, teamProfile: profileFor(empty.team), opponentProfile: opponentFor(empty.team), sportsbookRank: null, performanceRank: null, mm: null })
+    } else {
+      // Before markets post, only retain players whose latest known roster is
+      // one of the two teams in this game. The sample team is display context.
+      for (const player of windowData.players) {
+        const currentTeam = normalizedTeam(player.latestTeam || player.team)
+        if (!matchupTeams.has(currentTeam)) continue
+        byId.set(player.id, {
+          ...player,
+          team: currentTeam,
+          sampleTeam: normalizedTeam(player.team) !== currentTeam ? player.team : player.sampleTeam ?? null,
+          market: null,
+          hasTracking: true,
+          teamProfile: profileFor(currentTeam),
+          opponentProfile: opponentFor(currentTeam),
+          sportsbookRank: null,
+          performanceRank: null,
+          mm: null,
+        })
+      }
     }
     return addNflMmRanks(Array.from(byId.values()))
   }, [board, selected.away.abbr, selected.home.abbr, windowData.players, windowData.teams])
@@ -1300,7 +1329,6 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const sortedRows = (team: string) => rows
     .filter(row => {
       if (normalizedTeam(row.team) !== normalizedTeam(team) || erased.has(row.id)) return false
-      if (view === 'core' && currentBoard.players.length && !row.market) return false
       if (view === 'core' && roleFilter === 'all' && !['QB', 'RB', 'FB', 'WR', 'TE'].includes(row.position)) return false
       const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
       return !positions.length || positions.includes(row.position)
@@ -1366,7 +1394,6 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}><TeamLogo team={selected.away} size={28} /><b>{selected.away.abbr}</b><span>@</span><TeamLogo team={selected.home} size={28} /><b>{selected.home.abbr}</b></div>
         <div className={styles.windowTabs}>{WINDOW_OPTIONS.map(option => <button key={option.id} type="button" className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>{option.label}</button>)}</div>
-        <button type="button" onClick={() => setView('all')}><BarChart3 size={15} /> All</button>
         <button type="button" onClick={() => setColumnsOpen(true)}><Columns3 size={15} /> Columns</button>
         <button type="button" className={toolsOpen ? styles.activeControl : ''} onClick={() => setToolsOpen(value => !value)}><Sparkles size={15} /> Tools</button>
       </section>
@@ -1422,7 +1449,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
             })}
             onSelectWindow={setWindowId}
           />
-          {!collapsedTeams.has(section.team.abbr) ? <div className={styles.tableScroller}>
+          {!collapsedTeams.has(section.team.abbr) ? <div className={styles.tableScroller} key={`${view}:${roleFilter}`}>
             <table className={styles.boardTable} style={{ minWidth: resolvedColumns.reduce((total, column) => total + column.width, 0) }}>
               <thead><tr>{resolvedColumns.map(column => {
                 const sort = sorts.find(item => item.id === column.id)

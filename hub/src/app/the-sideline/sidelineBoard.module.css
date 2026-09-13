@@ -20,7 +20,9 @@
 .page {
   width: 100%;
   max-width: none;
+  min-width: 0;
   min-height: 100vh;
+  overflow-x: clip;
   padding: 12px clamp(10px, 1.2vw, 24px) 110px;
   color: var(--ink);
   background:
@@ -416,6 +418,7 @@
 
 .teamBoard {
   --team-color: #3a4554;
+  min-width: 0;
   overflow: hidden;
   margin-bottom: 12px;
   border-top: 2px solid var(--team-color);
@@ -516,13 +519,22 @@
 .tableScroller {
   position: relative;
   width: 100%;
-  overflow: auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  background: #080d13;
+  isolation: isolate;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(53, 215, 255, 0.44) #080d13;
 }
 
 .boardTable {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -761,24 +773,38 @@
   inset: 0;
   z-index: 1000;
   display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(2, 5, 8, 0.8);
-  backdrop-filter: blur(11px);
+  place-items: stretch end;
+  padding: 0;
+  background: rgba(2, 5, 8, 0.58);
+  backdrop-filter: blur(7px);
 }
 
 .playerModal,
 .columnModal {
   display: flex;
-  width: min(1040px, calc(100vw - 48px));
-  max-height: min(860px, calc(100dvh - 48px));
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #344355;
   border-top: 3px solid var(--lime);
-  border-radius: 17px;
   background: #0a1017;
   box-shadow: 0 30px 100px rgba(0, 0, 0, 0.66);
+}
+
+.playerModal {
+  width: min(680px, calc(100vw - 72px));
+  height: 100dvh;
+  max-height: 100dvh;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 20px 0 0 20px;
+  box-shadow: -26px 0 90px rgba(0, 0, 0, 0.58), inset 3px 0 var(--lime);
+  animation: playerDrawerIn 180ms cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes playerDrawerIn {
+  from { opacity: .68; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .playerModal > header,
@@ -833,7 +859,13 @@
 .modalMarkets article > div small { grid-column: 2; color: #8290a2; font-size: 8px; }
 .noData { margin: 0; padding: 40px; color: #8592a4; text-align: center; }
 
-.columnModal { width: min(920px, calc(100vw - 48px)); }
+.columnModal {
+  align-self: center;
+  justify-self: center;
+  width: min(920px, calc(100vw - 48px));
+  max-height: min(860px, calc(100dvh - 48px));
+  border-radius: 17px;
+}
 .columnList { min-height: 0; padding: 10px; overflow: auto; }
 .columnList article { display: grid; grid-template-columns: 1fr 100px 78px; gap: 10px; align-items: center; padding: 9px; border-bottom: 1px solid #1c2631; }
 .columnList label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -932,6 +964,7 @@
   .modalBackdrop { align-items: end; padding: 0; }
   .playerModal,
   .columnModal { width: 100vw; max-height: calc(100dvh - 54px); border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; }
+  .playerModal { height: auto; box-shadow: 0 -22px 70px rgba(0,0,0,.62); animation-name: playerSheetIn; }
   .playerModal::before,
   .columnModal::before { content: ''; width: 42px; height: 4px; flex: 0 0 4px; margin: 7px auto 0; border-radius: 99px; background: #3b4655; }
   .playerModal > header,
@@ -949,6 +982,11 @@
   .modalMarkets article > div { display: grid; grid-auto-flow: column; grid-auto-columns: 125px; grid-template-columns: none; overflow-x: auto; }
   .columnList article { grid-template-columns: 1fr 70px; }
   .columnList article > div { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+@keyframes playerSheetIn {
+  from { opacity: .72; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 430px) {
