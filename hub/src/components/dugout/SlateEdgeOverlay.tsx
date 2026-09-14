@@ -7,6 +7,7 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { ModalSurface } from '@/components/ui/ModalSurface'
+import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import styles from './SlateEdgeOverlay.module.css'
 
 export type SlateEdgeEntry = {
@@ -70,7 +71,8 @@ const heatStyle = (value: number | null, center = 0, span = 10): CSSProperties |
 }
 
 function ScoreMark({ value, compact = false }: { value: number | null; compact?: boolean }) {
-  return <span className={styles.scoreMark} data-compact={compact}><b>{value != null ? Math.round(value) : '—'}</b><small>SS</small></span>
+  if (value == null) return <span className={styles.scoreMissing} aria-label="SlipSurge Score unavailable">—</span>
+  return <MechanicsScoreRing score={value} label="SlipSurge Score" size="small" className={compact ? styles.scoreCompact : undefined} />
 }
 
 function MmMark({ entry, compact = false }: { entry: SlateEdgeEntry; compact?: boolean }) {
@@ -81,9 +83,19 @@ function MmMark({ entry, compact = false }: { entry: SlateEdgeEntry; compact?: b
 }
 
 function BookPrice({ market, value, delta }: { market: 'FHR' | 'HR'; value: number | null; delta?: number | null }) {
+  const open = value != null && delta != null ? value - delta : null
   return <span className={styles.bookPrice}>
     <span className={styles.bookLine}><BookLogo vendor="fanduel" size={14} /><small>FD {market}</small><b>{odds(value)}</b></span>
-    {delta != null && <span className={`${styles.movement} ${movementClass(delta)}`}>{delta < 0 ? 'Shortened ' : delta > 0 ? 'Lengthened ' : ''}{signed(delta)}</span>}
+    {delta != null
+      ? <span className={`${styles.movement} ${movementClass(delta)}`}><span>Open {odds(open)}</span><b>{delta < 0 ? 'Shortened ' : delta > 0 ? 'Lengthened ' : 'Unchanged '}{delta === 0 ? '' : signed(delta)}</b></span>
+      : <span className={`${styles.movement} ${styles.muted}`}>Open unavailable</span>}
+  </span>
+}
+
+function MarketPair({ entry }: { entry: SlateEdgeEntry }) {
+  return <span className={styles.marketPair}>
+    <BookPrice market="FHR" value={entry.fhr} delta={move(entry.fhr, entry.fhrOpen)} />
+    <BookPrice market="HR" value={entry.hr} delta={move(entry.hr, entry.hrOpen)} />
   </span>
 }
 
@@ -280,20 +292,21 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
             const players = filtered.filter(entry => entry.gameKey === gameEntry.gameKey).slice(0, 6)
             return <article className={styles.gameCard} key={gameEntry.gameKey}>
               <header className={styles.gameHead}><TeamLogo abbr={gameEntry.awayAbbr} /><strong>{gameEntry.awayAbbr} at {gameEntry.homeAbbr}</strong><TeamLogo abbr={gameEntry.homeAbbr} /><span>{gameEntry.lineupsConfirmed ? 'Confirmed' : 'Projected'}</span></header>
-              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ` · Batting #${entry.battingOrder}` : ''}</small></span><ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><BookPrice market="HR" value={entry.hr} delta={move(entry.hr, entry.hrOpen)} /></button>)}</div>
+              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ` · Batting #${entry.battingOrder}` : ''}</small></span><ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><MarketPair entry={entry} /></button>)}</div>
             </article>
           })}</div>}
 
           {view === 'market' && <div className={styles.split}>
             {[[modelAheadRows, 'Model ahead', 'Paper rank leads book rank'], [marketAheadRows, 'Market ahead', 'Book rank leads paper rank']] .map(([rows, label, note]) => <section className={styles.lane} key={String(label)}>
               <header className={styles.laneHead}><strong>{String(label)}</strong><span>{String(note)}</span></header>
-              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span>{entry.gameLabel} · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><BookPrice market="HR" value={entry.hr} delta={move(entry.hr, entry.hrOpen)} /></span><MmMark entry={entry} /></button>)}
+              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span>{entry.gameLabel} · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><MarketPair entry={entry} /></span><span className={styles.mismatchMetrics}><ScoreMark value={entry.score} compact /><MmMark entry={entry} /></span></button>)}
               {(rows as SlateEdgeEntry[]).length === 0 && <div className={styles.empty}>No rank gaps in this view.</div>}
             </section>)}
           </div>}
 
           {view === 'signals' && (signals.length ? <div className={styles.signalGrid}>{signals.map(({ entry, chips }) => <article role="button" tabIndex={0} className={styles.signalCard} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
             <div className={styles.signalTop}><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span><ScoreMark value={entry.score} compact /></div>
+            <MarketPair entry={entry} />
             <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} key={chip.label}>{chip.label}</span>)}</div>
           </article>)}</div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
         </main>

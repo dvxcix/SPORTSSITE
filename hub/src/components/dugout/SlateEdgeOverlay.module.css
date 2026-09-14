@@ -82,11 +82,8 @@
 .matchup { display: inline-flex; align-items: center; gap: 5px; font-weight: 850; white-space: nowrap; }
 .matchup img { width: 17px; height: 17px; object-fit: contain; }
 .score { color: var(--accent); font-size: 14px; font-weight: 950; }
-.scoreMark { width: 47px; height: 47px; display: inline-grid; place-content: center; justify-items: center; border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--border)); border-radius: 50%; background: radial-gradient(circle at 34% 24%, color-mix(in srgb, var(--accent) 29%, transparent), color-mix(in srgb, var(--accent) 6%, var(--surface-2)) 58%); color: var(--accent); box-shadow: inset 0 0 16px color-mix(in srgb, var(--accent) 10%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 7%, transparent); line-height: 1; }
-.scoreMark b { font-size: 14px; font-weight: 1000; letter-spacing: -.04em; }
-.scoreMark small { margin-top: 2px; color: color-mix(in srgb, var(--accent) 75%, white); font-size: 6px; font-weight: 1000; letter-spacing: .1em; }
-.scoreMark[data-compact="true"] { width: 36px; height: 36px; }
-.scoreMark[data-compact="true"] b { font-size: 12px; }
+.scoreCompact { transform: scale(.82); margin: -5px; }
+.scoreMissing { width: 48px; height: 48px; display: inline-grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); color: var(--text-4); font-weight: 900; }
 .mmMark { min-width: 86px; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 90%, transparent); }
 .mmMark b { font-size: 10px; font-weight: 1000; white-space: nowrap; }
 .mmMark small { color: var(--text-3); font-size: 7px; font-weight: 800; white-space: nowrap; }
@@ -98,15 +95,19 @@
 .factorCell small { display: block; margin-top: 3px; color: var(--text-3); font-size: 7px; font-weight: 800; white-space: nowrap; }
 .positive { color: #4ade80 !important; }
 .negative { color: #fb7185 !important; }
-.shortened { color: #38bdf8 !important; }
-.lengthened { color: #fbbf24 !important; }
+.shortened { color: #4ade80 !important; }
+.lengthened { color: #fb7185 !important; }
 .muted { color: var(--text-4) !important; }
 .odds { color: var(--text-1); font-family: monospace; font-weight: 900; }
-.bookPrice { display: inline-flex; min-width: 94px; flex-direction: column; align-items: flex-end; gap: 2px; }
+.bookPrice { display: inline-flex; min-width: 112px; flex-direction: column; align-items: flex-end; gap: 2px; }
 .bookLine { display: inline-grid; grid-template-columns: 14px auto auto; align-items: center; gap: 4px; }
 .bookLine small { color: #7dd3fc; font-size: 7px; font-weight: 950; letter-spacing: .03em; white-space: nowrap; }
 .bookLine b { color: #f8fafc; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 1000; white-space: nowrap; }
-.movement { display: block; margin-top: 2px; font-size: 8px; font-weight: 850; }
+.movement { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 2px; font-size: 7px; font-weight: 800; white-space: nowrap; }
+.movement span { color: var(--text-4); font-weight: 750; }
+.movement b { color: inherit; font-size: 8px; font-weight: 950; }
+.marketPair { display: inline-grid; grid-template-columns: repeat(2, minmax(112px, auto)); gap: 7px; align-items: center; }
+.marketPair .bookPrice { padding: 5px 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 88%, transparent); }
 .pickCount { font-weight: 900; color: #60a5fa; }
 
 .gameGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -116,7 +117,7 @@
 .gameHead strong { font-size: 11px; font-weight: 950; }
 .gameHead span { margin-left: auto; color: var(--text-3); font-size: 8px; font-weight: 850; }
 .gamePlayers { display: grid; }
-.gamePlayer { display: grid; grid-template-columns: 20px 38px minmax(0, 1fr) auto auto minmax(94px, auto); align-items: center; gap: 8px; min-height: 63px; padding: 7px 10px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent); background: transparent; color: var(--text-2); text-align: left; cursor: pointer; }
+.gamePlayer { display: grid; grid-template-columns: 20px 38px minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-height: 70px; padding: 7px 10px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent); background: transparent; color: var(--text-2); text-align: left; cursor: pointer; }
 .gamePlayer:last-child { border-bottom: 0; }
 .gamePlayer:hover { background: var(--accent-dim); }
 .gamePlayerRank { color: var(--text-4); font-family: monospace; font-size: 9px; font-weight: 900; }
@@ -136,6 +137,8 @@
 .mismatchCopy strong { overflow: hidden; color: #f8fafc; font-size: 11px; font-weight: 950; white-space: nowrap; text-overflow: ellipsis; }
 .mismatchCopy span { color: var(--text-3); font-size: 8px; }
 .mismatchCopy .bookPrice { align-items: flex-start; margin-top: 3px; }
+.mismatchCopy .marketPair { margin-top: 4px; }
+.mismatchMetrics { display: flex; align-items: center; gap: 7px; }
 .rankPair { display: grid; grid-template-columns: repeat(2, auto); gap: 2px 9px; text-align: right; }
 .rankPair small { color: var(--text-4); font-size: 7px; font-weight: 900; text-transform: uppercase; }
 .rankPair b { font-size: 11px; }
@@ -147,7 +150,10 @@
 .signalTop > span { min-width: 0; display: grid; gap: 2px; }
 .signalTop strong { overflow: hidden; font-size: 11px; font-weight: 950; white-space: nowrap; text-overflow: ellipsis; }
 .signalTop small { color: var(--text-3); font-size: 8px; font-weight: 750; }
-.signalTop > .scoreMark { margin-left: auto; }
+.signalTop > div:last-child { margin-left: auto; }
+.signalCard > .marketPair { width: 100%; margin-top: 9px; }
+.signalCard > .marketPair .bookPrice { min-width: 0; align-items: flex-start; }
+.signalCard > .marketPair .movement { justify-content: flex-start; }
 .signalChips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
 .signalChip { min-height: 23px; display: inline-flex; align-items: center; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text-2); font-size: 8px; font-weight: 850; }
 .empty { display: grid; place-items: center; min-height: 260px; border: 1px dashed var(--border); border-radius: 13px; color: var(--text-3); font-size: 11px; font-weight: 800; text-align: center; }
@@ -180,7 +186,8 @@
   .summaryCard strong { font-size: 13px; }
   .signalGrid { grid-template-columns: 1fr; }
   .gamePlayer { grid-template-columns: 18px 38px minmax(0, 1fr) auto auto; }
-  .gamePlayer > .bookPrice { display: none; }
+  .gamePlayer > .marketPair { display: none; }
+  .mismatchMetrics .scoreCompact { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
