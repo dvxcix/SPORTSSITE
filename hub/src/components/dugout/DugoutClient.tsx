@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip, type TooltipCardData } from '@/components/ui/tooltip-card'
@@ -30,6 +31,7 @@ import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPe
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { ModalSurface } from '@/components/ui/ModalSurface'
+import type { SlateEdgeEntry } from '@/components/dugout/SlateEdgeOverlay'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -40,6 +42,11 @@ type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   confidence: number
   trend: number
 }>>
+
+const SlateEdgeOverlay = dynamic(
+  () => import('@/components/dugout/SlateEdgeOverlay').then(module => module.SlateEdgeOverlay),
+  { ssr: false },
+)
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -4955,6 +4962,8 @@ export function DugoutClient({ date }: { date: string }) {
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
+  const [showSlateEdge, setShowSlateEdge] = useState(false)
+  const [slateFocus, setSlateFocus] = useState<{ gameKey: string; mlbId: number } | null>(null)
   const [showGamePicker, setShowGamePicker] = useState(false)
   const [gamePickerFilter, setGamePickerFilter] = useState<'all' | 'live' | 'upcoming' | 'final'>('all')
   const [density, setDensity] = useState<'compact' | 'comfortable'>(() => {
@@ -4966,6 +4975,7 @@ export function DugoutClient({ date }: { date: string }) {
       const panel = window.sessionStorage.getItem('ss:dugout-open-panel')
       setShowHrBoard(panel === 'home-runs')
       setShowNearHrBoard(panel === 'near-home-runs')
+      setShowSlateEdge(panel === 'slate-edge')
     } catch {}
   }, [])
   const gameButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -4988,9 +4998,10 @@ export function DugoutClient({ date }: { date: string }) {
     try {
       if (showHrBoard) window.sessionStorage.setItem('ss:dugout-open-panel', 'home-runs')
       else if (showNearHrBoard) window.sessionStorage.setItem('ss:dugout-open-panel', 'near-home-runs')
+      else if (showSlateEdge) window.sessionStorage.setItem('ss:dugout-open-panel', 'slate-edge')
       else window.sessionStorage.removeItem('ss:dugout-open-panel')
     } catch {}
-  }, [showHrBoard, showNearHrBoard])
+  }, [showHrBoard, showNearHrBoard, showSlateEdge])
   // Reuse the private profile already loaded by the app-wide AuthProvider.
   // Fetching /api/account/me again here doubled profile traffic for every
   // Dugout visit and added an unnecessary auth/database round trip.
@@ -5092,6 +5103,7 @@ export function DugoutClient({ date }: { date: string }) {
   // button history with dozens of entries.
   const setActiveGame = useCallback((gameKey: string | null) => {
     setActive(gameKey)
+    setSlateFocus(null)
     const snapshot = dugoutSessionSnapshots.get(date)
     if (snapshot) dugoutSessionSnapshots.set(date, { ...snapshot, activeGame: gameKey })
     try {
@@ -5148,6 +5160,75 @@ export function DugoutClient({ date }: { date: string }) {
   const openingMap = useMemo(() => buildOpeningMap(data), [data])
   const hrMap = useMemo(() => buildHrMap(data), [data])
   const nearMap = useMemo(() => buildNearMap(data), [data])
+
+  // Additive full-slate view: build the same per-game rows and rank pools as
+  // GameTable, from the already-loaded Dugout payload. This performs no new
+  // browser request and does not alter the active board, its columns, or its
+  // saved state. Locked games are intentionally excluded so this overlay
+  // cannot become a second path around the Dugout's existing access rules.
+  const slateEdgeEntries = useMemo<SlateEdgeEntry[]>(() => {
+    if (!showSlateEdge) return []
+    const out: SlateEdgeEntry[] = []
+    for (const game of (data?.games ?? [])) {
+      if (game.locked) continue
+      const gamePicks = buildCommunityPicksMap(data, game.gameKey ?? null)
+      const awayPitcher = game.awayPitcher
+      const homePitcher = game.homePitcher
+      const homeRows = (game.homeLineup ?? []).map((player: any) =>
+        buildBatterRow(player, awayPitcher?.hand || 'R', awayPitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, awayPitcher?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
+      )
+      const awayRows = (game.awayLineup ?? []).map((player: any) =>
+        buildBatterRow(player, homePitcher?.hand || 'R', homePitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, homePitcher?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
+      )
+      const pool = [...awayRows, ...homeRows]
+      computePaperScores(pool)
+      computeMmRanks(pool)
+
+      for (const row of pool) {
+        const hrBooks = [
+          ['FanDuel', row.sa_fd], ['Caesars', row.sa_cz], ['BetMGM', row.sa_mgm],
+          ['BetRivers', row.sa_br], ['Fanatics', row.sa_fan],
+        ].filter((offer): offer is [string, number] => offer[1] != null)
+        out.push({
+          gameKey: String(game.gameKey),
+          gamePk: game.gamePk != null ? String(game.gamePk) : null,
+          gameLabel: `${game.awayAbbr} at ${game.homeAbbr}`,
+          awayAbbr: game.awayAbbr,
+          homeAbbr: game.homeAbbr,
+          status: game.status ?? null,
+          gameTime: game.gameDate ?? null,
+          lineupsConfirmed: !!game.homeLineupConfirmed && !!game.awayLineupConfirmed,
+          mlbId: row.mlb_id,
+          name: row.name,
+          team: row.team,
+          position: row.position,
+          battingOrder: row.batting_order ?? null,
+          score: row.mechanics_index,
+          scoreRank: row.mechanics_rank,
+          scoreConfidence: row.mechanics_confidence,
+          paper: row.paper,
+          bookRank: row.bk_rk,
+          modelRank: row.pp_rk,
+          mm: row.mm,
+          pitchFit: row.matchup_edge,
+          barrelSeason: row.s_brl,
+          barrelRecent: row.r_brl,
+          barrelDelta: row.d_brl,
+          hardHitDelta: row.d_hh,
+          pullAirRecent: row.r_pa,
+          pullAirDelta: row.d_pa,
+          timingDelta: row.d_timing,
+          fhr: row.fhr_fd,
+          fhrOpen: row.fhr_open,
+          hr: row.sa_fd,
+          hrOpen: row.saFd_open,
+          hrBooks: hrBooks.map(([book, price]) => ({ book, price })),
+          publicPicks: row.total_market_pick_count ?? row.pk?.picks ?? null,
+        })
+      }
+    }
+    return out
+  }, [data, fhrAvgMap, hrMap, nearMap, openingMap, pitcherMap, saAvgMap, showSlateEdge, splitMap, statcastWindow])
 
   if (loading) return (
     <div aria-live="polite" aria-busy="true" style={{ display: 'grid', gap: 10, minHeight: 280 }}>
@@ -5270,6 +5351,15 @@ export function DugoutClient({ date }: { date: string }) {
           </button>
         )}
 
+        <button className="dugout-summary-action" aria-label="Open full-slate Slate Edge" onClick={() => { setShowHrBoard(false); setShowNearHrBoard(false); setShowSlateEdge(true) }} style={{
+          minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
+          border: '1px solid color-mix(in srgb, var(--accent) 48%, var(--border))', background: 'var(--accent-dim)', color: 'var(--accent)',
+          fontSize: 12, fontWeight: 850, cursor: 'pointer',
+        }}>
+          <BarChart3 size={14} aria-hidden="true" /> Slate Edge
+          <span style={{ background: 'color-mix(in srgb, var(--accent) 20%, transparent)', borderRadius: 999, padding: '1px 7px', fontSize: 10 }}>Full slate</span>
+        </button>
+
         {/* Per-account column customization — applies across every game's
             table below, not just the active one, so it lives up here at
             the page level rather than inside GameTable's per-game toolbar. */}
@@ -5361,7 +5451,7 @@ export function DugoutClient({ date }: { date: string }) {
               featuredMatchup={featuredGame ? `${featuredGame.awayAbbr} @ ${featuredGame.homeAbbr}` : undefined}
             />
           : <GameTable
-              key={active.gameKey}
+              key={`${active.gameKey}:${slateFocus && slateFocus.gameKey === active.gameKey ? slateFocus.mlbId : ''}`}
               game={active}
               date={date}
               splitMap={splitMap}
@@ -5372,7 +5462,7 @@ export function DugoutClient({ date }: { date: string }) {
               openingMap={openingMap}
               hrMap={hrMap}
               nearMap={nearMap}
-              highlightMlbId={highlightId}
+              highlightMlbId={slateFocus && slateFocus.gameKey === active.gameKey ? slateFocus.mlbId : highlightId}
               requestedCapture={requestedCapture}
               statcastWindow={statcastWindow}
               onStatcastWindowChange={setStatcastWindow}
@@ -5440,6 +5530,19 @@ export function DugoutClient({ date }: { date: string }) {
           teamByMlbId={teamByMlbId}
           onJumpToGame={gk => { setActiveGame(gk); setShowNearHrBoard(false) }}
           onClose={() => setShowNearHrBoard(false)}
+        />
+      )}
+
+      {showSlateEdge && (
+        <SlateEdgeOverlay
+          open
+          date={date}
+          entries={slateEdgeEntries}
+          onClose={() => setShowSlateEdge(false)}
+          onOpenPlayer={entry => {
+            setActiveGame(entry.gameKey)
+            if (entry.mlbId != null) setSlateFocus({ gameKey: entry.gameKey, mlbId: entry.mlbId })
+          }}
         />
       )}
 
