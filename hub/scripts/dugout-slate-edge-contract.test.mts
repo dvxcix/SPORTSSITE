@@ -21,6 +21,9 @@ test('Slate Edge exposes all four full-slate analysis views', () => {
   }
   assert.match(overlay, /onOpenPlayer/)
   assert.match(overlay, /Search player, team, or game/)
+  assert.match(overlay, /className={styles\.gamePlayer}[\s\S]*EdgeMark/)
+  assert.match(overlay, /className={styles\.mismatchMetrics}[\s\S]*EdgeMark/)
+  assert.match(overlay, /className={styles\.signalTop}[\s\S]*EdgeMark/)
 })
 
 test('Slate Edge is responsive and uses the shared accessible modal', () => {
