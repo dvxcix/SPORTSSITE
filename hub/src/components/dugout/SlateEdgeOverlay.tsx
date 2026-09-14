@@ -29,6 +29,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
+import { rankMlbSlateEdge, type MlbSlateEdgeRank } from '@/lib/mlbSlateEdgeRanking'
 import styles from './SlateEdgeOverlay.module.css'
 
 export type SlateEdgeEntry = {
@@ -56,6 +57,10 @@ export type SlateEdgeEntry = {
   barrelSeason: number | null
   barrelRecent: number | null
   barrelDelta: number | null
+  barrelL3: number | null
+  barrelL3Delta: number | null
+  barrelL5: number | null
+  barrelL5Delta: number | null
   hardHitDelta: number | null
   pullAirRecent: number | null
   pullAirDelta: number | null
@@ -69,8 +74,8 @@ export type SlateEdgeEntry = {
 }
 
 type View = 'rankings' | 'matchups' | 'market' | 'signals'
-type Sort = 'signals' | 'score' | 'model' | 'movement' | 'picks' | 'pitch'
-type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks'
+type Sort = 'edge' | 'signals' | 'score' | 'model' | 'movement' | 'picks' | 'pitch'
+type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks' | 'lineup' | 'quiet'
 type SignalChip = {
   label: string
   value: number
@@ -80,6 +85,7 @@ type SignalChip = {
 }
 
 const SORT_OPTIONS = [
+  { value: 'edge' as const, label: 'Slate Edge Rank', detail: 'Best complete pregame profile', Icon: Crosshair },
   { value: 'signals' as const, label: 'Signal Strength', detail: 'Strongest multi-signal stack', Icon: Layers3 },
   { value: 'score' as const, label: 'SlipSurge Score', detail: 'Highest composite signal', Icon: Zap },
   { value: 'model' as const, label: 'Model gap', detail: 'Largest model-market split', Icon: BrainCircuit },
@@ -111,6 +117,10 @@ const heatStyle = (value: number | null, center = 0, span = 10): CSSProperties |
 function ScoreMark({ value, compact = false }: { value: number | null; compact?: boolean }) {
   if (value == null) return <span className={styles.scoreMissing} aria-label="SlipSurge Score unavailable">—</span>
   return <MechanicsScoreRing score={value} label="SlipSurge Score" size="small" className={compact ? styles.scoreCompact : undefined} />
+}
+
+function EdgeMark({ value, compact = false }: { value: number; compact?: boolean }) {
+  return <span className={styles.edgeMark} data-compact={compact}><Crosshair size={compact ? 10 : 12} /><span><small>Edge</small><b>{value}</b></span></span>
 }
 
 function MmMark({ entry, compact = false }: { entry: SlateEdgeEntry; compact?: boolean }) {
@@ -181,16 +191,19 @@ function SignalGlyph({ chip }: { chip: SignalChip }) {
   if (chip.kind === 'pitch') return <Target size={13} />
   if (chip.kind === 'pullAir') return <Wind size={13} />
   if (chip.kind === 'timing') return <TimerReset size={13} />
+  if (chip.kind === 'lineup') return <BarChart3 size={13} />
+  if (chip.kind === 'quiet') return <ScanSearch size={13} />
   if (chip.kind === 'fhr') return <Crosshair size={13} />
   if (chip.kind === 'hr') return <Flame size={13} />
   return <Layers3 size={13} />
 }
 
-function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null) {
+function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null, edge: MlbSlateEdgeRank | undefined) {
   const chips: SignalChip[] = []
   if (entry.mm != null && Math.abs(entry.mm) >= 2) chips.push({ label: entry.mm > 0 ? `Model +${entry.mm}` : `Market +${Math.abs(entry.mm)}`, value: Math.abs(entry.mm) * 12, kind: entry.mm > 0 ? 'model' : 'market' })
   if (entry.pitchFit != null && pitchBaseline != null && entry.pitchFit > pitchBaseline + 8) chips.push({ label: `Pitch fit +${Math.round(entry.pitchFit - pitchBaseline)}`, value: entry.pitchFit - pitchBaseline, kind: 'pitch' })
-  if (entry.barrelDelta != null && Math.abs(entry.barrelDelta) >= 1) chips.push({ label: `Barrel ${signed(entry.barrelDelta)}`, value: Math.abs(entry.barrelDelta) * 5, kind: 'barrel' })
+  const recentBarrelDelta = Math.max(entry.barrelL3Delta ?? -Infinity, entry.barrelL5Delta ?? -Infinity, entry.barrelDelta ?? -Infinity)
+  if (Number.isFinite(recentBarrelDelta) && Math.abs(recentBarrelDelta) >= 1) chips.push({ label: 'Recent barrel ' + signed(recentBarrelDelta), value: Math.abs(recentBarrelDelta) * 5, kind: 'barrel' })
   if (entry.hardHitDelta != null && Math.abs(entry.hardHitDelta) >= 2) chips.push({ label: `Hard-hit ${signed(entry.hardHitDelta)}`, value: Math.abs(entry.hardHitDelta) * 2, kind: 'hardHit' })
   if (entry.pullAirDelta != null && Math.abs(entry.pullAirDelta) >= .02) chips.push({ label: `Pull-air ${signed(entry.pullAirDelta * 100, 'pp')}`, value: Math.abs(entry.pullAirDelta) * 100, kind: 'pullAir' })
   if (entry.timingDelta != null && Math.abs(entry.timingDelta) >= .02) chips.push({ label: `Timing ${signed(entry.timingDelta * 100, 'pp')}`, value: Math.abs(entry.timingDelta) * 100, kind: 'timing' })
@@ -200,7 +213,9 @@ function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null) {
   if (fhrMove != null && Math.abs(fhrMove) >= 20) chips.push({ label: `FHR ${signed(fhrMove)}`, value: Math.abs(fhrMove) / 3, kind: 'fhr', direction: fhrMove < 0 ? 'shortened' : fhrMove > 0 ? 'lengthened' : 'flat' })
   const bookGap = range(entry)
   if (bookGap != null && bookGap >= 75) chips.push({ label: `${bookGap} pts`, value: bookGap / 5, kind: 'books', books: entry.hrBooks.map(offer => offer.book) })
-  if (entry.publicPicks != null && entry.publicPicks > 0) chips.push({ label: `${entry.publicPicks.toLocaleString()} picks`, value: Math.log10(entry.publicPicks + 1) * 10, kind: 'picks' })
+  if (entry.lineupsConfirmed && entry.battingOrder != null && entry.battingOrder <= 4) chips.push({ label: 'Batting #' + entry.battingOrder, value: (5 - entry.battingOrder) * 7, kind: 'lineup' })
+  if (edge?.marketPosture === 'quiet') chips.push({ label: 'HR markets held flat', value: 28, kind: 'quiet', direction: 'flat' })
+  if (entry.publicPicks != null && edge && edge.lowPublicStrength >= 0.6) chips.push({ label: entry.publicPicks.toLocaleString() + ' picks · low public', value: edge.lowPublicStrength * 35, kind: 'picks' })
   return chips.sort((a, b) => b.value - a.value).slice(0, 5)
 }
 
@@ -255,7 +270,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
   const [view, setView] = useState<View>('rankings')
   const [query, setQuery] = useState('')
   const [game, setGame] = useState('all')
-  const [sort, setSort] = useState<Sort>('score')
+  const [sort, setSort] = useState<Sort>('edge')
   const gameRailRef = useRef<HTMLDivElement>(null)
 
   const scrollGames = (direction: -1 | 1) => gameRailRef.current?.scrollBy({ left: direction * Math.max(260, gameRailRef.current.clientWidth * .72), behavior: 'smooth' })
@@ -271,6 +286,8 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
     return [...map.values()]
   }, [entries])
 
+  const edgeRanks = useMemo(() => rankMlbSlateEdge(entries), [entries])
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const rows = entries.filter(entry =>
@@ -278,15 +295,16 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
       (!needle || entry.name.toLowerCase().includes(needle) || entry.team.toLowerCase().includes(needle) || entry.gameLabel.toLowerCase().includes(needle)),
     )
     return [...rows].sort((a, b) => {
+      if (sort === 'edge') return (edgeRanks.get(b)?.score ?? -1) - (edgeRanks.get(a)?.score ?? -1) || (b.score ?? -1) - (a.score ?? -1)
       if (sort === 'model') return (b.mm ?? -999) - (a.mm ?? -999)
       if (sort === 'movement') return Math.max(Math.abs(move(b.hr, b.hrOpen) ?? 0), Math.abs(move(b.fhr, b.fhrOpen) ?? 0)) - Math.max(Math.abs(move(a.hr, a.hrOpen) ?? 0), Math.abs(move(a.fhr, a.fhrOpen) ?? 0))
       if (sort === 'picks') return (b.publicPicks ?? -1) - (a.publicPicks ?? -1)
       if (sort === 'pitch') return (b.pitchFit ?? -999) - (a.pitchFit ?? -999)
       return (b.score ?? -1) - (a.score ?? -1) || (b.paper ?? -999) - (a.paper ?? -999)
     })
-  }, [entries, game, query, sort])
+  }, [edgeRanks, entries, game, query, sort])
 
-  const leader = filtered.reduce<SlateEdgeEntry | null>((best, entry) => !best || (entry.score ?? -1) > (best.score ?? -1) ? entry : best, null)
+  const leader = filtered[0] ?? null
   const modelAhead = filtered.filter(entry => (entry.mm ?? 0) >= 3).length
   const movers = filtered.filter(entry => Math.max(Math.abs(move(entry.hr, entry.hrOpen) ?? 0), Math.abs(move(entry.fhr, entry.fhrOpen) ?? 0)) >= 50).length
   const confirmedGames = new Set(filtered.filter(entry => entry.lineupsConfirmed).map(entry => entry.gameKey)).size
@@ -303,7 +321,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
   }, [entries])
   const signals = useMemo(() => {
     const rows = filtered
-      .map(entry => ({ entry, chips: signalChips(entry, pitchBaselines.get(entry.gameKey) ?? null) }))
+      .map(entry => ({ entry, chips: signalChips(entry, pitchBaselines.get(entry.gameKey) ?? null, edgeRanks.get(entry)) }))
       .filter(item => item.chips.length >= 2)
     if (sort === 'signals') {
       rows.sort((a, b) =>
@@ -312,9 +330,10 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
       )
     }
     return rows
-  }, [filtered, pitchBaselines, sort])
-  const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[1]
+  }, [edgeRanks, filtered, pitchBaselines, sort])
+  const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[0]
   const displayLeader = view === 'signals' ? signals[0]?.entry ?? null : leader
+  const displayLeaderEdge = displayLeader ? edgeRanks.get(displayLeader) : null
   const modelAheadRows = filtered.filter(entry => (entry.mm ?? 0) > 0).sort((a, b) => (b.mm ?? 0) - (a.mm ?? 0))
   const marketAheadRows = filtered.filter(entry => (entry.mm ?? 0) < 0).sort((a, b) => (a.mm ?? 0) - (b.mm ?? 0))
 
@@ -350,7 +369,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
               <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => {
                 setView(key)
                 if (key === 'signals') setSort('signals')
-                else if (sort === 'signals') setSort('score')
+                else if (sort === 'signals') setSort('edge')
               }}><Icon size={13} />{label}</button>
             ))}
           </nav>
@@ -370,7 +389,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
 
         <main className={styles.content}>
           <section className={styles.summary} aria-label="Slate summary">
-            <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeader && <ScoreMark value={displayLeader.score} compact />}</span><em>{view === 'signals' ? `#1 by ${activeSort.label}` : 'Highest SlipSurge Score in view'}</em></div>
+            <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span><em>#1 by {activeSort.label}</em></div>
             <div className={styles.summaryCard}><small>Model ahead</small><strong>{modelAhead}</strong><em>MM +3 or more</em></div>
             <div className={styles.summaryCard}><small>Market movers</small><strong>{movers}</strong><em>50+ odds points</em></div>
             <div className={styles.summaryCard}><small>Signal stacks</small><strong>{signals.length}</strong><em>Two or more signals</em></div>
@@ -384,7 +403,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
                   const fhrMove = move(entry.fhr, entry.fhrOpen)
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
-                    <td className={styles.rank}>{String(index + 1).padStart(2, '0')}</td>
+                    <td className={styles.rank}><b>{String(index + 1).padStart(2, '0')}</b>{edgeRanks.get(entry) && <small>Edge {edgeRanks.get(entry)?.score}</small>}</td>
                     <td><div className={styles.player}><Avatar entry={entry} size={40} /><span className={styles.playerCopy}><strong>{entry.name}</strong><span><TeamLogo abbr={entry.team} />{entry.team} · {entry.position}{entry.battingOrder ? ` · Batting #${entry.battingOrder}` : ''}</span></span></div></td>
                     <td><span className={styles.matchup}><TeamLogo abbr={entry.awayAbbr} />{entry.awayAbbr} at <TeamLogo abbr={entry.homeAbbr} />{entry.homeAbbr}</span></td>
                     <td><ScoreMark value={entry.score} /></td>
@@ -423,7 +442,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
           {view === 'signals' && (signals.length ? <div className={styles.signalView}>
             <div className={styles.signalOrder}><span><Layers3 size={13} /> Ranked by <b>{activeSort.label}</b></span><small>Read left to right · top to bottom</small></div>
             <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
-              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span><ScoreMark value={entry.score} compact /></div>
+              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>

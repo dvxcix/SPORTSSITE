@@ -105,6 +105,14 @@
 .table td:nth-child(1), .table td:nth-child(2) { z-index: 3; background: var(--bg); box-shadow: 1px 0 0 color-mix(in srgb, var(--border) 72%, transparent); }
 .table tbody tr:hover td:nth-child(1), .table tbody tr:hover td:nth-child(2) { background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
 .rank { color: var(--text-4); font-family: monospace; font-weight: 900; }
+.rank b { display: block; color: var(--text-2); }
+.rank small { display: block; margin-top: 3px; color: var(--accent); font-family: inherit; font-size: 7px; white-space: nowrap; }
+.edgeMark { min-width: 52px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 4px 7px; border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); color: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 10%, transparent); }
+.edgeMark > span { display: grid; line-height: 1; }
+.edgeMark small { color: var(--text-3); font-size: 6px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.edgeMark b { margin-top: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.edgeMark[data-compact="true"] { min-width: 43px; min-height: 30px; padding: 3px 5px; border-radius: 8px; }
+.edgeMark[data-compact="true"] b { font-size: 10px; }
 .player { display: flex; align-items: center; gap: 10px; min-width: 225px; }
 .playerCopy { min-width: 0; display: grid; gap: 2px; }
 .playerCopy strong { overflow: hidden; color: #f7fafc; font-size: 12px; font-weight: 950; white-space: nowrap; text-overflow: ellipsis; letter-spacing: -.01em; }
@@ -216,6 +224,8 @@
 .signalChip[data-kind="timing"] { --signal:#e879f9; }
 .signalChip[data-kind="books"] { --signal:#facc15; padding-left: 5px; }
 .signalChip[data-kind="picks"] { --signal:var(--accent); }
+.signalChip[data-kind="lineup"] { --signal:#a3e635; }
+.signalChip[data-kind="quiet"] { --signal:#22d3ee; }
 .signalChip[data-kind="fhr"] { --signal:#60a5fa; }
 .signalChip[data-kind="hr"] { --signal:#fb923c; }
 .signalChip[data-kind="score"] { --signal:var(--accent); }
