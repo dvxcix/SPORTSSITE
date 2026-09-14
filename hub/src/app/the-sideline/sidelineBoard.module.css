@@ -90,9 +90,8 @@
   padding: 7px;
   margin-bottom: 10px;
   border-color: #293747;
-  background: rgba(8, 13, 19, 0.88);
+  background: #080d13;
   box-shadow: 0 10px 34px rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.025);
-  backdrop-filter: blur(18px) saturate(125%);
 }
 
 .controlBar > button,
@@ -518,6 +517,7 @@
 
 .tableScroller {
   position: relative;
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -525,14 +525,14 @@
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   background: #080d13;
-  isolation: isolate;
-  scrollbar-gutter: stable;
+  isolation: auto;
+  scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
   scrollbar-color: rgba(53, 215, 255, 0.44) #080d13;
 }
 
 .boardTable {
-  width: max-content;
+  width: 100%;
   min-width: 100%;
   max-width: none;
   table-layout: fixed;
@@ -567,8 +567,7 @@
   top: 0;
   z-index: 5;
   height: 48px;
-  background: rgba(9,15,22,.96);
-  backdrop-filter: blur(14px);
+  background: #091016;
 }
 
 .boardTable th button {
@@ -620,7 +619,6 @@
   padding: 7px;
   color: #d9e0e8;
   font-size: 13px;
-  transition: background 140ms ease, opacity 140ms ease;
 }
 
 .boardTable tbody tr:hover td { background: #101923; }
@@ -633,10 +631,12 @@
   position: sticky !important;
   left: 0;
   z-index: 6 !important;
+  background: #080d13 !important;
   box-shadow: 1px 0 0 #253343;
 }
 
-.boardTable th.stickyCell { z-index: 8 !important; }
+.boardTable th.stickyCell { z-index: 8 !important; background: #091016 !important; }
+.boardTable tbody tr:hover td.stickyCell { background: #101923 !important; }
 
 .playerCell {
   display: grid;

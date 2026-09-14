@@ -20,7 +20,7 @@ test('season selections never mix preseason and regular-season references', () =
   assert.equal(parseNflSample('invalid'), 'previous')
   assert.equal(defaultNflSample({gameType:'PRE',week:3}),'preseason')
   assert.equal(defaultNflSample({gameType:'REG',week:1}),'previous')
-  assert.equal(defaultNflSample({gameType:'REG',week:3}),'previous')
+  assert.equal(defaultNflSample({gameType:'REG',week:2}),'regular')
   assert.equal(defaultNflSample({gameType:'REG',week:4}),'regular')
 })
 test('primary anytime TD ignores earlier multi-TD alternates and respects the sportsbook', () => {

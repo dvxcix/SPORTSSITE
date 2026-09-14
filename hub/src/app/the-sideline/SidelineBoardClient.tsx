@@ -9,7 +9,7 @@ import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { createPortal } from 'react-dom'
@@ -23,6 +23,8 @@ import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard 
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
+
+const NflSlateEdgeOverlay = dynamic(() => import('./NflSlateEdgeOverlay').then(module => module.NflSlateEdgeOverlay), { ssr: false })
 
 type BoardView = 'core' | 'touchdowns' | 'props' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
 type RoleFilter = 'all' | 'passing' | 'receiving' | 'rushing' | 'kicking' | 'defense'
@@ -1655,7 +1657,7 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[]; timeline: string[]; initialCapture?: string | null }) {
+export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[]; timeline: string[]; initialCapture?: string | null }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
@@ -1674,6 +1676,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [highlights, setHighlights] = useState<Record<string, HighlightColor>>({})
   const [erased, setErased] = useState<Set<string>>(new Set())
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [slateEdgeOpen, setSlateEdgeOpen] = useState(false)
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [expanded, setExpanded] = useState<PlayerRow | null>(null)
   const [compareIds, setCompareIds] = useState<string[]>([])
@@ -2141,6 +2144,9 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         <button type="button" className={toolsOpen ? styles.activeControl : ''} onClick={() => setToolsOpen(value => !value)}>
           <Sparkles size={15} /> Tools
         </button>
+        <button type="button" className={styles.slateEdgeButton} onClick={() => setSlateEdgeOpen(true)}>
+          <Crosshair size={15} /> Slate Edge
+        </button>
         <NflTouchdownTracker
           events={marketStory.touchdowns}
           onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
@@ -2461,6 +2467,8 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       )}
 
       <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
+
+      <NflSlateEdgeOverlay open={slateEdgeOpen} date={selected.gameday} sample={sample} onClose={() => setSlateEdgeOpen(false)} />
 
       {expanded || columnsOpen
         ? createPortal(

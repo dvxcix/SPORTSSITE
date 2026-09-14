@@ -50,6 +50,12 @@
 .gameChip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 38%, var(--border)); color: var(--text-1); }
 .gameChip[data-active="true"] { border-color: var(--accent); background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 20%, var(--surface-2)), var(--accent-dim)); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 9%, transparent); }
 .gameChip img { width: 18px; height: 18px; object-fit: contain; }
+.nflMarketRail { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.nflMarketRail::-webkit-scrollbar { display: none; }
+.nflMarketRail button { min-width: 94px; min-height: 39px; display: grid; align-content: center; gap: 2px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text-2); font-size: 9px; font-weight: 950; text-align: left; white-space: nowrap; cursor: pointer; }
+.nflMarketRail button small { color: var(--text-4); font-size: 6px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.nflMarketRail button[data-active="true"] { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.nflMarketRail button[data-active="true"] small { color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); }
 .gameTeam { color: inherit; }
 .at { color: var(--text-4); font-size: 7px; font-weight: 800; text-transform: uppercase; }
 .sortMenu { position: relative; min-width: 188px; }
@@ -212,6 +218,13 @@
 .signalChip[data-kind="picks"] { --signal:var(--accent); }
 .signalChip[data-kind="fhr"] { --signal:#60a5fa; }
 .signalChip[data-kind="hr"] { --signal:#fb923c; }
+.signalChip[data-kind="score"] { --signal:var(--accent); }
+.signalChip[data-kind="movement"] { --signal:#60a5fa; }
+.signalChip[data-kind="line"] { --signal:#22d3ee; }
+.signalChip[data-kind="dvp"] { --signal:#a78bfa; }
+.signalChip[data-kind="redzone"] { --signal:#fb7185; }
+.signalChip[data-kind="usage"] { --signal:#4ade80; }
+.signalChip[data-kind="explosive"] { --signal:#fbbf24; }
 .signalChip[data-direction="shortened"] { --signal:#4ade80; }
 .signalChip[data-direction="lengthened"] { --signal:#fb7185; }
 .barrelGlyph { width: 15px; height: 15px; display: inline-grid; place-items: center; }
