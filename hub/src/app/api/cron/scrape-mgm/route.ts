@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
-import { openSession } from '@/lib/browserbase'
+import { BETMGM_PROXY_DOMAIN_PATTERN, openSession } from '@/lib/browserbase'
 import { scrapeMgmGame } from '@/lib/scrapers/mgmScraper'
 import { findAndClickGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
@@ -34,7 +34,11 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
   // nc.betmgm.com is state-gated real-money content — without a North
   // Carolina-located proxy IP, BetMGM's backend won't serve the actual page
   // body (the site loads, but the events/odds content never appears).
-  const bb = await openSession({ geoState: 'NC', metadata: { book: 'mgm', sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
+  const bb = await openSession({
+    geoState: 'NC',
+    proxyDomainPattern: BETMGM_PROXY_DOMAIN_PATTERN,
+    metadata: { book: 'mgm', sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) },
+  })
   try {
     await bb.page.route('**/*', route => {
       const type = route.request().resourceType()

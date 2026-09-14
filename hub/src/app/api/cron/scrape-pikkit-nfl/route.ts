@@ -25,13 +25,6 @@ async function clickPlayerProps(page: Awaited<ReturnType<typeof openPikkitSessio
   return hasMarketSelect()
 }
 
-async function installTextOnlyRouting(session: BBSession) {
-  await session.page.route('**/*', route => {
-    const type = route.request().resourceType()
-    return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
-  })
-}
-
 async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
   const gameId = game.gameId
   try {
@@ -130,7 +123,6 @@ async function run(req: Request) {
         index === 0 && pageIndex === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()
       )))
       const sessions = pages.map(page => ({ ...bb, page }))
-      await Promise.all(sessions.map(installTextOnlyRouting))
       results.push(...await Promise.all(group.map((game, gameIndex) => scrapeGame(game, sessions[gameIndex]))))
       await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
     }

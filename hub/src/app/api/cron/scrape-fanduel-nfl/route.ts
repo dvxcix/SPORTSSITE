@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { openSession } from '@/lib/browserbase'
+import { FANDUEL_PROXY_DOMAIN_PATTERN, openSession } from '@/lib/browserbase'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   const { data, error } = await admin.from('nfl_odds_current').select('board').eq('game_id', gameId).maybeSingle()
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
-  const session = await openSession({ proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$', metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
+  const session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
   try {
     await session.page.route('**/*', route => {
       const type = route.request().resourceType()

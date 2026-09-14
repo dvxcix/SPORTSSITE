@@ -5,7 +5,11 @@ import { unstable_cache } from 'next/cache'
 
 export const BROWSERBASE_PLAN = {
   monthlyPriceUsd: 99,
+  concurrentBrowsers: 100,
   includedBrowserMinutes: 500 * 60,
+  includedAgentRuns: 50,
+  includedSearchCalls: 1_000,
+  includedFetchCalls: 10_000,
   includedProxyBytes: 5_000_000_000,
   browserOverageUsdPerHour: 0.10,
   proxyOverageUsdPerGigabyte: 10,

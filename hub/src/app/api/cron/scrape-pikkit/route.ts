@@ -33,23 +33,9 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function installTextOnlyRouting(bb: BBSession) {
-  await bb.page.route('**/*', route => {
-    const type = route.request().resourceType()
-    return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
-  })
-}
-
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, shared?: BBSession) {
   const bb = shared ?? await openPikkitSession(contextId, { sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) })
   try {
-    // Pikkit scraping is pure text/DOM extraction (team names, a market
-    // <select>, pick counts) — no visual rendering is ever needed, and
-    // unlike FD/MGM this isn't a bot-detection-sensitive site (we're
-    // already signed in via a persisted context), so blocking images is
-    // low-risk here specifically. Per Browserbase's own cost-optimization
-    // guidance, this cuts proxy bandwidth without touching page behavior.
-    if (!shared) await installTextOnlyRouting(bb)
     // Confirmed live: this click can land on the WRONG game's event page -
     // a debug dump for a game reporting "no markets scraped" (CWS@TEX)
     // showed a completely unrelated matchup (Orioles @ Red Sox) instead,
@@ -192,7 +178,6 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
       const pages = await Promise.all(group.map((_, pageIndex) => (
         index === 0 && pageIndex === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()
       )))
-      await Promise.all(pages.map(page => installTextOnlyRouting({ ...bb, page })))
       results.push(...await Promise.all(group.map((game, gameIndex) => scrapeOneGame(
         game,
         date,

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminStatCard } from '@/components/admin/AdminStatCard'
-import { browserbasePlanUsage, getBrowserbaseUsageSummary } from '@/lib/browserbaseUsage'
+import { BROWSERBASE_PLAN, browserbasePlanUsage, getBrowserbaseUsageSummary } from '@/lib/browserbaseUsage'
 
 export const dynamic = 'force-dynamic'
 
@@ -163,6 +163,17 @@ export default async function BrowserbaseOperationsPage() {
         <MiniPanel icon={ServerCog} title="Retention window" value={`${usage.retainedSessionCount.toLocaleString()} sessions`} detail={`Latest 100 shown · refreshed ${dateTime(usage.generatedAt)}`} />
       </section>
 
+      <section className={panel}>
+        <PanelHeader eyebrow="Startup plan coverage" title="Which Browserbase meters this application uses" detail="Browser minutes and proxy transfer are measured live by the Project Usage API. Product counters not exposed by that API are identified from audited application call paths instead of being presented as a misleading zero." />
+        <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-5">
+          <QuotaCard label="Concurrent browsers" allowance={BROWSERBASE_PLAN.concurrentBrowsers.toLocaleString()} status={usage.runningSessions + ' active now'} measured />
+          <QuotaCard label="Browser hours" allowance={BROWSERBASE_PLAN.includedBrowserMinutes / 60} status={plan.browserHours.toFixed(1) + ' used'} measured />
+          <QuotaCard label="Agent runs" allowance={BROWSERBASE_PLAN.includedAgentRuns.toLocaleString()} status="Not invoked by app code" />
+          <QuotaCard label="Search calls" allowance={BROWSERBASE_PLAN.includedSearchCalls.toLocaleString()} status="Not invoked by app code" />
+          <QuotaCard label="Fetch calls" allowance={BROWSERBASE_PLAN.includedFetchCalls.toLocaleString()} status="Not invoked by app code" />
+        </div>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-2">
         <div className={`${panel} p-4 sm:p-5`}>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent)]">Outcome distribution</p>
@@ -235,6 +246,11 @@ function MiniPanel({ icon: Icon, title, value, detail, danger = false }: { icon:
 function StatusBadge({ status }: { status: string }) {
   const tone = status === 'COMPLETED' ? 'bg-emerald-400/10 text-emerald-300' : status === 'RUNNING' ? 'bg-cyan-400/10 text-cyan-300' : status === 'PENDING' ? 'bg-amber-400/10 text-amber-300' : 'bg-red-400/10 text-red-300'
   return <span className={`w-fit rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${tone}`}>{status}</span>
+}
+
+function QuotaCard({ label, allowance, status, measured = false }: { label: string; allowance: string | number; status: string; measured?: boolean }) {
+  const badge = measured ? 'bg-cyan-400/10 text-cyan-300' : 'bg-emerald-400/10 text-emerald-300'
+  return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-overlay)] p-4"><div className="flex items-center justify-between gap-2"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">{label}</p><span className={'rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ' + badge}>{measured ? 'Live meter' : 'Code audit'}</span></div><p className="mt-3 text-xl font-black tabular-nums text-[var(--text-1)]">{allowance}<span className="ml-1 text-[10px] font-bold uppercase text-[var(--text-3)]">included</span></p><p className="mt-1 text-xs text-[var(--text-2)]">{status}</p></div>
 }
 
 function Empty({ label }: { label: string }) {

@@ -30,6 +30,9 @@ const DEFAULT_PROXY_BYTE_BUDGET = 4.25 * 1_000_000_000
 const USAGE_CACHE_MS = 60_000
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
+export const FANDUEL_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$'
+export const BETMGM_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*betmgm\\.com$'
+export const PIKKIT_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*(pikkit\\.com|pikkit\\.app|cloudflare\\.com)$'
 
 let projectIdCache: string | undefined
 let usageCache: { checkedAt: number; browserMinutes: number; proxyBytes: number } | undefined
@@ -91,10 +94,9 @@ export type BBSession = {
 // Pass `contextId` to resume a persisted, already-authenticated context
 // (Pikkit) instead of starting logged out every run — see
 // createPersistentContext() below for how that context gets its login in
-// the first place. Proxies default ON — this is exactly the "bypass basic
-// bot detection" capability the paid plan exists for, and FanDuel/BetMGM
-// are the sites most likely to actually need it; pass proxies:false to
-// disable for a specific call if it turns out not to be needed there.
+// the first place. Proxies default OFF so a future caller cannot
+// accidentally route an entire third-party page through metered residential
+// bandwidth. Every sportsbook/auth workflow opts into a narrow domain rule.
 // NOTE: opts.stealth maps to Browserbase's `advancedStealth` session flag,
 // which turned out to BE "Verified" mode itself, not a lesser included
 // tier of it — confirmed live: passing it 403s with "Verified mode is only
@@ -132,10 +134,13 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     ? [proxied, ...(opts.proxyDomainPattern ? [{ type: 'none' as const }] : [])]
     : opts.proxyDomainPattern
       ? [proxied, { type: 'none' as const }]
-      : (opts.proxies ?? true)
-  const userMetadata = opts.metadata
-    ? Object.fromEntries(Object.entries(opts.metadata).map(([key, value]) => [key, String(value)]))
-    : undefined
+      : (opts.proxies ?? false)
+  const proxyMode = opts.proxyDomainPattern ? 'domain-routed' : proxies ? 'full' : 'off'
+  const userMetadata = Object.fromEntries(Object.entries({
+    ...opts.metadata,
+    proxyMode,
+    region: BROWSERBASE_REGION,
+  }).map(([key, value]) => [key, String(value)]))
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
@@ -146,7 +151,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
-    ...(userMetadata ? { userMetadata } : {}),
+    userMetadata,
   })
   const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
   const context = browser.contexts()[0] ?? await browser.newContext()
@@ -194,7 +199,7 @@ export async function openPikkitSession(contextId: string, metadata: Record<stri
     geoState: pikkitGeoState(),
     // Preserve one proxied identity for Pikkit and its Cloudflare challenge,
     // while analytics/CDN traffic bypasses the metered residential proxy.
-    proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*(pikkit\\.com|pikkit\\.app|cloudflare\\.com)$',
+    proxyDomainPattern: PIKKIT_PROXY_DOMAIN_PATTERN,
     metadata: { book: 'pikkit', ...metadata },
   })
 }
@@ -264,9 +269,14 @@ export async function createPersistentContext(
   const bb = client()
   const pid = optionalProjectId()
   const geoState = pikkitGeoState()
-  const proxies = geoState
-    ? [{ type: 'browserbase' as const, geolocation: { country: 'US', state: geoState } }]
-    : true
+  const proxies = [
+    {
+      type: 'browserbase' as const,
+      domainPattern: PIKKIT_PROXY_DOMAIN_PATTERN,
+      ...(geoState ? { geolocation: { country: 'US' as const, state: geoState } } : {}),
+    },
+    { type: 'none' as const },
+  ]
   const existing = options.fresh ? {} : await findPikkitManualAuthIdentity(bb)
   if (existing.running?.contextId) {
     const live = await bb.sessions.debug(existing.running.id)
@@ -290,13 +300,14 @@ export async function createPersistentContext(
     keepAlive: true,
     timeout: PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS,
     browserSettings: {
+      blockAds: true,
       context: { id: contextId, persist: true },
       // This session is deliberately handed to a human in Live View. Do not
       // let Browserbase's automatic CAPTCHA interaction compete with the
       // admin while Cloudflare is asking for an ordinary manual verification.
       solveCaptchas: false,
     },
-    userMetadata: { book: 'pikkit', mode: 'manual-auth' },
+    userMetadata: { book: 'pikkit', sport: 'auth', mode: 'manual-auth', proxyMode: 'domain-routed', region: BROWSERBASE_REGION },
   })
   // The Live View has no address bar — it's just a viewport onto whatever
   // page the remote browser is already on. Without navigating it first, the
