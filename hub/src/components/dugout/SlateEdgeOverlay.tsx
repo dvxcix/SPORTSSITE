@@ -69,7 +69,7 @@ export type SlateEdgeEntry = {
 }
 
 type View = 'rankings' | 'matchups' | 'market' | 'signals'
-type Sort = 'score' | 'model' | 'movement' | 'picks' | 'pitch'
+type Sort = 'signals' | 'score' | 'model' | 'movement' | 'picks' | 'pitch'
 type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks'
 type SignalChip = {
   label: string
@@ -80,6 +80,7 @@ type SignalChip = {
 }
 
 const SORT_OPTIONS = [
+  { value: 'signals' as const, label: 'Signal Strength', detail: 'Strongest multi-signal stack', Icon: Layers3 },
   { value: 'score' as const, label: 'SlipSurge Score', detail: 'Highest composite signal', Icon: Zap },
   { value: 'model' as const, label: 'Model gap', detail: 'Largest model-market split', Icon: BrainCircuit },
   { value: 'movement' as const, label: 'Market movement', detail: 'Largest FHR or HR move', Icon: TrendingUp },
@@ -203,8 +204,9 @@ function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null) {
   return chips.sort((a, b) => b.value - a.value).slice(0, 5)
 }
 
-function SortMenu({ value, onChange }: { value: Sort; onChange: (sort: Sort) => void }) {
-  const selected = SORT_OPTIONS.find(option => option.value === value) ?? SORT_OPTIONS[0]
+function SortMenu({ value, view, onChange }: { value: Sort; view: View; onChange: (sort: Sort) => void }) {
+  const options = view === 'signals' ? SORT_OPTIONS : SORT_OPTIONS.filter(option => option.value !== 'signals')
+  const selected = options.find(option => option.value === value) ?? options[0]
   const SelectedIcon = selected.Icon
   return <details
     className={styles.sortMenu}
@@ -221,7 +223,7 @@ function SortMenu({ value, onChange }: { value: Sort; onChange: (sort: Sort) => 
       <ChevronDown className={styles.sortChevron} size={15} />
     </summary>
     <div className={styles.sortPopover} role="listbox" aria-label="Sort Slate Edge">
-      {SORT_OPTIONS.map(option => {
+      {options.map(option => {
         const Icon = option.Icon
         return <button
           type="button"
@@ -299,7 +301,20 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
     })
     return new Map([...totals].map(([key, value]) => [key, value.count ? value.sum / value.count : null]))
   }, [entries])
-  const signals = useMemo(() => filtered.map(entry => ({ entry, chips: signalChips(entry, pitchBaselines.get(entry.gameKey) ?? null) })).filter(item => item.chips.length >= 2).sort((a, b) => b.chips.reduce((sum, chip) => sum + chip.value, 0) - a.chips.reduce((sum, chip) => sum + chip.value, 0)), [filtered, pitchBaselines])
+  const signals = useMemo(() => {
+    const rows = filtered
+      .map(entry => ({ entry, chips: signalChips(entry, pitchBaselines.get(entry.gameKey) ?? null) }))
+      .filter(item => item.chips.length >= 2)
+    if (sort === 'signals') {
+      rows.sort((a, b) =>
+        b.chips.reduce((sum, chip) => sum + Math.min(chip.value, 40), 0) + b.chips.length * 12
+        - (a.chips.reduce((sum, chip) => sum + Math.min(chip.value, 40), 0) + a.chips.length * 12),
+      )
+    }
+    return rows
+  }, [filtered, pitchBaselines, sort])
+  const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[1]
+  const displayLeader = view === 'signals' ? signals[0]?.entry ?? null : leader
   const modelAheadRows = filtered.filter(entry => (entry.mm ?? 0) > 0).sort((a, b) => (b.mm ?? 0) - (a.mm ?? 0))
   const marketAheadRows = filtered.filter(entry => (entry.mm ?? 0) < 0).sort((a, b) => (a.mm ?? 0) - (b.mm ?? 0))
 
@@ -332,7 +347,11 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
               ['market', 'Model vs Market', Activity],
               ['signals', 'Signal Lab', Crosshair],
             ] as const).map(([key, label, Icon]) => (
-              <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => setView(key)}><Icon size={13} />{label}</button>
+              <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => {
+                setView(key)
+                if (key === 'signals') setSort('signals')
+                else if (sort === 'signals') setSort('score')
+              }}><Icon size={13} />{label}</button>
             ))}
           </nav>
           <div className={styles.filters}>
@@ -345,13 +364,13 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
               </div>
               <button type="button" className={styles.railArrow} onClick={() => scrollGames(1)} aria-label="Later games"><ChevronRight size={15} /></button>
             </div>
-            <SortMenu value={sort} onChange={setSort} />
+            <SortMenu value={sort} view={view} onChange={setSort} />
           </div>
         </section>
 
         <main className={styles.content}>
           <section className={styles.summary} aria-label="Slate summary">
-            <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>Board leader</small><span className={styles.summaryLeaderRow}>{leader && <Avatar entry={leader} size={31} />}<strong>{leader?.name ?? '—'}</strong>{leader && <ScoreMark value={leader.score} compact />}</span><em>Highest SlipSurge Score in view</em></div>
+            <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeader && <ScoreMark value={displayLeader.score} compact />}</span><em>{view === 'signals' ? `#1 by ${activeSort.label}` : 'Highest SlipSurge Score in view'}</em></div>
             <div className={styles.summaryCard}><small>Model ahead</small><strong>{modelAhead}</strong><em>MM +3 or more</em></div>
             <div className={styles.summaryCard}><small>Market movers</small><strong>{movers}</strong><em>50+ odds points</em></div>
             <div className={styles.summaryCard}><small>Signal stacks</small><strong>{signals.length}</strong><em>Two or more signals</em></div>
@@ -401,11 +420,14 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
             </section>)}
           </div>}
 
-          {view === 'signals' && (signals.length ? <div className={styles.signalGrid}>{signals.map(({ entry, chips }) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
-            <div className={styles.signalTop}><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span><ScoreMark value={entry.score} compact /></div>
-            <MarketPair entry={entry} />
-            <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
-          </article>)}</div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
+          {view === 'signals' && (signals.length ? <div className={styles.signalView}>
+            <div className={styles.signalOrder}><span><Layers3 size={13} /> Ranked by <b>{activeSort.label}</b></span><small>Read left to right · top to bottom</small></div>
+            <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
+              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span><ScoreMark value={entry.score} compact /></div>
+              <MarketPair entry={entry} />
+              <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
+            </article>)}</div>
+          </div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
         </main>
       </div>
     </ModalSurface>
