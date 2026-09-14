@@ -1,7 +1,28 @@
 'use client'
 
 import { useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
-import { Activity, BarChart3, ChevronLeft, ChevronRight, Crosshair, ScanSearch, Search, X } from 'lucide-react'
+import {
+  Activity,
+  BarChart3,
+  BrainCircuit,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  Flame,
+  Gauge,
+  Layers3,
+  Radar,
+  ScanSearch,
+  Search,
+  Target,
+  TimerReset,
+  TrendingUp,
+  UsersRound,
+  Wind,
+  X,
+  Zap,
+} from 'lucide-react'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -49,6 +70,22 @@ export type SlateEdgeEntry = {
 
 type View = 'rankings' | 'matchups' | 'market' | 'signals'
 type Sort = 'score' | 'model' | 'movement' | 'picks' | 'pitch'
+type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks'
+type SignalChip = {
+  label: string
+  value: number
+  kind: SignalKind
+  direction?: 'shortened' | 'lengthened' | 'flat'
+  books?: string[]
+}
+
+const SORT_OPTIONS = [
+  { value: 'score' as const, label: 'SlipSurge Score', detail: 'Highest composite signal', Icon: Zap },
+  { value: 'model' as const, label: 'Model gap', detail: 'Largest model-market split', Icon: BrainCircuit },
+  { value: 'movement' as const, label: 'Market movement', detail: 'Largest FHR or HR move', Icon: TrendingUp },
+  { value: 'picks' as const, label: 'Public picks', detail: 'Most tracked action', Icon: UsersRound },
+  { value: 'pitch' as const, label: 'Pitch fit', detail: 'Strongest matchup fit', Icon: Target },
+]
 
 const odds = (value: number | null) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
 const signed = (value: number | null, suffix = '') => value == null ? '—' : `${value > 0 ? '+' : ''}${Math.round(value)}${suffix}`
@@ -122,22 +159,88 @@ function movementClass(value: number | null) {
   return value < 0 ? styles.shortened : styles.lengthened
 }
 
+function BarrelGlyph() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5c2.8-1 7.2-1 10 0l1 3.5-1 8-1 3.5c-2.6 1-5.4 1-8 0L7 16 6 8l1-3.5Z" /><path d="M6.5 8h11M7 16h10M9 4v16M15 4v16" /></svg>
+}
+
+function BookStack({ books = [] }: { books?: string[] }) {
+  const visible = [...new Set(books)].slice(0, 4)
+  return <span className={styles.bookStack} aria-label={visible.length ? `${visible.join(', ')} disagreement` : 'Sportsbook disagreement'}>
+    {(visible.length ? visible : ['fanduel', 'betmgm', 'fanatics']).map(book => <span key={book}><BookLogo vendor={book} size={16} /></span>)}
+  </span>
+}
+
+function SignalGlyph({ chip }: { chip: SignalChip }) {
+  if (chip.kind === 'books') return <BookStack books={chip.books} />
+  if (chip.kind === 'picks') return <span className={styles.picksGlyph}><UsersRound size={13} /><Zap size={7} /></span>
+  if (chip.kind === 'barrel') return <span className={styles.barrelGlyph}><BarrelGlyph /></span>
+  if (chip.kind === 'hardHit') return <Gauge size={13} />
+  if (chip.kind === 'model') return <BrainCircuit size={13} />
+  if (chip.kind === 'market') return <Radar size={13} />
+  if (chip.kind === 'pitch') return <Target size={13} />
+  if (chip.kind === 'pullAir') return <Wind size={13} />
+  if (chip.kind === 'timing') return <TimerReset size={13} />
+  if (chip.kind === 'fhr') return <Crosshair size={13} />
+  if (chip.kind === 'hr') return <Flame size={13} />
+  return <Layers3 size={13} />
+}
+
 function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null) {
-  const chips: Array<{ label: string; value: number }> = []
-  if (entry.mm != null && Math.abs(entry.mm) >= 2) chips.push({ label: entry.mm > 0 ? `Model +${entry.mm}` : `Market +${Math.abs(entry.mm)}`, value: Math.abs(entry.mm) * 12 })
-  if (entry.pitchFit != null && pitchBaseline != null && entry.pitchFit > pitchBaseline + 8) chips.push({ label: `Pitch fit +${Math.round(entry.pitchFit - pitchBaseline)}`, value: entry.pitchFit - pitchBaseline })
-  if (entry.barrelDelta != null && Math.abs(entry.barrelDelta) >= 1) chips.push({ label: `Barrel ${signed(entry.barrelDelta)}`, value: Math.abs(entry.barrelDelta) * 5 })
-  if (entry.hardHitDelta != null && Math.abs(entry.hardHitDelta) >= 2) chips.push({ label: `Hard-hit ${signed(entry.hardHitDelta)}`, value: Math.abs(entry.hardHitDelta) * 2 })
-  if (entry.pullAirDelta != null && Math.abs(entry.pullAirDelta) >= .02) chips.push({ label: `Pull-air ${signed(entry.pullAirDelta * 100, 'pp')}`, value: Math.abs(entry.pullAirDelta) * 100 })
-  if (entry.timingDelta != null && Math.abs(entry.timingDelta) >= .02) chips.push({ label: `Timing ${signed(entry.timingDelta * 100, 'pp')}`, value: Math.abs(entry.timingDelta) * 100 })
+  const chips: SignalChip[] = []
+  if (entry.mm != null && Math.abs(entry.mm) >= 2) chips.push({ label: entry.mm > 0 ? `Model +${entry.mm}` : `Market +${Math.abs(entry.mm)}`, value: Math.abs(entry.mm) * 12, kind: entry.mm > 0 ? 'model' : 'market' })
+  if (entry.pitchFit != null && pitchBaseline != null && entry.pitchFit > pitchBaseline + 8) chips.push({ label: `Pitch fit +${Math.round(entry.pitchFit - pitchBaseline)}`, value: entry.pitchFit - pitchBaseline, kind: 'pitch' })
+  if (entry.barrelDelta != null && Math.abs(entry.barrelDelta) >= 1) chips.push({ label: `Barrel ${signed(entry.barrelDelta)}`, value: Math.abs(entry.barrelDelta) * 5, kind: 'barrel' })
+  if (entry.hardHitDelta != null && Math.abs(entry.hardHitDelta) >= 2) chips.push({ label: `Hard-hit ${signed(entry.hardHitDelta)}`, value: Math.abs(entry.hardHitDelta) * 2, kind: 'hardHit' })
+  if (entry.pullAirDelta != null && Math.abs(entry.pullAirDelta) >= .02) chips.push({ label: `Pull-air ${signed(entry.pullAirDelta * 100, 'pp')}`, value: Math.abs(entry.pullAirDelta) * 100, kind: 'pullAir' })
+  if (entry.timingDelta != null && Math.abs(entry.timingDelta) >= .02) chips.push({ label: `Timing ${signed(entry.timingDelta * 100, 'pp')}`, value: Math.abs(entry.timingDelta) * 100, kind: 'timing' })
   const hrMove = move(entry.hr, entry.hrOpen)
   const fhrMove = move(entry.fhr, entry.fhrOpen)
-  if (hrMove != null && Math.abs(hrMove) >= 20) chips.push({ label: `HR ${signed(hrMove)}`, value: Math.abs(hrMove) / 3 })
-  if (fhrMove != null && Math.abs(fhrMove) >= 20) chips.push({ label: `FHR ${signed(fhrMove)}`, value: Math.abs(fhrMove) / 3 })
+  if (hrMove != null && Math.abs(hrMove) >= 20) chips.push({ label: `HR ${signed(hrMove)}`, value: Math.abs(hrMove) / 3, kind: 'hr', direction: hrMove < 0 ? 'shortened' : hrMove > 0 ? 'lengthened' : 'flat' })
+  if (fhrMove != null && Math.abs(fhrMove) >= 20) chips.push({ label: `FHR ${signed(fhrMove)}`, value: Math.abs(fhrMove) / 3, kind: 'fhr', direction: fhrMove < 0 ? 'shortened' : fhrMove > 0 ? 'lengthened' : 'flat' })
   const bookGap = range(entry)
-  if (bookGap != null && bookGap >= 75) chips.push({ label: `Books ${bookGap} pts`, value: bookGap / 5 })
-  if (entry.publicPicks != null && entry.publicPicks > 0) chips.push({ label: `${entry.publicPicks.toLocaleString()} picks`, value: Math.log10(entry.publicPicks + 1) * 10 })
+  if (bookGap != null && bookGap >= 75) chips.push({ label: `${bookGap} pts`, value: bookGap / 5, kind: 'books', books: entry.hrBooks.map(offer => offer.book) })
+  if (entry.publicPicks != null && entry.publicPicks > 0) chips.push({ label: `${entry.publicPicks.toLocaleString()} picks`, value: Math.log10(entry.publicPicks + 1) * 10, kind: 'picks' })
   return chips.sort((a, b) => b.value - a.value).slice(0, 5)
+}
+
+function SortMenu({ value, onChange }: { value: Sort; onChange: (sort: Sort) => void }) {
+  const selected = SORT_OPTIONS.find(option => option.value === value) ?? SORT_OPTIONS[0]
+  const SelectedIcon = selected.Icon
+  return <details
+    className={styles.sortMenu}
+    onBlur={event => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.removeAttribute('open')
+    }}
+    onKeyDown={event => {
+      if (event.key === 'Escape') event.currentTarget.removeAttribute('open')
+    }}
+  >
+    <summary aria-label={`Sort Slate Edge by ${selected.label}`}>
+      <span className={styles.sortGlyph}><SelectedIcon size={15} /></span>
+      <span className={styles.sortCopy}><small>Sort board</small><b>{selected.label}</b></span>
+      <ChevronDown className={styles.sortChevron} size={15} />
+    </summary>
+    <div className={styles.sortPopover} role="listbox" aria-label="Sort Slate Edge">
+      {SORT_OPTIONS.map(option => {
+        const Icon = option.Icon
+        return <button
+          type="button"
+          role="option"
+          aria-selected={option.value === value}
+          data-active={option.value === value}
+          key={option.value}
+          onClick={event => {
+            onChange(option.value)
+            event.currentTarget.closest('details')?.removeAttribute('open')
+          }}
+        >
+          <span><Icon size={15} /></span>
+          <span><b>{option.label}</b><small>{option.detail}</small></span>
+          {option.value === value ? <i>Active</i> : null}
+        </button>
+      })}
+    </div>
+  </details>
 }
 
 export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }: {
@@ -242,13 +345,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
               </div>
               <button type="button" className={styles.railArrow} onClick={() => scrollGames(1)} aria-label="Later games"><ChevronRight size={15} /></button>
             </div>
-            <select className={styles.sortSelect} value={sort} onChange={event => setSort(event.target.value as Sort)} aria-label="Sort Slate Edge">
-              <option value="score">SlipSurge Score</option>
-              <option value="model">Model gap</option>
-              <option value="movement">Market movement</option>
-              <option value="picks">Public picks</option>
-              <option value="pitch">Pitch fit</option>
-            </select>
+            <SortMenu value={sort} onChange={setSort} />
           </div>
         </section>
 
@@ -304,10 +401,10 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
             </section>)}
           </div>}
 
-          {view === 'signals' && (signals.length ? <div className={styles.signalGrid}>{signals.map(({ entry, chips }) => <article role="button" tabIndex={0} className={styles.signalCard} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
+          {view === 'signals' && (signals.length ? <div className={styles.signalGrid}>{signals.map(({ entry, chips }) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
             <div className={styles.signalTop}><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span><ScoreMark value={entry.score} compact /></div>
             <MarketPair entry={entry} />
-            <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} key={chip.label}>{chip.label}</span>)}</div>
+            <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
           </article>)}</div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
         </main>
       </div>
