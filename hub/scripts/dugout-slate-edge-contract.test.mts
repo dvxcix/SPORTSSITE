@@ -16,7 +16,7 @@ test('Slate Edge is additive and reuses the existing Dugout payload', () => {
 })
 
 test('Slate Edge exposes all four full-slate analysis views', () => {
-  for (const label of ['Slate Rankings', 'Game Vault', 'Model vs Market', 'Signal Lab']) {
+  for (const label of ['Slate Rankings', 'Matchup Lens', 'Model vs Market', 'Signal Lab']) {
     assert.ok(overlay.includes(label), `missing ${label}`)
   }
   assert.match(overlay, /onOpenPlayer/)
