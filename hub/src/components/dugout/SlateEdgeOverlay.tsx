@@ -102,7 +102,7 @@ type WindowEvidence = {
 }
 
 const SORT_OPTIONS = [
-  { value: 'edge' as const, label: 'Slate Edge Rank', detail: 'Best complete pregame profile', Icon: Crosshair },
+  { value: 'edge' as const, label: 'Slate Edge Rank', detail: 'Best complete pregame profile', Icon: Zap },
   { value: 'signals' as const, label: 'Signal Strength', detail: 'Strongest multi-signal stack', Icon: Layers3 },
   { value: 'score' as const, label: 'SlipSurge Score', detail: 'Highest composite signal', Icon: Zap },
   { value: 'model' as const, label: 'Model gap', detail: 'Largest model-market split', Icon: BrainCircuit },
@@ -148,13 +148,21 @@ function SlipSurgeMark({ size = 14, className }: { size?: number; className?: st
 }
 
 function EdgeMark({ value, compact = false }: { value: number; compact?: boolean }) {
-  return <span className={styles.edgeMark} data-compact={compact}><SlipSurgeMark size={compact ? 13 : 16} /><span><small>Edge</small><b>{value}</b></span></span>
+  const tone = value >= 70 ? '#adff42' : value >= 50 ? '#47d7f7' : value >= 30 ? '#ffca62' : '#fb7893'
+  const dialStyle = {
+    '--edge-color': tone,
+    '--edge-progress': `${Math.max(0, Math.min(100, value))}%`,
+  } as CSSProperties
+  return <span className={styles.edgeMark} data-compact={compact} style={dialStyle} aria-label={`Slate Edge index ${value}`}>
+    <span className={styles.edgeDial}><b>{value}</b></span>
+    <small><SlipSurgeMark size={compact ? 9 : 11} />Edge</small>
+  </span>
 }
 
 function RankMark({ rank, edge }: { rank: number; edge?: number }) {
   return <span className={styles.rankMark}>
-    <span><small>Rank</small><b>#{String(rank).padStart(2, '0')}</b></span>
-    <span className={styles.rankEdge}><small>Edge</small><b>{edge ?? '—'}</b></span>
+    <span className={styles.rankNumber}><small>Rank</small><b>#{String(rank).padStart(2, '0')}</b></span>
+    {edge == null ? <span className={styles.scoreMissing}>—</span> : <EdgeMark value={edge} compact />}
   </span>
 }
 
@@ -170,8 +178,11 @@ function BookPrice({ market, value, delta }: { market: 'FHR' | 'HR'; value: numb
   return <span className={styles.bookPrice}>
     <span className={styles.bookLine}><BookLogo vendor="fanduel" size={14} /><small>FD {market}</small><b>{odds(value)}</b></span>
     {delta != null
-      ? <span className={`${styles.movement} ${movementClass(delta)}`}><span>Open {odds(open)}</span><b>{delta < 0 ? 'Shortened ' : delta > 0 ? 'Lengthened ' : 'Unchanged '}{delta === 0 ? '' : signed(delta)}</b></span>
-      : <span className={`${styles.movement} ${styles.muted}`}>Open unavailable</span>}
+      ? <span className={styles.movement} data-direction={delta < 0 ? 'shortened' : delta > 0 ? 'lengthened' : 'flat'}>
+          <span className={styles.openPrice}>Opened <strong>{odds(open)}</strong></span>
+          <span className={styles.movementBadge}>{delta < 0 ? 'Shortened' : delta > 0 ? 'Lengthened' : 'Held'}{delta === 0 ? '' : ` ${signed(delta)}`}</span>
+        </span>
+      : <span className={styles.movement}><span className={styles.openPrice}>Opening price unavailable</span></span>}
   </span>
 }
 
@@ -240,11 +251,6 @@ function GameMatchupMark({ away, home }: { away: string; home: string }) {
     <b>@</b>
     <span><TeamLogo abbr={home} /></span>
   </span>
-}
-
-function movementClass(value: number | null) {
-  if (value == null || value === 0) return styles.muted
-  return value < 0 ? styles.shortened : styles.lengthened
 }
 
 function BarrelGlyph() {
@@ -550,7 +556,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 ['rankings', 'Slate Rankings', BarChart3],
                 ['matchups', 'Matchup Lens', ScanSearch],
                 ['market', 'Model vs Market', Activity],
-                ['signals', 'Signal Lab', Crosshair],
+                ['signals', 'Signal Lab', Layers3],
               ] as const).map(([key, label, Icon]) => (
                 <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => {
                   setView(key)
@@ -604,7 +610,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
                     <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
                     <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /></td>
-                    <td><span className={styles.matchup}><TeamLogo abbr={entry.awayAbbr} />{entry.awayAbbr} at <TeamLogo abbr={entry.homeAbbr} />{entry.homeAbbr}</span></td>
+                    <td><span className={styles.matchup} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /></span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
                     <td style={heatStyle(entry.pitchFit, 50, 30)} className={styles.factorCell}><b>{entry.pitchFit != null ? Math.round(entry.pitchFit) : '—'}</b><small>Matchup fit</small></td>
@@ -653,7 +659,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
           {view === 'market' && <div className={styles.split}>
             {[[modelAheadRows, 'Model ahead', 'Paper rank leads book rank'], [marketAheadRows, 'Market ahead', 'Book rank leads paper rank']] .map(([rows, label, note]) => <section className={styles.lane} key={String(label)}>
               <header className={styles.laneHead}><strong>{String(label)}</strong><span>{String(note)}</span></header>
-              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span>{entry.gameLabel} · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><LeaderWindows windows={leaderWindowsFor(entry)} /><MarketPair entry={entry} /></span><span className={styles.mismatchMetrics}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} /></span></button>)}
+              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span className={styles.marketContext} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /> · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><LeaderWindows windows={leaderWindowsFor(entry)} /><MarketPair entry={entry} /></span><span className={styles.mismatchMetrics}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} /></span></button>)}
               {(rows as SlateEdgeEntry[]).length === 0 && <div className={styles.empty}>No rank gaps in this view.</div>}
             </section>)}
           </div>}
@@ -671,7 +677,20 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
               })}
             </div>
             <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
-              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small><LeaderWindows windows={leaderWindowsFor(entry)} /><EvidenceTags tags={evidenceTagsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
+              <div className={styles.signalTop}>
+                <div className={styles.signalIdentity}>
+                  <span className={styles.signalRank} aria-label={`Signal rank ${index + 1}`}>#{index + 1}</span>
+                  <BatterCharge momentum={entry.momentum} className={styles.batterCharge} />
+                  <Avatar entry={entry} size={42} />
+                  <span className={styles.signalCopy}>
+                    <strong>{entry.name}</strong>
+                    <small aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}; ${entry.team} ${entry.position}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /> · {entry.team} {entry.position}</small>
+                    <LeaderWindows windows={leaderWindowsFor(entry)} />
+                    <EvidenceTags tags={evidenceTagsFor(entry)} />
+                  </span>
+                </div>
+                <div className={styles.signalScores}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
+              </div>
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>
