@@ -255,7 +255,7 @@
 .signalCopy .gameMatchupMark { grid-template-columns: 20px 9px 20px; gap: 2px; }
 .signalCopy .gameMatchupMark > span, .signalCopy .gameMatchupMark img { width: 20px; height: 20px; }
 .signalScores { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
-.signalScores .scoreCompact { display: block; }
+.signalScores .scoreCompact { display: grid; place-items: center; align-self: center; }
 .signalCard > .marketPair { width: 100%; margin-top: 9px; }
 .signalCard > .marketPair .bookPrice { min-width: 0; align-items: flex-start; }
 .signalCard > .marketPair .movement { justify-content: flex-start; }
