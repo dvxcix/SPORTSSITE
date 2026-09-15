@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
 import {
   Activity,
@@ -131,8 +132,19 @@ function ScoreMark({ value, compact = false }: { value: number | null; compact?:
   return <MechanicsScoreRing score={value} label="SlipSurge Score" size="small" className={compact ? styles.scoreCompact : undefined} />
 }
 
+function SlipSurgeMark({ size = 14, className }: { size?: number; className?: string }) {
+  return <Image src="/logo.png" alt="" aria-hidden="true" width={size} height={size} className={className} />
+}
+
 function EdgeMark({ value, compact = false }: { value: number; compact?: boolean }) {
-  return <span className={styles.edgeMark} data-compact={compact}><Crosshair size={compact ? 10 : 12} /><span><small>Edge</small><b>{value}</b></span></span>
+  return <span className={styles.edgeMark} data-compact={compact}><SlipSurgeMark size={compact ? 13 : 16} /><span><small>Edge</small><b>{value}</b></span></span>
+}
+
+function RankMark({ rank, edge }: { rank: number; edge?: number }) {
+  return <span className={styles.rankMark}>
+    <span><small>Rank</small><b>#{String(rank).padStart(2, '0')}</b></span>
+    <span className={styles.rankEdge}><small>Edge</small><b>{edge ?? '—'}</b></span>
+  </span>
 }
 
 function MmMark({ entry, compact = false }: { entry: SlateEdgeEntry; compact?: boolean }) {
@@ -200,6 +212,14 @@ function PlayerIdentity({ entry, size = 40, leaderWindows = [] }: {
 function TeamLogo({ abbr }: { abbr: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={getTeamLogoUrl(abbr)} alt="" aria-hidden="true" />
+}
+
+function GameMatchupMark({ away, home }: { away: string; home: string }) {
+  return <span className={styles.gameMatchupMark} aria-hidden="true">
+    <span><TeamLogo abbr={away} /></span>
+    <b>@</b>
+    <span><TeamLogo abbr={home} /></span>
+  </span>
 }
 
 function movementClass(value: number | null) {
@@ -415,7 +435,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
     <ModalSurface open={open} onClose={onClose} labelledBy="slate-edge-title" backdropClassName={styles.backdrop} panelClassName={styles.panel}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <span className={styles.mark}><Crosshair size={21} aria-hidden="true" /></span>
+          <span className={styles.mark}><SlipSurgeMark size={30} /></span>
           <div className={styles.heading}>
             <div className={styles.eyebrow}>Full-slate intelligence</div>
             <h2 className={styles.title} id="slate-edge-title">Slate Edge</h2>
@@ -460,8 +480,8 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
             <div className={styles.gameRailShell}>
               <button type="button" className={styles.railArrow} onClick={() => scrollGames(-1)} aria-label="Earlier games"><ChevronLeft size={15} /></button>
               <div ref={gameRailRef} className={styles.gameRail} aria-label="Filter by game" onWheel={wheelGames}>
-                <button type="button" className={styles.gameChip} data-active={game === 'all'} onClick={() => setGame('all')}>Full slate</button>
-                {games.map(item => <button key={item.gameKey} type="button" className={styles.gameChip} data-active={game === item.gameKey} onClick={() => setGame(item.gameKey)}><TeamLogo abbr={item.awayAbbr} /><span className={styles.gameTeam}>{item.awayAbbr}</span><span className={styles.at}>at</span><TeamLogo abbr={item.homeAbbr} /><span className={styles.gameTeam}>{item.homeAbbr}</span></button>)}
+                <button type="button" className={styles.gameChip} data-slate="true" data-active={game === 'all'} onClick={() => setGame('all')}><SlipSurgeMark size={16} />Full slate</button>
+                {games.map(item => <button key={item.gameKey} type="button" className={styles.gameChip} aria-label={item.awayAbbr + ' at ' + item.homeAbbr} data-active={game === item.gameKey} onClick={() => setGame(item.gameKey)}><GameMatchupMark away={item.awayAbbr} home={item.homeAbbr} /></button>)}
               </div>
               <button type="button" className={styles.railArrow} onClick={() => scrollGames(1)} aria-label="Later games"><ChevronRight size={15} /></button>
             </div>
@@ -486,7 +506,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   const fhrMove = move(entry.fhr, entry.fhrOpen)
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
-                    <td className={styles.rank}><b>{String(index + 1).padStart(2, '0')}</b>{edgeRanks.get(entry) && <small>Edge {edgeRanks.get(entry)?.score}</small>}</td>
+                    <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
                     <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} /></td>
                     <td><span className={styles.matchup}><TeamLogo abbr={entry.awayAbbr} />{entry.awayAbbr} at <TeamLogo abbr={entry.homeAbbr} />{entry.homeAbbr}</span></td>
                     <td><ScoreMark value={entry.score} /></td>
@@ -509,9 +529,8 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 const edge = edgeRanks.get(entry)
                 return <button type="button" className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)}>
                   <span className={styles.mobileRankHead}>
-                    <span className={styles.mobileRankNumber}><b>{String(index + 1).padStart(2, '0')}</b><small>Edge {edge?.score ?? '—'}</small></span>
+                    <RankMark rank={index + 1} edge={edge?.score} />
                     <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} />
-                    {edge && <EdgeMark value={edge.score} compact />}
                     <ScoreMark value={entry.score} compact />
                   </span>
                   <span className={styles.mobileMetricGrid}>

@@ -31,6 +31,11 @@ test('Slate Edge exposes all four full-slate analysis views', () => {
   assert.match(overlay, /windowSignalLeaders/)
   assert.match(overlay, /Leader · all windows/)
   assert.match(overlay, /BatterCharge/)
+  assert.match(overlay, /src="\/logo\.png"/)
+  assert.match(overlay, /GameMatchupMark/)
+  assert.match(overlay, /aria-label=\{item\.awayAbbr \+ ' at ' \+ item\.homeAbbr\}/)
+  assert.match(overlay, /RankMark rank=\{index \+ 1\}/)
+  assert.doesNotMatch(overlay, /styles\.gameTeam/)
 })
 
 test('Slate Edge is responsive and uses the shared accessible modal', () => {
@@ -40,5 +45,8 @@ test('Slate Edge is responsive and uses the shared accessible modal', () => {
   assert.match(styles, /@media \(max-width: 560px\)/)
   assert.match(styles, /\.mobileRankingList/)
   assert.match(styles, /\.tableWrap \{ display: none; \}/)
+  assert.match(styles, /\.gameMatchupMark/)
+  assert.match(styles, /\.rankMark/)
+  assert.match(styles, /--se-muted: #a8b3c4/)
   assert.match(styles, /prefers-reduced-motion/)
 })
