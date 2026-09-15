@@ -35,6 +35,7 @@ import type { SlateEdgeEntry } from '@/components/dugout/SlateEdgeOverlay'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { BatterCharge } from '@/components/dugout/BatterCharge'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -1736,11 +1737,6 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
   const edgePool = g('matchup_edge').filter((x): x is number => x != null)
   const edgeAvg = edgePool.length ? edgePool.reduce((a, b) => a + b, 0) / edgePool.length : 0
   const hasLiveMatchup = row.matchup_edge != null && row.matchup_edge > edgeAvg + 8
-  const momentumSigned = (value: number | null) => value == null ? '-' : `${value > 0 ? '+' : ''}${value.toFixed(1)}`
-  const momentumTitle = row.momentum.direction === 'unknown'
-    ? 'Form battery: not enough L10/L5/L3/L1 data'
-    : `Form battery: ${row.momentum.label} ${momentumSigned(row.momentum.score)} · SlipSurge ${momentumSigned(row.momentum.slipsurgeTrend)} · Paper ${momentumSigned(row.momentum.paperTrend)}`
-
   // Achievement badges now sit under the actual FD odds cell they're each
   // about, not clustered on the name rail — a "did they homer, or is this
   // MY Matrix" mixup while backtesting was the whole reason for this move
@@ -1801,16 +1797,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
-        <span
-          className={`dg-momentum-battery is-${row.momentum.direction}`}
-          role="img"
-          aria-label={momentumTitle}
-          title={momentumTitle}
-          style={{ ['--dg-momentum-level' as string]: `${Math.round(row.momentum.level * 100)}%` } as React.CSSProperties}
-        >
-          <span className="dg-momentum-battery-fill" />
-          <span className="dg-momentum-battery-cap" />
-        </span>
+        <BatterCharge momentum={row.momentum} />
         <div className="dg-player-cell-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px 4px 12px' }}>
           {/* Order#/hand-circle rail — achievement badges (FHR/HR/near-miss)
               moved off this rail entirely, onto the actual FD FHR/SA odds
@@ -5166,30 +5153,33 @@ export function DugoutClient({ date }: { date: string }) {
   // browser request and does not alter the active board, its columns, or its
   // saved state. Locked games are intentionally excluded so this overlay
   // cannot become a second path around the Dugout's existing access rules.
-  const slateEdgeEntries = useMemo<SlateEdgeEntry[]>(() => {
-    if (!showSlateEdge) return []
-    const out: SlateEdgeEntry[] = []
-    for (const game of (data?.games ?? [])) {
-      if (game.locked) continue
-      const gamePicks = buildCommunityPicksMap(data, game.gameKey ?? null)
-      const awayPitcher = game.awayPitcher
-      const homePitcher = game.homePitcher
-      const homeRows = (game.homeLineup ?? []).map((player: any) =>
-        buildBatterRow(player, awayPitcher?.hand || 'R', awayPitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, awayPitcher?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
-      )
-      const awayRows = (game.awayLineup ?? []).map((player: any) =>
-        buildBatterRow(player, homePitcher?.hand || 'R', homePitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, homePitcher?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
-      )
-      const pool = [...awayRows, ...homeRows]
-      computePaperScores(pool)
-      computeMmRanks(pool)
+  const slateEdgeEntriesByWindow = useMemo<Record<'l1' | 'l3' | 'l5' | 'l10', SlateEdgeEntry[]>>(() => {
+    const byWindow = { l1: [], l3: [], l5: [], l10: [] } as Record<'l1' | 'l3' | 'l5' | 'l10', SlateEdgeEntry[]>
+    if (!showSlateEdge) return byWindow
+    for (const window of ['l1', 'l3', 'l5', 'l10'] as const) {
+      const out = byWindow[window]
+      for (const game of (data?.games ?? [])) {
+        if (game.locked) continue
+        const gamePicks = buildCommunityPicksMap(data, game.gameKey ?? null)
+        const awayPitcher = game.awayPitcher
+        const homePitcher = game.homePitcher
+        const homeRows = (game.homeLineup ?? []).map((player: any) =>
+          buildBatterRow(player, awayPitcher?.hand || 'R', awayPitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, awayPitcher?.matchupEdge ?? null, window, true, !!game.homeLineupConfirmed)
+        )
+        const awayRows = (game.awayLineup ?? []).map((player: any) =>
+          buildBatterRow(player, homePitcher?.hand || 'R', homePitcher?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, gamePicks, openingMap, hrMap, nearMap, homePitcher?.matchupEdge ?? null, window, false, !!game.awayLineupConfirmed)
+        )
+        const pool = [...awayRows, ...homeRows]
+        computePaperScores(pool)
+        computeMmRanks(pool)
+        computeDugoutMomentum(pool)
 
-      for (const row of pool) {
+        for (const row of pool) {
         const hrBooks = [
           ['FanDuel', row.sa_fd], ['Caesars', row.sa_cz], ['BetMGM', row.sa_mgm],
           ['BetRivers', row.sa_br], ['Fanatics', row.sa_fan],
         ].filter((offer): offer is [string, number] => offer[1] != null)
-        out.push({
+          out.push({
           gameKey: String(game.gameKey),
           gamePk: game.gamePk != null ? String(game.gamePk) : null,
           gameLabel: `${game.awayAbbr} at ${game.homeAbbr}`,
@@ -5228,11 +5218,13 @@ export function DugoutClient({ date }: { date: string }) {
           hrOpen: row.saFd_open,
           hrBooks: hrBooks.map(([book, price]) => ({ book, price })),
           publicPicks: row.total_market_pick_count ?? row.pk?.picks ?? null,
-        })
+          momentum: row.momentum,
+          })
+        }
       }
     }
-    return out
-  }, [data, fhrAvgMap, hrMap, nearMap, openingMap, pitcherMap, saAvgMap, showSlateEdge, splitMap, statcastWindow])
+    return byWindow
+  }, [data, fhrAvgMap, hrMap, nearMap, openingMap, pitcherMap, saAvgMap, showSlateEdge, splitMap])
 
   if (loading) return (
     <div aria-live="polite" aria-busy="true" style={{ display: 'grid', gap: 10, minHeight: 280 }}>
@@ -5541,7 +5533,9 @@ export function DugoutClient({ date }: { date: string }) {
         <SlateEdgeOverlay
           open
           date={date}
-          entries={slateEdgeEntries}
+          entriesByWindow={slateEdgeEntriesByWindow}
+          dataWindow={statcastWindow}
+          onWindowChange={setStatcastWindow}
           onClose={() => setShowSlateEdge(false)}
           onOpenPlayer={entry => {
             setActiveGame(entry.gameKey)

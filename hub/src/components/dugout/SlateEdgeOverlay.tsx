@@ -30,7 +30,11 @@ import { BookLogo } from '@/components/BookLogo'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { rankMlbSlateEdge, type MlbSlateEdgeRank } from '@/lib/mlbSlateEdgeRanking'
+import type { DugoutMomentumResult } from '@/lib/dugoutMomentum'
+import { BatterCharge } from './BatterCharge'
 import styles from './SlateEdgeOverlay.module.css'
+
+export type SlateEdgeWindow = 'l1' | 'l3' | 'l5' | 'l10'
 
 export type SlateEdgeEntry = {
   gameKey: string
@@ -71,6 +75,7 @@ export type SlateEdgeEntry = {
   hrOpen: number | null
   hrBooks: Array<{ book: string; price: number }>
   publicPicks: number | null
+  momentum: DugoutMomentumResult
 }
 
 type View = 'rankings' | 'matchups' | 'market' | 'signals'
@@ -92,6 +97,13 @@ const SORT_OPTIONS = [
   { value: 'movement' as const, label: 'Market movement', detail: 'Largest FHR or HR move', Icon: TrendingUp },
   { value: 'picks' as const, label: 'Public picks', detail: 'Most tracked action', Icon: UsersRound },
   { value: 'pitch' as const, label: 'Pitch fit', detail: 'Strongest matchup fit', Icon: Target },
+]
+
+const WINDOWS: Array<{ value: SlateEdgeWindow; short: string; label: string }> = [
+  { value: 'l1', short: 'L1', label: 'Last 1' },
+  { value: 'l3', short: 'L3', label: 'Last 3' },
+  { value: 'l5', short: 'L5', label: 'Last 5' },
+  { value: 'l10', short: 'L10', label: 'Last 10' },
 ]
 
 const odds = (value: number | null) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
@@ -160,6 +172,31 @@ function Avatar({ entry, size = 34 }: { entry: SlateEdgeEntry; size?: number }) 
   )
 }
 
+const playerKey = (entry: SlateEdgeEntry) => entry.mlbId != null ? String(entry.mlbId) : entry.name.toLowerCase()
+
+function LeaderWindows({ windows }: { windows: SlateEdgeWindow[] }) {
+  if (!windows.length) return null
+  const everyWindow = windows.length === WINDOWS.length
+  const label = everyWindow ? 'Leader · all windows' : 'Leader · ' + windows.map(value => value.toUpperCase()).join(' / ')
+  return <span className={styles.leaderWindows} data-all={everyWindow}><Crosshair size={10} />{label}</span>
+}
+
+function PlayerIdentity({ entry, size = 40, leaderWindows = [] }: {
+  entry: SlateEdgeEntry
+  size?: number
+  leaderWindows?: SlateEdgeWindow[]
+}) {
+  return <span className={styles.playerIdentity}>
+    <BatterCharge momentum={entry.momentum} className={styles.batterCharge} />
+    <Avatar entry={entry} size={size} />
+    <span className={styles.playerCopy}>
+      <strong>{entry.name}</strong>
+      <span><TeamLogo abbr={entry.team} />{entry.team} · {entry.position}{entry.battingOrder ? ' · Batting #' + entry.battingOrder : ''}</span>
+      <LeaderWindows windows={leaderWindows} />
+    </span>
+  </span>
+}
+
 function TeamLogo({ abbr }: { abbr: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={getTeamLogoUrl(abbr)} alt="" aria-hidden="true" />
@@ -219,6 +256,9 @@ function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null, edge: 
   return chips.sort((a, b) => b.value - a.value).slice(0, 5)
 }
 
+const signalRankValue = (chips: SignalChip[]) =>
+  chips.reduce((sum, chip) => sum + Math.min(chip.value, 40), 0) + chips.length * 12
+
 function SortMenu({ value, view, onChange }: { value: Sort; view: View; onChange: (sort: Sort) => void }) {
   const options = view === 'signals' ? SORT_OPTIONS : SORT_OPTIONS.filter(option => option.value !== 'signals')
   const selected = options.find(option => option.value === value) ?? options[0]
@@ -260,13 +300,16 @@ function SortMenu({ value, view, onChange }: { value: Sort; view: View; onChange
   </details>
 }
 
-export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }: {
+export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWindowChange, onClose, onOpenPlayer }: {
   open: boolean
   date: string
-  entries: SlateEdgeEntry[]
+  entriesByWindow: Record<SlateEdgeWindow, SlateEdgeEntry[]>
+  dataWindow: SlateEdgeWindow
+  onWindowChange: (window: SlateEdgeWindow) => void
   onClose: () => void
   onOpenPlayer: (entry: SlateEdgeEntry) => void
 }) {
+  const entries = entriesByWindow[dataWindow]
   const [view, setView] = useState<View>('rankings')
   const [query, setQuery] = useState('')
   const [game, setGame] = useState('all')
@@ -324,13 +367,39 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
       .map(entry => ({ entry, chips: signalChips(entry, pitchBaselines.get(entry.gameKey) ?? null, edgeRanks.get(entry)) }))
       .filter(item => item.chips.length >= 2)
     if (sort === 'signals') {
-      rows.sort((a, b) =>
-        b.chips.reduce((sum, chip) => sum + Math.min(chip.value, 40), 0) + b.chips.length * 12
-        - (a.chips.reduce((sum, chip) => sum + Math.min(chip.value, 40), 0) + a.chips.length * 12),
-      )
+      rows.sort((a, b) => signalRankValue(b.chips) - signalRankValue(a.chips))
     }
     return rows
   }, [edgeRanks, filtered, pitchBaselines, sort])
+  const windowSignalLeaders = useMemo(() => WINDOWS.flatMap(item => {
+    const windowEntries = entriesByWindow[item.value]
+    const needle = query.trim().toLowerCase()
+    const candidates = windowEntries.filter(entry =>
+      (game === 'all' || entry.gameKey === game) &&
+      (!needle || entry.name.toLowerCase().includes(needle) || entry.team.toLowerCase().includes(needle) || entry.gameLabel.toLowerCase().includes(needle)),
+    )
+    const ranks = rankMlbSlateEdge(windowEntries)
+    const totals = new Map<string, { sum: number; count: number }>()
+    windowEntries.forEach(entry => {
+      if (entry.pitchFit == null) return
+      const current = totals.get(entry.gameKey) ?? { sum: 0, count: 0 }
+      current.sum += entry.pitchFit
+      current.count += 1
+      totals.set(entry.gameKey, current)
+    })
+    const baselines = new Map([...totals].map(([key, value]) => [key, value.count ? value.sum / value.count : null]))
+    const leader = candidates
+      .map(entry => ({ entry, chips: signalChips(entry, baselines.get(entry.gameKey) ?? null, ranks.get(entry)) }))
+      .filter(item => item.chips.length >= 2)
+      .sort((a, b) => signalRankValue(b.chips) - signalRankValue(a.chips) || (ranks.get(b.entry)?.score ?? -1) - (ranks.get(a.entry)?.score ?? -1))[0]?.entry
+    return leader ? [{ window: item.value, entry: leader }] : []
+  }), [entriesByWindow, game, query])
+  const leaderWindowsByPlayer = useMemo(() => {
+    const result = new Map<string, SlateEdgeWindow[]>()
+    windowSignalLeaders.forEach(item => result.set(playerKey(item.entry), [...(result.get(playerKey(item.entry)) ?? []), item.window]))
+    return result
+  }, [windowSignalLeaders])
+  const leaderWindowsFor = (entry: SlateEdgeEntry) => leaderWindowsByPlayer.get(playerKey(entry)) ?? []
   const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[0]
   const displayLeader = view === 'signals' ? signals[0]?.entry ?? null : leader
   const displayLeaderEdge = displayLeader ? edgeRanks.get(displayLeader) : null
@@ -350,7 +419,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
           <div className={styles.heading}>
             <div className={styles.eyebrow}>Full-slate intelligence</div>
             <h2 className={styles.title} id="slate-edge-title">Slate Edge</h2>
-            <div className={styles.subtitle}>{date} · {games.length} games · {entries.length} players</div>
+            <div className={styles.subtitle}>{date} · {games.length} games · {entries.length} players · {dataWindow.toUpperCase()}</div>
           </div>
           <div className={styles.headerMeta}>
             <span className={styles.metaPill}>{confirmedGames}/{games.length} confirmed</span>
@@ -359,20 +428,33 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
         </header>
 
         <section className={styles.controlDeck} aria-label="Slate Edge controls">
-          <nav className={styles.tabs} aria-label="Slate Edge views">
-            {([
-              ['rankings', 'Slate Rankings', BarChart3],
-              ['matchups', 'Matchup Lens', ScanSearch],
-              ['market', 'Model vs Market', Activity],
-              ['signals', 'Signal Lab', Crosshair],
-            ] as const).map(([key, label, Icon]) => (
-              <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => {
-                setView(key)
-                if (key === 'signals') setSort('signals')
-                else if (sort === 'signals') setSort('edge')
-              }}><Icon size={13} />{label}</button>
-            ))}
-          </nav>
+          <div className={styles.viewBar}>
+            <nav className={styles.tabs} aria-label="Slate Edge views">
+              {([
+                ['rankings', 'Slate Rankings', BarChart3],
+                ['matchups', 'Matchup Lens', ScanSearch],
+                ['market', 'Model vs Market', Activity],
+                ['signals', 'Signal Lab', Crosshair],
+              ] as const).map(([key, label, Icon]) => (
+                <button key={key} type="button" className={styles.tab} data-active={view === key} onClick={() => {
+                  setView(key)
+                  if (key === 'signals') setSort('signals')
+                  else if (sort === 'signals') setSort('edge')
+                }}><Icon size={13} />{label}</button>
+              ))}
+            </nav>
+            <div className={styles.windowToggle} role="group" aria-label="Slate Edge data window">
+              <span>Window</span>
+              {WINDOWS.map(item => <button
+                type="button"
+                key={item.value}
+                aria-label={'Show ' + item.label + ' Slate Edge data'}
+                aria-pressed={dataWindow === item.value}
+                data-active={dataWindow === item.value}
+                onClick={() => onWindowChange(item.value)}
+              >{item.short}</button>)}
+            </div>
+          </div>
           <div className={styles.filters}>
             <label className={styles.search}><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search player, team, or game" aria-label="Search Slate Edge" /></label>
             <div className={styles.gameRailShell}>
@@ -389,14 +471,15 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
 
         <main className={styles.content}>
           <section className={styles.summary} aria-label="Slate summary">
-            <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span><em>#1 by {activeSort.label}</em></div>
+            <div className={styles.summaryCard + ' ' + styles.summaryLeader}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <BatterCharge momentum={displayLeader.momentum} className={styles.batterCharge} />}{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span>{displayLeader && view === 'signals' ? <LeaderWindows windows={leaderWindowsFor(displayLeader)} /> : null}<em>#1 by {activeSort.label} · {dataWindow.toUpperCase()}</em></div>
             <div className={styles.summaryCard}><small>Model ahead</small><strong>{modelAhead}</strong><em>MM +3 or more</em></div>
             <div className={styles.summaryCard}><small>Market movers</small><strong>{movers}</strong><em>50+ odds points</em></div>
             <div className={styles.summaryCard}><small>Signal stacks</small><strong>{signals.length}</strong><em>Two or more signals</em></div>
           </section>
 
           {view === 'rankings' && (filtered.length ? (
-            <div className={styles.tableWrap}>
+            <div className={styles.rankingsViews}>
+              <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead><tr><th>Rank</th><th>Player</th><th>Game</th><th>SlipSurge Score</th><th>MM</th><th>Pitch fit</th><th>Barrel form</th><th>Hard-hit Δ</th><th>Pull-air</th><th>Timing Δ</th><th>FHR market</th><th>HR market</th><th>Book gap</th><th>Picks</th></tr></thead>
                 <tbody>{filtered.map((entry, index) => {
@@ -404,7 +487,7 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
                     <td className={styles.rank}><b>{String(index + 1).padStart(2, '0')}</b>{edgeRanks.get(entry) && <small>Edge {edgeRanks.get(entry)?.score}</small>}</td>
-                    <td><div className={styles.player}><Avatar entry={entry} size={40} /><span className={styles.playerCopy}><strong>{entry.name}</strong><span><TeamLogo abbr={entry.team} />{entry.team} · {entry.position}{entry.battingOrder ? ` · Batting #${entry.battingOrder}` : ''}</span></span></div></td>
+                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} /></td>
                     <td><span className={styles.matchup}><TeamLogo abbr={entry.awayAbbr} />{entry.awayAbbr} at <TeamLogo abbr={entry.homeAbbr} />{entry.homeAbbr}</span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
@@ -420,6 +503,27 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
                   </tr>
                 })}</tbody>
               </table>
+              </div>
+              <div className={styles.mobileRankingList}>
+              {filtered.map((entry, index) => {
+                const edge = edgeRanks.get(entry)
+                return <button type="button" className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)}>
+                  <span className={styles.mobileRankHead}>
+                    <span className={styles.mobileRankNumber}><b>{String(index + 1).padStart(2, '0')}</b><small>Edge {edge?.score ?? '—'}</small></span>
+                    <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} />
+                    {edge && <EdgeMark value={edge.score} compact />}
+                    <ScoreMark value={entry.score} compact />
+                  </span>
+                  <span className={styles.mobileMetricGrid}>
+                    <span style={heatStyle(entry.mm, 0, 8)}><small>MM</small><MmMark entry={entry} compact /></span>
+                    <span style={heatStyle(entry.pitchFit, 50, 30)}><small>Pitch fit</small><b>{entry.pitchFit != null ? Math.round(entry.pitchFit) : '—'}</b></span>
+                    <span><small>Book gap</small><b>{range(entry) != null ? range(entry) + ' pts' : '—'}</b></span>
+                    <span><small>Picks</small><b>{entry.publicPicks?.toLocaleString() ?? '—'}</b></span>
+                  </span>
+                  <MarketPair entry={entry} />
+                </button>
+              })}
+              </div>
             </div>
           ) : <div className={styles.empty}>No players match these filters.</div>)}
 
@@ -427,22 +531,32 @@ export function SlateEdgeOverlay({ open, date, entries, onClose, onOpenPlayer }:
             const players = filtered.filter(entry => entry.gameKey === gameEntry.gameKey).slice(0, 6)
             return <article className={styles.gameCard} key={gameEntry.gameKey}>
               <header className={styles.gameHead}><TeamLogo abbr={gameEntry.awayAbbr} /><strong>{gameEntry.awayAbbr} at {gameEntry.homeAbbr}</strong><TeamLogo abbr={gameEntry.homeAbbr} /><span>{gameEntry.lineupsConfirmed ? 'Confirmed' : 'Projected'}</span></header>
-              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ` · Batting #${entry.battingOrder}` : ''}</small></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><MarketPair entry={entry} /></button>)}</div>
+              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ' · Batting #' + entry.battingOrder : ''}</small><LeaderWindows windows={leaderWindowsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><MarketPair entry={entry} /></button>)}</div>
             </article>
           })}</div>}
 
           {view === 'market' && <div className={styles.split}>
             {[[modelAheadRows, 'Model ahead', 'Paper rank leads book rank'], [marketAheadRows, 'Market ahead', 'Book rank leads paper rank']] .map(([rows, label, note]) => <section className={styles.lane} key={String(label)}>
               <header className={styles.laneHead}><strong>{String(label)}</strong><span>{String(note)}</span></header>
-              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span>{entry.gameLabel} · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><MarketPair entry={entry} /></span><span className={styles.mismatchMetrics}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} /></span></button>)}
+              {(rows as SlateEdgeEntry[]).slice(0, 18).map(entry => <button type="button" className={styles.mismatchRow} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={38} /><span className={styles.mismatchCopy}><strong>{entry.name}</strong><span>{entry.gameLabel} · {entry.publicPicks?.toLocaleString() ?? 0} picks</span><LeaderWindows windows={leaderWindowsFor(entry)} /><MarketPair entry={entry} /></span><span className={styles.mismatchMetrics}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} /></span></button>)}
               {(rows as SlateEdgeEntry[]).length === 0 && <div className={styles.empty}>No rank gaps in this view.</div>}
             </section>)}
           </div>}
 
           {view === 'signals' && (signals.length ? <div className={styles.signalView}>
             <div className={styles.signalOrder}><span><Layers3 size={13} /> Ranked by <b>{activeSort.label}</b></span><small>Read left to right · top to bottom</small></div>
-            <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
-              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
+            <div className={styles.windowLeaderRail} aria-label="Signal leaders by data window">
+              {WINDOWS.map(item => {
+                const windowLeader = windowSignalLeaders.find(leaderItem => leaderItem.window === item.value)?.entry
+                return <button type="button" key={item.value} data-active={dataWindow === item.value} onClick={() => onWindowChange(item.value)}>
+                  <span>{item.short}</span>
+                  {windowLeader ? <><Avatar entry={windowLeader} size={25} /><strong>{windowLeader.name}</strong></> : <strong>—</strong>}
+                  {windowLeader && leaderWindowsFor(windowLeader).length === WINDOWS.length ? <em>4/4</em> : null}
+                </button>
+              })}
+            </div>
+            <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
+              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small><LeaderWindows windows={leaderWindowsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>

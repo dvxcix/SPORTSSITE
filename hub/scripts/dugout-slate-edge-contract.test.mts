@@ -13,6 +13,9 @@ test('Slate Edge is additive and reuses the existing Dugout payload', () => {
   assert.match(dugout, /for \(const game of \(data\?\.games \?\? \[\]\)\)/)
   assert.doesNotMatch(overlay, /fetch\(/)
   assert.match(dugout, /if \(game\.locked\) continue/)
+  assert.match(dugout, /computeDugoutMomentum\(pool\)/)
+  assert.match(dugout, /entriesByWindow=\{slateEdgeEntriesByWindow\}/)
+  assert.match(dugout, /onWindowChange=\{setStatcastWindow\}/)
 })
 
 test('Slate Edge exposes all four full-slate analysis views', () => {
@@ -24,6 +27,10 @@ test('Slate Edge exposes all four full-slate analysis views', () => {
   assert.match(overlay, /className={styles\.gamePlayer}[\s\S]*EdgeMark/)
   assert.match(overlay, /className={styles\.mismatchMetrics}[\s\S]*EdgeMark/)
   assert.match(overlay, /className={styles\.signalTop}[\s\S]*EdgeMark/)
+  assert.match(overlay, /Slate Edge data window/)
+  assert.match(overlay, /windowSignalLeaders/)
+  assert.match(overlay, /Leader · all windows/)
+  assert.match(overlay, /BatterCharge/)
 })
 
 test('Slate Edge is responsive and uses the shared accessible modal', () => {
@@ -31,5 +38,7 @@ test('Slate Edge is responsive and uses the shared accessible modal', () => {
   assert.match(overlay, /labelledBy="slate-edge-title"/)
   assert.match(styles, /@media \(max-width: 900px\)/)
   assert.match(styles, /@media \(max-width: 560px\)/)
+  assert.match(styles, /\.mobileRankingList/)
+  assert.match(styles, /\.tableWrap \{ display: none; \}/)
   assert.match(styles, /prefers-reduced-motion/)
 })

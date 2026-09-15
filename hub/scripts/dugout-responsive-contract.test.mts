@@ -6,6 +6,7 @@ import { computeDugoutMomentum, seriesTrend, type DugoutMomentumInputRow, type D
 import { isHistoricalDugoutDate } from '../src/lib/dugoutBoardDate.ts'
 
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
+const batterChargeSource = readFileSync(new URL('../src/components/dugout/BatterCharge.tsx', import.meta.url), 'utf8')
 const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCard.tsx', import.meta.url), 'utf8')
 const pageStyles = readFileSync(new URL('../src/app/dugout/dugout-page.module.css', import.meta.url), 'utf8')
 const scoreRingSource = readFileSync(new URL('../src/components/ui/MechanicsScoreRing.tsx', import.meta.url), 'utf8')
@@ -69,8 +70,9 @@ test('form battery combines full SlipSurge and Paper Score trajectories relative
 })
 
 test('player rows expose an animated accessible form battery without adding a saved column', () => {
-  assert.ok(source.includes('dg-momentum-battery'))
-  assert.ok(source.includes('Form battery:'))
+  assert.ok(source.includes('<BatterCharge'))
+  assert.ok(batterChargeSource.includes('dg-momentum-battery'))
+  assert.ok(batterChargeSource.includes("label = 'Batter Charge'"))
   assert.ok(source.includes("['FORM BATTERY', 'L10-to-L1 trajectory."))
   assert.match(globalStyles, /\.dg-momentum-battery\.is-up \.dg-momentum-battery-fill\{bottom:1px/)
   assert.match(globalStyles, /\.dg-momentum-battery\.is-down \.dg-momentum-battery-fill\{top:1px/)
