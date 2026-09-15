@@ -145,6 +145,15 @@
 .playerCopy span img { width: 14px; height: 14px; object-fit: contain; }
 .leaderWindows { width: fit-content; min-height: 18px; display: inline-flex !important; align-items: center; gap: 4px; margin-top: 2px; padding: 0 6px; border: 1px solid color-mix(in srgb, #60a5fa 36%, var(--border)); border-radius: 999px; background: color-mix(in srgb, #60a5fa 9%, var(--surface-2)); color: #93c5fd !important; font-size: 6px !important; font-weight: 950 !important; letter-spacing: .025em; white-space: nowrap; }
 .leaderWindows[data-all="true"] { border-color: color-mix(in srgb, var(--accent) 54%, var(--border)); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); color: var(--accent) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent); }
+.evidenceTags { min-width: 0; display: flex !important; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.evidenceTag { --evidence:#94a3b8; width: fit-content; min-height: 18px; display: inline-flex !important; align-items: center; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--evidence) 38%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--evidence) 10%, var(--surface-2)); color: color-mix(in srgb, var(--evidence) 84%, white) !important; font-size: 6px !important; font-weight: 950 !important; letter-spacing: .025em; line-height: 1; white-space: nowrap; }
+.evidenceTag[data-kind="consensus"] { --evidence:var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 11%, transparent); }
+.evidenceTag[data-kind="established"] { --evidence:#22d3ee; }
+.evidenceTag[data-kind="ignition"] { --evidence:#fb923c; }
+.evidenceTag[data-kind="marketRescued"] { --evidence:#facc15; }
+.evidenceTag[data-kind="singleWindow"] { --evidence:#a78bfa; }
+.evidenceTag[data-kind="contradictory"] { --evidence:#fb7185; }
+.evidenceTag[data-kind="lineupRisk"] { --evidence:#f43f5e; }
 .matchup { display: inline-flex; align-items: center; gap: 5px; font-weight: 850; white-space: nowrap; }
 .matchup img { width: 17px; height: 17px; object-fit: contain; }
 .score { color: var(--accent); font-size: 14px; font-weight: 950; }
@@ -309,6 +318,8 @@
   .mobileRankHead .playerIdentity { min-width: 0; gap: 7px; overflow: hidden; }
   .mobileRankHead .playerCopy strong { max-width: 100%; font-size: 11px; }
   .mobileRankHead .playerCopy > span:not(.leaderWindows) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .mobileRankHead .playerCopy > .evidenceTags { overflow: hidden; flex-wrap: nowrap; }
+  .mobileRankHead .evidenceTag { max-width: 132px; overflow: hidden; text-overflow: ellipsis; }
   .mobileRankHead .scoreCompact { display: none; }
   .mobileMetricGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg); }
   .mobileMetricGrid > span { min-width: 0; min-height: 48px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 5px 3px; border-right: 1px solid var(--border-subtle); text-align: center; }

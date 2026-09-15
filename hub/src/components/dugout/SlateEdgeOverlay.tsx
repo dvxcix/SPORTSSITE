@@ -90,6 +90,17 @@ type SignalChip = {
   books?: string[]
 }
 
+type EvidenceTag = {
+  key: 'consensus' | 'established' | 'ignition' | 'marketRescued' | 'singleWindow' | 'contradictory' | 'lineupRisk'
+  label: string
+  detail: string
+}
+
+type WindowEvidence = {
+  edgeRank: number
+  scoreRank: number
+}
+
 const SORT_OPTIONS = [
   { value: 'edge' as const, label: 'Slate Edge Rank', detail: 'Best complete pregame profile', Icon: Crosshair },
   { value: 'signals' as const, label: 'Signal Strength', detail: 'Strongest multi-signal stack', Icon: Layers3 },
@@ -184,7 +195,14 @@ function Avatar({ entry, size = 34 }: { entry: SlateEdgeEntry; size?: number }) 
   )
 }
 
-const playerKey = (entry: SlateEdgeEntry) => entry.mlbId != null ? String(entry.mlbId) : entry.name.toLowerCase()
+const playerKey = (entry: SlateEdgeEntry) => `${entry.gameKey}:${entry.mlbId != null ? String(entry.mlbId) : entry.name.toLowerCase()}`
+
+function EvidenceTags({ tags }: { tags: EvidenceTag[] }) {
+  if (!tags.length) return null
+  return <span className={styles.evidenceTags} aria-label="Cross-window evidence">
+    {tags.map(tag => <span key={tag.key} className={styles.evidenceTag} data-kind={tag.key} title={tag.detail}>{tag.label}</span>)}
+  </span>
+}
 
 function LeaderWindows({ windows }: { windows: SlateEdgeWindow[] }) {
   if (!windows.length) return null
@@ -193,10 +211,11 @@ function LeaderWindows({ windows }: { windows: SlateEdgeWindow[] }) {
   return <span className={styles.leaderWindows} data-all={everyWindow}><Crosshair size={10} />{label}</span>
 }
 
-function PlayerIdentity({ entry, size = 40, leaderWindows = [] }: {
+function PlayerIdentity({ entry, size = 40, leaderWindows = [], evidenceTags = [] }: {
   entry: SlateEdgeEntry
   size?: number
   leaderWindows?: SlateEdgeWindow[]
+  evidenceTags?: EvidenceTag[]
 }) {
   return <span className={styles.playerIdentity}>
     <BatterCharge momentum={entry.momentum} className={styles.batterCharge} />
@@ -205,6 +224,7 @@ function PlayerIdentity({ entry, size = 40, leaderWindows = [] }: {
       <strong>{entry.name}</strong>
       <span><TeamLogo abbr={entry.team} />{entry.team} · {entry.position}{entry.battingOrder ? ' · Batting #' + entry.battingOrder : ''}</span>
       <LeaderWindows windows={leaderWindows} />
+      <EvidenceTags tags={evidenceTags} />
     </span>
   </span>
 }
@@ -420,6 +440,82 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
     return result
   }, [windowSignalLeaders])
   const leaderWindowsFor = (entry: SlateEdgeEntry) => leaderWindowsByPlayer.get(playerKey(entry)) ?? []
+  const windowEvidenceByPlayer = useMemo(() => {
+    const result = new Map<string, Partial<Record<SlateEdgeWindow, WindowEvidence>>>()
+    WINDOWS.forEach(item => {
+      const windowEntries = entriesByWindow[item.value]
+      const ranks = rankMlbSlateEdge(windowEntries)
+      const byGame = new Map<string, SlateEdgeEntry[]>()
+      windowEntries.forEach(entry => byGame.set(entry.gameKey, [...(byGame.get(entry.gameKey) ?? []), entry]))
+      byGame.forEach(gameEntries => {
+        const byEdge = [...gameEntries].sort((a, b) => (ranks.get(b)?.score ?? -1) - (ranks.get(a)?.score ?? -1) || (b.score ?? -1) - (a.score ?? -1))
+        const byScore = [...gameEntries].sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || (b.paper ?? -999) - (a.paper ?? -999))
+        byEdge.forEach((entry, edgeIndex) => {
+          const scoreIndex = byScore.findIndex(candidate => playerKey(candidate) === playerKey(entry))
+          const evidence = result.get(playerKey(entry)) ?? {}
+          evidence[item.value] = { edgeRank: edgeIndex + 1, scoreRank: scoreIndex >= 0 ? scoreIndex + 1 : gameEntries.length }
+          result.set(playerKey(entry), evidence)
+        })
+      })
+    })
+    return result
+  }, [entriesByWindow])
+  const evidenceTagsFor = (entry: SlateEdgeEntry) => {
+    const evidence = windowEvidenceByPlayer.get(playerKey(entry)) ?? {}
+    const topThree = WINDOWS.filter(item => (evidence[item.value]?.edgeRank ?? Infinity) <= 3).map(item => item.value)
+    const tags: EvidenceTag[] = []
+    if (topThree.length >= 3) tags.push({
+      key: 'consensus',
+      label: `Consensus ${topThree.length}/4`,
+      detail: `Top-three Slate Edge profile in ${topThree.map(value => value.toUpperCase()).join(', ')}. This is the most stable cross-window evidence.`,
+    })
+    if (topThree.length < 3 && (evidence.l5?.edgeRank ?? Infinity) <= 3 && (evidence.l10?.edgeRank ?? Infinity) <= 3) tags.push({
+      key: 'established',
+      label: 'Established L5 + L10',
+      detail: 'Top-three Slate Edge profile in both L5 and L10, indicating sustained rather than one-game form.',
+    })
+    if (topThree.length < 3 && ((evidence.l1?.edgeRank ?? Infinity) <= 3 || (evidence.l3?.edgeRank ?? Infinity) <= 3) && (evidence.l10?.edgeRank ?? 0) > 5) tags.push({
+      key: 'ignition',
+      label: 'Short-form ignition',
+      detail: 'Top-three in L1 or L3 but outside the L10 top five. Treat as emerging form that still needs confirmation.',
+    })
+    const rescuedWindows = WINDOWS.filter(item => {
+      const point = evidence[item.value]
+      return point != null && point.edgeRank <= 3 && point.scoreRank - point.edgeRank >= 5
+    })
+    if (rescuedWindows.length) tags.push({
+      key: 'marketRescued',
+      label: 'Market-rescued',
+      detail: `Slate Edge elevated this player at least five places above raw SlipSurge Score in ${rescuedWindows.map(item => item.short).join(', ')} using market, lineup, public and book context.`,
+    })
+    if (topThree.length === 1) tags.push({
+      key: 'singleWindow',
+      label: `Single-window · ${topThree[0].toUpperCase()}`,
+      detail: 'Top-three in only one data window. Useful as a lead, but materially less stable than cross-window agreement.',
+    })
+    const recentBarrel = Math.max(entry.barrelL3Delta ?? -Infinity, entry.barrelL5Delta ?? -Infinity, entry.barrelDelta ?? -Infinity)
+    const directional = [
+      Number.isFinite(recentBarrel) ? recentBarrel : null,
+      entry.hardHitDelta,
+      entry.pullAirDelta != null ? entry.pullAirDelta * 100 : null,
+      entry.timingDelta != null ? entry.timingDelta * 100 : null,
+      move(entry.hr, entry.hrOpen) != null ? -move(entry.hr, entry.hrOpen)! : null,
+      move(entry.fhr, entry.fhrOpen) != null ? -move(entry.fhr, entry.fhrOpen)! : null,
+    ].filter((value): value is number => value != null && Math.abs(value) >= 1)
+    const favorable = directional.filter(value => value > 0).length
+    const adverse = directional.filter(value => value < 0).length
+    if (adverse >= 2 && adverse > favorable) tags.push({
+      key: 'contradictory',
+      label: 'Contradictory',
+      detail: 'Multiple displayed signals are moving in an adverse direction. Signal density is high, but direction is not confirming the player.',
+    })
+    if (!entry.lineupsConfirmed || entry.battingOrder == null) tags.push({
+      key: 'lineupRisk',
+      label: 'Lineup risk',
+      detail: 'The lineup is not confirmed or this player has no confirmed batting position. Recheck availability before acting.',
+    })
+    return tags.slice(0, 3)
+  }
   const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[0]
   const displayLeader = view === 'signals' ? signals[0]?.entry ?? null : leader
   const displayLeaderEdge = displayLeader ? edgeRanks.get(displayLeader) : null
@@ -491,7 +587,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
 
         <main className={styles.content}>
           <section className={styles.summary} aria-label="Slate summary">
-            <div className={styles.summaryCard + ' ' + styles.summaryLeader}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <BatterCharge momentum={displayLeader.momentum} className={styles.batterCharge} />}{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span>{displayLeader && view === 'signals' ? <LeaderWindows windows={leaderWindowsFor(displayLeader)} /> : null}<em>#1 by {activeSort.label} · {dataWindow.toUpperCase()}</em></div>
+            <div className={styles.summaryCard + ' ' + styles.summaryLeader}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <BatterCharge momentum={displayLeader.momentum} className={styles.batterCharge} />}{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span>{displayLeader && view === 'signals' ? <LeaderWindows windows={leaderWindowsFor(displayLeader)} /> : null}{displayLeader ? <EvidenceTags tags={evidenceTagsFor(displayLeader)} /> : null}<em>#1 by {activeSort.label} · {dataWindow.toUpperCase()}</em></div>
             <div className={styles.summaryCard}><small>Model ahead</small><strong>{modelAhead}</strong><em>MM +3 or more</em></div>
             <div className={styles.summaryCard}><small>Market movers</small><strong>{movers}</strong><em>50+ odds points</em></div>
             <div className={styles.summaryCard}><small>Signal stacks</small><strong>{signals.length}</strong><em>Two or more signals</em></div>
@@ -507,7 +603,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
                     <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
-                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} /></td>
+                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /></td>
                     <td><span className={styles.matchup}><TeamLogo abbr={entry.awayAbbr} />{entry.awayAbbr} at <TeamLogo abbr={entry.homeAbbr} />{entry.homeAbbr}</span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
@@ -530,7 +626,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 return <button type="button" className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)}>
                   <span className={styles.mobileRankHead}>
                     <RankMark rank={index + 1} edge={edge?.score} />
-                    <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} />
+                    <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} />
                     <ScoreMark value={entry.score} compact />
                   </span>
                   <span className={styles.mobileMetricGrid}>
@@ -550,7 +646,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
             const players = filtered.filter(entry => entry.gameKey === gameEntry.gameKey).slice(0, 6)
             return <article className={styles.gameCard} key={gameEntry.gameKey}>
               <header className={styles.gameHead}><TeamLogo abbr={gameEntry.awayAbbr} /><strong>{gameEntry.awayAbbr} at {gameEntry.homeAbbr}</strong><TeamLogo abbr={gameEntry.homeAbbr} /><span>{gameEntry.lineupsConfirmed ? 'Confirmed' : 'Projected'}</span></header>
-              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ' · Batting #' + entry.battingOrder : ''}</small><LeaderWindows windows={leaderWindowsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><MarketPair entry={entry} /></button>)}</div>
+              <div className={styles.gamePlayers}>{players.map((entry, index) => <button type="button" className={styles.gamePlayer} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)}><span className={styles.gamePlayerRank}>{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={36} /><span className={styles.gamePlayerName}><b>{entry.name}</b><small>{entry.position}{entry.battingOrder ? ' · Batting #' + entry.battingOrder : ''}</small><LeaderWindows windows={leaderWindowsFor(entry)} /><EvidenceTags tags={evidenceTagsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /><MmMark entry={entry} compact /><MarketPair entry={entry} /></button>)}</div>
             </article>
           })}</div>}
 
@@ -575,7 +671,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
               })}
             </div>
             <div className={styles.signalGrid}>{signals.map(({ entry, chips }, index) => <article role="button" tabIndex={0} className={styles.signalCard} data-leading={chips[0]?.kind} data-podium={index < 3} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name)} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
-              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small><LeaderWindows windows={leaderWindowsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
+              <div className={styles.signalTop}><span className={styles.signalRank}>#{index + 1}</span><BatterCharge momentum={entry.momentum} className={styles.batterCharge} /><Avatar entry={entry} size={42} /><span><strong>{entry.name}</strong><small>{entry.gameLabel} · {entry.team} {entry.position}</small><LeaderWindows windows={leaderWindowsFor(entry)} /><EvidenceTags tags={evidenceTagsFor(entry)} /></span>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>
