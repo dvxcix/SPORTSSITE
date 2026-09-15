@@ -259,6 +259,6 @@ export const getCachedSidelineLens = unstable_cache(
 
 export const getCachedSidelineCheatsheetLens = unstable_cache(
   async (game: SidelineGame) => getSidelineLens(game, false),
-  ['sideline-cheatsheet-lens-v2-complete-pbp'],
+  ['sideline-cheatsheet-lens-v3-pbp-roster-fallback'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )

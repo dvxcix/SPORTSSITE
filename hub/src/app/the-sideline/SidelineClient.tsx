@@ -133,7 +133,8 @@ export type SidelinePlayerGameLine = {
   passAttempts: number
   completions: number
   passingYards: number
-  touchdowns: number
+  passingTouchdowns: number
+  scorerTouchdowns: number
   firstTouchdowns: number
 }
 
@@ -215,6 +216,12 @@ export type SidelineLens = {
   targets: SidelineTarget[]
   runGaps: SidelineRunGap[]
   dvp: SidelineDvpRow[]
+  coverage: {
+    pbpPlays: number
+    trackedPlayers: number
+    rosterPlayers: number
+    advanced: 'complete' | 'partial' | 'unavailable'
+  }
 }
 
 type View = 'props' | 'routes' | 'film' | 'team-dna' | 'red-zone'

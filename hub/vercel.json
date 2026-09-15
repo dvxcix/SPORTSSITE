@@ -158,19 +158,19 @@
     },
     {
       "path": "/api/cron/nfl-sync-player-stats",
-      "schedule": "55 10 * * *"
+      "schedule": "55 10,16 * * *"
     },
     {
       "path": "/api/cron/nfl-sync-ngs",
-      "schedule": "0 11 * * *"
+      "schedule": "0 11,17 * * *"
     },
     {
       "path": "/api/cron/nfl-sync-pbp",
-      "schedule": "5 11 * * *"
+      "schedule": "5 11,17 * * *"
     },
     {
       "path": "/api/cron/nfl-compute-dvp",
-      "schedule": "10 11 * * *"
+      "schedule": "10 11,17 * * *"
     },
     {
       "path": "/api/cron/scrape-fanduel",
