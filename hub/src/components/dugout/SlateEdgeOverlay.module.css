@@ -141,10 +141,10 @@
 .playerCopy strong { overflow: hidden; color: #f7fafc; font-size: 12px; font-weight: 950; white-space: nowrap; text-overflow: ellipsis; letter-spacing: -.01em; }
 .playerCopy span { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 8px; font-weight: 800; }
 .playerCopy span img { width: 14px; height: 14px; object-fit: contain; }
-.leaderWindows { width: fit-content; min-height: 18px; display: inline-flex !important; align-items: center; gap: 4px; margin-top: 2px; padding: 0 6px; border: 1px solid color-mix(in srgb, #60a5fa 36%, var(--border)); border-radius: 999px; background: color-mix(in srgb, #60a5fa 9%, var(--surface-2)); color: #93c5fd !important; font-size: 6px !important; font-weight: 950 !important; letter-spacing: .025em; white-space: nowrap; }
+.leaderWindows { width: fit-content; min-height: 20px; display: inline-flex !important; align-items: center; gap: 4px; margin-top: 2px; padding: 0 6px; border: 1px solid color-mix(in srgb, #60a5fa 36%, var(--border)); border-radius: 999px; background: color-mix(in srgb, #60a5fa 9%, var(--surface-2)); color: #93c5fd !important; font-size: 6px !important; font-weight: 950 !important; letter-spacing: .025em; white-space: nowrap; }
 .leaderWindows[data-all="true"] { border-color: color-mix(in srgb, var(--accent) 54%, var(--border)); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); color: var(--accent) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent); }
 .evidenceTags { min-width: 0; display: flex !important; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-.evidenceTag { --evidence:#94a3b8; width: fit-content; min-height: 18px; display: inline-flex !important; align-items: center; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--evidence) 38%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--evidence) 10%, var(--surface-2)); color: color-mix(in srgb, var(--evidence) 84%, white) !important; font-size: 6px !important; font-weight: 950 !important; letter-spacing: .025em; line-height: 1; white-space: nowrap; }
+.evidenceTag { --evidence:#94a3b8; width: fit-content; min-height: 20px; display: inline-flex !important; align-items: center; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--evidence) 38%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--evidence) 10%, var(--surface-2)); color: color-mix(in srgb, var(--evidence) 84%, white) !important; font-size: 7px !important; font-weight: 950 !important; letter-spacing: .025em; line-height: 1; white-space: nowrap; }
 .evidenceTag[data-kind="consensus"] { --evidence:var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 11%, transparent); }
 .evidenceTag[data-kind="established"] { --evidence:#22d3ee; }
 .evidenceTag[data-kind="ignition"] { --evidence:#fb923c; }
@@ -254,11 +254,15 @@
 .signalCopy > small { min-width: 0; display: flex; align-items: center; gap: 5px; color: #b7c4d4; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .signalCopy .gameMatchupMark { grid-template-columns: 20px 9px 20px; gap: 2px; }
 .signalCopy .gameMatchupMark > span, .signalCopy .gameMatchupMark img { width: 20px; height: 20px; }
-.signalScores { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
-.signalScores .scoreCompact { display: grid; place-items: center; align-self: center; }
+.signalScores { flex: 0 0 104px; width: 104px; display: grid; grid-template-columns: repeat(2, 48px); align-items: center; justify-content: end; gap: 8px; }
+.signalScores > * { justify-self: center; }
+.signalScores > .edgeMark { width: 48px; min-width: 48px; height: 48px; align-content: center; }
+.signalScores .scoreCompact { width: 48px; height: 48px; display: grid; place-items: center; align-self: center; }
 .signalCard > .marketPair { width: 100%; margin-top: 9px; }
 .signalCard > .marketPair .bookPrice { min-width: 0; align-items: flex-start; }
 .signalCard > .marketPair .movement { justify-content: flex-start; }
+.signalCard > .marketPair .bookLine b { font-size: 12px; }
+.signalCard > .marketPair .openPrice { color: #c4cfdd; }
 .signalChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .signalChip { --signal:#94a3b8; min-height: 28px; display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border: 1px solid color-mix(in srgb, var(--signal) 30%, var(--border)); border-radius: 999px; background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 13%, var(--surface-2)), color-mix(in srgb, var(--signal) 4%, var(--bg))); color: color-mix(in srgb, var(--signal) 82%, white); font-size: 8px; font-weight: 900; box-shadow: inset 0 1px 0 rgba(255,255,255,.025); }
 .signalChip > svg, .signalChip > .barrelGlyph, .signalChip > .picksGlyph { flex: 0 0 auto; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--signal) 28%, transparent)); }
@@ -298,6 +302,10 @@
 .nflMarketRail button small, .sortChevron, .playerCopy span, .mmMark small, .mmMark[data-tone="even"], .gameHead span, .gamePlayerName small, .laneHead span, .mismatchCopy span, .signalOrder small, .signalTop small, .empty { color: var(--se-muted); }
 .scoreMissing, .muted, .gamePlayerRank, .rankPair small { color: var(--se-subtle) !important; }
 .gamePlayer, .mismatchRow, .signalOrder, .windowLeaderRail button, .mobileRankCard { color: #cbd5e1; }
+
+@media (max-width: 1380px) and (min-width: 901px) {
+  .signalGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 @media (max-width: 900px) {
   .backdrop { align-items: flex-end; padding: 0; }
@@ -368,7 +376,7 @@
   .mismatchRow { grid-template-columns: 7px 36px minmax(0, 1fr) auto; gap: 7px; }
   .mismatchMetrics .edgeMark { display: none; }
   .signalTop { grid-template-columns: minmax(0, 1fr); gap: 9px; }
-  .signalScores { justify-content: flex-end; padding-top: 6px; border-top: 1px solid var(--border-subtle); }
+  .signalScores { width: 100%; grid-template-columns: repeat(2, 48px); justify-content: end; padding-top: 8px; border-top: 1px solid var(--border-subtle); }
   .signalCopy > small { flex-wrap: wrap; white-space: normal; }
   .leaderWindows { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 }
