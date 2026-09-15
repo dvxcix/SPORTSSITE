@@ -1755,14 +1755,12 @@ test('Activity Replay is private, durable, bounded, and universally reachable', 
   assert.match(commands, /seen\.has\(item\.href\)/)
 })
 
-test('Dugout Market Moments restore and share an exact validated capture', async () => {
+test('Dugout Market Story restores an exact validated capture', async () => {
   const dugout = await read('src/components/dugout/DugoutClient.tsx')
   assert.match(dugout, /Number\.isFinite\(Date\.parse\(requestedCaptureValue\)\)/)
   assert.match(dugout, /requestedCaptureAppliedRef/)
   assert.match(dugout, /Math\.abs\(Date\.parse\(point\.capturedAt\) - target\)/)
-  assert.match(dugout, /url\.searchParams\.set\('at', new Date\(selectedTimelinePoint\.capturedAt\)\.toISOString\(\)\)/)
-  assert.match(dugout, /aria-label="Share this Market Story capture"/)
-  assert.match(dugout, /navigator\.share/)
+  assert.match(dugout, /aria-label="Market history"/)
 })
 
 test('Community onboarding is durable, member-private, channel-bound, and permission-safe', async () => {

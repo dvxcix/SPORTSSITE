@@ -25,7 +25,7 @@ import { computeDugoutMomentum, type DugoutMomentumResult, type DugoutMomentumWi
 import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Activity, Ban, BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Share2, Sparkles, Users, X } from 'lucide-react'
+import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
@@ -3491,7 +3491,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>(persistedView.stickyCols)
   const [marketSnapshot, setMarketSnapshot] = useState<DugoutMarketSnapshot>(persistedView.marketSnapshot)
   const [timelineIndex, setTimelineIndex] = useState<number | null>(persistedView.timelineIndex)
-  const [marketShareState, setMarketShareState] = useState<'idle' | 'copied'>('idle')
   const requestedCaptureAppliedRef = useRef(false)
   const [viewPreset, setViewPreset] = useState<DugoutViewPreset>(persistedView.viewPreset)
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set(persistedView.collapsedTeams))
@@ -3821,30 +3820,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     setTimelineIndex(bounded)
     setMarketSnapshot(bounded === 0 ? 'open' : 'now')
   }
-  const shareMarketMoment = async () => {
-    if (!selectedTimelinePoint) return
-    const url = new URL(window.location.href)
-    url.searchParams.set('date', date)
-    url.searchParams.set('game', String(game.gameKey))
-    url.searchParams.set('at', new Date(selectedTimelinePoint.capturedAt).toISOString())
-    const shareData = { title: `${game.awayAbbr} at ${game.homeAbbr} Market Story`, text: `${selectedTimelineLabel} market capture`, url: url.toString() }
-    try {
-      if (navigator.share) await navigator.share(shareData)
-      else await navigator.clipboard.writeText(url.toString())
-      setMarketShareState('copied')
-      window.setTimeout(() => setMarketShareState('idle'), 1800)
-    } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') setMarketShareState('idle')
-    }
-  }
   const confirmedLineups = Number(!!game.homeLineupConfirmed) + Number(!!game.awayLineupConfirmed)
   const matchupStatus = game.status === 'Live' ? 'Live' : game.status === 'Final' ? 'Final' : 'Pregame'
-  const scheduledTime = game.gameDate
-    ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : 'Time TBD'
-  const gameStatePrimary = matchupStatus === 'Pregame'
-    ? scheduledTime
-    : `${game.awayAbbr} ${game.awayScore ?? '-'} · ${game.homeAbbr} ${game.homeScore ?? '-'}`
   const gameWatchlistItems = watchlist.items.filter(item => item.status === 'pending' && item.game_pk === String(game.gamePk))
   const watchedPlayerIds = new Set(gameWatchlistItems.map(item => item.mlb_id).filter((id): id is number => id != null))
   const matrixCount = pool.filter(row => row.matrix_matches.length > 0).length
@@ -3854,6 +3831,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const gap = (Math.max(...prices) - Math.min(...prices)) * 100
     return !best || gap > best.gap ? { row, gap } : best
   }, null)
+  const disagreementOffers = disagreementLeader ? [
+    { vendor: 'fanduel', price: disagreementLeader.row.sa_fd },
+    { vendor: 'caesars', price: disagreementLeader.row.sa_cz },
+    { vendor: 'betmgm', price: disagreementLeader.row.sa_mgm },
+    { vendor: 'betrivers', price: disagreementLeader.row.sa_br },
+  ].filter((offer): offer is { vendor: string; price: number } => offer.price != null) : []
   const teamSummary = (rows: BatterRow[]) => {
     const top = rows.reduce<BatterRow | null>((best, row) => !best || (row.mechanics_index ?? -1) > (best.mechanics_index ?? -1) ? row : best, null)
     const advertised = rows.reduce<BatterRow | null>((best, row) => row.mm == null || row.mm >= 0 ? best : !best || best.mm == null || row.mm < best.mm ? row : best, null)
@@ -4273,11 +4256,20 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </section>
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
         <GameWeatherSummary gamePk={String(game.gamePk)} date={date} venue={game.venue} />
-        <span className="dugout-intel-state"><small>GAME STATUS</small><strong>{gameStatePrimary}</strong><em>{matchupStatus} · {confirmedLineups}/2 lineups</em></span>
         <span className="dugout-intel-matchup"><small>STARTING MATCHUP</small><strong><TeamLogo abbr={game.awayAbbr} size={18} /> {game.awayPitcher?.name ?? 'TBD'} · <TeamLogo abbr={game.homeAbbr} size={18} /> {game.homePitcher?.name ?? 'TBD'}</strong><em>{confirmedLineups}/2 lineups</em></span>
         <span className="dugout-intel-team-ml"><small>HR + TEAM WIN</small><strong>{game.awayAbbr} {oStr(awaySummary.teamMl)} · {game.homeAbbr} {oStr(homeSummary.teamMl)}</strong><em>from HR + team win</em></span>
-        <span className="dugout-intel-book"><small>BOOK DISAGREEMENT</small><strong>{disagreementLeader ? `${disagreementLeader.row.name} ${disagreementLeader.gap.toFixed(1)} pts` : 'No split'}</strong><em>FD · CZ · MGM · BR</em></span>
-        <span className="dugout-intel-window"><small>DATA VIEW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
+        <span className="dugout-intel-book">
+          <small>BOOK DISAGREEMENT · ANYTIME HR</small>
+          {disagreementLeader ? <span className="dugout-book-player">
+            <PlayerAvatar mlbId={disagreementLeader.row.mlb_id} teamAbbr={disagreementLeader.row.team} name={disagreementLeader.row.name} size={42} />
+            <span className="dugout-book-player-copy">
+              <strong>{disagreementLeader.row.name}</strong>
+              <em>{disagreementLeader.row.team} · {disagreementLeader.row.position || 'Batter'}{disagreementLeader.row.batting_order ? ` · Batting #${disagreementLeader.row.batting_order}` : ''}</em>
+              <span className="dugout-book-offers"><span className="dugout-book-logos">{disagreementOffers.map(offer => <i key={offer.vendor} title={`${offer.vendor} ${oStr(offer.price)}`}><BookLogo vendor={offer.vendor} size={16} /></i>)}</span><b>{disagreementOffers.map(offer => oStr(offer.price)).join(' · ')}</b></span>
+            </span>
+            <span className="dugout-book-gap"><b>{disagreementLeader.gap.toFixed(1)}</b><small>PTS APART</small></span>
+          </span> : <strong>No meaningful split across books</strong>}
+        </span>
         <span className="dugout-intel-nohr"><small>NO HOME RUN</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong><em>{oStr(game.noHr?.openingFanduel)} → {oStr(game.noHr?.fanduel)}</em></span>
         <span className="dugout-intel-saved"><small>YOUR SAVED READS</small><strong>{matrixCount} Matrix · {gameWatchlistItems.length} Watchlist</strong><em>{statcastWindow.toUpperCase()} · {density}</em></span>
         <label className="dugout-market-snapshot" data-tone="timeline">
@@ -4297,9 +4289,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           </span>
           <em>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures · ${selectedTimelineLabel}` : 'Open / latest only'}</em>
         </label>
-        <button type="button" className="dugout-market-share" onClick={() => void shareMarketMoment()} disabled={!selectedTimelinePoint} aria-label="Share this Market Story capture">
-          {marketShareState === 'copied' ? <Check size={14}/> : <Share2 size={14}/>}<span>{marketShareState === 'copied' ? 'Copied' : 'Share moment'}</span>
-        </button>
       </section>
       <nav className="dugout-timeline-phases" data-count={timelinePhaseIndices.length} aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
       {activeSortKeys.length > 0 && (
@@ -4360,28 +4349,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           }}>{label}</button>
         })}
       </nav>
-      <section className="dugout-related-market-control" aria-label="RBI and total-base market display">
-        <span><small>RBI + BASES</small><strong>{relatedMarketDisplay === 'ratio' ? 'HR relationships' : 'FanDuel raw odds'}</strong></span>
+      <section className="dugout-related-market-control" aria-label="Home-run related market display">
+        <span><small>MARKET VALUES</small><strong>{relatedMarketDisplay === 'ratio' ? 'HR Ratios' : 'Raw Odds'}</strong></span>
         <div role="group" aria-label="Choose RBI and total-base values">
           <button type="button" aria-pressed={relatedMarketDisplay === 'ratio'} onClick={() => setRelatedMarketDisplay('ratio')}>HR Ratios</button>
           <button type="button" aria-pressed={relatedMarketDisplay === 'odds'} onClick={() => setRelatedMarketDisplay('odds')}><BookLogo vendor="fanduel" size={14} /> Raw Odds</button>
         </div>
       </section>
-      <nav className="dugout-desktop-minimap" aria-label="Lineup quick jump">
-        <div className="dugout-minimap-copy"><strong>Lineup quick jump</strong><small>Select a batter to move directly to their row. The color fill is their SlipSurge Score.</small></div>
-        <div className="dugout-minimap-teams">{([
-          [game.homeAbbr, homeRows],
-          [game.awayAbbr, awayRows],
-        ] as const).map(([abbr, rows]) => <section key={abbr}>
-          <header><TeamLogo abbr={abbr} size={24} /><span><b>{abbr}</b><small>{(rows as BatterRow[]).length} batters</small></span></header>
-          <div>{(rows as BatterRow[]).map((row: BatterRow, index: number) => {
-            const rowKey = `${abbr === game.homeAbbr ? 'h' : 'a'}-${row.mlb_id ?? row.name}`
-            const score = Math.max(0, Math.min(100, row.mechanics_index ?? 0))
-            const lastName = row.name.split(' ').slice(-1)[0]
-            return <button key={rowKey} type="button" title={`Jump to ${row.name}`} aria-label={`${row.batting_order}. ${row.name}, SlipSurge Score ${Math.round(score)}. Jump to player row`} className={`${expanded === rowKey ? 'is-active' : ''}${row.matrix_matches.length ? ' has-matrix' : ''}${row.mlb_id != null && watchedPlayerIds.has(row.mlb_id) ? ' is-watched' : ''}`} style={{ ['--score' as string]: `${score}%` }} onClick={() => document.getElementById(rowKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><b>{row.batting_order ?? index + 1}</b><span>{lastName}</span><small>{Math.round(score)}</small></button>
-          })}</div>
-        </section>)}</div>
-      </nav>
       <nav className="dugout-board-nav" aria-label="Board minimap">
         {(['start', 'home', 'away', 'end'] as const).map(stop => (
           <button key={stop} type="button" onClick={() => scrollBoardToStop(stop)} disabled={(stop === 'start' && !horizontalState.canGoLeft) || (stop === 'end' && !horizontalState.canGoRight)}>
@@ -5563,13 +5537,20 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-command-matchup>em{margin-left:3px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;color:var(--text-3);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .dugout-command-matchup>em[data-status=live]{border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.1);color:#fb7185}
         .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;margin-bottom:9px;overflow:visible;border:0;background:transparent}
-        .dugout-intelligence-strip>span,.dugout-market-snapshot{--card-accent:#94a3b8;position:relative;display:grid;align-content:center;gap:5px;min-width:0;min-height:76px;overflow:hidden;padding:13px 14px;border:1px solid color-mix(in srgb,var(--card-accent) 24%,var(--border));border-radius:12px;background:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--card-accent) 13%,transparent),transparent 58%),linear-gradient(145deg,#111821,#090e14);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 12px 30px rgba(0,0,0,.16)}
-        .dugout-intelligence-strip>span::before,.dugout-market-snapshot::before{position:absolute;inset:0 auto 0 0;width:3px;background:var(--card-accent);content:"";opacity:.85}
-        .dugout-intelligence-strip>span:nth-child(1){--card-accent:#38bdf8;grid-column:span 3}.dugout-intelligence-strip>span:nth-child(2){--card-accent:#a6ff3f;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(3){--card-accent:#a78bfa;grid-column:span 3}.dugout-intelligence-strip>span:nth-child(4){--card-accent:#fbbf24;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(5){--card-accent:#fb7185;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(6){--card-accent:#60a5fa;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(7){--card-accent:#f87171;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(8){--card-accent:#f472b6;grid-column:span 2}
-        .dugout-intelligence-strip small{color:color-mix(in srgb,var(--card-accent) 80%,#fff);font-size:10px;font-weight:950;letter-spacing:.085em;text-transform:uppercase}
-        .dugout-intelligence-strip strong{display:flex;align-items:center;gap:5px;overflow:hidden;color:#f8fafc;font-size:14px;font-weight:900;letter-spacing:-.015em;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-intelligence-strip em{overflow:hidden;color:#aab6c8;font-size:10px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-market-snapshot{--card-accent:#2dd4bf;grid-column:span 6}
+        .dugout-intelligence-strip>span,.dugout-market-snapshot{position:relative;display:grid;align-content:center;gap:4px;min-width:0;min-height:68px;overflow:hidden;padding:11px 12px;border:1px solid #26313f;border-radius:11px;background:linear-gradient(145deg,rgba(15,22,30,.98),rgba(8,13,19,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+        .dugout-intelligence-strip>span::before{position:absolute;inset:12px auto 12px 0;width:2px;border-radius:999px;background:#526174;content:"";opacity:.7}
+        .dugout-weather-summary{grid-column:span 2}.dugout-intel-matchup{grid-column:span 3}.dugout-intel-team-ml{grid-column:span 3}.dugout-intel-book{grid-column:span 4;grid-row:span 2;align-content:stretch!important;padding:13px!important;border-color:rgba(245,185,66,.34)!important;background:radial-gradient(circle at 100% 0,rgba(245,185,66,.1),transparent 48%),linear-gradient(145deg,#111820,#090e14)!important}.dugout-intel-nohr{grid-column:span 2}.dugout-intel-saved{grid-column:span 4}
+        .dugout-intel-book::before{background:#f5b942!important}.dugout-intel-nohr::before{background:#fb7185!important}.dugout-intel-saved::before{background:#a6ff3f!important}
+        .dugout-intelligence-strip small{color:#8492a6;font-size:9px;font-weight:900;letter-spacing:.085em;text-transform:uppercase}
+        .dugout-intelligence-strip strong{display:flex;align-items:center;gap:5px;overflow:hidden;color:#f3f6fa;font-size:13px;font-weight:900;letter-spacing:-.01em;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-intelligence-strip em{overflow:hidden;color:#8694a7;font-size:9px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-book-player{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0;margin-top:7px}
+        .dugout-book-player-copy{display:grid;gap:3px;min-width:0}.dugout-book-player-copy>strong{font-size:15px}.dugout-book-player-copy>em{font-size:9px}
+        .dugout-book-offers{display:flex;align-items:center;gap:8px;min-width:0;margin-top:3px}.dugout-book-offers>b{overflow:hidden;color:#c8d2df;font-family:var(--font-mono,monospace);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-book-logos{display:flex;align-items:center;padding-left:4px}.dugout-book-logos>i{width:23px;height:23px;display:grid;place-items:center;margin-left:-5px;border:2px solid #0d141c;border-radius:999px;background:#151f2a;box-shadow:0 2px 8px rgba(0,0,0,.34)}
+        .dugout-book-gap{display:grid;justify-items:end;gap:1px;padding-left:9px;border-left:1px solid #2b3542}.dugout-book-gap>b{color:#f5c15b;font-family:var(--font-mono,monospace);font-size:20px;line-height:1}.dugout-book-gap>small{font-size:7px;white-space:nowrap}
+        .dugout-market-snapshot{grid-column:span 6;border-color:rgba(45,212,191,.24);background:radial-gradient(circle at 100% 0,rgba(45,212,191,.08),transparent 54%),linear-gradient(145deg,#101820,#090e14)}
+        .dugout-market-snapshot::before{position:absolute;inset:12px auto 12px 0;width:2px;border-radius:999px;background:#2dd4bf;content:"";opacity:.85}
         .dugout-market-snapshot>span{display:grid;grid-template-columns:auto minmax(72px,1fr) auto;align-items:center;gap:7px}
         .dugout-market-snapshot b{color:#9aa9bb;font-size:9px;text-transform:uppercase}
         .dugout-market-snapshot b.is-active{color:var(--accent)}
@@ -5586,14 +5567,6 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-related-market-control button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:transparent;color:#9aa9bb;font-size:9px;font-weight:900;letter-spacing:.025em;cursor:pointer}
         .dugout-related-market-control button[aria-pressed=true]{border-color:rgba(56,189,248,.42);background:rgba(14,116,144,.22);color:#e0f2fe;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
         .dugout-related-market-control button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-        .dugout-desktop-minimap{display:grid;gap:10px;margin-bottom:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));border-radius:13px;background:radial-gradient(circle at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 30%),linear-gradient(180deg,#0e141c,#080d13)}
-        .dugout-minimap-copy{display:flex;align-items:baseline;gap:10px;min-width:0}.dugout-minimap-copy strong{color:#f8fafc;font-size:13px;font-weight:950}.dugout-minimap-copy small{overflow:hidden;color:#9aa9bb;font-size:10px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-minimap-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.dugout-minimap-teams>section{display:grid;grid-template-columns:minmax(102px,auto) minmax(0,1fr);align-items:center;gap:10px;min-width:0;padding:8px;border:1px solid #263243;border-radius:10px;background:rgba(9,14,21,.82)}
-        .dugout-minimap-teams header{display:flex;align-items:center;gap:7px;min-width:0}.dugout-minimap-teams header>span{display:grid;gap:1px}.dugout-minimap-teams header b{color:#f8fafc;font-size:12px}.dugout-minimap-teams header small{color:#8f9caf;font-size:8px;font-weight:750;white-space:nowrap}
-        .dugout-minimap-teams section>div{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(82px,1fr);gap:5px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
-        .dugout-desktop-minimap button{position:relative;min-height:40px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px;overflow:hidden;padding:0 7px;border:1px solid #2a3647;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,#111923) var(--score),#111923 var(--score));color:#cbd5e1;cursor:pointer}
-        .dugout-desktop-minimap button>b{color:#a6ff3f;font-family:var(--font-mono,monospace);font-size:9px;font-weight:950}.dugout-desktop-minimap button>span{overflow:hidden;font-size:9px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}.dugout-desktop-minimap button>small{color:#f8fafc;font-family:var(--font-mono,monospace);font-size:9px;font-weight:950}
-        .dugout-desktop-minimap button.has-matrix{box-shadow:inset 0 -2px 0 #a855f7}.dugout-desktop-minimap button.is-watched{border-color:#fbbf24}.dugout-desktop-minimap button.is-active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
         .dg-team-banner-content{min-height:44px}
         .dg-team-collapse{width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:rgba(0,0,0,.24);color:var(--text-2);cursor:pointer}
         .dg-team-collapse[aria-expanded=false] svg{transform:rotate(180deg)}
@@ -5716,14 +5689,12 @@ export function DugoutClient({ date }: { date: string }) {
         @media(min-width:641px) and (max-width:900px){
           .dugout-board-enter.has-inspector{padding-right:0}
           .dugout-command-bar{flex-wrap:wrap}.dugout-command-primary{margin-left:auto}
-          .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intelligence-strip>span:nth-child(1),.dugout-intelligence-strip>span:nth-child(3),.dugout-market-snapshot{grid-column:span 3}
-          .dugout-minimap-teams{grid-template-columns:1fr}
+          .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intel-book,.dugout-market-snapshot{grid-column:span 3}.dugout-intel-book{grid-row:auto}
           .dg-player-drilldown-portal>.dg-player-drilldown{width:calc(100vw - 24px);height:calc(100dvh - 24px);border-radius:17px}
           .dugout-compare-grid{grid-template-columns:repeat(4,minmax(280px,1fr))}
         }
         @media(min-width:901px) and (max-width:1250px){
-          .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intelligence-strip>span:nth-child(1),.dugout-intelligence-strip>span:nth-child(3),.dugout-market-snapshot{grid-column:span 3}
-          .dugout-minimap-teams{grid-template-columns:1fr}
+          .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intel-book,.dugout-market-snapshot{grid-column:span 3}.dugout-intel-book{grid-row:auto}
           .dugout-board-enter.has-inspector{padding-right:0}
           .dg-player-drilldown-portal>.dg-player-drilldown{width:calc(100vw - 32px);height:calc(100dvh - 32px)}
         }
@@ -5744,12 +5715,12 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-window-toggle button span{display:none}.dugout-window-toggle button i{display:inline;font-size:9px;font-style:normal;font-weight:950}
           .dugout-tools-popover{position:absolute;left:0;right:0;top:calc(100% + 5px);display:grid;grid-template-columns:1fr;max-width:none;overflow:visible;padding:8px}
           .dugout-tools-popover>.dugout-mode-buttons{overflow-x:auto}.dugout-tools-popover>button{width:100%}
-          .dugout-intelligence-strip{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(112px,.85fr);grid-template-areas:"weather state" "matchup saved";gap:5px;margin-bottom:6px;overflow:visible}
+          .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"book book" "weather matchup" "team nohr" "saved saved";gap:5px;margin-bottom:6px;overflow:visible}
           .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:0;min-height:56px;padding:8px 10px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
-          .dugout-weather-summary{grid-area:weather}.dugout-intel-state{grid-area:state}.dugout-intel-matchup{grid-area:matchup}.dugout-intel-saved{grid-area:saved}
-          .dugout-intel-team-ml,.dugout-intel-book,.dugout-intel-window,.dugout-intel-nohr{display:none!important}
+          .dugout-weather-summary{grid-area:weather}.dugout-intel-matchup{grid-area:matchup}.dugout-intel-team-ml{grid-area:team}.dugout-intel-book{grid-area:book;grid-row:auto}.dugout-intel-nohr{grid-area:nohr}.dugout-intel-saved{grid-area:saved}
           .dugout-intelligence-strip small{font-size:8px;letter-spacing:.07em}.dugout-intelligence-strip strong{font-size:11px;line-height:1.15}.dugout-intelligence-strip em{font-size:8px;line-height:1.2}
           .dugout-intel-matchup strong{font-size:10px}.dugout-intel-matchup strong img{width:16px!important;height:16px!important}.dugout-intel-saved strong{white-space:normal;line-height:1.2}
+          .dugout-book-player{grid-template-columns:auto minmax(0,1fr) auto;gap:8px}.dugout-book-player>img{width:36px!important;height:36px!important}.dugout-book-player-copy>strong{font-size:13px}.dugout-book-offers>b{font-size:8px}.dugout-book-gap>b{font-size:17px}
           .dugout-market-snapshot{position:fixed;left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 70px);z-index:calc(var(--layer-floating) - 1);display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:10px;width:min(calc(100vw - 20px),470px);min-height:48px;margin:0;padding:7px 12px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:13px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 98%,#0c2018),color-mix(in srgb,var(--surface-2) 96%,transparent));box-shadow:0 -8px 28px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.055);backdrop-filter:blur(20px);transform:translateX(-50%);pointer-events:auto}.dugout-market-snapshot>small{font-size:8px;white-space:nowrap}.dugout-market-snapshot>span{gap:6px}.dugout-market-snapshot>span b{font-size:8px}.dugout-market-snapshot em{display:none}
           body:has(.dugout-market-snapshot) .ss-utility-dock{bottom:calc(var(--mobile-dock-clearance) + 48px)}
           body.ss-modal-open .dugout-market-snapshot{opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,24px)}
@@ -5757,7 +5728,6 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-timeline-phases button,.dugout-group-nav button{min-height:34px;padding:0 10px;font-size:9px}
           .dugout-related-market-control{gap:5px;margin-bottom:5px;padding:4px 5px 4px 8px;border-radius:9px}.dugout-related-market-control>span small{display:none}.dugout-related-market-control>span strong{font-size:9px}.dugout-related-market-control>div{gap:2px;padding:2px}.dugout-related-market-control button{min-height:32px;padding:0 8px;font-size:8px}.dugout-related-market-control button svg{width:12px;height:12px}
           .dugout-jump-menu{display:none!important}
-          .dugout-desktop-minimap{display:none}
           .dugout-redundant-sort-summary{flex-wrap:nowrap!important;overflow-x:auto;min-height:38px;margin-bottom:5px!important;padding:5px 7px!important;scrollbar-width:none}
           .dugout-redundant-sort-summary::-webkit-scrollbar{display:none}
           .dugout-redundant-sort-summary > *{flex:0 0 auto}

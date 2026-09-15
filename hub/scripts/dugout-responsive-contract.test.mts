@@ -193,9 +193,9 @@ test('The Dugout implements all 14 responsive product requirements', () => {
     ['5 player identity and quick scores', ['size={34}', 'dg-player-name', 'dg-player-signal-row', '<small>MKT</small>', '<small>CON</small>', '<small>FIT</small>']],
     ['6 readable density and mobile targets', ['dg-player-name{font-size:13px', 'font-variant-numeric:tabular-nums', 'min-height:44px', 'density-comfortable']],
     ['7 concise glossary', ['Open glossary', 'Board glossary', 'Quick definitions only', "['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.']"]],
-    ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'GAME STATUS', 'HR + TEAM WIN', 'BOOK DISAGREEMENT', 'NO HOME RUN', 'YOUR SAVED READS']],
+    ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'HR + TEAM WIN', 'BOOK DISAGREEMENT · ANYTIME HR', 'dugout-book-logos', 'NO HOME RUN', 'YOUR SAVED READS']],
     ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'prefix="Top" compact', 'MOST ADVERTISED', 'MOST HIDDEN', 'LINEUP']],
-    ['10 desktop and mobile minimaps', ['dugout-desktop-minimap', 'dugout-board-nav', "(['start', 'home', 'away', 'end'] as const)", 'dugout-board-progress']],
+    ['10 mobile board navigation', ['dugout-board-nav', "(['start', 'home', 'away', 'end'] as const)", 'dugout-board-progress']],
     ['11 persistent two-to-four player comparison', ['slice(0, 4)', 'previous.slice(-3)', 'dugout-compare-tray', "(['l1', 'l3', 'l5', 'l10'] as const)", 'PROJECTED BATTED BALL', 'PITCH FIT']],
     ['12 multi-market timeline', ['MARKET STORY', 'dugout-timeline-phases', "label: 'OPEN'", "label: '9AM'", "label: 'NOON'", "label: 'LINEUP'", "label: 'CURRENT'", 'withTimelinePrices', 'timelineRow.sa_mgm']],
     ['13 restored workspace state', ['ss:dugout-view-v1:', 'ss:dugout-active-game:', 'collapsedTeams', 'inspectorTab', 'compareOpen', 'activeGroup']],
@@ -257,20 +257,18 @@ test('player analysis is a true accessible modal instead of a shrinking side rai
   assert.match(source, /width:min\(1180px,calc\(100vw - 48px\)\)/)
 })
 
-test('game intelligence and lineup navigation explain themselves visually', () => {
-  assert.ok(source.includes('Lineup quick jump'))
-  assert.ok(source.includes('Select a batter to move directly to their row.'))
-  assert.ok(source.includes('SlipSurge Score ${Math.round(score)}'))
-  assert.ok(source.includes('Jump to player row'))
+test('game intelligence is compact, legible, and complete across viewports', () => {
   assert.match(source, /\.dugout-intelligence-strip\{[^}]*grid-template-columns:repeat\(12,minmax\(0,1fr\)\)/)
   assert.ok(source.includes('<small>STARTING MATCHUP</small>'))
   assert.ok(source.includes('<small>HR + TEAM WIN</small>'))
   assert.ok(source.includes('<small>YOUR SAVED READS</small>'))
   assert.ok(source.includes('className="dugout-intel-matchup"'))
-  assert.match(source, /grid-template-areas:"weather state" "matchup saved"/)
+  assert.ok(source.includes('className="dugout-book-player"'))
+  assert.ok(source.includes('className="dugout-book-logos"'))
+  assert.match(source, /grid-template-areas:"book book" "weather matchup" "team nohr" "saved saved"/)
   assert.match(source, /\.dugout-market-snapshot\{position:fixed;left:50%;bottom:calc\(max\(10px,env\(safe-area-inset-bottom,0px\)\) \+ 70px\)/)
   assert.match(source, /body:has\(\.dugout-market-snapshot\) \.ss-utility-dock\{bottom:calc\(var\(--mobile-dock-clearance\) \+ 48px\)\}/)
-  assert.match(source, /\.dugout-intel-team-ml,\.dugout-intel-book,\.dugout-intel-window,\.dugout-intel-nohr\{display:none!important\}/)
+  assert.doesNotMatch(source, /Lineup quick jump|Share this Market Story capture/)
 })
 
 test('touch foldables retain the complete mobile Dugout and shell behavior when unfolded', () => {

@@ -54,13 +54,13 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/the-sideline?mode=research', label: 'NFL Matchup Lab', shortLabel: 'Matchups', icon: Crosshair },
     { href: '/the-public', label: 'The Public', shortLabel: 'Public', icon: Users },
     { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
-    { href: '/odds-terminal', label: 'Odds Terminal', shortLabel: 'Terminal', icon: ChartSpline, badge: 'ULT' },
+    { href: '/odds-terminal', label: 'Odds Terminal', shortLabel: 'Terminal', icon: ChartSpline },
     { href: '/slate-breakdown', label: 'Slate Breakdown', shortLabel: 'Slate', icon: Table2 },
     { href: '/pitcher-report', label: 'Pitcher Report', icon: Compass },
     { href: '/weather-lab', label: 'Weather Lab', icon: CloudSun },
     { href: '/synergy', label: 'Synergy', icon: Link2 },
     { href: '/daily-recap', label: 'Daily Recap', shortLabel: 'Recap', icon: Flame },
-    { href: '/spray-charts', label: 'Spray Charts', icon: Crosshair, badge: 'ULT', ultimateOnly: true },
+    { href: '/spray-charts', label: 'Spray Charts', icon: Crosshair, ultimateOnly: true },
   ],
   community: [
     { href: '/community', label: 'Community Home', icon: LayoutGrid },
@@ -79,7 +79,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/settings', label: 'Settings', icon: Settings2 },
   ],
   commerce: [
-    { href: '/marketplace', label: 'Matrix Marketplace', icon: ShoppingBag, badge: 'ULT', ultimateOnly: true },
+    { href: '/marketplace', label: 'Matrix Marketplace', icon: ShoppingBag, ultimateOnly: true },
     { href: '/pricing', label: 'Membership', icon: Award },
   ],
 }

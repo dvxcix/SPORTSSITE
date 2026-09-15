@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
-import { MovingBorderGlow } from './MovingBorderGlow'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { useAuth } from '@/context/AuthContext'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
@@ -33,7 +32,7 @@ const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
-  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean; ultimateOnly?: boolean; adminOnly?: boolean
+  flagKey?: string; badge?: string; badgeColor?: string; ultimateOnly?: boolean; adminOnly?: boolean
 }
 type NavItem = NavLink | { section: string; logo?: string; adminOnly?: boolean } | null
 
@@ -56,11 +55,11 @@ const nav: NavItem[] = [
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
   { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown' },
   { href: '/batter-cost', icon: Coins,         label: 'Batter Cost' },
-  { href: '/odds-terminal', icon: ChartSpline, label: 'Odds Terminal', badge: 'ULT' },
+  { href: '/odds-terminal', icon: ChartSpline, label: 'Odds Terminal' },
   { href: '/synergy',     icon: Link2,         label: 'Synergy' },
   { href: '/daily-recap', icon: Flame,         label: 'Daily Recap' },
-  { href: '/spray-charts', icon: Crosshair,     label: 'Spray Charts', badge: 'ULT', ultimateOnly: true },
-  { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
+  { href: '/spray-charts', icon: Crosshair,     label: 'Spray Charts', ultimateOnly: true },
+  { href: '/the-public',  icon: Megaphone,     label: 'The Public' },
   null,
   { section: 'NFL Research', logo: NFL_LOGO_URL, adminOnly: true },
   { href: '/the-sideline', icon: Trophy, label: 'The Sideline', adminOnly: true },
@@ -74,7 +73,7 @@ const nav: NavItem[] = [
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
-  { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', badge: 'ULT', ultimateOnly: true },
+  { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', ultimateOnly: true },
   null,
   { section: 'Discover' },
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },
@@ -287,16 +286,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           }
           const Icon = item.icon
           const isActive = active(item.href)
-          // A plain 'transparent' idle background would let the glow ring's
-          // conic-gradient pseudo-element show through the whole button
-          // instead of just its border — glowing items need an opaque idle
-          // fill so only the 1.5px ring around the edge reads as lit.
-          const idleBg = item.movingBorder ? 'var(--surface)' : 'transparent'
+          const idleBg = 'transparent'
           const link = (
             <Link key={item.href} href={item.href} prefetch={false} className="nav-item" data-active={isActive} title={isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
               justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: isCollapsed ? '8px' : '8px 10px', borderRadius: item.movingBorder ? 7 : 8,
+              padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
               fontSize: 13, fontWeight: isActive ? 700 : 500,
               color: isActive ? 'var(--accent)' : 'var(--text-2)',
               background: isActive ? 'var(--accent-dim)' : idleBg,
@@ -326,17 +321,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               )}
             </Link>
           )
-          // Golden moving-border treatment (Aceternity's actual technique,
-          // see MovingBorderGlow.tsx) to flag the newest MLB tool without
-          // yet another text "NEW" badge — a small point of light travels
-          // around the item's own outline continuously.
-          if (item.movingBorder) {
-            return (
-              <MovingBorderGlow key={`glow-${item.href}`} borderRadius={8}>
-                {link}
-              </MovingBorderGlow>
-            )
-          }
           return link
         })}
       </nav>
