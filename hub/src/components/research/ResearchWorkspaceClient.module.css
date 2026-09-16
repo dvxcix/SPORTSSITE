@@ -3,3 +3,4 @@
 @media(max-width:1180px){.layout{grid-template-columns:220px minmax(0,1fr)}.notesPanel{position:static;grid-column:1/-1}.notesList{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:800px),(max-width:1024px) and (any-pointer:coarse){.layout{grid-template-columns:1fr}.sidebar,.notesPanel{position:static}.compareGrid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}.compareCard{min-width:min(78vw,240px);scroll-snap-align:start}.itemList{grid-template-columns:1fr;max-height:none}.notesList{grid-template-columns:1fr}.search{min-width:0;width:100%}.libraryPanel .panelHeader{align-items:stretch;flex-direction:column}.headerActions button{padding:8px}.layout{padding-bottom:calc(var(--mobile-dock-clearance) + 10px)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.evidenceList{display:grid;gap:10px;padding:12px}

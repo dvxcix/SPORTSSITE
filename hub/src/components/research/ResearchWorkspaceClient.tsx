@@ -1,12 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BookmarkPlus, Check, FileText, Grid2X2, LoaderCircle, Pencil, Pin, Plus, Save, Search, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, Check, FileText, Grid2X2, Layers3, LoaderCircle, Pencil, Pin, Plus, Save, Search, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { WorkspaceCollaboration } from './WorkspaceCollaboration'
 import styles from './ResearchWorkspaceClient.module.css'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { SlateEdgeEvidenceCard } from '@/components/social/SlateEdgeEvidenceCard'
+import { isSlateEdgeEvidence, type SlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
 
 type SavedItem = {
   id: string; sport: string; game_pk: string | null; game_date: string | null; mlb_id: number | null
@@ -17,10 +19,11 @@ type SavedItem = {
 type Matrix = { id: string; name: string; color: string | null; element_code: string | null }
 type Workspace = { id: string; user_id: string; name: string; description: string; sport: string | null; watchlist_item_ids: string[]; mlb_matrix_ids: string[]; nfl_matrix_ids: string[]; created_at: string; updated_at: string }
 type Note = { id: string; title: string; body: string; sport: string | null; game_id: string | null; tags: string[]; pinned: boolean; created_at: string; updated_at: string }
+type EvidenceItem = { id: string; workspace_id: string; added_by: string; item_type: string; title: string; source_path: string; payload: SlateEdgeEvidence; created_at: string }
 
 function displayOdds(value: number | null) { return value == null ? '—' : value > 0 ? `+${value}` : String(value) }
-export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatrices, initialNflMatrices, initialWorkspaces, initialNotes }: {
-  userId: string; initialItems: SavedItem[]; initialMlbMatrices: Matrix[]; initialNflMatrices: Matrix[]; initialWorkspaces: Workspace[]; initialNotes: Note[]
+export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatrices, initialNflMatrices, initialWorkspaces, initialNotes, initialEvidenceItems }: {
+  userId: string; initialItems: SavedItem[]; initialMlbMatrices: Matrix[]; initialNflMatrices: Matrix[]; initialWorkspaces: Workspace[]; initialNotes: Note[]; initialEvidenceItems: EvidenceItem[]
 }) {
   const db = createClient()
   const [workspaces, setWorkspaces] = useState(initialWorkspaces)
@@ -41,6 +44,7 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
   const [message, setMessage] = useState('')
 
   const active = workspaces.find(workspace => workspace.id === activeId) ?? null
+  const activeEvidence = initialEvidenceItems.filter(item => item.workspace_id === activeId && isSlateEdgeEvidence(item.payload))
   const compared = draftIds.map(id => initialItems.find(item => item.id === id)).filter(Boolean) as SavedItem[]
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -131,6 +135,10 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
     </aside>
 
     <div className={styles.main}>
+      <section className={styles.libraryPanel}>
+        <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Captured from live tools</span><h2>Evidence board</h2></div><Layers3 size={18}/></div>
+        {activeEvidence.length ? <div className={styles.evidenceList}>{activeEvidence.map(item => <SlateEdgeEvidenceCard key={item.id} evidence={item.payload}/>)}</div> : <div className={styles.emptyTray}><Layers3 size={25}/><strong>No captured reads yet</strong><span>Use Share in Slate Edge to pin the exact board evidence here.</span></div>}
+      </section>
       <section className={styles.comparePanel}>
         <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Up to four saved markets</span><h2>Compare Tray</h2></div><div className={styles.headerActions}><span>{compared.length}/4</span><button type="button" onClick={() => void saveWorkspace()} disabled={busy === 'save'}>{busy === 'save' ? <LoaderCircle className={styles.spin} size={15}/> : <Save size={15}/>}Save</button>{active?.user_id === userId && <button className={styles.dangerButton} type="button" onClick={() => void deleteWorkspace()} disabled={busy === 'delete'} aria-label="Delete workspace"><Trash2 size={15}/></button>}</div></div>
         {compared.length ? <div className={styles.compareGrid}>{compared.map(item => <article className={styles.compareCard} key={item.id}><button className={styles.remove} type="button" onClick={() => toggleCompare(item.id)} aria-label={`Remove ${item.player_name}`}><X size={14}/></button><div className={styles.player}><PlayerAvatar headshot={item.headshot_url} teamAbbr={item.team} name={item.player_name} size={42}/><div><strong>{item.player_name}</strong><span>{item.team ?? '—'} · {item.position ?? item.sport}</span></div></div><div className={styles.market}>{item.prop_label}</div><div className={styles.metrics}><span><small>Line</small><b>{item.line || '—'}</b></span><span><small>Odds</small><b>{displayOdds(item.odds)}</b></span><span><small>Book</small><b>{item.book || '—'}</b></span></div>{item.notes && <p className={styles.itemNote}>{item.notes}</p>}</article>)}</div> : <div className={styles.emptyTray}><BookmarkPlus size={25}/><strong>Add saved markets to compare</strong><span>Select items from the library below.</span></div>}

@@ -16,6 +16,7 @@ import {
   Radar,
   ScanSearch,
   Search,
+  Share2,
   Target,
   TimerReset,
   TrendingUp,
@@ -34,6 +35,8 @@ import { rankMlbSlateEdge, type MlbSlateEdgeRank } from '@/lib/mlbSlateEdgeRanki
 import type { DugoutMomentumResult } from '@/lib/dugoutMomentum'
 import { BatterCharge } from './BatterCharge'
 import { MarketBaselineRead } from './MarketBaselineRead'
+import { SlateEdgeShareModal } from '@/components/social/SlateEdgeShareModal'
+import type { SlateEdgeEvidence, SlateEdgeEvidenceView } from '@/lib/slateEdgeEvidence'
 import styles from './SlateEdgeOverlay.module.css'
 
 export type SlateEdgeWindow = 'l1' | 'l3' | 'l5' | 'l10'
@@ -389,20 +392,24 @@ function SortMenu({ value, view, onChange }: { value: Sort; view: View; onChange
   </details>
 }
 
-export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWindowChange, onClose, onOpenPlayer }: {
+export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, initialView = 'rankings', initialGame = 'all', initialPlayerId = null, onWindowChange, onClose, onOpenPlayer }: {
   open: boolean
   date: string
   entriesByWindow: Record<SlateEdgeWindow, SlateEdgeEntry[]>
   dataWindow: SlateEdgeWindow
+  initialView?: SlateEdgeEvidenceView
+  initialGame?: string
+  initialPlayerId?: number | null
   onWindowChange: (window: SlateEdgeWindow) => void
   onClose: () => void
   onOpenPlayer: (entry: SlateEdgeEntry) => void
 }) {
   const entries = entriesByWindow[dataWindow]
-  const [view, setView] = useState<View>('rankings')
-  const [query, setQuery] = useState('')
-  const [game, setGame] = useState('all')
+  const [view, setView] = useState<View>(initialView)
+  const [query, setQuery] = useState(() => initialPlayerId == null ? '' : String(initialPlayerId))
+  const [game, setGame] = useState(initialGame)
   const [sort, setSort] = useState<Sort>('edge')
+  const [shareEvidence, setShareEvidence] = useState<SlateEdgeEvidence | null>(null)
   const gameRailRef = useRef<HTMLDivElement>(null)
 
   const scrollGames = (direction: -1 | 1) => gameRailRef.current?.scrollBy({ left: direction * Math.max(260, gameRailRef.current.clientWidth * .72), behavior: 'smooth' })
@@ -424,7 +431,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
     const needle = query.trim().toLowerCase()
     const rows = entries.filter(entry =>
       (game === 'all' || entry.gameKey === game) &&
-      (!needle || entry.name.toLowerCase().includes(needle) || entry.team.toLowerCase().includes(needle) || entry.gameLabel.toLowerCase().includes(needle)),
+      (!needle || entry.name.toLowerCase().includes(needle) || entry.team.toLowerCase().includes(needle) || entry.gameLabel.toLowerCase().includes(needle) || String(entry.mlbId ?? '') === needle),
     )
     return [...rows].sort((a, b) => {
       if (sort === 'edge') return (edgeRanks.get(b)?.score ?? -1) - (edgeRanks.get(a)?.score ?? -1) || (b.score ?? -1) - (a.score ?? -1)
@@ -565,6 +572,41 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
     })
     return tags.slice(0, 3)
   }
+  const captureEvidence = (entry: SlateEdgeEntry, rank: number, edge: MlbSlateEdgeRank | undefined) => {
+    const params = new URLSearchParams({
+      date,
+      game: entry.gameKey,
+      panel: 'slate-edge',
+      slateView: view,
+      slateWindow: dataWindow,
+    })
+    if (entry.mlbId != null) params.set('slatePlayer', String(entry.mlbId))
+    const evidence: SlateEdgeEvidence = {
+      version: 1,
+      kind: 'slate_edge_player',
+      capturedAt: new Date().toISOString(),
+      source: { path: `/dugout?${params.toString()}`, date, window: dataWindow, view, gameKey: entry.gameKey, playerId: entry.mlbId },
+      snapshot: {
+        name: entry.name,
+        team: entry.team,
+        position: entry.position,
+        battingOrder: entry.battingOrder,
+        awayAbbr: entry.awayAbbr,
+        homeAbbr: entry.homeAbbr,
+        rank,
+        edge: edge?.score ?? null,
+        marketScore: edge?.marketStructureScore ?? null,
+        marketOverlay: edge?.marketOverlay ?? null,
+        score: entry.score,
+        tags: evidenceTagsFor(entry).map(tag => tag.label),
+        hr: entry.hr,
+        hrBaseline: entry.hrBaseline,
+        fhr: entry.fhr,
+        fhrBaseline: entry.fhrBaseline,
+      },
+    }
+    setShareEvidence(evidence)
+  }
   const activeSort = SORT_OPTIONS.find(option => option.value === sort) ?? SORT_OPTIONS[0]
   const displayLeader = view === 'signals' ? signals[0]?.entry ?? null : leader
   const displayLeaderEdge = displayLeader ? edgeRanks.get(displayLeader) : null
@@ -652,7 +694,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   const hrMove = move(entry.hr, entry.hrOpen)
                   const edge = edgeRanks.get(entry)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
-                    <td className={styles.rank}><RankMark rank={index + 1} edge={edge?.score} marketScore={edge?.marketStructureScore} marketOverlay={edge?.marketOverlay} /></td>
+                    <td className={styles.rank}><span className={styles.rankActions}><RankMark rank={index + 1} edge={edge?.score} marketScore={edge?.marketStructureScore} marketOverlay={edge?.marketOverlay} /><button type="button" className={styles.evidenceButton} onClick={event => { event.stopPropagation(); captureEvidence(entry, index + 1, edge) }} aria-label={`Share ${entry.name} Slate Edge evidence`}><Share2 size={12}/></button></span></td>
                     <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edge} /></td>
                     <td className={styles.baselineReadCell}><BaselineMarketRead entry={entry} /></td>
                     <td><span className={styles.matchup} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /></span></td>
@@ -674,11 +716,11 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
               <div className={styles.mobileRankingList}>
               {filtered.map((entry, index) => {
                 const edge = edgeRanks.get(entry)
-                return <button type="button" className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)}>
+                return <article role="button" tabIndex={0} className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openPlayer(entry) }}>
                   <span className={styles.mobileRankHead}>
                     <RankMark rank={index + 1} edge={edge?.score} marketScore={edge?.marketStructureScore} marketOverlay={edge?.marketOverlay} />
                     <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} />
-                    <ScoreMark value={entry.score} compact />
+                    <button type="button" className={styles.evidenceButton} onClick={event => { event.stopPropagation(); captureEvidence(entry, index + 1, edge) }} aria-label={`Share ${entry.name} Slate Edge evidence`}><Share2 size={13}/></button>
                   </span>
                   <MarketStructureTags edge={edge} />
                   <BaselineMarketRead entry={entry} />
@@ -689,7 +731,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                     <span><small>Picks</small><b>{entry.publicPicks?.toLocaleString() ?? '—'}</b></span>
                   </span>
                   <MarketPair entry={entry} />
-                </button>
+                </article>
               })}
               </div>
             </div>
@@ -736,7 +778,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                     <EvidenceTags tags={evidenceTagsFor(entry)} />
                   </span>
                 </div>
-                <div className={styles.signalScores}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
+                <div className={styles.signalScores}><button type="button" className={styles.evidenceButton} onClick={event => { event.stopPropagation(); captureEvidence(entry, index + 1, edgeRanks.get(entry)) }} aria-label={`Share ${entry.name} Slate Edge evidence`}><Share2 size={12}/></button>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               </div>
               <MarketStructureTags edge={edgeRanks.get(entry)} />
               <BaselineMarketRead entry={entry} />
@@ -746,6 +788,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
           </div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
         </main>
       </div>
+      <SlateEdgeShareModal evidence={shareEvidence} onClose={() => setShareEvidence(null)}/>
     </ModalSurface>
   )
 }

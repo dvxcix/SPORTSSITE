@@ -94,6 +94,7 @@ export interface Post {
   author?: User
   content: string
   media_urls: string[]
+  attachments?: import('@/lib/slateEdgeEvidence').SocialAttachment[]
   post_type: 'text' | 'pick' | 'parlay' | 'poll' | 'analysis' | 'reel'
   sport?: string
   game_pk?: string

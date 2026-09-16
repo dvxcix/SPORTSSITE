@@ -30,6 +30,8 @@ import { MemberAvatar } from './MemberAvatar'
 import { ProfileHoverTarget } from './MentionProfileCard'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { SlateEdgeEvidenceCard } from './SlateEdgeEvidenceCard'
+import { isSlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
 
 interface PostCardClientProps {
   post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
@@ -795,6 +797,12 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   full player card; older freeform picks (team/line/odds/book
                   text only, no player link) fall back to the simple layout
                   since there's nothing richer to show for them. */}
+              {post.attachments?.filter(isSlateEdgeEvidence).map((evidence, evidenceIndex) => (
+                <div key={`${evidence.source.path}:${evidence.capturedAt}:${evidenceIndex}`} style={{ marginTop: 12 }}>
+                  <SlateEdgeEvidenceCard evidence={evidence}/>
+                </div>
+              ))}
+
               {post.pick_data && (
                 <div className="ss-post-pick-card" style={{
                   marginTop: 12, borderRadius: 10, border: `1px solid ${pickBorderColor}`,

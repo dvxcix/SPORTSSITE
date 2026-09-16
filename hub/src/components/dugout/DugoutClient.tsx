@@ -4911,6 +4911,19 @@ const dugoutSessionSnapshots = new Map<string, { data: any; activeGame: string |
 
 export function DugoutClient({ date }: { date: string }) {
   const { user: authUser, profile: authProfile } = useAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const initialPanel = searchParams.get('panel')
+  const initialPanelRef = useRef(initialPanel)
+  const initialSlateView = (() => {
+    const value = searchParams.get('slateView')
+    return value === 'matchups' || value === 'market' || value === 'signals' ? value : 'rankings'
+  })()
+  const initialSlatePlayer = (() => {
+    const value = Number(searchParams.get('slatePlayer'))
+    return Number.isFinite(value) && value > 0 ? value : null
+  })()
   const initialSnapshot = dugoutSessionSnapshots.get(date)
   const [data, setData]         = useState<any | null>(() => initialSnapshot?.data ?? null)
   const [loading, setLoading]   = useState(() => !initialSnapshot)
@@ -4920,7 +4933,7 @@ export function DugoutClient({ date }: { date: string }) {
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
-  const [showSlateEdge, setShowSlateEdge] = useState(false)
+  const [showSlateEdge, setShowSlateEdge] = useState(() => initialPanel === 'slate-edge')
   const [slateFocus, setSlateFocus] = useState<{ gameKey: string; mlbId: number } | null>(null)
   const [showGamePicker, setShowGamePicker] = useState(false)
   const [gamePickerFilter, setGamePickerFilter] = useState<'all' | 'live' | 'upcoming' | 'final'>('all')
@@ -4929,6 +4942,10 @@ export function DugoutClient({ date }: { date: string }) {
     return window.localStorage.getItem('ss:dugout-density') === 'comfortable' ? 'comfortable' : 'compact'
   })
   useEffect(() => {
+    if (initialPanelRef.current === 'slate-edge') {
+      setShowHrBoard(false); setShowNearHrBoard(false); setShowSlateEdge(true)
+      return
+    }
     try {
       const panel = window.sessionStorage.getItem('ss:dugout-open-panel')
       setShowHrBoard(panel === 'home-runs')
@@ -4943,6 +4960,8 @@ export function DugoutClient({ date }: { date: string }) {
   // GameTable) so it survives switching between today's games.
   const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>(() => {
     if (typeof window === 'undefined') return 'l10'
+    const requested = searchParams.get('slateWindow')
+    if (requested === 'l1' || requested === 'l3' || requested === 'l5' || requested === 'l10') return requested
     const saved = window.localStorage.getItem('ss:dugout-statcast-window')
     return saved === 'l1' || saved === 'l3' || saved === 'l5' || saved === 'l10' ? saved : 'l10'
   })
@@ -4981,9 +5000,6 @@ export function DugoutClient({ date }: { date: string }) {
   // straight to this player's row, expanded, on whichever game he's in
   // today. Read once per navigation, not on every render, since the value
   // only matters right after the data load below picks the right game.
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
   const highlightMlbId = searchParams.get('highlight')
   const highlightId = highlightMlbId ? parseInt(highlightMlbId, 10) : null
   const requestedCaptureValue = searchParams.get('at')
@@ -5530,6 +5546,9 @@ export function DugoutClient({ date }: { date: string }) {
           date={date}
           entriesByWindow={slateEdgeEntriesByWindow}
           dataWindow={statcastWindow}
+          initialView={initialSlateView}
+          initialGame={searchParams.get('game') ?? 'all'}
+          initialPlayerId={initialSlatePlayer}
           onWindowChange={setStatcastWindow}
           onClose={() => setShowSlateEdge(false)}
           onOpenPlayer={entry => {

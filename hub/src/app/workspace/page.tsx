@@ -18,6 +18,10 @@ export default async function WorkspacePage() {
     db.from('research_notes').select('id,title,body,sport,game_id,tags,pinned,created_at,updated_at').eq('user_id', user.id).order('pinned', { ascending: false }).order('updated_at', { ascending: false }),
   ])
   const workspaces = workspaceResult.data ?? []
+  const workspaceIds = workspaces.map(workspace => workspace.id)
+  const evidenceResult = workspaceIds.length
+    ? await db.from('research_workspace_items').select('id,workspace_id,added_by,item_type,title,source_path,payload,created_at').in('workspace_id', workspaceIds).order('created_at', { ascending: false })
+    : { data: [] }
   const sharedWatchlistIds = [...new Set(workspaces.flatMap(workspace => workspace.watchlist_item_ids ?? []))]
   const sharedMlbMatrixIds = [...new Set(workspaces.flatMap(workspace => workspace.mlb_matrix_ids ?? []))]
   const sharedNflMatrixIds = [...new Set(workspaces.flatMap(workspace => workspace.nfl_matrix_ids ?? []))]
@@ -52,6 +56,7 @@ export default async function WorkspacePage() {
       initialNflMatrices={nflMatrices}
       initialWorkspaces={workspaces}
       initialNotes={notesResult.data ?? []}
+      initialEvidenceItems={evidenceResult.data ?? []}
     />
   </ProductPageShell>
 }
