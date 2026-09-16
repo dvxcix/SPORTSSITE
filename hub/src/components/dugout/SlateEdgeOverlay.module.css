@@ -158,7 +158,15 @@
 .marketStructureTags > span[data-baseline-direction="shorter"] { border-color: rgba(52,211,153,.34); background: linear-gradient(135deg, rgba(16,185,129,.14), rgba(9,14,20,.82)); color: #6ee7b7; }
 .marketStructureTags > span[data-baseline-direction="longer"] { border-color: rgba(251,113,133,.34); background: linear-gradient(135deg, rgba(244,63,94,.14), rgba(9,14,20,.82)); color: #fda4af; }
 .marketStructureIndex em { margin-left: 5px; padding-left: 5px; border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); color: #f7fafc; font-size: 7px; font-style: normal; }
-.marketStructureTags > small { flex-basis: 100%; color: #c4cfdd; font-size: 7px; font-weight: 850; letter-spacing: .01em; line-height: 1.35; }
+.marketStructureTags > .baselineMarket { min-height: 25px; gap: 5px; padding: 0 7px 0 5px; border-color: rgba(148,163,184,.18); background: linear-gradient(135deg,rgba(255,255,255,.035),rgba(9,14,20,.9)); color: #dce5ef; }
+.baselineMarket b { display: grid; place-items: center; min-width: 23px; height: 17px; border-radius: 5px; background: rgba(148,163,184,.1); color: #cbd5e1; font-size: 6px; letter-spacing: .08em; }
+.baselineMarket strong { color: #f8fafc; font-size: 8px; font-variant-numeric: tabular-nums; }
+.baselineMarket i { padding: 2px 4px; border-radius: 5px; font-size: 7px; font-style: normal; font-weight: 950; font-variant-numeric: tabular-nums; }
+.baselineMarket small { color: #758399; font-size: 6px; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+.marketStructureTags > .baselineMarket[data-direction="shorter"] { border-color: rgba(52,211,153,.3); box-shadow: inset 2px 0 0 rgba(52,211,153,.72); }
+.baselineMarket[data-direction="shorter"] i { background: rgba(16,185,129,.14); color: #6ee7b7; }
+.marketStructureTags > .baselineMarket[data-direction="longer"] { border-color: rgba(251,113,133,.28); box-shadow: inset 2px 0 0 rgba(251,113,133,.68); }
+.baselineMarket[data-direction="longer"] i { background: rgba(244,63,94,.14); color: #fda4af; }
 .matchup { display: inline-flex; align-items: center; gap: 5px; font-weight: 850; white-space: nowrap; }
 .matchup img { width: 17px; height: 17px; object-fit: contain; }
 .score { color: var(--accent); font-size: 14px; font-weight: 950; }

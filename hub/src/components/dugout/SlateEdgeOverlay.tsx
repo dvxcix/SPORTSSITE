@@ -218,15 +218,30 @@ function EvidenceTags({ tags }: { tags: EvidenceTag[] }) {
   </span>
 }
 
-function MarketStructureTags({ edge }: { edge: MlbSlateEdgeRank | undefined }) {
-  if (!edge?.marketBadges.length) return null
+function BaselineMarket({ market, current, baseline }: { market: 'HR' | 'FHR'; current: number | null; baseline: number | null }) {
+  if (current == null || baseline == null) return null
+  const difference = Math.round(current - baseline)
+  const direction = difference < 0 ? 'shorter' : difference > 0 ? 'longer' : 'flat'
+  const movement = direction === 'shorter' ? `▼${Math.abs(difference).toLocaleString()}` : direction === 'longer' ? `▲${Math.abs(difference).toLocaleString()}` : '•'
+  return <span className={styles.baselineMarket} data-direction={direction} title={`${market} ${odds(current)}; ${Math.abs(difference)} points ${direction} than ${odds(baseline)} norm`}>
+    <b>{market}</b>
+    <strong>{odds(current)}</strong>
+    <i>{movement}</i>
+    <small>Norm {odds(baseline)}</small>
+  </span>
+}
+
+function MarketStructureTags({ edge, entry }: { edge: MlbSlateEdgeRank | undefined; entry: SlateEdgeEntry }) {
+  const hasBaseline = (entry.hr != null && entry.hrBaseline != null) || (entry.fhr != null && entry.fhrBaseline != null)
+  if (!edge || (!edge.marketBadges.length && !hasBaseline)) return null
   return <span className={styles.marketStructureTags} title={edge.marketExplanation ?? undefined} aria-label={edge.marketExplanation ?? 'Market structure'}>
     <span className={styles.marketStructureIndex}>Market {edge.marketStructureScore}<em>{edge.marketOverlay >= 0 ? '+' : ''}{edge.marketOverlay}</em></span>
     {edge.marketBadges.slice(0, 2).map(label => <span
       key={label}
       data-baseline-direction={label.includes('shorter than own norm') ? 'shorter' : label.includes('longer than own norm') ? 'longer' : undefined}
     >{label}</span>)}
-    {edge.marketPriceLine ? <small>{edge.marketPriceLine}</small> : null}
+    <BaselineMarket market="HR" current={entry.hr} baseline={entry.hrBaseline} />
+    <BaselineMarket market="FHR" current={entry.fhr} baseline={entry.fhrBaseline} />
   </span>
 }
 
@@ -632,7 +647,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
                     <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
-                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edgeRanks.get(entry)} /></td>
+                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edgeRanks.get(entry)} entry={entry} /></td>
                     <td><span className={styles.matchup} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /></span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
@@ -658,7 +673,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                     <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} />
                     <ScoreMark value={entry.score} compact />
                   </span>
-                  <MarketStructureTags edge={edge} />
+                  <MarketStructureTags edge={edge} entry={entry} />
                   <span className={styles.mobileMetricGrid}>
                     <span style={heatStyle(entry.mm, 0, 8)}><small>MM</small><MmMark entry={entry} compact /></span>
                     <span style={heatStyle(entry.pitchFit, 50, 30)}><small>Pitch fit</small><b>{entry.pitchFit != null ? Math.round(entry.pitchFit) : '—'}</b></span>
@@ -715,7 +730,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 </div>
                 <div className={styles.signalScores}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               </div>
-              <MarketStructureTags edge={edgeRanks.get(entry)} />
+              <MarketStructureTags edge={edgeRanks.get(entry)} entry={entry} />
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>
