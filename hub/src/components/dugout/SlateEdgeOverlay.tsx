@@ -121,7 +121,11 @@ const WINDOWS: Array<{ value: SlateEdgeWindow; short: string; label: string }> =
   { value: 'l10', short: 'L10', label: 'Last 10' },
 ]
 
-const odds = (value: number | null) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
+const odds = (value: number | null) => {
+  if (value == null) return '—'
+  const rounded = Math.round(value)
+  return rounded > 0 ? `+${rounded}` : String(rounded)
+}
 const signed = (value: number | null, suffix = '') => value == null ? '—' : `${value > 0 ? '+' : ''}${Math.round(value)}${suffix}`
 const pctRaw = (value: number | null) => value == null ? '—' : `${value.toFixed(1)}%`
 const move = (current: number | null, open: number | null) => current != null && open != null ? current - open : null
