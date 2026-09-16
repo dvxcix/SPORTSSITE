@@ -12,7 +12,7 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 // (renders nothing) for a signed-out visitor or when there's no odds to
 // actually save.
 export function WatchlistStarButton({
-  mlbId, name, team, position, bats, gameInfo, odds, oddsByBook, propKey = 'sa', book = 'fanduel', size = 13,
+  mlbId, name, team, position, bats, gameInfo, odds, oddsByBook, propKey = 'sa', book = 'fanduel', size = 13, showLabel = false, className,
 }: {
   mlbId: number | null
   name: string
@@ -25,6 +25,8 @@ export function WatchlistStarButton({
   propKey?: string
   book?: string
   size?: number
+  showLabel?: boolean
+  className?: string
 }) {
   const wl = useWatchlist()
   const [busy, setBusy] = useState(false)
@@ -70,6 +72,7 @@ export function WatchlistStarButton({
     <button
       onClick={handleClick}
       disabled={busy}
+      className={className}
       title={saved ? 'Saved to watchlist — click to remove' : `Add ${meta?.label ?? propKey} @ ${book} to watchlist`}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -79,7 +82,8 @@ export function WatchlistStarButton({
         fontSize: size, lineHeight: 1,
       }}
     >
-      {saved ? '★' : '☆'}
+      <span aria-hidden="true">{saved ? '★' : '☆'}</span>
+      {showLabel && <span>{saved ? 'Saved' : 'Save'}</span>}
     </button>
   )
 }

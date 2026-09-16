@@ -33,6 +33,7 @@ import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { rankMlbSlateEdge, type MlbSlateEdgeRank } from '@/lib/mlbSlateEdgeRanking'
 import type { DugoutMomentumResult } from '@/lib/dugoutMomentum'
 import { BatterCharge } from './BatterCharge'
+import { MarketBaselineRead } from './MarketBaselineRead'
 import styles from './SlateEdgeOverlay.module.css'
 
 export type SlateEdgeWindow = 'l1' | 'l3' | 'l5' | 'l10'
@@ -229,29 +230,13 @@ function EvidenceTags({ tags }: { tags: EvidenceTag[] }) {
   </span>
 }
 
-function BaselineMarket({ market, current, baseline }: { market: 'HR' | 'FHR'; current: number | null; baseline: number | null }) {
-  if (current == null || baseline == null) return null
-  const difference = Math.round(current - baseline)
-  const direction = difference < 0 ? 'shorter' : difference > 0 ? 'longer' : 'flat'
-  const movement = direction === 'shorter' ? `▼ ${Math.abs(difference).toLocaleString()}` : direction === 'longer' ? `▲ ${Math.abs(difference).toLocaleString()}` : 'Held'
-  const currentPosition = 50 + Math.max(-34, Math.min(34, difference / 12))
-  const marketName = market === 'FHR' ? 'First HR' : 'Anytime HR'
-  const tileStyle = { '--market-position': `${currentPosition}%` } as CSSProperties
-  return <span className={styles.baselineMarket} data-market={market} data-direction={direction} style={tileStyle} title={`${marketName}: ${odds(current)}; ${Math.abs(difference)} points ${direction} than ${odds(baseline)} norm`}>
-    <span className={styles.baselineMarketHead}><b>{market}</b><small>{marketName}</small></span>
-    <span className={styles.baselineMarketPrice}><strong>{odds(current)}</strong><i>{movement}</i></span>
-    <span className={styles.baselineTrack} aria-hidden="true"><span className={styles.baselineNormDot} /><span className={styles.baselineCurrentDot} /></span>
-    <span className={styles.baselineMarketFoot}><small>Current</small><span>Norm <b>{odds(baseline)}</b></span></span>
-  </span>
-}
-
 function BaselineMarketRead({ entry }: { entry: SlateEdgeEntry }) {
-  const hasBaseline = (entry.hr != null && entry.hrBaseline != null) || (entry.fhr != null && entry.fhrBaseline != null)
-  if (!hasBaseline) return <span className={styles.baselineReadEmpty}>Baseline unavailable</span>
-  return <span className={styles.baselineRead} aria-label="Home run prices versus player baseline">
-    <BaselineMarket market="HR" current={entry.hr} baseline={entry.hrBaseline} />
-    <BaselineMarket market="FHR" current={entry.fhr} baseline={entry.fhrBaseline} />
-  </span>
+  return <MarketBaselineRead
+    hr={entry.hr}
+    hrBaseline={entry.hrBaseline}
+    fhr={entry.fhr}
+    fhrBaseline={entry.fhrBaseline}
+  />
 }
 
 function MarketStructureTags({ edge }: { edge: MlbSlateEdgeRank | undefined }) {

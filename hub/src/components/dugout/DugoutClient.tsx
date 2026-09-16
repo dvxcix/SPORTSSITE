@@ -36,6 +36,7 @@ import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColu
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { BatterCharge } from '@/components/dugout/BatterCharge'
+import { MarketBaselineRead, baselinePriceFromPercent } from '@/components/dugout/MarketBaselineRead'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -1737,6 +1738,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
   const edgePool = g('matchup_edge').filter((x): x is number => x != null)
   const edgeAvg = edgePool.length ? edgePool.reduce((a, b) => a + b, 0) / edgePool.length : 0
   const hasLiveMatchup = row.matchup_edge != null && row.matchup_edge > edgeAvg + 8
+  const hrBaseline = baselinePriceFromPercent(row.sa_fd, row.sa_pct)
+  const fhrBaseline = baselinePriceFromPercent(row.fhr_fd, row.fhr_pct)
   // Achievement badges now sit under the actual FD odds cell they're each
   // about, not clustered on the name rail — a "did they homer, or is this
   // MY Matrix" mixup while backtesting was the whole reason for this move
@@ -1778,7 +1781,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         tabIndex={0}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Open'} ${row.name} matchup details`}
-        className="dg-sticky-col w-[172px] min-w-[172px] max-w-[172px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
+        className="dg-sticky-col"
         style={{
           ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
           // Reported live (mobile): odds-column values from further right in
@@ -1831,52 +1834,9 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 below), so a long name or a player with several flags at
                 once no longer squeezes it down to almost nothing. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-              <span className="dg-player-name" style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
+              <span className="dg-player-name" style={{ color: expanded ? 'var(--accent)' : 'var(--text-1)' }}>
                 {row.name}
               </span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                <WatchlistStarButton
-                  mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
-                  gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
-                />
-                {onToggleCompare && (
-                  <Tooltip content={compared ? 'Remove from comparison' : 'Compare this player'}>
-                    <button
-                      type="button"
-                      className="dugout-compare-toggle"
-                      aria-label={`${compared ? 'Remove' : 'Add'} ${row.name} ${compared ? 'from' : 'to'} comparison`}
-                      aria-pressed={compared}
-                      onClick={event => { event.stopPropagation(); onToggleCompare() }}
-                    >{compared ? '✓' : '+'}</button>
-                  </Tooltip>
-                )}
-                {/* Which of this member's own Matrices lit this row up —
-                    moved here (under the star, not the achievement rail
-                    above) specifically so it never sits next to an HR/FHR
-                    badge and reads as "did they homer or is this my
-                    Matrix?" at a glance. */}
-                {row.matrix_matches.length > 0 && (
-                  <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 2, maxWidth: 54,
-                      flexWrap: 'wrap', cursor: 'help', lineHeight: 0,
-                    }}>
-                      {row.matrix_matches.map(matrix => (
-                        <span
-                          key={matrix.id}
-                          aria-label={matrix.name}
-                          style={{
-                            width: 7, height: 7, borderRadius: '50%', flex: '0 0 7px',
-                            background: matrix.color,
-                            border: '1px solid rgba(255,255,255,.28)',
-                            boxShadow: `0 0 5px ${matrix.color}88`,
-                          }}
-                        />
-                      ))}
-                    </span>
-                  </Tooltip>
-                )}
-              </div>
             </div>
             {/* flexWrap here (not nowrap) is the fix for a real bug: on the
                 narrow 140px mobile sticky column there often isn't room for
@@ -1913,13 +1873,50 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 </Tooltip>
               )}
             </div>
-            <div className="dg-player-signal-row" aria-label={`${row.name} quick scores`}>
-              <span><small>MKT</small><b>{row.mm != null ? Math.round(row.mm) : '—'}</b></span>
-              <span><small>CON</small><b>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</b></span>
-              <span><small>FIT</small><b>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '—'}</b></span>
+            <div className="dg-player-actions" aria-label={`${row.name} actions`} onClick={event => event.stopPropagation()}>
+              <WatchlistStarButton
+                mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
+                gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
+                showLabel className="dg-player-action"
+              />
+              {onToggleCompare && (
+                <button
+                  type="button"
+                  className="dg-player-action"
+                  aria-label={`${compared ? 'Remove' : 'Add'} ${row.name} ${compared ? 'from' : 'to'} comparison`}
+                  aria-pressed={compared}
+                  onClick={onToggleCompare}
+                ><span aria-hidden="true">{compared ? '✓' : '+'}</span><span>{compared ? 'Compared' : 'Compare'}</span></button>
+              )}
+              <button
+                type="button"
+                className="dg-player-action dg-player-details-action"
+                aria-expanded={expanded}
+                onClick={onToggle}
+              ><span>{expanded ? 'Hide' : 'Details'}</span><span aria-hidden="true">{expanded ? '▲' : '▼'}</span></button>
+              {row.matrix_matches.length > 0 && (
+                <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
+                  <span className="dg-player-matrix-matches" aria-label={`${row.matrix_matches.length} Matrix matches`}>
+                    {row.matrix_matches.map(matrix => (
+                      <span
+                        key={matrix.id}
+                        aria-label={matrix.name}
+                        style={{ background: matrix.color, boxShadow: `0 0 5px ${matrix.color}88` }}
+                      />
+                    ))}
+                  </span>
+                </Tooltip>
+              )}
             </div>
+            <MarketBaselineRead
+              compact
+              className="dg-player-baseline"
+              hr={row.sa_fd}
+              hrBaseline={hrBaseline}
+              fhr={row.fhr_fd}
+              fhrBaseline={fhrBaseline}
+            />
           </div>
-          <span className="dg-expand-indicator" style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
       </td>
 
@@ -5134,10 +5131,7 @@ export function DugoutClient({ date }: { date: string }) {
     // (current price - own average price) / own average price. Reconstruct
     // the actual average price first; Slate Edge converts both prices to
     // implied probability before comparing them.
-    const ownBaselinePrice = (current: number | null, priceDeltaPct: number | null) =>
-      current != null && priceDeltaPct != null && Math.abs(1 + priceDeltaPct) > .0001
-        ? current / (1 + priceDeltaPct)
-        : null
+    const ownBaselinePrice = baselinePriceFromPercent
     for (const window of ['l1', 'l3', 'l5', 'l10'] as const) {
       const out = byWindow[window]
       for (const game of (data?.games ?? [])) {
@@ -5704,7 +5698,21 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
         .dugout-glossary>div{display:grid;gap:1px;background:var(--border)}.dugout-glossary>div>span{display:grid;grid-template-columns:minmax(142px,.78fr) minmax(0,1.22fr);align-items:start;gap:14px;padding:12px 14px;background:var(--surface)}.dugout-glossary b{display:flex;min-width:0;color:var(--accent);font-size:11px}.dugout-glossary p{min-width:0;margin:0;color:var(--text-2);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
-        .dg-player-signal-row{display:flex;align-items:center;gap:5px;margin-top:3px}.dg-player-signal-row span{padding:1px 4px;border-radius:4px;background:var(--surface-2);color:var(--text-3);font-size:8px;font-weight:850}
+        .dg-sticky-col{width:270px!important;min-width:270px!important;max-width:270px!important}
+        .dg-player-cell-inner{min-height:98px!important;gap:7px!important;padding:8px 8px 8px 13px!important}
+        .dg-player-copy{display:grid;gap:5px;overflow:visible!important}
+        .dugout-dense-table .dg-player-name{display:-webkit-box;min-width:0;overflow:hidden;font-size:13px!important;font-weight:900!important;line-height:1.18!important;white-space:normal!important;text-overflow:clip!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
+        .dg-player-actions{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
+        .dg-player-action{min-height:24px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:4px!important;padding:0 7px!important;border:1px solid var(--border)!important;border-radius:7px!important;background:linear-gradient(180deg,color-mix(in srgb,var(--surface-2) 94%,white 2%),var(--surface-2))!important;color:var(--text-2)!important;font-family:inherit!important;font-size:7px!important;font-weight:900!important;line-height:1!important;white-space:nowrap;cursor:pointer}
+        .dg-player-action:hover{border-color:color-mix(in srgb,var(--accent) 52%,var(--border))!important;color:var(--text-1)!important}
+        .dg-player-action[aria-pressed=true]{border-color:color-mix(in srgb,var(--accent) 62%,var(--border))!important;background:var(--accent-dim)!important;color:var(--accent)!important}
+        .dg-player-action>span:first-child{font-size:11px;line-height:1}
+        .dg-player-details-action{margin-left:auto}
+        .dg-player-details-action>span:first-child{font-size:7px}
+        .dg-player-matrix-matches{min-height:24px;display:inline-flex;align-items:center;gap:2px;padding:0 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:help}.dg-player-matrix-matches>span{width:7px;height:7px;border:1px solid rgba(255,255,255,.28);border-radius:50%}
+        .dg-player-baseline{margin-top:1px}
+        .dg-player-baseline[aria-label]{width:100%}
+        .dg-expand-indicator{display:none!important}
         .dugout-active-matchup{display:none;align-items:center;gap:6px}
         .dugout-active-matchup > span{color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
         .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
@@ -5790,11 +5798,13 @@ export function DugoutClient({ date }: { date: string }) {
           .dg-team-identity{width:100%;overflow:hidden}.dg-team-name{min-width:0;max-width:26vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dg-team-identity>a{min-width:0;max-width:46vw;overflow:hidden}
           .dugout-dense-table{font-size:12px!important}
           .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
-          .dg-sticky-col{width:208px!important;min-width:208px!important;max-width:208px!important}
-          .dg-player-cell-inner{gap:6px!important;padding:6px 5px!important;min-height:52px}
-          .dg-player-copy{font-size:11px!important;overflow:hidden}
-          .dg-player-name{font-size:13px!important;line-height:1.25!important}
-          .dg-player-cell-inner>a img,.dg-player-cell-inner>img{width:32px!important;height:32px!important}
+          .dg-sticky-col{width:220px!important;min-width:220px!important;max-width:220px!important}
+          .dg-player-cell-inner{gap:6px!important;padding:8px 6px 8px 8px!important;min-height:108px!important}
+          .dg-player-copy{font-size:11px!important;overflow:visible!important}
+          .dg-player-name{font-size:13px!important;line-height:1.18!important;-webkit-line-clamp:2}
+          .dg-player-cell-inner>a img,.dg-player-cell-inner>img{width:34px!important;height:34px!important}
+          .dg-player-actions{gap:3px}.dg-player-action{min-height:23px!important;padding:0 5px!important;font-size:6.5px!important}.dg-player-details-action{margin-left:0}
+          .dg-player-baseline{grid-template-columns:1fr!important}.dg-player-baseline>span{min-height:46px}
           .dugout-compare-toggle{width:22px;height:22px}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
