@@ -49,7 +49,10 @@ export function SlateEdgeShareModal({ evidence, onClose }: { evidence: SlateEdge
       game_pk: null,
     })
     setBusy('')
-    setMessage(error ? 'Could not post this read.' : 'Posted to your feed.')
+    if (error) { setMessage('Could not post this read.'); return }
+    setMessage('Posted to your feed.')
+    router.refresh()
+    window.setTimeout(onClose, 650)
   }
 
   async function saveToWorkspace() {
@@ -60,12 +63,15 @@ export function SlateEdgeShareModal({ evidence, onClose }: { evidence: SlateEdge
       workspace_id: workspaceId,
       added_by: user.id,
       item_type: 'slate_edge_player',
-      title: `${evidence!.snapshot.name} � ${evidence!.source.window.toUpperCase()} Slate Edge`,
+      title: `${evidence!.snapshot.name} · ${evidence!.source.window.toUpperCase()} Slate Edge`,
       source_path: evidence!.source.path,
       payload: evidence,
     })
     setBusy('')
-    setMessage(error ? 'Could not save this evidence.' : 'Saved to Research Workspace.')
+    if (error) { setMessage('Could not save this evidence.'); return }
+    setMessage('Saved to Research Workspace.')
+    router.refresh()
+    window.setTimeout(onClose, 650)
   }
 
   return <ModalSurface open onClose={onClose} labelledBy="slate-share-title" backdropClassName={styles.backdrop} panelClassName={styles.panel}>
@@ -74,7 +80,7 @@ export function SlateEdgeShareModal({ evidence, onClose }: { evidence: SlateEdge
     <label className={styles.note}><span>Add context <small>optional</small></span><textarea value={note} onChange={event => setNote(event.target.value)} maxLength={500} placeholder="What stood out in this read?"/></label>
     <div className={styles.destinations}>
       <section><span><Send size={15}/><b>Post to Feed</b></span><p>Followers see this exact captured read and can open its live board context.</p><button type="button" onClick={() => void postToFeed()} disabled={!!busy}>{busy === 'feed' ? <LoaderCircle className={styles.spin} size={15}/> : <Send size={15}/>}Post evidence</button></section>
-      <section><span><BookmarkPlus size={15}/><b>Research Workspace</b></span><p>Keep the snapshot beside your notes and comparisons.</p><select value={workspaceId} onChange={event => setWorkspaceId(event.target.value)} aria-label="Research workspace"><option value="">Choose workspace</option>{workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select><button type="button" onClick={() => void saveToWorkspace()} disabled={!!busy}>{busy === 'workspace' ? <LoaderCircle className={styles.spin} size={15}/> : <BookmarkPlus size={15}/>}Save read</button></section>
+      <section><span><BookmarkPlus size={15}/><b>Research Workspace</b></span><p>Keep the snapshot beside your notes and comparisons.</p>{workspaces.length ? <><select value={workspaceId} onChange={event => setWorkspaceId(event.target.value)} aria-label="Research workspace"><option value="">Choose workspace</option>{workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select><button type="button" onClick={() => void saveToWorkspace()} disabled={!!busy || !workspaceId}>{busy === 'workspace' ? <LoaderCircle className={styles.spin} size={15}/> : <BookmarkPlus size={15}/>}Save read</button></> : <button type="button" className={styles.createWorkspace} onClick={() => router.push('/workspace')}>Create a workspace</button>}</section>
     </div>
     {message && <p className={styles.message} role="status">{message}</p>}
   </ModalSurface>
