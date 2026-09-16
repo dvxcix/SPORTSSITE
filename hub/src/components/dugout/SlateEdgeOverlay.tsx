@@ -162,10 +162,17 @@ function EdgeMark({ value, compact = false }: { value: number; compact?: boolean
   </span>
 }
 
-function RankMark({ rank, edge }: { rank: number; edge?: number }) {
-  return <span className={styles.rankMark}>
-    <span className={styles.rankNumber}><small>Rank</small><b>#{String(rank).padStart(2, '0')}</b></span>
-    {edge == null ? <span className={styles.scoreMissing}>—</span> : <EdgeMark value={edge} compact />}
+function RankMark({ rank, edge, marketScore, marketOverlay }: { rank: number; edge?: number; marketScore?: number; marketOverlay?: number }) {
+  return <span className={styles.rankCluster}>
+    {marketScore != null && <span className={styles.rankMarketCap}>
+      <span>Market</span>
+      <strong>{marketScore}</strong>
+      {marketOverlay != null && <em data-tone={marketOverlay > 0 ? 'up' : marketOverlay < 0 ? 'down' : 'flat'}>{signed(marketOverlay)}</em>}
+    </span>}
+    <span className={styles.rankMark}>
+      <span className={styles.rankNumber}><small>Rank</small><b>#{String(rank).padStart(2, '0')}</b></span>
+      {edge == null ? <span className={styles.scoreMissing}>—</span> : <EdgeMark value={edge} compact />}
+    </span>
   </span>
 }
 
@@ -222,26 +229,35 @@ function BaselineMarket({ market, current, baseline }: { market: 'HR' | 'FHR'; c
   if (current == null || baseline == null) return null
   const difference = Math.round(current - baseline)
   const direction = difference < 0 ? 'shorter' : difference > 0 ? 'longer' : 'flat'
-  const movement = direction === 'shorter' ? `▼${Math.abs(difference).toLocaleString()}` : direction === 'longer' ? `▲${Math.abs(difference).toLocaleString()}` : '•'
-  return <span className={styles.baselineMarket} data-direction={direction} title={`${market} ${odds(current)}; ${Math.abs(difference)} points ${direction} than ${odds(baseline)} norm`}>
-    <b>{market}</b>
-    <strong>{odds(current)}</strong>
-    <i>{movement}</i>
-    <small>Norm {odds(baseline)}</small>
+  const movement = direction === 'shorter' ? `▼ ${Math.abs(difference).toLocaleString()}` : direction === 'longer' ? `▲ ${Math.abs(difference).toLocaleString()}` : 'Held'
+  const currentPosition = 50 + Math.max(-34, Math.min(34, difference / 12))
+  const marketName = market === 'FHR' ? 'First HR' : 'Anytime HR'
+  const tileStyle = { '--market-position': `${currentPosition}%` } as CSSProperties
+  return <span className={styles.baselineMarket} data-market={market} data-direction={direction} style={tileStyle} title={`${marketName}: ${odds(current)}; ${Math.abs(difference)} points ${direction} than ${odds(baseline)} norm`}>
+    <span className={styles.baselineMarketHead}><b>{market}</b><small>{marketName}</small></span>
+    <span className={styles.baselineMarketPrice}><strong>{odds(current)}</strong><i>{movement}</i></span>
+    <span className={styles.baselineTrack} aria-hidden="true"><span className={styles.baselineNormDot} /><span className={styles.baselineCurrentDot} /></span>
+    <span className={styles.baselineMarketFoot}><small>Current</small><span>Norm <b>{odds(baseline)}</b></span></span>
   </span>
 }
 
-function MarketStructureTags({ edge, entry }: { edge: MlbSlateEdgeRank | undefined; entry: SlateEdgeEntry }) {
+function BaselineMarketRead({ entry }: { entry: SlateEdgeEntry }) {
   const hasBaseline = (entry.hr != null && entry.hrBaseline != null) || (entry.fhr != null && entry.fhrBaseline != null)
-  if (!edge || (!edge.marketBadges.length && !hasBaseline)) return null
-  return <span className={styles.marketStructureTags} title={edge.marketExplanation ?? undefined} aria-label={edge.marketExplanation ?? 'Market structure'}>
-    <span className={styles.marketStructureIndex}>Market {edge.marketStructureScore}<em>{edge.marketOverlay >= 0 ? '+' : ''}{edge.marketOverlay}</em></span>
-    {edge.marketBadges.slice(0, 2).map(label => <span
-      key={label}
-      data-baseline-direction={label.includes('shorter than own norm') ? 'shorter' : label.includes('longer than own norm') ? 'longer' : undefined}
-    >{label}</span>)}
+  if (!hasBaseline) return <span className={styles.baselineReadEmpty}>Baseline unavailable</span>
+  return <span className={styles.baselineRead} aria-label="Home run prices versus player baseline">
     <BaselineMarket market="HR" current={entry.hr} baseline={entry.hrBaseline} />
     <BaselineMarket market="FHR" current={entry.fhr} baseline={entry.fhrBaseline} />
+  </span>
+}
+
+function MarketStructureTags({ edge }: { edge: MlbSlateEdgeRank | undefined }) {
+  if (!edge) return null
+  const badges = edge.marketBadges.filter(label => !label.includes('shorter than own norm') && !label.includes('longer than own norm'))
+  if (!badges.length) return null
+  return <span className={styles.marketStructureTags} title={edge.marketExplanation ?? undefined} aria-label={edge.marketExplanation ?? 'Market structure'}>
+    {badges.slice(0, 2).map(label => <span
+      key={label}
+    >{label}</span>)}
   </span>
 }
 
@@ -641,13 +657,15 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
             <div className={styles.rankingsViews}>
               <div className={styles.tableWrap}>
               <table className={styles.table}>
-                <thead><tr><th>Rank</th><th>Player</th><th>Game</th><th>SlipSurge Score</th><th>MM</th><th>Pitch fit</th><th>Barrel form</th><th>Hard-hit Δ</th><th>Pull-air</th><th>Timing Δ</th><th>FHR market</th><th>HR market</th><th>Book gap</th><th>Picks</th></tr></thead>
+                <thead><tr><th>Rank</th><th>Player</th><th>Price vs norm</th><th>Game</th><th>SlipSurge Score</th><th>MM</th><th>Pitch fit</th><th>Barrel form</th><th>Hard-hit Δ</th><th>Pull-air</th><th>Timing Δ</th><th>FHR market</th><th>HR market</th><th>Book gap</th><th>Picks</th></tr></thead>
                 <tbody>{filtered.map((entry, index) => {
                   const fhrMove = move(entry.fhr, entry.fhrOpen)
                   const hrMove = move(entry.hr, entry.hrOpen)
+                  const edge = edgeRanks.get(entry)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
-                    <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
-                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edgeRanks.get(entry)} entry={entry} /></td>
+                    <td className={styles.rank}><RankMark rank={index + 1} edge={edge?.score} marketScore={edge?.marketStructureScore} marketOverlay={edge?.marketOverlay} /></td>
+                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edge} /></td>
+                    <td className={styles.baselineReadCell}><BaselineMarketRead entry={entry} /></td>
                     <td><span className={styles.matchup} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /></span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
@@ -669,11 +687,12 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 const edge = edgeRanks.get(entry)
                 return <button type="button" className={styles.mobileRankCard} key={entry.gameKey + ':' + (entry.mlbId ?? entry.name) + ':mobile'} onClick={() => openPlayer(entry)}>
                   <span className={styles.mobileRankHead}>
-                    <RankMark rank={index + 1} edge={edge?.score} />
+                    <RankMark rank={index + 1} edge={edge?.score} marketScore={edge?.marketStructureScore} marketOverlay={edge?.marketOverlay} />
                     <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} />
                     <ScoreMark value={entry.score} compact />
                   </span>
-                  <MarketStructureTags edge={edge} entry={entry} />
+                  <MarketStructureTags edge={edge} />
+                  <BaselineMarketRead entry={entry} />
                   <span className={styles.mobileMetricGrid}>
                     <span style={heatStyle(entry.mm, 0, 8)}><small>MM</small><MmMark entry={entry} compact /></span>
                     <span style={heatStyle(entry.pitchFit, 50, 30)}><small>Pitch fit</small><b>{entry.pitchFit != null ? Math.round(entry.pitchFit) : '—'}</b></span>
@@ -730,7 +749,8 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 </div>
                 <div className={styles.signalScores}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               </div>
-              <MarketStructureTags edge={edgeRanks.get(entry)} entry={entry} />
+              <MarketStructureTags edge={edgeRanks.get(entry)} />
+              <BaselineMarketRead entry={entry} />
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>
