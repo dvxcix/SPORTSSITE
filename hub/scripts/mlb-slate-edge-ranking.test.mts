@@ -127,7 +127,7 @@ test('retained low-public lower-order pricing creates a capped market overlay', 
   assert.ok(result.marketBadges.includes('Low-public retained'))
   assert.ok(result.hrBaselineProbabilityDelta! > 0, '+560 is shorter than the reconstructed +587 own norm')
   assert.ok(result.fhrBaselineProbabilityDelta! < 0, '+1500 is slightly longer than the reconstructed +1487 own norm')
-  assert.equal(result.marketPriceLine, 'HR +560 vs +587 norm · FHR +1500 vs +1487 norm')
+  assert.equal(result.marketPriceLine, 'HR +560 · 27 pts shorter than +587 norm · FHR +1500 · 13 pts longer than +1487 norm')
   assert.ok(result.marketOverlay > 0)
   assert.ok(result.marketOverlay <= 6)
   assert.equal(result.score, Math.min(100, result.baseScore + result.marketOverlay))

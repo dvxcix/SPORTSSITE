@@ -222,7 +222,10 @@ function MarketStructureTags({ edge }: { edge: MlbSlateEdgeRank | undefined }) {
   if (!edge?.marketBadges.length) return null
   return <span className={styles.marketStructureTags} title={edge.marketExplanation ?? undefined} aria-label={edge.marketExplanation ?? 'Market structure'}>
     <span className={styles.marketStructureIndex}>Market {edge.marketStructureScore}<em>{edge.marketOverlay >= 0 ? '+' : ''}{edge.marketOverlay}</em></span>
-    {edge.marketBadges.slice(0, 2).map(label => <span key={label}>{label}</span>)}
+    {edge.marketBadges.slice(0, 2).map(label => <span
+      key={label}
+      data-baseline-direction={label.includes('shorter than own norm') ? 'shorter' : label.includes('longer than own norm') ? 'longer' : undefined}
+    >{label}</span>)}
     {edge.marketPriceLine ? <small>{edge.marketPriceLine}</small> : null}
   </span>
 }

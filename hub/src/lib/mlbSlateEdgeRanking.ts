@@ -59,6 +59,15 @@ const oddsProbability = (odds: number | null) => odds == null
 const oddsMove = (current: number | null, open: number | null) => current != null && open != null ? current - open : null
 const oddsLabel = (value: number | null) => value == null ? '—' : value > 0 ? `+${Math.round(value)}` : String(Math.round(value))
 
+const baselinePriceLabel = (market: 'HR' | 'FHR', current: number | null | undefined, baseline: number | null | undefined) => {
+  if (current == null || baseline == null) return null
+  const pointDelta = Math.round(Math.abs(current - baseline))
+  const direction = current < baseline ? 'shorter' : current > baseline ? 'longer' : 'at'
+  return direction === 'at'
+    ? `${market} ${oddsLabel(current)} · at ${oddsLabel(baseline)} norm`
+    : `${market} ${oddsLabel(current)} · ${pointDelta} pts ${direction} than ${oddsLabel(baseline)} norm`
+}
+
 const probabilityDelta = (current: number | null, baseline: number | null) => {
   const currentProbability = oddsProbability(current)
   const baselineProbability = oddsProbability(baseline)
@@ -236,8 +245,10 @@ export function rankMlbSlateEdge<T extends MlbSlateEdgeRankInput>(entries: T[]) 
       if (retained && paperTeamRank != null && paperTeamRank - retainedRank >= 3) marketBadges.push(`Book #${retainedRank} · Paper #${paperTeamRank}`)
       if (ladder.label === 'lengthened-retained') marketBadges.push('Ladder long · rank held')
       else if (ladder.label === 'protected') marketBadges.push('Ladder protected')
-      if (hrBaselineDelta != null && hrBaselineDelta >= .02) marketBadges.push('HR above own norm')
-      else if (hrBaselineDelta != null && hrBaselineDelta <= -.02) marketBadges.push('HR below own norm')
+      // These deltas are changes in implied probability, but members read the
+      // displayed values as American prices. Say shorter/longer explicitly.
+      if (hrBaselineDelta != null && hrBaselineDelta >= .02) marketBadges.push('HR shorter than own norm')
+      else if (hrBaselineDelta != null && hrBaselineDelta <= -.02) marketBadges.push('HR longer than own norm')
       if (fhrBaselineDelta != null && Math.abs(fhrBaselineDelta) < .015) marketBadges.push('FHR near own norm')
       const hrDirection = hrBaselineDelta == null ? 0 : Math.sign(hrBaselineDelta)
       const fhrDirection = fhrBaselineDelta == null ? 0 : Math.sign(fhrBaselineDelta)
@@ -247,8 +258,8 @@ export function rankMlbSlateEdge<T extends MlbSlateEdgeRankInput>(entries: T[]) 
         ? `Book #${retainedRank} on ${entry.team}${paperTeamRank != null ? ` vs Paper #${paperTeamRank}` : ''}${picksTeamRank != null ? ` and Picks #${picksTeamRank}` : ''}. ${ladder.label === 'lengthened-retained' ? 'Prices lengthened broadly, but the player retained a top-three team position.' : ladder.label === 'protected' ? 'The correlated ladder shortened broadly.' : 'Team-relative price placement remains the primary market signal.'}`
         : null
       const marketPriceParts = [
-        entry.hr != null && entry.hrBaseline != null ? `HR ${oddsLabel(entry.hr)} vs ${oddsLabel(entry.hrBaseline)} norm` : null,
-        entry.fhr != null && entry.fhrBaseline != null ? `FHR ${oddsLabel(entry.fhr)} vs ${oddsLabel(entry.fhrBaseline)} norm` : null,
+        baselinePriceLabel('HR', entry.hr, entry.hrBaseline),
+        baselinePriceLabel('FHR', entry.fhr, entry.fhrBaseline),
       ].filter((value): value is string => value != null)
 
       const reasons: string[] = []
