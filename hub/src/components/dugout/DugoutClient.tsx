@@ -37,6 +37,7 @@ import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySna
 import { SafeImage } from '@/components/ui/SafeImage'
 import { BatterCharge } from '@/components/dugout/BatterCharge'
 import { MarketBaselineRead, baselinePriceFromPercent } from '@/components/dugout/MarketBaselineRead'
+import playerRowStyles from './PlayerRow.module.css'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -1100,7 +1101,7 @@ function TH({
     <th
       data-col-key={dataColKey}
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
-      className={responsiveSticky ? 'w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]' : undefined}
+      className={responsiveSticky ? playerRowStyles.cell : undefined}
       style={{
         ...sthRest,
         ...(responsiveSticky ? {} : { width: w, minWidth: w, maxWidth: w }),
@@ -1772,6 +1773,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <td
         onClick={onToggle}
         onKeyDown={event => {
+          if (event.target !== event.currentTarget) return
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             onToggle()
@@ -1781,7 +1783,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         tabIndex={0}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Open'} ${row.name} matchup details`}
-        className="dg-sticky-col"
+        className={`dg-sticky-col ${playerRowStyles.cell}`}
         style={{
           ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
           // Reported live (mobile): odds-column values from further right in
@@ -1801,7 +1803,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         }}
       >
         <BatterCharge momentum={row.momentum} />
-        <div className="dg-player-cell-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px 4px 12px' }}>
+        <div className={`dg-player-cell-inner ${playerRowStyles.inner}`}>
           {/* Order#/hand-circle rail — achievement badges (FHR/HR/near-miss)
               moved off this rail entirely, onto the actual FD FHR/SA odds
               cells they're each about (see the OddsCell `badge` prop calls
@@ -1827,14 +1829,14 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ) : (
             <PlayerAvatar mlbId={row.mlb_id} size={34} teamAbbr={row.team} name={row.name} />
           )}
-          <div className="dg-player-copy" style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+          <div className={`dg-player-copy ${playerRowStyles.copy}`}>
             {/* Name line's width is now fixed regardless of how many flags
                 are active — every badge moved off it (achievement flags to
                 the rail above, signal flags to the position/hand line
                 below), so a long name or a player with several flags at
                 once no longer squeezes it down to almost nothing. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-              <span className="dg-player-name" style={{ color: expanded ? 'var(--accent)' : 'var(--text-1)' }}>
+              <span className={`dg-player-name ${playerRowStyles.name}`} style={{ color: expanded ? 'var(--accent)' : 'var(--text-1)' }}>
                 {row.name}
               </span>
             </div>
@@ -1873,7 +1875,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 </Tooltip>
               )}
             </div>
-            <div className="dg-player-actions" aria-label={`${row.name} actions`} onClick={event => event.stopPropagation()}>
+          </div>
+            <div className={`dg-player-actions ${playerRowStyles.actions}`} aria-label={`${row.name} actions`} onClick={event => event.stopPropagation()}>
               <WatchlistStarButton
                 mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
                 gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
@@ -1910,13 +1913,12 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
             </div>
             <MarketBaselineRead
               compact
-              className="dg-player-baseline"
+              className={`dg-player-baseline ${playerRowStyles.baseline}`}
               hr={row.sa_fd}
               hrBaseline={hrBaseline}
               fhr={row.fhr_fd}
               fhrBaseline={fhrBaseline}
             />
-          </div>
         </div>
       </td>
 

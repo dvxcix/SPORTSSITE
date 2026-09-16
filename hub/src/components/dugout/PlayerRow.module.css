@@ -1,0 +1,17 @@
+/* Shared renderer styles load on both pages, independent of page CSS. */
+.cell.cell.cell{width:250px!important;min-width:250px!important;max-width:250px!important;box-sizing:border-box}
+.inner.inner.inner{display:grid!important;grid-template-columns:27px 34px minmax(0,1fr);align-items:start;gap:7px!important;padding:8px 8px 8px 13px!important;min-height:0!important;width:100%;box-sizing:border-box}
+.copy.copy.copy{display:grid;gap:4px;min-width:0;overflow:visible!important;text-align:left}
+.name.name.name{display:block!important;min-width:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px!important;font-weight:850!important;line-height:1.3!important;white-space:normal!important;overflow:visible!important;overflow-wrap:anywhere;-webkit-line-clamp:unset}
+.actions.actions.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
+.actions.actions.actions>button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:4px!important;margin:0!important;min-height:30px!important;padding:4px 7px!important;border:1px solid var(--border)!important;border-radius:7px!important;background:var(--surface-2)!important;color:var(--text-2)!important;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;font-size:10px!important;font-weight:750!important;line-height:1.2!important;white-space:nowrap;cursor:pointer}
+.actions.actions.actions>button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.actions.actions.actions>button[aria-pressed=true]{color:var(--accent)!important;border-color:var(--accent)!important}
+.actions.actions.actions>button>span{font-size:inherit!important}
+.baseline.baseline.baseline{grid-column:1/-1;width:100%;min-width:0;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:0}
+@media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
+ .cell.cell.cell{width:204px!important;min-width:204px!important;max-width:204px!important}
+ .inner.inner.inner{grid-template-columns:23px 34px minmax(0,1fr);gap:5px!important;padding:8px 6px 8px 10px!important}
+ .actions.actions.actions{gap:4px}
+ .actions.actions.actions>button{min-height:36px!important;padding:4px 6px!important;font-size:9px!important}
+}
