@@ -74,3 +74,8 @@
  .evidenceList{grid-template-columns:1fr;padding:10px}
 }
 @media(prefers-reduced-motion:reduce){.spin{animation:none}.itemButton{transition:none}}
+
+.windowPicker{display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.windowPicker button{min-width:28px;padding:5px 6px;border:0;border-radius:7px;background:transparent;color:var(--text-3);font-size:8px;font-weight:900;cursor:pointer}
+.windowPicker button[data-active=true]{background:var(--accent);color:var(--accent-fg);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+@media(max-width:800px),(max-width:1024px) and (any-pointer:coarse){.headerActions{width:100%;flex-wrap:wrap}.windowPicker{order:-1;margin-right:auto}.compareGrid{padding:10px}}
