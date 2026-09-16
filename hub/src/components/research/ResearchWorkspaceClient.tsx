@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BookmarkPlus, Check, FileText, Grid2X2, Layers3, LoaderCircle, Pencil, Pin, Plus, Save, Search, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, Check, FileText, Grid2X2, Layers3, LoaderCircle, Pencil, Pin, Plus, Save, Search, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { WorkspaceCollaboration } from './WorkspaceCollaboration'
