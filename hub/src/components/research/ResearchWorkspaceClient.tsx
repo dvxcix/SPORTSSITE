@@ -5,6 +5,7 @@ import { BookmarkPlus, Check, FileText, Grid2X2, Layers3, LoaderCircle, Pencil, 
 import { createClient } from '@/lib/supabase/client'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { WorkspaceCollaboration } from './WorkspaceCollaboration'
+import { WorkspaceMarketCard } from './WorkspaceMarketCard'
 import styles from './ResearchWorkspaceClient.module.css'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { SlateEdgeEvidenceCard } from '@/components/social/SlateEdgeEvidenceCard'
@@ -42,6 +43,7 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
   const [editBody, setEditBody] = useState('')
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
+  const [compareWindow, setCompareWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>('l10')
 
   const active = workspaces.find(workspace => workspace.id === activeId) ?? null
   const activeEvidence = initialEvidenceItems.filter(item => item.workspace_id === activeId && isSlateEdgeEvidence(item.payload))
@@ -140,8 +142,8 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
         {activeEvidence.length ? <div className={styles.evidenceList}>{activeEvidence.map(item => <SlateEdgeEvidenceCard key={item.id} evidence={item.payload}/>)}</div> : <div className={styles.emptyTray}><Layers3 size={25}/><strong>No captured reads yet</strong><span>Use Share in Slate Edge to pin the exact board evidence here.</span></div>}
       </section>
       <section className={styles.comparePanel}>
-        <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Up to four saved markets</span><h2>Compare Tray</h2></div><div className={styles.headerActions}><span>{compared.length}/4</span><button type="button" onClick={() => void saveWorkspace()} disabled={busy === 'save'}>{busy === 'save' ? <LoaderCircle className={styles.spin} size={15}/> : <Save size={15}/>}Save</button>{active?.user_id === userId && <button className={styles.dangerButton} type="button" onClick={() => void deleteWorkspace()} disabled={busy === 'delete'} aria-label="Delete workspace"><Trash2 size={15}/></button>}</div></div>
-        {compared.length ? <div className={styles.compareGrid}>{compared.map(item => <article className={styles.compareCard} key={item.id}><button className={styles.remove} type="button" onClick={() => toggleCompare(item.id)} aria-label={`Remove ${item.player_name}`}><X size={14}/></button><div className={styles.player}><PlayerAvatar headshot={item.headshot_url} teamAbbr={item.team} name={item.player_name} size={42}/><div><strong>{item.player_name}</strong><span>{item.team ?? '—'} · {item.position ?? item.sport}</span></div></div><div className={styles.market}>{item.prop_label}</div><div className={styles.metrics}><span><small>Line</small><b>{item.line || '—'}</b></span><span><small>Odds</small><b>{displayOdds(item.odds)}</b></span><span><small>Book</small><b>{item.book || '—'}</b></span></div>{item.notes && <p className={styles.itemNote}>{item.notes}</p>}</article>)}</div> : <div className={styles.emptyTray}><BookmarkPlus size={25}/><strong>Add saved markets to compare</strong><span>Select items from the library below.</span></div>}
+        <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Live Dugout context · up to four markets</span><h2>Compare Tray</h2></div><div className={styles.headerActions}><div className={styles.windowPicker} role="group" aria-label="Compare data window">{(['l1','l3','l5','l10'] as const).map(value => <button type="button" key={value} data-active={compareWindow === value} onClick={() => setCompareWindow(value)}>{value.toUpperCase()}</button>)}</div><span>{compared.length}/4</span><button type="button" onClick={() => void saveWorkspace()} disabled={busy === 'save'}>{busy === 'save' ? <LoaderCircle className={styles.spin} size={15}/> : <Save size={15}/>}Save</button>{active?.user_id === userId && <button className={styles.dangerButton} type="button" onClick={() => void deleteWorkspace()} disabled={busy === 'delete'} aria-label="Delete workspace"><Trash2 size={15}/></button>}</div></div>
+        {compared.length ? <div className={styles.compareGrid}>{compared.map(item => <WorkspaceMarketCard key={item.id} item={item} windowKey={compareWindow} onRemove={() => toggleCompare(item.id)} />)}</div> : <div className={styles.emptyTray}><BookmarkPlus size={25}/><strong>Add saved markets to compare</strong><span>Select items from the library below.</span></div>}
       </section>
 
       <section className={styles.libraryPanel}>
