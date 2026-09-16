@@ -5130,6 +5130,14 @@ export function DugoutClient({ date }: { date: string }) {
   const slateEdgeEntriesByWindow = useMemo<Record<'l1' | 'l3' | 'l5' | 'l10', SlateEdgeEntry[]>>(() => {
     const byWindow = { l1: [], l3: [], l5: [], l10: [] } as Record<'l1' | 'l3' | 'l5' | 'l10', SlateEdgeEntry[]>
     if (!showSlateEdge) return byWindow
+    // The Dugout's FHR% / HR% fields are American-price deviations:
+    // (current price - own average price) / own average price. Reconstruct
+    // the actual average price first; Slate Edge converts both prices to
+    // implied probability before comparing them.
+    const ownBaselinePrice = (current: number | null, priceDeltaPct: number | null) =>
+      current != null && priceDeltaPct != null && Math.abs(1 + priceDeltaPct) > .0001
+        ? current / (1 + priceDeltaPct)
+        : null
     for (const window of ['l1', 'l3', 'l5', 'l10'] as const) {
       const out = byWindow[window]
       for (const game of (data?.games ?? [])) {
@@ -5188,9 +5196,28 @@ export function DugoutClient({ date }: { date: string }) {
           timingDelta: row.d_timing,
           fhr: row.fhr_fd,
           fhrOpen: row.fhr_open,
+          fhrBaseline: ownBaselinePrice(row.fhr_fd, row.fhr_pct),
           hr: row.sa_fd,
           hrOpen: row.saFd_open,
+          hrBaseline: ownBaselinePrice(row.sa_fd, row.sa_pct),
           hrBooks: hrBooks.map(([book, price]) => ({ book, price })),
+          marketLadder: [
+            { key: 'fhr', label: 'FHR', current: row.fhr_fd, open: row.fhr_open },
+            { key: 'hr', label: 'HR', current: row.sa_fd, open: row.saFd_open },
+            { key: 'hr2', label: '2+ HR', current: row.hr2_fd, open: row.hr2Fd_open },
+            { key: 'rbi', label: 'RBI', current: row.rbi_fd, open: row.rbiFd_open },
+            { key: 'rbi2', label: '2+ RBI', current: row.rbi2_fd, open: row.rbi2Fd_open },
+            { key: 'rbi3', label: '3+ RBI', current: row.rbi3_fd, open: row.rbi3Fd_open },
+            { key: 'tb', label: '2+ TB', current: row.tb_fd, open: row.tbFd_open },
+            { key: 'tb3', label: '3+ TB', current: row.tb3_fd, open: row.tb3Fd_open },
+            { key: 'tb4', label: '4+ TB', current: row.tb4_fd, open: row.tb4Fd_open },
+            { key: 'tb5', label: '5+ TB', current: row.tb5_fd, open: row.tb5Fd_open },
+            { key: 'hrr', label: 'H+R+R', current: row.hrr_fd, open: row.hrrFd_open },
+            { key: 'hits', label: 'Hit', current: row.hits_fd, open: row.hits_open },
+            { key: 'hits2', label: '2+ Hits', current: row.hits2_fd, open: row.hits2_open },
+            { key: 'runs', label: 'Run', current: row.runs_fd, open: row.runs_open },
+            { key: 'runs2', label: '2+ Runs', current: row.runs2_fd, open: row.runs2_open },
+          ],
           publicPicks: row.total_market_pick_count ?? row.pk?.picks ?? null,
           momentum: row.momentum,
           })

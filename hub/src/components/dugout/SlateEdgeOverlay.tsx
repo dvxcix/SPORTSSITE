@@ -72,16 +72,19 @@ export type SlateEdgeEntry = {
   timingDelta: number | null
   fhr: number | null
   fhrOpen: number | null
+  fhrBaseline: number | null
   hr: number | null
   hrOpen: number | null
+  hrBaseline: number | null
   hrBooks: Array<{ book: string; price: number }>
+  marketLadder: Array<{ key: string; label: string; current: number | null; open: number | null }>
   publicPicks: number | null
   momentum: DugoutMomentumResult
 }
 
 type View = 'rankings' | 'matchups' | 'market' | 'signals'
 type Sort = 'edge' | 'signals' | 'score' | 'model' | 'movement' | 'picks' | 'pitch'
-type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks' | 'lineup' | 'quiet'
+type SignalKind = 'model' | 'market' | 'pitch' | 'barrel' | 'hardHit' | 'pullAir' | 'timing' | 'fhr' | 'hr' | 'books' | 'picks' | 'lineup' | 'quiet' | 'retained' | 'baseline' | 'structure'
 type SignalChip = {
   label: string
   value: number
@@ -215,6 +218,15 @@ function EvidenceTags({ tags }: { tags: EvidenceTag[] }) {
   </span>
 }
 
+function MarketStructureTags({ edge }: { edge: MlbSlateEdgeRank | undefined }) {
+  if (!edge?.marketBadges.length) return null
+  return <span className={styles.marketStructureTags} title={edge.marketExplanation ?? undefined} aria-label={edge.marketExplanation ?? 'Market structure'}>
+    <span className={styles.marketStructureIndex}>Market {edge.marketStructureScore}<em>{edge.marketOverlay >= 0 ? '+' : ''}{edge.marketOverlay}</em></span>
+    {edge.marketBadges.slice(0, 2).map(label => <span key={label}>{label}</span>)}
+    {edge.marketPriceLine ? <small>{edge.marketPriceLine}</small> : null}
+  </span>
+}
+
 function LeaderWindows({ windows }: { windows: SlateEdgeWindow[] }) {
   if (!windows.length) return null
   const everyWindow = windows.length === WINDOWS.length
@@ -276,6 +288,9 @@ function SignalGlyph({ chip }: { chip: SignalChip }) {
   if (chip.kind === 'timing') return <TimerReset size={13} />
   if (chip.kind === 'lineup') return <BarChart3 size={13} />
   if (chip.kind === 'quiet') return <ScanSearch size={13} />
+  if (chip.kind === 'retained') return <Radar size={13} />
+  if (chip.kind === 'baseline') return <Activity size={13} />
+  if (chip.kind === 'structure') return <Layers3 size={13} />
   if (chip.kind === 'fhr') return <Crosshair size={13} />
   if (chip.kind === 'hr') return <Flame size={13} />
   return <Layers3 size={13} />
@@ -283,6 +298,11 @@ function SignalGlyph({ chip }: { chip: SignalChip }) {
 
 function signalChips(entry: SlateEdgeEntry, pitchBaseline: number | null, edge: MlbSlateEdgeRank | undefined) {
   const chips: SignalChip[] = []
+  edge?.marketBadges.slice(0, 2).forEach((label, index) => chips.push({
+    label,
+    value: 46 - index * 2,
+    kind: label.includes('norm') ? 'baseline' : label.includes('Ladder') ? 'structure' : 'retained',
+  }))
   if (entry.mm != null && Math.abs(entry.mm) >= 2) chips.push({ label: entry.mm > 0 ? `Model +${entry.mm}` : `Market +${Math.abs(entry.mm)}`, value: Math.abs(entry.mm) * 12, kind: entry.mm > 0 ? 'model' : 'market' })
   if (entry.pitchFit != null && pitchBaseline != null && entry.pitchFit > pitchBaseline + 8) chips.push({ label: `Pitch fit +${Math.round(entry.pitchFit - pitchBaseline)}`, value: entry.pitchFit - pitchBaseline, kind: 'pitch' })
   const recentBarrelDelta = Math.max(entry.barrelL3Delta ?? -Infinity, entry.barrelL5Delta ?? -Infinity, entry.barrelDelta ?? -Infinity)
@@ -609,7 +629,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                   const hrMove = move(entry.hr, entry.hrOpen)
                   return <tr key={`${entry.gameKey}:${entry.mlbId ?? entry.name}`} onClick={() => openPlayer(entry)}>
                     <td className={styles.rank}><RankMark rank={index + 1} edge={edgeRanks.get(entry)?.score} /></td>
-                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /></td>
+                    <td><PlayerIdentity entry={entry} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} /><MarketStructureTags edge={edgeRanks.get(entry)} /></td>
                     <td><span className={styles.matchup} aria-label={`${entry.awayAbbr} at ${entry.homeAbbr}`}><GameMatchupMark away={entry.awayAbbr} home={entry.homeAbbr} /></span></td>
                     <td><ScoreMark value={entry.score} /></td>
                     <td style={heatStyle(entry.mm, 0, 8)}><MmMark entry={entry} /></td>
@@ -635,6 +655,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                     <PlayerIdentity entry={entry} size={38} leaderWindows={leaderWindowsFor(entry)} evidenceTags={evidenceTagsFor(entry)} />
                     <ScoreMark value={entry.score} compact />
                   </span>
+                  <MarketStructureTags edge={edge} />
                   <span className={styles.mobileMetricGrid}>
                     <span style={heatStyle(entry.mm, 0, 8)}><small>MM</small><MmMark entry={entry} compact /></span>
                     <span style={heatStyle(entry.pitchFit, 50, 30)}><small>Pitch fit</small><b>{entry.pitchFit != null ? Math.round(entry.pitchFit) : '—'}</b></span>
@@ -691,6 +712,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, onWi
                 </div>
                 <div className={styles.signalScores}>{edgeRanks.get(entry) && <EdgeMark value={edgeRanks.get(entry)!.score} compact />}<ScoreMark value={entry.score} compact /></div>
               </div>
+              <MarketStructureTags edge={edgeRanks.get(entry)} />
               <MarketPair entry={entry} />
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>

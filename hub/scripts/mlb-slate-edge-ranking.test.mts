@@ -7,6 +7,7 @@ type Fixture = MlbSlateEdgeRankInput & { name: string }
 const base = (name: string, input: Partial<Fixture>): Fixture => ({
   name,
   gameKey: 'LAD-CIN',
+  team: 'LAD',
   lineupsConfirmed: true,
   battingOrder: 6,
   score: 35,
@@ -84,4 +85,50 @@ test('projected batting-order placeholders do not receive lineup credit', () => 
   assert.ok(ranks.get(confirmed)!.score > ranks.get(projected)!.score)
   assert.ok(ranks.get(confirmed)!.reasons.includes('Batting #4'))
   assert.ok(!ranks.get(projected)!.reasons.includes('Batting #4'))
+})
+
+test('retained low-public lower-order pricing creates a capped market overlay', () => {
+  const ladder = (factor: number) => [
+    ['fhr', 1500, 1400], ['hr', 560, 520], ['hr2', 9000, 8000],
+    ['rbi', 260, 230], ['tb', 130, 115], ['tb3', 300, 260],
+    ['tb4', 480, 420], ['tb5', 900, 750],
+  ].map(([key, current, open]) => ({
+    key: String(key),
+    label: String(key).toUpperCase(),
+    current: Number(current) * factor,
+    open: Number(open) * factor,
+  }))
+
+  const lowe = base('Josh Lowe', {
+    battingOrder: 7,
+    paper: 20,
+    publicPicks: 12,
+    hr: 560,
+    hrOpen: 520,
+    hrBaseline: 560 / .954,
+    fhr: 1500,
+    fhrOpen: 1400,
+    fhrBaseline: 1500 / 1.009,
+    marketLadder: ladder(1),
+  })
+  const slate = [
+    base('Team favorite', { paper: 90, publicPicks: 500, battingOrder: 1, hr: 400, fhr: 900 }),
+    base('Public cleanup', { paper: 75, publicPicks: 350, battingOrder: 4, hr: 500, fhr: 1200 }),
+    lowe,
+    base('Paper darling', { paper: 70, publicPicks: 220, battingOrder: 3, hr: 700, fhr: 1800 }),
+    base('Long shot one', { paper: 60, publicPicks: 140, battingOrder: 5, hr: 800, fhr: 2100 }),
+    base('Long shot two', { paper: 50, publicPicks: 90, battingOrder: 6, hr: 900, fhr: 2400 }),
+  ]
+  const result = rankMlbSlateEdge(slate).get(lowe)!
+
+  assert.equal(result.teamHrRank, 3)
+  assert.equal(result.ladderShape, 'lengthened-retained')
+  assert.ok(result.marketBadges.includes('B7 · Book #3'))
+  assert.ok(result.marketBadges.includes('Low-public retained'))
+  assert.ok(result.hrBaselineProbabilityDelta! > 0, '+560 is shorter than the reconstructed +587 own norm')
+  assert.ok(result.fhrBaselineProbabilityDelta! < 0, '+1500 is slightly longer than the reconstructed +1487 own norm')
+  assert.equal(result.marketPriceLine, 'HR +560 vs +587 norm · FHR +1500 vs +1487 norm')
+  assert.ok(result.marketOverlay > 0)
+  assert.ok(result.marketOverlay <= 6)
+  assert.equal(result.score, Math.min(100, result.baseScore + result.marketOverlay))
 })
