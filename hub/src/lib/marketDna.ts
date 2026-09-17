@@ -1141,8 +1141,7 @@ async function loadHistoricalRowsForGames(games: MarketDnaGame[]) {
   return mpGetAll(query, 20_000)
 }
 
-async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
-  const cutoff = games.map(game => game.gameDate).sort()[0]
+async function loadCanonicalArchiveBefore(cutoff: string) {
   const admin = createAdminClient()
   const rows: ArchivedProfileRow[] = []
   const pageSize = 1000
@@ -1162,6 +1161,11 @@ async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
     if (page.length < pageSize) break
   }
   return rows
+}
+
+async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
+  const cutoff = games.map(game => game.gameDate).sort()[0]
+  return loadCanonicalArchiveBefore(cutoff)
 }
 
 function rankGameWithHistory(game: MarketDnaGame, rows: HistoricalRow[], canonicalRows: ArchivedProfileRow[]) {
@@ -1211,6 +1215,13 @@ async function loadOrTrainMarketDnaRanker(
     }, { onConflict: 'target_date' })
     if (writeError) throw new Error(`Market DNA reducer could not be stored: ${writeError.message}`)
   }
+  return artifact
+}
+
+export async function refreshMarketDnaRanker(targetDate: string) {
+  const rows = await loadCanonicalArchiveBefore(targetDate)
+  const artifact = await loadOrTrainMarketDnaRanker(targetDate, rows)
+  if (!artifact) throw new Error('Market DNA does not have enough canonical archive rows to fit a reducer.')
   return artifact
 }
 
