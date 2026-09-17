@@ -30,5 +30,25 @@
 .read[data-compact="true"] .foot small { font-size: inherit; }
 .read[data-compact="true"] .foot span { white-space: nowrap; }
 
+/* Dense board rail: preserves the exact current-vs-norm read without making
+   the sticky identity cell (and therefore every table row) grow vertically. */
+.read[data-variant="rail"] { width: 158px; grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.read[data-variant="rail"] .market { grid-template-columns: 26px minmax(0, 1fr) auto; gap: 3px 5px; padding: 4px 5px 3px; border-radius: 7px; }
+.read[data-variant="rail"] .head { align-items: center; }
+.read[data-variant="rail"] .head b { font-size: 9px; }
+.read[data-variant="rail"] .head small { display: none; }
+.read[data-variant="rail"] .price { min-width: 0; justify-content: flex-start; gap: 4px; }
+.read[data-variant="rail"] .price strong { font-size: 9px; white-space: nowrap; }
+.read[data-variant="rail"] .price i { padding: 1px 3px; font-size: 6px; white-space: nowrap; }
+.read[data-variant="rail"] .track { grid-column: 1 / -1; grid-row: 2; height: 3px; margin: 0 2px; }
+.read[data-variant="rail"] .normDot,.read[data-variant="rail"] .currentDot { width: 6px; height: 6px; }
+.read[data-variant="rail"] .foot { grid-column: 3; grid-row: 1; align-self: center; display: block; font-size: 6px; letter-spacing: 0; white-space: nowrap; }
+.read[data-variant="rail"] .foot>small { display: none; }
+.read[data-variant="rail"] .foot span { white-space: nowrap; }
+
+@media(max-width:640px),(max-width:1024px) and (any-pointer:coarse) {
+  .read[data-variant="rail"] { width: 146px; }
+  .read[data-variant="rail"] .market { grid-template-columns: 24px minmax(0, 1fr) auto; padding-inline: 4px; }
+}
 @keyframes pulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--market-accent) 20%, transparent), 0 0 12px var(--market-accent); } }
 @media (prefers-reduced-motion: reduce) { .currentDot { animation: none; } }

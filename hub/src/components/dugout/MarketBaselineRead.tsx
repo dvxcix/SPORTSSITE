@@ -48,12 +48,13 @@ function BaselineMarket({ market, current, baseline }: {
   </span>
 }
 
-export function MarketBaselineRead({ hr, hrBaseline, fhr, fhrBaseline, compact = false, className = '' }: {
+export function MarketBaselineRead({ hr, hrBaseline, fhr, fhrBaseline, compact = false, variant = 'cards', className = '' }: {
   hr: number | null
   hrBaseline: number | null
   fhr: number | null
   fhrBaseline: number | null
   compact?: boolean
+  variant?: 'cards' | 'rail'
   className?: string
 }) {
   const hasBaseline = (hr != null && hrBaseline != null) || (fhr != null && fhrBaseline != null)
@@ -62,6 +63,7 @@ export function MarketBaselineRead({ hr, hrBaseline, fhr, fhrBaseline, compact =
   return <span
     className={`${styles.read} ${className}`.trim()}
     data-compact={compact || undefined}
+    data-variant={variant}
     aria-label="Home run prices versus player baseline"
   >
     <BaselineMarket market="HR" current={hr} baseline={hrBaseline} />

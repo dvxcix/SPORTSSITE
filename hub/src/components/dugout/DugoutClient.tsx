@@ -1911,17 +1911,24 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 </Tooltip>
               )}
             </div>
-            <MarketBaselineRead
-              compact
-              className={`dg-player-baseline ${playerRowStyles.baseline}`}
-              hr={row.sa_fd}
-              hrBaseline={hrBaseline}
-              fhr={row.fhr_fd}
-              fhrBaseline={fhrBaseline}
-            />
+
         </div>
       </td>
 
+      {/* Current-vs-own-norm is a first-class board lane, not part of the
+          player identity stack. Keeping it in a compact dedicated column
+          preserves the read while restoring the table's original density. */}
+      <td className="dg-baseline-cell" style={{ ...STD, width: 168, minWidth: 168, padding: '3px 5px' }}>
+        <MarketBaselineRead
+          compact
+          variant="rail"
+          className="dg-player-baseline"
+          hr={row.sa_fd}
+          hrBaseline={hrBaseline}
+          fhr={row.fhr_fd}
+          fhrBaseline={fhrBaseline}
+        />
+      </td>
       {/* Exact shared Research mechanics index for the selected L1/L3/L5/L10
           window. The value and 18-player rank are server-computed together;
           this cell only renders the canonical snapshot. */}
@@ -2730,6 +2737,7 @@ const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
 type DugoutColSlot = { type: 'player' } | { type: 'divider' } | { type: 'col'; key: string; group: string }
 const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'player' },
+  { type: 'col', key: 'market_baseline', group: 'baseline' },
   { type: 'col', key: 'mechanics_index', group: 'mechanics' },
   { type: 'divider' },
   { type: 'col', key: 'pk', group: 'picks' },
@@ -2839,12 +2847,12 @@ const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
 // customize panel's per-section hide toggles iterate over — NOT a
 // constraint on display order, which is fully free (see
 // resolveDugoutColumns/DUGOUT_COLUMN_LAYOUT's own comment).
-const DUGOUT_GROUP_ORDER = ['mechanics', 'picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
+const DUGOUT_GROUP_ORDER = ['baseline', 'mechanics', 'picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
 const DUGOUT_ALL_COLUMNS = DUGOUT_COLUMN_LAYOUT.filter((s): s is Extract<DugoutColSlot, { type: 'col' }> => s.type === 'col')
 // Human labels for the customize panel's group toggles — the terse internal
 // group keys above (fhr/hr/props/...) aren't fit to show a member.
 export const DUGOUT_GROUP_LABELS: Record<string, string> = {
-  mechanics: 'HR Mechanics', picks: 'Community Picks', fhr: 'First HR', hr: 'HR & Related', props: 'Hits, Runs & Bases',
+  baseline: 'Price vs Player Norm', mechanics: 'HR Mechanics', picks: 'Community Picks', fhr: 'First HR', hr: 'HR & Related', props: 'Hits, Runs & Bases',
   ranks: 'Rank / Composite Scores', batspeed: 'Bat Tracking', barrel: 'Batted Ball (Statcast)',
 }
 
@@ -2868,6 +2876,15 @@ export function resolveDugoutColumns(prefs: DugoutColumnPrefs | null | undefined
   // already supported there; only this sort (and the Statcast banner's
   // colSpan, fixed separately) assumed sections stayed contiguous blocks.
   const ordered = applyDugoutColumnPrefs(DUGOUT_ALL_COLUMNS, prefs)
+  // Saved layouts from before this lane existed should see it immediately
+  // beside the player, not stranded at the far end of a 90-column board.
+  if (!(prefs?.columnOrder ?? []).includes('market_baseline')) {
+    const baselineIndex = ordered.findIndex(column => column.key === 'market_baseline')
+    if (baselineIndex >= 0) {
+      const [baseline] = ordered.splice(baselineIndex, 1)
+      ordered.unshift(baseline)
+    }
+  }
   // Existing members may have a complete saved order from before this
   // column existed. Unranked additions would otherwise fall at the very end
   // of their table. Insert this new canonical field immediately before PK
@@ -2951,6 +2968,7 @@ function renderDugoutColumns(
 // the tooltip text each column's real header (H()/BL() inside GameTable)
 // already uses, so the panel reads consistently with the board itself.
 const DUGOUT_COLUMN_LABELS: Record<string, string> = {
+  market_baseline: 'Current HR / FHR price vs player norm',
   mechanics_index: 'SlipSurge Score',
   pk: 'Community HR pick count',
   fhr_fd: 'FanDuel First HR', fhr_cz: 'Caesars First HR', fhr_fan: 'Fanatics First HR',
@@ -3026,9 +3044,9 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   })
   const applyPreset = (preset: 'compact' | 'markets' | 'power' | 'statcast') => {
     const presetColumns: Record<typeof preset, string[]> = {
-      compact: ['mechanics_index', 'pk', 'fhr_fd', 'fhr_cz', 'div', 'sa_fd', 'sa_cz', 'paper', 'bk_rk', 'pp_rk', 'mm'],
-      markets: DUGOUT_ALL_COLUMNS.filter(col => ['picks', 'fhr', 'hr', 'props', 'ranks'].includes(col.group)).map(col => col.key),
-      power: ['pk', 'fhr_fd', 'sa_fd', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'paper', 'bk_rk', 'pp_rk', 'mm', 's_spd', 'r_spd', 'd_spd', 's_brl', 'r_brl', 'd_brl', 's_hh', 'r_hh', 'd_hh', 's_ev', 'r_ev', 'd_ev', 's_la', 'r_la', 'd_la', 's_hr'],
+      compact: ['market_baseline', 'mechanics_index', 'pk', 'fhr_fd', 'fhr_cz', 'div', 'sa_fd', 'sa_cz', 'paper', 'bk_rk', 'pp_rk', 'mm'],
+      markets: DUGOUT_ALL_COLUMNS.filter(col => ['baseline', 'picks', 'fhr', 'hr', 'props', 'ranks'].includes(col.group)).map(col => col.key),
+      power: ['market_baseline', 'pk', 'fhr_fd', 'sa_fd', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'paper', 'bk_rk', 'pp_rk', 'mm', 's_spd', 'r_spd', 'd_spd', 's_brl', 'r_brl', 'd_brl', 's_hh', 'r_hh', 'd_hh', 's_ev', 'r_ev', 'd_ev', 's_la', 'r_la', 'd_la', 's_hr'],
       statcast: DUGOUT_ALL_COLUMNS.filter(col => ['ranks', 'batspeed', 'barrel'].includes(col.group)).map(col => col.key),
     }
     const visible = new Set(presetColumns[preset])
@@ -3327,6 +3345,7 @@ export function getDugoutHeaderCells(
   const headerCells = (
     <>
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      {H('HR / FHR', 'Current FanDuel prices compared with this player’s own norm', 168, 'market_baseline')}
       {H(
         <SafeImage
           src="/logo.png"
@@ -5720,7 +5739,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
         .dugout-glossary>div{display:grid;gap:1px;background:var(--border)}.dugout-glossary>div>span{display:grid;grid-template-columns:minmax(142px,.78fr) minmax(0,1.22fr);align-items:start;gap:14px;padding:12px 14px;background:var(--surface)}.dugout-glossary b{display:flex;min-width:0;color:var(--accent);font-size:11px}.dugout-glossary p{min-width:0;margin:0;color:var(--text-2);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
         .dg-sticky-col{width:270px!important;min-width:270px!important;max-width:270px!important}
-        .dg-player-cell-inner{min-height:98px!important;gap:7px!important;padding:8px 8px 8px 13px!important}
+        .dg-player-cell-inner{min-height:66px!important;gap:7px!important;padding:6px 8px 6px 13px!important}
         .dg-player-copy{display:grid;gap:5px;overflow:visible!important}
         .dugout-dense-table .dg-player-name{display:-webkit-box;min-width:0;overflow:hidden;font-size:13px!important;font-weight:900!important;line-height:1.18!important;white-space:normal!important;text-overflow:clip!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
         .dg-player-actions{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
@@ -5731,8 +5750,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dg-player-details-action{margin-left:auto}
         .dg-player-details-action>span:first-child{font-size:7px}
         .dg-player-matrix-matches{min-height:24px;display:inline-flex;align-items:center;gap:2px;padding:0 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:help}.dg-player-matrix-matches>span{width:7px;height:7px;border:1px solid rgba(255,255,255,.28);border-radius:50%}
-        .dg-player-baseline{margin-top:1px}
-        .dg-player-baseline[aria-label]{width:100%}
+        .dg-baseline-cell{vertical-align:middle!important}.dg-player-baseline[aria-label]{width:100%}
         .dg-expand-indicator{display:none!important}
         .dugout-active-matchup{display:none;align-items:center;gap:6px}
         .dugout-active-matchup > span{color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
@@ -5820,12 +5838,12 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-dense-table{font-size:12px!important}
           .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
           .dg-sticky-col{width:220px!important;min-width:220px!important;max-width:220px!important}
-          .dg-player-cell-inner{gap:6px!important;padding:8px 6px 8px 8px!important;min-height:108px!important}
+          .dg-player-cell-inner{gap:6px!important;padding:6px 6px 6px 8px!important;min-height:72px!important}
           .dg-player-copy{font-size:11px!important;overflow:visible!important}
           .dg-player-name{font-size:13px!important;line-height:1.18!important;-webkit-line-clamp:2}
           .dg-player-cell-inner>a img,.dg-player-cell-inner>img{width:34px!important;height:34px!important}
           .dg-player-actions{gap:3px}.dg-player-action{min-height:23px!important;padding:0 5px!important;font-size:6.5px!important}.dg-player-details-action{margin-left:0}
-          .dg-player-baseline{grid-template-columns:1fr!important}.dg-player-baseline>span{min-height:46px}
+          .dg-baseline-cell{width:156px!important;min-width:156px!important;padding:3px 5px!important}
           .dugout-compare-toggle{width:22px;height:22px}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}

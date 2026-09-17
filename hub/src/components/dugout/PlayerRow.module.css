@@ -8,7 +8,6 @@
 .actions.actions.actions>button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .actions.actions.actions>button[aria-pressed=true]{color:var(--accent)!important;border-color:var(--accent)!important}
 .actions.actions.actions>button>span{font-size:inherit!important}
-.baseline.baseline.baseline{grid-column:1/-1;width:100%;min-width:0;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:0}
 @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
  .cell.cell.cell{width:204px!important;min-width:204px!important;max-width:204px!important}
  .inner.inner.inner{grid-template-columns:23px 34px minmax(0,1fr);gap:5px!important;padding:8px 6px 8px 10px!important}
