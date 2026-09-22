@@ -1,4 +1,6 @@
 /* Shared renderer styles load on both pages, independent of page CSS. */
+.matrixMatches{min-height:24px;display:inline-flex;align-items:center;gap:2px;padding:0 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:help}
+.matrixMatches>span{flex:0 0 7px;width:7px;height:7px;border:1px solid rgba(255,255,255,.28);border-radius:50%}
 .cell.cell.cell{width:250px!important;min-width:250px!important;max-width:250px!important;box-sizing:border-box}
 .inner.inner.inner{display:grid!important;grid-template-columns:27px 34px minmax(0,1fr);align-items:start;gap:7px!important;padding:8px 8px 8px 13px!important;min-height:0!important;width:100%;box-sizing:border-box}
 .copy.copy.copy{display:grid;gap:4px;min-width:0;overflow:visible!important;text-align:left}

@@ -1899,7 +1899,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
               ><span>{expanded ? 'Hide' : 'Details'}</span><span aria-hidden="true">{expanded ? '▲' : '▼'}</span></button>
               {row.matrix_matches.length > 0 && (
                 <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
-                  <span className="dg-player-matrix-matches" aria-label={`${row.matrix_matches.length} Matrix matches`}>
+                  <span className={`dg-player-matrix-matches ${playerRowStyles.matrixMatches}`} aria-label={`${row.matrix_matches.length} Matrix matches`}>
                     {row.matrix_matches.map(matrix => (
                       <span
                         key={matrix.id}
@@ -5749,7 +5749,6 @@ export function DugoutClient({ date }: { date: string }) {
         .dg-player-action>span:first-child{font-size:11px;line-height:1}
         .dg-player-details-action{margin-left:auto}
         .dg-player-details-action>span:first-child{font-size:7px}
-        .dg-player-matrix-matches{min-height:24px;display:inline-flex;align-items:center;gap:2px;padding:0 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:help}.dg-player-matrix-matches>span{width:7px;height:7px;border:1px solid rgba(255,255,255,.28);border-radius:50%}
         .dg-baseline-cell{vertical-align:middle!important}.dg-player-baseline[aria-label]{width:100%}
         .dg-expand-indicator{display:none!important}
         .dugout-active-matchup{display:none;align-items:center;gap:6px}
