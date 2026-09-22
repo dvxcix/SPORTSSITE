@@ -663,11 +663,13 @@
 .playerCell > button:not(.playerName):hover { color: var(--lime); border-color: rgba(167, 255, 63, 0.5); }
 .playerCell .compareActive { color: #071006 !important; border-color: var(--lime) !important; background: var(--lime) !important; }
 
-.marketValue { position: relative; display: inline-grid; justify-items: center; gap: 5px; min-width: 58px; }
+.marketValue { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: center; justify-items: center; gap: 4px; min-width: 0; width: 100%; }
 .marketValue b { color: #f4f7fa; font-size: 12px; line-height: 1; }
 .marketValue b i { margin-right: 4px; color: #96a4b6; font-size: 9px; font-style: normal; }
 .marketValue small { color: #8491a4; font-size: 8px; font-weight: 800; letter-spacing: 0.025em; }
-.marketValue em { position: absolute; top: -1px; right: -3px; font-size: 8px; font-style: normal; }
+.marketValue b { display: flex; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; }
+.marketValue small { grid-column: 1; white-space: nowrap; }
+.marketValue em { display: inline-flex; position: static; font-size: 8px; font-style: normal; }
 .bestMarketValue { position: relative; display: grid; grid-template-columns: 18px 1fr; gap: 3px 5px; align-items: center; justify-content: center; min-width: 74px; text-align: left; }
 .bestMarketValue b { color: #f5f8fb; font-size: 13px; }
 .bestMarketValue small { grid-column: 1 / -1; color: #9ca8b8; font-size: 8px; font-weight: 850; text-align: center; }
@@ -695,19 +697,19 @@
 .ratioValue small { color: #73cfe5; font-size: 6px; font-weight: 900; letter-spacing: .08em; }
 .marketSave,
 .marketSaved {
-  position: absolute;
-  right: -5px;
-  bottom: -6px;
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: grid;
   place-items: center;
-  width: 17px;
-  height: 17px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
   color: #4f5c6c;
-  opacity: 0;
+  opacity: .75;
   cursor: pointer;
   transition: color 120ms ease, opacity 120ms ease, background 120ms ease;
 }
@@ -949,7 +951,7 @@
   .marketSave { opacity: 0.7; }
   .toolsPanel { overflow-x: auto; }
   .toolsPanel > button { white-space: nowrap; }
-  .viewTabs { position: sticky; top: 166px; z-index: 20; background: #080d13; backdrop-filter: none; }
+  .viewTabs { position: static; background: #080d13; }
   .roleTabs { margin-top: -5px; }
   .teamHeader { min-height: 0; }
   .teamIdentity { padding: 11px; }
@@ -1014,7 +1016,7 @@
 .compactBoard .boardTable td { height: 58px; padding: 4px; font-size: 11px; }
 .compactBoard .boardTable th { height: 42px; }
 .compactBoard .boardTable th span { font-size: 9px; letter-spacing: .015em; }
-.compactBoard .playerCell { grid-template-columns: 12px 32px minmax(45px, 1fr) 23px 23px; gap: 4px; }
+.compactBoard .playerCell { grid-template-columns: 12px 32px minmax(0, 1fr) 32px 32px; gap: 4px; }
 .compactBoard .avatar { width: 32px; height: 32px; }
 .compactBoard .playerCell > button:not(.playerName) { width: 23px; height: 26px; border-radius: 6px; }
 .compactBoard .playerName b { font-size: 11px; }
@@ -1032,4 +1034,59 @@
 }
 /* Compact density changes presentation, never the interactive hit area. */
 .compactBoard .playerCell > button:not(.playerName){width:32px;height:32px;min-width:32px;min-height:32px}
-.marketSave,.marketSaved{width:32px;height:32px;right:-12px;bottom:-13px}
+
+/* One width drives both header/body and the table's total width. */
+.page { --player-column-width: 286px; }
+.compactBoard { --player-column-width: 256px; }
+.playerCell { grid-template-columns: 16px 38px minmax(0, 1fr) 32px 32px; gap: 5px; }
+.playerCell > button:not(.playerName) { width: 32px; height: 32px; }
+.playerName b { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+.viewTabs button, .roleTabs button { flex: 0 0 auto; white-space: nowrap; }
+.marketSave:focus-visible, .marketSaved:focus-visible { outline: 2px solid var(--lime); outline-offset: 1px; }
+
+@media (max-width: 1024px) {
+  /* Rails stay in flow: no fixed top offsets that cover scrolled rows. */
+  .controlBar, .viewTabs { position: static; }
+  .page, .compactBoard { --player-column-width: 202px; }
+  .playerCell, .compactBoard .playerCell {
+    grid-template-columns: 12px 28px minmax(0, 1fr) 32px;
+    grid-template-rows: 32px 32px;
+    gap: 2px 4px;
+  }
+  .playerCell .depth { grid-column: 1; grid-row: 1 / span 2; }
+  .playerCell .avatar { grid-column: 2; grid-row: 1 / span 2; width: 28px; height: 28px; }
+  .playerCell .playerName { grid-column: 3; grid-row: 1 / span 2; }
+  .playerCell > button:nth-last-child(2) { grid-column: 4; grid-row: 1; }
+  .playerCell > button:last-child { grid-column: 4; grid-row: 2; }
+  .playerName b, .compactBoard .playerName b { font-size: 12px; }
+  .boardTable td, .compactBoard .boardTable td { height: 78px; padding: 5px; }
+}
+
+/* Same breakpoint and safe-area clearance as the app's mobile navigation. */
+@media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
+  .page { padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px)); }
+  .storyGrid { overflow: visible; }
+  .storyGrid > .marketStory {
+    position: fixed;
+    top: auto;
+    left: 50%;
+    bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + 76px);
+    z-index: calc(var(--layer-floating, 100) - 1);
+    transform: translateX(-50%);
+    width: min(calc(100vw - 20px), 470px);
+    min-height: 64px !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 8px 12px !important;
+    border: 1px solid rgba(167, 255, 63, .3) !important;
+    border-radius: 13px;
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, .42);
+    background: #0d151d !important;
+  }
+  .marketStory div { flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
+  .marketStory div small, .marketStory div strong { font-size: 10px; }
+  .marketStory input { min-width: 0; height: 24px; margin: 0; }
+  .marketStory > span { font-size: 9px; }
+  :global(body.ss-modal-open) .marketStory { visibility: hidden; pointer-events: none; }
+  :global(body):has(.page) :global(.ss-utility-dock) { bottom: calc(184px + env(safe-area-inset-bottom, 0px)); }
+}

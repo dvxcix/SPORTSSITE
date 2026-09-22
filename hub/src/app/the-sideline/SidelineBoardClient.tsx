@@ -642,19 +642,20 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: { playe
       <b>
         {market.line != null && !['anytime_td', 'first_td', 'last_td'].includes(market.propType) ? <i>{market.line}</i> : null}
         {oddsLabel(current)}
+        {moved !== 0 ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
       </b>
       <small>{opening != null ? `OPEN ${oddsLabel(opening)}` : 'OPEN -'}</small>
-      {moved !== 0 ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
       <button
         type="button"
         className={saved ? styles.marketSaved : styles.marketSave}
+        aria-pressed={saved}
         aria-label={`${saved ? 'Remove' : 'Add'} ${player.name} ${market.label} ${vendor} ${saved ? 'from' : 'to'} watchlist`}
         onClick={event => {
           event.stopPropagation()
           onToggleSaved(player, market.key, vendor)
         }}
       >
-        <Star size={10} fill={saved ? 'currentColor' : 'none'} />
+        <Star size={14} fill={saved ? 'currentColor' : 'none'} />
       </button>
     </span>
   )
@@ -2028,7 +2029,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           ? { ...column, label: `${scoreContextAbbr} SCORE`, title: `SlipSurge score for ${scoreContextLabel.toLowerCase()} using role, matchup, DvP, game environment and selected-window production` }
           : column.id === 'mm'
             ? { ...column, title: `Consensus sportsbook ${scoreContextLabel.toLowerCase()} rank minus the matching contextual analytics rank` }
-            : column,
+            : column.vendor ? { ...column, width: Math.max(120, column.width) } : column,
       ),
     [resolvedColumns, scoreContextAbbr, scoreContextLabel],
   )
@@ -2335,7 +2336,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                 <table
                   className={styles.boardTable}
                   style={{
-                    minWidth: displayColumns.reduce((total, column) => total + column.width, 0),
+                    minWidth: `calc(${displayColumns.filter(column => !column.sticky).reduce((total, column) => total + column.width, 0)}px + ${displayColumns.some(column => column.sticky) ? 'var(--player-column-width)' : '0px'})`,
                   }}
                 >
                   <thead>
@@ -2349,8 +2350,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                             key={column.id}
                             className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`}
                             style={{
-                              width: column.width,
-                              minWidth: column.width,
+                              width: column.sticky ? 'var(--player-column-width)' : column.width,
+                              minWidth: column.sticky ? 'var(--player-column-width)' : column.width,
                             }}
                           >
                             <button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>
@@ -2388,8 +2389,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                 key={column.id}
                                 className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`}
                                 style={{
-                                  width: column.width,
-                                  minWidth: column.width,
+                                  width: column.sticky ? 'var(--player-column-width)' : column.width,
+                                  minWidth: column.sticky ? 'var(--player-column-width)' : column.width,
                                   ...automaticHeat,
                                 }}
                                 onClick={() => toggleHighlight(player, column)}
