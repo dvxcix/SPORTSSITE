@@ -247,18 +247,18 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
 
 export const getCachedSidelineBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),
-  ['sideline-board-lens-v10-pbp-production'],
+  ['sideline-board-lens-v11-pregame-dvp'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 
 export const getCachedSidelineLens = unstable_cache(
   async (game: SidelineGame) => getSidelineLens(game),
-  ['sideline-film-lens-v3-cheatsheets'],
+  ['sideline-film-lens-v4-pregame'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 
 export const getCachedSidelineCheatsheetLens = unstable_cache(
   async (game: SidelineGame) => getSidelineLens(game, false),
-  ['sideline-cheatsheet-lens-v3-pbp-roster-fallback'],
+  ['sideline-cheatsheet-lens-v4-pregame'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )

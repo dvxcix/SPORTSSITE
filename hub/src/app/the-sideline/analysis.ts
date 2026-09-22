@@ -1,4 +1,5 @@
 import 'server-only'
+import { getNflPregameDvp, getNflPregameWeekly } from '@/lib/nflPregameData'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
@@ -196,7 +197,7 @@ type PlayerGameLine = {
   passingYards: number
   passingTouchdowns: number
   scorerTouchdowns: number
-  firstTouchdowns: number
+  firstTouchdowns: number | null
 }
 
 function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<string, PlayerGameLine[]> {
@@ -213,13 +214,13 @@ function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<s
     if (!teamSet.has(String(row.posteam ?? ''))) continue
     const gameId = String(row.game_id ?? '')
     if (!gameId) continue
-    if (truthy(row.pass_attempt)) {
+    if (truthy(row.pass_attempt) && !truthy(row.sack)) {
       const passerId = String(row.passer_player_id ?? '')
       if (passerId) {
         const game = line(passerId, gameId)
         game.passAttempts += 1
         if (truthy(row.complete_pass)) game.completions += 1
-        game.passingYards += numeric(row.yards_gained)
+        game.passingYards += numeric(row.passing_yards ?? (truthy(row.complete_pass) ? row.yards_gained : 0))
         if (truthy(row.pass_touchdown)) game.passingTouchdowns += 1
       }
       const receiverId = String(row.receiver_player_id ?? '')
@@ -227,7 +228,7 @@ function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<s
         const game = line(receiverId, gameId)
         if (truthy(row.complete_pass)) {
           game.receptions += 1
-          game.receivingYards += numeric(row.yards_gained)
+          game.receivingYards += numeric(row.receiving_yards ?? row.yards_gained)
         }
         if (truthy(row.pass_touchdown)) game.scorerTouchdowns += 1
       }
@@ -237,7 +238,7 @@ function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<s
       if (rusherId) {
         const game = line(rusherId, gameId)
         game.carries += 1
-        game.rushingYards += numeric(row.yards_gained)
+        game.rushingYards += numeric(row.rushing_yards ?? row.yards_gained)
         if (truthy(row.rush_touchdown)) game.scorerTouchdowns += 1
       }
     }
@@ -245,9 +246,9 @@ function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<s
 
   const firstScores = new Map<string, { playId: number; playerId: string }>()
   for (const row of rows) {
-    if (!truthy(row.pass_touchdown) && !truthy(row.rush_touchdown)) continue
+    if (!truthy(row.touchdown)) continue
     const gameId = String(row.game_id ?? '')
-    const playerId = String(truthy(row.pass_touchdown) ? row.receiver_player_id ?? '' : row.rusher_player_id ?? '')
+    const playerId = String(row.td_player_id ?? (truthy(row.pass_touchdown) ? row.receiver_player_id ?? '' : truthy(row.rush_touchdown) ? row.rusher_player_id ?? '' : 'team-touchdown'))
     const playId = numeric(row.play_id)
     const current = firstScores.get(gameId)
     if (gameId && playerId && (!current || playId < current.playId)) firstScores.set(gameId, { playId, playerId })
@@ -263,7 +264,7 @@ function buildPlayerGameLines(rows: Row[], teams: SidelineGame['home'][]): Map<s
 
 function recentAverage(lines: PlayerGameLine[], field: keyof Omit<PlayerGameLine, 'gameId'>, count: number, fallback: number) {
   const sample = lines.slice(0, count)
-  return sample.length ? sample.reduce((sum, item) => sum + item[field], 0) / sample.length : fallback
+  return sample.length ? sample.reduce((sum, item) => sum + (item[field] ?? 0), 0) / sample.length : fallback
 }
 
 function makeProjection(key: SidelineProjection['key'], label: string, baseline: number, recent3: number, recent5: number, observed: number[], matchup: number, pace: number, confidence: number, kind: 'count' | 'yards' | 'probability', unit = ''): SidelineProjection {
@@ -281,7 +282,7 @@ function makeProjection(key: SidelineProjection['key'], label: string, baseline:
   return { key, label, mean: round(mean), low: round(range.low), high: round(range.high), unit, matchup: round(matchup), pace: round(pace), confidence: Math.round(clamp(calibratedConfidence, 35, 94)), baseline: round(baseline), recent3: round(recent3), recent5: round(recent5), hitRate }
 }
 
-function buildPlayers(receiving: Row[], rushing: Row[], passing: Row[], dvpRows: Row[], pbp: Row[], directoryRows: Row[], teams: SidelineGame['home'][], headshots: Map<string, string>): SidelinePlayer[] {
+function buildPlayers(receiving: Row[], rushing: Row[], passing: Row[], dvpRows: Row[], pbp: Row[], directoryRows: Row[], teams: SidelineGame['home'][], headshots: Map<string, string>, weekly: Row[] = []): SidelinePlayer[] {
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
   const teamCarries = new Map<string, number>()
@@ -289,6 +290,19 @@ function buildPlayers(receiving: Row[], rushing: Row[], passing: Row[], dvpRows:
   const opponents = new Map(teams.map((team, index) => [team.abbr, teams[index === 0 ? 1 : 0]?.abbr ?? '']))
   const dvp = new Map<string, number>()
   const gameLines = buildPlayerGameLines(pbp, teams)
+  for (const row of weekly) {
+    const id = String(row.player_id ?? '')
+    const gameId = String(row.game_id ?? '')
+    if (!id || !gameId) continue
+    const lines = gameLines.get(id) ?? []
+    const previous = lines.find(line => line.gameId === gameId)
+    const value: PlayerGameLine = { gameId, receptions: numeric(row.receptions), receivingYards: numeric(row.receiving_yards),
+      carries: numeric(row.carries), rushingYards: numeric(row.rushing_yards), passAttempts: numeric(row.attempts),
+      completions: numeric(row.completions), passingYards: numeric(row.passing_yards), passingTouchdowns: numeric(row.passing_tds),
+      scorerTouchdowns: numeric(row.receiving_tds) + numeric(row.rushing_tds) + numeric(row.special_teams_tds),
+      firstTouchdowns: previous?.firstTouchdowns ?? null }
+    gameLines.set(id, [...lines.filter(line => line.gameId !== gameId), value].sort((a, b) => b.gameId.localeCompare(a.gameId)))
+  }
   const pace = new Map<string, number>()
   const directory = new Map(directoryRows.map(row => [String(row.gsis_id ?? ''), row]))
   const receivingIds = new Set(receiving.map(row => String(row.player_gsis_id ?? '')))
@@ -311,6 +325,7 @@ function buildPlayers(receiving: Row[], rushing: Row[], passing: Row[], dvpRows:
     seedFromPlay(row.receiver_player_id, row.receiver_player_name, row.posteam, 'receiving')
     seedFromPlay(row.rusher_player_id, row.rusher_player_name, row.posteam, 'rushing')
   }
+  for (const row of weekly) seedFromPlay(row.player_id, row.player_display_name, row.recent_team, row.position === 'QB' ? 'passing' : row.position === 'RB' ? 'rushing' : 'receiving')
 
   for (const row of dvpRows) dvp.set(`${String(row.opponent_team)}:${String(row.position)}:${String(row.stat_category)}`, numeric(row.pct_diff))
   for (const row of pbp) {
@@ -417,7 +432,7 @@ function buildPlayers(receiving: Row[], rushing: Row[], passing: Row[], dvpRows:
   }
 
   return Array.from(playerMap.values())
-    .filter(player => teams.some(team => team.abbr === player.team) && (player.targets + player.carries >= 8 || player.passAttempts >= 20))
+    .filter(player => teams.some(team => team.abbr === player.team) && player.targets + player.carries + player.passAttempts > 0)
     .map(player => {
       const touches = player.targets + player.carries
       const lines = gameLines.get(player.id) ?? []
@@ -780,6 +795,7 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
 
 async function querySeason(game: SidelineGame, season: number) {
   const admin = createAdminClient()
+  const beforeWeek = season === game.season ? game.week : 100
   const teams = [game.away.abbr, game.home.abbr]
   const loadPbp = async () => {
     const rows: Row[] = []
@@ -787,16 +803,18 @@ async function querySeason(game: SidelineGame, season: number) {
     for (let offset = 0; ; offset += pageSize) {
       const { data, error } = await admin
         .from('nfl_pbp')
-        .select('game_id,play_id,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,run_location,run_gap,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+        .select('game_id,play_id,sack,passing_yards,receiving_yards,rushing_yards,play_deleted,play_type,two_point_attempt,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,run_location,run_gap,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name,td_player_id:raw->>td_player_id')
         .eq('season', season)
         .eq('season_type', 'REG')
+        .lt('week', beforeWeek)
+        .lt('game_date', game.gameday)
         .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
         .order('game_id', { ascending: false })
         .order('play_id', { ascending: true })
         .range(offset, offset + pageSize - 1)
         .abortSignal(AbortSignal.timeout(15000))
       if (error) throw error
-      rows.push(...((data ?? []) as Row[]))
+      rows.push(...((data ?? []) as Row[]).filter(row => !truthy(row.play_deleted) && !truthy(row.two_point_attempt) && row.play_type !== 'no_play'))
       if ((data?.length ?? 0) < pageSize) break
     }
     return rows
@@ -807,43 +825,69 @@ async function querySeason(game: SidelineGame, season: number) {
       .from('nfl_ngs_receiving')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,avg_separation,avg_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
       .eq('season', season)
-      .eq('week', 0)
+      .gt('week', 0).lt('week', beforeWeek)
       .eq('season_type', 'REG')
       .in('team_abbr', teams),
     admin
       .from('nfl_ngs_rushing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
       .eq('season', season)
-      .eq('week', 0)
+      .gt('week', 0).lt('week', beforeWeek)
       .eq('season_type', 'REG')
       .in('team_abbr', teams),
     admin
       .from('nfl_ngs_passing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,attempts,completions,pass_yards,pass_touchdowns')
       .eq('season', season)
-      .eq('week', 0)
+      .gt('week', 0).lt('week', beforeWeek)
       .eq('season_type', 'REG')
       .in('team_abbr', teams),
-    admin
-      .from('nfl_dvp')
-      .select('position,opponent_team,stat_category,pct_diff,games')
-      .eq('season', season)
-      .in('opponent_team', teams),
+    getNflPregameDvp(season, beforeWeek),
   ])
 
-  const participantIds = Array.from(new Set(pbpResult.flatMap(row => [
+  for (const result of [receivingResult, rushingResult, passingResult]) if (result.error) throw result.error
+  const weekly = (await getNflPregameWeekly(season, beforeWeek)).filter(row => teams.includes(String(row.recent_team)))
+  // Weekly production is authoritative for counts, including low-volume players
+  // who never qualify for NGS. Tracking metrics remain sourced from NGS only.
+  const production = (kind: 'receiving' | 'rushing' | 'passing', tracking: Row[]) => {
+    const mapping = kind === 'receiving' ? { targets: 'targets', receptions: 'receptions', yards: 'receiving_yards', rec_touchdowns: 'receiving_tds' }
+      : kind === 'rushing' ? { rush_attempts: 'carries', rush_yards: 'rushing_yards', rush_touchdowns: 'rushing_tds' }
+        : { attempts: 'attempts', completions: 'completions', pass_yards: 'passing_yards', pass_touchdowns: 'passing_tds' }
+    const groups = new Map<string, Row>()
+    for (const row of weekly) {
+      const id = String(row.player_id)
+      const group = groups.get(id) ?? { player_gsis_id: id, player_display_name: row.player_display_name, player_position: row.position, team_abbr: row.recent_team }
+      for (const [target, source] of Object.entries(mapping)) group[target] = numeric(group[target]) + numeric(row[source])
+      if (kind === 'receiving' && row.receiving_air_yards != null) group.weeklyAirYards = numeric(group.weeklyAirYards) + numeric(row.receiving_air_yards)
+      groups.set(id, group)
+    }
+    for (const [id, group] of groups) {
+      if (kind === 'receiving' && group.weeklyAirYards != null && numeric(group.targets) > 0) group.avg_intended_air_yards = numeric(group.weeklyAirYards) / numeric(group.targets)
+      const samples = tracking.filter(row => row.player_gsis_id === id)
+      const weight = kind === 'receiving' ? 'targets' : kind === 'rushing' ? 'rush_attempts' : 'attempts'
+      for (const key of ['avg_separation', 'avg_intended_air_yards', 'avg_yac_above_expectation', 'rush_yards_over_expected_per_att']) {
+        const observed = samples.filter(row => row[key] != null)
+        const total = observed.reduce((sum, row) => sum + numeric(row[weight]), 0)
+        if (total) group[key] = observed.reduce((sum, row) => sum + numeric(row[key]) * numeric(row[weight]), 0) / total
+      }
+    }
+    return weekly.length ? [...groups.values()] : tracking
+  }
+  const participantIds = Array.from(new Set([...weekly.map(row => String(row.player_id)), ...pbpResult.flatMap(row => [
     String(row.passer_player_id ?? ''),
     String(row.receiver_player_id ?? ''),
     String(row.rusher_player_id ?? ''),
-  ]).filter(Boolean)))
+  ])].filter(Boolean)))
   const directoryResult = participantIds.length
     ? await admin.from('nfl_players').select('gsis_id,display_name,position,latest_team').in('gsis_id', participantIds)
     : { data: [] }
   return {
     pbp: pbpResult,
-    receiving: (receivingResult.data ?? []) as Row[],
-    rushing: (rushingResult.data ?? []) as Row[],
-    passing: (passingResult.data ?? []) as Row[],
+    receiving: production('receiving', (receivingResult.data ?? []) as Row[]),
+    rushing: production('rushing', (rushingResult.data ?? []) as Row[]),
+    passing: production('passing', (passingResult.data ?? []) as Row[]),
+    weekly,
+    trackedPlayers: new Set([...(receivingResult.data ?? []), ...(rushingResult.data ?? []), ...(passingResult.data ?? [])].map(row => row.player_gsis_id)).size,
     dvp: (dvpResult.data ?? []) as Row[],
     directory: (directoryResult.data ?? []) as Row[],
   }
@@ -852,25 +896,21 @@ async function querySeason(game: SidelineGame, season: number) {
 export async function getSidelineLens(game: SidelineGame, includeHistory = true): Promise<SidelineLens> {
   const preferredSeason = game.gameType === 'REG' && game.week > 1 ? game.season : game.season - 1
   try {
-    let season = preferredSeason
+    const season = preferredSeason
     const historyPromise = includeHistory ? queryHistory() : Promise.resolve({ games: [], plays: [], headshots: new Map<string, string>() })
-    let data = await querySeason(game, season)
-    if (!data.pbp.length && !data.receiving.length && season > 2020) {
-      season -= 1
-      data = await querySeason(game, season)
-    }
+    const data = await querySeason(game, season)
 
     const history = await historyPromise
     const away = profileTeam(game.away, data.pbp)
     const home = profileTeam(game.home, data.pbp)
     const matchupPlayerIds = Array.from(new Set([...data.receiving, ...data.rushing, ...data.passing, ...data.directory].map(row => nullableText(row.player_gsis_id ?? row.gsis_id)).filter((id): id is string => Boolean(id))))
     const matchupHeadshots = await queryHeadshots(matchupPlayerIds)
-    const players = buildPlayers(data.receiving, data.rushing, data.passing, data.dvp, data.pbp, data.directory, [game.away, game.home], matchupHeadshots)
+    const players = buildPlayers(data.receiving, data.rushing, data.passing, data.dvp, data.pbp, data.directory, [game.away, game.home], matchupHeadshots, data.weekly)
     const targets = buildTargets(data.pbp, [game.away, game.home])
     const runGaps = buildRunGaps(data.pbp, [game.away, game.home])
     const dvp = data.dvp.map(row => ({ defense: text(row.opponent_team), position: text(row.position), stat: text(row.stat_category), pctDiff: round(numeric(row.pct_diff)), games: numeric(row.games) }))
     const headline = buildHeadline(away, home)
-    const trackedPlayers = new Set([...data.receiving, ...data.rushing, ...data.passing].map(row => String(row.player_gsis_id ?? '')).filter(Boolean)).size
+    const trackedPlayers = data.trackedPlayers
     const advanced = trackedPlayers === 0 ? 'unavailable' : trackedPlayers >= players.length ? 'complete' : 'partial'
 
     return {

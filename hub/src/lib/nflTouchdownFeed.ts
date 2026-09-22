@@ -41,7 +41,7 @@ type PlayerRow = { gsis_id: string; display_name: string; position: string | nul
 type BoardRow = { game_id: string; board: SidelineOddsBoard; captured_at?: string }
 const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' }
 const canonicalTeam = (value: string) => TEAM_ALIASES[value.toUpperCase()] ?? value.toUpperCase()
-const numberOrNull = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : null
+const numberOrNull = (value: unknown) => value != null && value !== '' && Number.isFinite(Number(value)) ? Number(value) : null
 
 function scorerFromText(text: string) {
   return text.match(/^(.+?)\s+-?\d+\s+Yd\b/i)?.[1]?.trim() ?? text.match(/^(.+?)\s+(?:Pass|Rush|Reception|Return)\b/i)?.[1]?.trim() ?? ''
@@ -184,7 +184,8 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
       marketQuotes: touchdownQuotes(boardsByGame.get(row.game_id) ?? [], playerName, team, bdlPlayerId),
     })
   }
-  events.sort((a, b) => Date.parse(a.occurredAt ?? '') - Date.parse(b.occurredAt ?? '') || a.quarter - b.quarter)
+  const clockSeconds = (clock: string) => { const [minutes, seconds] = clock.split(':').map(Number); return Number.isFinite(minutes + seconds) ? minutes * 60 + seconds : 0 }
+  events.sort((a, b) => a.gameId.localeCompare(b.gameId) || a.quarter - b.quarter || clockSeconds(b.clock) - clockSeconds(a.clock) || Date.parse(a.occurredAt ?? '') - Date.parse(b.occurredAt ?? '') || a.id.localeCompare(b.id, undefined, { numeric: true }))
   const firstByGame = new Set<string>()
   const playerCounts = new Map<string, number>()
   return events.map(event => {
@@ -197,4 +198,4 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
   })
 }
 
-export const getNflTouchdownFeed = unstable_cache(loadNflTouchdowns, ['nfl-live-touchdown-feed-v2'], { revalidate: 15, tags: ['sideline:nfl-live'] })
+export const getNflTouchdownFeed = unstable_cache(loadNflTouchdowns, ['nfl-live-touchdown-feed-v3-chronology'], { revalidate: 15, tags: ['sideline:nfl-live'] })

@@ -10,12 +10,12 @@ export async function requireNflAccess() {
   const { data: profile, error: profileError } = await supabase.from('users')
     .select('account_type').eq('id', userId).maybeSingle()
   if (profileError || !profile) return { error: NextResponse.json({ error: 'Access unavailable' }, { status: 403 }) }
-  if (hasNflAccess(profile.account_type, false)) return { userId }
+  if (hasNflAccess(profile.account_type, false)) return { userId, isAdmin: true }
   const { data: grant, error } = await supabase.from('nfl_early_access')
     .select('user_id').eq('user_id', userId).maybeSingle()
   if (error) return { error: NextResponse.json({ error: 'Could not check NFL access' }, { status: 503 }) }
   if (!hasNflAccess(profile.account_type, !!grant)) {
     return { error: NextResponse.json({ error: 'NFL early access required' }, { status: 403 }) }
   }
-  return { userId }
+  return { userId, isAdmin: false }
 }

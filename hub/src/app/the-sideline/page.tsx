@@ -15,6 +15,7 @@ import { CalendarOff } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
+import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +49,7 @@ export default async function SidelinePage({ searchParams }: {
     ? parseNflSample(requestedSample)
     : defaultNflSample(selected)
   const navigation = <><SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
-    <Suspense fallback={<p className="mx-3 text-xs text-slate-400">Checking game-data coverage…</p>}><NflGameData game={selected} /></Suspense></>
+    {gate.isAdmin ? <Suspense fallback={null}><NflGameData game={selected} /></Suspense> : null}</>
 
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
@@ -59,10 +60,11 @@ export default async function SidelinePage({ searchParams }: {
   ])
   if (mode === 'cheatsheets') {
     const lens = await getCachedSidelineCheatsheetLens(selected)
-    return <>{navigation}<SidelineCheatsheets key={selected.id} lens={lens} board={market.odds} /></>
+    return <>{navigation}<SidelineCheatsheets key={selected.id} lens={lens} board={market.odds} isAdmin={gate.isAdmin} /></>
   }
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
+    gameId={selected.id} initialResults={mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
     boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   const roster = market.odds.players.map(player => ({

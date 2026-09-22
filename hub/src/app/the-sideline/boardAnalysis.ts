@@ -1,4 +1,5 @@
 import 'server-only'
+import { getNflPregameDvp } from '@/lib/nflPregameData'
 import { nflSampleReference, type NflSample } from '@/lib/nflSample'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -576,6 +577,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
         .eq('season', season)
         .eq('season_type', phase)
         .lt('game_date', game.gameday)
+        .lt('week', season === game.season && phase === game.gameType ? game.week : 100)
         .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
         .order('game_id')
         .order('play_id')
@@ -591,7 +593,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     admin.from('nfl_ngs_receiving').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_passing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
-    admin.from('nfl_dvp').select('position,opponent_team,stat_category,pct_diff,games').eq('season', season).in('opponent_team', teams),
+    getNflPregameDvp(season, season === game.season && phase === game.gameType ? game.week : 100, phase),
     getNflBdlCurrentSeasonStats(season, teamIds, phase === 'PRE' ? 1 : 2).catch(error => {
       console.error('[the-sideline] current-season BDL stats unavailable', game.id, error)
       return []
@@ -641,7 +643,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
       rosterStatus: row.status ?? null,
     })
   }
-  const eligibleStats = currentStatsRaw.filter(row => row.game?.date && row.game.date.slice(0, 10) < game.gameday)
+  const eligibleStats = currentStatsRaw.filter(row => row.game?.date && row.game.date.slice(0, 10) < game.gameday && (season !== game.season || phase !== game.gameType || (row.game.week != null && row.game.week < game.week)))
   const currentGameKeys = Array.from(new Set(eligibleStats.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`))).sort((a, b) => a.localeCompare(b))
   const sampleIndex = new Map(currentGameKeys.map((key, index) => [key, index + 1]))
   const currentStats: CurrentStatRow[] = eligibleStats.map(row => ({

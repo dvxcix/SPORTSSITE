@@ -66,7 +66,7 @@ function isHit(value: number, line: number, milestone: boolean) {
 }
 
 function hitSummary(log: SidelinePlayerGameLine[], field: LogField, line: number, count: number | null, milestone: boolean): HitSummary {
-  const sample = count == null ? log : log.slice(0, count)
+  const sample = (count == null ? log : log.slice(0, count)).filter(row => row[field] != null && Number.isFinite(row[field]))
   if (!sample.length) return null
   const hits = sample.filter(row => isHit(Number(row[field]), line, milestone)).length
   return { hits, total: sample.length, rate: hits / sample.length * 100 }
@@ -134,7 +134,7 @@ function PlayerChips({ players }: { players: NflOddsPlayer[] }) {
   return <div className={styles.playerChips}>{players.slice(0, 4).map(player => <a href={player.gsisId ? `/nfl/players/${player.gsisId}` : '#'} key={player.id}>{player.headshot ? <Image src={player.headshot} alt="" width={26} height={26} unoptimized /> : <i>{player.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</i>}<span><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></span></a>)}</div>
 }
 
-export function SidelineCheatsheets({ lens, board }: { lens: SidelineLens; board: SidelineOddsBoard }) {
+export function SidelineCheatsheets({ lens, board, isAdmin = false }: { lens: SidelineLens; board: SidelineOddsBoard; isAdmin?: boolean }) {
   const [view, setView] = useState<View>('edge')
   const [prop, setProp] = useState('anytime_td')
   const [vendor, setVendor] = useState('fanduel')
@@ -235,12 +235,12 @@ export function SidelineCheatsheets({ lens, board }: { lens: SidelineLens; board
       <div className={styles.heroCopy}><span>NFL INTELLIGENCE DESK</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {lens.season} regular-season reference</p></div>
       <div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div>
     </header>
-    <section className={styles.coverageRail} aria-label="Data coverage">
+    {isAdmin ? <section className={styles.coverageRail} aria-label="Data coverage">
       <article data-state="ready"><Database size={16} /><span><small>PLAY-BY-PLAY</small><b>{lens.coverage.pbpPlays.toLocaleString()} charted plays</b></span></article>
       <article data-state={lens.coverage.advanced}><Activity size={16} /><span><small>ADVANCED TRACKING</small><b>{coverageLabel}</b></span></article>
       <article data-state="ready"><UsersRound size={16} /><span><small>PLAYER IDENTITY</small><b>{lens.coverage.rosterPlayers} roster matches</b></span></article>
       <article data-state="reference"><Shield size={16} /><span><small>REFERENCE WINDOW</small><b>{lens.season} · {lens.players.length} qualified players</b></span></article>
-    </section>
+    </section> : null}
     <nav className={styles.views} aria-label="Cheatsheet views">{VIEW_META.map(([key, label, Icon]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); setDirection('desc'); setSort(key === 'explosives' ? 'x-total' : key === 'defense' ? 'd-edge' : key === 'gaps' ? 'g-edge' : 'edge') }}><Icon size={15} />{label}</button>)}</nav>
     <section className={styles.sectionIntro}><div><small>{VIEW_COPY[view].eyebrow}</small><h2>{VIEW_COPY[view].title}</h2></div><span>{view === 'edge' || view === 'hits' ? marketRows.length + ' live contracts' : paired.filter(row => row.stats).length + ' matched players'}</span></section>
     <section className={styles.controls} aria-label="Cheatsheet controls">

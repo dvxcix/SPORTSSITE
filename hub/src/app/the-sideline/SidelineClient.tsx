@@ -135,7 +135,7 @@ export type SidelinePlayerGameLine = {
   passingYards: number
   passingTouchdowns: number
   scorerTouchdowns: number
-  firstTouchdowns: number
+  firstTouchdowns: number | null
 }
 
 export type SidelineRunGap = {

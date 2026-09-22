@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
@@ -11,6 +11,7 @@ import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineTeam } from './types'
 import styles from './sidelineResearch.module.css'
+import { gradeNflPublicProp, type NflPublicResult } from '@/lib/nflPublicResults'
 
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
 const stamp = (value: string | null | undefined) => value ? value.replace('T', ' ').slice(0, 19) + ' UTC' : 'Time unavailable'
@@ -25,9 +26,30 @@ export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?:
 const toneFor = (key: string) => /td|touchdown/.test(key) ? 'lime' : /rec/.test(key) ? 'cyan' : /rush/.test(key) ? 'amber' : 'violet'
 const marketLabel = (key: string) => key.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()).replace(/\bTds?\b/g, word => word.toUpperCase())
 
-export function SidelineResearchClient({ board, boardHref, title, mode, teams }: {
+export function SidelineResearchClient({ board, boardHref, title, mode, teams, gameId, initialResults = null }: {
   board: SidelineOddsBoard; boardHref: string; title: string; mode: 'public' | 'markets'; teams: SidelineTeam[]
+  gameId?: string; initialResults?: NflPublicResult | null
 }) {
+  const [results, setResults] = useState(initialResults)
+  const [refreshFailed, setRefreshFailed] = useState(false)
+  useEffect(() => {
+    if (mode !== 'public' || !gameId) return
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const refresh = async () => {
+      try {
+        if (document.visibilityState !== 'hidden') {
+          const response = await fetch(`/the-sideline/results?game=${encodeURIComponent(gameId)}`, { signal: controller.signal, cache: 'no-store' })
+          if (!response.ok) throw new Error('Result refresh failed')
+          const next: NflPublicResult = await response.json()
+          if (!controller.signal.aborted) { setResults(next); setRefreshFailed(false) }
+        }
+      } catch { if (!controller.signal.aborted) setRefreshFailed(true) }
+      finally { if (!controller.signal.aborted) timer = setTimeout(refresh, 30000) }
+    }
+    timer = setTimeout(refresh, 30000)
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [gameId, mode])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
   const [page, setPage] = useState(0)
@@ -68,6 +90,7 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
   return <div className={styles.root}>
     <header><Link href={boardHref}>← The Sideline</Link><p>{title}</p><h1>{mode === 'public' ? 'The Public · NFL' : 'NFL sportsbook comparison'}</h1>
       <small>Captured: {stamp(mode === 'public' ? board.picksCapturedAt : board.capturedAt)}</small>
+      {mode === 'public' ? <p className={styles.resultSummary} role="status">{results?.status === 'final' ? 'Final results' : results?.status === 'in_progress' ? 'Live results · refresh every 30s' : 'Game results'}{results ? ` · Updated ${stamp(results.updatedAt)}` : ' · Awaiting feed'}{refreshFailed ? ' · Refresh delayed; showing last update' : ''}</p> : null}
     </header>
     <section className={styles.controls} aria-label="Research filters">
       <label>Search<input value={search} placeholder="Player, team or market" onChange={event => { setSearch(event.target.value); setPage(0) }} /></label>
@@ -78,14 +101,22 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
     {count === 0 ? <p className={styles.empty}>No captured data matches this view.</p> : <div className={styles.cards}>
       {mode === 'public' ? filteredPicks.slice(page * pageSize, (page + 1) * pageSize).map((row, index) => {
         const player = playersById.get(row.playerId)!
-        const market = nflPrimaryMarket(player, row.propType)
-        const offers = market?.offers.filter(offer => !offer.isOpeningOnly && americanImpliedProbability(offer.current.odds ?? offer.current.over) != null) ?? []
+        const market = row.line == null ? nflPrimaryMarket(player, row.propType) : player.markets.find(item => item.propType === row.propType && item.offers.some(offer => (offer.line ?? item.line) === row.line && (!row.kind || row.kind === offer.type)))
+        const oddsFor = (offer: NonNullable<typeof market>['offers'][number]) => row.side === 'under' ? offer.current.under : offer.current.odds ?? offer.current.over
+        const offers = market?.offers.filter(offer => !offer.isOpeningOnly && (row.line == null || (offer.line ?? market.line) === row.line) && americanImpliedProbability(oddsFor(offer)) != null) ?? []
+        const outcome = gradeNflPublicProp(results, player, row)
+        const ladder = [...new Map(player.markets.filter(item => item.propType === row.propType).flatMap(item => item.offers.filter(offer => !offer.isOpeningOnly).flatMap(offer => {
+          const line = offer.line ?? item.line ?? (item.propType === 'anytime_td' || item.propType === 'first_td' ? 1 : null)
+          return line == null ? [] : [[`${line}:${offer.type}`, { line, kind: offer.type }] as const]
+        }))).values()].sort((a, b) => a.line - b.line)
         const share = totalPicks ? row.picks / totalPicks * 100 : 0
         return <article className={styles.card} data-tone={toneFor(row.propType)} style={theme(row.team)} key={`${row.playerId}:${row.propType}:${index}`}>
           <div className={styles.cardHead}><span className={styles.rank}>{page * pageSize + index + 1}</span><PlayerIdentity player={player} team={teams.find(team => team.abbr === row.team)} /><span className={styles.pickBadge}><b>{row.picks.toLocaleString()}</b><small>PICKS</small></span></div>
           <div className={styles.marketHeading}><strong>{row.label}</strong><span>{share.toFixed(1)}% of filtered picks</span></div>
+          <div className={styles.outcome} data-state={outcome.state}><strong>{outcome.label}</strong>{outcome.actual != null ? <span>{outcome.actual}{row.line != null ? ` / ${row.line}` : ''} actual</span> : null}</div>
+          {ladder.length ? <details className={styles.resultLadders}><summary>Captured ladder results · {ladder.length} lines</summary><div>{ladder.map(rung => { const grade = gradeNflPublicProp(results, player, { propType: row.propType, ...rung, side: row.side }); return <span key={`${rung.line}:${rung.kind}`} data-state={grade.state}><b>{row.side === 'under' ? 'Under ' : rung.kind === 'over_under' ? 'Over ' : ''}{rung.line}{rung.kind === 'milestone' ? '+' : ''}</b><small>{grade.label}</small></span> })}</div></details> : null}
           <div className={styles.shareTrack} role="meter" aria-label={`${row.player} filtered pick share`} aria-valuenow={share} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${share}%` }} /></div>
-          {offers.length ? <div className={styles.reference}><small>REFERENCE ODDS{market?.line != null ? ` · LINE ${market.line}` : ''}</small><div className={styles.oddsChips}>{offers.map(offer => <span key={offer.vendor} data-ss-native-tooltip={`${offer.vendor} · ${stamp(offer.updatedAt)}`} aria-label={`${offer.vendor} ${price((offer.current.odds ?? offer.current.over)!)} captured ${stamp(offer.updatedAt)}`}><BookLogo vendor={offer.vendor} size={16} /><b>{offer.current.over != null ? 'O ' : ''}{price((offer.current.odds ?? offer.current.over)!)}</b></span>)}</div></div> : <small className={styles.missing}>No matching reference price captured</small>}
+          {offers.length ? <div className={styles.reference}><small>{row.line == null ? 'CATEGORY REFERENCE' : 'MATCHING LINE'}{market?.line != null ? ` · LINE ${market.line}` : ''}</small><div className={styles.oddsChips}>{offers.map(offer => <span key={`${offer.vendor}:${offer.line}`} aria-label={`${offer.vendor} ${price(oddsFor(offer)!)} captured ${stamp(offer.updatedAt)}`}><BookLogo vendor={offer.vendor} size={16} /><b>{row.side === 'under' ? 'U ' : offer.current.over != null ? 'O ' : ''}{price(oddsFor(offer)!)}</b></span>)}</div></div> : <small className={styles.missing}>No matching reference price captured</small>}
           <footer className={styles.cardFooter}><small>{stamp(row.capturedAt)}</small>{player.gsisId ? <Link prefetch={false} href={`/nfl/players/${encodeURIComponent(player.gsisId)}`}>Player profile ↗</Link> : <small>Profile not linked yet</small>}</footer>
         </article>
       }) : filteredMarkets.slice(page * pageSize, (page + 1) * pageSize).map(row => <article className={styles.card} data-tone={toneFor(row.category)} style={theme(row.team)} key={row.id}>
