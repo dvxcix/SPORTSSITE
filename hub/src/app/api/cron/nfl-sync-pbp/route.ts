@@ -5,6 +5,7 @@ import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { isNflverseAssetError, syncNflPbp } from '@/lib/nflverseSync'
+import { refreshNflProduction } from '@/lib/nflProduction'
 
 export const revalidate = 0
 export const maxDuration = 120
@@ -30,18 +31,23 @@ async function run(req: Request) {
   const season = currentNflSeason()
   try {
     const count = await syncNflPbp(admin, season)
-    revalidateTag('sideline:nfl-data', 'max')
-    return NextResponse.json({ synced: count, season })
+    const coverage = await refreshNflProduction(admin, season)
+    revalidateTag('sideline:nfl-data', { expire: 0 })
+    if (coverage.missingGames.length) {
+      return NextResponse.json({ reason: 'Completed games lack complete play data', coverage }, { status: 503 })
+    }
+    return NextResponse.json({ synced: count, season, coverage })
   } catch (e: unknown) {
     // nflverse does not publish a season PBP asset until games exist. That is
     // an expected upstream state, not a broken SlipSurge pipeline. Keep the
     // health row green while still exposing the reason to the admin panel.
     if (isNflverseAssetError(e, 404)) {
       return NextResponse.json({
+        reason: 'Upstream play-by-play not yet published; coverage is not current',
         synced: 0,
         season,
         skipped: 'upstream_not_published',
-      })
+      }, { status: 425 })
     }
     console.error('[nfl-sync-pbp] failed', { type: e instanceof Error ? e.name : typeof e })
     return safeApiError('nfl-sync-pbp', e)

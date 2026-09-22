@@ -285,6 +285,7 @@ export async function syncNflPlayerStats(admin: ReturnType<typeof createAdminCli
       receiving_2pt_conversions: n(r.receiving_2pt_conversions), racr: n(r.racr),
       target_share: n(r.target_share), air_yards_share: n(r.air_yards_share), wopr: n(r.wopr),
       special_teams_tds: n(r.special_teams_tds), fantasy_points: n(r.fantasy_points), fantasy_points_ppr: n(r.fantasy_points_ppr),
+      data_source: 'nflverse',
       updated_at: new Date().toISOString(),
     }))
     .filter(r => r.player_id && r.season != null && r.week != null && r.season_type)

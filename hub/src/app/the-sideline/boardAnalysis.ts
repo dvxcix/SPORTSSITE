@@ -27,6 +27,12 @@ const canonicalTeam = (value: unknown) => {
   const upper = String(value ?? '').toUpperCase()
   return TEAM_ALIASES[upper] ?? upper
 }
+const teamAliases = (team: string) => Array.from(new Set([team, canonicalTeam(team), ...Object.keys(TEAM_ALIASES).filter(key => TEAM_ALIASES[key] === canonicalTeam(team))]))
+const hasNumber = (value: unknown) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+const validPlay = (row: Row) => !truthy(row.play_deleted) && row.play_type !== 'no_play' && !truthy(row.two_point_attempt)
+export function trackingBeforeGame(rows: Row[], season: number, game: Pick<SidelineGame, 'season' | 'week'>) {
+  return rows.filter(row => season !== game.season || (numeric(row.week) > 0 && numeric(row.week) < game.week))
+}
 
 type CurrentStatRow = NflBdlPlayerStat & { sampleIndex: number }
 
@@ -48,6 +54,8 @@ function emptyTeamProfile(team: SidelineGame['home']): SidelineTeamProfile {
 }
 
 function profileTeam(team: SidelineGame['home'], rows: Row[]): SidelineTeamProfile {
+  team = { ...team, abbr: canonicalTeam(team.abbr) }
+  rows = rows.filter(validPlay)
   const offense = rows.filter(row => row.posteam === team.abbr && (truthy(row.pass_attempt) || truthy(row.rush_attempt)))
   const defense = rows.filter(row => row.defteam === team.abbr && (truthy(row.pass_attempt) || truthy(row.rush_attempt)))
   if (!offense.length && !defense.length) return emptyTeamProfile(team)
@@ -109,6 +117,8 @@ type PlayerAccumulator = {
   timeToThrowWeight: number
   timeToThrowTotal: number
   redZoneLooks: number
+  redZoneTargets: number
+  redZoneCarries: number
   goalLineLooks: number
   redZoneScores: number
   explosivePlays: number
@@ -150,6 +160,8 @@ function ensurePlayer(map: Map<string, PlayerAccumulator>, row: Row, fallbackPos
     timeToThrowWeight: 0,
     timeToThrowTotal: 0,
     redZoneLooks: 0,
+    redZoneTargets: 0,
+    redZoneCarries: 0,
     goalLineLooks: 0,
     redZoneScores: 0,
     explosivePlays: 0,
@@ -159,7 +171,7 @@ function ensurePlayer(map: Map<string, PlayerAccumulator>, row: Row, fallbackPos
 }
 
 function addWeighted(player: PlayerAccumulator, totalKey: keyof PlayerAccumulator, weightKey: keyof PlayerAccumulator, value: unknown, weight: number) {
-  if (!weight) return
+  if (!weight || !hasNumber(value)) return
   ;(player[totalKey] as number) += numeric(value) * weight
   ;(player[weightKey] as number) += weight
 }
@@ -173,6 +185,7 @@ export function buildPlayers(
   bio: Map<
     string,
     {
+      name?: string
       headshot: string | null
       headshotFallbacks: string[]
       jersey: number | null
@@ -185,12 +198,22 @@ export function buildPlayers(
   rosterTeams: Map<string, string>,
   currentStats: CurrentStatRow[],
   roster: SidelineRosterPlayer[],
-  dvpRows: Row[],
+  dvpRows: Row[] = [],
 ): SidelinePlayer[] {
+  teams = teams.map(team => ({ ...team, abbr: canonicalTeam(team.abbr) }))
+  pbp = pbp.filter(validPlay).map(row => ({ ...row, posteam: canonicalTeam(row.posteam), defteam: canonicalTeam(row.defteam) }))
+  receiving = receiving.map(row => ({ ...row, team_abbr: canonicalTeam(row.team_abbr) }))
+  rushing = rushing.map(row => ({ ...row, team_abbr: canonicalTeam(row.team_abbr) }))
+  passing = passing.map(row => ({ ...row, team_abbr: canonicalTeam(row.team_abbr) }))
+  rosterTeams = new Map([...rosterTeams].map(([id, team]) => [id, canonicalTeam(team)]))
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
   const teamCarries = new Map<string, number>()
   const teamPassAttempts = new Map<string, number>()
+  const teamAir = new Map<string, { total: number; samples: number; targets: number }>()
+  const playerAir = new Map<string, { total: number; samples: number; targets: number }>()
+  const teamRzTargets = new Map<string, number>()
+  const teamRzCarries = new Map<string, number>()
 
   for (const row of receiving) {
     const player = ensurePlayer(playerMap, row, 'WR')
@@ -257,6 +280,7 @@ export function buildPlayers(
       const rusherId = String(row.rusher_player_id ?? '')
       const passerId = String(row.passer_player_id ?? '')
       const findPlayer = (id: string) => {
+        if (!id) return null
         const existing = playerMap.get(id)
         if (existing) return existing
         const identity = roster.find(player => player.id === id)
@@ -271,11 +295,24 @@ export function buildPlayers(
               },
               identity.position,
             )
-          : null
+          : ensurePlayer(playerMap, {
+              player_gsis_id: id,
+              player_display_name: id === receiverId ? row.receiver_player_name : id === rusherId ? row.rusher_player_name : row.passer_player_name,
+              team_abbr: team,
+              player_position: bio.get(id)?.position ?? (id === passerId ? 'QB' : id === rusherId ? 'RB' : 'WR'),
+            }, 'WR')
       }
       const week = numeric(row.week)
       const yards = numeric(row.yards_gained)
       if (truthy(row.pass_attempt) && receiverId) {
+        const addAir = (map: Map<string, { total: number; samples: number; targets: number }>, key: string) => {
+          const air = map.get(key) ?? { total: 0, samples: 0, targets: 0 }
+          air.targets++
+          if (hasNumber(row.air_yards)) { air.total += Number(row.air_yards); air.samples++ }
+          map.set(key, air)
+        }
+        addAir(teamAir, team)
+        addAir(playerAir, receiverId)
         teamTargets.set(team, (teamTargets.get(team) ?? 0) + 1)
         const player = findPlayer(receiverId)
         if (player) {
@@ -283,9 +320,21 @@ export function buildPlayers(
           player.targets++
           if (truthy(row.complete_pass)) {
             player.receptions++
-            player.receivingYards += yards
+            player.receivingYards += hasNumber(row.receiving_yards) ? Number(row.receiving_yards) : yards
           }
-          if (truthy(row.pass_touchdown)) player.touchdowns++
+          if (truthy(row.pass_touchdown) && (!row.td_player_id || row.td_player_id === receiverId)) player.touchdowns++
+        }
+      }
+      if (truthy(row.complete_pass) && row.lateral_receiver_player_id) {
+        const id = String(row.lateral_receiver_player_id)
+        const lateral = playerMap.get(id) ?? ensurePlayer(playerMap, {
+          player_gsis_id: id, player_display_name: row.lateral_receiver_player_name,
+          team_abbr: team, player_position: bio.get(id)?.position ?? 'WR',
+        }, 'WR')
+        if (lateral) {
+          lateral.games.add(week)
+          lateral.receivingYards += numeric(row.lateral_receiving_yards)
+          if (truthy(row.pass_touchdown) && row.td_player_id === id) lateral.touchdowns++
         }
       }
       if (truthy(row.rush_attempt) && rusherId) {
@@ -294,7 +343,7 @@ export function buildPlayers(
         if (player) {
           player.games.add(week)
           player.carries++
-          player.rushingYards += yards
+          player.rushingYards += hasNumber(row.rushing_yards) ? Number(row.rushing_yards) : yards
           if (truthy(row.rush_touchdown)) player.touchdowns++
         }
       }
@@ -306,7 +355,7 @@ export function buildPlayers(
           player.passAttempts++
           if (truthy(row.complete_pass)) {
             player.completions++
-            player.passingYards += yards
+            player.passingYards += hasNumber(row.passing_yards) ? Number(row.passing_yards) : yards
           }
           if (truthy(row.pass_touchdown)) player.passingTouchdowns++
         }
@@ -389,17 +438,25 @@ export function buildPlayers(
     }
   }
 
-  const byName = new Map(Array.from(playerMap.values()).map(player => [player.name.toLowerCase(), player]))
   for (const row of pbp) {
+    if (!teams.some(team => team.abbr === row.posteam)) continue
     const isPass = truthy(row.pass_attempt)
     const isRush = truthy(row.rush_attempt)
     const isRedZone = numeric(row.yardline_100) > 0 && numeric(row.yardline_100) <= 20
     const isGoalLine = numeric(row.yardline_100) > 0 && numeric(row.yardline_100) <= 5
-    const id = String(row.receiver_player_id ?? row.rusher_player_id ?? '')
-    const name = String(row.receiver_player_name ?? row.rusher_player_name ?? '').toLowerCase()
-    const player = playerMap.get(id) ?? byName.get(name)
+    if (!isPass && !isRush) continue
+    const id = String(isPass ? row.receiver_player_id ?? '' : row.rusher_player_id ?? '')
+    if (isRedZone && id) {
+      const totals = isPass ? teamRzTargets : teamRzCarries
+      totals.set(String(row.posteam), (totals.get(String(row.posteam)) ?? 0) + 1)
+    }
+    // Never override an explicit GSIS identity with an abbreviated-name match.
+    // Opponents can both be named M.Washington.
+    const player = playerMap.get(id)
     if (!player) continue
     if (isRedZone) player.redZoneLooks += 1
+    if (isRedZone && isPass) player.redZoneTargets += 1
+    if (isRedZone && isRush) player.redZoneCarries += 1
     if (isGoalLine) player.goalLineLooks += 1
     if (isRedZone && (truthy(row.pass_touchdown) || truthy(row.rush_touchdown))) player.redZoneScores += 1
     if ((isPass && numeric(row.yards_gained) >= 20) || (isRush && numeric(row.yards_gained) >= 10)) player.explosivePlays += 1
@@ -417,8 +474,12 @@ export function buildPlayers(
       const targetShare = hasTeamSample ? percent(player.targets, teamTargets.get(sampleTeam) ?? 0) : 0
       const carryShare = hasTeamSample ? percent(player.carries, teamCarries.get(sampleTeam) ?? 0) : 0
       const passShare = hasTeamSample ? percent(player.passAttempts, teamPassAttempts.get(sampleTeam) ?? 0) : 0
-      const airYards = player.airYardsWeight ? player.airYardsTotal / player.airYardsWeight : 0
-      const airYardsShare = player.airShareWeight ? player.airShareTotal / player.airShareWeight : 0
+      const air = playerAir.get(player.id)
+      const teamAirSample = teamAir.get(sampleTeam)
+      const completeAir = Boolean(air?.targets && air.samples === air.targets)
+      const completeTeamAir = Boolean(teamAirSample?.targets && teamAirSample.samples === teamAirSample.targets && teamAirSample.total !== 0)
+      const airYards = air ? (completeAir ? air.total / air.targets : 0) : player.airYardsWeight ? player.airYardsTotal / player.airYardsWeight : 0
+      const airYardsShare = air ? (completeAir && completeTeamAir ? 100 * air.total / teamAirSample!.total : 0) : player.airShareWeight ? player.airShareTotal / player.airShareWeight : 0
       const separation = player.separationWeight ? player.separationTotal / player.separationWeight : 0
       const yacAboveExpected = player.yacWeight ? player.yacTotal / player.yacWeight : 0
       const rushOverExpected = player.rushOeWeight ? player.rushOeTotal / player.rushOeWeight : 0
@@ -439,8 +500,8 @@ export function buildPlayers(
 
       return {
         id: player.id,
-        unavailableMetrics: [...(!hasTeamSample ? ['targetShare', 'carryShare'] : []), ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []), ...(!player.airYardsWeight ? ['airYards'] : []), ...(!player.airShareWeight ? ['airYardsShare'] : []), ...(!player.separationWeight ? ['separation'] : []), ...(!player.yacWeight ? ['yacAboveExpected'] : []), ...(!player.rushOeWeight ? ['rushOverExpected'] : []), ...(!player.cpoeWeight ? ['cpoe'] : []), ...(!player.timeToThrowWeight ? ['timeToThrow'] : [])],
-        name: player.name,
+        unavailableMetrics: [...(!hasTeamSample ? ['targetShare', 'carryShare'] : []), ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'redZoneTargets', 'redZoneCarries', 'redZoneTargetShare', 'redZoneCarryShare', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []), ...((air ? !completeAir : !player.airYardsWeight) ? ['airYards'] : []), ...(!completeAir ? ['totalAirYards'] : []), ...((air ? !(completeAir && completeTeamAir) : !player.airShareWeight) ? ['airYardsShare'] : []), ...(!player.separationWeight ? ['separation'] : []), ...(!player.yacWeight ? ['yacAboveExpected'] : []), ...(!player.rushOeWeight ? ['rushOverExpected'] : []), ...(!player.cpoeWeight ? ['cpoe'] : []), ...(!player.timeToThrowWeight ? ['timeToThrow'] : [])],
+        name: playerBio?.name ?? player.name,
         team: player.team,
         position: resolvedPosition,
         headshot: playerBio?.headshot ?? null,
@@ -470,6 +531,7 @@ export function buildPlayers(
         targetShare,
         carryShare,
         airYards: round1(airYards),
+        totalAirYards: completeAir ? air!.total : undefined,
         airYardsShare: round1(airYardsShare),
         separation: round1(separation),
         yacAboveExpected: round1(yacAboveExpected),
@@ -479,6 +541,10 @@ export function buildPlayers(
         cpoe: round1(cpoe),
         timeToThrow: round1(timeToThrow),
         redZoneLooks: player.redZoneLooks,
+        redZoneTargets: player.redZoneTargets,
+        redZoneCarries: player.redZoneCarries,
+        redZoneTargetShare: teamRzTargets.get(sampleTeam) ? percent(player.redZoneTargets, teamRzTargets.get(sampleTeam)!) : undefined,
+        redZoneCarryShare: teamRzCarries.get(sampleTeam) ? percent(player.redZoneCarries, teamRzCarries.get(sampleTeam)!) : undefined,
         goalLineLooks: player.goalLineLooks,
         explosivePlays: player.explosivePlays,
         dvp,
@@ -498,7 +564,7 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
 
 async function querySeason(game: SidelineGame, season: number, roster: SidelineRosterPlayer[], phase: 'PRE' | 'REG') {
   const admin = createAdminClient()
-  const teams = [game.away.abbr, game.home.abbr]
+  const teams = Array.from(new Set([game.away.abbr, game.home.abbr].flatMap(teamAliases)))
   const rosterIds = Array.from(new Set(roster.map(player => player.id).filter(id => id && !id.startsWith('bdl-'))))
   const teamIds = Array.from(new Set(roster.map(player => player.teamId).filter((id): id is number => id != null)))
   const loadPlays = async () => {
@@ -506,7 +572,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     for (let offset = 0; offset < 20000; offset += 500) {
       const result = await admin
         .from('nfl_pbp')
-        .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,complete_pass,sack,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+        .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,receiving_yards,rushing_yards,passing_yards,air_yards,play_deleted,play_type,two_point_attempt,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,complete_pass,sack,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name,lateral_receiver_player_id:raw->>lateral_receiver_player_id,lateral_receiver_player_name:raw->>lateral_receiver_player_name,lateral_receiving_yards:raw->>lateral_receiving_yards,td_player_id:raw->>td_player_id')
         .eq('season', season)
         .eq('season_type', phase)
         .lt('game_date', game.gameday)
@@ -515,7 +581,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
         .order('play_id')
         .range(offset, offset + 499)
       if (result.error) throw new Error(`NFL play sample unavailable: ${result.error.message}`)
-      rows.push(...result.data)
+      rows.push(...result.data.filter(validPlay).map(row => ({ ...row, posteam: canonicalTeam(row.posteam), defteam: canonicalTeam(row.defteam) })))
       if (result.data.length < 500) return { data: rows }
     }
     throw new Error('NFL play sample exceeded paging bound; refusing a partial sample')
@@ -536,16 +602,22 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
   const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
   const rosterPassing = rosterIds.length ? await admin.from('nfl_ngs_passing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
 
-  const uniqueRows = (rows: Row[]) => Array.from(new Map(rows.map(row => [`${row.player_gsis_id}:${row.week}`, row])).values())
+  // A season aggregate cannot be rewound to a pregame cutoff. In the current
+  // season use only completed PRIOR weeks, just like the play sample above.
+  // Otherwise a published Week 2 tracking row makes L1 select Week 2 while
+  // its PBP was correctly excluded, blanking volume / RZ and leaking outcomes.
+  const uniqueRows = (rows: Row[]) => Array.from(new Map(trackingBeforeGame(rows, season, game)
+    .map(row => [`${row.player_gsis_id}:${row.week}`, row])).values())
   const receiving = uniqueRows([...((receivingResult.data ?? []) as Row[]), ...((rosterReceiving.data ?? []) as Row[])])
   const rushing = uniqueRows([...((rushingResult.data ?? []) as Row[]), ...((rosterRushing.data ?? []) as Row[])])
   const passing = uniqueRows([...((passingResult.data ?? []) as Row[]), ...((rosterPassing.data ?? []) as Row[])])
-  const actualIds = Array.from(new Set([...receiving.map(row => String(row.player_gsis_id ?? '')), ...rushing.map(row => String(row.player_gsis_id ?? '')), ...passing.map(row => String(row.player_gsis_id ?? '')), ...rosterIds].filter(Boolean)))
-  const bioResult = actualIds.length ? await admin.from('nfl_players').select('gsis_id,headshot,jersey_number,position,rookie_season,last_season,latest_team,status,espn_id').in('gsis_id', actualIds) : { data: [] }
+  const actualIds = Array.from(new Set([...receiving.map(row => String(row.player_gsis_id ?? '')), ...rushing.map(row => String(row.player_gsis_id ?? '')), ...passing.map(row => String(row.player_gsis_id ?? '')), ...pbpResult.data.flatMap(row => [String(row.receiver_player_id ?? ''), String(row.rusher_player_id ?? ''), String(row.passer_player_id ?? '')]), ...rosterIds].filter(Boolean)))
+  const bioResult = actualIds.length ? await admin.from('nfl_players').select('gsis_id,display_name,headshot,jersey_number,position,rookie_season,last_season,latest_team,status,espn_id').in('gsis_id', actualIds) : { data: [] }
 
   const bio = new Map<
     string,
     {
+      name?: string
       headshot: string | null
       headshotFallbacks: string[]
       jersey: number | null
@@ -559,6 +631,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     const espn = row.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${row.espn_id}.png` : null
     const headshotFallbacks = Array.from(new Set([row.headshot, espn].filter((value): value is string => Boolean(value))))
     bio.set(String(row.gsis_id), {
+      name: row.display_name ?? undefined,
       headshot: headshotFallbacks[0] ?? null,
       headshotFallbacks,
       jersey: row.jersey_number ?? null,

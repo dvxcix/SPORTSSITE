@@ -102,6 +102,7 @@ export type SidelinePlayer = {
   targetShare: number
   carryShare: number
   airYards: number
+  totalAirYards?: number
   airYardsShare: number
   separation: number
   yacAboveExpected: number
@@ -111,6 +112,10 @@ export type SidelinePlayer = {
   cpoe: number
   timeToThrow: number
   redZoneLooks: number
+  redZoneTargets?: number
+  redZoneCarries?: number
+  redZoneTargetShare?: number
+  redZoneCarryShare?: number
   goalLineLooks: number
   explosivePlays: number
   /** Opponent DvP percentage differences keyed by canonical stat category. */

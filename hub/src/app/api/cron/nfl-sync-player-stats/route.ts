@@ -5,6 +5,7 @@ import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflPlayerStats } from '@/lib/nflverseSync'
+import { currentNflSeason, refreshNflProduction } from '@/lib/nflProduction'
 
 export const revalidate = 0
 export const maxDuration = 120
@@ -15,9 +16,15 @@ async function run(req: Request) {
 
   const admin = createAdminClient()
   try {
+    // Rebuild current production FIRST, even when the legacy combined asset
+    // is stale or unavailable. Provider history cannot gate current coverage.
+    const coverage = await refreshNflProduction(admin, currentNflSeason())
+    revalidateTag('sideline:nfl-data', { expire: 0 })
     const count = await syncNflPlayerStats(admin)
-    revalidateTag('sideline:nfl-data', 'max')
-    return NextResponse.json({ synced: count })
+    if (coverage.missingGames.length) {
+      return NextResponse.json({ reason: 'Completed games lack complete play data', coverage }, { status: 503 })
+    }
+    return NextResponse.json({ synced: count, coverage })
   } catch (e: any) {
     console.error('[nfl-sync-player-stats] failed', { type: e instanceof Error ? e.name : typeof e })
     return safeApiError('nfl-sync-player-stats', e)

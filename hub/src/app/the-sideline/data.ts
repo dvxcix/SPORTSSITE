@@ -247,7 +247,7 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
 
 export const getCachedSidelineBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),
-  ['sideline-board-lens-v9-contextual-dvp'],
+  ['sideline-board-lens-v10-pbp-production'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 

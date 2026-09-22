@@ -727,7 +727,7 @@ function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | nul
 
 function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedKeys, onToggleSaved }: { markets: MarketSpec[]; pickMarkets: PublicPickSpec[]; books: BookSpec[]; board: SidelineOddsBoard; game: SidelineGame; savedKeys: Set<string>; onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void }) {
   return useMemo<ColumnDefinition[]>(() => {
-    const metric = (id: string, label: string, title: string, group: ColumnGroup, width: number, get: (row: PlayerRow) => number, suffix = '', decimals = 0): ColumnDefinition => ({
+    const metric = (id: string, label: string, title: string, group: ColumnGroup, width: number, get: (row: PlayerRow) => number | null, suffix = '', decimals = 0): ColumnDefinition => ({
       id,
       label,
       title,
@@ -737,8 +737,8 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       roleHeat: !['index', 'volume', 'geometry', 'redZone', 'breakaway'].includes(id),
       value: row => (row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null),
       render: row =>
-        row.hasTracking && !row.unavailableMetrics?.includes(id) ? (
-          <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b>
+        row.hasTracking && !row.unavailableMetrics?.includes(id) && get(row) != null ? (
+          <b className={id === 'index' ? scoreTone(get(row)!) : undefined}>{metricDisplay(get(row)!, suffix, decimals)}</b>
         ) : (
           <span className={styles.empty} aria-label="Not available in this statistical sample">
             -
@@ -928,6 +928,10 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       metric('carries', 'CAR', 'Carries in selected window', 'usage', 68, row => row.carries),
       metric('carryShare', 'CAR%', 'Share of team carries', 'usage', 74, row => row.carryShare, '%', 1),
       metric('redZoneLooks', 'RZ LOOK', 'Red-zone opportunities', 'usage', 80, row => row.redZoneLooks),
+      metric('redZoneTargets', 'RZ TGT', 'Targets inside the opponent 20; excludes nullified plays and conversions', 'usage', 78, row => row.redZoneTargets ?? null),
+      metric('redZoneTargetShare', 'RZ TGT%', 'Share of team red-zone targets in the selected window', 'usage', 84, row => row.redZoneTargetShare ?? null, '%', 1),
+      metric('redZoneCarries', 'RZ CAR', 'Carries inside the opponent 20', 'usage', 78, row => row.redZoneCarries ?? null),
+      metric('redZoneCarryShare', 'RZ CAR%', 'Share of team red-zone carries in the selected window', 'usage', 84, row => row.redZoneCarryShare ?? null, '%', 1),
       metric('goalLineLooks', 'GL LOOK', 'Opportunities inside the five', 'usage', 80, row => row.goalLineLooks),
       metric('receivingYards', 'REC YDS', 'Receiving yards in selected window', 'usage', 84, row => row.receivingYards),
       metric('rushingYards', 'RUSH YDS', 'Rushing yards in selected window', 'usage', 88, row => row.rushingYards),
@@ -935,6 +939,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       metric('passingTouchdowns', 'PASS TD', 'Passing touchdowns in selected window', 'usage', 82, row => row.passingTouchdowns),
       metric('touchdowns', 'TD', 'Rushing and receiving touchdowns scored', 'usage', 64, row => row.touchdowns),
       metric('airYards', 'aDOT', 'Average intended air yards', 'tracking', 72, row => row.airYards, '', 1),
+      metric('totalAirYards', 'AIR YDS', 'Total receiving air yards from all targets in the selected window, including negative air yards', 'tracking', 84, row => row.totalAirYards ?? null),
       metric('airYardsShare', 'AIR%', 'Share of intended team air yards', 'tracking', 74, row => row.airYardsShare, '%', 1),
       metric('separation', 'SEP', 'Average route separation', 'tracking', 70, row => row.separation, '', 1),
       metric('yacAboveExpected', 'YACOE', 'Yards after catch above expectation', 'tracking', 76, row => row.yacAboveExpected, '', 1),
@@ -1826,7 +1831,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
     const matchupTeams = new Set([selected.away.abbr, selected.home.abbr].map(normalizedTeam))
     const marketPlayers = board.players.filter(player => matchupTeams.has(normalizedTeam(player.team)))
     const trackingById = new Map(windowData.players.map(player => [player.id, player]))
-    const trackingByName = new Map(windowData.players.map(player => [normalizedName(player.name), player]))
+    const trackingByName = new Map(windowData.players.map(player => [`${normalizedTeam(player.team)}:${normalizedName(player.name)}`, player]))
     const teamProfiles = new Map(windowData.teams.map(profile => [normalizedTeam(profile.team.abbr), profile]))
     const profileFor = (team: string) => teamProfiles.get(normalizedTeam(team)) ?? null
     const opponentFor = (team: string) => profileFor(normalizedTeam(team) === normalizedTeam(selected.away.abbr) ? selected.home.abbr : selected.away.abbr)
@@ -1835,7 +1840,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
       // The posted game board owns row membership. Historical samples enrich
       // those players, but must never pull a former player into a current team.
       for (const market of marketPlayers) {
-        const tracked = (market.gsisId ? trackingById.get(market.gsisId) : null) ?? trackingByName.get(normalizedName(market.name)) ?? null
+        const tracked = (market.gsisId ? trackingById.get(market.gsisId) : null) ?? trackingByName.get(`${normalizedTeam(market.team)}:${normalizedName(market.name)}`) ?? null
         const base = tracked ?? buildEmptyPlayer(market)
         const identified = mergePlayerIdentity(base, market)
         const id = market.gsisId ?? base.id
@@ -1931,6 +1936,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           return values[factor.field] ?? null
         }
         if (!windowPlayer) return null
+        if (windowPlayer.unavailableMetrics?.includes(factor.field)) return null
         const values: Record<string, number> = {
           index: windowPlayer.index,
           volume: windowPlayer.volume,

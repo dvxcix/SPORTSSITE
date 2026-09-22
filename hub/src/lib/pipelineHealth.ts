@@ -5,12 +5,13 @@ import { safeErrorMetadata } from '@/lib/safeApiError'
 
 type RouteHandler = (request: Request) => Promise<Response>
 
-async function responseMetadata(response: Response) {
-  if (response.ok) return { error: null, details: {} }
+async function responseMetadata(response: Response, jobName: string) {
+  if (response.ok && !jobName.startsWith('nfl-sync-')) return { error: null, details: {} }
   try {
     const body = await response.clone().json() as Record<string, unknown>
+    if (response.ok) return { error: null, details: Object.fromEntries(['synced', 'season', 'coverage'].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
     const reason = typeof body.reason === 'string' ? body.reason : `HTTP ${response.status}`
-    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results']
+    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage']
       .filter(key => body[key] !== undefined)
       .map(key => [key, body[key]]))
     return { error: reason.slice(0, 2000), details }
@@ -55,7 +56,7 @@ export function withPipelineHealth(jobName: string, handler: RouteHandler, optio
     try {
       const response = await handler(request)
       if (!startError) {
-        const responseInfo = await responseMetadata(response)
+        const responseInfo = await responseMetadata(response, jobName)
         const status = response.status === 425 ? 'deferred' : response.ok ? 'succeeded' : 'failed'
         const { error } = await admin.from('pipeline_runs').update({
           status,
