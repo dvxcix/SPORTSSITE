@@ -14,7 +14,7 @@ const RELEASE_BASE = 'https://github.com/nflverse/nflverse-data/releases/downloa
 // (e.g. team_logo_wikipedia URLs, player college names with commas). Kept as
 // its own copy rather than importing savantSync.ts's version so this file
 // has no dependency on baseball-specific code.
-function parseCsv(text: string): Record<string, string>[] {
+export function parseCsv(text: string): Record<string, string>[] {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.length > 0)
   if (!lines.length) return []
   const parseLine = (line: string): string[] => {
@@ -48,7 +48,7 @@ function parseCsv(text: string): Record<string, string>[] {
 async function fetchNflverseCsv(url: string): Promise<Record<string, string>[]> {
   const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) })
   const text = await res.text()
-  if (!res.ok) throw new Error(`nflverse CSV request failed (${res.status})`)
+  if (!res.ok) throw new NflverseAssetError(`nflverse CSV request failed (${res.status})`, res.status, url)
   return parseCsv(text)
 }
 
@@ -243,18 +243,23 @@ export async function syncNflSchedule(admin: ReturnType<typeof createAdminClient
   return upsertChunked(admin, 'nfl_schedule', mapped, 'game_id')
 }
 
-// player_stats.csv is the combined all-seasons box-score file (~134k rows,
-// one row per player per week) — nflverse's own aggregation of raw PBP
-// into passing/rushing/receiving/fantasy totals, exactly the "season stat
-// line + per-game log" a player page needs, with no PBP aggregation work
-// of our own required. Real gap, confirmed live (2026-07-28): this combined
-// file currently only goes through the 2024 season — nflverse hasn't
-// published a 2025 file under this release yet (unlike nextgen_stats below,
-// which IS current through the 2025 postseason) — but the sync re-fetches
-// the same URL every run, so whenever nflverse catches up, the very next
-// cron run picks up 2025+ with no code change needed here.
+// Legacy combined files do not cover current seasons. Modern weekly files
+// use renamed team/interception/sack columns; normalize those explicitly.
+export function normalizeWeeklyStats(r: Record<string, string>): Record<string, string> {
+  return { ...r, recent_team: r.team ?? r.recent_team,
+    interceptions: r.passing_interceptions ?? r.interceptions,
+    sacks: r.sacks_suffered ?? r.sacks, sack_yards: r.sack_yards_lost ?? r.sack_yards }
+}
+
 export async function syncNflPlayerStats(admin: ReturnType<typeof createAdminClient>, sinceSeason?: number): Promise<number> {
-  const rows = await fetchNflverseCsv(`${RELEASE_BASE}/player_stats/player_stats.csv`)
+  // Current weekly files moved to stats_player. Never wait for the legacy
+  // combined file to acquire a new season. Explicit historical calls retain it.
+  const now = new Date()
+  const season = sinceSeason ?? (now.getUTCMonth() < 2 ? now.getUTCFullYear() - 1 : now.getUTCFullYear())
+  const modern = season >= 2025
+  const rows = (await fetchNflverseCsv(modern
+    ? `${RELEASE_BASE}/stats_player/stats_player_week_${season}.csv`
+    : `${RELEASE_BASE}/player_stats/player_stats.csv`)).map(normalizeWeeklyStats)
   const mapped = rows
     .filter(r => sinceSeason == null || Number(r.season) >= sinceSeason)
     .map(r => ({
@@ -286,6 +291,8 @@ export async function syncNflPlayerStats(admin: ReturnType<typeof createAdminCli
       target_share: n(r.target_share), air_yards_share: n(r.air_yards_share), wopr: n(r.wopr),
       special_teams_tds: n(r.special_teams_tds), fantasy_points: n(r.fantasy_points), fantasy_points_ppr: n(r.fantasy_points_ppr),
       data_source: 'nflverse',
+      ...(modern ? { game_id: s(r.game_id) } : {}),
+      raw: r,
       updated_at: new Date().toISOString(),
     }))
     .filter(r => r.player_id && r.season != null && r.week != null && r.season_type)

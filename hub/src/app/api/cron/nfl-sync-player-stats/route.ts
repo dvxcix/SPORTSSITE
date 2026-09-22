@@ -16,11 +16,10 @@ async function run(req: Request) {
 
   const admin = createAdminClient()
   try {
-    // Rebuild current production FIRST, even when the legacy combined asset
-    // is stale or unavailable. Provider history cannot gate current coverage.
+    // Rebuild current production FIRST; the modern weekly provider then enriches it.
     const coverage = await refreshNflProduction(admin, currentNflSeason())
-    revalidateTag('sideline:nfl-data', { expire: 0 })
     const count = await syncNflPlayerStats(admin)
+    revalidateTag('sideline:nfl-data', { expire: 0 })
     if (coverage.missingGames.length) {
       return NextResponse.json({ reason: 'Completed games lack complete play data', coverage }, { status: 503 })
     }

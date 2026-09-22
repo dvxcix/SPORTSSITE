@@ -158,7 +158,7 @@
     },
     {
       "path": "/api/cron/nfl-sync-player-stats",
-      "schedule": "55 10,16 * * *"
+      "schedule": "15 * * * *"
     },
     {
       "path": "/api/cron/nfl-sync-ngs",
@@ -167,6 +167,14 @@
     {
       "path": "/api/cron/nfl-sync-pbp",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/nfl-sync-game-events",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/nfl-sync-advanced",
+      "schedule": "20 */3 * * *"
     },
     {
       "path": "/api/cron/nfl-compute-dvp",

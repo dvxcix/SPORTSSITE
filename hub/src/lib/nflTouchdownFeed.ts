@@ -3,6 +3,7 @@ import { bdlHeaders } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import { fetchAllBdl } from '@/lib/nflGameFeeds'
 
 export type NflTouchdownMarketQuote = {
   propType: string
@@ -58,18 +59,7 @@ export function isNflTouchdownPlay(play: Pick<BdlPlay, 'scoring_play' | 'type_sl
   return Boolean(play.scoring_play) && /touchdown/i.test(`${play.type_slug ?? ''} ${play.type_text ?? ''} ${play.short_text ?? ''} ${play.text ?? ''}`)
 }
 async function getBdlPlays(gameId: number) {
-  const plays: BdlPlay[] = []
-  let cursor: string | null = null
-  for (let page = 0; page < 3; page += 1) {
-    const suffix = cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
-    const response = await fetch(`https://api.balldontlie.io/nfl/v1/plays?game_id=${gameId}&per_page=100${suffix}`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12_000) })
-    if (!response.ok) throw new Error(`BDL NFL plays ${gameId} returned ${response.status}`)
-    const payload = await response.json() as { data?: BdlPlay[]; meta?: { next_cursor?: string | number | null } }
-    plays.push(...(payload.data ?? []))
-    if (payload.meta?.next_cursor == null) break
-    cursor = String(payload.meta.next_cursor)
-  }
-  return plays
+  return fetchAllBdl<BdlPlay>(`plays?game_id=${gameId}&per_page=100`)
 }
 async function getBdlGames(season: number, week: number) {
   const response = await fetch(`https://api.balldontlie.io/nfl/v1/games?seasons[]=${season}&weeks[]=${week}&per_page=100`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12_000) })
@@ -117,18 +107,32 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
   if (scheduleError) throw scheduleError
   const rows = (schedule ?? []) as ScheduleRow[]
   if (!rows.length) return []
+  const {data:savedFeeds,error:feedError}=await admin.from('nfl_game_feeds')
+    .select('game_id,payload,fetched_at,reconciled').eq('source','bdl_plays')
+    .in('game_id',rows.map(r=>r.game_id)).abortSignal(AbortSignal.timeout(10000))
+  if(feedError) console.error('[nfl-touchdowns] stored feed unavailable',{code:feedError.code})
+  const saved=new Map((savedFeeds ?? []).map(r=>[r.game_id,{
+    ...r,payload:r.payload as {game:ApiGame;plays:BdlPlay[]},
+  }]))
   const teamLogos = new Map((teams ?? []).map(row => [canonicalTeam(String(row.team_abbr)), row.team_logo_espn as string | null]))
   const teamColors = new Map((teams ?? []).map(row => [canonicalTeam(String(row.team_abbr)), row.team_color as string | null]))
   const pools = new Map<string, ApiGame[]>()
   await Promise.all(Array.from(new Set(rows.map(row => `${row.season}:${row.week}`))).map(async key => {
     const [season, week] = key.split(':').map(Number)
+    const weekRows=rows.filter(r=>r.season===season&&r.week===week)
+    if(weekRows.every(r=>saved.get(r.game_id)?.reconciled)) {
+      pools.set(key,weekRows.map(r=>saved.get(r.game_id)!.payload.game))
+      return
+    }
     try { pools.set(key, await getBdlGames(season, week)) }
     catch (error) { console.error('[nfl-touchdowns] BDL games failed', { date, season, week, error: error instanceof Error ? error.message : String(error) }); pools.set(key, []) }
   }))
-  const matched = rows.map(row => ({ row, game: matchGame(pools.get(`${row.season}:${row.week}`) ?? [], row) }))
+  const matched = rows.map(row => ({ row, game: matchGame(pools.get(`${row.season}:${row.week}`) ?? [], row) ?? saved.get(row.game_id)?.payload.game }))
     .filter((value): value is { row: ScheduleRow; game: ApiGame } => Boolean(value.game))
     .filter(({ game }) => game.status_state === 'in_progress' || game.status_state === 'final')
   const playResults = await Promise.all(matched.map(async value => {
+    const stored=saved.get(value.row.game_id)
+    if(stored?.reconciled || (stored && Date.now()-Date.parse(stored.fetched_at)<60000)) return {...value,plays:stored.payload.plays}
     try { return { ...value, plays: await getBdlPlays(value.game.id) } }
     catch (error) { console.error('[nfl-touchdowns] BDL plays failed', { date, gameId: value.game.id, error: error instanceof Error ? error.message : String(error) }); return { ...value, plays: [] as BdlPlay[] } }
   }))
