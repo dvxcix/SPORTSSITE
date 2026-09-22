@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useNflAccess } from '@/lib/useNflAccess'
+import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ChevronLeft, ChevronRight, Crown, Settings2 } from 'lucide-react'
@@ -12,6 +14,7 @@ import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeM
 
 export function DesktopNavigation() {
   const pathname = usePathname()
+  const { allowed: nflAccess } = useNflAccess()
   const { profile, loading } = useAuth()
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
@@ -20,7 +23,7 @@ export function DesktopNavigation() {
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
-  const items = context.items.filter(item => !item.ultimateOnly || hasUltimate)
+  const items = context.items.filter(item => (!item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess))
   const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
   const accessLabel = !profile
     ? (loading ? 'Checking access…' : 'Refresh account')

@@ -1,11 +1,11 @@
 import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireTier } from '@/lib/requireTier'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(req: Request) {
-  const gate = await requireTier('ultimate')
+  const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const body = await req.json().catch(() => null) as { element_code?: string } | null
   const code = body?.element_code?.trim().toUpperCase()

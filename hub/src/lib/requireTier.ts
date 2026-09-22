@@ -17,7 +17,7 @@ import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '
 // every downstream `.from(...)` query on the returned client is evaluated
 // under RLS as that real user, not the anon role — identical behavior to
 // the cookie-session path, just a different transport for the same JWT.
-async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient; userId: string | null }> {
+export async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient; userId: string | null }> {
   const bearer = (await headers()).get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
   if (bearer) {
     const supabase = createSupabaseClient(

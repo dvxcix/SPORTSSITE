@@ -15,6 +15,7 @@ import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { useAuth } from '@/context/AuthContext'
+import { useNflAccess } from '@/lib/useNflAccess'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
@@ -32,9 +33,9 @@ const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
-  flagKey?: string; badge?: string; badgeColor?: string; ultimateOnly?: boolean; adminOnly?: boolean
+  flagKey?: string; badge?: string; badgeColor?: string; ultimateOnly?: boolean; nflOnly?: boolean
 }
-type NavItem = NavLink | { section: string; logo?: string; adminOnly?: boolean } | null
+type NavItem = NavLink | { section: string; logo?: string; nflOnly?: boolean } | null
 
 const nav: NavItem[] = [
   { section: 'Community' },
@@ -61,12 +62,12 @@ const nav: NavItem[] = [
   { href: '/spray-charts', icon: Crosshair,     label: 'Spray Charts', ultimateOnly: true },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public' },
   null,
-  { section: 'NFL Research', logo: NFL_LOGO_URL, adminOnly: true },
-  { href: '/the-sideline', icon: Trophy, label: 'The Sideline', adminOnly: true },
-  { href: '/the-sideline?mode=cheatsheets', icon: Table2, label: 'Cheatsheets', adminOnly: true },
-  { href: '/the-sideline?mode=public', icon: Megaphone, label: 'The Public', adminOnly: true },
-  { href: '/the-sideline?mode=markets', icon: ChartSpline, label: 'Sportsbooks', adminOnly: true },
-  { href: '/the-sideline?mode=research', icon: Crosshair, label: 'Matchup Lab', adminOnly: true },
+  { section: 'NFL Research', logo: NFL_LOGO_URL, nflOnly: true },
+  { href: '/the-sideline', icon: Trophy, label: 'The Sideline', nflOnly: true },
+  { href: '/the-sideline?mode=cheatsheets', icon: Table2, label: 'Cheatsheets', nflOnly: true },
+  { href: '/the-sideline?mode=public', icon: Megaphone, label: 'The Public', nflOnly: true },
+  { href: '/the-sideline?mode=markets', icon: ChartSpline, label: 'Sportsbooks', nflOnly: true },
+  { href: '/the-sideline?mode=research', icon: Crosshair, label: 'Matchup Lab', nflOnly: true },
   null,
   { section: 'Connect' },
   { href: '/community',   icon: Users,         label: 'Community' },
@@ -89,6 +90,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const path = usePathname()
   const [sidelineMode, setSidelineMode] = useState('')
   const { profile } = useAuth()
+  const { allowed: nflAccess } = useNflAccess()
   const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
   // The persisted collapse preference is desktop/tablet-only — if it's on
   // and the user then opens the mobile drawer (e.g. after resizing down),
@@ -150,7 +152,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
   const visibleNav = nav.filter(item => {
     if (!item) return true
-    if (item.adminOnly && profile?.account_type !== 'admin') return false
+    if (item.nflOnly && !nflAccess) return false
     if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
     return !item.flagKey || flags[item.flagKey] !== false

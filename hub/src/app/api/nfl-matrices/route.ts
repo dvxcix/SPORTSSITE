@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireTier } from '@/lib/requireTier'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { safeApiError } from '@/lib/safeApiError'
 import { validateNflMatrixDefinition } from '@/lib/nflMatrix'
 
@@ -12,7 +12,7 @@ function elementCode() {
 }
 
 export async function GET() {
-  const gate = await requireTier('ultimate')
+  const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const admin = createAdminClient()
   const { data, error } = await admin.from('nfl_matrices')
@@ -23,7 +23,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const gate = await requireTier('ultimate')
+  const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 80) : ''

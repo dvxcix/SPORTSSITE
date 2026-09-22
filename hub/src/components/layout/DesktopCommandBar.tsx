@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useNflAccess } from '@/lib/useNflAccess'
+import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ArrowLeft, Search, Wifi, WifiOff } from 'lucide-react'
@@ -8,11 +10,12 @@ import { getContextNavigation, routeMatches } from './navigationConfig'
 
 export function DesktopCommandBar() {
   const pathname = usePathname()
+  const { allowed: nflAccess } = useNflAccess()
   const router = useRouter()
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const context = getContextNavigation(pathname)
   const ContextIcon = context.meta.icon
-  const shortcuts = context.items.filter(item => !item.ultimateOnly).slice(0, 5)
+  const shortcuts = context.items.filter(item => !item.ultimateOnly && (!isNflToolHref(item.href) || nflAccess)).slice(0, 5)
 
   useEffect(() => {
     const markOnline = () => setOnline(true)

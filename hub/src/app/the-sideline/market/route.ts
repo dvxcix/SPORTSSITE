@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { packSidelineBoard } from '@/lib/sidelineWire'
-import { createClient } from '@/lib/supabase/server'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 
@@ -8,11 +8,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Sign in required' }, { status: 401 })
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (profile?.account_type !== 'admin') return NextResponse.json({ error: 'Admin preview only' }, { status: 403 })
+  const gate = await requireNflAccess()
+  if (gate.error) return gate.error
   const params = new URL(request.url).searchParams
   const id = params.get('game') ?? ''
   if (!/^[\w-]{1,64}$/.test(id)) return NextResponse.json({ error: 'Invalid game' }, { status: 400 })

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireTier } from '@/lib/requireTier'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { safeApiError } from '@/lib/safeApiError'
 import { validateNflMatrixDefinition } from '@/lib/nflMatrix'
 
 export const revalidate = 0
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const gate = await requireTier('ultimate')
+  const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const { id } = await params
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
@@ -35,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const gate = await requireTier('ultimate')
+  const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const { id } = await params
   const admin = createAdminClient()

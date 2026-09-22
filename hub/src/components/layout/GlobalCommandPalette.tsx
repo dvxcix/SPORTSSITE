@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNflAccess } from '@/lib/useNflAccess'
+import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { ChevronRight, Search, ShieldCheck, UserRound, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { areaNavigation, productAreaMeta, type ProductArea } from './navigationConfig'
@@ -42,6 +44,7 @@ type NflResults = { players?: Array<{ gsis_id: string; display_name: string; pos
 
 export function GlobalCommandPalette() {
   const router = useRouter()
+  const { allowed: nflAccess } = useNflAccess()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [sports, setSports] = useState<CommandItem[]>([])
@@ -72,7 +75,11 @@ export function GlobalCommandPalette() {
     }, 180)
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [query])
-  const local = useMemo(() => { const value = query.trim().toLowerCase(); return value ? destinations.filter(item => `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)) : destinations }, [query])
+  const local = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    return destinations.filter(item => (!isNflToolHref(item.href) || nflAccess)
+      && (!value || `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)))
+  }, [query, nflAccess])
   const items = useMemo(() => [...local, ...sports], [local, sports])
   function close() { setOpen(false); setQuery(''); setSports([]) }
   function navigate(href: string) { close(); router.push(href) }

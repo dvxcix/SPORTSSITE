@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { renderNflTouchdownReplayGif } from '@/lib/nflTouchdownReplayGif'
 
@@ -8,11 +8,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Sign in required' }, { status: 401 })
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (profile?.account_type !== 'admin') return NextResponse.json({ error: 'Admin preview only' }, { status: 403 })
+  const gate = await requireNflAccess()
+  if (gate.error) return gate.error
   const params = new URL(request.url).searchParams
   const date = params.get('date') ?? ''
   const eventId = params.get('event') ?? ''

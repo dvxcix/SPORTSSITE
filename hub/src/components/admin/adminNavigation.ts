@@ -63,6 +63,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     description: 'Members, content, and moderation',
     links: [
       { href: '/admin/users', label: 'Members', description: 'Accounts, access, and membership tiers', icon: Users, keywords: ['users', 'accounts'] },
+      { href: '/admin/nfl-access', label: 'NFL early access', description: 'Grant or revoke NFL-only beta access', icon: FlaskConical, keywords: ['testers', 'beta', 'sideline', 'permissions'] },
       { href: '/admin/users/online', label: 'Online now', description: 'Current member activity', icon: Gauge, keywords: ['presence', 'active'] },
       { href: '/admin/users/banned', label: 'Restricted accounts', description: 'Bans and enforcement', icon: Flag, keywords: ['banned', 'moderation'] },
       { href: '/admin/users/deletions', label: 'Deletion requests', description: 'Privacy and account removal queue', icon: Users, keywords: ['privacy', 'gdpr', 'delete'] },

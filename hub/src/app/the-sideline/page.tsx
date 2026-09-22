@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
 import { defaultNflSample, parseNflSample } from '@/lib/nflSample'
-import { createClient } from '@/lib/supabase/server'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { SidelineBoardClient } from './SidelineBoardClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
@@ -25,11 +25,8 @@ export const metadata: Metadata = {
 export default async function SidelinePage({ searchParams }: {
   searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[] }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) notFound()
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (profile?.account_type !== 'admin') notFound()
+  const gate = await requireNflAccess()
+  if (gate.error) notFound()
 
   const params = await searchParams
   const requestedSample = Array.isArray(params.sample) ? params.sample[0] : params.sample

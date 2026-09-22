@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireNflAccess } from '@/lib/nflAccess'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
@@ -66,11 +66,8 @@ function marketExpectation(market: NflSlateEdgeMarket, propType: NflSlateEdgeMar
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (profile?.account_type !== 'admin') return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const gate = await requireNflAccess()
+  if (gate.error) return gate.error
 
   const requestedDate = request.nextUrl.searchParams.get('date') ?? undefined
   const requestedSample = request.nextUrl.searchParams.get('sample')
