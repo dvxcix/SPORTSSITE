@@ -7,6 +7,8 @@ import { ladderOffers, ladderPrice, estimateLadderPicks, observedPropPicks, cont
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import styles from './ladderBoard.module.css'
+import { buildBoardHeat } from './boardHeat'
+import { compareLadderValues, ladderHeatBackground, type LadderSort, type LadderSortKey } from './ladderPresentation'
 const price = (n: number | null) => (n == null ? '—' : n > 0 ? '+' + n : String(n))
 type ContextScore = { score: number; mm: number | null; label: string }
 export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore> }) {
@@ -15,7 +17,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
   const [offset, setOffset] = useState(0),
     [mode, setMode] = useState<'odds' | 'move' | 'ratio' | 'picks'>('odds')
-  const [sortLine, setSortLine] = useState<number | null>(null)
+  const [sort, setSort] = useState<LadderSort>({ key: 'player', direction: 'asc' })
   const props = useMemo(() => Array.from(new Set(board.players.flatMap(p => p.markets.map(m => m.propType)))).sort(), [board])
   const books = useMemo(() => Array.from(new Set(board.players.flatMap(p => p.markets.flatMap(m => m.offers.map(o => o.vendor))))).sort(), [board])
   const rows = useMemo(
@@ -53,7 +55,30 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
       return [line, { min: Math.min(...v), max: Math.max(...v) }]
     }),
   )
-  const ordered = [...rows].sort((a, b) => (sortLine == null ? a.player.team.localeCompare(b.player.team) || a.player.name.localeCompare(b.player.name) : (entryValue(b, sortLine) ?? -Infinity) - (entryValue(a, sortLine) ?? -Infinity)))
+  const activeSort: LadderSort = typeof sort.key === 'number' && !visible.includes(sort.key) ? { key: 'player', direction: 'asc' } : sort
+  const sortValue = (row: (typeof rows)[number]) => {
+    if (typeof activeSort.key === 'number') return entryValue(row, activeSort.key)
+    if (activeSort.key === 'player') return row.player.name
+    if (activeSort.key === 'picks') return observedPropPicks(row.player, prop)
+    return scores.get(row.player.id)?.[activeSort.key] ?? null
+  }
+  const ordered = [...rows].sort((a, b) => compareLadderValues(sortValue(a), sortValue(b), activeSort.direction) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id)
+  const metricHeat = buildBoardHeat(
+    [
+      { id: 'score', heat: 'high' as const, value: (row: { score: number | null }) => row.score },
+      { id: 'mm', heat: 'high' as const, value: (row: { mm: number | null }) => row.mm },
+      { id: 'picks', heat: 'high' as const, value: (row: { picks: number | null }) => row.picks },
+    ],
+    rows.map(row => ({ id: String(row.player.id), position: row.player.position, score: scores.get(row.player.id)?.score ?? null, mm: scores.get(row.player.id)?.mm ?? null, picks: observedPropPicks(row.player, prop) })),
+  )
+  const changeSort = (key: LadderSortKey) => setSort({ key, direction: activeSort.key === key ? activeSort.direction === 'asc' ? 'desc' : 'asc' : key === 'player' ? 'asc' : 'desc' })
+  const sortHeader = (key: LadderSortKey, label: string, title?: string) => (
+    <th key={key} scope="col" aria-sort={activeSort.key === key ? activeSort.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
+      <button type="button" className={styles.sortButton} onClick={() => changeSort(key)} title={title}>
+        {label}<span aria-hidden="true">{activeSort.key === key ? activeSort.direction === 'asc' ? '↑' : '↓' : '↕'}</span>
+      </button>
+    </th>
+  )
   return (
     <section className={styles.panel} aria-label="NFL full market ladders">
       <header>
@@ -81,7 +106,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
             onChange={e => {
               onProp(e.target.value)
               setOffset(0)
-              setSortLine(null)
+              setSort({ key: 'player', direction: 'asc' })
             }}
           >
             {props.map(p => (
@@ -98,7 +123,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
             onChange={e => {
               setVendor(e.target.value)
               setOffset(0)
-              setSortLine(null)
+              setSort({ key: 'player', direction: 'asc' })
             }}
           >
             {books.map(b => (
@@ -126,6 +151,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
             onChange={e => {
               setKind(e.target.value as typeof kind)
               setOffset(0)
+              setSort({ key: 'player', direction: 'asc' })
               if (e.target.value === 'milestone') setSide('over')
             }}
           >
@@ -156,22 +182,17 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
         </span>
         <span>Estimated pick distribution</span>
         <span>{mode} heat</span>
+        <span>Score / MM: relative to displayed players · tap headers to sort</span>
       </div>
       <div className={styles.scroll}>
         <table>
           <thead>
             <tr>
-              <th>Player / observed prop picks</th>
-              <th>Score</th>
-              <th>MM</th>
-              {visible.map(line => (
-                <th key={line}>
-                  <button onClick={() => setSortLine(line)}>
-                    {line}
-                    {kind === 'milestone' ? '+' : ''} {sortLine === line ? '↓' : ''}
-                  </button>
-                </th>
-              ))}
+              {sortHeader('player', 'Player')}
+              {sortHeader('score', 'Score', 'Contextual score for this market')}
+              {sortHeader('mm', 'MM', 'Market vs model rank')}
+              {sortHeader('picks', 'Picks', 'Observed picks for this prop; not estimated ladder allocations')}
+              {visible.map(line => sortHeader(line, String(line) + (kind === 'milestone' ? '+' : ''), mode === 'odds' ? 'Sort by implied probability: down = shortest odds first' : 'Sort by displayed ' + mode))}
             </tr>
           </thead>
           <tbody>
@@ -183,18 +204,22 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
                     <span>
                       <b>{row.player.name}</b>
                       <small>
-                        {row.player.team} · {row.player.position} · {observedPropPicks(row.player, prop)?.toLocaleString() ?? '—'} picks
+                        {row.player.team} · {row.player.position}
                       </small>
                     </span>
                   </button>
                 </td>
-                <td>
+                <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:score`))}>
                   <b>{scores.get(row.player.id)?.score ?? '—'}</b>
                   <small>{scores.get(row.player.id)?.label ?? prop.replaceAll('_', ' ')}</small>
                 </td>
-                <td>
+                <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:mm`))}>
                   <b>{scores.get(row.player.id)?.mm == null ? '—' : `${(scores.get(row.player.id)?.mm ?? 0) > 0 ? '+' : ''}${scores.get(row.player.id)?.mm}`}</b>
                   <small>Market vs model rank</small>
+                </td>
+                <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:picks`))}>
+                  <b>{observedPropPicks(row.player, prop)?.toLocaleString() ?? '—'}</b>
+                  <small>Observed prop picks</small>
                 </td>
                 {visible.map(line => {
                   const e = row.entries.find(e => e.line === line)
@@ -209,13 +234,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
                   return (
                     <td
                       key={line}
-                      style={
-                        strength == null
-                          ? undefined
-                          : {
-                              background: 'rgba(' + (strength >= 0.5 ? '80,220,142' : '245,91,113') + ',' + (0.04 + Math.abs(strength - 0.5) * 0.36) + ')',
-                            }
-                      }
+                      style={ladderHeatBackground(strength)}
                     >
                       <b>{mode === 'odds' ? price(now) : v == null ? '—' : mode === 'picks' ? (exact == null ? 'Est. ' : '') + v.toLocaleString() : v.toFixed(2)}</b>
                       <small>{mode === 'odds' ? 'OPEN ' + price(open) : 'ODDS ' + price(now)}</small>

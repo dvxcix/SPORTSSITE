@@ -22,6 +22,18 @@ const players = names.map((name, i) => ({
   })),
 }))
 const odds = { bdlGameId: 1, status: 'ready', capturedAt: times[2], source: 'snapshot', gameLines: [], players }
+const ladderOdds = { ...odds, players: players.slice(0, 5).map((player, i) => ({
+  ...player,
+  publicPicks: i === 4 ? [] : [{ propType: 'receiving_yards', label: 'Receiving yards', rawMarket: 'Receiving yards', picks: [10, 100, 0, 40][i], capturedAt: times[2] }],
+  markets: [...player.markets, ...[10, 20, 30, 40, 50, 60, 70].filter(line => !(i === 4 && line === 20)).flatMap(line => ['milestone', 'over_under'].map(type => ({
+    key: 'receiving_yards:' + type + ':' + line, propType: 'receiving_yards', label: 'Receiving yards', category: 'receiving', line,
+    offers: ['fanduel', 'draftkings'].map(vendor => ({
+      vendor, type, line, openingLine: line,
+      current: type === 'milestone' ? { odds: 100 + i * 100 + line } : { over: 100 + i * 100 + line, under: -100 - i * 50 },
+      opening: type === 'milestone' ? { odds: 150 + i * 50 + line } : { over: 150 + i * 50 + line, under: -120 - i * 30 }, updatedAt: times[2],
+    })),
+  })))],
+})) }
 const windowData = { plays: 0, weeks: [], teams: [], players: [] }
 const props = {
   games: [{ id: 'fixture', season: 2026, week: 3, gameType: 'REG', gameday: '2026-09-22', gametime: '13:00', stadium: 'Responsive test fixture', roof: 'Outdoors', surface: 'Grass', away: teams[0], home: teams[1] }],
@@ -38,7 +50,7 @@ const stubs: Record<string, string> = {
   '@/context/WatchlistContext': 'import {useState} from "react";export function useWatchlist(){const [items,set]=useState([]);return {items,add:async item=>set(old=>[...old,{...item,id:String(old.length+1),status:"pending"}]),remove:async id=>set(old=>old.filter(item=>item.id!==id))}}',
 }
 const bundled = await build({
-  stdin: { contents: 'import {createRoot} from "react-dom/client";import {SidelineBoardClient} from "./src/app/the-sideline/SidelineBoardClient";createRoot(document.getElementById("root")).render(<SidelineBoardClient {...window.fixtureProps}/>);', loader: 'tsx', resolveDir: process.cwd() },
+  stdin: { contents: 'import {useState} from "react";import {createRoot} from "react-dom/client";import {SidelineBoardClient} from "./src/app/the-sideline/SidelineBoardClient";import {LadderBoard} from "./src/app/the-sideline/LadderBoard";function Props(){const [prop,onProp]=useState("receiving_yards");return <LadderBoard board={window.ladderOdds} prop={prop} onProp={onProp} onPlayer={()=>{}} scores={new Map([[1,{score:80,mm:4,label:"Receiving"}],[2,{score:20,mm:-3,label:"Receiving"}],[3,{score:50,mm:0,label:"Receiving"}],[4,{score:50,mm:null,label:"Receiving"}]])}/>};createRoot(document.getElementById("root")).render(location.pathname==="/props"?<Props/>:<SidelineBoardClient {...window.fixtureProps}/>);', loader: 'tsx', resolveDir: process.cwd() },
   bundle: true, write: false, outdir: '.artifacts/sideline-fixture', platform: 'browser', format: 'iife', jsx: 'automatic',
   tsconfig: 'tsconfig.json', define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'fixture-boundaries', setup(build) {
@@ -59,7 +71,7 @@ createServer((req, res) => {
     const at = url.searchParams.get('at')
     res.end(JSON.stringify(at ? { frame: { capturedAt: at, board: { ...odds, capturedAt: at } } } : { odds, timeline: times, gameState: null, touchdowns: [] })); return
   }
-  if (url.pathname !== '/') {
+  if (url.pathname !== '/' && url.pathname !== '/props') {
     const publicRoot = resolve('public')
     const asset = resolve(publicRoot, '.' + url.pathname)
     if (asset.startsWith(publicRoot + sep) && existsSync(asset) && statSync(asset).isFile()) {
@@ -69,5 +81,5 @@ createServer((req, res) => {
     res.writeHead(204); res.end(); return
   }
   res.setHeader('content-type', 'text/html; charset=utf-8')
-  res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><header class="test-header">SlipSurge · LOCAL TEST DATA</header><main id="root"></main><nav class="ss-mobile-dock">Home · Research · Community · Picks</nav><script>window.fixtureProps=' + JSON.stringify(props) + '</script><script src="/app.js"></script></body></html>')
+  res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><header class="test-header">SlipSurge · LOCAL TEST DATA</header><main id="root"></main><nav class="ss-mobile-dock">Home · Research · Community · Picks</nav><script>window.fixtureProps=' + JSON.stringify(props) + ';window.ladderOdds=' + JSON.stringify(ladderOdds) + '</script><script src="/app.js"></script></body></html>')
 }).listen(4187, '127.0.0.1', () => console.log('Sideline fixture http://127.0.0.1:4187 (synthetic data only)'))
