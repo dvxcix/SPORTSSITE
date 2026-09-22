@@ -1061,6 +1061,11 @@
   .playerName b, .compactBoard .playerName b { font-size: 12px; }
   .boardTable td, .compactBoard .boardTable td { height: 78px; padding: 5px; }
 }
+/* Explicit two-axis native gestures, including swipes begun on sticky cells. */
+.tableScroller { overscroll-behavior-y: auto; touch-action: pan-x pan-y pinch-zoom; }
+@media (max-width: 1024px), (any-pointer: coarse) {
+  .tableScroller { height: auto; max-height: none; overflow-y: hidden; scrollbar-gutter: auto; }
+}
 
 /* Same breakpoint and safe-area clearance as the app's mobile navigation. */
 @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {

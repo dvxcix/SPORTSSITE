@@ -39,7 +39,7 @@
 .movement[data-state=shortened]{border-color:rgba(61,220,142,.3);background:rgba(21,83,57,.26);color:#55e59c}
 .movement[data-state=lengthened]{border-color:rgba(255,91,117,.3);background:rgba(105,30,46,.27);color:#ff7188}
 .movement[data-state=flat]{color:#8799a9}
-.tableWrap{background:linear-gradient(180deg,#0a1117,#070c11);overscroll-behavior:contain}
+.tableWrap{background:linear-gradient(180deg,#0a1117,#070c11);overscroll-behavior-x:contain;overscroll-behavior-y:auto;touch-action:pan-x pan-y pinch-zoom}
 .tableWrap tbody tr:nth-child(even) td{background-color:rgba(13,21,28,.55)}
 .tableWrap tbody tr:hover td{background-color:#14212b}
 .hitCell,.explosiveCell{min-width:74px}
@@ -52,3 +52,8 @@
 .metricToggle button:hover{color:#dfe8ed;background:#111b23}
 .metricToggle button[aria-pressed=true]{border-color:#64982d;background:#1b2b16;color:#baff55}
 .cardRank{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(3,8,12,.55);color:#92a7b7;font-size:8px;font-weight:950}
+/* One vertical page scroller on touch devices; tables retain horizontal panning. */
+@media (max-width: 1024px), (any-pointer: coarse) {
+  .tableWrap { height: auto; max-height: none; overflow-x: auto; overflow-y: hidden; }
+  .views { position: relative; top: auto; }
+}

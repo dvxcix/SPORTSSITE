@@ -19,6 +19,10 @@
     var(--bg);
   font-size: 15px;
 }
+/* Film/research lists share the page's vertical scroll on phones and tablets. */
+@media (max-width: 1024px), (any-pointer: coarse) {
+  .playList { max-height: none; overflow-y: visible; }
+}
 
 .page * { box-sizing: border-box; }
 .page button { font: inherit; }
