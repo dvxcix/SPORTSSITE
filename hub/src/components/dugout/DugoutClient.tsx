@@ -4406,7 +4406,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         ['--dugout-header-top' as string]: `${bannerHeight}px`,
       }}
     >
-      <table className={`dugout-dense-table density-${density}`} style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: density === 'compact' ? 10 : 11, width: 'max-content', minWidth: '100%' }}>
+      <table className={`dugout-dense-table density-${density}`} style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', fontSize: density === 'compact' ? 10 : 11, width: 'max-content', minWidth: '100%' }}>
         <tbody>
           {/* Home banner, THEN home's own column-label row directly beneath
               it (not a single shared <thead> above everything) — the member
@@ -4851,7 +4851,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
           ['--dugout-header-top' as string]: '0px',
         }}
       >
-        <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+        <table className="dugout-dense-table" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
           <tbody>
             <tr>{renderedHeaderCells}</tr>
           {displayRows.map(({ row, oppPitcher, pitcherTeamAbbr, gameInfo, pool }) => {

@@ -1,4 +1,10 @@
 /* Shared renderer styles load on both pages, independent of page CSS. */
+/* Keep sticky content independently paintable during Android touch scrolling.
+   Do not contain/virtualize table rows or transform the scroll container. */
+@media(any-pointer:coarse){
+ .cell.cell.cell{isolation:isolate;content-visibility:visible;contain:none}
+ .inner.inner.inner{position:relative;transform:translateZ(0);backface-visibility:hidden}
+}
 .matrixMatches{min-height:24px;display:inline-flex;align-items:center;gap:2px;padding:0 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:help}
 .matrixMatches>span{flex:0 0 7px;width:7px;height:7px;border:1px solid rgba(255,255,255,.28);border-radius:50%}
 .cell.cell.cell{width:250px!important;min-width:250px!important;max-width:250px!important;box-sizing:border-box}

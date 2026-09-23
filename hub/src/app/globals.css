@@ -717,7 +717,7 @@ img { max-width: 100%; }
 .ss-topbar-search-input:focus { border-color: color-mix(in srgb, var(--accent) 72%, var(--border)); background: var(--surface-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent), inset 0 1px rgba(255,255,255,.035); }
 .ss-topbar-search-clear { position: absolute; top: 50%; right: 8px; display: grid; width: 22px; height: 22px; translate: 0 -50%; place-items: center; border: 0; border-radius: 50%; color: var(--text-3); background: var(--surface-3); cursor: pointer; }
 .ss-topbar-search-clear:hover { color: var(--text-1); background: color-mix(in srgb, var(--surface-3) 80%, var(--accent-dim)); }
-.ss-topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.ss-topbar-actions { display: flex; flex-shrink: 0; align-items: center; gap: 8px; margin-left: auto; }
 .ss-topbar-control-wrap { position: relative; }
 .ss-topbar-icon-button, .ss-topbar-profile-trigger { min-height: 38px; border: 1px solid color-mix(in srgb, var(--border-2) 82%, transparent) !important; border-radius: 12px !important; color: var(--text-2); background: color-mix(in srgb, var(--surface-2) 76%, transparent) !important; box-shadow: inset 0 1px rgba(255,255,255,.035); cursor: pointer; transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast); }
 .ss-topbar-icon-button { width: 38px !important; height: 38px !important; }
@@ -1549,6 +1549,7 @@ img { max-width: 100%; }
   .ss-topbar-icon-button,
   .ss-topbar-profile-trigger { width: 42px !important; min-width: 42px; height: 42px !important; min-height: 42px; }
   .ss-topbar-profile-trigger { padding: 5px !important; justify-content: center; }
+  .ss-topbar-profile-trigger .ss-topbar-profile-copy { display: none !important; }
   .ss-topbar-profile-trigger > svg { display: none; }
   .ss-topbar-profile-menu .ss-dropdown-item { min-height: 44px; }
   .ss-topbar-search-results { max-height: min(68dvh, 560px) !important; border-radius: 18px !important; }
