@@ -4,6 +4,8 @@ import { requireTier } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { canonGameKey } from '@slipsurge/core/teamAbbr'
+import { getThreePlusHrrArchive } from '@/lib/hrrArchive'
+import { threePlusHrr } from '@/lib/hrrMarket'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,9 +48,16 @@ function compactSnapshots(rows: SnapshotRow[]) {
 
   return rows.flatMap(row => {
     const propMap: Record<string, PropEntry> = {}
-    for (const [playerKey, rawEntry] of Object.entries(row.prop_map ?? {})) {
+    for (let [playerKey, rawEntry] of Object.entries(row.prop_map ?? {})) {
       if (!rawEntry || typeof rawEntry !== 'object') continue
       const entry: PropEntry = { name: typeof rawEntry.name === 'string' ? rawEntry.name : playerKey }
+      // Preserve line identity before delta compaction splits price from line.
+      const hrr3: PriceBook = {}
+      for (const book of Object.keys(rawEntry.hrr_line ?? {})) {
+        const price = threePlusHrr(rawEntry as Parameters<typeof threePlusHrr>[0], book)
+        if (price != null) hrr3[book] = price
+      }
+      rawEntry = { ...rawEntry, hrr3: { ...hrr3, ...(rawEntry.hrr3 as PriceBook ?? {}) } }
       let changed = false
 
       for (const [market, rawBooks] of Object.entries(rawEntry)) {
@@ -139,13 +148,20 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
     const latestImport = gaps.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, gaps[0].updated_at)
     rows.push({ captured_at: latestImport, prop_map: buildFanDuelMap(gaps) })
   }
+  for (const quote of await getThreePlusHrrArchive(date)) {
+    if (canonGameKey(quote.game_key) !== canonGameKey(gameKey)) continue
+    if (firstPitchAt && Date.parse(quote.scraped_at) > Date.parse(firstPitchAt)) continue
+    rows.push({ captured_at: quote.scraped_at, prop_map: {
+      [quote.selection]: { name: quote.selection, hrr3: { fanduel: quote.odds } },
+    } })
+  }
   rows.sort((a, b) => a.captured_at.localeCompare(b.captured_at))
 
   return { sourceCount: rows.length, snapshots: compactSnapshots(rows), firstPitchAt }
 }
 
-const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v4'], { revalidate: 20 })
-const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v4'], { revalidate: 86400 })
+const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v5-hrr3'], { revalidate: 20 })
+const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v5-hrr3'], { revalidate: 86400 })
 
 export async function GET(req: Request) {
   const gate = await requireTier('ultimate')

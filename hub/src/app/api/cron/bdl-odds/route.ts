@@ -22,7 +22,7 @@ const BDL_OPENING_MARKETS = [
   'tb', 'tb3', 'tb4', 'tb5', 'strikeouts', 'strikeouts2', 'strikeouts3',
   'singles', 'singles2', 'singles3', 'doubles', 'doubles2', 'doubles3',
   'triples', 'triples2', 'triples3', 'stolen_bases', 'stolen_bases2', 'stolen_bases3',
-  'runs', 'runs2', 'runs3', 'hrr',
+  'runs', 'runs2', 'runs3', 'hrr', 'hrr3',
 ] as const
 
 // Real bug, reported live (2026-07-29): MLB's `abstractGameState` collapses

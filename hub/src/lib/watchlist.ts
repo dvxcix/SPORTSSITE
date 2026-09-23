@@ -13,6 +13,7 @@ import { combineOdds } from '@slipsurge/core/parlayCalc'
 // exact-anchored regex against FanDuel's own page text) or, where noted,
 // confirmed directly.
 export const PROP_META: Record<string, { label: string; pickType: string }> = {
+  hrr3: { label: 'Player to Record 3+ Hits + Runs + RBIs', pickType: 'hits_runs_rbis_3plus' },
   fhr:                 { label: 'To Hit First Home Run',                        pickType: 'first_hr' },
   sa:                  { label: 'To Hit a Home Run',                           pickType: 'anytime_hr' },
   hr2:                 { label: 'To Hit 2+ Home Runs',                          pickType: 'hr_2plus' },

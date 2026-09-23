@@ -1,3 +1,4 @@
+import { threePlusHrr } from './hrrMarket'
 export type DugoutViewPreset = 'signal' | 'market' | 'power' | 'props' | 'all' | 'custom'
 
 export type DugoutHistoryEntry = { name?: string; [market: string]: unknown }
@@ -34,7 +35,7 @@ const TIMELINE_MARKETS = [
   'stolen_bases', 'stolen_bases2',
   'hits', 'hits2', 'runs', 'runs2',
   'rbi', 'rbi2', 'rbi3',
-  'tb', 'tb3', 'tb4', 'tb5', 'hrr', 'hr2',
+  'tb', 'tb3', 'tb4', 'tb5', 'hrr', 'hrr3', 'hr2',
   'moonshot', 'laser105', 'laser110', 'pa1', 'hrMl',
 ] as const
 const TIMELINE_BOOKS = ['fanduel', 'williamhill_us', 'betmgm', 'betrivers', 'fanatics'] as const
@@ -56,9 +57,14 @@ export function buildDugoutMarketTimeline(
       if (!playerKey || !entry || typeof entry !== 'object') continue
       const previous = latest.get(playerKey) ?? {}
       const next: DugoutTimelinePlayer = { ...previous }
+      const verifiedHrr: DugoutTimelineBooks = {}
+      for (const book of TIMELINE_BOOKS) {
+        const odds = threePlusHrr(entry as Parameters<typeof threePlusHrr>[0], book)
+        if (odds != null) verifiedHrr[book] = odds
+      }
 
       for (const market of TIMELINE_MARKETS) {
-        const books = entry[market]
+        const books = market === 'hrr3' ? verifiedHrr : entry[market]
         if (!books || typeof books !== 'object' || Array.isArray(books)) continue
         const nextBooks: DugoutTimelineBooks = { ...(next[market] ?? {}) }
         for (const book of TIMELINE_BOOKS) {

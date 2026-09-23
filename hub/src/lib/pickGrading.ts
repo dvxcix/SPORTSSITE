@@ -23,6 +23,7 @@ export const THRESHOLDS: Record<string, (b: any) => boolean> = {
   stolen_base:   (b) => (b.stolenBases ?? 0) >= 1,
   batter_strikeout: (b) => (b.strikeOuts ?? 0) >= 1,
   hits_runs_rbis: (b) => ((b.hits ?? 0) + (b.runs ?? 0) + (b.rbi ?? 0)) >= 1,
+  hits_runs_rbis_3plus: (b) => ((b.hits ?? 0) + (b.runs ?? 0) + (b.rbi ?? 0)) >= 3,
 }
 
 export async function fetchLiveFeed(gamePk: string) {

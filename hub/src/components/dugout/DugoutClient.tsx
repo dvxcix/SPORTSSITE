@@ -9,6 +9,7 @@ import { Tooltip, type TooltipCardData } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { useAuth } from '@/context/AuthContext'
 import { PROP_META } from '@/lib/watchlist'
+import { threePlusHrr } from '@/lib/hrrMarket'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
@@ -451,7 +452,7 @@ export function buildBatterRow(
   const tb5_fd     = props?.tb5?.fanduel      ?? null
   const hr2_fd     = props?.hr2?.fanduel      ?? null
   const tri_fd     = props?.triples?.fanduel  ?? null
-  const hrr_fd     = props?.hrr?.fanduel      ?? null
+  const hrr_fd     = threePlusHrr(props)
   // Real BDL markets that were already flowing through buildPropMap
   // (balldontlie.ts) but never surfaced as their own columns.
   const sb_fd      = props?.stolen_bases?.fanduel ?? null
@@ -488,7 +489,7 @@ export function buildBatterRow(
   const tb3Fd_open     = open.tb3Fd    ?? null
   const tb4Fd_open     = open.tb4Fd    ?? null
   const tb5Fd_open     = open.tb5Fd    ?? null
-  const hrrFd_open     = open.hrrFd    ?? null
+  const hrrFd_open     = open.hrr3Fd    ?? null
   const laser105_open = open.laser105 ?? null
   const laser110_open = open.laser110 ?? null
   const moonshot_open = open.moonshot ?? null
@@ -683,7 +684,8 @@ export function buildBatterRow(
     pkDoubles: communityPickEntry?.doubles ?? null,
     pkTriples: communityPickEntry?.triples ?? null,
     pkRbi:     communityPickEntry?.rbi ?? null,
-    pkHrr:     communityPickEntry?.hits_runs_rbi ?? null,
+    // Legacy counts aggregate different thresholds; they are not 3+ counts.
+    pkHrr:     null as typeof communityPickEntry.hits_runs_rbi | null,
     pkTb:      communityPickEntry?.bases ?? null,
     hr_hits: hrEntry    ?? [],
     near_hr: nearEntry  ?? null,
@@ -1012,7 +1014,10 @@ function withDugoutTimelinePrices(
   const tb3 = price('tb3', row.tb3Fd_open, row.tb3_fd)
   const tb4 = price('tb4', row.tb4Fd_open, row.tb4_fd)
   const tb5 = price('tb5', row.tb5Fd_open, row.tb5_fd)
-  const hrr = price('hrr', row.hrrFd_open, row.hrr_fd)
+  // Never leak today's price into an older snapshot with no verified 3+ quote.
+  const hrr = timelinePoint
+    ? timelinePoint.players.get(playerKey)?.hrr3?.fanduel ?? null
+    : snapshot === 'open' ? row.hrrFd_open : row.hrr_fd
   const hr2 = price('hr2', row.hr2Fd_open, row.hr2_fd)
   const moonshot = price('moonshot', row.moonshot_open, row.moonshot_fd)
   const laser105 = price('laser105', row.laser105_open, row.laser105_fd)
@@ -1500,6 +1505,7 @@ function OddsCell({
         headshot_url: row.mlb_id ? mlbHeadshot(row.mlb_id) : null,
         prop_key: propKey,
         prop_label: meta?.label ?? propKey,
+        ...(propKey === 'hrr3' ? { line: '2.5' } : {}),
         book,
         odds,
         odds_by_book: oddsByBook,
@@ -2000,12 +2006,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={relatedDisplay(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi2', 'rbi2_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={relatedDisplay(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi3', 'rbi3_fd') }} />
-      {/* No openOdds here on purpose: BDL's own HRR line is variable-threshold
-          per player (hrr_line in balldontlie.ts) — our opening capture is
-          always the exact "1+" section, so BDL's current could silently be a
-          2+/3+ line for a different player. Showing a delta would compare
-          two different markets as if they were the same one. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={relatedDisplay(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_hrr', 'hrr_fd') }} pickCount={row.pkHrr?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr3" book="fanduel" odds={row.hrr_fd} openOdds={row.hrrFd_open} display={relatedDisplay(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_hrr', 'hrr_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} openOdds={row.tbFd_open} display={relatedDisplay(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb', 'tb_fd') }} pickCount={row.pkTb?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb3" book="fanduel" odds={row.tb3_fd} openOdds={row.tb3Fd_open} display={relatedDisplay(row.sa_div_tb3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb3', 'tb3_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={relatedDisplay(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb4', 'tb4_fd') }} />
@@ -3383,7 +3384,7 @@ export function getDugoutHeaderCells(
       {RELATED('1+ RBI', 'sa_div_rbi', 'rbi_fd', 'pkRbi')}
       {RELATED('2+ RBI', 'sa_div_rbi2', 'rbi2_fd')}
       {RELATED('3+ RBI', 'sa_div_rbi3', 'rbi3_fd')}
-      {RELATED('H+R+RBI', 'sa_div_hrr', 'hrr_fd', 'pkHrr', 52)}
+      {RELATED('3+ H+R+RBI', 'sa_div_hrr', 'hrr_fd', 'pkHrr', 70)}
       {RELATED('2+ TB', 'sa_div_tb', 'tb_fd', 'pkTb')}
       {RELATED('3+ TB', 'sa_div_tb3', 'tb3_fd')}
       {RELATED('4+ TB', 'sa_div_tb4', 'tb4_fd')}
@@ -5243,7 +5244,7 @@ export function DugoutClient({ date }: { date: string }) {
             { key: 'tb3', label: '3+ TB', current: row.tb3_fd, open: row.tb3Fd_open },
             { key: 'tb4', label: '4+ TB', current: row.tb4_fd, open: row.tb4Fd_open },
             { key: 'tb5', label: '5+ TB', current: row.tb5_fd, open: row.tb5Fd_open },
-            { key: 'hrr', label: 'H+R+R', current: row.hrr_fd, open: row.hrrFd_open },
+            { key: 'hrr3', label: '3+ H+R+R', current: row.hrr_fd, open: row.hrrFd_open },
             { key: 'hits', label: 'Hit', current: row.hits_fd, open: row.hits_open },
             { key: 'hits2', label: '2+ Hits', current: row.hits2_fd, open: row.hits2_open },
             { key: 'runs', label: 'Run', current: row.runs_fd, open: row.runs_open },

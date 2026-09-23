@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { getThreePlusHrrArchive } from '@/lib/hrrArchive'
+import { threePlusHrr } from '@/lib/hrrMarket'
 import { unstable_cache } from 'next/cache'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -140,11 +142,12 @@ async function fetchGapOdds(date: string) {
     }
     return rows
   }
-  const [fdRows, mgmRows] = await Promise.all([
+  const [fdRows, mgmRows, hrrRows] = await Promise.all([
     fetchAll('fanduel_gap_odds', 'game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners'),
     fetchAll('mgm_gap_odds', 'game_key, name_norm, sa_mgm, hr2_mgm'),
+    getThreePlusHrrArchive(date).catch(error => { console.error('3+ HRR archive unavailable', error); return [] }),
   ])
-  return { fdRows, mgmRows }
+  return { fdRows, mgmRows, hrrRows }
 }
 const getCachedGapOddsRecent = unstable_cache(fetchGapOdds, ['dugout-gap-odds-recent'], { revalidate: 60 })
 const getCachedGapOddsSettling = unstable_cache(fetchGapOdds, ['dugout-gap-odds-settling'], { revalidate: HOUR_SECONDS })
@@ -380,6 +383,7 @@ const getCachedSchedule = (date: string) => {
 const GAME_LEVEL_NAME_NORM = '__game__'
 
 const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
+  'hrr3:fanduel': 'hrr3Fd',
   'fhr:fanduel': 'fhr', 'sa:fanduel': 'saFd', 'hr2:fanduel': 'hr2Fd',
   'singles:fanduel': 'sngFd', 'doubles:fanduel': 'dblFd', 'triples:fanduel': 'triFd',
   'rbi:fanduel': 'rbiFd', 'rbi2:fanduel': 'rbi2Fd', 'rbi3:fanduel': 'rbi3Fd',
@@ -1178,6 +1182,23 @@ export async function GET(req: Request) {
         return entry
       }
       return resolveNameEntry(bdlByName, normName(sourceName)) ?? (bdlByName[normName(sourceName)] = { name: displayName || sourceName })
+    }
+    // Recover explicit 3+ prices from preserved captures, scoped to this game
+    // and no later than scheduled first pitch. Never reuse the legacy 1+ gap.
+    const hrrArchive: Awaited<ReturnType<typeof getThreePlusHrrArchive>> =
+      'hrrRows' in gapOddsResult ? gapOddsResult.hrrRows as Awaited<ReturnType<typeof getThreePlusHrrArchive>> : []
+    const hrrLatest = new Map<string, typeof hrrArchive[number]>()
+    const hrrFirst = new Map<string, number>()
+    for (const quote of hrrArchive) {
+      if (canonGameKey(quote.game_key) !== gameKey || Date.parse(quote.scraped_at) > Date.parse(g.gameDate)) continue
+      const key = normName(quote.selection)
+      hrrLatest.set(key, quote)
+      if (!hrrFirst.has(key)) hrrFirst.set(key, quote.odds)
+    }
+    for (const [key, quote] of hrrLatest) {
+      const entry = entryForSourceName(key, quote.selection)
+      entry.hrr3 = { ...entry.hrr3, fanduel: threePlusHrr(entry) ?? quote.odds }
+      if (ultimateForGame(gameKey)) entry.open = { ...entry.open, hrr3Fd: hrrFirst.get(key) }
     }
     // Layer in manually-imported FanDuel gap markets. Create an entry if the
     // player has no BDL props at all (e.g. a bench bat BDL doesn't price)

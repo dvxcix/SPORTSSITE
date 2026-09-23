@@ -108,6 +108,7 @@ export interface BDLPropMap {
     runs3?: { [vendor: string]: number }       // 3+ runs (line=2.5+)
     hrr?: { [vendor: string]: number }         // Hits+Runs+RBIs combined (line varies)
     hrr_line?: { [vendor: string]: number }
+    hrr3?: { [vendor: string]: number }        // Exactly 3+ H+R+R (over 2.5)
     pitcher_strikeouts?: { [vendor: string]: number }
     pitcher_strikeouts_line?: { [vendor: string]: number }
     // FanDuel-only markets BDL doesn't carry at all — filled by the admin
@@ -356,6 +357,10 @@ export function buildPropMap(props: BDLPlayerProp[], playerNames: Record<number,
       else if (l <= 1.5) { if (!entry.stolen_bases2) entry.stolen_bases2 = {}; entry.stolen_bases2[vendor] = odds! }
       else { if (!entry.stolen_bases3) entry.stolen_bases3 = {}; entry.stolen_bases3[vendor] = odds! }
     } else if (p.prop_type === 'hits_runs_rbis') {
+      if (line === 2.5) {
+        if (!entry.hrr3) entry.hrr3 = {}
+        entry.hrr3[vendor] = odds!
+      }
       if (!entry.hrr) entry.hrr = {}
       entry.hrr[vendor] = odds!
       if (line != null) {
