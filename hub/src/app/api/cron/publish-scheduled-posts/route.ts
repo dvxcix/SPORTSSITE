@@ -14,18 +14,21 @@ async function run(request: Request) {
   if (error) return safeApiError('publish-scheduled-posts', error)
   let published = 0; let failed = 0
   for (const item of due ?? []) {
-    const { data: claimed } = await admin.from('creator_scheduled_posts').update({ status: 'publishing', attempts: item.attempts + 1 }).eq('id', item.id).eq('status', 'scheduled').select('id').maybeSingle()
+    const { data: claimed, error: claimError } = await admin.from('creator_scheduled_posts').update({ status: 'publishing', attempts: item.attempts + 1 }).eq('id', item.id).eq('status', 'scheduled').select('id').maybeSingle()
+    if (claimError) return safeApiError('publish-scheduled-posts-claim', claimError)
     if (!claimed) continue
     const { data: post, error: postError } = await admin.from('posts').insert({ author_id: item.creator_id, content: item.content, post_type: item.post_type, sport: item.sport, visibility: item.visibility, media_urls: item.media_urls ?? [], pick_data: null }).select('id').single()
     if (postError || !post) {
       failed += 1
-      await admin.from('creator_scheduled_posts').update({ status: item.attempts + 1 >= 5 ? 'failed' : 'scheduled', last_error: 'Publication failed. Retry queued.' }).eq('id', item.id).eq('status', 'publishing')
+      const { error: retryError } = await admin.from('creator_scheduled_posts').update({ status: item.attempts + 1 >= 5 ? 'failed' : 'scheduled', last_error: 'Publication failed. Retry queued.' }).eq('id', item.id).eq('status', 'publishing')
+      if (retryError) return safeApiError('publish-scheduled-posts-retry', retryError)
       continue
     }
     published += 1
-    await admin.from('creator_scheduled_posts').update({ status: 'published', published_post_id: post.id, last_error: null }).eq('id', item.id).eq('status', 'publishing')
+    const { error: finalizeError } = await admin.from('creator_scheduled_posts').update({ status: 'published', published_post_id: post.id, last_error: null }).eq('id', item.id).eq('status', 'publishing')
+    if (finalizeError) return safeApiError('publish-scheduled-posts-finalize', finalizeError)
   }
-  return NextResponse.json({ ok: true, due: due?.length ?? 0, published, failed })
+  return NextResponse.json({ ok: failed === 0, due: due?.length ?? 0, published, failed }, { status: failed ? 503 : 200 })
 }
 
 export const GET = withPipelineHealth('publish-scheduled-posts', run)

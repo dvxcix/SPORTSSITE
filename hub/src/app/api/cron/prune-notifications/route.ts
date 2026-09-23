@@ -3,9 +3,10 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { safeApiError } from '@/lib/safeApiError'
+import { pruneInBatches } from '@/lib/retentionBatch'
 
 export const revalidate = 0
-export const maxDuration = 30
+export const maxDuration = 120
 
 // lineup_confirmed notifications are only ever meaningful for the day
 // they fire (a confirmed lineup or a postponed-game alert from a week ago
@@ -43,7 +44,11 @@ async function run(req: Request) {
   }
 
   const results = await Promise.all([
-    admin.from('notifications').delete({ count: 'exact' }).eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff),
+    pruneInBatches(
+      () => admin.from('notifications').select('id').eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff).order('created_at').limit(500),
+      ids => admin.from('notifications').delete({ count: 'exact' }).in('id', ids).eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff),
+      now + 90_000,
+    ),
     admin.from('notifications').delete({ count: 'exact' }).eq('read', true).neq('type', 'lineup_confirmed').gte('created_at', absoluteCutoff).lt('created_at', readCutoff),
     admin.from('notifications').delete({ count: 'exact' }).lt('created_at', absoluteCutoff),
     admin.from('notification_delivery_attempts').delete({ count: 'exact' }).lt('attempted_at', telemetryCutoff),
@@ -57,9 +62,11 @@ async function run(req: Request) {
   ])
   const failure = results.find(result => result.error)
   if (failure?.error) return safeApiError('prune-notifications', failure.error)
+  const remaining = results.some(result => 'remaining' in result && result.remaining)
 
   return NextResponse.json({
-    ok: true,
+    ok: !remaining,
+    ...(remaining ? { deferred: true, reason: 'Retention backlog partially cleared; another bounded pass is needed.' } : {}),
     deleted: {
       staleLineups: results[0].count ?? 0,
       oldRead: results[1].count ?? 0,
@@ -72,7 +79,7 @@ async function run(req: Request) {
       operationalRetries: results[8].count ?? 0,
     },
     cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, productTelemetryCutoff, webhookCutoff, retryCutoff },
-  })
+  }, { status: remaining ? 425 : 200 })
 }
 
 export const GET = withPipelineHealth('prune-notifications', run)

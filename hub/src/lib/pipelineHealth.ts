@@ -6,12 +6,13 @@ import { safeErrorMetadata } from '@/lib/safeApiError'
 type RouteHandler = (request: Request) => Promise<Response>
 
 async function responseMetadata(response: Response, jobName: string) {
-  if (response.ok && !jobName.startsWith('nfl-sync-')) return { error: null, details: {} }
+  const detailedJob = jobName.startsWith('nfl-sync-') || jobName === 'poll-fanduel-nfl' || jobName === 'research-mechanics-precompute'
+  if (response.ok && !detailedJob) return { error: null, details: {} }
   try {
     const body = await response.clone().json() as Record<string, unknown>
-    if (response.ok) return { error: null, details: Object.fromEntries(['synced', 'season', 'coverage'].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
+    if (response.ok) return { error: null, details: Object.fromEntries(['synced', 'season', 'coverage', 'results', 'gamesComputed', 'windowsComputed'].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
     const reason = typeof body.reason === 'string' ? body.reason : `HTTP ${response.status}`
-    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage']
+    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage', 'gamesWaiting', 'gamesComputed', 'windowsComputed']
       .filter(key => body[key] !== undefined)
       .map(key => [key, body[key]]))
     return { error: reason.slice(0, 2000), details }

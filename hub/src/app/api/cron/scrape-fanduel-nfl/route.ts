@@ -11,6 +11,7 @@ import { parseNflFanduel, type FdTab } from '@/lib/scrapers/nflFanduelMarkets'
 import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
 import { ingestNflMarketBoard } from '@/lib/nflMarketArchive'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import { emptyNflCaptureStatus } from '@/lib/nflCaptureCoverage'
 
 export const maxDuration = 300
 export const revalidate = 0
@@ -60,7 +61,12 @@ export async function GET(req: Request) {
     const parsed = parseNflFanduel(tabs, base)
     const summary = { gameId, tabs: tabs.length, incomplete: tabs.some(t => t.incomplete), players: parsed.board.players.length, markets: parsed.board.players.reduce((sum, p) => sum + p.markets.length, 0), rejected: parsed.rejected }
     if (url.searchParams.get('dryRun') === '1') return NextResponse.json({ ...summary, raw: tabs })
-    if (!parsed.board.players.length) return NextResponse.json({ ...summary, error: 'No recognized NFL markets' }, { status: 425 })
+    if (!parsed.board.players.length) {
+      const status = emptyNflCaptureStatus(tabs)
+      return NextResponse.json({ ...summary, deferred: status === 425,
+        error: status === 425 ? 'Player markets not published in completed capture' : 'Player-market extraction or identity matching failed',
+      }, { status })
+    }
     if (!(await getUpcomingNflPikkitGames(7)).some(g => g.gameId === gameId)) return NextResponse.json({ error: 'Kickoff reached; capture discarded' }, { status: 409 })
     const { error: saveError } = await admin.from('nfl_fanduel_capture_history').insert({ game_id: gameId, captured_at: parsed.board.capturedAt, board: parsed.board, raw_tabs: tabs })
     if (saveError) throw new Error('Capture archive failed')

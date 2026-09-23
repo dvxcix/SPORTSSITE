@@ -28,7 +28,7 @@ const ALL_STATCAST_SAVANT_CATEGORIES = ['bat_tracking', 'batted_ball_splits', 's
 // data arrives. Historical boards are immutable snapshots: the self-heal
 // may fill a missing batter/hand row, but it never rewrites one that already
 // existed for that date.
-export async function precomputeDugoutStatcastForDate(date: string): Promise<{ date: string; batters: number; rows: number }> {
+export async function precomputeDugoutStatcastForDate(date: string, options: { onlyPlayerIds?: number[] } = {}): Promise<{ date: string; batters: number; rows: number }> {
   // Confirmed-or-projected lineups for every game today — the exact same
   // resolution the Dugout grid itself displays, so this covers every
   // batter it could ever need to look up, whether or not lineups have
@@ -40,7 +40,8 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
       if (!batsById.has(p.mlb_id)) batsById.set(p.mlb_id, p.bats || '?')
     }
   }
-  const batterIds = Array.from(batsById.keys())
+  const requestedIds = options.onlyPlayerIds ? new Set(options.onlyPlayerIds) : null
+  const batterIds = Array.from(batsById.keys()).filter(id => !requestedIds || requestedIds.has(id))
   if (!batterIds.length) return { date, batters: 0, rows: 0 }
 
   const admin = createAdminClient()
