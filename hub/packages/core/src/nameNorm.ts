@@ -36,6 +36,14 @@ export type PlayerIdentityCandidate = {
   team?: string | null
 }
 
+// Full-name aliases only: do not treat every Leo/Leonardo as interchangeable.
+// Keep provider/display names intact; use these only when joining sources.
+const PLAYER_NAME_ALIAS_GROUPS = [
+  ['leonardo bernal', 'leo bernal'],
+]
+const fullNameAliases = (name: string): string[] =>
+  PLAYER_NAME_ALIAS_GROUPS.find(group => group.includes(name)) ?? []
+
 // BDL has stable player IDs, so retain the few explicit cross-provider IDs
 // needed when MLB itself has two active players with the same full name.
 // Ordinary players continue through the generic name+team resolver below.
@@ -108,6 +116,7 @@ export function providerKeysForPlayer(mlbId: number, displayName: string): strin
     keys.add(normProviderPlayerKey(displayName))
   }
   const normalizedDisplay = normProviderPlayerKey(displayName)
+  for (const alias of fullNameAliases(normalizedDisplay)) keys.add(alias)
   const legacyAccentDrop = normProviderPlayerKey(displayName.replace(/[^\x00-\x7F]/g, ''))
   if (legacyAccentDrop && legacyAccentDrop !== normalizedDisplay) keys.add(legacyAccentDrop)
   return [...keys]
@@ -169,7 +178,8 @@ const nicknameCanonical = (token: string) => NICKNAME_CANONICAL[token] ?? token
 // nickname spelling differences, for COMPARISON only — never store this,
 // it deliberately throws away information a real display string needs.
 function canonicalizeForMatch(nn: string): string {
-  const tokens = stripSuffix(nn).split(' ').filter(Boolean)
+  const stripped = stripSuffix(nn)
+  const tokens = (fullNameAliases(stripped)[0] ?? stripped).split(' ').filter(Boolean)
   if (!tokens.length) return nn
   return [nicknameCanonical(tokens[0]), ...tokens.slice(1)].join(' ')
 }

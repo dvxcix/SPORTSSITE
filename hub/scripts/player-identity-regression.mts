@@ -4,6 +4,7 @@ import {
   normProviderPlayerKey,
   providerKeysForPlayer,
   resolvePlayerIdentity,
+  resolveNameEntry,
   resolveProviderEntryForPlayer,
 } from '../packages/core/src/nameNorm.ts'
 
@@ -36,4 +37,25 @@ assert.equal(resolveProviderEntryForPlayer(averages, { mlbId: 571970, name: 'Max
 assert.equal(resolveProviderEntryForPlayer(averages, { mlbId: 691777, name: 'Max Muncy' })?.fd, 627)
 assert.equal(resolveProviderEntryForPlayer(averages, { mlbId: 665953, name: 'Andrés Chaparro' })?.fd, 650)
 
+// Synthetic IDs: these tests exercise names, not a hard-coded MLB ID mapping.
+for (const [displayName, sourceName] of [
+  ['Leonardo Bernal', 'Leo Bernal'],
+  ['Leo Bernal', 'Leonardo Bernal'],
+]) {
+  const roster = [{ mlbId: 1, name: displayName, team: 'STL' }]
+  assert.equal(resolvePlayerIdentity(roster, sourceName, { sourceTeam: 'STL' })?.mlbId, 1)
+  assert.equal(resolveNameEntry({ [sourceName.toLowerCase()]: 900 }, displayName.toLowerCase()), 900)
+  assert.equal(resolveProviderEntryForPlayer(
+    { [sourceName.toLowerCase()]: { fd: 900 } },
+    { mlbId: 1, name: displayName },
+  )?.fd, 900)
+  assert.equal(resolvePlayerIdentity([
+    ...roster, { mlbId: 2, name: displayName, team: 'STL' },
+  ], sourceName), undefined, 'Ambiguous alias must fail closed')
+}
+assert.equal(resolvePlayerIdentity([{ mlbId: 1, name: 'Leonardo Other' }], 'Leo Other'), undefined)
+assert.equal(resolvePlayerIdentity([{ mlbId: 1, name: 'Leonardo Bernal' }], 'Leo Other'), undefined)
+assert.equal(resolveProviderEntryForPlayer(
+  { 'leo bernal': 900, 'leonardo bernal': 950 }, { mlbId: 1, name: 'Leo Bernal' },
+), 900, 'Exact provider entry keeps precedence')
 console.log('Player identity regression checks passed')
