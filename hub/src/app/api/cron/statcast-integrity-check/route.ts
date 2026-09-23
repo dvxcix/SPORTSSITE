@@ -7,6 +7,7 @@ import { daysAgoET } from '@/lib/savantSplitsSync'
 import { alertOnStatcastIntegrityFailure, type StatcastIntegrityResult } from '@/lib/statcastIntegrity'
 import { safeApiError } from '@/lib/safeApiError'
 import { getMLBSchedule } from '@slipsurge/core/mlb-api'
+import { finalPitchGamesForDate } from '@/lib/pitchPipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 120
@@ -53,9 +54,7 @@ async function run(req: Request) {
   // write were missed on the same day. Only officially final games count;
   // postponed or suspended games must not create false missing-data alarms.
   if (officialSchedule.length) {
-    const finalGamePks = officialSchedule
-      .filter(game => game.status.abstractGameState === 'Final')
-      .map(game => game.gamePk)
+    const finalGamePks = finalPitchGamesForDate(officialSchedule, throughDate)
     const loggedGamePks = new Set<string>()
     const pageSize = 1000
     for (let from = 0; ; from += pageSize) {

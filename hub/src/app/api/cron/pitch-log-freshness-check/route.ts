@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
 import { daysAgoET } from '@/lib/savantSplitsSync'
-import { PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
+import { latestPitchLogDate } from '@/lib/pitchPipelineHealth'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
 import { safeApiError } from '@/lib/safeApiError'
 
@@ -27,15 +27,12 @@ async function run(req: Request) {
   const season = currentSeason()
   const end = daysAgoET(1)
 
-  const { data: freshness, error } = await admin
-    .from(PITCH_LOG_TABLE)
-    .select('game_date')
-    .eq('season', season)
-    .order('game_date', { ascending: false })
-    .limit(1)
-  if (error) return safeApiError('pitch-log-freshness-query', error)
-
-  const latestDate = freshness?.[0]?.game_date ?? null
+  let latestDate: string | null
+  try {
+    latestDate = await latestPitchLogDate(admin, season)
+  } catch (error) {
+    return safeApiError('pitch-log-freshness-query', error)
+  }
   await checkPitchLogFreshnessAndAlert(admin, latestDate, end)
 
   return NextResponse.json({ season, latestDate, expected: end })

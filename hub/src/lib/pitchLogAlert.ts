@@ -15,6 +15,7 @@ const ALERT_DEBOUNCE_KEY = 'pitch_log_stale_alert_sent_at'
 const STALE_THRESHOLD_DAYS = 2
 
 async function sendStalenessAlertEmail(admin: SupabaseClient, latestDate: string, expectedDate: string, staleDays: number) {
+  const lagLabel = Number.isFinite(staleDays) ? staleDays + ' days behind' : 'No pitch data found for this season'
   const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
   const recipients = (admins ?? []).map(a => a.email).filter((email): email is string => Boolean(email))
   if (!recipients.length) {
@@ -22,18 +23,18 @@ async function sendStalenessAlertEmail(admin: SupabaseClient, latestDate: string
     return
   }
 
-  const text = `player_pitch_log is ${staleDays} days behind — latest data is ${latestDate}, expected through ${expectedDate}. Last N Starts, the Statcast section, and the Paper/matchup-edge score are all computed off this table, so they're currently showing stale numbers for real games that have already happened.`
+  const text = `player_pitch_log: ${lagLabel} — latest data is ${latestDate}, expected through ${expectedDate}. Last N Starts, Statcast, and Paper/matchup-edge scores may be stale.`
   const instructions = `The daily savant-sync-pitch-log cron has its own multi-day recheck/retry logic and hasn't caught up on its own — check Vercel's runtime logs for that route, and see hub/scripts/diagnose-pitch-log-gap.mjs for a script that replicates the sync directly against production and reports exactly where it fails (a prior incident traced this to Savant treating Vercel's serverless IPs differently than a normal connection).`
 
   const sent = await sendEmail({
     to: recipients,
-    subject: `Pitch log data is ${staleDays} days stale — action needed`,
+    subject: `Pitch log: ${lagLabel} — action needed`,
     text: `${text}\n\n${instructions}`,
     html: brandedEmailHtml({
       eyebrow: 'Pipeline health',
       heading: 'Pitch data needs attention',
-      preheader: `Pitch log data is ${staleDays} days behind.`,
-      bodyHtml: `<div style="padding:14px 16px;border:1px solid #4A2629;border-radius:12px;background:#1A1012;color:#FCA5A5;"><strong>${staleDays} days behind</strong><br />Latest: ${latestDate}<br />Expected: ${expectedDate}</div><p style="margin:14px 0 0;">Last N Starts, Statcast, and Paper matchup scores may be stale. The automated retry window did not catch up, so runtime logs need review.</p>`,
+      preheader: `Pitch log: ${lagLabel}.`,
+      bodyHtml: `<div style="padding:14px 16px;border:1px solid #4A2629;border-radius:12px;background:#1A1012;color:#FCA5A5;"><strong>${lagLabel}</strong><br />Latest: ${latestDate}<br />Expected: ${expectedDate}</div><p style="margin:14px 0 0;">Last N Starts, Statcast, and Paper matchup scores may be stale. The automated retry window did not catch up, so runtime logs need review.</p>`,
       ctaLabel: 'Review pipeline health',
       ctaUrl: 'https://www.slipsurge.com/admin/pipeline-health',
     }),
@@ -65,7 +66,7 @@ export async function checkPitchLogFreshnessAndAlert(admin: SupabaseClient, late
     sendStalenessAlertEmail(admin, latestLabel, expectedDate, staleDays),
     postAlert(admin, 'pipeline_health', {
       embeds: [{
-        title: `⚠️ Pitch log data is ${staleDays} days stale`,
+        title: Number.isFinite(staleDays) ? `⚠️ Pitch log data is ${staleDays} days stale` : '⚠️ No pitch data found for this season',
         description: `Latest: **${latestLabel}** — expected through **${expectedDate}**.\nLast N Starts, Statcast, and Paper/matchup-edge are all affected.`,
         color: 0xFF4D4D,
       }],

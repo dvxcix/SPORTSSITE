@@ -26,6 +26,8 @@ export interface MLBTeamInfo {
 export interface MLBGame {
   gamePk: number
   gameDate: string
+  officialDate?: string
+  gameType?: string
   status: {
     abstractGameState: 'Preview' | 'Live' | 'Final'
     detailedState: string

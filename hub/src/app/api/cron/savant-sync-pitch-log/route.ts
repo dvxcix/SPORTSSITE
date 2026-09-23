@@ -9,6 +9,7 @@ import { seasonStartDate, daysAgoET } from '@/lib/savantSplitsSync'
 import { syncStatcastDay, PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
 import { safeApiError } from '@/lib/safeApiError'
+import { latestPitchLogDate } from '@/lib/pitchPipelineHealth'
 
 export const revalidate = 0
 // Was 60s — too tight for MAX_DAYS_PER_RUN=4 dates processed sequentially,
@@ -102,12 +103,13 @@ async function run(req: Request) {
     const pks = new Set<string>()
     const PAGE = 1000
     for (let offset = 0; ; offset += PAGE) {
-      const { data } = await admin
+      const { data, error } = await admin
         .from(PITCH_LOG_TABLE)
         .select('game_pk')
         .eq('season', season)
         .eq('game_date', checkDate)
         .range(offset, offset + PAGE - 1)
+      if (error) throw error
       if (!data?.length) break
       for (const r of data) pks.add(r.game_pk)
       if (data.length < PAGE) break
@@ -159,13 +161,13 @@ async function run(req: Request) {
   // alert here means the automatic retry genuinely didn't fix it, not just
   // "today's run hasn't happened yet." See pitchLogAlert.ts for the
   // debounce (fires once per ongoing gap, not once per cron run).
-  const { data: freshness } = await admin
-    .from(PITCH_LOG_TABLE)
-    .select('game_date')
-    .eq('season', season)
-    .order('game_date', { ascending: false })
-    .limit(1)
-  await checkPitchLogFreshnessAndAlert(admin, freshness?.[0]?.game_date ?? null, end)
+  let freshness: string | null
+  try {
+    freshness = await latestPitchLogDate(admin, season)
+  } catch (error) {
+    return safeApiError('savant-sync-pitch-log-freshness', error)
+  }
+  await checkPitchLogFreshnessAndAlert(admin, freshness, end)
 
   return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results })
 }
