@@ -501,7 +501,9 @@ export function buildPlayers(
 
       return {
         id: player.id,
-        unavailableMetrics: [...(!hasTeamSample ? ['targetShare', 'carryShare'] : []), ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'redZoneTargets', 'redZoneCarries', 'redZoneTargetShare', 'redZoneCarryShare', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []), ...((air ? !completeAir : !player.airYardsWeight) ? ['airYards'] : []), ...(!completeAir ? ['totalAirYards'] : []), ...((air ? !(completeAir && completeTeamAir) : !player.airShareWeight) ? ['airYardsShare'] : []), ...(!player.separationWeight ? ['separation'] : []), ...(!player.yacWeight ? ['yacAboveExpected'] : []), ...(!player.rushOeWeight ? ['rushOverExpected'] : []), ...(!player.cpoeWeight ? ['cpoe'] : []), ...(!player.timeToThrowWeight ? ['timeToThrow'] : [])],
+        // No opportunities is undefined, not a measured zero-percent result.
+        // Use attempts/targets rather than position: trick plays count too.
+        unavailableMetrics: [...(player.targets > 0 ? [] : ['catchRate']), ...(player.passAttempts > 0 ? [] : ['completionRate']), ...(!hasTeamSample ? ['targetShare', 'carryShare'] : []), ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'redZoneTargets', 'redZoneCarries', 'redZoneTargetShare', 'redZoneCarryShare', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []), ...((air ? !completeAir : !player.airYardsWeight) ? ['airYards'] : []), ...(!completeAir ? ['totalAirYards'] : []), ...((air ? !(completeAir && completeTeamAir) : !player.airShareWeight) ? ['airYardsShare'] : []), ...(!player.separationWeight ? ['separation'] : []), ...(!player.yacWeight ? ['yacAboveExpected'] : []), ...(!player.rushOeWeight ? ['rushOverExpected'] : []), ...(!player.cpoeWeight ? ['cpoe'] : []), ...(!player.timeToThrowWeight ? ['timeToThrow'] : [])],
         name: playerBio?.name ?? player.name,
         team: player.team,
         position: resolvedPosition,

@@ -47,6 +47,21 @@ test('zero air yards is known, but missing air yards never becomes zero', () => 
   assert.ok(missing.unavailableMetrics.includes('airYardsShare'))
 })
 
+test('catch and completion percentages require opportunities, not a position label', () => {
+  const rows = build([play({complete_pass:false,receiving_yards:0,passing_yards:0})])
+  const receiver = find(rows)
+  const qb = find(rows,'qb')
+  assert.equal(receiver.catchRate,0)
+  assert.ok(!receiver.unavailableMetrics.includes('catchRate'))
+  assert.ok(receiver.unavailableMetrics.includes('completionRate'))
+  assert.equal(qb.completionRate,0)
+  assert.ok(!qb.unavailableMetrics.includes('completionRate'))
+  assert.ok(qb.unavailableMetrics.includes('catchRate'))
+  const trick = find(build([play(),play({passer_player_id:'receiver',receiver_player_id:'other'})]))
+  assert.equal(trick.completionRate,100)
+  assert.ok(!trick.unavailableMetrics.includes('completionRate'))
+})
+
 test('shares use every teammate and signed air yards, not tracking-qualified players', () => {
   const rows = build([play({ air_yards: -5 }), play({ receiver_player_id: 'other', air_yards: 25 })])
   assert.equal(find(rows).targetShare, 50)
