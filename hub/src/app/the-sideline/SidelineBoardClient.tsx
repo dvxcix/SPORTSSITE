@@ -8,6 +8,7 @@ import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
+import { teamMmHighlights } from './teamHighlights'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
@@ -467,16 +468,6 @@ function offerSummary(offer: NflMarketOffer, phase: 'current' | 'opening') {
   if (!value) return '-'
   if (offer.type === 'milestone') return oddsLabel(value.odds)
   return `O ${oddsLabel(value.over)} · U ${oddsLabel(value.under)}`
-}
-
-function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendor = 'fanduel') {
-  const baseline = player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor))
-  if (baseline?.sampleGames && baseline.sampleGames >= 2 && baseline.deltaPct != null) return baseline.deltaPct * 100
-  const offer = findOffer(findMarket(player, propType), vendor)
-  const current = offerCurrent(offer)
-  const opening = offerOpening(offer)
-  if (current == null || opening == null || opening === 0) return null
-  return ((current - opening) / Math.abs(opening)) * 100
 }
 
 function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vendor = 'fanduel') {
@@ -1086,20 +1077,17 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
   const topScore = [...rows].filter(row => row.hasTracking).sort((a, b) => b.index - a.index)[0]
   const contextLabels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
   const contextLabel = contextLabels.length === 1 ? contextLabels[0]! : 'Role'
-  const movers = rows.map(row => ({ row, move: marketMove(row.market, row.contextProp ?? 'anytime_td') })).filter(item => item.move != null) as { row: PlayerRow; move: number }[]
-  const advertised = movers.filter(item => item.move < 0).sort((a, b) => a.move - b.move)[0]
-  const hidden = movers.filter(item => item.move > 0).sort((a, b) => b.move - a.move)[0]
+  const { advertised, hidden } = teamMmHighlights(rows)
   const fanduel = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const moneyline = side === 'home' ? fanduel?.moneylineHome : fanduel?.moneylineAway
-  const signal = (item: { row: PlayerRow; move: number } | undefined) => {
-    if (!item) return <b className={styles.noSignal}>No qualifying move</b>
-    const offer = primaryMarketOffer(item.row.market, item.row.contextProp ?? 'anytime_td')
+  const signal = (item: PlayerRow | undefined) => {
+    if (!item) return <b className={styles.noSignal}>No qualifying MM</b>
+    const offer = primaryMarketOffer(item.market, item.contextProp ?? 'anytime_td')
     return (
       <b className={styles.signalValue}>
-        <strong>{item.row.name}</strong>
+        <strong>{item.name}</strong>
         <span>
-          {item.move > 0 ? '+' : ''}
-          {item.move.toFixed(1)}%
+          MM {item.mm! > 0 ? '+' : ''}{item.mm}
         </span>
         {offer ? (
           <em>
