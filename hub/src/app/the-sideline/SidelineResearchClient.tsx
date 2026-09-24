@@ -12,6 +12,7 @@ import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineTeam } from './types'
 import styles from './sidelineResearch.module.css'
 import { gradeNflPublicProp, type NflPublicResult } from '@/lib/nflPublicResults'
+import { startNflPolling } from '@/lib/nflPolling'
 
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
 const stamp = (value: string | null | undefined) => value ? value.replace('T', ' ').slice(0, 19) + ' UTC' : 'Time unavailable'
@@ -41,39 +42,28 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
   useEffect(() => {
     if (!gameId) return
     const controller = new AbortController()
-    let timer: ReturnType<typeof setTimeout>
-    const refresh = async () => {
+    const refresh = async (signal: AbortSignal) => {
       try {
         if (document.visibilityState !== 'hidden') {
-          const response = await fetch(`/the-sideline/market?game=${encodeURIComponent(gameId)}&summary=1`, { signal: controller.signal, cache: 'no-store' })
+          const response = await fetch(`/the-sideline/market?game=${encodeURIComponent(gameId)}&summary=1${mode === 'public' ? '&results=1' : ''}`, { signal, cache: 'no-store' })
           if (!response.ok) throw new Error('Market refresh failed')
-          const next = await response.json() as { odds: SidelineOddsBoard }
+          const next = await response.json() as { odds: SidelineOddsBoard; results?: NflPublicResult | null }
           if (!Array.isArray(next.odds?.players)) throw new Error('Invalid market response')
-          if (!controller.signal.aborted) { setBoard(next.odds); setMarketRefreshFailed(false) }
+          if (!controller.signal.aborted) {
+            setBoard(next.odds); setMarketRefreshFailed(false)
+            if (mode === 'public') {
+              setRefreshFailed(!next.results)
+              if (next.results) setResults(next.results)
+            }
+          }
         }
-      } catch { if (!controller.signal.aborted) setMarketRefreshFailed(true) }
-      finally { if (!controller.signal.aborted) timer = setTimeout(refresh, 30000) }
+      } catch {
+        if (!controller.signal.aborted) { setMarketRefreshFailed(true); if (mode === 'public') setRefreshFailed(true) }
+        throw new Error('Research refresh failed')
+      }
     }
-    timer = setTimeout(refresh, 30000)
-    return () => { controller.abort(); clearTimeout(timer) }
-  }, [gameId])
-  useEffect(() => {
-    if (mode !== 'public' || !gameId) return
-    const controller = new AbortController()
-    let timer: ReturnType<typeof setTimeout>
-    const refresh = async () => {
-      try {
-        if (document.visibilityState !== 'hidden') {
-          const response = await fetch(`/the-sideline/results?game=${encodeURIComponent(gameId)}`, { signal: controller.signal, cache: 'no-store' })
-          if (!response.ok) throw new Error('Result refresh failed')
-          const next: NflPublicResult = await response.json()
-          if (!controller.signal.aborted) { setResults(next); setRefreshFailed(false) }
-        }
-      } catch { if (!controller.signal.aborted) setRefreshFailed(true) }
-      finally { if (!controller.signal.aborted) timer = setTimeout(refresh, 30000) }
-    }
-    timer = setTimeout(refresh, 30000)
-    return () => { controller.abort(); clearTimeout(timer) }
+    const stop = startNflPolling(refresh)
+    return () => { controller.abort(); stop() }
   }, [gameId, mode])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')

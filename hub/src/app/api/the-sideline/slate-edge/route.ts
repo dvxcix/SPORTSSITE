@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
@@ -73,7 +74,16 @@ export async function GET(request: NextRequest) {
   const requestedSample = request.nextUrl.searchParams.get('sample')
   const explicitSample: NflSample | null = requestedSample ? parseNflSample(requestedSample) : null
   const { games, date } = await getSidelineGames(requestedDate)
+  const payload = await getSlatePayload(games, date, explicitSample)
+  return NextResponse.json(payload, { headers: { 'Cache-Control': 'private, no-store' } })
+}
 
+// Shared research only. Membership is freshly checked above, outside this cache.
+const getSlatePayload = unstable_cache(async (
+  games: Awaited<ReturnType<typeof getSidelineGames>>['games'],
+  date: string,
+  explicitSample: NflSample | null,
+) => {
   const gameResults = await Promise.all(games.map(async game => {
     const bundle = await getSidelineOddsBundle(game)
     const roster = bundle.odds.players.map(player => ({
@@ -176,5 +186,5 @@ export async function GET(request: NextRequest) {
     })),
     entries,
   }
-  return NextResponse.json(payload, { headers: { 'Cache-Control': 'private, max-age=20' } })
-}
+  return payload
+}, ['nfl-slate-edge-payload-v1'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data', 'sideline:nfl-live'] })

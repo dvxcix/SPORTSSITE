@@ -3,6 +3,7 @@ import { packSidelineBoard } from '@/lib/sidelineWire'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
+import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -23,7 +24,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ timeline: await getSidelineTimeline(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     if (params.get('summary') === '1' && !at) {
-      return NextResponse.json(await getSidelineOddsBundle(game), { headers: { 'Cache-Control': 'private, no-store' } })
+      const [bundle, results] = await Promise.all([
+        getSidelineOddsBundle(game),
+        params.get('results') === '1' ? getNflPublicResults(game, null).catch(() => null) : Promise.resolve(undefined),
+      ])
+      return NextResponse.json({ ...bundle, results }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     if (at) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())

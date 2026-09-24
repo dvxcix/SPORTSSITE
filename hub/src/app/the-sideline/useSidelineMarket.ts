@@ -6,6 +6,7 @@ import type { SidelineOddsFrame } from './types'
 import type { SidelineGameState } from './types'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
+import { startNflPolling } from '@/lib/nflPolling'
 
 export function useSidelineMarket(
   gameId: string,
@@ -65,27 +66,26 @@ export function useSidelineMarket(
 
   useEffect(() => {
     const controller = new AbortController()
-    const update = async () => {
-      if (document.visibilityState === 'hidden') return
+    const update = async (pollSignal: AbortSignal) => {
       try {
-        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20000)])
+        const signal = AbortSignal.any([controller.signal, pollSignal])
         const base = '/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId)
         const currentResponse = await fetch(base, { signal })
         if (!currentResponse.ok) throw new Error('Refresh unavailable')
         const currentData = await currentResponse.json()
         if (controller.signal.aborted) return
+        setError(previous => previous === 'Refresh unavailable. Showing the last loaded capture.' ? '' : previous)
         setTimes(previous => { const next: string[]=currentData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
         if (currentData.odds) { const next=unpackSidelineBoard(currentData.odds); setCurrent(previous => JSON.stringify(previous)===JSON.stringify(next) ? previous : next) }
         if ('gameState' in currentData) setGameState(currentData.gameState ?? null)
         if (Array.isArray(currentData.touchdowns)) setTouchdowns(currentData.touchdowns)
       } catch {
         if (!controller.signal.aborted) setError('Refresh unavailable. Showing the last loaded capture.')
+        throw new Error('Market refresh failed')
       }
     }
-    void update()
-    const interval = window.setInterval(update, 30000)
-    window.addEventListener('visibilitychange', update)
-    return () => { controller.abort(); window.clearInterval(interval); window.removeEventListener('visibilitychange', update) }
+    const stop = startNflPolling(update, { immediate: refreshKey > 0 })
+    return () => { controller.abort(); stop() }
   }, [gameId, refreshKey])
 
   useEffect(() => {
@@ -102,11 +102,11 @@ export function useSidelineMarket(
     return () => { active = false; window.clearTimeout(timer) }
   }, [loadFrame, selectedAt, refreshKey])
 
-  // Warm only the opening and closest stops. Loading dozens of captures on mount
-  // competes with the board and makes the slider feel slower on mobile networks.
+  // Warm adjacent stops only after the viewer selects history, not on every mount.
   useEffect(() => {
+    if (!selectedAt || document.visibilityState === 'hidden' || navigator.onLine === false) return
     let active = true
-    const queue = [timeline[0], timeline[index - 1], timeline[index + 1], timeline[index - 2], timeline[index + 2]]
+    const queue = [timeline[index - 1], timeline[index + 1]]
       .filter((at): at is string => Boolean(at) && !cache.current.has(at))
     const worker = async () => {
       while (active && queue.length) {
@@ -116,7 +116,7 @@ export function useSidelineMarket(
     }
     void worker()
     return () => { active = false }
-  }, [timeline, index, loadFrame])
+  }, [timeline, index, loadFrame, selectedAt])
 
   const select = useCallback((next: number) => {
     setError('')
