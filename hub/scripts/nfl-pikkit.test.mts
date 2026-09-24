@@ -130,6 +130,9 @@ test('broad NFL tabs resolve real players and reject market-total headings', () 
 })
 
 test('Pikkit picks attach by normalized player and team identity', () => {
+  for (const [raw, identity] of [['Kyle Pitts First TD Scorer','Kyle Pitts Sr.'],['Kyle Pitts Sr. First TD Scorer','Kyle Pitts']]) {
+    assert.equal(resolveNflPikkitEntry(raw,'Touchdowns',[{name:identity,team:'ATL',position:'TE'}])?.marketLabel,'First TD Scorer')
+  }
   const board: SidelineOddsBoard = {
     bdlGameId: 1,
     status: 'ready',
@@ -150,6 +153,15 @@ test('Pikkit picks attach by normalized player and team identity', () => {
   assert.equal(enriched.picksCapturedAt, snapshot.capturedAt)
   assert.equal(enriched.players[0].publicPicks?.[0]?.picks, 1234)
   assert.equal(enriched.players[0].publicPicks?.[0]?.propType, 'passing_yards')
+  const pittsBoard = { ...board, players: [{ ...board.players[0], name: 'Kyle Pitts Sr.', team: 'ATL' }] }
+  const pittsSnapshot = { ...snapshot, markets: [{ ...snapshot.markets[0], players: [{ ...snapshot.markets[0].players[0], playerName: 'Kyle Pitts', playerKey: 'kylepitts', team: 'ATL' }] }] }
+  assert.equal(attachNflPikkitSnapshot(pittsBoard, pittsSnapshot).players[0].publicPicks?.[0]?.picks, 1234)
+  pittsSnapshot.markets[0].players[0].playerName = 'Kyle Pitts Sr.'
+  pittsSnapshot.markets[0].players[0].playerKey = 'kylepittssr'
+  pittsBoard.players[0].name = 'Kyle Pitts'
+  assert.equal(attachNflPikkitSnapshot(pittsBoard, pittsSnapshot).players[0].publicPicks?.[0]?.picks, 1234)
+  pittsSnapshot.markets[0].players[0].team = 'GB'
+  assert.deepEqual(attachNflPikkitSnapshot(pittsBoard, pittsSnapshot).players[0].publicPicks, [])
   assert.deepEqual(attachNflPikkitSnapshot(board, { ...snapshot, invalidMarkets: ['passing_yards'] }).players[0].publicPicks, [])
 })
 

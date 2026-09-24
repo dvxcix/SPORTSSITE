@@ -1,4 +1,5 @@
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import { normalizeNflPlayerName } from './nflPlayerName'
 
 export type NflPikkitPick = {
   playerName: string
@@ -71,11 +72,15 @@ export function resolveNflPikkitEntry(
   category: string,
   identities: NflPikkitIdentity[],
 ): ResolvedNflPikkitEntry | null {
+  // Remove name suffix tokens before splitting the player from the market.
+  // Keep the original identity; only normalize matching text.
+  const withoutSuffix = (value: string) => value.replace(/\b(?:jr|sr|ii|iii|iv|v)\b\.?/gi, '').replace(/\s+/g, ' ').trim()
+  rawName = withoutSuffix(rawName)
   const normalizedRaw = normalizeNflPikkitName(rawName)
   if (!normalizedRaw) return null
 
   const matches = identities.flatMap(identity => {
-    const aliases = [identity.name, ...(identity.aliases ?? [])]
+    const aliases = [identity.name, ...(identity.aliases ?? [])].map(withoutSuffix)
     return aliases.flatMap(alias => {
       const normalizedAlias = normalizeNflPikkitName(alias)
       return normalizedAlias && normalizedRaw.startsWith(normalizedAlias)
@@ -140,26 +145,30 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
 export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflPikkitSnapshot | null): SidelineOddsBoard {
   if (!snapshot) return { ...board, picksCapturedAt: null, players: board.players.map(player => ({ ...player, publicPicks: [] })) }
   const picksByPlayer = new Map<string, NonNullable<NflOddsPlayer['publicPicks']>>()
+  const boardNameCounts = new Map<string, number>()
+  for (const player of board.players) {
+    const name = normalizeNflPlayerName(player.name)
+    boardNameCounts.set(name, (boardNameCounts.get(name) ?? 0) + 1)
+  }
   for (const market of snapshot.markets) {
     // Normalize again at read time so already-stored captures from an older
     // importer immediately populate the correct Sideline column.
     const propType = canonicalizeNflPikkitMarket(market.propType || market.rawKey, market.rawLabel || market.label)
     if (snapshot.invalidMarkets?.includes(propType)) continue
     for (const player of market.players) {
-      const key = `${normalizeNflPikkitName(player.team ?? '')}:${player.playerKey}`
-      const fallback = `:${player.playerKey}`
+      const name = normalizeNflPlayerName(player.playerName || player.playerKey)
+      const key = `${normalizeNflPikkitName(player.team ?? '')}:${name}`
       const pick = { propType, label: market.label, rawMarket: market.rawLabel, picks: player.picks, capturedAt: snapshot.capturedAt }
       picksByPlayer.set(key, [...(picksByPlayer.get(key) ?? []), pick])
-      if (fallback !== key) picksByPlayer.set(fallback, [...(picksByPlayer.get(fallback) ?? []), pick])
     }
   }
   return {
     ...board,
     picksCapturedAt: snapshot.capturedAt,
     players: board.players.map(player => {
-      const name = normalizeNflPikkitName(player.name)
+      const name = normalizeNflPlayerName(player.name)
       const exact = picksByPlayer.get(`${normalizeNflPikkitName(player.team)}:${name}`)
-      return { ...player, publicPicks: exact ?? picksByPlayer.get(`:${name}`) ?? [] }
+      return { ...player, publicPicks: exact ?? (boardNameCounts.get(name) === 1 ? picksByPlayer.get(`:${name}`) : undefined) ?? [] }
     }),
   }
 }
