@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
-import { BookLogo } from '@/components/BookLogo'
+import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { ladderOffers, ladderPrice, estimateLadderPicks, observedPropPicks, contractPicks, type LadderSide } from '@/lib/nflLadders'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
@@ -10,6 +10,9 @@ import styles from './ladderBoard.module.css'
 import { buildBoardHeat } from './boardHeat'
 import { compareLadderValues, ladderHeatBackground, type LadderSort, type LadderSortKey } from './ladderPresentation'
 const price = (n: number | null) => (n == null ? '—' : n > 0 ? '+' + n : String(n))
+const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_td: 'First Touchdown', passing_tds: 'Passing Touchdowns', passing_completions: 'Pass Completions' }[key] ?? key.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\bTds?\b/g, 'Touchdowns'))
+const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
+const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
 export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore> }) {
   const [vendor, setVendor] = useState('fanduel')
@@ -83,7 +86,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
     <section className={styles.panel} aria-label="NFL full market ladders">
       <header>
         <div>
-          <h2>Market ladders</h2>
+          <h2>Player Props</h2>
           <small>
             {board.capturedAt
               ? new Date(board.capturedAt).toLocaleString('en-US', {
@@ -96,12 +99,12 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
               : 'Awaiting capture'}
           </small>
         </div>
-        <BookLogo vendor={vendor} size={24} />
       </header>
       <div className={styles.controls}>
         <label>
           Market
           <select
+            aria-label="Market"
             value={prop}
             onChange={e => {
               onProp(e.target.value)
@@ -109,16 +112,18 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
               setSort({ key: 'player', direction: 'asc' })
             }}
           >
-            {props.map(p => (
-              <option key={p} value={p}>
-                {p.replaceAll('_', ' ')}
-              </option>
-            ))}
+            {['Receiving', 'Rushing', 'Passing', 'Combined', 'Touchdowns', 'Other Markets'].map(group => {
+              const markets = props.filter(p => marketGroup(p) === group)
+              return markets.length ? <optgroup key={group} label={group}>{markets.map(p => <option key={p} value={p}>{marketLabel(p)}</option>)}</optgroup> : null
+            })}
           </select>
         </label>
         <label>
-          Book
+          Sportsbook
+          <span className={styles.bookSelect}>
+          <BookLogo key={vendor} vendor={vendor} size={22} />
           <select
+            aria-label="Sportsbook"
             value={vendor}
             onChange={e => {
               setVendor(e.target.value)
@@ -127,13 +132,18 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
             }}
           >
             {books.map(b => (
-              <option key={b}>{b}</option>
+              <option key={b} value={b}>{bookLabel(b)}</option>
             ))}
           </select>
+          </span>
         </label>
+      </div>
+      <details className={styles.options}>
+        <summary>Display Options</summary>
+      <div className={styles.controls}>
         <label>
-          Jump to threshold
-          <select value={visible[0] ?? ''} onChange={e => setOffset(Math.floor(thresholds.indexOf(Number(e.target.value)) / 6) * 6)}>
+          Starting Line
+          <select aria-label="Starting Line" value={visible[0] ?? ''} onChange={e => setOffset(Math.floor(thresholds.indexOf(Number(e.target.value)) / 6) * 6)}>
             {thresholds
               .filter((_, i) => i % 6 === 0)
               .map(line => (
@@ -145,8 +155,9 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
           </select>
         </label>
         <label>
-          Contract
+          Line Type
           <select
+            aria-label="Line Type"
             value={kind}
             onChange={e => {
               setKind(e.target.value as typeof kind)
@@ -156,34 +167,27 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
             }}
           >
             <option value="milestone">Milestones (+)</option>
-            <option value="over_under">O/U lines</option>
+            <option value="over_under">Over / Under</option>
           </select>
         </label>
-        <label>
+        {kind === 'over_under' && <label>
           Side
-          <select value={side} onChange={e => setSide(e.target.value as LadderSide)}>
-            <option value="over">Over / milestone</option>
+          <select aria-label="Side" value={side} onChange={e => setSide(e.target.value as LadderSide)}>
+            <option value="over">Over</option>
             {kind === 'over_under' ? <option value="under">Under</option> : null}
           </select>
-        </label>
+        </label>}
         <label>
           Compare
-          <select value={mode} onChange={e => setMode(e.target.value as typeof mode)}>
+          <select aria-label="Compare" value={mode} onChange={e => setMode(e.target.value as typeof mode)}>
             <option value="odds">Odds</option>
-            <option value="move">Change · probability pp</option>
-            <option value="ratio">ATD / contract</option>
-            <option value="picks">Picks · observed / est.</option>
+            <option value="move">Probability Change (pp)</option>
+            <option value="ratio">Anytime TD / Prop Ratio</option>
+            <option value="picks">Picks (Includes Estimates)</option>
           </select>
         </label>
       </div>
-      <div className={styles.legend}>
-        <span>
-          {rows.length} players · {thresholds.length} thresholds · {side.toUpperCase()}
-        </span>
-        <span>Estimated pick distribution</span>
-        <span>{mode} heat</span>
-        <span>Score / MM: relative to displayed players · tap headers to sort</span>
-      </div>
+      </details>
       <div className={styles.scroll}>
         <table>
           <thead>
@@ -211,7 +215,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:score`))}>
                   <b>{scores.get(row.player.id)?.score ?? '—'}</b>
-                  <small>{scores.get(row.player.id)?.label ?? prop.replaceAll('_', ' ')}</small>
+                  <small>{scores.get(row.player.id)?.label ?? marketLabel(prop)}</small>
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:mm`))}>
                   <b>{scores.get(row.player.id)?.mm == null ? '—' : `${(scores.get(row.player.id)?.mm ?? 0) > 0 ? '+' : ''}${scores.get(row.player.id)?.mm}`}</b>
