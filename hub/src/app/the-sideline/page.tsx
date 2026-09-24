@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
-import { NflGameData } from './NflGameData'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
 import { defaultNflSample, parseNflSample, nflSampleReference } from '@/lib/nflSample'
@@ -48,8 +46,7 @@ export default async function SidelinePage({ searchParams }: {
   const sample = requestedSample
     ? parseNflSample(requestedSample)
     : defaultNflSample(selected)
-  const navigation = <><SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
-    {gate.isAdmin ? <Suspense fallback={null}><NflGameData game={selected} /></Suspense> : null}</>
+  const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
 
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
