@@ -1096,11 +1096,11 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
     const offer = primaryMarketOffer(item.row.market, item.row.contextProp ?? 'anytime_td')
     return (
       <b className={styles.signalValue}>
+        <strong>{item.row.name}</strong>
         <span>
           {item.move > 0 ? '+' : ''}
           {item.move.toFixed(1)}%
         </span>
-        <strong>{item.row.name}</strong>
         {offer ? (
           <em>
             <BookLogo vendor={offer.offer.vendor} size={13} />
@@ -1132,7 +1132,7 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
           </span>
         </div>
       </div>
-      <div className={styles.teamSignals}>
+      <div className={styles.teamSummaryControls}>
         <div className={styles.teamWindows}>
           <small>WINDOW</small>
           <span>
@@ -1143,25 +1143,26 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
             ))}
           </span>
         </div>
+        <div className={styles.teamSummaryMeta}>
+          <span>Team ML <b>{oddsLabel(moneyline)}</b></span>
+          <span>Saved <b>{savedCount}</b></span>
+        </div>
+      </div>
+      <div className={styles.teamSignals} aria-label={`${team.name} player highlights`}>
         <div>
-          <small>TOP {contextLabel.toUpperCase()} SCORE</small>
-          <b>{topScore ? `${topScore.name} ${topScore.index}` : 'Syncing'}</b>
+          <small>TOP SCORE <span>· {contextLabel}</span></small>
+          <b className={styles.signalValue}>
+            <strong>{topScore?.name ?? 'No scored player'}</strong>
+            <span>{topScore?.index ?? '—'} <em>/ 100</em></span>
+          </b>
         </div>
         <div className={styles.advertised}>
-          <small>MOST ADVERTISED · {contextLabel.toUpperCase()}</small>
+          <small>MOST ADVERTISED <span>· {contextLabel}</span></small>
           {signal(advertised)}
         </div>
         <div className={styles.hidden}>
-          <small>MOST HIDDEN · {contextLabel.toUpperCase()}</small>
+          <small>MOST HIDDEN <span>· {contextLabel}</span></small>
           {signal(hidden)}
-        </div>
-        <div>
-          <small>TEAM ML</small>
-          <b>{oddsLabel(moneyline)}</b>
-        </div>
-        <div>
-          <small>SAVED MARKETS</small>
-          <b>{savedCount}</b>
         </div>
       </div>
     </header>

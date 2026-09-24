@@ -21,6 +21,17 @@ try {
     const checkGeometry = async () => {
       const failures = await page.evaluate(() => {
         const failures: string[] = []
+        document.querySelectorAll('[aria-label$="player highlights"]').forEach(summary => {
+          const bounds = summary.getBoundingClientRect()
+          if (bounds.left < -1 || bounds.right > innerWidth + 1) failures.push('summary outside viewport')
+          summary.querySelectorAll('strong,small,b,em').forEach(element => {
+            const rect = element.getBoundingClientRect()
+            const card = element.closest('[class*="teamSignals"] > div')!.getBoundingClientRect()
+            if (element.scrollWidth > element.clientWidth + 1 && element.clientWidth > 0) failures.push('summary text clipped')
+            if (rect.left < card.left - 1 || rect.right > card.right + 1) failures.push('summary text outside card')
+            if (element.tagName === 'STRONG' && getComputedStyle(element).textOverflow === 'ellipsis') failures.push('summary name truncated')
+          })
+        })
         document.querySelectorAll('td [class*="baselineValue"], td [class*="ratioValue"], td [class*="roleMarket"]').forEach(card => {
           const cell = card.closest('td')!.getBoundingClientRect()
           for (const element of [card, ...card.querySelectorAll('b,small,button')]) {
@@ -69,6 +80,11 @@ try {
     await slider.fill('2')
     await page.getByText('CURRENT', { exact: true }).waitFor()
     const saved = page.getByRole('button', { name: 'Add Bijan Robinson First TD fanduel to watchlist', exact: true })
+    await saved.evaluate(button => {
+      const scroller = button.closest('table')!.parentElement!
+      window.scrollBy(0, button.getBoundingClientRect().top - innerHeight / 2)
+      scroller.scrollLeft += button.getBoundingClientRect().right - scroller.getBoundingClientRect().right + 16
+    })
     await saved.click()
     assert.equal(await page.getByRole('button', { name: 'Remove Bijan Robinson First TD fanduel from watchlist', exact: true }).getAttribute('aria-pressed'), 'true')
     await page.getByRole('button', { name: 'Compare Bijan Robinson', exact: true }).click()

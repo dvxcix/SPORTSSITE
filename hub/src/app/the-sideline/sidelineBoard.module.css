@@ -425,7 +425,8 @@
 }
 
 .teamHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   min-height: 72px;
   border-bottom: 1px solid var(--line);
@@ -461,14 +462,22 @@
 .collapseTeam.teamCollapsed svg { transform: rotate(-90deg); }
 
 .teamIdentity > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
-.teamIdentity strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.teamIdentity strong { font-size: 15px; overflow-wrap: anywhere; }
 .teamIdentity span { color: #a1adbc; font-size: 11px; }
 
 .teamSignals {
   display: grid;
-  grid-template-columns: minmax(230px, 1.35fr) repeat(5, minmax(142px, 1fr));
-  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
 }
+
+.teamSummaryControls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; padding: 10px 15px; }
+.teamSummaryControls .teamWindows { display: grid; gap: 5px; }
+.teamSummaryMeta { display: flex; gap: 14px; color: #a1adbc; font-size: 11px; }
+.teamSummaryMeta b { color: #f5f8fb; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.teamSignals small { font-size: 10px; line-height: 1.5; }
+.teamSignals small span { color: #a1adbc; font-weight: 600; white-space: nowrap; }
 
 .teamSignals > div {
   display: flex;
@@ -484,15 +493,16 @@
 .teamSignals b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .teamSignals .signalValue {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   align-items: center;
   overflow: visible;
   white-space: normal;
 }
-.signalValue > span { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.signalValue > strong { overflow: hidden; color: #f5f8fb; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.signalValue > em { display: inline-flex; align-items: center; gap: 3px; color: #dce5ee; font-size: 10px; font-style: normal; white-space: nowrap; }
+.signalValue > span { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.signalValue > strong { grid-column: 1 / -1; color: #f5f8fb; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; white-space: normal; }
+.signalValue em { font-size: 11px; font-style: normal; color: #a1adbc; }
+.signalValue > em { display: inline-flex; align-items: center; gap: 5px; color: #dce5ee; font-size: 12px; white-space: nowrap; }
 .noSignal { color: #778496; font-size: 10px !important; font-weight: 800; }
 .teamSignals .advertised { background: linear-gradient(145deg, rgba(255, 102, 126, 0.12), transparent); }
 .teamSignals .advertised small { color: #ff8e9f; }
@@ -503,7 +513,7 @@
 .teamWindows > span { display: flex; gap: 4px; }
 .teamWindows button {
   min-width: 29px;
-  height: 25px;
+  min-height: 36px;
   padding: 0 7px;
   border: 1px solid #283442;
   border-radius: 6px;
@@ -895,8 +905,7 @@
   .teamHeader { display: block; }
   .gameLines { grid-template-columns: 190px minmax(0, 1fr); }
   .teamIdentity { min-width: 0; }
-  .teamSignals { border-top: 1px solid var(--line); overflow-x: auto; }
-  .teamSignals > div { min-width: 150px; }
+  .teamSignals > div { min-width: 0; }
   .comparisonGrid { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
   .metricCards { grid-template-columns: repeat(3, minmax(110px, 1fr)); }
   .modalMarkets article > div { grid-template-columns: repeat(3, minmax(115px, 1fr)); }
@@ -957,8 +966,11 @@
   .roleTabs { margin-top: -5px; }
   .teamHeader { min-height: 0; }
   .teamIdentity { padding: 11px; }
-  .teamSignals { grid-template-columns: 230px repeat(5, 154px); }
-  .teamSignals > div { min-width: 154px; padding: 9px 11px; }
+  .teamSignals { grid-template-columns: 1fr; }
+  .teamSignals > div { min-width: 0; padding: 10px 12px; border-left: 0; border-top: 1px solid var(--line); }
+  .teamSignals > div:first-child { border-top: 0; }
+  .teamSummaryControls { padding: 0 11px 11px; }
+  .teamWindows > span { flex-wrap: wrap; }
   .boardTable td { height: 84px; }
   .playerCell { grid-template-columns: 17px 42px minmax(82px, 1fr) 30px 30px; gap: 5px; }
   .stickyCell { box-shadow: 5px 0 11px rgba(0, 0, 0, 0.35); }
@@ -998,8 +1010,6 @@
   .storyGrid > article:nth-child(3) { grid-column: auto; }
   .storyGrid > article:nth-child(4) { grid-column: 1 / -1; }
   .teamIdentity strong { font-size: 14px; }
-  .teamSignals { grid-template-columns: 220px repeat(5, 150px); }
-  .teamSignals > div { min-width: 150px; }
 }
 
 @media (min-width: 1900px) {
