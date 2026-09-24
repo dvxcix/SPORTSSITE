@@ -85,7 +85,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
       <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`} data-product-area={productArea}>
         {isDesktop
           ? <DesktopNavigation />
-          : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}
+          : <Suspense fallback={null}><Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} /></Suspense>}
         <div className="flex-1 min-w-0 flex flex-col">
           {isDesktop && <DesktopCommandBar />}
           {!isDesktop && <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />}

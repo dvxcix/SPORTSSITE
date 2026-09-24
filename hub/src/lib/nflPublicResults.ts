@@ -15,7 +15,7 @@ export function matchesResultPlayer(player: Pick<NflOddsPlayer, 'id' | 'gsisId' 
     normalizeNflPlayerName(player.name) === normalizeNflPlayerName(row.name))
 }
 export function gradeNflPublicProp(result: NflPublicResult | null, player: NflOddsPlayer, prop: { propType: string; line?: number | null; side?: 'over' | 'under'; kind?: 'milestone' | 'over_under' }): NflOutcome {
-  const unknown: NflOutcome = { state: 'unavailable', actual: null, label: 'Awaiting result' }
+  const unknown: NflOutcome = { state: 'unavailable', actual: null, label: result?.status === 'final' ? 'Result unavailable' : 'Awaiting result' }
   if (!result || ['unknown', 'canceled', 'postponed', 'abandoned'].includes(result.status)) return unknown
   if (result.status === 'scheduled') return { state: 'pending', actual: null, label: 'Pregame' }
   const final = result.status === 'final'
@@ -27,11 +27,12 @@ export function gradeNflPublicProp(result: NflPublicResult | null, player: NflOd
   const rows = result.players.filter(row => matchesResultPlayer(player, row))
   if (rows.length !== 1) return unknown
   const actual = rows[0].stats[prop.propType]
-  const line = prop.line ?? (prop.propType === 'anytime_td' ? 1 : null)
+  const anytime = /^anytime_td(?:_[1-4][qh])?$/.test(prop.propType)
+  const line = prop.line ?? (anytime ? 1 : null)
   if (actual == null || !Number.isFinite(actual)) return unknown
   if (line == null) return { state: 'unavailable', actual, label: final ? 'Final total · choose a ladder' : 'Live total · choose a ladder' }
   if (!Number.isFinite(line)) return unknown
-  const milestone = prop.kind === 'milestone' || (prop.propType === 'anytime_td' && prop.kind !== 'over_under')
+  const milestone = prop.kind === 'milestone' || (anytime && prop.kind !== 'over_under')
   const hit = prop.side === 'under' ? actual < line : milestone ? actual >= line : actual > line
   if (!final) return { state: hit && prop.side !== 'under' ? 'reached' : 'pending', actual, label: hit && prop.side !== 'under' ? 'Reached · live' : 'Live · pending' }
   const state = !milestone && actual === line ? 'push' : hit ? 'hit' : 'miss'

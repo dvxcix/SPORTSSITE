@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
@@ -88,7 +88,8 @@ const nav: NavItem[] = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname()
-  const [sidelineMode, setSidelineMode] = useState('')
+  const searchParams = useSearchParams()
+  const sidelineMode = searchParams.get('mode') ?? ''
   const { profile } = useAuth()
   const { allowed: nflAccess } = useNflAccess()
   const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
@@ -114,14 +115,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // Tapping a nav link should close the drawer on mobile — otherwise the
   // new page loads underneath a sidebar that's still covering half the
   // screen until you notice and dismiss it yourself.
-  useEffect(() => { onClose() }, [path]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const syncMode = () => setSidelineMode(new URLSearchParams(window.location.search).get('mode') ?? '')
-    syncMode()
-    window.addEventListener('popstate', syncMode)
-    return () => window.removeEventListener('popstate', syncMode)
-  }, [path])
+  useEffect(() => { onClose() }, [path, sidelineMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the page behind the mobile drawer stationary while it is open.
   useEffect(() => {
@@ -301,7 +295,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               textDecoration: 'none',
               userSelect: 'none',
             }}
-            onClick={() => { if (item.href.startsWith('/the-sideline')) setSidelineMode(new URLSearchParams(item.href.split('?')[1] ?? '').get('mode') ?? '') }}
+            onClick={onClose}
             onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; } }}
             onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />

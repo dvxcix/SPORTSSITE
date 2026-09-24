@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
+import { build } from 'esbuild'
+import { createRequire } from 'node:module'
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -64,11 +66,19 @@ assert.equal(mismatches.length,0,'Stored production and rendered board disagree'
 
 const {data:games,error:gamesError}=await db.from('nfl_schedule').select('game_id,season,week,gameday,away_team,home_team').eq('season',season).eq('week',2).eq('game_type','REG')
 if(gamesError)throw gamesError
+// Use actual dependencies for integration checks; the pure buildPlayers test above
+// intentionally remains isolated. Stubbing new imports silently hid loader failures.
+const bundle = await build({ stdin: { contents: "export { getSidelineBoardLens } from './src/app/the-sideline/boardAnalysis'", resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external', tsconfig: 'tsconfig.json', plugins: [{ name: 'runtime', setup(b) {
+  b.onResolve({ filter: /^(server-only|next\/cache)$/ }, a => ({ path: a.path, namespace: 'runtime' }))
+  b.onLoad({ filter: /.*/, namespace: 'runtime' }, a => ({ contents: a.path === 'server-only' ? '' : 'export const unstable_cache=(fn)=>fn' }))
+} }] })
+const actual = { exports: {} as typeof exports }
+new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(createRequire(import.meta.url), actual, actual.exports)
 const lenses:any[]=[]
 for(let offset=0;offset<games.length;offset+=4){
   await Promise.all(games.slice(offset,offset+4).map(async g=>{
     const team=(abbr:string)=>({abbr,name:abbr,color:'#000',logo:null})
-    const lens=await exports.getSidelineBoardLens({id:g.game_id,season:g.season,week:g.week,gameday:g.gameday,gameType:'REG',away:team(g.away_team),home:team(g.home_team)},[],'regular')
+    const lens=await actual.exports.getSidelineBoardLens({id:g.game_id,season:g.season,week:g.week,gameday:g.gameday,gameType:'REG',away:team(g.away_team),home:team(g.home_team)},[],'regular')
     assert.equal(lens.status,'calculated',g.game_id)
     assert.ok(lens.windows.l1.plays>0,g.game_id+' has no L1 plays')
     assert.ok(lens.windows.l1.weeks.every((week:number)=>week<2),g.game_id+' leaked current/future week')

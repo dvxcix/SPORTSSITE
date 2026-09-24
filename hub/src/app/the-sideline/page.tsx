@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { NflGameData } from './NflGameData'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
-import { defaultNflSample, parseNflSample } from '@/lib/nflSample'
+import { defaultNflSample, parseNflSample, nflSampleReference } from '@/lib/nflSample'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { SidelineBoardClient } from './SidelineBoardClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
@@ -59,8 +59,8 @@ export default async function SidelinePage({ searchParams }: {
     getNflTouchdownFeed(date),
   ])
   if (mode === 'cheatsheets') {
-    const lens = await getCachedSidelineCheatsheetLens(selected)
-    return <>{navigation}<SidelineCheatsheets key={selected.id} lens={lens} board={market.odds} isAdmin={gate.isAdmin} /></>
+    const lens = await getCachedSidelineCheatsheetLens(selected, sample)
+    return <>{navigation}<SidelineCheatsheets key={selected.id + sample} lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></>
   }
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}

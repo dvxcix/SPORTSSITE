@@ -1,5 +1,6 @@
 import 'server-only'
 import { getNflPregameDvp, getNflPregameWeekly } from '@/lib/nflPregameData'
+import { defaultNflSample, nflSampleReference, type NflSample } from '@/lib/nflSample'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
@@ -793,9 +794,9 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
   return { script, detail, aggressor: aggressor.team.abbr }
 }
 
-async function querySeason(game: SidelineGame, season: number) {
+async function querySeason(game: SidelineGame, season: number, phase: 'PRE' | 'REG' = 'REG') {
   const admin = createAdminClient()
-  const beforeWeek = season === game.season ? game.week : 100
+  const beforeWeek = season === game.season && phase === game.gameType ? game.week : 100
   const teams = [game.away.abbr, game.home.abbr]
   const loadPbp = async () => {
     const rows: Row[] = []
@@ -805,7 +806,7 @@ async function querySeason(game: SidelineGame, season: number) {
         .from('nfl_pbp')
         .select('game_id,play_id,sack,passing_yards,receiving_yards,rushing_yards,play_deleted,play_type,two_point_attempt,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,run_location,run_gap,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name,td_player_id:raw->>td_player_id')
         .eq('season', season)
-        .eq('season_type', 'REG')
+        .eq('season_type', phase)
         .lt('week', beforeWeek)
         .lt('game_date', game.gameday)
         .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
@@ -826,27 +827,27 @@ async function querySeason(game: SidelineGame, season: number) {
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,avg_separation,avg_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
       .eq('season', season)
       .gt('week', 0).lt('week', beforeWeek)
-      .eq('season_type', 'REG')
+      .eq('season_type', phase)
       .in('team_abbr', teams),
     admin
       .from('nfl_ngs_rushing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
       .eq('season', season)
       .gt('week', 0).lt('week', beforeWeek)
-      .eq('season_type', 'REG')
+      .eq('season_type', phase)
       .in('team_abbr', teams),
     admin
       .from('nfl_ngs_passing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,attempts,completions,pass_yards,pass_touchdowns')
       .eq('season', season)
       .gt('week', 0).lt('week', beforeWeek)
-      .eq('season_type', 'REG')
+      .eq('season_type', phase)
       .in('team_abbr', teams),
-    getNflPregameDvp(season, beforeWeek),
+    getNflPregameDvp(season, beforeWeek, phase),
   ])
 
   for (const result of [receivingResult, rushingResult, passingResult]) if (result.error) throw result.error
-  const weekly = (await getNflPregameWeekly(season, beforeWeek)).filter(row => teams.includes(String(row.recent_team)))
+  const weekly = (await getNflPregameWeekly(season, beforeWeek, phase)).filter(row => teams.includes(String(row.recent_team)))
   // Weekly production is authoritative for counts, including low-volume players
   // who never qualify for NGS. Tracking metrics remain sourced from NGS only.
   const production = (kind: 'receiving' | 'rushing' | 'passing', tracking: Row[]) => {
@@ -893,12 +894,13 @@ async function querySeason(game: SidelineGame, season: number) {
   }
 }
 
-export async function getSidelineLens(game: SidelineGame, includeHistory = true): Promise<SidelineLens> {
-  const preferredSeason = game.gameType === 'REG' && game.week > 1 ? game.season : game.season - 1
+export async function getSidelineLens(game: SidelineGame, includeHistory = true, sample: NflSample = defaultNflSample(game)): Promise<SidelineLens> {
+  const reference = nflSampleReference(game.season, sample)
+  const preferredSeason = reference.season
   try {
     const season = preferredSeason
     const historyPromise = includeHistory ? queryHistory() : Promise.resolve({ games: [], plays: [], headshots: new Map<string, string>() })
-    const data = await querySeason(game, season)
+    const data = await querySeason(game, season, reference.phase)
 
     const history = await historyPromise
     const away = profileTeam(game.away, data.pbp)

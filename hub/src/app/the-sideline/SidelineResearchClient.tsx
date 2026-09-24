@@ -26,12 +26,37 @@ export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?:
 const toneFor = (key: string) => /td|touchdown/.test(key) ? 'lime' : /rec/.test(key) ? 'cyan' : /rush/.test(key) ? 'amber' : 'violet'
 const marketLabel = (key: string) => key.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()).replace(/\bTds?\b/g, word => word.toUpperCase())
 
-export function SidelineResearchClient({ board, boardHref, title, mode, teams, gameId, initialResults = null }: {
+export function SidelineResearchClient(props: Parameters<typeof ResearchView>[0]) {
+  return <ResearchView key={`${props.gameId ?? props.boardHref}:${props.mode}:${props.board.capturedAt}:${props.board.picksCapturedAt}:${props.initialResults?.updatedAt}`} {...props} />
+}
+
+function ResearchView({ board: initialBoard, boardHref, title, mode, teams, gameId, initialResults = null }: {
   board: SidelineOddsBoard; boardHref: string; title: string; mode: 'public' | 'markets'; teams: SidelineTeam[]
   gameId?: string; initialResults?: NflPublicResult | null
 }) {
+  const [board, setBoard] = useState(initialBoard)
   const [results, setResults] = useState(initialResults)
   const [refreshFailed, setRefreshFailed] = useState(false)
+  const [marketRefreshFailed, setMarketRefreshFailed] = useState(false)
+  useEffect(() => {
+    if (!gameId) return
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const refresh = async () => {
+      try {
+        if (document.visibilityState !== 'hidden') {
+          const response = await fetch(`/the-sideline/market?game=${encodeURIComponent(gameId)}&summary=1`, { signal: controller.signal, cache: 'no-store' })
+          if (!response.ok) throw new Error('Market refresh failed')
+          const next = await response.json() as { odds: SidelineOddsBoard }
+          if (!Array.isArray(next.odds?.players)) throw new Error('Invalid market response')
+          if (!controller.signal.aborted) { setBoard(next.odds); setMarketRefreshFailed(false) }
+        }
+      } catch { if (!controller.signal.aborted) setMarketRefreshFailed(true) }
+      finally { if (!controller.signal.aborted) timer = setTimeout(refresh, 30000) }
+    }
+    timer = setTimeout(refresh, 30000)
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [gameId])
   useEffect(() => {
     if (mode !== 'public' || !gameId) return
     const controller = new AbortController()
@@ -52,7 +77,7 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams, g
   }, [gameId, mode])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
-  const [page, setPage] = useState(0)
+  const [requestedPage, setPage] = useState(0)
   const [teamFilter, setTeamFilter] = useState('all')
   const playersById = useMemo(() => new Map(board.players.map(player => [player.id, player])), [board.players])
   const picks = useMemo(() => board.players.flatMap(player => (player.publicPicks ?? []).map(pick => ({
@@ -86,10 +111,12 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams, g
   const count = mode === 'public' ? filteredPicks.length : filteredMarkets.length
   const totalPicks = filteredPicks.reduce((sum, row) => sum + row.picks, 0)
   const pageSize = 24
+  const page = Math.min(requestedPage, Math.max(0, Math.ceil(count / pageSize) - 1))
   const theme = (team: string) => ({ '--team-color': teams.find(item => item.abbr === team)?.color ?? '#203d50' }) as CSSProperties
   return <div className={styles.root}>
     <header><Link href={boardHref}>← The Sideline</Link><p>{title}</p><h1>{mode === 'public' ? 'The Public · NFL' : 'NFL sportsbook comparison'}</h1>
-      <small>Captured: {stamp(mode === 'public' ? board.picksCapturedAt : board.capturedAt)}</small>
+      <small>Odds captured: {stamp(board.capturedAt)} · Picks captured: {stamp(board.picksCapturedAt)}</small>
+      {marketRefreshFailed ? <p role="status">Market refresh delayed; showing the last captured prices and picks.</p> : null}
       {mode === 'public' ? <p className={styles.resultSummary} role="status">{results?.status === 'final' ? 'Final results' : results?.status === 'in_progress' ? 'Live results · refresh every 30s' : 'Game results'}{results ? ` · Updated ${stamp(results.updatedAt)}` : ' · Awaiting feed'}{refreshFailed ? ' · Refresh delayed; showing last update' : ''}</p> : null}
     </header>
     <section className={styles.controls} aria-label="Research filters">
@@ -125,6 +152,6 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams, g
         <div className={styles.bookGrid}>{row.offers.map((offer, index) => <div className={styles.bookOffer} data-best={index === 0 && row.offers.length > 1} key={`${offer.vendor}:${index}`}><span><BookLogo vendor={offer.vendor} size={20} />{offer.vendor}</span><b>{price(offer.odds)}</b><small>{stamp(offer.time)}</small>{index === 0 && row.offers.length > 1 ? <em>BEST PAYOUT</em> : null}</div>)}</div>
       </article>)}
     </div>}
-    <footer className={styles.controls}><button disabled={page === 0} onClick={() => setPage(value => value - 1)}>Previous</button><span>Page {page + 1} of {Math.max(1, Math.ceil(count / pageSize))}</span><button disabled={(page + 1) * pageSize >= count} onClick={() => setPage(value => value + 1)}>Next</button></footer>
+    <footer className={styles.controls}><button disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page + 1} of {Math.max(1, Math.ceil(count / pageSize))}</span><button disabled={(page + 1) * pageSize >= count} onClick={() => setPage(page + 1)}>Next</button></footer>
   </div>
 }

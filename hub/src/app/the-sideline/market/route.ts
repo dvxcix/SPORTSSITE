@@ -22,6 +22,9 @@ export async function GET(request: Request) {
     if (params.get('index') === '1') {
       return NextResponse.json({ timeline: await getSidelineTimeline(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
+    if (params.get('summary') === '1' && !at) {
+      return NextResponse.json(await getSidelineOddsBundle(game), { headers: { 'Cache-Control': 'private, no-store' } })
+    }
     if (at) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())
       return NextResponse.json({ frame: frame && params.get('packed')==='1' ? {...frame,board:packSidelineBoard(frame.board)} : frame }, { headers: { 'Cache-Control': 'private, no-store' } })

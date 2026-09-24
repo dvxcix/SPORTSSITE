@@ -7,6 +7,7 @@ import { getNflBdlGame } from './nflOdds'
 import type { SidelineGame } from '@/app/the-sideline/types'
 import type { NflPublicResult, NflResultPlayer } from './nflPublicResults'
 import { matchesResultPlayer } from './nflPublicResults'
+import { attachNflPeriodResults, attachNflBdlPeriodResults, type NflBdlPeriodPlay } from './nflPeriodResults'
 
 type Stat = Record<string, unknown> & { player: { id: number; first_name: string; last_name: string }; team: { abbreviation: string }; game: { id: number; status_state: string } }
 const fields: Record<string, string> = {
@@ -62,5 +63,25 @@ export const getNflPublicResults = unstable_cache(async (game: SidelineGame, bdl
     const scored = gameTds.filter(event => (player.id != null && event.bdlPlayerId === player.id) || (player.gsisId != null && event.playerId === player.gsisId) || (event.playerName === player.name && event.team === player.team)).length
     player.stats.anytime_td = scoring.some(value => value != null) ? scoring.reduce<number>((sum, value) => sum + (value ?? 0), 0) : scored > 0 ? scored : player.stats.anytime_td ?? null
   }
+  if (base.status === 'final' && saved?.reconciled) {
+    const { data: plays, error } = await admin.from('nfl_pbp')
+      .select('play_id,qtr,play_type,play_deleted,two_point_attempt,pass_attempt,complete_pass,sack,rush_attempt,passing_yards,receiving_yards,rushing_yards,pass_touchdown,touchdown,passer_player_id,receiver_player_id,rusher_player_id,raw')
+      .eq('game_id', game.id).order('play_id').range(0, 999).abortSignal(AbortSignal.timeout(10000))
+    if (!error) attachNflPeriodResults(base.players, plays ?? [], true)
+  }
+  // Observed TDs can show reached live. Do not infer period zeroes from silence.
+  if (base.status === 'in_progress') for (const player of base.players) {
+    const events = gameTds.filter(event => (player.id != null && event.bdlPlayerId === player.id) || (player.gsisId != null && event.playerId === player.gsisId))
+    for (const period of ['1q', '2q', '3q', '4q', '1h', '2h']) {
+      const matching = events.filter(event => period === '1h' ? event.quarter <= 2 : period === '2h' ? event.quarter >= 3 : event.quarter === Number(period[0]))
+      if (matching.length) player.stats[`anytime_td_${period}`] = matching.length
+    }
+  }
+  if (base.status === 'in_progress') {
+    const fresh = saved && Date.now() - Date.parse(saved.fetched_at) < 30000
+    const plays = fresh ? (saved.payload as { plays?: NflBdlPeriodPlay[] }).plays ?? []
+      : await fetchAllBdl<NflBdlPeriodPlay>(`plays?game_id=${id}&per_page=100`).catch(() => [])
+    attachNflBdlPeriodResults(base.players, plays, id)
+  }
   return base
-}, ['nfl-public-results-v1'], { revalidate: 20, tags: ['sideline:nfl-live'] })
+}, ['nfl-public-results-v2-periods'], { revalidate: 20, tags: ['sideline:nfl-live'] })

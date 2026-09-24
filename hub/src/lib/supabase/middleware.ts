@@ -291,9 +291,13 @@ export async function updateSession(request: NextRequest) {
   ) || isPublicCreatorRoute || isPublicBlogRoute
 
   if (!userId && !isAuthRoute && !isPublicRoute) {
+    if (pathname.startsWith('/api/') || /^\/the-sideline\/(market|results|touchdown-replay)$/.test(pathname)) {
+      return NextResponse.json({ error: 'Sign in required' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
-    url.searchParams.set('next', request.nextUrl.pathname)
+    url.search = ''
+    url.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(url)
   }
 

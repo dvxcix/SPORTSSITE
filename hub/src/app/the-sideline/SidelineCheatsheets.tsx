@@ -20,17 +20,20 @@ type HitSummary = { hits: number; total: number; rate: number } | null
 const PROP_FIELDS: Record<string, LogField> = {
   receptions: 'receptions', receiving_yards: 'receivingYards', rushing_attempts: 'carries', rushing_yards: 'rushingYards',
   passing_attempts: 'passAttempts', completions: 'completions', passing_yards: 'passingYards', passing_tds: 'passingTouchdowns',
+  passing_completions: 'completions',
   anytime_td: 'scorerTouchdowns', first_td: 'firstTouchdowns',
 }
 const PROP_LABELS: Record<string, string> = {
   anytime_td: 'Anytime TD', first_td: 'First TD', passing_tds: 'Passing TDs', receptions: 'Receptions',
   receiving_yards: 'Receiving Yards', rushing_attempts: 'Rush Attempts', rushing_yards: 'Rushing Yards',
   passing_attempts: 'Pass Attempts', completions: 'Completions', passing_yards: 'Passing Yards',
+  passing_completions: 'Completions',
 }
 const PROJECTION_KEYS: Record<string, string> = {
   receiving_yards: 'receiving-yards', rushing_yards: 'rushing-yards', rushing_attempts: 'rush-attempts',
   passing_yards: 'passing-yards', passing_attempts: 'pass-attempts', receptions: 'receptions',
   completions: 'completions', passing_tds: 'touchdown', anytime_td: 'touchdown', first_td: 'touchdown',
+  passing_completions: 'completions',
 }
 const VIEW_META = [
   ['edge', 'Market Edge', Gauge], ['hits', 'Exact-Line Hits', Target], ['explosives', 'Explosive Plays', Sparkles],
@@ -134,7 +137,7 @@ function PlayerChips({ players }: { players: NflOddsPlayer[] }) {
   return <div className={styles.playerChips}>{players.slice(0, 4).map(player => <a href={player.gsisId ? `/nfl/players/${player.gsisId}` : '#'} key={player.id}>{player.headshot ? <Image src={player.headshot} alt="" width={26} height={26} unoptimized /> : <i>{player.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</i>}<span><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></span></a>)}</div>
 }
 
-export function SidelineCheatsheets({ lens, board, isAdmin = false }: { lens: SidelineLens; board: SidelineOddsBoard; isAdmin?: boolean }) {
+export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season} regular season`, isAdmin = false }: { lens: SidelineLens; board: SidelineOddsBoard; sampleLabel?: string; isAdmin?: boolean }) {
   const [view, setView] = useState<View>('edge')
   const [prop, setProp] = useState('anytime_td')
   const [vendor, setVendor] = useState('fanduel')
@@ -232,7 +235,7 @@ export function SidelineCheatsheets({ lens, board, isAdmin = false }: { lens: Si
 
   return <div className={styles.root}>
     <header className={styles.hero}>
-      <div className={styles.heroCopy}><span>NFL INTELLIGENCE DESK</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {lens.season} regular-season reference</p></div>
+      <div className={styles.heroCopy}><span>NFL INTELLIGENCE DESK</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {sampleLabel} reference</p></div>
       <div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div>
     </header>
     {isAdmin ? <section className={styles.coverageRail} aria-label="Data coverage">

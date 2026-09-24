@@ -30,9 +30,9 @@ test('initial page never loads or serializes the archive', () => {
   assert.match(data, /select\('captured_at'\)/)
   assert.match(data, /lte\('captured_at', capturedAt\)/)
 })
-test('NFL preview stays out of navigation', () => {
-  for (const file of ['Sidebar.tsx', 'MobileDock.tsx', 'DesktopCommandBar.tsx']) {
-    const source = readFileSync(new URL('../src/components/layout/' + file, import.meta.url), 'utf8')
-    assert.doesNotMatch(source, /href: ?['"]\/the-sideline/)
-  }
+test('NFL navigation remains entitlement-gated and follows query-only changes', () => {
+  const source = readFileSync(new URL('../src/components/layout/Sidebar.tsx', import.meta.url), 'utf8')
+  assert.match(source, /item.nflOnly && !nflAccess/)
+  assert.match(source, /useSearchParams\(\)/)
+  assert.match(source, /searchParams.get\('mode'\)/)
 })
