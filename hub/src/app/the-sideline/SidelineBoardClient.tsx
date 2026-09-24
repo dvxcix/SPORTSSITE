@@ -1996,7 +1996,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         .filter(column => COMPACT_GAME_DAY.has(column.id) && hasValue(column))
         .map(column => ({
           ...column,
-          width: column.id === 'player' ? 204 : column.id === 'roleMarket' ? 82 : column.id.startsWith('picks:') ? 56 : column.id === 'index' ? 54 : 64,
+          // Compact density must not shrink multi-line market/ratio cards below their content.
+          width: column.id === 'player' ? 204 : column.id.startsWith('picks:') ? 64 : column.id === 'index' ? 54 : Math.max(64, column.width),
         }))
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
@@ -2029,7 +2030,10 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           ? { ...column, label: `${scoreContextAbbr} SCORE`, title: `SlipSurge score for ${scoreContextLabel.toLowerCase()} using role, matchup, DvP, game environment and selected-window production` }
           : column.id === 'mm'
             ? { ...column, title: `Consensus sportsbook ${scoreContextLabel.toLowerCase()} rank minus the matching contextual analytics rank` }
-            : column.vendor ? { ...column, width: Math.max(120, column.width) } : column,
+            : column.id === 'roleMarket' ? { ...column, width: 168 }
+              : column.id === 'ftdPct' || column.id === 'atdPct' ? { ...column, width: Math.max(124, column.width) }
+                : column.id.toLowerCase().includes('ratio') ? { ...column, width: Math.max(104, column.width) }
+                  : column.vendor ? { ...column, width: Math.max(152, column.width) } : column,
       ),
     [resolvedColumns, scoreContextAbbr, scoreContextLabel],
   )

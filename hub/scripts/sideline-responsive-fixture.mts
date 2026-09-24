@@ -21,7 +21,15 @@ const players = names.map((name, i) => ({
     })),
   })),
 }))
-const odds = { bdlGameId: 1, status: 'ready', capturedAt: times[2], source: 'snapshot', gameLines: [], players }
+// Populate the rich cells: empty baselines/yardage cannot catch compact-column collisions.
+players.forEach((player, i) => Object.assign(player, {
+  tdBaselines: ['first_td', 'anytime_td'].map(propType => ({ propType, vendor: 'fanduel', averageOdds: 12345, sampleGames: 18, deltaPct: i % 2 ? -0.339 : 1.031 })),
+  markets: [...player.markets, {
+    key: 'role-yards', propType: player.position === 'RB' ? 'rushing_yards' : 'receiving_yards', category: 'yards', label: 'Yards', line: 177.5,
+    offers: [{ vendor: 'fanduel', type: 'over_under', line: 177.5, openingLine: 177.5, current: { over: -113, under: -110 }, opening: { over: -114, under: -110 }, updatedAt: times[2] }],
+  }],
+}))
+const odds = { bdlGameId: 1, status: 'ready', capturedAt: times[2], source: 'snapshot', gameLines: [{ vendor: 'fanduel', moneylineHome: -250, moneylineAway: 205 }], players }
 const ladderOdds = { ...odds, players: players.slice(0, 5).map((player, i) => ({
   ...player,
   publicPicks: i === 4 ? [] : [{ propType: 'receiving_yards', label: 'Receiving yards', rawMarket: 'Receiving yards', picks: [10, 100, 0, 40][i], capturedAt: times[2] }],

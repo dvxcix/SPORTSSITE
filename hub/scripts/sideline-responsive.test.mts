@@ -8,7 +8,7 @@ const output = resolve('.artifacts/sideline-responsive')
 mkdirSync(output, { recursive: true })
 const browser = await chromium.launch({ headless: true })
 try {
-  for (const width of [360, 390, 549, 768, 1024, 1440, 1920]) {
+  for (const width of [360, 390, 549, 768, 1024, 1280, 1440, 1920]) {
     const context = await browser.newContext({ viewport: { width, height: 1000 }, hasTouch: width <= 1024, isMobile: width < 768 })
     const page = await context.newPage()
     const errors: string[] = []
@@ -21,6 +21,14 @@ try {
     const checkGeometry = async () => {
       const failures = await page.evaluate(() => {
         const failures: string[] = []
+        document.querySelectorAll('td [class*="baselineValue"], td [class*="ratioValue"], td [class*="roleMarket"]').forEach(card => {
+          const cell = card.closest('td')!.getBoundingClientRect()
+          for (const element of [card, ...card.querySelectorAll('b,small,button')]) {
+            const rect = element.getBoundingClientRect()
+            if (rect.left < cell.left - 1 || rect.right > cell.right + 1) failures.push('rich market content outside cell')
+            if (element.scrollWidth > element.clientWidth + 1) failures.push('rich market content clipped')
+          }
+        })
         if (document.documentElement.scrollWidth > innerWidth + 1) failures.push('page overflow')
         document.querySelectorAll('table tbody tr').forEach(row => {
           const cell = row.querySelector('td')
