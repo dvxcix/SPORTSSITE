@@ -1,6 +1,7 @@
-// Independent of subscription tiers and the general beta override.
-export function hasNflAccess(accountType: string | null | undefined, granted: boolean): boolean {
-  return accountType === 'admin' || granted === true
+// NFL tools include Ultimate memberships and explicit NFL beta grants.
+// The general beta flag and account-type strings must not imply a paid tier.
+export function hasNflAccess(accountType: string | null | undefined, granted: boolean, tier?: string | null): boolean {
+  return accountType === 'admin' || granted === true || tier === 'ultimate'
 }
 
 export function isNflToolHref(href: string): boolean {

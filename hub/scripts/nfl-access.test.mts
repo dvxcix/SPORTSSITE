@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { hasNflAccess, isNflToolHref } from '../src/lib/nflAccessPolicy.ts'
 
-test('NFL entitlement is independent of admin role and other memberships', () => {
+test('NFL entitlement includes Ultimate without granting admin privileges', () => {
   assert.equal(hasNflAccess('admin', false), true)
   for (const role of ['user', 'creator', 'ultimate', null, undefined]) {
     assert.equal(hasNflAccess(role, false), false)
@@ -13,6 +13,9 @@ test('NFL entitlement is independent of admin role and other memberships', () =>
   assert.equal(isNflToolHref('/the-sideline?mode=research'), true)
   assert.equal(isNflToolHref('/admin'), false)
   assert.equal(isNflToolHref('/dugout'), false)
+  for (const tier of ['free', 'basic', 'advanced', null, undefined]) assert.equal(hasNflAccess('user', false, tier), false)
+  assert.equal(hasNflAccess('user', false, 'ultimate'), true)
+  assert.equal(hasNflAccess('creator', false, 'ultimate'), true)
 })
 
 test('all NFL tool handlers enforce the entitlement before loading data', () => {
@@ -41,6 +44,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     caller: null as string | null,
     accounts: new Map([[member, 'user'], [adminId, 'admin']]),
     grants: new Set<string>(), audit: [] as unknown[], adminCalls: 0,
+    tier: 'free', adminTier: null as string | null, discord: false,
     assurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
     error: false,
   }
@@ -60,7 +64,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
           then(resolve: (value: unknown) => unknown) { return Promise.resolve(result()).then(resolve) },
         }
         function result() {
-          if (table === 'users') return { data: state.accounts.has(id) ? { id, account_type: state.accounts.get(id) } : null, error: null }
+          if (table === 'users') return { data: state.accounts.has(id) ? { id, account_type: state.accounts.get(id), tier: state.tier, admin_granted_tier: state.adminTier, discord_advanced_claimed: state.discord } : null, error: null }
           if (state.error) return { data: null, error: { message: 'Database unavailable' } }
           if (operation === 'upsert') state.grants.add(values!.user_id)
           if (operation === 'delete') state.grants.delete(id)
@@ -101,6 +105,18 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     assert.equal((await api.GET(new Request('https://slipsurge.com/api/admin/nfl-access'))).status, 401)
     state.caller = member
     assert.equal((await api.requireNflAccess()).error.status, 403)
+    state.tier = 'ultimate'
+    assert.deepEqual(await api.requireNflAccess(), { userId: member, isAdmin: false })
+    assert.equal((await api.POST(request({ userId: member, granted: true }))).status, 403, 'Ultimate must never grant admin access')
+    state.tier = 'advanced'
+    assert.equal((await api.requireNflAccess()).error.status, 403, 'Downgrade takes effect on the next request')
+    state.adminTier = 'ultimate'
+    assert.deepEqual(await api.requireNflAccess(), { userId: member, isAdmin: false })
+    state.adminTier = null
+    state.tier = 'free'
+    state.discord = true
+    assert.equal((await api.requireNflAccess()).error.status, 403, 'Discord Advanced is not Ultimate')
+    state.discord = false
     assert.equal((await api.POST(request({ userId: member, granted: true }))).status, 403)
     assert.equal(state.adminCalls, 0, 'Unauthorized requests must not create a privileged client')
     state.caller = adminId
