@@ -8,13 +8,14 @@ import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMa
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import styles from './ladderBoard.module.css'
 import { buildBoardHeat } from './boardHeat'
+import { NflPropActions } from '@/components/sideline/NflPropActions'
 import { compareLadderValues, ladderHeatBackground, type LadderSort, type LadderSortKey } from './ladderPresentation'
 const price = (n: number | null) => (n == null ? '—' : n > 0 ? '+' + n : String(n))
 const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_td: 'First Touchdown', passing_tds: 'Passing Touchdowns', passing_completions: 'Pass Completions' }[key] ?? key.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\bTds?\b/g, 'Touchdowns'))
 const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
 const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
-export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore> }) {
+export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matrixMatches }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>> }) {
   const [vendor, setVendor] = useState('fanduel')
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
@@ -212,6 +213,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
                       </small>
                     </span>
                   </button>
+                  {matrixMatches?.get(row.player.id)?.map(matrix => <small key={matrix.id} style={{ color: matrix.color, borderLeft: `3px solid ${matrix.color}`, paddingLeft: 6 }}>{matrix.name}</small>)}
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:score`))}>
                   <b>{scores.get(row.player.id)?.score ?? '—'}</b>
@@ -244,6 +246,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores }: { board: 
                       <small>{mode === 'odds' ? 'OPEN ' + price(open) : 'ODDS ' + price(now)}</small>
                       {e.offer.openingLine !== e.offer.line ? <small>OPEN LINE {e.offer.openingLine ?? '—'}</small> : null}
                       {mode !== 'picks' ? <small>{exact != null ? exact + ' picks' : est != null ? 'Est. ' + est : 'Picks —'}</small> : null}
+                      {game && now != null ? <NflPropActions player={row.player} market={e.market} offer={e.offer} side={side} game={game} /> : null}
                     </td>
                   )
                 })}

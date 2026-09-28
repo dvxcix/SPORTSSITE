@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { NflTouchdownTracker } from './NflTouchdownTracker'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
@@ -1679,6 +1680,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
+  const [saveMessage, setSaveMessage] = useState('')
+  const saveLocks = useRef(new Set<string>())
   const board = marketStory.board
   const currentBoard = marketStory.current
   const sourceBoards = useMemo(() => (currentBoard === board ? [board] : [currentBoard, board]), [currentBoard, board])
@@ -1693,33 +1696,19 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
       const offer = findOffer(market, vendor)
       if (!market || !offer) return
       const key = `${normalizedTeam(player.team)}:${normalizedName(player.name)}:${market.key}:${vendor}`
+      if (saveLocks.current.has(key)) return
+      saveLocks.current.add(key)
+      setSaveMessage('')
       const existing = savedItems.find(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}` === key)
       if (existing) {
-        void removeWatchlist(existing.id).catch(error => console.error('[the-sideline] failed to remove saved market', error))
+        void removeWatchlist(existing.id).then(() => setSaveMessage('Removed from watchlist.')).catch(() => setSaveMessage('Could not remove selection. Please try again.')).finally(() => saveLocks.current.delete(key))
         return
       }
-      const oddsByBook = Object.fromEntries(
-        market.offers.flatMap(candidate => {
-          const price = offerCurrent(candidate)
-          return price == null ? [] : [[candidate.vendor, price]]
-        }),
-      )
-      void addWatchlist({
-        sport: 'nfl',
-        game_pk: selected.id,
-        game_date: selected.gameday,
-        mlb_id: null,
-        player_name: player.name,
-        team: player.team,
-        position: player.position,
-        headshot_url: player.headshot,
-        prop_key: `nfl:${market.key}`,
-        prop_label: market.label,
-        line: market.line == null ? null : String(market.line),
-        book: vendor,
-        odds: offerCurrent(offer),
-        odds_by_book: oddsByBook,
-      }).catch(error => console.error('[the-sideline] failed to save market', error))
+      if (!player.market || offerCurrent(offer) == null) { saveLocks.current.delete(key); setSaveMessage('No available price to save.'); return }
+      void addWatchlist(nflWatchlistSelection(player.market, market, offer, 'over', { id: selected.id, gameday: selected.gameday }))
+        .then(() => setSaveMessage('Saved. Open Watchlist to review and post your pick.'))
+        .catch(() => setSaveMessage('Could not save selection. Check that you are signed in and try again.'))
+        .finally(() => saveLocks.current.delete(key))
     },
     [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id],
   )
@@ -1900,7 +1889,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
       id: row.id,
       team: normalizedTeam(row.team),
       values: (factor: NflMatrixFactor) => {
-        if (factor.category === 'picks' || factor.category === 'market') return ladderMatrixValue(findMarketPlayer(currentBoard, row), factor)
+        if (factor.category === 'picks' || factor.category === 'market') return ladderMatrixValue(findMarketPlayer(board, row), factor)
         if (factor.category === 'baseline') {
           const prop = factor.field === 'ftdPct' ? 'first_td' : 'anytime_td'
           const delta = baselineMove(row.market, prop)?.deltaPct
@@ -1970,7 +1959,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
       })
     return result
-  }, [currentBoard, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
+  }, [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
 
   const resolvedColumns = useMemo(() => {
     const ordered = columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
@@ -2152,6 +2141,16 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
         />
       </section>
+      <nav className={styles.memberActions} aria-label="Saved research">
+        <button type="button" onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}><Layers3 size={16} /> Matrices</button>
+        <button type="button" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={16} /> Watchlist · {savedItems.length}</button>
+      </nav>
+      {saveMessage ? <p role="status">{saveMessage}</p> : null}
+      {matrices.some(matrix => matrix.enabled) ? <div className={styles.matrixLegend} aria-label="Active matrix matches">
+        {matrices.filter(matrix => matrix.enabled).map(matrix => <button key={matrix.id} type="button" style={{ borderColor: matrix.color }} onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}>
+          <i style={{ background: matrix.color }} />{matrix.name} · {[...matrixMatches.values()].filter(matches => matches.some(match => match.id === matrix.id)).length} matches
+        </button>)}
+      </div> : null}
 
       <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}>
@@ -2284,6 +2283,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           prop={activeProp}
           onProp={setActiveProp}
           scores={ladderScores}
+          game={selected}
+          matrixMatches={new Map(rows.flatMap(row => row.market ? [[row.market.id, matrixMatches.get(row.id) ?? []] as const] : []))}
           onPlayer={id => {
             const row = rows.find(row => row.market?.id === id)
             if (row) setExpanded(row)
@@ -2420,6 +2421,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                           </mark>
                                         ) : null}
                                       </small>
+                                      {matches.length ? <span className={styles.matrixNames}>{matches.map(matrix => <span key={matrix.id} style={{ color: matrix.color }}>{matrix.name}</span>)}</span> : null}
                                     </button>
                                     <button
                                       type="button"

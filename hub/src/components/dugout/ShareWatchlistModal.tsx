@@ -84,10 +84,13 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
     setBusy('feed')
     setError('')
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Sign in to share.')
       const blob = await fetchBlob()
       const upload = await uploadMedia(new File([blob], 'dugout-research.png', { type: 'image/png' }), 'posts')
       if ('error' in upload) throw new Error(upload.error)
       const { data, error: insertError } = await supabase.from('posts').insert({
+        author_id: user.id,
         content: sport === 'NFL' ? 'Sideline research card' : sport === 'MLB' ? 'Dugout research card' : 'SlipSurge research card',
         post_type: 'analysis',
         sport,

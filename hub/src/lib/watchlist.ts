@@ -51,6 +51,7 @@ export const PROP_META: Record<string, { label: string; pickType: string }> = {
 }
 
 export type WatchlistItem = {
+  nfl_selection?: import('./nflWatchlist').NflSavedSelection | null
   id: string
   user_id: string
   sport: string
@@ -76,6 +77,7 @@ export type WatchlistItem = {
 }
 
 export type NewWatchlistItem = {
+  nfl_selection?: import('./nflWatchlist').NflSavedSelection | null
   sport?: string
   game_pk?: string | null
   game_date?: string | null
@@ -94,7 +96,7 @@ export type NewWatchlistItem = {
   notes?: string | null
 }
 
-const WATCHLIST_COLUMNS = 'id,user_id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,posted_pick_id,created_at,updated_at'
+const WATCHLIST_COLUMNS = 'id,user_id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,posted_pick_id,created_at,updated_at,nfl_selection'
 
 export async function fetchWatchlist(userId: string): Promise<WatchlistItem[]> {
   const supabase = createClient()
@@ -155,6 +157,10 @@ export async function postBetToFeed(
   opts: { content?: string; isPremium?: boolean; visibility?: string; wagerAmount?: number | null } = {}
 ): Promise<{ postId: string; pickIds: string[] }> {
   if (legs.length === 0) throw new Error('No legs to post')
+  const { watchlistPickPayload } = await import('./nflWatchlist')
+  const sports = new Set(legs.map(l => l.sport.toUpperCase()))
+  if (sports.size !== 1) throw new Error('A parlay cannot mix sports.')
+  const payloadLegs = legs.map(watchlistPickPayload)
 
   const isParlay = legs.length > 1
   const books = new Set(legs.map(l => l.book).filter(Boolean))
@@ -180,11 +186,8 @@ export async function postBetToFeed(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      legs: legs.map(l => ({
-        mlb_id: l.mlb_id, player_name: l.player_name, team: l.team, headshot_url: l.headshot_url,
-        game_pk: l.game_pk, game_date: l.game_date,
-        prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, book: l.book, odds: l.odds,
-      })),
+      sport: payloadLegs[0].sport,
+      legs: payloadLegs,
       content,
       wager: opts.wagerAmount ?? null,
       visibility: opts.visibility ?? 'public',

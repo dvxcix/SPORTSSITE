@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Clipboard, Copy, Grid3X3, Plus, Share2, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 import {
   NFL_MATRIX_BOOKS,
   NFL_MATRIX_FIELDS,
@@ -113,8 +114,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: NflMatrix | null
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not save.') } finally { setSaving(false) }
   }
   return (
-    <div className={styles.backdrop} onMouseDown={event => { if (event.currentTarget === event.target) onClose() }}>
-      <section className={styles.editor} role="dialog" aria-modal="true" aria-label="NFL Matrix editor">
+    <ModalSurface open onClose={onClose} label="NFL Matrix editor" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.editor}>
         <header><div><small>NFL ONLY</small><h2>{initial ? 'Edit NFL Matrix' : 'Build NFL Matrix'}</h2><p>Uses Sideline fields only. It can never highlight an MLB board.</p></div><button type="button" onClick={onClose}><X size={18} /> Close</button></header>
         <div className={styles.editorBody}>
           <label className={styles.nameField}><span>Name</span><input value={name} maxLength={80} onChange={event => setName(event.target.value)} placeholder="Red-zone role + ATD value" /></label>
@@ -125,13 +125,17 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: NflMatrix | null
           {error ? <p role="alert" className={styles.error}>{error}</p> : null}
         </div>
         <footer><button type="button" onClick={onClose}>Cancel</button><button type="button" className={styles.save} disabled={saving || !name.trim() || !rows.length} onClick={save}>{saving ? 'Saving…' : 'Save NFL Matrix'}</button></footer>
-      </section>
-    </div>
+    </ModalSurface>
   )
 }
 
 export function NflMatrixButton() {
   const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const show = () => setOpen(true)
+    window.addEventListener('ss:open-nfl-matrices', show)
+    return () => window.removeEventListener('ss:open-nfl-matrices', show)
+  }, [])
   const [tab, setTab] = useState<'mine' | 'community'>('mine')
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
   const [listings, setListings] = useState<Listing[]>([])
@@ -172,7 +176,7 @@ export function NflMatrixButton() {
   return (
     <>
       <button type="button" className={`matrix-fab ${styles.fab}`} onClick={() => setOpen(true)}><Grid3X3 size={15} /> NFL Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
-      {open ? <div className={styles.backdrop} onMouseDown={event => { if (event.currentTarget === event.target) setOpen(false) }}><section className={styles.drawer} role="dialog" aria-modal="true" aria-label="NFL Matrices">
+      <ModalSurface open={open && !editor} onClose={() => setOpen(false)} label="NFL Matrices" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.drawer}>
         <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Separate criteria, codes, and community posts from MLB.</p></div><button type="button" aria-label="Close NFL Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
         <nav aria-label="NFL Matrix views"><button type="button" aria-pressed={tab === 'mine'} className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NFL Matrices</button><button type="button" aria-pressed={tab === 'community'} className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NFL Community</button></nav>
         <div className={styles.drawerBody}>
@@ -184,7 +188,7 @@ export function NflMatrixButton() {
           </> : <div className={styles.matrixList}>{listings.map(listing => <article key={listing.id} style={{ '--matrix-color': listing.color } as React.CSSProperties}><header><i /><div><b>{listing.title}</b><small>{listing.matrix_type} · {listing.copy_count} adds</small></div></header>{listing.description ? <p>{listing.description}</p> : null}<footer><button type="button" onClick={() => mutate(`community-${listing.id}`, () => request(`/api/nfl-matrix-marketplace/${listing.id}/import`, { method: 'POST' }))}><Plus size={12} /> Add to NFL Matrices</button></footer></article>)}{!loadingCommunity && !listings.length ? <div className={styles.emptyState}><Share2 size={26} /><b>No NFL community posts yet</b><span>Publish one of your NFL Matrices from the My NFL Matrices tab.</span></div> : null}</div>}
           {message ? <div className={styles.message} role="status" aria-live="polite">{message}</div> : null}
         </div>
-      </section></div> : null}
+      </ModalSurface>
       {editor ? <MatrixEditor initial={editor.matrix} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); void refresh() }} /> : null}
     </>
   )

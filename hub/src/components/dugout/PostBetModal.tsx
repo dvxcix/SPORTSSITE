@@ -7,6 +7,7 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { combineOdds, calcPayout, formatOdds, fmtUsd } from '@slipsurge/core/parlayCalc'
 import { type WatchlistItem } from '@/lib/watchlist'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 
 // Posts one or more watchlist legs as a bet — a straight bet for one leg, a
 // parlay for 2+. Every leg must share a book by the time this opens (the
@@ -38,8 +39,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   }
 
   return (
-    <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="post-bet-title" style={{ width: 'min(420px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+    <ModalSurface open onClose={onClose} labelledBy="post-bet-title" backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
           <button type="button" onClick={onClose} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={16} /></button>
@@ -48,7 +48,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
           {legs.map(l => (
             <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
-              <PlayerAvatar headshot={l.headshot_url} teamLogo={getTeamLogoUrl(l.team)} teamAbbr={l.team} name={l.player_name} size={28} />
+              <PlayerAvatar headshot={l.headshot_url} teamLogo={l.sport.toLowerCase() === 'nfl' ? undefined : getTeamLogoUrl(l.team)} teamAbbr={l.team} name={l.player_name} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{l.player_name}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.prop_label}</div>
@@ -93,7 +93,6 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
         >
           {posting ? 'Posting…' : isParlay ? 'Post Parlay' : 'Post Pick'}
         </button>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }

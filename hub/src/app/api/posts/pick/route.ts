@@ -9,6 +9,7 @@ import { notifyFollowers } from '@/lib/notify'
 import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { NflMarketOffer } from '@/lib/nflOddsTypes'
+import { findNflPickOffer } from '@/lib/nflPickOffer'
 
 export const revalidate = 0
 
@@ -125,10 +126,7 @@ export async function POST(req: Request) {
       }
       const player = bundle.odds.players.find(candidate =>
         candidate.gsisId === l.player_id || `bdl:${candidate.id}` === l.player_id)
-      const market = player?.markets.find(candidate =>
-        candidate.propType === l.prop_key && (l.numeric_line == null || candidate.line === l.numeric_line))
-      const vendor = (l.book ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
-      const offer = market?.offers.find(candidate => candidate.vendor.toLowerCase().replace(/[^a-z0-9]/g, '') === vendor)
+      const { market, offer } = findNflPickOffer(player, l) ?? {}
       if (!player || !market || !offer || currentOfferOdds(offer, l.market_side ?? 'milestone') !== l.odds) {
         return NextResponse.json({ error: `${l.player_name}'s selected price changed. Refresh the market and try again.` }, { status: 409 })
       }

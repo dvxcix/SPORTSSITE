@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { type WatchlistItem } from '@/lib/watchlist'
@@ -39,11 +39,11 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
       )}
       <PlayerAvatar
         headshot={item.headshot_url}
-        teamLogo={getTeamLogoUrl(item.team)}
+        teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : getTeamLogoUrl(item.team)}
         teamAbbr={item.team}
         name={item.player_name}
         size={34}
-        showTeam={!!getTeamLogoUrl(item.team)}
+        showTeam={item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         {item.mlb_id ? (
@@ -114,6 +114,11 @@ export function WatchlistButton() {
   const [confirmingClearAll, setConfirmingClearAll] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
   const [sharing, setSharing] = useState(false)
+  useEffect(() => {
+    const show = () => setOpen(true)
+    window.addEventListener('ss:open-watchlist', show)
+    return () => window.removeEventListener('ss:open-watchlist', show)
+  }, [])
 
   if (!wl.signedIn) return null
 
@@ -184,7 +189,7 @@ export function WatchlistButton() {
       </button>
 
       <ModalSurface
-        open={open}
+        open={open && !modalLegs && !sharing}
         onClose={() => setOpen(false)}
         labelledBy="watchlist-panel-title"
         backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
