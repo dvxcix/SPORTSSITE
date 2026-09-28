@@ -10,6 +10,7 @@ export const NFL_SLATE_EDGE_MARKETS = [
 export type NflSlateEdgeMarketKey = (typeof NFL_SLATE_EDGE_MARKETS)[number]['key']
 
 export type NflSlateEdgeMarket = {
+  selection?: import('./watchlist').NewWatchlistItem | null
   label: string
   line: number | null
   openingLine: number | null

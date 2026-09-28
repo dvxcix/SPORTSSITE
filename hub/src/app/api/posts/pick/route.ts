@@ -51,7 +51,6 @@ export async function POST(req: Request) {
   const visibility: string = body?.visibility === 'followers' ? 'followers' : 'public'
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
-  const isSpoiler = body?.isSpoiler === true
   const sport: 'MLB' | 'NFL' = body?.sport === 'NFL' ? 'NFL' : 'MLB'
 
   if (pageId) {
@@ -60,6 +59,7 @@ export async function POST(req: Request) {
   }
 
   if (!legs.length) return NextResponse.json({ error: 'No pick legs provided' }, { status: 400 })
+  if (legs.length > 30) return NextResponse.json({ error: 'Choose up to 30 legs.' }, { status: 400 })
   for (const l of legs) {
     if (!l.game_pk || !l.prop_key || l.odds == null || (sport === 'MLB' ? !l.mlb_id : !l.player_id)) {
       return NextResponse.json({ error: 'Malformed pick leg' }, { status: 400 })
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
     ? { legs: legsSummary, book: legs[0].book, combined_odds: combined, wager_amount: wager, potential_payout: payout, result: 'pending' }
     : { ...legsSummary[0], book: legs[0].book, wager_amount: wager, potential_payout: payout, sport }
 
-  const { data: post, error: postErr } = await supabase.from('posts').insert({
+  const postPayload = {
     author_id: user.id,
     content: content.trim(),
     post_type: isParlay ? 'parlay' : 'pick',
@@ -163,14 +163,9 @@ export async function POST(req: Request) {
     visibility,
     group_id: groupId,
     page_id: pageId,
-    is_spoiler: isSpoiler,
-  }).select('id').single()
-
-  if (postErr || !post) return NextResponse.json({ error: 'Failed to post. Please try again.' }, { status: 500 })
-
-  const { error: picksErr } = await supabase.from('picks').insert(legs.map(l => ({
+  }
+  const pickRows = legs.map(l => ({
     user_id: user.id,
-    post_id: post.id,
     sport,
     game_pk: l.game_pk,
     game_date: l.game_date,
@@ -185,16 +180,23 @@ export async function POST(req: Request) {
     odds: l.odds,
     book: l.book,
     result: 'pending',
-  })))
+  }))
 
   const admin = createAdminClient()
-  await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
-  if (!picksErr) {
+  const { data: post, error: postErr } = await admin.rpc('create_tracked_pick_post', { p_post: postPayload, p_picks: pickRows })
+  if (postErr || !post?.id || !post.picksTracked) {
+    console.error('[posts/pick] transaction failed', { code: postErr?.code, message: postErr?.message })
+    if (postErr?.message?.includes('Please wait before posting again')) return NextResponse.json({ error: 'Please wait a few minutes before posting again.' }, { status: 429 })
+    return NextResponse.json({ error: 'Your pick was not posted. Please try again.' }, { status: 503 })
+  }
+  // A notification error must not turn a committed post into a retry/duplicate.
+  try {
+    await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
     await notifyFollowers(admin, {
       actorId: user.id, type: 'new_pick', message: `posted a new ${isParlay ? 'parlay' : 'pick'}`,
       link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
-  }
+  } catch (error) { console.error('[posts/pick] notification failed', error) }
 
-  return NextResponse.json({ id: post.id, picksTracked: !picksErr })
+  return NextResponse.json(post)
 }

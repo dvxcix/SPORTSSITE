@@ -281,7 +281,7 @@ export function WatchlistButton() {
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>
               ) : wl.items.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
-                  No picks saved yet.<br />Click any odds cell in The Dugout to add it here.
+                  No picks saved yet.<br />Save an odds selection from The Dugout or The Sideline using its star button.
                 </div>
               ) : (
                 wl.items.map(item => (
@@ -330,6 +330,7 @@ export function WatchlistButton() {
       )}
 
       {sharing && <ShareWatchlistModal
+        itemIds={pendingItems.map(item => item.id)}
         onClose={() => setSharing(false)}
         sport={pendingItems.length && pendingItems.every(item => item.sport.toLowerCase() === pendingItems[0].sport.toLowerCase())
           ? pendingItems[0].sport.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'

@@ -1,10 +1,13 @@
-export type SlateEdgeEvidenceWindow = 'l1' | 'l3' | 'l5' | 'l10'
+import { NFL_SLATE_EDGE_MARKETS } from './nflSlateEdge'
+export type SlateEdgeEvidenceWindow = 'l1' | 'l3' | 'l5' | 'l10' | 'season'
 export type SlateEdgeEvidenceView = 'rankings' | 'matchups' | 'market' | 'signals'
 
 export type SlateEdgeBookOffer = { book: string; price: number }
 export type SlateEdgeMarketStep = { key: string; label: string; current: number | null; open: number | null }
 
 export type SlateEdgeEvidence = {
+  sport?: 'MLB' | 'NFL'
+  nfl?: { entry: import('./nflSlateEdge').NflSlateEdgeEntry; focus: import('./nflSlateEdge').NflSlateEdgeMarketKey; sampleLabel: string }
   version: 1
   kind: 'slate_edge_player'
   capturedAt: string
@@ -37,11 +40,19 @@ export type SocialAttachment = SlateEdgeEvidence
 export function isSlateEdgeEvidence(value: unknown): value is SlateEdgeEvidence {
   if (!value || typeof value !== 'object') return false
   const evidence = value as Partial<SlateEdgeEvidence>
+  if (evidence.sport === 'NFL') {
+    const entry = evidence.nfl?.entry
+    if (!entry || typeof entry.name !== 'string' || typeof entry.team !== 'string' || typeof entry.gameLabel !== 'string'
+      || !NFL_SLATE_EDGE_MARKETS.some(market => market.key === evidence.nfl?.focus)
+      || !NFL_SLATE_EDGE_MARKETS.every(({ key }) => entry.markets?.[key]
+        && (entry.markets[key].odds === null || Number.isFinite(entry.markets[key].odds))
+        && entry.score && entry.mm)) return false
+  }
   return evidence.version === 1
     && evidence.kind === 'slate_edge_player'
     && typeof evidence.capturedAt === 'string'
     && typeof evidence.source?.path === 'string'
-    && evidence.source.path.startsWith('/dugout')
+    && (evidence.sport === 'NFL' ? /^\/the-sideline(?:\?|$)/.test(evidence.source.path) && !!evidence.nfl?.entry && !!evidence.nfl?.focus : /^\/dugout(?:\?|$)/.test(evidence.source.path))
     && !evidence.source.path.startsWith('//')
     && typeof evidence.snapshot?.name === 'string'
     && typeof evidence.snapshot?.rank === 'number'

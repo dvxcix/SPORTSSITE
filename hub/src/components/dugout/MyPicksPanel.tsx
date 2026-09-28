@@ -9,35 +9,38 @@ import type { Post } from '@/lib/supabase/types'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 
-// Same "local day" framing as the watchlist — this panel is for tracking
-// slips you're live-watching today, not an archive of every pick you've
-// ever posted (that's what the profile Picks tab is for).
-function isFromToday(post: Post) {
-  const localToday = new Date().toLocaleDateString('en-CA')
-  return post.created_at?.slice(0, 10) >= localToday
-}
-
 export function MyPicksButton() {
   const { user } = useAuth()
   const fab = useDraggableFab('mp-fab-pos')
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState<'active' | 'history'>('active')
+  const [limit, setLimit] = useState(50)
+  const [error, setError] = useState('')
 
   const refresh = useCallback(async () => {
     if (!user) { setItems([]); setLoading(false); return }
     setLoading(true)
     try {
-      const rows = await fetchMyPicks(user.id)
-      setItems(rows.filter(isFromToday))
+      const rows = await fetchMyPicks(user.id, view, limit)
+      setItems(rows)
+      setError('')
     } catch (e) {
       console.error('[MyPicksPanel] failed to load picks', e)
+      setError('Could not load your picks. Please retry.')
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user, view, limit])
 
   useEffect(() => { refresh() }, [refresh])
+  useEffect(() => {
+    const update = () => { void refresh() }
+    window.addEventListener('ss:picks-updated', update)
+    window.addEventListener('focus', update)
+    return () => { window.removeEventListener('ss:picks-updated', update); window.removeEventListener('focus', update) }
+  }, [refresh])
 
   // Picks up anything posted from the watchlist (or the composer) while the
   // panel is mounted, so a just-posted parlay shows here immediately without
@@ -47,9 +50,9 @@ export function MyPicksButton() {
     const supabase = createClient()
     const channel = supabase
       .channel(`my-picks-${user.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: `author_id=eq.${user.id}` }, (payload: any) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts', filter: `author_id=eq.${user.id}` }, (payload: any) => {
         const row = payload.new as Post
-        if ((row.post_type === 'pick' || row.post_type === 'parlay') && isFromToday(row)) {
+        if (row.post_type === 'pick' || row.post_type === 'parlay' || payload.eventType === 'DELETE') {
           refresh()
         }
       })
@@ -69,7 +72,7 @@ export function MyPicksButton() {
         ref={fab.ref}
         className="mp-fab"
         title="Drag to move"
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); void refresh() }}
         {...fab.handlers}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -106,21 +109,26 @@ export function MyPicksButton() {
               <span id="my-picks-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <ClipboardList size={16} /> My Picks
               </span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{items.length} today</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{items.length} {view === 'active' ? 'active' : 'in history'}</span>
               <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
+            <nav aria-label="Pick status" style={{ display: 'flex', gap: 12, padding: 12 }}>
+              {(['active', 'history'] as const).map(tab => <button key={tab} type="button" aria-pressed={view === tab} onClick={() => { setView(tab); setLimit(50) }} style={{ minHeight: 44, padding: '8px 18px', color: view === tab ? 'var(--accent)' : 'var(--text-2)' }}>{tab === 'active' ? 'Active Picks' : 'History'}</button>)}
+            </nav>
             <div style={{ flex: 1, overflowY: 'auto' }}>
+              {error && <div role="alert" style={{ padding: 16 }}>{error} <button type="button" onClick={() => void refresh()}>Retry</button></div>}
               {loading ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>
               ) : items.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
-                  No picks posted today yet.<br />Post a straight bet or parlay from your Watchlist to track it here.
+                  {view === 'active' ? 'No active picks.' : 'No picks in your history yet.'}<br />Post a straight bet or parlay from your Watchlist to track it here.
                 </div>
               ) : (
                 <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {items.map((p, i) => (
                     <PostCardClient key={p.id} post={p as any} index={i} />
                   ))}
+                  {items.length >= limit && <button type="button" onClick={() => setLimit(value => value + 50)}>Load More</button>}
                 </div>
               )}
             </div>

@@ -4,6 +4,7 @@ import { requireNflAccess } from '@/lib/nflAccess'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { defaultNflSample, nflSampleReference, parseNflSample, type NflSample } from '@/lib/nflSample'
 import {
@@ -35,7 +36,7 @@ function primaryOffer(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey) {
   return { market, offer }
 }
 
-function marketSnapshot(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey): NflSlateEdgeMarket {
+function marketSnapshot(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey, game: { id: string; gameday: string }): NflSlateEdgeMarket {
   const { market, offer } = primaryOffer(player, propType)
   const line = offer?.line ?? market?.line ?? null
   const comparable = market?.offers.filter(item => item.type === 'milestone' || item.line === line) ?? []
@@ -45,6 +46,7 @@ function marketSnapshot(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey):
   })
   const counts = (player.publicPicks ?? []).filter(item => item.propType === propType).map(item => item.picks)
   return {
+    selection: market && offer && currentOdds(offer) != null ? nflWatchlistSelection(player, market, offer, 'over', game) : null,
     label: market?.label ?? NFL_SLATE_EDGE_MARKETS.find(item => item.key === propType)?.label ?? propType,
     line,
     openingLine: offer?.openingLine ?? null,
@@ -112,7 +114,7 @@ const getSlatePayload = unstable_cache(async (
         const team = normalizedTeam(player.team)
         const teamProfile = profiles.get(team) ?? null
         const opponentProfile = profiles.get(team === normalizedTeam(game.away.abbr) ? normalizedTeam(game.home.abbr) : normalizedTeam(game.away.abbr)) ?? null
-        const markets = Object.fromEntries(NFL_SLATE_EDGE_MARKETS.map(item => [item.key, marketSnapshot(player, item.key)])) as Record<NflSlateEdgeMarketKey, NflSlateEdgeMarket>
+        const markets = Object.fromEntries(NFL_SLATE_EDGE_MARKETS.map(item => [item.key, marketSnapshot(player, item.key, { id: game.id, gameday: date })])) as Record<NflSlateEdgeMarketKey, NflSlateEdgeMarket>
         const teamMoneyline = team === normalizedTeam(game.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
         const score = Object.fromEntries(NFL_SLATE_EDGE_MARKETS.map(item => [
           item.key,
@@ -187,4 +189,4 @@ const getSlatePayload = unstable_cache(async (
     entries,
   }
   return payload
-}, ['nfl-slate-edge-payload-v1'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data', 'sideline:nfl-live'] })
+}, ['nfl-slate-edge-payload-v2'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data', 'sideline:nfl-live'] })

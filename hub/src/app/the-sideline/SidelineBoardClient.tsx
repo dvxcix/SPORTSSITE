@@ -1678,6 +1678,12 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [compareIds, setCompareIds] = useState<string[]>([])
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set())
   const [preferencesReady, setPreferencesReady] = useState(false)
+  useEffect(() => {
+    if (!preferencesReady || !location.hash.startsWith('#nfl-player-')) return
+    const id = decodeURIComponent(location.hash.slice(1))
+    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'center', inline: 'nearest' }))
+    return () => cancelAnimationFrame(frame)
+  }, [preferencesReady])
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
   const [saveMessage, setSaveMessage] = useState('')
@@ -2369,6 +2375,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                       return (
                         <tr
                           key={player.id}
+                          id={`nfl-player-${selected.id}-${player.id}`}
                           className={eraser ? styles.eraserRow : ''}
                           onClick={() => {
                             if (eraser) setErased(current => new Set([...current, player.id]))

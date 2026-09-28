@@ -53,7 +53,7 @@ test('shared watchlist posting sends NFL metadata to the guarded pick API', asyn
   globalThis.fetch = (async (url, init) => {
     assert.equal(url, '/api/posts/pick')
     sent = JSON.parse(String(init?.body))
-    return new Response(JSON.stringify({ id: 'test-post' }), { status: 200 })
+    return new Response(JSON.stringify({ id: 'test-post', picksTracked: true, pickIds: ['tracked-leg'] }), { status: 200 })
   }) as typeof fetch
   try {
     const saved = { ...nflWatchlistSelection(player, market, offer, 'over', game), id: 'test', status: 'pending' } as WatchlistItem
@@ -64,4 +64,13 @@ test('shared watchlist posting sends NFL metadata to the guarded pick API', asyn
     assert.equal(sent.legs[0].numeric_line, 60)
     await assert.rejects(postBetToFeed('test-user', [saved, { ...saved, sport: 'mlb' }]), /cannot mix sports/)
   } finally { globalThis.fetch = oldFetch }
+})
+
+test('HTTP success without tracked picks is never reported as a successful post', async () => {
+  const previous = globalThis.fetch
+  globalThis.fetch = (async () => new Response(JSON.stringify({ id: 'orphan', picksTracked: false }), { status: 200 })) as typeof fetch
+  try {
+    const saved = { ...nflWatchlistSelection(player, market, offer, 'over', game), id: 'test', status: 'pending' } as WatchlistItem
+    await assert.rejects(postBetToFeed('test-user', [saved]), /tracking could not be confirmed/)
+  } finally { globalThis.fetch = previous }
 })

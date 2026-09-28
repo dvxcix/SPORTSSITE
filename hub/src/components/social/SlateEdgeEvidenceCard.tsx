@@ -10,12 +10,14 @@ import { MarketBaselineRead } from '@/components/dugout/MarketBaselineRead'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import type { SlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
 import styles from './SlateEdgeEvidenceCard.module.css'
+import { NflSlateEdgeEvidenceCard } from './NflSlateEdgeEvidenceCard'
 
 const odds = (value: number | null | undefined) => value == null ? '—' : `${Math.round(value) > 0 ? '+' : ''}${Math.round(value)}`
 const signed = (value: number | null | undefined, suffix = '') => value == null ? '—' : `${value > 0 ? '+' : ''}${Math.round(value)}${suffix}`
 const tone = (value: number | null | undefined, center = 0) => value == null ? 'neutral' : value > center ? 'positive' : value < center ? 'negative' : 'neutral'
 
 export function SlateEdgeEvidenceCard({ evidence, interactive = true }: { evidence: SlateEdgeEvidence; interactive?: boolean }) {
+  if (evidence.sport === 'NFL' && evidence.nfl) return <NflSlateEdgeEvidenceCard evidence={evidence} interactive={interactive} />
   const snapshot = evidence.snapshot
   const books = snapshot.hrBooks ?? []
   const factors = [

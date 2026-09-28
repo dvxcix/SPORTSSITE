@@ -16,7 +16,7 @@ import styles from './ShareWatchlistModal.module.css'
 // Download + native file-share (which attaches the PNG bytes directly, no
 // URL needed — covers sharing to X/Instagram/Messages from a phone just
 // fine) plus a desktop-friendly "Copy Image" cover the same ground instead.
-export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; sport: 'MLB' | 'NFL' | null }) {
+export function ShareWatchlistModal({ onClose, sport, itemIds }: { onClose: () => void; sport: 'MLB' | 'NFL' | null; itemIds: string[] }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -25,7 +25,8 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const imgUrl = '/api/share-image/watchlist'
+  const [sharedIds] = useState(() => [...itemIds])
+  const imgUrl = '/api/share-image/watchlist?ids=' + encodeURIComponent(sharedIds.join(','))
 
   async function fetchBlob() {
     const res = await fetch(imgUrl)
@@ -45,6 +46,8 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not download. Please retry.')
     } finally {
       setBusy(null)
     }
@@ -58,8 +61,7 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard image-write isn't supported in every browser — download
-      // still works as the fallback, so this just silently no-ops.
+      setError('Could not copy this image. Use Download instead.')
     } finally {
       setBusy(null)
     }
@@ -72,9 +74,9 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
       const file = new File([blob], 'slipsurge-watchlist.png', { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: 'My Watchlist on SlipSurge' })
-      }
-    } catch {
-      // user dismissed the native sheet — nothing to do
+      } else { setError('File sharing is unavailable here. Use Download instead.') }
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === 'AbortError')) setError('Could not share this image. Use Download instead.')
     } finally {
       setBusy(null)
     }
@@ -87,7 +89,7 @@ export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; s
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Sign in to share.')
       const blob = await fetchBlob()
-      const upload = await uploadMedia(new File([blob], 'dugout-research.png', { type: 'image/png' }), 'posts')
+      const upload = await uploadMedia(new File([blob], 'slipsurge-research.png', { type: 'image/png' }), 'posts')
       if ('error' in upload) throw new Error(upload.error)
       const { data, error: insertError } = await supabase.from('posts').insert({
         author_id: user.id,

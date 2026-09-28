@@ -98,9 +98,9 @@ const MAX_BOOKS_SHOWN = 3
 function PlayerCard({ item, origin }: { item: any; origin: string }) {
   const books = Object.entries(item.odds_by_book || {}) as [string, number][]
   const sorted = books.length
-    ? books.sort((a, b) => Math.abs(a[1]) - Math.abs(b[1])).slice(0, MAX_BOOKS_SHOWN)
+    ? books.sort((a, b) => b[1] - a[1]).slice(0, MAX_BOOKS_SHOWN)
     : (item.book && item.odds != null ? [[item.book, item.odds] as [string, number]] : [])
-  const teamLogo = getTeamLogoUrl(item.team)
+  const teamLogo = item.sport?.toLowerCase() === 'nfl' ? null : getTeamLogoUrl(item.team)
 
   return (
     <div style={{
@@ -145,14 +145,21 @@ function PlayerCard({ item, origin }: { item: any; origin: string }) {
 
 export async function GET(req: Request) {
   const origin = new URL(req.url).origin
+  const ids = [...new Set((new URL(req.url).searchParams.get('ids') ?? '').split(',').filter(Boolean))]
+  if (!ids.length || ids.length > 100 || ids.some(id => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+    return new Response('Choose between 1 and 100 visible Watchlist selections to share.', { status: 400 })
+  }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Not signed in', { status: 401 })
 
-  const [{ data: profile }, { data: items }] = await Promise.all([
+  const [{ data: profile }, { data: rowsFound, error: itemsError }] = await Promise.all([
     supabase.from('users').select('username, display_name, avatar_url, is_verified').eq('id', user.id).single(),
-    supabase.from('watchlist_items').select('id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,created_at').eq('user_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+    supabase.from('watchlist_items').select('id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,created_at').eq('user_id', user.id).eq('status', 'pending').in('id', ids),
   ])
+  if (itemsError) return new Response('Could not load your selections. Please retry.', { status: 503 })
+  if (rowsFound?.length !== ids.length) return new Response('Your Watchlist changed. Close and reopen Share to refresh it.', { status: 409 })
+  const items = ids.map(id => rowsFound.find(item => item.id === id)!)
 
   if (!items || items.length === 0) {
     return new Response('Nothing on your watchlist yet', { status: 404 })
@@ -174,7 +181,7 @@ export async function GET(req: Request) {
             <span style={{ fontSize: 14, fontWeight: 800, color: C.gold, letterSpacing: 1.7 }}>MY WATCHLIST</span>
             <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 'auto', alignItems: 'flex-end' }}>
               <span style={{ fontSize: 14, fontWeight: 900, color: C.text1 }}>{items.length} ON DECK</span>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: C.text3, letterSpacing: 0.3, marginTop: 2 }}>TODAY · {today}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: C.text3, letterSpacing: 0.3, marginTop: 2 }}>CAPTURED · {today}</span>
             </div>
           </div>
 
@@ -215,6 +222,6 @@ export async function GET(req: Request) {
         </div>
       </div>
     ),
-    { width, height }
+    { width, height, headers: { 'Cache-Control': 'private, no-store' } }
   )
 }

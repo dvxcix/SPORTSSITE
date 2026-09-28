@@ -13,6 +13,8 @@ const FOCUSABLE = [
 ].join(',')
 
 const subscribeToClient = () => () => {}
+const modalStack: symbol[] = []
+let originalOverflow = ''
 
 export function ModalSurface({
   open,
@@ -47,8 +49,9 @@ export function ModalSurface({
   useEffect(() => {
     if (!open) return
     const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const previousOverflow = document.body.style.overflow
-    const alreadyModal = document.body.classList.contains('ss-modal-open')
+    const token = Symbol('modal')
+    if (!modalStack.length) originalOverflow = document.body.style.overflow
+    modalStack.push(token)
     document.body.style.overflow = 'hidden'
     document.body.classList.add('ss-modal-open')
 
@@ -57,8 +60,9 @@ export function ModalSurface({
       ;(preferred ?? panelRef.current)?.focus({ preventScroll: true })
     })
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+      if (event.key !== 'Escape' || modalStack.at(-1) !== token) return
       event.preventDefault()
+      event.stopImmediatePropagation()
       closeRef.current()
     }
     window.addEventListener('keydown', closeOnEscape)
@@ -66,9 +70,14 @@ export function ModalSurface({
     return () => {
       window.cancelAnimationFrame(focusFrame)
       window.removeEventListener('keydown', closeOnEscape)
-      document.body.style.overflow = previousOverflow
-      if (!alreadyModal) document.body.classList.remove('ss-modal-open')
-      activeElement?.focus({ preventScroll: true })
+      const wasTop = modalStack.at(-1) === token
+      const index = modalStack.indexOf(token)
+      if (index >= 0) modalStack.splice(index, 1)
+      if (!modalStack.length) {
+        document.body.style.overflow = originalOverflow
+        document.body.classList.remove('ss-modal-open')
+      }
+      if (wasTop && activeElement?.isConnected) activeElement.focus({ preventScroll: true })
     }
   }, [open])
 

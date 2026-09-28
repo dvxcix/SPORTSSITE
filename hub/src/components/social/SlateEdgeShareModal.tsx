@@ -40,7 +40,7 @@ export function SlateEdgeShareModal({ evidence, onClose }: { evidence: SlateEdge
       author_id: user.id,
       content: note.trim() || `Slate Edge read: ${evidence!.snapshot.name}`,
       post_type: 'analysis',
-      sport: 'MLB',
+      sport: evidence!.sport ?? 'MLB',
       pick_data: null,
       poll_data: null,
       media_urls: [],

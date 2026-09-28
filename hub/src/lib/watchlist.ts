@@ -195,16 +195,15 @@ export async function postBetToFeed(
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data?.error || 'Failed to post')
+  if (data.picksTracked !== true) throw new Error('Pick tracking could not be confirmed. Check My Picks before retrying.')
 
   // Posting sends the leg to My Picks via /api/posts/pick above, but
   // deliberately leaves the watchlist item alone — someone tracking a
   // player for multiple plays throughout the day shouldn't lose them from
   // the watchlist just because one line got posted.
 
-  // /api/posts/pick doesn't return individual pick row ids (only whether
-  // picks tracking succeeded overall) — nothing currently reads this
-  // array's contents, only its presence, so an empty array is fine here.
-  return { postId: data.id, pickIds: [] }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('ss:picks-updated'))
+  return { postId: data.id, pickIds: data.pickIds ?? [] }
 }
 
 // Legacy single-item wrapper — kept for any existing callers.
