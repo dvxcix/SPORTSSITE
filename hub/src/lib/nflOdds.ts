@@ -209,6 +209,7 @@ async function bdlGet<T>(path: string, freshness: 'live' | 'reference' = 'live')
   const response = await fetch(`${NFL_BDL_BASE}${path}`, {
     headers: bdlHeaders,
     ...(freshness === 'live' ? { cache: 'no-store' as const } : { next: { revalidate: 3600 } }),
+    signal: AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`BDL NFL ${path} returned ${response.status}`)
   const payload = await response.json()
@@ -216,7 +217,7 @@ async function bdlGet<T>(path: string, freshness: 'live' | 'reference' = 'live')
 }
 
 async function bdlGetOne<T>(path: string): Promise<T> {
-  const response = await fetch(`${NFL_BDL_BASE}${path}`, { headers: bdlHeaders, cache: 'no-store' })
+  const response = await fetch(`${NFL_BDL_BASE}${path}`, { headers: bdlHeaders, next: { revalidate: 60 }, signal: AbortSignal.timeout(15000) })
   if (!response.ok) throw new Error(`BDL NFL ${path} returned ${response.status}`)
   const payload = await response.json()
   return payload.data as T

@@ -170,7 +170,7 @@
     },
     {
       "path": "/api/cron/nfl-sync-game-events",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/nfl-sync-advanced",

@@ -1,9 +1,7 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from './supabase/admin'
-import { fetchAllBdl } from './nflGameFeeds'
 import { getNflTouchdownFeed } from './nflTouchdownFeed'
-import { getNflBdlGame } from './nflOdds'
 import type { SidelineGame } from '@/app/the-sideline/types'
 import type { NflPublicResult, NflResultPlayer } from './nflPublicResults'
 import { matchesResultPlayer } from './nflPublicResults'
@@ -20,18 +18,18 @@ const number = (value: unknown) => value == null || value === '' || !Number.isFi
 
 export const getNflPublicResults = unstable_cache(async (game: SidelineGame, bdlId: number | null): Promise<NflPublicResult> => {
   const admin = createAdminClient()
-  const { data: saved } = await admin.from('nfl_game_feeds').select('payload,reconciled,fetched_at').eq('game_id', game.id).eq('source', 'bdl_plays').maybeSingle()
-  const stored = saved?.payload as { game?: { id: number; status_state: string } } | undefined
+  const { data: saved, error: savedError } = await admin.from('nfl_game_feeds').select('payload,reconciled,fetched_at').eq('game_id', game.id).eq('source', 'bdl_plays').maybeSingle()
+  if (savedError) throw new Error('NFL result snapshot unavailable: '+savedError.message)
+  const stored = saved?.payload as { game?: { id: number; status_state: string }; stats?: Stat[] } | undefined
   const { data: odds } = bdlId == null && stored?.game?.id == null
     ? await admin.from('nfl_odds_current').select('board').eq('game_id', game.id).maybeSingle() : { data: null }
   const id = bdlId ?? stored?.game?.id ?? (odds?.board as { bdlGameId?: number } | undefined)?.bdlGameId ?? null
   const base: NflPublicResult = { status: 'unknown', updatedAt: new Date().toISOString(), players: [], firstTd: null, firstTdKnown: false }
   if (id == null) return base
-  const [current, stats, touchdowns] = await Promise.all([
-    saved?.reconciled ? Promise.resolve(stored?.game) : getNflBdlGame(id),
-    fetchAllBdl<Stat>(`stats?game_ids[]=${id}&per_page=100`).catch(() => []),
-    getNflTouchdownFeed(game.gameday).catch(() => []),
-  ])
+  const current = stored?.game
+  const stats = stored?.stats ?? []
+  const touchdowns = await getNflTouchdownFeed(game.gameday)
+  base.updatedAt = saved?.fetched_at ?? base.updatedAt
   base.status = current?.status_state ?? 'unknown'
   base.players = stats.filter(row => row.game.id === id).map(row => ({
     id: row.player.id, name: `${row.player.first_name} ${row.player.last_name}`, team: row.team.abbreviation,
@@ -78,10 +76,8 @@ export const getNflPublicResults = unstable_cache(async (game: SidelineGame, bdl
     }
   }
   if (base.status === 'in_progress') {
-    const fresh = saved && Date.now() - Date.parse(saved.fetched_at) < 30000
-    const plays = fresh ? (saved.payload as { plays?: NflBdlPeriodPlay[] }).plays ?? []
-      : await fetchAllBdl<NflBdlPeriodPlay>(`plays?game_id=${id}&per_page=100`).catch(() => [])
+    const plays = (saved?.payload as { plays?: NflBdlPeriodPlay[] } | undefined)?.plays ?? []
     attachNflBdlPeriodResults(base.players, plays, id)
   }
   return base
-}, ['nfl-public-results-v2-periods'], { revalidate: 20, tags: ['sideline:nfl-live'] })
+}, ['nfl-public-results-v3-stored'], { revalidate: 30, tags: ['sideline:nfl-live'] })

@@ -67,6 +67,10 @@ export async function syncNflGameEvents(admin: Admin, season: number, gameIds?: 
   const e=prior.get(s.game_id)
   return !e || !e.reconciled || now-Date.parse(e.fetched_at)>24*3600*1000
  }).sort((a,b) => {
+  // Today's live/recent games must not queue behind yesterday's corrections.
+  const today = new Date(now).toLocaleDateString('en-CA',{timeZone:'America/New_York'})
+  const priority = (s: typeof a) => s.gameday === today && !prior.get(s.game_id)?.reconciled ? 0 : !prior.get(s.game_id)?.reconciled ? 1 : 2
+  if (priority(a)!==priority(b)) return priority(a)-priority(b)
   // Missing recent games first; then least recently polled feeds. This rotates
   // every live game instead of starving the second half of a Sunday slate.
   const at=prior.get(a.game_id)?.fetched_at, bt=prior.get(b.game_id)?.fetched_at
@@ -76,11 +80,13 @@ export async function syncNflGameEvents(admin: Admin, season: number, gameIds?: 
  const weeks = new Map<number,FeedGame[]>()
  const results: {gameId:string; events:number; reconciled:boolean}[]=[]
  for (const row of due) {
-  if(results.length>=8 || Date.now()-now>220000) break
+  if(results.length>=16 || Date.now()-now>50000) break
   if (!weeks.has(row.week)) weeks.set(row.week,await fetchAllBdl<FeedGame>('games?seasons[]='+season+'&weeks[]='+row.week+'&per_page=100'))
   const game = matchingFeedGame(weeks.get(row.week)!,row)
   if (!game || !['final','in_progress'].includes(game.status_state ?? '')) continue
   const plays=await fetchAllBdl<FeedPlay>('plays?game_id='+game.id+'&per_page=100')
+  const stats=await fetchAllBdl<FeedRow>('stats?game_ids[]='+game.id+'&per_page=100')
+  if (!stats.length || stats.some(s => (s.game as FeedGame | undefined)?.id !== game.id)) throw new Error('Missing or mismatched NFL box-score snapshot')
   const reconciled=reconcileFeed(game,plays)
   // Final scoreboard mismatch must never be published as reconciled.
   const scheduleAgrees=(row.away_score == null || row.away_score===game.visitor_team_score)
@@ -90,7 +96,7 @@ export async function syncNflGameEvents(admin: Admin, season: number, gameIds?: 
   }
   const {error:writeError}=await admin.from('nfl_game_feeds').upsert({
    game_id:row.game_id,season,source:'bdl_plays',row_count:plays.length,
-   payload:{game,plays},reconciled:reconciled&&scheduleAgrees,
+   payload:{game,plays,stats},reconciled:reconciled&&scheduleAgrees,
    source_updated_at:plays.map(p=>p.wallclock).filter((s):s is string=>!!s).sort().at(-1) ?? null,
    fetched_at:new Date().toISOString(),
   },{onConflict:'game_id,source'})

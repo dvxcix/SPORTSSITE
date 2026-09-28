@@ -119,7 +119,9 @@ async function run(req: Request) {
 
   const admin = createAdminClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const backfill = await backfillOneHistoricalGame(admin, today)
+  // Historical discovery is maintenance, not work to repeat every minute.
+  const backfill = new Date().getUTCMinutes() === 30 && new Date().getUTCHours() % 6 === 0
+    ? await backfillOneHistoricalGame(admin, today) : null
   const through = new Date(`${today}T12:00:00Z`)
   through.setUTCDate(through.getUTCDate() + 7)
 
@@ -151,9 +153,11 @@ async function run(req: Request) {
     if (kickoff && kickoff.getTime() <= now) return false
     const daysUntil = (new Date(`${game.gameday}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000
     const stored = previous.get(game.game_id)
-    if (daysUntil <= 2 || !stored) return true
+    if (!stored) return true
     const age = now - new Date(stored.captured_at).getTime()
-    return !Number.isFinite(age) || age >= 10 * 60_000
+    const minutesUntil = kickoff ? (kickoff.getTime() - now) / 60_000 : Infinity
+    const interval = minutesUntil <= 360 ? 55_000 : daysUntil <= 2 ? 5 * 60_000 : 15 * 60_000
+    return !Number.isFinite(age) || age >= interval
   })
 
   const weekKeys = Array.from(new Set(captureSchedule.map(game => `${game.season}:${game.week}`)))
@@ -163,7 +167,7 @@ async function run(req: Request) {
     gamePools.set(key, await getNflBdlGames(season, week, 'live'))
   }))
 
-  const results = await inBatches(captureSchedule, 3, async game => {
+  const results = await inBatches(captureSchedule, 1, async game => {
     try {
       const ref = {
         id: game.game_id,
@@ -206,12 +210,17 @@ async function run(req: Request) {
   const capturedDates = Array.from(new Set(results.flatMap(result => result.row && result.game ? [result.game.gameday] : [])))
   let baselineCount = 0
   if (capturedDates.length) baselineCount = await refreshNflTdBaselines(admin, capturedDates)
-  const { data: baselineRows, error: baselineError } = capturedDates.length
-    ? await admin.from('nfl_td_baseline_daily')
-      .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,sample_games,first_sample_date,through_date')
-      .in('slate_date', capturedDates)
-    : { data: [], error: null }
-  if (baselineError) throw new Error(`NFL TD baseline read failed: ${baselineError.message}`)
+  const baselineRows: NflTdBaselineRow[] = []
+  if (capturedDates.length) for (let offset = 0; ; offset += 500) {
+    if (offset >= 50000) throw new Error('NFL TD baseline paging bound exceeded')
+    const { data, error } = await admin.from('nfl_td_baseline_daily')
+      .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
+      .in('slate_date', capturedDates).order('slate_date').order('player_id').order('vendor').order('prop_type')
+      .range(offset, offset + 499).abortSignal(AbortSignal.timeout(10000))
+    if (error) throw new Error(`NFL TD baseline read failed: ${error.message}`)
+    baselineRows.push(...((data ?? []) as NflTdBaselineRow[]))
+    if ((data?.length ?? 0) < 500) break
+  }
   const baselinesByDate = new Map<string, NflTdBaselineRow[]>()
   ;((baselineRows ?? []) as NflTdBaselineRow[]).forEach(row => baselinesByDate.set(row.slate_date, [...(baselinesByDate.get(row.slate_date) ?? []), row]))
   results.forEach(result => {
@@ -231,11 +240,13 @@ async function run(req: Request) {
 
   if (rows.length || backfill?.status === 'complete') revalidateTag('sideline:nfl-odds', 'max')
 
+  const failed = results.filter(result => result.status === 'error').length
   return NextResponse.json({
     captured: rows.length,
     changed: changedRows.length,
     baselines: baselineCount,
     backfill,
+    failed,
     games: results.map(({ gameId, status, changed }) => ({ gameId, status, changed: Boolean(changed) })),
-  })
+  }, { status: failed ? 503 : 200 })
 }

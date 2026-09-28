@@ -3,7 +3,12 @@ import test from 'node:test'
 import sharp from 'sharp'
 import { renderNflTouchdownReplayGif } from '../src/lib/nflTouchdownReplayGif'
 import type { NflTouchdownEvent } from '../src/lib/nflTouchdownFeed'
-import { classifyNflTouchdown, isNflTouchdownPlay } from '../src/lib/nflTouchdownFeed'
+import { classifyNflTouchdown, isNflTouchdownPlay, scorerFromText } from '../src/lib/nflTouchdownFeed'
+
+test('lateral touchdown names the final ball carrier, not the passer', () => {
+  assert.equal(scorerFromText('Brock Purdy complete pass to Mike Evans for 2 yards, lateral to Deebo Samuel for 80 yards (Eddy Pineiro Kick)'), 'Deebo Samuel')
+  assert.equal(scorerFromText('Mike Evans 23 Yd pass from Brock Purdy (Eddy Pineiro Kick)'), 'Mike Evans')
+})
 
 test('defensive touchdowns are detected when TOUCHDOWN only appears in full play text', () => {
   const play = {

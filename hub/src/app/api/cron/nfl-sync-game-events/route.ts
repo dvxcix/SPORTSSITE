@@ -11,8 +11,7 @@ async function run(req: Request) {
  const denied=requireCronAuth(req); if(denied) return denied
  try {
   const results=await syncNflGameEvents(createAdminClient(),currentNflSeason())
-  revalidateTag('sideline:nfl-live',{expire:0})
-  revalidateTag('sideline:nfl-data',{expire:0})
+  revalidateTag('sideline:nfl-live','max')
   return NextResponse.json({synced:results.reduce((n,r)=>n+r.events,0),coverage:{results}})
  } catch(error) { return safeApiError('nfl-sync-game-events',error) }
 }

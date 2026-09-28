@@ -590,17 +590,20 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     }
     throw new Error('NFL play sample exceeded paging bound; refusing a partial sample')
   }
-  const [pbpResult, receivingResult, rushingResult, passingResult, dvpResult, currentStatsRaw] = await Promise.all([
+  const [pbpResult, receivingResult, rushingResult, passingResult, dvpResult] = await Promise.all([
     loadPlays(),
     admin.from('nfl_ngs_receiving').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_passing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw').eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     getNflPregameDvp(season, season === game.season && phase === game.gameType ? game.week : 100, phase),
-    getNflBdlCurrentSeasonStats(season, teamIds, phase === 'PRE' ? 1 : 2).catch(error => {
+  ])
+  // Only fetch the fallback when the preferred production sources are absent.
+  // Calling it on every populated board fetched entire team seasons needlessly.
+  const currentStatsRaw = !pbpResult.data.length && !receivingResult.data?.length && !rushingResult.data?.length && !passingResult.data?.length
+    ? await getNflBdlCurrentSeasonStats(season, teamIds, phase === 'PRE' ? 1 : 2).catch(error => {
       console.error('[the-sideline] current-season BDL stats unavailable', game.id, error)
       return []
-    }),
-  ])
+    }) : []
 
   const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
   const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing').select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att').eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
