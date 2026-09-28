@@ -51,7 +51,12 @@
 .metricToggle button{min-height:34px;padding:0 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:#71879a;font-size:9px;font-weight:900;white-space:nowrap}
 .metricToggle button:hover{color:#dfe8ed;background:#111b23}
 .metricToggle button[aria-pressed=true]{border-color:#64982d;background:#1b2b16;color:#baff55}
-.cardRank{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(3,8,12,.55);color:#92a7b7;font-size:8px;font-weight:950}
+/* Scope header parts so the generic span label rule cannot override badges. */
+.cards article>header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px}
+.cards article>header>.teamBadge{display:inline-flex;align-items:center;gap:7px;letter-spacing:normal}
+.cards article>header>.gapTitle{min-width:0}
+.cards article>header>.cardRank{display:grid;place-items:center;align-self:center;width:32px;height:32px;padding:0;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(3,8,12,.55);color:#92a7b7;font-size:11px;font-weight:850;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums}
+@media(max-width:650px){.cards article>header{gap:10px;padding:14px}.cards article>header>.teamBadge{flex-direction:column;gap:4px}.cards article>header strong{font-size:18px}}
 /* One vertical page scroller on touch devices; tables retain horizontal panning. */
 @media (max-width: 1024px), (any-pointer: coarse) {
   .tableWrap { height: auto; max-height: none; overflow-x: auto; overflow-y: hidden; }
