@@ -57,6 +57,54 @@
 .cards article>header>.gapTitle{min-width:0}
 .cards article>header>.cardRank{display:grid;place-items:center;align-self:center;width:32px;height:32px;padding:0;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(3,8,12,.55);color:#92a7b7;font-size:11px;font-weight:850;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums}
 @media(max-width:650px){.cards article>header{gap:10px;padding:14px}.cards article>header>.teamBadge{flex-direction:column;gap:4px}.cards article>header strong{font-size:18px}}
+/* Shared customer layout across all five Cheatsheets views. */
+.root { min-width: 0; }
+.hero { min-height: 0; flex-wrap: wrap; gap: 12px; }
+.hero h1 { font-size: clamp(22px, 3vw, 30px); }
+.heroTeams { display: flex; flex-wrap: wrap; flex-shrink: 0; }
+.views { position: relative; top: auto; backdrop-filter: none; touch-action: pan-x pan-y pinch-zoom; }
+.views button, .metricToggle button { min-height: 44px; font-size: 12px; flex-shrink: 0; }
+.controls label > span { font-size: 10px; }
+.controls select, .searchBox { min-height: 44px; height: 44px; }
+.controls select, .searchBox input { font-size: 14px; }
+.searchBox { min-width: 0; }
+.summaryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.summaryGrid article { min-width: 0; }
+.summaryGrid b { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; }
+.summaryGrid small { font-size: 9px; }
+.summaryGrid em { font-size: 14px; }
+.tableWrap { max-height: none; overflow-x: auto; overflow-y: hidden; isolation: isolate; }
+.tableWrap table { font-size: 12px; }
+.tableWrap th { position: static; }
+.tableWrap td { padding: 10px 12px; }
+.sortButton { min-height: 44px; }
+.tableWrap td:first-child, .tableWrap th:first-child {
+  isolation: isolate; transform: translateZ(0); backface-visibility: hidden; content-visibility: visible; contain: none;
+  position: sticky; left: 0; background: #0c141c; background-image: none;
+}
+.tableWrap tbody tr:nth-child(even) td:first-child,
+.tableWrap tbody tr[data-tone] td:first-child,
+.tableWrap tbody tr:hover td:first-child { background: #0c141c; }
+.tableWrap th:first-child { background: #121c26; }
+.rank { font-size: 10px; }
+.playerChips b { font-size: 11px; max-width: none; white-space: normal; }
+.playerChips small { font-size: 9px !important; }
+.playerChips a { min-height: 44px; max-width: 100%; }
+.playerChips a[aria-disabled=true] { cursor: default; }
+.cards footer, .gapMetrics small, .roleBlock > small { font-size: 10px; line-height: 1.5; }
+.teamStrip article > span:not(.teamBadge) { font-size: 11px; }
+.views button:focus-visible, .metricToggle button:focus-visible, .sortButton:focus-visible,
+.tableWrap:focus-visible, .playerChips a:focus-visible { outline: 2px solid #baff46; outline-offset: -2px; }
+@media(max-width:1000px) { .summaryGrid { grid-template-columns: 1fr; } }
+@media(max-width:650px) {
+  .heroTeams { display: flex; padding: 7px 9px; }
+  .controls select, .searchBox input { font-size: 16px; }
+  .summaryGrid { display: grid; overflow: visible; }
+  .summaryGrid article { min-width: 0; min-height: 64px; }
+  .tableWrap td:first-child, .tableWrap th:first-child { min-width: 185px; }
+  .teamStrip article { grid-template-columns: 1fr; }
+  .teamStrip article > span:not(.teamBadge) { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; }
+}
 /* One vertical page scroller on touch devices; tables retain horizontal panning. */
 @media (max-width: 1024px), (any-pointer: coarse) {
   .tableWrap { height: auto; max-height: none; overflow-x: auto; overflow-y: hidden; }
