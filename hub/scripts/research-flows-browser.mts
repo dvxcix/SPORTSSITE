@@ -36,6 +36,14 @@ try {
   await share.waitFor({state:'hidden'})
   assert.equal(await page.getByRole('dialog').count(),1)
   assert.equal(await page.evaluate(()=>document.body.style.overflow),'hidden')
+  for (const tab of ['Matchup Lens','Model vs Market','Signal Lab','Slate Rankings']) {
+    await page.getByRole('button',{name:tab,exact:true}).click()
+    await page.getByRole('button',{name:'Share / Workspace',exact:true}).click()
+    await share.waitFor()
+    await page.keyboard.press('Escape')
+    await share.waitFor({state:'hidden'})
+    assert.equal(await page.getByRole('dialog').count(),1)
+  }
   await page.getByRole('button',{name:'Save',exact:true}).click()
   await page.getByRole('button',{name:'Saved',exact:true}).waitFor()
   await page.getByRole('button',{name:'Post Pick',exact:true}).click()

@@ -36,7 +36,7 @@ export function NflSlateEdgeActions({ entry, focus, date, sample, view, rank, on
     })
   }
   const control = { minHeight: 44, padding: '8px 10px', display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } as const
-  return <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }} onClick={event => event.stopPropagation()}>
+  return <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, gridColumn: '1 / -1', minWidth: 0 }} onClick={event => event.stopPropagation()}>
     {selection && <><button type="button" style={control} disabled={busy} aria-pressed={!!existing} onClick={() => void save(false)}><Star size={14} fill={existing ? 'currentColor' : 'none'} />{existing ? 'Saved' : 'Save'}</button><button type="button" style={control} disabled={busy} onClick={() => void save(true)}><Send size={14} />Post Pick</button></>}
     <button type="button" style={control} onClick={share}><Share2 size={14} />Share / Workspace</button>
     <a style={control} href={path}><ArrowUpRight size={14} />Open Board</a>
