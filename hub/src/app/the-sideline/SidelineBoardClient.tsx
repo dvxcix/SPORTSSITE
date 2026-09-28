@@ -1133,7 +1133,7 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
           </span>
         </div>
         <div className={styles.teamSummaryMeta}>
-          <span>Team ML <b>{oddsLabel(moneyline)}</b></span>
+          <span className={styles.inlineMarket} aria-label={`${fanduel?.vendor ?? 'FanDuel'} team moneyline`}><BookLogo vendor={fanduel?.vendor ?? 'fanduel'} size={18} /> ML <b>{oddsLabel(moneyline)}</b></span>
           <span>Saved <b>{savedCount}</b></span>
         </div>
       </div>
@@ -1166,7 +1166,7 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
         <div>
           <small>GAME LINES</small>
           <strong>
-            {game.away.abbr} at {game.home.abbr}
+            <span className={styles.matchupLogos}><TeamLogo team={game.away} size={28} /> {game.away.abbr} <span>@</span> <TeamLogo team={game.home} size={28} /> {game.home.abbr}</span>
           </strong>
           <p>Compare both sides at every live book.</p>
         </div>
@@ -1197,12 +1197,12 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
                 <dt>Moneyline</dt>
                 <dd>
                   <span>
-                    <small>{game.away.abbr}</small>
+                    <small className={styles.inlineMarket}><TeamLogo team={game.away} size={20} />{game.away.abbr}</small>
                     <b>{oddsLabel(line.moneylineAway)}</b>
                     <em>Open {openOdds(line.opening?.moneylineAway)}</em>
                   </span>
                   <span>
-                    <small>{game.home.abbr}</small>
+                    <small className={styles.inlineMarket}><TeamLogo team={game.home} size={20} />{game.home.abbr}</small>
                     <b>{oddsLabel(line.moneylineHome)}</b>
                     <em>Open {openOdds(line.opening?.moneylineHome)}</em>
                   </span>
@@ -1212,12 +1212,12 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
                 <dt>Spread</dt>
                 <dd>
                   <span>
-                    <small>{game.away.abbr}</small>
+                    <small className={styles.inlineMarket}><TeamLogo team={game.away} size={20} />{game.away.abbr}</small>
                     <b>{spreadValue(line.spreadAway, line.spreadAwayOdds)}</b>
                     <em>Open {spreadValue(line.opening?.spreadAway, line.opening?.spreadAwayOdds)}</em>
                   </span>
                   <span>
-                    <small>{game.home.abbr}</small>
+                    <small className={styles.inlineMarket}><TeamLogo team={game.home} size={20} />{game.home.abbr}</small>
                     <b>{spreadValue(line.spreadHome, line.spreadHomeOdds)}</b>
                     <em>Open {spreadValue(line.opening?.spreadHome, line.opening?.spreadHomeOdds)}</em>
                   </span>
@@ -2147,10 +2147,6 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
         />
       </section>
-      <nav className={styles.memberActions} aria-label="Saved research">
-        <button type="button" onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}><Layers3 size={16} /> Matrices</button>
-        <button type="button" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={16} /> Watchlist · {savedItems.length}</button>
-      </nav>
       {saveMessage ? <p role="status">{saveMessage}</p> : null}
       {matrices.some(matrix => matrix.enabled) ? <div className={styles.matrixLegend} aria-label="Active matrix matches">
         {matrices.filter(matrix => matrix.enabled).map(matrix => <button key={matrix.id} type="button" style={{ borderColor: matrix.color }} onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}>
@@ -2172,10 +2168,12 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           <span>{periodScores ?? statusCopy.detail}</span>
         </article>
         <article>
-          <small>FANDUEL GAME LINE</small>
-          <strong>
-            {selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}
-          </strong>
+          <small className={styles.inlineMarket}><BookLogo vendor={(board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0])?.vendor ?? 'fanduel'} size={20} /> GAME LINE</small>
+          <div className={styles.gameLineSummary}>
+            <span><TeamLogo team={selected.away} size={24} />{selected.away.abbr}<b>{oddsLabel(gameMoneyline(board, 'away'))}</b></span>
+            <i>@</i>
+            <span><TeamLogo team={selected.home} size={24} />{selected.home.abbr}<b>{oddsLabel(gameMoneyline(board, 'home'))}</b></span>
+          </div>
           <span>{board.gameLines.length} sportsbooks captured</span>
         </article>
         <article className={styles.marketStory}>

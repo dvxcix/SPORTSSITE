@@ -374,6 +374,25 @@
 }
 .gameLineMarket dd em { grid-column: 2; color: #78869a; font-size: 8px; font-style: normal; font-weight: 700; text-transform: uppercase; }
 
+/* Keep full game prices readable instead of squeezing three markets side by side. */
+.gameLineMarkets { grid-template-columns: minmax(0, 1fr); }
+.gameLineMarket { padding: 10px; gap: 8px; }
+.gameLineMarket dd { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gameLineMarket dd > span { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 5px; }
+.gameLineMarket dd > span + span { border-left: 1px solid #263342; padding-left: 12px; }
+.gameLineMarket dd b { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }
+.gameLineMarket dd em { grid-column: 1; white-space: normal; font-size: 10px; line-height: 1.4; }
+.gameLineMarket dt { font-size: 10px; }
+.inlineMarket { display: inline-flex !important; align-items: center; gap: 6px; }
+.inlineMarket img { flex-shrink: 0; }
+.matchupLogos { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.matchupLogos > span { color: #8795a7; font-size: 13px; }
+.gameLineSummary { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 6px 0; }
+.gameLineSummary > span { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #f4f8fc; font-size: 13px; }
+.gameLineSummary > i { color: #8795a7; font-style: normal; }
+.teamSummaryMeta { flex-wrap: wrap; align-items: center; }
+.gameLinesDisclosure > summary { flex-wrap: wrap; }
+
 .toolsPanel {
   display: flex;
   align-items: center;
