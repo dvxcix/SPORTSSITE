@@ -1,0 +1,14 @@
+/*
+ * Keep a pinned cell's opaque background and contents in the SAME composited
+ * layer. Promoting only the inner name/avatar leaves the table-cell background
+ * in the scrolling table paint chunk, which can expose odds beneath it during
+ * accelerated touch scrolling. Do not promote/contain the table or its rows.
+ * Used by both sports so their sticky identity columns have one paint policy.
+ */
+.pinned {
+  isolation: isolate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  content-visibility: visible;
+  contain: none;
+}

@@ -535,7 +535,7 @@
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   background: #080d13;
-  isolation: auto;
+  isolation: isolate;
   scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
   scrollbar-color: rgba(53, 215, 255, 0.44) #080d13;
@@ -638,6 +638,7 @@
 .boardTable td:last-child { border-right: 0; }
 
 .stickyCell {
+  composes: pinned from '../../components/ui/StickyTableCell.module.css';
   position: sticky !important;
   left: 0;
   z-index: 6 !important;

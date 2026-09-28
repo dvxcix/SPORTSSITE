@@ -13,7 +13,7 @@ try {
     const page = await context.newPage()
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
-    await page.goto('http://127.0.0.1:4187')
+    await page.goto('http://127.0.0.1:' + (process.env.SIDELINE_FIXTURE_PORT ?? 4187))
     await page.getByRole('button', { name: 'TDs', exact: true }).click()
     const tables = page.locator('table').filter({ has: page.getByRole('button', { name: 'Player, team and position', exact: true }) })
     await tables.first().waitFor()
