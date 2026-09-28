@@ -4,13 +4,17 @@ import { resolve } from 'node:path'
 import { chromium } from 'playwright-core'
 const output = resolve('.artifacts/sideline-props')
 mkdirSync(output, { recursive: true })
-const browser = await chromium.launch()
+const browser = await chromium.launch({executablePath:process.env.SIDELINE_CHROMIUM})
 try {
-  for (const width of [390, 768, 1440]) {
+  for (const width of [360, 390, 768, 1024, 1440]) {
     const page = await browser.newPage({viewport:{width,height:900},hasTouch:width<1024})
     const errors: string[] = []
     page.on('pageerror',e=>errors.push(e.message))
-    await page.goto('http://127.0.0.1:4187/props')
+    await page.goto('http://127.0.0.1:' + (process.env.SIDELINE_FIXTURE_PORT ?? 4187) + '/props')
+    await page.getByText('Display Options', {exact:true}).click()
+    const region = page.getByRole('region', {name:'Receiving Yards comparison table'})
+    await region.focus()
+    assert.equal(await region.getAttribute('tabindex'), '0')
     const header = (name:string) => page.getByRole('columnheader').filter({has:page.getByRole('button',{name,exact:false})})
     const rows = page.locator('tbody tr')
     const names = () => rows.locator('td:first-child b').allTextContents()
@@ -49,9 +53,9 @@ try {
     await page.getByRole('button',{name:'Higher →',exact:true}).click()
     assert.equal(await header('Player').getAttribute('aria-sort'),'ascending')
     await header('70+').getByRole('button').click()
-    await page.getByRole('combobox',{name:/^Book/}).selectOption('draftkings')
+    await page.getByRole('combobox',{name:'Sportsbook',exact:true}).selectOption('draftkings')
     assert.equal(await header('Player').getAttribute('aria-sort'),'ascending')
-    await page.getByRole('combobox',{name:/^Contract/}).selectOption('over_under')
+    await page.getByRole('combobox',{name:'Line Type',exact:true}).selectOption('over_under')
     await page.getByRole('combobox',{name:/^Side/}).selectOption('under')
     await header('20').getByRole('button').click()
     assert.equal((await names())[0],'Charlie Woerner') // Branch has no 20-yard contract.

@@ -17,3 +17,15 @@
 @media (max-width: 1024px), (any-pointer: coarse) {
   .scroll { height: auto; max-height: none; overflow-x: auto; overflow-y: hidden; }
 }
+
+.scroll:focus-visible { outline: 2px solid #a7ff3f; outline-offset: -2px; }
+.panel .sortButton { min-height: 44px; }
+.panel footer > button { min-height: 44px; min-width: 88px; }
+.panel td:first-child, .panel th:first-child { box-shadow: 1px 0 0 #2a3a4a; }
+.panel .player { width: 100%; min-height: 44px; }
+.player img { flex-shrink: 0; }
+.panel td small { line-height: 1.4; }
+.panel p[role="status"] { margin: 0; line-height: 1.6; color: #b7c6d8; }
+@media (any-pointer: coarse) {
+  .controls select { font-size: 16px; }
+}

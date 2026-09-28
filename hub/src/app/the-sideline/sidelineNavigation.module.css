@@ -14,3 +14,34 @@
 @media(max-width:820px){.topBar{align-items:flex-start}.contextControls{display:grid;grid-template-columns:1fr 1fr}.selectControl{display:grid;gap:2px}.schedulePicker{grid-template-columns:1fr}.gamePickerTitle{display:none}}
 @media(max-width:640px){.shell{margin:7px 7px 0;border-radius:11px}.topBar{display:grid;gap:7px;padding:8px}.contextControls{width:100%}.selectControl select{width:100%;min-width:0;min-height:38px}.schedulePicker{padding:7px}.dayRail button{min-width:68px;min-height:38px}.gameCards{grid-auto-columns:minmax(152px,60vw)}.gameCards button{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.shell *,.shell *::before,.shell *::after{transition:none!important;animation:none!important}}
+
+/* Keep the shared NFL navigation readable without increasing board row height. */
+.topBar { flex-wrap: wrap; }
+.contextControls { min-width: 0; }
+.identity small { font-size: 11px; }
+.selectControl > span:first-child { font-size: 10px; }
+.selectControl select { min-height: 44px; font-size: 12px; }
+.dayRail { min-width: 0; max-width: 100%; }
+.dayRail button { min-height: 44px; }
+.dayRail small { font-size: 10px; }
+.dayRail strong { font-size: 12px; }
+.gamePickerTitle { font-size: 10px; }
+.gameCards { grid-auto-columns: 224px; }
+.gameCards button { min-height: 58px; gap: 8px; padding: 8px; }
+.matchupTeam { gap: 4px; }
+.matchupTeam strong { font-size: 12px; }
+.matchupTeam img, .matchupTeam > span { width: 26px; height: 26px; flex-shrink: 0; }
+.matchupTeam > span { font-size: 10px; }
+.matchupCenter i { font-size: 9px; }
+.matchupCenter small { font-size: 11px; max-width: none; overflow: visible; white-space: normal; text-align: center; }
+.dayRail, .gameCards { scroll-padding-inline: 4px; }
+.dayRail button:focus-visible, .gameCards button:focus-visible { outline-offset: -3px; }
+@media (max-width: 820px) {
+  .topBar { display: grid; grid-template-columns: 1fr; }
+  .contextControls { width: 100%; }
+  .selectControl, .selectControl > span:last-child { min-width: 0; }
+  .selectControl select { width: 100%; min-width: 0; }
+}
+@media (any-pointer: coarse) {
+  .selectControl select { font-size: 16px; }
+}

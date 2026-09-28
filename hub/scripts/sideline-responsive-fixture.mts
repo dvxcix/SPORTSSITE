@@ -5,6 +5,7 @@ import { resolve, sep } from 'node:path'
 import { build } from 'esbuild'
 
 const times = ['2026-09-22T10:00:00.000Z', '2026-09-22T11:00:00.000Z', '2026-09-22T12:00:00.000Z']
+const port = Number(process.env.SIDELINE_FIXTURE_PORT ?? 4187)
 const teams = [
   { abbr: 'ATL', name: 'Atlanta Falcons', color: '#a71930', logo: null },
   { abbr: 'GB', name: 'Green Bay Packers', color: '#203731', logo: null },
@@ -52,14 +53,14 @@ const props = {
   },
 }
 const stubs: Record<string, string> = {
-  'next/navigation': 'export const useRouter=()=>({push(){},replace(){},refresh(){}})',
+  'next/navigation': 'export const useRouter=()=>({push(){},replace(){},refresh(){}});export const useSearchParams=()=>new URLSearchParams()',
   'next/dynamic': 'export default ()=>()=>null',
   'next/image': 'import React from "react";export default function Image({fill,priority,unoptimized,...props}){return <img {...props}/>}',
   'next/link': 'import React from "react";export default function Link(props){return <a {...props}/>} ',
   '@/context/WatchlistContext': 'import {useSyncExternalStore} from "react";import {watchlistPickPayload} from "./src/lib/nflWatchlist";let items=[];const listeners=new Set();const emit=()=>listeners.forEach(fn=>fn());const subscribe=fn=>{listeners.add(fn);return()=>listeners.delete(fn)};export function useWatchlist(){useSyncExternalStore(subscribe,()=>items);return {items,signedIn:true,loading:false,pendingCount:items.length,add:async item=>{items=[...items,{...item,id:crypto.randomUUID(),status:"pending"}];emit()},remove:async id=>{items=items.filter(item=>item.id!==id);emit()},postBet:async legs=>{window.postedPayload={sport:legs[0].sport.toUpperCase(),legs:legs.map(watchlistPickPayload)};return {postId:"test-post",pickIds:[]}}}}',
 }
 const bundled = await build({
-  stdin: { contents: 'import {useState} from "react";import {createRoot} from "react-dom/client";import {SidelineBoardClient} from "./src/app/the-sideline/SidelineBoardClient";import {LadderBoard} from "./src/app/the-sideline/LadderBoard";import {WatchlistButton} from "./src/components/dugout/WatchlistPanel";import {NflMatrixButton} from "./src/components/sideline/NflMatrixButton";function Props(){const [prop,onProp]=useState("receiving_yards");return <LadderBoard game={window.fixtureProps.games[0]} board={window.ladderOdds} prop={prop} onProp={onProp} onPlayer={()=>{}} scores={new Map([[1,{score:80,mm:4,label:"Receiving"}],[2,{score:20,mm:-3,label:"Receiving"}],[3,{score:50,mm:0,label:"Receiving"}],[4,{score:50,mm:null,label:"Receiving"}]])}/>};createRoot(document.getElementById("root")).render(<>{location.pathname==="/props"?<Props/>:<SidelineBoardClient {...window.fixtureProps}/>}<WatchlistButton/><NflMatrixButton/></>);', loader: 'tsx', resolveDir: process.cwd() },
+  stdin: { contents: 'import {useState} from "react";import {createRoot} from "react-dom/client";import {SidelineBoardClient} from "./src/app/the-sideline/SidelineBoardClient";import {SidelineNavigation} from "./src/app/the-sideline/SidelineNavigation";import {LadderBoard} from "./src/app/the-sideline/LadderBoard";import {WatchlistButton} from "./src/components/dugout/WatchlistPanel";import {NflMatrixButton} from "./src/components/sideline/NflMatrixButton";function Props(){const [prop,onProp]=useState("receiving_yards");return <LadderBoard game={window.fixtureProps.games[0]} board={window.ladderOdds} prop={prop} onProp={onProp} onPlayer={()=>{}} scores={new Map([[1,{score:80,mm:4,label:"Receiving"}],[2,{score:20,mm:-3,label:"Receiving"}],[3,{score:50,mm:0,label:"Receiving"}],[4,{score:50,mm:null,label:"Receiving"}]])}/>};createRoot(document.getElementById("root")).render(<>{location.pathname==="/navigation"?<SidelineNavigation games={window.fixtureProps.games} days={[{date:"2026-09-22",season:2026,week:3,gameType:"REG"}]} selected={window.fixtureProps.games[0]} sample="regular" mode=""/>:location.pathname==="/props"?<Props/>:<SidelineBoardClient {...window.fixtureProps}/>}<WatchlistButton/><NflMatrixButton/></>);', loader: 'tsx', resolveDir: process.cwd() },
   bundle: true, write: false, outdir: '.artifacts/sideline-fixture', platform: 'browser', format: 'iife', jsx: 'automatic',
   tsconfig: 'tsconfig.json', define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'fixture-boundaries', setup(build) {
@@ -80,7 +81,7 @@ createServer((req, res) => {
     const at = url.searchParams.get('at')
     res.end(JSON.stringify(at ? { frame: { capturedAt: at, board: { ...odds, capturedAt: at } } } : { odds, timeline: times, gameState: null, touchdowns: [] })); return
   }
-  if (url.pathname !== '/' && url.pathname !== '/props') {
+  if (url.pathname !== '/' && url.pathname !== '/props' && url.pathname !== '/navigation') {
     const publicRoot = resolve('public')
     const asset = resolve(publicRoot, '.' + url.pathname)
     if (asset.startsWith(publicRoot + sep) && existsSync(asset) && statSync(asset).isFile()) {
@@ -91,4 +92,4 @@ createServer((req, res) => {
   }
   res.setHeader('content-type', 'text/html; charset=utf-8')
   res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><header class="test-header">SlipSurge · LOCAL TEST DATA</header><main id="root"></main><nav class="ss-mobile-dock">Home · Research · Community · Picks</nav><script>window.fixtureProps=' + JSON.stringify(props) + ';window.ladderOdds=' + JSON.stringify(ladderOdds) + '</script><script src="/app.js"></script></body></html>')
-}).listen(4187, '127.0.0.1', () => console.log('Sideline fixture http://127.0.0.1:4187 (synthetic data only)'))
+}).listen(port, '127.0.0.1', () => console.log('Sideline fixture http://127.0.0.1:' + port + ' (synthetic data only)'))

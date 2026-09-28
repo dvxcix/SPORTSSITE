@@ -189,7 +189,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
         </label>
       </div>
       </details>
-      <div className={styles.scroll}>
+      <div className={styles.scroll} role="region" aria-label={`${marketLabel(prop)} comparison table`} tabIndex={0}>
         <table>
           <thead>
             <tr>
@@ -221,11 +221,9 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:mm`))}>
                   <b>{scores.get(row.player.id)?.mm == null ? '—' : `${(scores.get(row.player.id)?.mm ?? 0) > 0 ? '+' : ''}${scores.get(row.player.id)?.mm}`}</b>
-                  <small>Market vs model rank</small>
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:picks`))}>
                   <b>{observedPropPicks(row.player, prop)?.toLocaleString() ?? '—'}</b>
-                  <small>Observed prop picks</small>
                 </td>
                 {visible.map(line => {
                   const e = row.entries.find(e => e.line === line)
@@ -255,7 +253,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
           </tbody>
         </table>
       </div>
-      {!rows.length ? <p>No matching contracts in this capture. Choose another market, book or contract type.</p> : null}
+      {!rows.length ? <p role="status">No {marketLabel(prop).toLowerCase()} lines available for {bookLabel(vendor)} with these filters. Try another sportsbook or change the Line Type in Display Options.</p> : null}
       <footer>
         <button disabled={start === 0} onClick={() => setOffset(Math.max(0, start - 6))}>
           ← Lower
