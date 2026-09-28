@@ -77,8 +77,8 @@ export async function POST(req: Request) {
     const existing = identitiesByName.get(key)
     identitiesByName.set(key, existing ? {
       ...existing,
-      team: existing.team ?? identity.team,
-      position: existing.position ?? identity.position,
+      team: [game.away_team, game.home_team].includes(existing.team ?? '') ? existing.team : identity.team ?? existing.team,
+      position: [game.away_team, game.home_team].includes(existing.team ?? '') ? existing.position : identity.position ?? existing.position,
       aliases: [...new Set([...(existing.aliases ?? []), ...(identity.aliases ?? [])])],
     } : identity)
   }

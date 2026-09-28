@@ -4,6 +4,20 @@ import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, resolveNflPikkitE
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 import { runPikkitScrape } from '../src/lib/scrapers/pikkitScraper.ts'
 
+test('off-game picks identity follows a unique GSIS-confirmed game player without changing counts', () => {
+  const player = { id: 33939855, name: 'DeVonta Smith', team: 'PHI', position: 'WR', gsisId: '00-0036912', markets: [] }
+  const board = { bdlGameId: 1, status: 'ready', capturedAt: null, source: 'snapshot', gameLines: [], players: [player] } as SidelineOddsBoard
+  const snapshot = { gameId: 'test', awayTeam: 'PHI', homeTeam: 'CHI', capturedAt: '2026-09-28T21:37:57Z',
+    markets: [{ propType: 'receiving_yards', label: 'Receiving Yards', rawKey: 'receiving_yards', rawLabel: 'Receiving Yards',
+      players: [{ playerName: 'DeVonta Smith', playerKey: 'devontasmith', team: 'CAR', position: 'CB', picks: 4001 }] }] } as NflPikkitSnapshot
+  assert.equal(attachNflPikkitSnapshot(board, snapshot).players[0].publicPicks?.[0].picks, 4001)
+  assert.equal(snapshot.markets[0].players[0].team, 'CAR', 'raw history remains untouched')
+  const ambiguous = {...board, players: [player, {...player,id:2,team:'CHI',gsisId:'other'}]}
+  assert.equal(attachNflPikkitSnapshot(ambiguous,snapshot).players[0].publicPicks?.length,0)
+  const unverified = {...board,players:[{...player,gsisId:null}]}
+  assert.equal(attachNflPikkitSnapshot(unverified,snapshot).players[0].publicPicks?.length,0)
+})
+
 test('scraper preserves different NFL contracts for the same player', async () => {
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
   const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location')

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { build } from 'esbuild'
+import { attachNflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
 
 const compiled = await build({
   entryPoints: ['src/app/the-sideline/playerIdentity.ts'], bundle: true, write: false,
@@ -55,6 +56,16 @@ if (process.argv.includes('--live')) {
   for(const row of boards.data??[]) {
     const selected={...row.board,players:row.board.players.filter((p:any)=>p.name.toLowerCase()==='devonta smith')}
     const actual = await mod.exports.enrichSidelineOddsBoards({season:row.season,away:{abbr:row.away_abbr},home:{abbr:row.home_abbr}},[selected])
+    if (row.game_id === '2026_03_PHI_CHI') {
+      const picks = await db.from('nfl_pikkit_picks_current').select('snapshot').eq('game_id',row.game_id).single()
+      if(picks.error) throw picks.error
+      const attached = attachNflPikkitSnapshot(actual[0],picks.data.snapshot).players[0]
+      const expected = picks.data.snapshot.markets.flatMap((m:any)=>m.players.filter((p:any)=>p.playerName === 'DeVonta Smith'))
+      assert.ok(expected.length>0)
+      assert.equal(attached.publicPicks?.length,expected.length)
+      assert.deepEqual(attached.publicPicks?.map(p=>p.picks),expected.map((p:any)=>p.picks))
+      console.log('Production DeVonta pick counts preserved:',attached.publicPicks?.map(p=>[p.propType,p.picks]))
+    }
     for(const p of actual[0].players) {
       assert.equal(p.team,'PHI');assert.equal(p.position,'WR');assert.equal(p.gsisId,wr.gsis_id)
       assert.ok(p.headshotFallbacks.some((url:string)=>url.includes('4241478')))

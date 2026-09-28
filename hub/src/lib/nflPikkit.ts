@@ -157,7 +157,15 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
     if (snapshot.invalidMarkets?.includes(propType)) continue
     for (const player of market.players) {
       const name = normalizeNflPlayerName(player.playerName || player.playerKey)
-      const key = `${normalizeNflPikkitName(player.team ?? '')}:${name}`
+      const suppliedTeam = normalizeNflPikkitName(player.team ?? '')
+      const gameTeams = [snapshot.awayTeam, snapshot.homeTeam].map(normalizeNflPikkitName)
+      const candidates = board.players.filter(candidate => normalizeNflPlayerName(candidate.name) === name
+        && Boolean(candidate.gsisId) && gameTeams.includes(normalizeNflPikkitName(candidate.team)))
+      // Old captures may inherit a same-name player's unrelated team from odds.
+      // Repair only against a unique, canonically identified player in this game.
+      const repairedTeam = suppliedTeam && !gameTeams.includes(suppliedTeam) && candidates.length === 1
+        ? normalizeNflPikkitName(candidates[0].team) : suppliedTeam
+      const key = `${repairedTeam}:${name}`
       const pick = { propType, label: market.label, rawMarket: market.rawLabel, picks: player.picks, capturedAt: snapshot.capturedAt }
       picksByPlayer.set(key, [...(picksByPlayer.get(key) ?? []), pick])
     }
