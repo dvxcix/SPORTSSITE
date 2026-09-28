@@ -31,7 +31,7 @@ try {
     if(touch){
       await page.keyboard.press('Escape')
       await page.waitForFunction(()=>document.body.style.overflow!=='hidden')
-      assert.equal(await page.locator('.ss-mobile-dock a[data-label="Research"]').getAttribute('href'),'/the-sideline')
+      assert.equal(await page.locator('.ss-mobile-dock button[data-label="Research"]').getAttribute('aria-haspopup'),'dialog')
     }
     const tabs=page.getByRole('navigation',{name:'NFL tools'})
     assert.equal(await tabs.locator('[aria-current="page"]').count(),1)
