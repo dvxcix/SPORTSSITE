@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useMemo, useState, type CSSProperties } from 'react'
-import { Activity, ArrowUpDown, Database, Gauge, Route, Search, Shield, Sparkles, Target, UsersRound } from 'lucide-react'
+import { ArrowUpDown, Gauge, Route, Search, Shield, Sparkles, Target } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
@@ -39,13 +39,6 @@ const VIEW_META = [
   ['edge', 'Market Edge', Gauge], ['hits', 'Exact-Line Hits', Target], ['explosives', 'Explosive Plays', Sparkles],
   ['gaps', 'Run Gaps', Route], ['defense', 'Defense / DvP', Shield],
 ] as const
-const VIEW_COPY: Record<View, { eyebrow: string; title: string }> = {
-  edge: { eyebrow: 'Model + market', title: 'Where performance rates disagree with the live price' },
-  hits: { eyebrow: 'Exact thresholds', title: 'Every hit, miss, and sample window at the selected line' },
-  explosives: { eyebrow: 'Play creation', title: 'Deep targets and chunk-play frequency by player' },
-  gaps: { eyebrow: 'Run geometry', title: 'Ball carriers mapped to the lanes each defense allows' },
-  defense: { eyebrow: 'Defense by position', title: 'Which positions gain or lose volume versus league average' },
-}
 const cleanTeam = (value: string) => ({ LA: 'LAR', JAC: 'JAX', OAK: 'LV', WAS: 'WSH' }[value.toUpperCase()] ?? value.toUpperCase())
 const playerKey = (name: string, team: string) => `${cleanTeam(team)}:${normalizeNflPlayerName(name)}`
 const price = (value: number | null) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
@@ -137,7 +130,7 @@ function PlayerChips({ players }: { players: NflOddsPlayer[] }) {
   return <div className={styles.playerChips}>{players.slice(0, 4).map(player => <a href={player.gsisId ? `/nfl/players/${player.gsisId}` : '#'} key={player.id}>{player.headshot ? <Image src={player.headshot} alt="" width={26} height={26} unoptimized /> : <i>{player.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</i>}<span><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></span></a>)}</div>
 }
 
-export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season} regular season`, isAdmin = false }: { lens: SidelineLens; board: SidelineOddsBoard; sampleLabel?: string; isAdmin?: boolean }) {
+export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season} regular season` }: { lens: SidelineLens; board: SidelineOddsBoard; sampleLabel?: string; isAdmin?: boolean }) {
   const [view, setView] = useState<View>('edge')
   const [prop, setProp] = useState('anytime_td')
   const [vendor, setVendor] = useState('fanduel')
@@ -196,7 +189,6 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
     }
   }, [marketRows])
 
-  const coverageLabel = lens.coverage.advanced === 'complete' ? 'NGS matched' : lens.coverage.advanced === 'partial' ? 'NGS partial · PBP fallback active' : 'PBP fallback active'
   const explosiveRows = useMemo(() => {
     const rows = paired.filter((row): row is typeof row & { stats: NonNullable<typeof row.stats> } => Boolean(row.stats))
     const explosiveValue = (stats: SidelinePlayer, key: string) => ({
@@ -238,14 +230,7 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
       <div className={styles.heroCopy}><span>NFL INTELLIGENCE DESK</span><h1>Sideline Cheatsheets</h1><p>{teams.map(item => item.abbr).join(' vs ')} · {sampleLabel} reference</p></div>
       <div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div>
     </header>
-    {isAdmin ? <section className={styles.coverageRail} aria-label="Data coverage">
-      <article data-state="ready"><Database size={16} /><span><small>PLAY-BY-PLAY</small><b>{lens.coverage.pbpPlays.toLocaleString()} charted plays</b></span></article>
-      <article data-state={lens.coverage.advanced}><Activity size={16} /><span><small>ADVANCED TRACKING</small><b>{coverageLabel}</b></span></article>
-      <article data-state="ready"><UsersRound size={16} /><span><small>PLAYER IDENTITY</small><b>{lens.coverage.rosterPlayers} roster matches</b></span></article>
-      <article data-state="reference"><Shield size={16} /><span><small>REFERENCE WINDOW</small><b>{lens.season} · {lens.players.length} qualified players</b></span></article>
-    </section> : null}
     <nav className={styles.views} aria-label="Cheatsheet views">{VIEW_META.map(([key, label, Icon]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); setDirection('desc'); setSort(key === 'explosives' ? 'x-total' : key === 'defense' ? 'd-edge' : key === 'gaps' ? 'g-edge' : 'edge') }}><Icon size={15} />{label}</button>)}</nav>
-    <section className={styles.sectionIntro}><div><small>{VIEW_COPY[view].eyebrow}</small><h2>{VIEW_COPY[view].title}</h2></div><span>{view === 'edge' || view === 'hits' ? marketRows.length + ' live contracts' : paired.filter(row => row.stats).length + ' matched players'}</span></section>
     <section className={styles.controls} aria-label="Cheatsheet controls">
       <label className={styles.searchControl}><span>Find player</span><div className={styles.searchBox}><Search size={15} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search player, team, role" /></div></label>
       <label><span>Team</span><select value={team} onChange={event => setTeam(event.target.value)}><option value="all">Both Teams</option>{teams.map(item => <option key={item.abbr} value={item.abbr}>{item.name}</option>)}</select></label>

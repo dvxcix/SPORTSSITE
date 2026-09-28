@@ -62,7 +62,7 @@ export function SidelineMatchupLab({ lens, board }: { lens: SidelineLens; board:
       : (marketPrice(boardById.get(a.id), 'anytime_td') ?? 99999) - (marketPrice(boardById.get(b.id), 'anytime_td') ?? 99999)),
   [boardById, metrics, query, sample.players, teamAbbreviations])
   return <div className={styles.root}>
-    <header><h1>Matchup Lab</h1><small>{lens.coverage.label}</small></header>
+    <header><h1>Matchup Lab</h1></header>
     <section className={styles.controls} aria-label="Matchup filters"><label>Player<input value={search} onChange={event => setSearch(event.target.value)} placeholder="Player, team or position" /></label><label>Window<select value={window} onChange={event => setWindow(event.target.value as SidelineWindow)}><option value="season">Season</option>{[1, 3, 5, 10].map(n => <option key={n} value={`l${n}`}>Last {n}</option>)}</select></label><span>{players.length} players</span></section>
     <div className={controls.scrollRail} aria-label="Matchup research categories">{Object.keys(views).map(name => <button key={name} type="button" aria-pressed={name === view} className={`${controls.pill} ${name === view ? controls.pillActive : ''}`} onClick={() => setView(name)}>{name}</button>)}</div>
     <section className={styles.cards} aria-label="Team tendencies and opponent allowances">{sample.teams.map(profile => <article className={styles.card} data-tone="cyan" key={profile.team.abbr} style={{ '--team-color': profile.team.color } as CSSProperties}>
