@@ -14,6 +14,7 @@ import { PageState } from '@/components/layout/PageState'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
+import { getNflWeather } from '@/lib/nflWeatherServer'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,9 +52,10 @@ export default async function SidelinePage({ searchParams }: {
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
-  const [market, touchdownFeed] = await Promise.all([
+  const [market, touchdownFeed, weatherSummary] = await Promise.all([
     getSidelineOddsBundle(selected),
     getNflTouchdownFeed(date),
+    mode === '' ? getNflWeather({ stadium: selected.stadium, roof: selected.roof, surface: selected.surface, gameday: selected.gameday, gametime: selected.gametime, temp: selected.temp, wind: selected.wind }) : Promise.resolve(undefined),
   ])
   if (mode === 'cheatsheets') {
     const lens = await getCachedSidelineCheatsheetLens(selected, sample)
@@ -74,5 +76,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
 }

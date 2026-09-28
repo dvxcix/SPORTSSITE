@@ -2159,7 +2159,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           <small>STADIUM / CONDITIONS</small>
           <strong>{selected.stadium ?? 'Stadium TBD'}</strong>
           <span>
-            {selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : (selected.roof ?? 'Roof TBD')} · {selected.surface ?? 'Surface TBD'}
+            {selected.weatherSummary ?? 'Weather unavailable'}
           </span>
         </article>
         <article>

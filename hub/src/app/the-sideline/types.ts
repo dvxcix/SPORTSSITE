@@ -20,6 +20,7 @@ export type SidelineGame = {
   surface: string | null
   temp?: number | null
   wind?: number | null
+  weatherSummary?: string
   awayScore?: number | null
   homeScore?: number | null
   away: SidelineTeam
