@@ -3,7 +3,7 @@ import { normalizeNflPlayerName as canonicalName } from '@/lib/nflPlayerName'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import type { SidelineGame } from './types'
+type IdentityGame = { season: number; away: { abbr: string }; home: { abbr: string } }
 
 type PlayerDirectoryRow = {
   gsis_id: string
@@ -40,7 +40,7 @@ function positionGroup(value: string | null | undefined) {
   return position
 }
 
-function candidateScore(candidate: PlayerDirectoryRow, player: NflOddsPlayer, game: SidelineGame) {
+function candidateScore(candidate: PlayerDirectoryRow, player: NflOddsPlayer, game: IdentityGame) {
   const name = canonicalName(player.name)
   const candidateNames = namesFor(candidate)
   const exactName = candidateNames.includes(name)
@@ -62,10 +62,11 @@ function espnHeadshot(espnId: PlayerDirectoryRow['espn_id']) {
     : `https://a.espncdn.com/i/headshots/nfl/players/full/${String(espnId).trim()}.png`
 }
 
-async function loadDirectory(players: NflOddsPlayer[], game: SidelineGame) {
+async function loadDirectory(players: NflOddsPlayer[], game: IdentityGame) {
   const admin = createAdminClient()
   const names = Array.from(new Set(players.map(player => player.name).filter(Boolean)))
-  const teams = Array.from(new Set([game.away.abbr, game.home.abbr].map(canonicalTeam)))
+  // Include supplied teams to load both sides of case-insensitive name collisions.
+  const teams = Array.from(new Set([game.away.abbr, game.home.abbr, ...players.map(player => player.team)].map(canonicalTeam).filter(Boolean)))
   const select = 'gsis_id,display_name,short_name,football_name,position,latest_team,headshot,jersey_number,rookie_season,last_season,status,espn_id'
   const chunks = <T,>(values: T[], size = 80) => Array.from({ length: Math.ceil(values.length / size) }, (_, index) => values.slice(index * size, (index + 1) * size))
   const queries = [
@@ -88,20 +89,41 @@ async function loadDirectory(players: NflOddsPlayer[], game: SidelineGame) {
   return Array.from(rows.values())
 }
 
-export async function enrichSidelineOddsBoards(game: SidelineGame, boards: SidelineOddsBoard[]) {
+export async function enrichSidelineOddsBoards(game: IdentityGame, boards: SidelineOddsBoard[]) {
   const players = boards.flatMap(board => board.players)
   if (!players.length) return boards
   const directory = await loadDirectory(players, game)
+  return identifySidelineBoards(game, boards, directory)
+}
+
+export function identifySidelineBoards(game: IdentityGame, boards: SidelineOddsBoard[], directory: PlayerDirectoryRow[]) {
   const resolved = new Map<string, PlayerDirectoryRow | null>()
 
   const resolve = (player: NflOddsPlayer) => {
     const key = `${player.id}:${canonicalTeam(player.team)}:${canonicalName(player.name)}`
     if (resolved.has(key)) return resolved.get(key) ?? null
+    const gameTeams = [canonicalTeam(game.away.abbr), canonicalTeam(game.home.abbr)]
+    // Provider player IDs can point at a same-name player on an unrelated team.
+    // Only a unique exact-name, in-game identity can repair that conflict.
+    const inGameNames = directory.filter(candidate =>
+      namesFor(candidate).includes(canonicalName(player.name))
+      && gameTeams.includes(canonicalTeam(candidate.latest_team))
+      && (candidate.last_season ?? 0) >= game.season)
+    const hasSameNameCollision = directory.some(candidate =>
+      namesFor(candidate).includes(canonicalName(player.name))
+      && canonicalTeam(candidate.latest_team) === canonicalTeam(player.team)
+      && !gameTeams.includes(canonicalTeam(candidate.latest_team)))
+    const repair = hasSameNameCollision && inGameNames.length === 1 ? inGameNames[0] : null
+    if (repair) { resolved.set(key, repair); return repair }
+    if (!gameTeams.includes(canonicalTeam(player.team)) && inGameNames.length > 1) {
+      resolved.set(key, null)
+      return null
+    }
     const ranked = directory
       .map(candidate => ({ candidate, score: candidateScore(candidate, player, game) }))
       .filter(entry => entry.score >= 55)
       .sort((a, b) => b.score - a.score || (b.candidate.last_season ?? 0) - (a.candidate.last_season ?? 0))
-    const winner = ranked[0]?.candidate ?? null
+    const winner = ranked[0] && ranked[0].score !== ranked[1]?.score ? ranked[0].candidate : null
     resolved.set(key, winner)
     return winner
   }
@@ -111,10 +133,21 @@ export async function enrichSidelineOddsBoards(game: SidelineGame, boards: Sidel
     players: board.players.map(player => {
       const identity = resolve(player)
       if (!identity) return player
+      const repairsTeam = ![canonicalTeam(game.away.abbr), canonicalTeam(game.home.abbr)].includes(canonicalTeam(player.team))
+        && [canonicalTeam(game.away.abbr), canonicalTeam(game.home.abbr)].includes(canonicalTeam(identity.latest_team))
+        && namesFor(identity).includes(canonicalName(player.name))
+        && (identity.last_season ?? 0) >= game.season
+        && directory.some(candidate => candidate.gsis_id !== identity.gsis_id
+          && namesFor(candidate).includes(canonicalName(player.name))
+          && canonicalTeam(candidate.latest_team) === canonicalTeam(player.team))
       const fallback = espnHeadshot(identity.espn_id)
       const headshotFallbacks = Array.from(new Set([identity.headshot, fallback].filter((value): value is string => Boolean(value))))
       return {
         ...player,
+        // Keep the source odds ID: saved selections and market histories use it.
+        // Canonical roster/stat identity is GSIS, not the provider's name collision.
+        team: repairsTeam ? canonicalTeam(identity.latest_team) : player.team,
+        teamId: repairsTeam ? null : player.teamId,
         gsisId: identity.gsis_id,
         headshot: headshotFallbacks[0] ?? null,
         headshotFallbacks,
@@ -123,7 +156,7 @@ export async function enrichSidelineOddsBoards(game: SidelineGame, boards: Sidel
         lastSeason: identity.last_season,
         latestTeam: identity.latest_team,
         rosterStatus: identity.status,
-        position: player.position || identity.position || '',
+        position: repairsTeam ? identity.position || '' : player.position || identity.position || '',
       }
     }),
   }))

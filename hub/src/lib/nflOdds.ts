@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { bdlHeaders } from '@/lib/balldontlie'
+import { enrichSidelineOddsBoards } from '@/app/the-sideline/playerIdentity'
 import type {
   NflGameLineBook,
   NflMarketOffer,
@@ -411,7 +412,7 @@ export async function getLiveNflOddsBoard(game: SidelineGameRef, knownGames?: Ap
     gameLines: buildGameLines(gameLines, openingLines),
     players: buildPlayers(props, openingProps, playerLookup),
   }
-  return board
+  return (await enrichSidelineOddsBoards(game, [board]))[0]
 }
 
 export async function getOpeningNflOddsBoard(game: SidelineGameRef, knownGames?: ApiGame[]): Promise<SidelineOddsBoard> {
@@ -424,7 +425,7 @@ export async function getOpeningNflOddsBoard(game: SidelineGameRef, knownGames?:
     bdlGet<ApiProp>(`/odds/player_props/opening?game_id=${matched.id}`, 'reference'),
   ])
   const playerLookup = await getPlayers(openingProps.map(row => row.player_id))
-  return {
+  const board: SidelineOddsBoard = {
     bdlGameId: matched.id,
     status: openingLines.length || openingProps.length ? 'ready' : 'not-posted',
     capturedAt: new Date().toISOString(),
@@ -432,4 +433,5 @@ export async function getOpeningNflOddsBoard(game: SidelineGameRef, knownGames?:
     gameLines: buildGameLines([], openingLines),
     players: buildPlayers([], openingProps, playerLookup),
   }
+  return (await enrichSidelineOddsBoards(game, [board]))[0]
 }
