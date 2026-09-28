@@ -25,6 +25,7 @@
 .panel .player { width: 100%; min-height: 44px; }
 .player img { flex-shrink: 0; }
 .panel td small { line-height: 1.4; }
+.panel td:not(:first-child) { min-width: 120px; }
 .panel p[role="status"] { margin: 0; line-height: 1.6; color: #b7c6d8; }
 @media (any-pointer: coarse) {
   .controls select { font-size: 16px; }

@@ -62,6 +62,13 @@ try {
     await header('20').getByRole('button').click()
     assert.equal((await names())[0],'Bijan Robinson')
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+    const actionRows = await page.locator('td').evaluateAll(cells => cells.flatMap(cell => {
+      const actions = [...cell.querySelectorAll('button[aria-label]')]
+      if (actions.length !== 2) return []
+      const [save, post] = actions.map(button => button.getBoundingClientRect())
+      return Math.abs(save.top - post.top) > 1 ? ['stacked prop actions'] : []
+    }))
+    assert.deepEqual(actionRows, [], 'save/post remain side by side')
     await page.screenshot({path:resolve(output,width+'.png')})
     assert.deepEqual(errors,[])
     console.log(width+'px PASS: header toggles, missing values, heat, modes, books, pages, under-side')
