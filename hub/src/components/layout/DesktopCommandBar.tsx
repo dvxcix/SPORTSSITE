@@ -4,18 +4,22 @@ import Link from 'next/link'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Search, Wifi, WifiOff } from 'lucide-react'
 import { getContextNavigation, routeMatches } from './navigationConfig'
+import { researchSportForPath, researchToolActive, researchToolHref } from './researchNavigation'
+import { useResearchSport } from './useResearchSport'
 
 export function DesktopCommandBar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { sport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
   const router = useRouter()
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const context = getContextNavigation(pathname)
   const ContextIcon = context.meta.icon
-  const shortcuts = context.items.filter(item => !item.ultimateOnly && (!isNflToolHref(item.href) || nflAccess)).slice(0, 5)
+  const shortcuts = context.items.filter(item => !item.ultimateOnly && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === (nflAccess ? sport : 'mlb'))).slice(0, 5)
 
   useEffect(() => {
     const markOnline = () => setOnline(true)
@@ -44,9 +48,9 @@ export function DesktopCommandBar() {
       <div className="ss-desktop-workspaces" aria-label="Workspaces">
         {shortcuts.map(item => {
           const Icon = item.icon
-          const active = routeMatches(pathname, item)
+          const active = isNflToolHref(item.href) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item)
           return (
-            <Link key={item.href} href={item.href} prefetch={false} data-active={active}>
+            <Link key={item.href} href={researchToolHref(item.href, pathname, searchParams)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined}>
               <Icon size={13} />
               <span>{item.shortLabel ?? item.label}</span>
             </Link>

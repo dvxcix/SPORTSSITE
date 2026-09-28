@@ -5,9 +5,14 @@ import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { primaryNavigation, routeMatches } from './navigationConfig'
+import { useResearchSport } from './useResearchSport'
+import { researchHome } from './researchNavigation'
+import { useNflAccess } from '@/lib/useNflAccess'
 
 export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () => void; hidden?: boolean }) {
   const pathname = usePathname()
+  const { sport } = useResearchSport(pathname)
+  const { allowed: nflAccess } = useNflAccess()
 
   return (
     <nav className="ss-mobile-dock md:hidden" data-hidden={hidden} aria-label="Primary navigation" aria-hidden={hidden}>
@@ -16,7 +21,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
           const Icon = item.icon
           const active = routeMatches(pathname, item)
           return (
-            <Link key={item.href} href={item.href} prefetch={false} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined} data-label={item.label}>
+            <Link key={item.href} href={item.label === 'Research' ? researchHome(sport, nflAccess) : item.href} prefetch={false} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined} data-label={item.label}>
               <span className="ss-mobile-dock-icon"><Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" /></span>
               <span>{item.label}</span>
             </Link>

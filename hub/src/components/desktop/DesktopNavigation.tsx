@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ChevronLeft, ChevronRight, Crown, Settings2 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
@@ -11,9 +11,14 @@ import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
+import { researchHome, researchSportForPath, researchToolActive, researchToolHref } from '@/components/layout/researchNavigation'
+import { useResearchSport } from '@/components/layout/useResearchSport'
+import { ResearchSportSwitcher } from '@/components/layout/ResearchSportSwitcher'
 
 export function DesktopNavigation() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { sport, chooseSport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
   const { profile, loading } = useAuth()
   const { collapsed, toggle } = useSidebarCollapsed()
@@ -23,7 +28,7 @@ export function DesktopNavigation() {
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
-  const items = context.items.filter(item => (!item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess))
+  const items = context.items.filter(item => (!item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === (nflAccess ? sport : 'mlb')))
   const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
   const accessLabel = !profile
     ? (loading ? 'Checking access…' : 'Refresh account')
@@ -44,7 +49,7 @@ export function DesktopNavigation() {
             const Icon = item.icon
             const active = routeMatches(pathname, item)
             return (
-              <Link key={item.href} href={item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
+              <Link key={item.href} href={item.label === 'Research' ? researchHome(sport, nflAccess) : item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
                 <Icon size={19} />
                 {item.badge && <i>{item.badge === 'LIVE' ? '' : item.badge}</i>}
               </Link>
@@ -68,13 +73,14 @@ export function DesktopNavigation() {
           <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
           </button>
-          <div className="ss-desktop-context-label">WORKSPACE</div>
+          {context.area === 'research' && <ResearchSportSwitcher sport={nflAccess ? sport : 'mlb'} onChange={chooseSport} nflAccess={nflAccess} compact={contextCollapsed} />}
+          <div className="ss-desktop-context-label">{context.area === 'research' ? (nflAccess ? sport : 'mlb').toUpperCase() + ' RESEARCH' : 'WORKSPACE'}</div>
           <nav aria-label={`${context.meta.label} navigation`}>
             {items.map(item => {
               const Icon = item.icon
-              const active = routeMatches(pathname, item)
+              const active = isNflToolHref(item.href) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item)
               return (
-                <Link key={item.href} href={item.href} prefetch={false} data-active={active}>
+                <Link key={item.href} href={researchToolHref(item.href, pathname, searchParams)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined}>
                   <Icon size={15} />
                   <span>{item.label}</span>
                   {item.badge && <em>{item.badge}</em>}

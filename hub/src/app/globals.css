@@ -953,6 +953,13 @@ img { max-width: 100%; }
   .ss-site-sidebar.-translate-x-full { transform: translateX(-100%) !important; }
   .ss-site-sidebar.translate-x-0 { transform: translateX(0) !important; }
   .ss-site-sidebar .hidden.md\:flex { display: none !important; }
+  .ss-mobile-sidebar-backdrop { z-index: var(--layer-modal); backdrop-filter: blur(5px); }
+  .ss-site-sidebar { z-index: var(--layer-tour) !important; box-shadow: 18px 0 52px rgba(0,0,0,.48); }
+  .ss-site-sidebar .nav-item, .ss-sidebar-settings { min-height: 44px; }
+}
+
+@media (min-width: 1025px), (min-width: 768px) and (any-pointer: fine) and (not (any-pointer: coarse)) {
+  .ss-sidebar-close { display: none !important; }
 }
 
 /* Foldables and compact tablets have desktop-class viewport widths without

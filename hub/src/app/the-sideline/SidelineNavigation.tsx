@@ -1,12 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, type CSSProperties } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Trophy, Table2, Megaphone, ChartSpline, Crosshair } from 'lucide-react'
 import type { SidelineGame, SidelineTeam } from './types'
 import styles from './sidelineNavigation.module.css'
 import { scheduleWeekKey, scheduleWeekLabel, type SidelineScheduleDay } from './scheduleNavigation'
+import { researchToolHref } from '@/components/layout/researchNavigation'
 
 function shortDay(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -25,6 +27,7 @@ function NavigationTeamLogo({ team }: { team: SidelineTeam }) {
 
 export function SidelineNavigation({ games, days, selected, sample, mode }: { games: SidelineGame[]; days: SidelineScheduleDay[]; selected: SidelineGame; sample: string; mode: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
   const href = (section: string, game = selected.id, date = selected.gameday, reference = sample) => `/the-sideline?${new URLSearchParams({ game, date, sample: reference, ...(section ? { mode: section } : {}) })}`
   const change = (url: string) => startTransition(() => router.push(url, { scroll: false }))
@@ -50,6 +53,11 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         </label>
       </div>
     </header>
+
+    <nav className={styles.toolNav} aria-label="NFL tools">
+      {[{mode:'',label:'The Sideline',icon:Trophy},{mode:'cheatsheets',label:'Cheatsheets',icon:Table2},{mode:'public',label:'The Public',icon:Megaphone},{mode:'markets',label:'Sportsbooks',icon:ChartSpline},{mode:'research',label:'Matchup Lab',icon:Crosshair}].map(tool =>
+        <Link key={tool.mode} href={researchToolHref(href(tool.mode), '/the-sideline', searchParams)} prefetch={false} scroll={false} aria-current={mode === tool.mode ? 'page' : undefined}><tool.icon size={16} aria-hidden="true" /><span>{tool.label}</span></Link>)}
+    </nav>
 
     <div className={styles.schedulePicker}>
       <nav className={styles.dayRail} aria-label="NFL game days">

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, Calendar, BookOpen, ShoppingBag,
@@ -17,6 +17,10 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { useAuth } from '@/context/AuthContext'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
+import { useResearchSport } from './useResearchSport'
+import { ResearchSportSwitcher } from './ResearchSportSwitcher'
+import { researchToolHref } from './researchNavigation'
+import navigationStyles from './researchNavigation.module.css'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
@@ -92,6 +96,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const sidelineMode = searchParams.get('mode') ?? ''
   const { profile } = useAuth()
   const { allowed: nflAccess } = useNflAccess()
+  const { sport, chooseSport } = useResearchSport(path)
+  const selectedSport = nflAccess ? sport : 'mlb'
+  const [menuSearch, setMenuSearch] = useState('')
+  const drawerRef = useRef<HTMLElement>(null)
+  const closeRef = useRef(onClose)
+  useEffect(() => { closeRef.current = onClose }, [onClose])
   const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
   // The persisted collapse preference is desktop/tablet-only — if it's on
   // and the user then opens the mobile drawer (e.g. after resizing down),
@@ -120,7 +130,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // Keep the page behind the mobile drawer stationary while it is open.
   useEffect(() => {
     if (!open) return
-    const mobileQuery = window.matchMedia('(max-width: 767px)')
+    const mobileQuery = window.matchMedia('(max-width: 767px), (max-width: 1024px) and (any-pointer: coarse)')
     const previousOverflow = document.body.style.overflow
     let locked = false
 
@@ -142,14 +152,43 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open || !window.matchMedia('(max-width: 767px), (max-width: 1024px) and (any-pointer: coarse)').matches) return
+    const previous = document.activeElement as HTMLElement | null
+    drawerRef.current?.querySelector<HTMLButtonElement>('[aria-label="Close menu"]')?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); closeRef.current(); return }
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(drawerRef.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input') ?? []).filter(element => element.getClientRects().length > 0)
+      const first = focusable[0], last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus() }
+  }, [open])
+
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
-  const visibleNav = nav.filter(item => {
+  const permittedNav = nav.filter(item => {
     if (!item) return true
     if (item.nflOnly && !nflAccess) return false
     if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
     return !item.flagKey || flags[item.flagKey] !== false
+  })
+  const groups: { heading: Extract<NavItem, { section: string }>; links: NavLink[] }[] = []
+  for (const item of permittedNav) {
+    if (!item) continue
+    if ('section' in item) groups.push({ heading: item, links: [] })
+    else groups.at(-1)?.links.push(item)
+  }
+  const query = menuSearch.trim().toLowerCase()
+  const orderedGroups = [...groups.filter(group => group.heading.section === selectedSport.toUpperCase() + ' Research'), ...groups.filter(group => group.heading.section !== selectedSport.toUpperCase() + ' Research')]
+  const visibleNav: NavItem[] = orderedGroups.flatMap(group => {
+    if (!query && group.heading.logo && group.heading.section !== selectedSport.toUpperCase() + ' Research') return []
+    const links = query ? group.links.filter(link => (link.label + ' ' + group.heading.section).toLowerCase().includes(query)) : group.links
+    return links.length ? [group.heading, ...links] : []
   })
 
   function active(href: string) {
@@ -169,6 +208,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-black/60" aria-hidden="true" />
       )}
       <aside
+        ref={drawerRef}
         // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
         // that custom property (0px when it's not showing) so this sticks
         // right below the banner instead of overlapping it once scrolled.
@@ -204,14 +244,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         }}
       >
       {/* Logo */}
-      <Link href="/feed" prefetch={false} className="ss-sidebar-brand" style={{
+      <div className="ss-sidebar-brand" style={{
         display: 'flex', alignItems: 'center', gap: 10,
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         padding: isCollapsed ? '20px 8px 18px' : '20px 16px 18px',
         borderBottom: '1px solid var(--border)',
         textDecoration: 'none',
       }}>
-        <Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain', flexShrink: 0 }} />
+        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain', flexShrink: 0 }} /></Link>
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
@@ -232,7 +272,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <X size={18} />
           </button>
         )}
-      </Link>
+      </div>
 
       {/* Collapse toggle — desktop/tablet only, mirrors the mobile X button's
           spot in the flow but lives in its own row since collapsing needs to
@@ -260,8 +300,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         )}
       </button>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <div className={navigationStyles.controls}>
+        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
+        {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page or tool" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
+      </div>
+      {/* Remount the scroll area when switching sports so its first tool is visible. */}
+      <nav key={selectedSport + query} aria-label="All navigation" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {!visibleNav.length && <p role="status" className={navigationStyles.empty}>No matching pages.</p>}
         {visibleNav.map((item, i) => {
           if (item === null) {
             return <div key={`div-${i}`} style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
@@ -284,7 +329,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           const isActive = active(item.href)
           const idleBg = 'transparent'
           const link = (
-            <Link key={item.href} href={item.href} prefetch={false} className="nav-item" data-active={isActive} title={isCollapsed ? item.label : undefined} style={{
+            <Link key={item.href} href={researchToolHref(item.href, path, searchParams)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={isCollapsed ? item.label : undefined} title={isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
               justifyContent: isCollapsed ? 'center' : 'flex-start',
               padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
@@ -295,7 +340,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               textDecoration: 'none',
               userSelect: 'none',
             }}
-            onClick={onClose}
+            onClick={() => { setMenuSearch(''); onClose() }}
             onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; } }}
             onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
