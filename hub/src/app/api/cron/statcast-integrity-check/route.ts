@@ -6,7 +6,7 @@ import { currentSeason } from '@/lib/playerSync'
 import { daysAgoET } from '@/lib/savantSplitsSync'
 import { alertOnStatcastIntegrityFailure, type StatcastIntegrityResult } from '@/lib/statcastIntegrity'
 import { safeApiError } from '@/lib/safeApiError'
-import { getMLBSchedule } from '@slipsurge/core/mlb-api'
+import { getMLBScheduleResult } from '@slipsurge/core/mlb-api'
 import { finalPitchGamesForDate } from '@/lib/pitchPipelineHealth'
 
 export const revalidate = 0
@@ -41,7 +41,7 @@ async function run(req: Request) {
   const throughDate = daysAgoET(1)
   const [auditResponse, officialSchedule] = await Promise.all([
     runAuditWithTransientRetry(admin, season, throughDate),
-    getMLBSchedule(throughDate),
+    getMLBScheduleResult(throughDate),
   ])
   const { data, error } = auditResponse
   if (error) return safeApiError('statcast-integrity-audit', error)
@@ -53,8 +53,8 @@ async function run(req: Request) {
   // the wider failure mode where both the schedule write and the pitch-log
   // write were missed on the same day. Only officially final games count;
   // postponed or suspended games must not create false missing-data alarms.
-  if (officialSchedule.length) {
-    const finalGamePks = finalPitchGamesForDate(officialSchedule, throughDate)
+  if (officialSchedule.available) {
+    const finalGamePks = finalPitchGamesForDate(officialSchedule.games, throughDate)
     const loggedGamePks = new Set<string>()
     const pageSize = 1000
     for (let from = 0; ; from += pageSize) {

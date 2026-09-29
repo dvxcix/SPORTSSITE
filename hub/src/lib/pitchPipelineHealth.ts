@@ -4,7 +4,7 @@ type ScheduleGame = {
   gamePk: number
   officialDate?: string
   gameType?: string
-  status: { abstractGameState: string }
+  status: { abstractGameState: string; codedGameState?: string; detailedState?: string }
 }
 
 // Schedule responses can include rescheduled games with a different official
@@ -12,6 +12,8 @@ type ScheduleGame = {
 export function finalPitchGamesForDate(games: ScheduleGame[], date: string): number[] {
   return [...new Set(games.filter(game =>
     game.status.abstractGameState === 'Final'
+    && game.status.codedGameState !== 'C'
+    && !/cancelled|canceled|postponed|suspended/i.test(game.status.detailedState ?? '')
     && game.officialDate === date
     && (!game.gameType || game.gameType === 'R')
   ).map(game => game.gamePk))]

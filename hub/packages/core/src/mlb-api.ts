@@ -249,17 +249,25 @@ export interface MLBGameFeed {
 }
 
 // ─── API calls ───────────────────────────────────────────────────
-export async function getMLBSchedule(date?: string): Promise<MLBGame[]> {
+export async function getMLBScheduleResult(date?: string): Promise<{ available: boolean; games: MLBGame[] }> {
   try {
     const d = date ?? new Date().toISOString().split('T')[0]
     const url = `${BASE}/schedule?sportId=1&date=${d}&hydrate=linescore,team,broadcasts(all),venue(location,fieldInfo),weather`
     const res = await fetch(url, { next: { revalidate: 30 }, headers: { 'User-Agent': 'SlipSurge/1.0' } })
-    if (!res.ok) return []
+    if (!res.ok) return { available: false, games: [] }
     const data = await res.json()
-    return data.dates?.[0]?.games ?? []
+    // An official off-day is successful, not a schedule outage.
+    if (!Array.isArray(data.dates) || !data.dates.every((day: any) => Array.isArray(day.games))) {
+      return { available: false, games: [] }
+    }
+    return { available: true, games: data.dates.flatMap((day: any) => day.games) }
   } catch {
-    return []
+    return { available: false, games: [] }
   }
+}
+
+export async function getMLBSchedule(date?: string): Promise<MLBGame[]> {
+  return (await getMLBScheduleResult(date)).games
 }
 
 export async function getMLBGameFeed(gamePk: number | string): Promise<MLBGameFeed | null> {

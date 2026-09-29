@@ -2,6 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { finalPitchGamesForDate, latestPitchLogDate } from '../src/lib/pitchPipelineHealth.ts'
 
+test('cancelled games are not played finals', () => {
+  assert.deepEqual(finalPitchGamesForDate([
+    { gamePk: 823490, officialDate: '2026-09-27', gameType: 'R', status: { abstractGameState: 'Final', codedGameState: 'C', detailedState: 'Cancelled: Rain' } },
+  ], '2026-09-27'), [])
+})
+
 test('audit excludes cross-date finals, includes late UTC games and deduplicates', () => {
   const games = [
     { gamePk: 1, officialDate: '2026-09-22', status: { abstractGameState: 'Final' } },

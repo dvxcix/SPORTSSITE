@@ -45,6 +45,14 @@ test('defers until the exact through-yesterday audit exists', () => {
   assert.equal(result.requiredThroughDate, '2026-08-18')
 })
 
+test('verified off-day allows scores using pregame history', () => {
+  const current = audit({ checks: { ...audit().checks,
+    official_schedule: { source_available: true, final_games: 0, final_games_without_pitch_log: 0, missing_game_pks: [] },
+  } })
+  const result = evaluateMechanicsReadiness({ gameDate, currentDate: gameDate, audit: current, requirements, derivedRows: readyRows, categoryRows: readyCategories })
+  assert.equal(result.ready, true)
+})
+
 test('defers when an officially final game has no pitch log', () => {
   const current = audit({
     status: 'failed',
