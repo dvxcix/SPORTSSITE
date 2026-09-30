@@ -25,9 +25,6 @@ function optionalProjectId(): string | undefined {
 
 const BROWSERBASE_REGION = 'us-east-1' as const
 const AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 * 60
-const DEFAULT_BROWSER_MINUTE_BUDGET = 425 * 60
-const DEFAULT_PROXY_BYTE_BUDGET = 4.25 * 1_000_000_000
-const USAGE_CACHE_MS = 60_000
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
 export const FANDUEL_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$'
@@ -35,19 +32,6 @@ export const BETMGM_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*betmgm\\.com$'
 export const PIKKIT_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*(pikkit\\.com|pikkit\\.app|cloudflare\\.com)$'
 
 let projectIdCache: string | undefined
-let usageCache: { checkedAt: number; browserMinutes: number; proxyBytes: number } | undefined
-
-function positiveLimit(name: string, fallback: number): number {
-  const parsed = Number(process.env[name])
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
-export class BrowserbaseBudgetExceededError extends Error {
-  constructor(public readonly resource: 'browser-minutes' | 'proxy-bytes') {
-    super(`Browserbase ${resource} safety budget reached`)
-    this.name = 'BrowserbaseBudgetExceededError'
-  }
-}
 
 async function resolveProjectId(bb: Browserbase, configured?: string): Promise<string> {
   if (configured) return configured
@@ -58,21 +42,6 @@ async function resolveProjectId(bb: Browserbase, configured?: string): Promise<s
   return project.id
 }
 
-async function assertAutomatedUsageBudget(bb: Browserbase, configuredProjectId?: string): Promise<string> {
-  const projectId = await resolveProjectId(bb, configuredProjectId)
-  const now = Date.now()
-  const usage = usageCache && now - usageCache.checkedAt < USAGE_CACHE_MS
-    ? usageCache
-    : await bb.projects.usage(projectId).then(value => {
-      usageCache = { checkedAt: now, ...value }
-      return usageCache
-    })
-  const browserMinuteBudget = positiveLimit('BROWSERBASE_BROWSER_MINUTE_BUDGET', DEFAULT_BROWSER_MINUTE_BUDGET)
-  const proxyByteBudget = positiveLimit('BROWSERBASE_PROXY_BYTE_BUDGET', DEFAULT_PROXY_BYTE_BUDGET)
-  if (usage.browserMinutes >= browserMinuteBudget) throw new BrowserbaseBudgetExceededError('browser-minutes')
-  if (usage.proxyBytes >= proxyByteBudget) throw new BrowserbaseBudgetExceededError('proxy-bytes')
-  return projectId
-}
 
 function pikkitGeoState(): string | undefined {
   // Pikkit is authenticated manually from North Carolina. Browserbase's
@@ -124,7 +93,9 @@ export type BBSession = {
 export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const bb = client()
   const configuredProjectId = optionalProjectId()
-  const pid = await assertAutomatedUsageBudget(bb, configuredProjectId)
+  // Spend thresholds are admin alerts, never capture gates. Usage lookup also
+  // stays out of this path so a billing API outage cannot stop data ingestion.
+  const pid = await resolveProjectId(bb, configuredProjectId)
   const proxied = {
     type: 'browserbase' as const,
     ...(opts.geoState ? { geolocation: { country: 'US' as const, state: opts.geoState } } : {}),

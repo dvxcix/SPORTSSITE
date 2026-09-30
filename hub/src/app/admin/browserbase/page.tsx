@@ -52,7 +52,7 @@ export default async function BrowserbaseOperationsPage() {
       <AdminPageHeader
         eyebrow="Infrastructure cost center"
         title="Browser automation"
-        description="A complete view of proxy transfer, browser time, scraper attribution, retained sessions, failures, and current safety limits."
+        description="Proxy transfer, browser time, scraper attribution, failures, and spending alerts."
         icon={Cloud}
         actions={(
           <Link href="/admin/pipeline-health" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border-2)] bg-[var(--surface-2)] px-3 text-xs font-extrabold text-[var(--text-2)] transition hover:text-[var(--accent)]">
@@ -68,18 +68,18 @@ export default async function BrowserbaseOperationsPage() {
               {safetyBlocked ? <ShieldAlert size={20} aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
             </span>
             <div>
-              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${safetyBlocked ? 'text-red-300' : 'text-emerald-300'}`}>Automated spending guard</p>
-              <h2 className="mt-1 text-lg font-black text-[var(--text-1)]">{safetyBlocked ? 'New automated sessions are blocked' : 'Automation is inside its safety budget'}</h2>
+              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${safetyBlocked ? 'text-red-300' : 'text-emerald-300'}`}>Spending alerts · Monitoring only</p>
+              <h2 className="mt-1 text-lg font-black text-[var(--text-1)]">{safetyBlocked ? 'Spending threshold exceeded — captures remain enabled' : 'Usage is below the alert thresholds'}</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-2)]">
-                {proxyBlocked ? 'Proxy transfer crossed the configured stop line. ' : ''}
-                {browserBlocked ? 'Browser time crossed the configured stop line. ' : ''}
-                Manual authentication remains separate; extraction should fail closed before creating more paid usage.
+                {proxyBlocked ? 'Proxy transfer crossed the alert threshold. ' : ''}
+                {browserBlocked ? 'Browser time crossed the alert threshold. ' : ''}
+                FanDuel, Pikkit and other captures are not stopped by spending alerts. Additional provider charges may apply.
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-[390px]">
-            <GuardRail label="Proxy stop line" value={`${formatGb(proxyBudgetBytes)} GB`} used={`${plan.proxyGigabytes.toFixed(2)} GB used`} tripped={proxyBlocked} />
-            <GuardRail label="Browser stop line" value={`${(browserBudgetMinutes / 60).toFixed(0)} hours`} used={`${plan.browserHours.toFixed(1)} h used`} tripped={browserBlocked} />
+            <GuardRail label="Proxy alert threshold" value={`${formatGb(proxyBudgetBytes)} GB`} used={`${plan.proxyGigabytes.toFixed(2)} GB used`} tripped={proxyBlocked} />
+            <GuardRail label="Browser alert threshold" value={`${(browserBudgetMinutes / 60).toFixed(0)} hours`} used={`${plan.browserHours.toFixed(1)} h used`} tripped={browserBlocked} />
           </div>
         </div>
       </section>

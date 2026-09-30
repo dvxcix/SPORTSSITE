@@ -4,6 +4,16 @@ import test from 'node:test'
 
 const source = async (path: string) => readFile(new URL(path, import.meta.url), 'utf8')
 
+test('spending and billing API failures cannot block automated captures', async () => {
+  const browserbase = await source('../src/lib/browserbase.ts')
+  assert.doesNotMatch(browserbase, /BrowserbaseBudgetExceededError|assertAutomatedUsageBudget|projects\.usage/)
+  assert.match(browserbase, /await resolveProjectId\(bb, configuredProjectId\)/)
+  assert.match(browserbase, /AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 \* 60/)
+  const dashboard = await source('../src/app/admin/browserbase/page.tsx')
+  assert.match(dashboard, /Spending threshold exceeded — captures remain enabled/)
+  assert.match(dashboard, /BROWSERBASE_PROXY_BYTE_BUDGET/)
+})
+
 test('generic sessions default to no paid proxy and carry cost attribution metadata', async () => {
   const browserbase = await source('../src/lib/browserbase.ts')
   assert.match(browserbase, /opts\.proxies \?\? false/)
