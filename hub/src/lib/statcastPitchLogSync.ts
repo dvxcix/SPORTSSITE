@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchSavantCsv } from '@/lib/savantSync'
+import { isCompetitiveMlbGame, SAVANT_COMPETITIVE_GAME_FILTER } from './mlbCompetitiveGames'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -15,14 +16,14 @@ type AdminClient = ReturnType<typeof createAdminClient>
 // stub name until mlb-sync-bio reaches that player.
 function pitchLogCsvUrl(date: string): string {
   return `https://baseballsavant.mlb.com/statcast_search/csv?all=true&hfPT=&hfAB=&hfBBT=&hfPR=&hfZ=` +
-    `&stadium=&hfBBL=&hfNewZones=&hfGT=R%7C&hfC=&hfSea=&hfSit=&player_type=pitcher&hfOuts=` +
+    `&stadium=&hfBBL=&hfNewZones=&hfGT=${SAVANT_COMPETITIVE_GAME_FILTER}&hfC=&hfSea=&hfSit=&player_type=pitcher&hfOuts=` +
     `&opponent=&pitcher_throws=&batter_stands=&hfSA=&game_date_gt=${date}&game_date_lt=${date}` +
     `&hfInfield=&team=&position=&hfOutfield=&hfRO=&home_road=&hfFlag=&hfPull=&metric_1=&hfInn=` +
     `&min_pitches=0&min_results=0&group_by=name&sort_col=pitches&player_event_sort=api_p_release_speed` +
     `&sort_order=desc&min_pas=0&type=details`
 }
 
-// Regular-season game log for a date — MLB's own schedule endpoint,
+// Regular-season and postseason game log — MLB's own schedule endpoint,
 // `hydrate=venue` for stadium name. Gives day/night + venue + opponent,
 // none of which appear anywhere in the Savant pitch CSV.
 async function fetchScheduleJson(date: string): Promise<any> {
@@ -66,7 +67,7 @@ const WRITE_CHUNK_SIZE = 500
 
 export async function syncGamesForDate(admin: AdminClient, date: string, season: number): Promise<{ games: number }> {
   const d = await fetchScheduleJson(date)
-  const games = (d?.dates?.[0]?.games ?? []).filter((g: any) => g.gameType === 'R')
+  const games = (d?.dates?.[0]?.games ?? []).filter((g: any) => isCompetitiveMlbGame(g.gameType))
   if (!games.length) return { games: 0 }
 
   const rows = games.map((g: any) => ({

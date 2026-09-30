@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isCompetitiveMlbGame } from './mlbCompetitiveGames'
 
 type ScheduleGame = {
   gamePk: number
@@ -15,7 +16,7 @@ export function finalPitchGamesForDate(games: ScheduleGame[], date: string): num
     && game.status.codedGameState !== 'C'
     && !/cancelled|canceled|postponed|suspended/i.test(game.status.detailedState ?? '')
     && game.officialDate === date
-    && (!game.gameType || game.gameType === 'R')
+    && (!game.gameType || isCompetitiveMlbGame(game.gameType))
   ).map(game => game.gamePk))]
 }
 

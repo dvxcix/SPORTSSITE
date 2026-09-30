@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { finalPitchGamesForDate, latestPitchLogDate } from '../src/lib/pitchPipelineHealth.ts'
+import { isCompetitiveMlbGame, SAVANT_COMPETITIVE_GAME_FILTER } from '../src/lib/mlbCompetitiveGames.ts'
+
+test('ingestion and health coverage include every postseason round, not exhibitions', () => {
+  const types = ['R', 'F', 'D', 'L', 'W', 'S', 'E', 'A']
+  assert.deepEqual(types.filter(isCompetitiveMlbGame), ['R', 'F', 'D', 'L', 'W'])
+  assert.equal(decodeURIComponent(SAVANT_COMPETITIVE_GAME_FILTER), 'R|F|D|L|W|')
+  assert.deepEqual(finalPitchGamesForDate(types.map((gameType, gamePk) => ({ gamePk, gameType, officialDate: '2026-09-29', status: { abstractGameState: 'Final' } })), '2026-09-29'), [0, 1, 2, 3, 4])
+})
 
 test('cancelled games are not played finals', () => {
   assert.deepEqual(finalPitchGamesForDate([
