@@ -4,6 +4,7 @@ import { requireNflAccess } from '@/lib/nflAccess'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { nflAvailability } from '@/lib/nflAvailability'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { defaultNflSample, nflSampleReference, parseNflSample, type NflSample } from '@/lib/nflSample'
@@ -106,7 +107,7 @@ const getSlatePayload = unstable_cache(async (
     const teams = new Set([normalizedTeam(game.away.abbr), normalizedTeam(game.home.abbr)])
 
     const entries: NflSlateEdgeEntry[] = bundle.odds.players
-      .filter(player => teams.has(normalizedTeam(player.team)) && player.availability?.active !== false)
+      .filter(player => teams.has(normalizedTeam(player.team)) && nflAvailability(player, game.gameday).eligible)
       .map(player => {
         const tracked = (player.gsisId ? trackedById.get(player.gsisId) : null)
           ?? trackedByName.get(normalizeNflPlayerName(player.name))

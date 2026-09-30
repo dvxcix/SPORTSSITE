@@ -9,6 +9,7 @@ import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
 import { teamMmHighlights } from './teamHighlights'
+import { nflAvailability } from '@/lib/nflAvailability'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
@@ -34,6 +35,8 @@ type ColumnGroup = Exclude<BoardView, 'all' | 'custom'>
 type SortEntry = { id: string; direction: 'asc' | 'desc' }
 type HighlightColor = 'lime' | 'cyan' | 'amber' | 'rose'
 type PlayerRow = SidelinePlayer & {
+  eligible?: boolean
+  statusLabel?: string | null
   market: NflOddsPlayer | null
   hasTracking: boolean
   teamProfile: SidelineTeamProfile | null
@@ -293,6 +296,7 @@ function addNflMmRanks(rows: PlayerRow[]) {
   const performanceRanks = new Map<string, number>()
   const groups = new Map<string, PlayerRow[]>()
   for (const row of rows) {
+    if (row.eligible === false) continue
     const key = row.contextProp ?? 'anytime_td'
     groups.set(key, [...(groups.get(key) ?? []), row])
   }
@@ -1075,7 +1079,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
 }
 
 function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: { team: SidelineTeam; opponent: SidelineTeam; rows: PlayerRow[]; board: SidelineOddsBoard; selectedWindow: SidelineWindow; side: 'away' | 'home'; savedCount: number; collapsed: boolean; onToggle: () => void; onSelectWindow: (window: SidelineWindow) => void }) {
-  const topScore = [...rows].filter(row => row.hasTracking).sort((a, b) => b.index - a.index)[0]
+  const topScore = [...rows].filter(row => row.hasTracking && row.eligible !== false).sort((a, b) => b.index - a.index)[0]
   const contextLabels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
   const contextLabel = contextLabels.length === 1 ? contextLabels[0]! : 'Role'
   const { advertised, hidden } = teamMmHighlights(rows)
@@ -1644,6 +1648,7 @@ function periodScoreCopy(state: SidelineGameState | null) {
 }
 
 function availabilityLabel(player: PlayerRow) {
+  if (player.statusLabel) return player.statusLabel
   const availability = player.market?.availability
   if (!availability) return null
   if (availability.active === false) return 'INACTIVE'
@@ -1872,8 +1877,11 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
       baseRows.map(row => {
         const teamMoneyline = normalizedTeam(row.team) === normalizedTeam(selected.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
         const result = contextualNflScore(row, scoreProp, americanImpliedProbability(teamMoneyline ?? null), gameLine?.total ?? null)
+        const status = nflAvailability({ availability: row.market?.availability, rosterStatus: row.market?.rosterStatus ?? row.rosterStatus }, selected.gameday)
         return {
           ...row,
+          eligible: status.eligible,
+          statusLabel: status.label,
           baseIndex: row.index,
           index: result.score,
           contextLabel: result.context.label,
@@ -1881,7 +1889,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         }
       }),
     )
-  }, [baseRows, board.gameLines, scoreProp, selected.home.abbr])
+  }, [baseRows, board.gameLines, scoreProp, selected.home.abbr, selected.gameday])
 
   const matrixMatches = useMemo(() => {
     if (!matrices.length) return new Map<string, NflMatrix[]>()
@@ -1957,7 +1965,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         return values[factor.field] ?? null
       },
     })
-    const candidates = rows.map(candidateFor)
+    const candidates = rows.filter(row => row.eligible !== false).map(candidateFor)
     const result = new Map<string, NflMatrix[]>()
     matrices
       .filter(matrix => matrix.enabled)
@@ -2032,6 +2040,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         return !positions.length || positions.includes(row.position)
       })
       .sort((a, b) => {
+        if (a.eligible !== b.eligible) return a.eligible === false ? 1 : -1
         for (const sort of sorts) {
           const column = columnById.get(sort.id)
           if (!column) continue
@@ -2048,13 +2057,13 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
 
   const awayRows = sortedRows(selected.away.abbr)
   const homeRows = sortedRows(selected.home.abbr)
-  const heat = buildBoardHeat(displayColumns, [...awayRows, ...homeRows])
+  const heat = buildBoardHeat(displayColumns, [...awayRows, ...homeRows].filter(row => row.eligible !== false))
   const comparePlayers = compareIds.map(id => rows.find(row => row.id === id)).filter(Boolean) as PlayerRow[]
   const ladderScores = useMemo(
     () =>
       new Map(
         rows.flatMap(row =>
-          row.market
+          row.market && row.eligible !== false
             ? [
                 [
                   row.market.id,
@@ -2374,7 +2383,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                         <tr
                           key={player.id}
                           id={`nfl-player-${selected.id}-${player.id}`}
-                          className={eraser ? styles.eraserRow : ''}
+                          className={`${eraser ? styles.eraserRow : ''} ${player.eligible === false ? styles.unavailableRow : ''}`}
                           onClick={() => {
                             if (eraser) setErased(current => new Set([...current, player.id]))
                           }}
@@ -2404,7 +2413,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                 ) : null}
                                 {column.id === 'player' ? (
                                   <div className={styles.playerCell}>
-                                    <span className={styles.depth}>{index + 1}</span>
+                                    <span className={styles.depth}>{player.eligible === false ? '—' : index + 1}</span>
                                     <PlayerAvatar player={player} team={section.team} />
                                     <button
                                       type="button"
@@ -2451,7 +2460,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                     </button>
                                   </div>
                                 ) : (
-                                  column.render(player)
+                                  player.eligible === false && ['index', 'mm'].includes(column.id) ? '—' : column.render(player)
                                 )}
                               </td>
                             )

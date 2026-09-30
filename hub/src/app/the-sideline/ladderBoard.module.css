@@ -30,3 +30,10 @@
 @media (any-pointer: coarse) {
   .controls select { font-size: 16px; }
 }
+.unavailableRow .player b {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+.unavailableRow .player small {
+  color: #fda4af;
+}

@@ -1135,3 +1135,14 @@
   :global(body.ss-modal-open) .marketStory { visibility: hidden; pointer-events: none; }
   :global(body):has(.page) :global(.ss-utility-dock) { bottom: calc(184px + env(safe-area-inset-bottom, 0px)); }
 }
+.unavailableRow .playerName > b {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+.unavailableRow > td {
+  color: #94a3b8;
+}
+.unavailableRow .availabilityBadge {
+  color: #fda4af;
+  border-color: #9f4353;
+}

@@ -7,6 +7,7 @@ import type { SidelineGameState } from './types'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import { startNflPolling } from '@/lib/nflPolling'
+import { withGameAvailability } from '@/lib/nflAvailability'
 
 export function useSidelineMarket(
   gameId: string,
@@ -133,7 +134,7 @@ export function useSidelineMarket(
     setSelectedAt(at)
   }, [timeline])
   const retry = () => { setError(''); setRefreshKey(value => value + 1) }
-  const board = selectedAt == null ? current : frame?.board ?? current
+  const board = useMemo(() => selectedAt == null ? current : withGameAvailability(frame?.board ?? current, current), [selectedAt, frame, current])
   return {
     board, current, gameState, touchdowns, timeline, index, select, retry, error,
     loading: selectedAt != null && frame?.capturedAt !== selectedAt && !error,

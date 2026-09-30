@@ -6,6 +6,7 @@ import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { ladderOffers, ladderPrice, estimateLadderPicks, observedPropPicks, contractPicks, type LadderSide } from '@/lib/nflLadders'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { nflAvailability } from '@/lib/nflAvailability'
 import styles from './ladderBoard.module.css'
 import { buildBoardHeat } from './boardHeat'
 import { NflPropActions } from '@/components/sideline/NflPropActions'
@@ -17,6 +18,7 @@ const marketGroup = (key: string) => key.startsWith('passing') || key === 'compl
 type ContextScore = { score: number; mm: number | null; label: string }
 export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matrixMatches }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>> }) {
   const [vendor, setVendor] = useState('fanduel')
+  const statusFor = (player: SidelineOddsBoard['players'][number]) => nflAvailability(player, game?.gameday)
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
   const [offset, setOffset] = useState(0),
@@ -66,7 +68,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
     if (activeSort.key === 'picks') return observedPropPicks(row.player, prop)
     return scores.get(row.player.id)?.[activeSort.key] ?? null
   }
-  const ordered = [...rows].sort((a, b) => compareLadderValues(sortValue(a), sortValue(b), activeSort.direction) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id)
+  const ordered = [...rows].sort((a, b) => Number(statusFor(b.player).eligible) - Number(statusFor(a.player).eligible) || compareLadderValues(sortValue(a), sortValue(b), activeSort.direction) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id)
   const metricHeat = buildBoardHeat(
     [
       { id: 'score', heat: 'high' as const, value: (row: { score: number | null }) => row.score },
@@ -202,7 +204,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
           </thead>
           <tbody>
             {ordered.map(row => (
-              <tr key={row.player.id}>
+              <tr key={row.player.id} className={!statusFor(row.player).eligible ? styles.unavailableRow : undefined}>
                 <td>
                   <button className={styles.player} onClick={() => onPlayer(row.player.id)}>
                     {row.player.headshot ? <Image src={row.player.headshot} unoptimized={!row.player.headshot.startsWith('https://static.www.nfl.com/')} width={32} height={32} alt="" /> : null}
@@ -210,13 +212,14 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
                       <b>{row.player.name}</b>
                       <small>
                         {row.player.team} · {row.player.position}
+                        {statusFor(row.player).label ? ` · ${statusFor(row.player).label}` : ''}
                       </small>
                     </span>
                   </button>
                   {matrixMatches?.get(row.player.id)?.map(matrix => <small key={matrix.id} style={{ color: matrix.color, borderLeft: `3px solid ${matrix.color}`, paddingLeft: 6 }}>{matrix.name}</small>)}
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:score`))}>
-                  <b>{scores.get(row.player.id)?.score ?? '—'}</b>
+                  <b>{statusFor(row.player).eligible ? scores.get(row.player.id)?.score ?? '—' : '—'}</b>
                   <small>{scores.get(row.player.id)?.label ?? marketLabel(prop)}</small>
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:mm`))}>
