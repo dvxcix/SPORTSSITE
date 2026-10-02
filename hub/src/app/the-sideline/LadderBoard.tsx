@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
+import { NflScorerBadges } from '@/components/sideline/NflScorerBadges'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { ladderOffers, ladderPrice, estimateLadderPicks, observedPropPicks, contractPicks, type LadderSide } from '@/lib/nflLadders'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
@@ -209,7 +210,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
                   <button className={styles.player} onClick={() => onPlayer(row.player.id)}>
                     {row.player.headshot ? <Image src={row.player.headshot} unoptimized={!row.player.headshot.startsWith('https://static.www.nfl.com/')} width={32} height={32} alt="" /> : null}
                     <span>
-                      <b>{row.player.name}</b>
+                      <b>{row.player.name}<NflScorerBadges player={row.player} /></b>
                       <small>
                         {row.player.team} · {row.player.position}
                         {statusFor(row.player).label ? ` · ${statusFor(row.player).label}` : ''}

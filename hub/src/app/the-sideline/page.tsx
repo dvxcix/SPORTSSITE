@@ -15,6 +15,7 @@ import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { getNflWeather } from '@/lib/nflWeatherServer'
+import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export default async function SidelinePage({ searchParams }: {
   ])
   if (mode === 'cheatsheets') {
     const lens = await getCachedSidelineCheatsheetLens(selected, sample)
-    return <>{navigation}<SidelineCheatsheets key={selected.id + sample} lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></>
+    return <>{navigation}<LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed.filter(event => event.gameId === selected.id)}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
   }
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}

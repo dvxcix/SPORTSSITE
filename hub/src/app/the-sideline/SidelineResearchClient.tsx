@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
+import { NflScorerBadges } from '@/components/sideline/NflScorerBadges'
 import controls from '@/components/product/ResearchControls.module.css'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { BookLogo } from '@/components/BookLogo'
@@ -21,7 +22,7 @@ export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?:
   const [failed, setFailed] = useState<string[]>([])
   const sources = [...new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((src): src is string => Boolean(src)))]
   const source = sources.find(src => !failed.includes(src))
-  const body = <><span className={styles.portrait}>{source ? <Image unoptimized src={source} alt={`${player.name} headshot`} width={56} height={56} onError={() => setFailed(values => [...values, source])} /> : <span className={styles.initials} aria-label="Portrait unavailable">{player.name.split(' ').map(word => word[0]).slice(0, 2).join('')}</span>}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small></span></>
+  const body = <><span className={styles.portrait}>{source ? <Image unoptimized src={source} alt={`${player.name} headshot`} width={56} height={56} onError={() => setFailed(values => [...values, source])} /> : <span className={styles.initials} aria-label="Portrait unavailable">{player.name.split(' ').map(word => word[0]).slice(0, 2).join('')}</span>}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><NflScorerBadges player={player} /><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small></span></>
   return player.gsisId ? <Link prefetch={false} className={styles.identity} aria-label={`View ${player.name} NFL profile`} href={`/nfl/players/${encodeURIComponent(player.gsisId)}`}>{body}<span className={styles.profileArrow}>↗</span></Link> : <div className={styles.identity}>{body}</div>
 }
 const toneFor = (key: string) => /td|touchdown/.test(key) ? 'lime' : /rec/.test(key) ? 'cyan' : /rush/.test(key) ? 'amber' : 'violet'

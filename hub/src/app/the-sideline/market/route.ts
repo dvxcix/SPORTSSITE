@@ -20,6 +20,10 @@ export async function GET(request: Request) {
     const { games } = await getSidelineGames(undefined, id)
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+    if (params.get('touchdowns') === '1' && !at) {
+      const touchdowns = (await getNflTouchdownFeed(game.gameday)).filter(event => event.gameId === game.id)
+      return NextResponse.json({ touchdowns }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
     if (params.get('index') === '1') {
       return NextResponse.json({ timeline: await getSidelineTimeline(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
     }

@@ -24,6 +24,7 @@ import { contextualNflScore } from '@/lib/nflContextScore'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
+import { NflScorerBadges, NflScorerProvider } from '@/components/sideline/NflScorerBadges'
 import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
 
@@ -2126,7 +2127,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const statusCopy = gameStatusCopy(selected, marketStory.gameState)
   const periodScores = periodScoreCopy(marketStory.gameState)
   return (
-    <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
+    <NflScorerProvider gameId={selectedId} events={marketStory.touchdowns}><div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}>
           <TeamLogo team={selected.away} size={28} />
@@ -2423,7 +2424,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                         setExpanded(player)
                                       }}
                                     >
-                                      <b>{player.name}</b>
+                                      <b>{player.name}<NflScorerBadges player={player.market ?? player} /></b>
                                       <small>
                                         {player.position}
                                         {player.jersey ? ` · #${player.jersey}` : ''}
@@ -2534,6 +2535,6 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
             document.body,
           )
         : null}
-    </div>
+    </div></NflScorerProvider>
   )
 }
