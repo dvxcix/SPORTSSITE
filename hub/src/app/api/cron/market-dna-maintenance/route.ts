@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { analyzeMarketDnaSlate, archiveMarketDnaDate, buildMarketDnaSlate } from '@/lib/marketDna'
+import { archiveMarketDnaDate, refreshMarketDnaRanker } from '@/lib/marketDna'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 
@@ -32,16 +32,18 @@ async function run(req: Request) {
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const fitOnly = new URL(req.url).searchParams.get('fitOnly') === '1'
   if (fitOnly) {
-    const slate = await buildMarketDnaSlate(todayEt)
-    const analysis = await analyzeMarketDnaSlate(todayEt, slate.games)
-    const reducer = analysis.games.find(game => game.reducer)?.reducer ?? null
+    // Fitting needs only the canonical archive. Building and analyzing today's
+    // full board here duplicated expensive capture, MLB feed and outcome work
+    // and pushed this dedicated fit invocation over Vercel's 300s ceiling.
+    const reducer = await refreshMarketDnaRanker(todayEt)
     return NextResponse.json({
       ok: true,
       todayEt,
       stage: 'model-fit',
-      modelVersion: reducer?.version ?? null,
-      validation: reducer?.validation ?? null,
-      gamesAnalyzed: analysis.games.length,
+      modelVersion: reducer.version,
+      trainedThrough: reducer.trainedThrough,
+      trainingRows: reducer.trainingRows,
+      validation: reducer.validation,
     })
   }
 

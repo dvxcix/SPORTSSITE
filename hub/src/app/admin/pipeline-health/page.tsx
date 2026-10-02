@@ -133,6 +133,7 @@ export default async function PipelineHealthPage() {
   const browserbasePlan = browserbaseUsage ? browserbasePlanUsage(browserbaseUsage) : null
   const sourceUnavailable = Object.values(integrity?.checks?.pitch_log?.source_unavailable_fair_ball_metrics ?? {})
     .reduce((sum, value) => sum + Number(value || 0), 0)
+  const upstreamPending = integrity?.checks?.category_freshness?.stale_categories ?? 0
   const latest = new Map<string, Run>()
   for (const run of runs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())) {
     if (!latest.has(run.job_name)) latest.set(run.job_name, run)
@@ -290,16 +291,18 @@ export default async function PipelineHealthPage() {
             </div>
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${integrity.status === 'failed' ? 'bg-red-500/15 text-red-300' : integrity.status === 'warning' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{integrity.status}</span>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             <IntegrityMetric label="Pitch events" value={integrity.checks?.pitch_log?.rows ?? 0} />
             <IntegrityMetric label="Games" value={integrity.checks?.pitch_log?.games ?? 0} />
             <IntegrityMetric label="Fair balls" value={integrity.checks?.pitch_log?.fair_balls ?? 0} />
             <IntegrityMetric label="Home runs" value={integrity.checks?.pitch_log?.home_runs ?? 0} />
             <IntegrityMetric label="Source unavailable" value={sourceUnavailable} />
+            <IntegrityMetric label="Upstream pending" value={upstreamPending} warning={upstreamPending > 0} />
             <IntegrityMetric label="Pipeline gaps" value={integrity.summary?.failures ?? 0} danger={(integrity.summary?.failures ?? 0) > 0} />
           </div>
           <div className="mt-3 space-y-1 text-xs text-zinc-500">
             <p>Official MLB final-game gaps: {integrity.checks?.official_schedule?.final_games_without_pitch_log ?? 0}. Stored schedule gaps: {integrity.checks?.game_coverage?.scheduled_games_without_pitch_log ?? 0}.</p>
+            <p>Upstream pending categories: {upstreamPending}. Publication lag is retried automatically and does not invalidate the canonical pitch ledger.</p>
             <p>Source unavailable counts are genuine MLB/Statcast omissions, displayed as unavailable rather than zero. HR event coverage gaps: {integrity.checks?.home_run_enrichment?.missing_detail_events ?? 0}. Canonical detail fallbacks: {integrity.checks?.home_run_enrichment?.canonical_fallback_home_runs ?? 0}. Every MLB home run has a detail record; a fallback preserves the canonical event when Savant has not published its separate park projection.</p>
           </div>
         </section>
@@ -330,8 +333,8 @@ export default async function PipelineHealthPage() {
   )
 }
 
-function IntegrityMetric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
-  return <div className="rounded-xl border border-white/8 bg-black/20 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p><p className={`mt-1 text-xl font-black ${danger ? 'text-red-300' : 'text-white'}`}>{value.toLocaleString()}</p></div>
+function IntegrityMetric({ label, value, danger = false, warning = false }: { label: string; value: number; danger?: boolean; warning?: boolean }) {
+  return <div className="rounded-xl border border-white/8 bg-black/20 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p><p className={`mt-1 text-xl font-black ${danger ? 'text-red-300' : warning ? 'text-amber-300' : 'text-white'}`}>{value.toLocaleString()}</p></div>
 }
 
 function BudgetMetric({ label, value, detail, percent }: { label: string; value: string; detail: string; percent: number }) {
