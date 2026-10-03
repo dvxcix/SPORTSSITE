@@ -9,7 +9,8 @@ import { seasonStartDate, daysAgoET } from '@/lib/savantSplitsSync'
 import { syncStatcastDay, PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
 import { safeApiError } from '@/lib/safeApiError'
-import { latestPitchLogDate } from '@/lib/pitchPipelineHealth'
+import { latestPitchLogDate, finalPitchGamesForDate } from '@/lib/pitchPipelineHealth'
+import { getMLBScheduleResult } from '@slipsurge/core/mlb-api'
 
 export const revalidate = 0
 // Was 60s — too tight for MAX_DAYS_PER_RUN=4 dates processed sequentially,
@@ -122,12 +123,15 @@ async function run(req: Request) {
   const checkDates = Array.from({ length: RECHECK_WINDOW_DAYS }, (_, i) => format(addDays(parseISO(start), -(i + 1)), 'yyyy-MM-dd'))
     .filter(d => d >= seasonStart)
   const checks = await Promise.all(checkDates.map(async checkDate => {
-    const [{ count: gameCount }, loggedGamePks] = await Promise.all([
-      admin.from('games').select('game_pk', { count: 'exact', head: true }).eq('season', season).eq('game_date', checkDate),
+    const [schedule, loggedGamePks] = await Promise.all([
+      getMLBScheduleResult(checkDate),
       fetchDistinctGamePks(checkDate),
     ])
-    const loggedCount = loggedGamePks.size
-    return { checkDate, incomplete: (gameCount ?? 0) > 0 && loggedCount < (gameCount ?? 0) }
+    if (!schedule.available) throw new Error(`Official schedule unavailable for ${checkDate}`)
+    // Stored schedules include cancellations. They must never pin the cursor
+    // behind games which have actually been played (including postseason).
+    const finals = finalPitchGamesForDate(schedule.games, checkDate)
+    return { checkDate, incomplete: finals.some(pk => !loggedGamePks.has(String(pk))) }
   }))
   const incompleteDates = checks.filter(c => c.incomplete).map(c => c.checkDate).sort()
   if (incompleteDates.length) start = incompleteDates[0]
@@ -169,7 +173,8 @@ async function run(req: Request) {
   }
   await checkPitchLogFreshnessAndAlert(admin, freshness, end)
 
-  return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results })
+  const failed = Object.values(results).some(result => result != null && typeof result === 'object' && 'error' in result)
+  return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results }, { status: failed ? 503 : 200 })
 }
 
 export const GET = withPipelineHealth('savant-sync-pitch-log', run)
