@@ -10,6 +10,12 @@ export const maxDuration = 60
 
 const CATEGORY_STALE_HOURS = 20
 
+type CategoryResult =
+  | { rows: number }
+  | { skipped: true }
+  | { deferred: true; reason: string }
+  | { error: string }
+
 // Runs once daily, ~6am ET (see vercel.json — a fixed UTC hour, so it'll
 // drift an hour off 6am ET across the DST changeover until adjusted).
 // Savant's own leaderboards only update once a day anyway (not live
@@ -27,7 +33,7 @@ async function run(req: Request) {
   const season = currentSeason()
   const staleBefore = Date.now() - CATEGORY_STALE_HOURS * 60 * 60_000
 
-  const results: Record<string, { rows: number } | { skipped: true } | { error: string }> = {}
+  const results: Record<string, CategoryResult> = {}
 
   for (const category of SAVANT_TIER_A) {
     // Keyed by name+target, not just name — home_runs and
@@ -67,17 +73,18 @@ async function run(req: Request) {
         }, { onConflict: 'source,entity_type,entity_id,season' })
         if (stateError) throw new Error('Savant category completion-state write failed')
       } else {
-        // Confirmed live: Savant can return HTTP 200 with an empty CSV for a
-        // category — the same "success-shaped failure" already found and
-        // fixed in the pitch-log sync. Marking this 'statcast_complete'
-        // would silently block the CATEGORY_STALE_HOURS gate from retrying
-        // for a full day even though nothing was actually written — leave
-        // it as 'error' (no last_synced_at stamp) so the very next run
-        // tries again instead of waiting out the staleness window.
-        console.error('[savant-sync-tier-a] empty category response, not marking complete', resultKey)
-        results[resultKey] = { error: 'empty category response' }
+        // Savant can return HTTP 200 with an empty CSV while retaining the
+        // previously published leaderboard. Preserve that good data and its
+        // last-success timestamp, expose the source lag as deferred, and let
+        // the next scheduled invocation retry it.
+        const hadPriorSuccess = Boolean(job?.last_synced_at)
+        console.warn('[savant-sync-tier-a] empty category response', { resultKey, hadPriorSuccess })
+        results[resultKey] = hadPriorSuccess
+          ? { deferred: true, reason: 'Savant has not published a replacement leaderboard yet' }
+          : { error: 'empty category response before the first successful sync' }
         const { error: stateError } = await admin.from('sync_state').upsert({
-          source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
+          source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season,
+          status: hadPriorSuccess ? 'waiting_upstream' : 'error',
         }, { onConflict: 'source,entity_type,entity_id,season' })
         if (stateError) throw new Error('Savant category error-state write failed')
       }
@@ -94,6 +101,22 @@ async function run(req: Request) {
   const failures = Object.entries(results)
     .filter(([, result]) => 'error' in result)
     .map(([category, result]) => ({ category, error: 'error' in result ? result.error : 'sync failed' }))
+  const deferredCategories = Object.entries(results)
+    .filter(([, result]) => 'deferred' in result)
+    .map(([category]) => category)
+  if (!failures.length && deferredCategories.length) {
+    return NextResponse.json({
+      ok: false,
+      deferred: true,
+      season,
+      stage: 'savant-category-publication',
+      reason: `${deferredCategories.length} Savant leaderboards are waiting for their next non-empty publication`,
+      retryAt: 'next scheduled Tier A sync',
+      deferredCategories,
+      results,
+      failures,
+    }, { status: 425 })
+  }
   return NextResponse.json(
     { ok: failures.length === 0, season, results, failures },
     { status: failures.length ? 503 : 200 }
