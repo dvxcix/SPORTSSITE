@@ -53,10 +53,11 @@ async function run(req: Request) {
       return { ...body, gameId: game.gameId, ok: response.ok && body.incomplete !== true, deferred: response.status === 425, httpStatus: response.status }
     } catch (error) {
       // Persist only bounded diagnostic identifiers, never URLs, headers or messages.
-      const failure = error as { name?: unknown; code?: unknown }
+      const failure = error as { name?: unknown; code?: unknown; syscall?: unknown; capturePhase?: unknown }
       const identifier = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(value) ? value : undefined
       return { gameId: game.gameId, ok: false, error: 'Capture request failed',
-        errorName: identifier(failure?.name), errorCode: identifier(failure?.code), elapsedMs: Date.now() - requestStarted }
+        errorName: identifier(failure?.name), errorCode: identifier(failure?.code),
+        errorSyscall: identifier(failure?.syscall), requestPhase: identifier(failure?.capturePhase), elapsedMs: Date.now() - requestStarted }
     }
   })
   const summary = { discovered: upcoming.length, games: games.length, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
