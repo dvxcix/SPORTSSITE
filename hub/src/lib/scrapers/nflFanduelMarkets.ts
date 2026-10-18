@@ -6,7 +6,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, 
 export function nflFdMarket(label: string): { prop: string; category: NflPlayerMarket['category']; line: number | null } | null {
   const s = label.toLowerCase().replace(/\byds\b/g, 'yards').replace(/\btds?\b/g, 'touchdown')
   // Do not silently import period/team/combo markets as full-game individual props.
-  if (/quarter|\b[1-4]q\b|\bteam\b|\bdrive\b|\bmost\b|\beither\b|special|each|both|combined|next touchdown|last touchdown/.test(s)) return null
+  if (/quarter|\bqtr\b|\b[1-4]q\b|\bteam\b|\bdrive\b|\bmost\b|\beither\b|special|each|both|combined|next touchdown|last touchdown/.test(s)) return null
   if (/half/.test(s) && !/(first|1st) half.*touchdown|touchdown.*(first|1st) half/.test(s)) return null
   if (/(first|1st) half/.test(s) && /touchdown/.test(s)) return { prop: 'anytime_td_1h', category: 'touchdowns', line: 0.5 }
   if (/(first|1st).*touchdown/.test(s)) return { prop: 'first_td', category: 'touchdowns', line: 0.5 }
@@ -17,6 +17,7 @@ export function nflFdMarket(label: string): { prop: string; category: NflPlayerM
     return { prop: count > 1 ? `${names[count] ?? count}_plus_td` : 'anytime_td', category: 'touchdowns', line: count > 1 ? count : 0.5 }
   }
   const rules: [RegExp, string, NflPlayerMarket['category']][] = [
+    [/pass.*rush.*yard/, 'passing_rushing_yards', 'passing'],
     [/rush.*receiv.*yard/, 'rushing_receiving_yards', 'rushing'],
     [/\byard\s+reception\b/, 'longest_reception', 'receiving'],
     [/\byard\s+(?:rush|run)\b/, 'longest_rush', 'rushing'],
@@ -75,5 +76,5 @@ export function parseNflFanduel(tabs: FdTab[], base: SidelineOddsBoard) {
     players.set(player.id, player)
   }
   for (const p of players.values()) for (const m of p.markets) for (const o of m.offers) o.opening ??= { ...o.current }
-  return { board: { ...base, fanduelParserVersion: 2, gameLines: [], players: [...players.values()], capturedAt: tabs.map(t => t.scraped_at).sort().at(-1) ?? null } as SidelineOddsBoard, rejected: [...rejected] }
+  return { board: { ...base, fanduelParserVersion: 3, gameLines: [], players: [...players.values()], capturedAt: tabs.map(t => t.scraped_at).sort().at(-1) ?? null } as SidelineOddsBoard, rejected: [...rejected] }
 }

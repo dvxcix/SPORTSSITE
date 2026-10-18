@@ -12,7 +12,7 @@ export async function loadNflFanduel(gameId: string, at?: string): Promise<Sidel
   if (error) throw new Error('Supplemental markets unavailable')
   const board = data?.board as SidelineOddsBoard | null
   if (!data || !board) return null
-  if ((board as SidelineOddsBoard & { fanduelParserVersion?: number }).fanduelParserVersion === 2) return board
+  if ((board as SidelineOddsBoard & { fanduelParserVersion?: number }).fanduelParserVersion === 3) return board
   return loadRepairedCapture(gameId, data.captured_at)
 }
 
@@ -26,7 +26,7 @@ const loadRepairedCapture = unstable_cache(async (gameId: string, capturedAt: st
   if (!data) return null
   const board = data.board as SidelineOddsBoard
   return Array.isArray(data.raw_tabs) && data.raw_tabs.length ? parseNflFanduel(data.raw_tabs as FdTab[], board).board : board
-}, ['nfl-fanduel-repaired-contracts-v2'], { revalidate: 86400 })
+}, ['nfl-fanduel-repaired-contracts-v3'], { revalidate: 86400 })
 
 /** Supplement missing offers, but never replace a newer observation with an older scrape. */
 export function attachNflFanduel(base: SidelineOddsBoard, supplement: SidelineOddsBoard | null): SidelineOddsBoard {
