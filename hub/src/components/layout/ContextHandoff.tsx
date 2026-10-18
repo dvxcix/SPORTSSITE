@@ -58,6 +58,7 @@ export function ContextHandoff() {
   const [remoteResult, setRemoteResult] = useState<{ userId: string; sourcePath: string; context: SavedContext } | null>(null)
   const [dismissedPath, setDismissedPath] = useState<string | null>(null)
   const latestRef = useRef<SavedContext | null>(null)
+  const restoringRef = useRef(false)
   const userId = user?.id
   const search = searchParams.toString()
   const currentPath = pathname + (search ? '?' + search : '')
@@ -70,34 +71,51 @@ export function ContextHandoff() {
     // must not overwrite the position chosen by the member before navigation.
     const saved = readContext('sessionStorage', restoreKey)
     if (saved?.path === currentPath) {
-      try { sessionStorage.removeItem(restoreKey) } catch { /* Optional browser storage. */ }
-      let attempts = 0
+      restoringRef.current = true
       let frame = 0
-      const cancel = () => { cancelAnimationFrame(frame); removeListeners() }
+      let retry = 0
+      let timeout = 0
+      let settled = 0
+      const stop = (consume: boolean) => {
+        cancelAnimationFrame(frame)
+        window.clearInterval(retry)
+        window.clearTimeout(timeout)
+        restoringRef.current = false
+        removeListeners()
+        if (consume) {
+          try { sessionStorage.removeItem(restoreKey) } catch { /* Optional browser storage. */ }
+        }
+      }
+      const cancel = () => stop(true)
       const removeListeners = () => {
         window.removeEventListener('wheel', cancel)
         window.removeEventListener('touchstart', cancel)
         window.removeEventListener('keydown', cancel)
       }
       const restore = () => {
+        // Next commits the destination URL before streamed route content arrives.
+        // Keep the intent until the loading placeholder has actually gone away.
+        if (document.querySelector('.ss-route-loading[aria-busy="true"]')) return
         const container = scrollContainer()
         if (container) container.scrollTo({ top: saved.scroll_y, behavior: 'instant' })
         else window.scrollTo({ top: saved.scroll_y, behavior: 'instant' })
-        attempts += 1
-        if (attempts < 120 && Math.abs((container?.scrollTop ?? window.scrollY) - saved.scroll_y) > 24) frame = requestAnimationFrame(restore)
-        else removeListeners()
+        settled = Math.abs((container?.scrollTop ?? window.scrollY) - saved.scroll_y) <= 24 ? settled + 1 : 0
+        if (settled >= 2) stop(true)
       }
       window.addEventListener('wheel', cancel, { passive: true })
       window.addEventListener('touchstart', cancel, { passive: true })
       window.addEventListener('keydown', cancel)
+      retry = window.setInterval(restore, 100)
+      timeout = window.setTimeout(cancel, 15_000)
       frame = requestAnimationFrame(restore)
-      return cancel
+      return () => stop(false)
     }
   }, [currentPath, userId])
 
   useEffect(() => {
     if (loading || !userId || !isSafeProductPath(currentPath)) return
     let cancelled = false
+    let lastSynced = ''
     const localKey = `${LOCAL_KEY}:${userId}`
     void Promise.resolve(supabase
       .from('member_context_handoff')
@@ -128,10 +146,13 @@ export function ContextHandoff() {
       scrollTimer = setTimeout(saveLocal, 500)
     }
     window.addEventListener('scroll', onScroll, { passive: true, capture: true })
-    const sync = async () => {
+    const sync = async (leaving = false) => {
+      if (restoringRef.current || (!leaving && document.visibilityState === 'hidden')) return
       saveLocal()
       const context = latestRef.current
       if (!context || !navigator.onLine) return
+      const signature = JSON.stringify([context.path, context.page_title, context.scroll_y])
+      if (signature === lastSynced) return
       try {
         const { error } = await supabase.from('member_context_handoff').upsert({
           user_id: userId,
@@ -139,13 +160,15 @@ export function ContextHandoff() {
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
         if (error) console.warn('[context-handoff] sync failed', error.code)
+        else lastSynced = signature
       } catch { console.warn('[context-handoff] sync failed') }
     }
     const flush = () => { void sync() }
-    const onVisibility = () => { if (document.visibilityState === 'hidden') flush() }
+    const onLeave = () => { void sync(true) }
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onLeave() }
     // Keep capturing later scroll changes, and retry transient/offline failures.
     const syncTimer = setInterval(flush, SYNC_DELAY_MS)
-    window.addEventListener('pagehide', flush)
+    window.addEventListener('pagehide', onLeave)
     window.addEventListener('online', flush)
     document.addEventListener('visibilitychange', onVisibility)
 
@@ -154,7 +177,7 @@ export function ContextHandoff() {
       if (scrollTimer) clearTimeout(scrollTimer)
       clearInterval(syncTimer)
       window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('pagehide', flush)
+      window.removeEventListener('pagehide', onLeave)
       window.removeEventListener('online', flush)
       document.removeEventListener('visibilitychange', onVisibility)
       // Do not recapture scroll/title here: Next may already show the next route.
