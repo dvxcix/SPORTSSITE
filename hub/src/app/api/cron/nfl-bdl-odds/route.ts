@@ -18,6 +18,7 @@ import {
   type NflTdBaselineRow,
 } from '@/lib/nflMarketArchive'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import { nflMatchupBoard } from '@/lib/nflMatchupBoard'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 
 export const revalidate = 0
@@ -179,7 +180,7 @@ async function run(req: Request) {
         home: { abbr: game.home_team },
       }
       const fetched = await getLiveNflOddsBoard(ref, gamePools.get(`${game.season}:${game.week}`))
-      const board = mergeNflOddsBoards(previous.get(game.game_id)?.board ?? null, fetched)
+      const board = nflMatchupBoard(mergeNflOddsBoards(previous.get(game.game_id)?.board ?? null, fetched), game.away_team, game.home_team)
       if (!board.bdlGameId || board.status !== 'ready') return { gameId: game.game_id, status: board.status }
       await ingestNflMarketBoard(admin, game as NflMarketScheduleGame, board)
       const payloadHash = nflOddsPayloadHash(board)
