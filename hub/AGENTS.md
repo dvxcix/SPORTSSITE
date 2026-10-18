@@ -1,3 +1,7 @@
+# SlipSurge baseline guard
+
+Before editing, read `../AGENTS.md`. This app must retain the verified live baseline commit `6c3811b0882e1b1a6694a30849273f3e210cd69c`; GitHub main alone was missing deployed NFL game-center code. Start new task branches and worktrees from `laptop/live-baseline` or a verified descendant.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
