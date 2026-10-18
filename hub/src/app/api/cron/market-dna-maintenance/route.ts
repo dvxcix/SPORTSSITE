@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
-export const maxDuration = 300
+export const maxDuration = 600
 
 const MAX_BACKFILL_DATES = 2
 const STRICT_ARCHIVE_START = '2026-07-16'

@@ -50,3 +50,14 @@ test('single-play yard milestones never become reception counts or total yardage
   assert.equal(original.players[0].markets[0].key, 'receptions:20')
   assert.deepEqual(normalizeNflSinglePlayContracts(repaired), repaired)
 })
+
+test('four-touchdown prices never overwrite the anytime touchdown contract', () => {
+  assert.equal(nflFdMarket('To Score 4+ Touchdowns')?.prop, 'four_plus_td')
+  const base={...EMPTY_SIDELINE_ODDS,players:[{id:1,name:'Javonte Williams',team:'DAL',position:'RB',markets:[]}]}
+  const result=parseNflFanduel([{scraped_at:'2026-10-18T02:47:00Z',event:{title:'Cowboys @ Packers'},sections:{
+    'Touchdown Scorers':[{parts:['Javonte Williams'],odds:'-220'}],
+    'To Score 4+ Touchdowns':[{parts:['Javonte Williams'],odds:'+6000'}],
+  }}],base)
+  assert.equal(result.board.players[0].markets.find(m=>m.key==='anytime_td:0.5')?.offers[0].current.odds,-220)
+  assert.equal(result.board.players[0].markets.find(m=>m.key==='four_plus_td:4')?.offers[0].current.odds,6000)
+})

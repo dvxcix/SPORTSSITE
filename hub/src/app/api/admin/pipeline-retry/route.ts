@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
 
 export const runtime = 'nodejs'
-export const maxDuration = 300
+export const maxDuration = 650
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   after(async () => {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${secret}`, 'X-SlipSurge-Trigger': 'manual-retry', 'X-SlipSurge-Run': runId },
-      signal: AbortSignal.timeout(290_000),
+      signal: AbortSignal.timeout(action === 'fit' ? 620_000 : 290_000),
     }).catch(() => null)
     if (!response?.ok) console.error('[pipeline-retry] manual run failed', { jobName, runId, status: response?.status })
   })

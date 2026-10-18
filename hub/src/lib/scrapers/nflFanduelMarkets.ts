@@ -11,8 +11,10 @@ export function nflFdMarket(label: string): { prop: string; category: NflPlayerM
   if (/(first|1st) half/.test(s) && /touchdown/.test(s)) return { prop: 'anytime_td_1h', category: 'touchdowns', line: 0.5 }
   if (/(first|1st).*touchdown/.test(s)) return { prop: 'first_td', category: 'touchdowns', line: 0.5 }
   if (/touchdown/.test(s) && !/pass/.test(s)) {
-    const threshold = s.match(/\b([23])\s*(?:\+|or more)/)
-    return { prop: threshold ? `${threshold[1] === '2' ? 'two' : 'three'}_plus_td` : 'anytime_td', category: 'touchdowns', line: threshold ? Number(threshold[1]) : 0.5 }
+    const threshold = s.match(/\b(\d+)\s*(?:\+|or more)/)
+    const count = threshold ? Number(threshold[1]) : 1
+    const names: Record<number, string> = { 2: 'two', 3: 'three', 4: 'four' }
+    return { prop: count > 1 ? `${names[count] ?? count}_plus_td` : 'anytime_td', category: 'touchdowns', line: count > 1 ? count : 0.5 }
   }
   const rules: [RegExp, string, NflPlayerMarket['category']][] = [
     [/rush.*receiv.*yard/, 'rushing_receiving_yards', 'rushing'],

@@ -1,15 +1,21 @@
 import 'server-only'
 import { createAdminClient } from './supabase/admin'
 import { mergeNflOddsBoards } from './nflOddsLogic'
-import { normalizeNflSinglePlayContracts } from './scrapers/nflFanduelMarkets'
+import { normalizeNflSinglePlayContracts, parseNflFanduel, type FdTab } from './scrapers/nflFanduelMarkets'
 import type { SidelineOddsBoard } from './nflOddsTypes'
 
 export async function loadNflFanduel(gameId: string, at?: string): Promise<SidelineOddsBoard | null> {
-  let query = createAdminClient().from('nfl_fanduel_capture_history').select('board').eq('game_id', gameId)
+  let query = createAdminClient().from('nfl_fanduel_capture_history').select('board,raw_tabs').eq('game_id', gameId)
   if (at) query = query.lte('captured_at', at)
   const { data, error } = await query.order('captured_at', { ascending: false }).limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   if (error) throw new Error('Supplemental markets unavailable')
-  return data?.board as SidelineOddsBoard ?? null
+  const board = data?.board as SidelineOddsBoard | null
+  if (!data || !board) return null
+  // Reparse preserved source so old parsed captures cannot overwrite ATD with
+  // a four-touchdown price. This repairs display without rewriting archives.
+  return Array.isArray(data.raw_tabs) && data.raw_tabs.length
+    ? parseNflFanduel(data.raw_tabs as FdTab[], board).board
+    : board
 }
 
 /** Supplement missing offers, but never replace a newer observation with an older scrape. */
