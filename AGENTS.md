@@ -35,3 +35,7 @@ Do not claim end-to-end restore until real browser verification passes.
 Baseline NFL tests passed 9/9. General smoke suite had seven existing source
 contract failures (127/134); do not hide these or call this full certification.
 Evidence and reports are in the enclosing workspace outputs directory.
+
+Database status: all seven reviewed repair batches are applied, plus anonymous
+group-RPC revoke and owner-read RLS correction. See hub/docs/operations/main-and-database-repair-release.txt.
+Do not replay them. Main is canonical and retains recovered NFL ancestry.

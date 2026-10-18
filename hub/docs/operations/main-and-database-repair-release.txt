@@ -1,0 +1,44 @@
+SlipSurge main reconciliation and database repair release — October 17, 2026 EDT
+
+GitHub main advanced from d114e066 to 994f7050d1c7f814de9603a727050d46877a4596,
+preserving recovered NFL ancestry and all prior live resume changes. The reviewed
+three-file banner fix is committed there. Git-triggered deployment dpl_HgKc753mgMV7tz9MUxqXwkyeVHzf
+completed, but its compiled global CSS retained the old undefined layer value.
+A clean-cache rebuild of the SAME main source was requested and is now live as
+dpl_xQGFUz5kCi7KAJ8MTaw2E7zmPjzZ. The served CSS asset changed from 10hogol0g6opu.css
+to 22ovbvwkqppax.css. Browser CSSOM confirms banner now uses --layer-popover.
+Never use deployment metadata alone as proof that the intended asset is served.
+
+All 7 database repair batches are applied, with 2 verification-driven corrections:
+- deny anonymous execution of create_group_conversation (inherited default grants)
+- allow authenticated owners to SELECT their own groups, so the existing SECURITY
+  INVOKER creator RPC can INSERT RETURNING before its helper can see the new row.
+No elevation of that RPC to SECURITY DEFINER; other group access predicates retained.
+
+All 16 repaired tables exist with RLS. Flags preserved: only polls/watchlist on;
+all other legacy flags remain off. Rollouts copy current settings; no overrides.
+7 future-activity capture triggers and 2 group realtime publication members exist.
+No historical backfill, collectors, job replays, secret changes, payment changes or
+legacy MLB database changes. Latest physical backup rechecked at 2026-10-17 04:54:39 UTC.
+
+Validation
+13 resume tests, 9 NFL tests, 50 isolated PostgreSQL checks and typecheck passed.
+Live rolled-back authenticated checks passed for post creation + activity capture,
+research-note + activity capture, accessible DM pins, group conversation creation,
+message/reaction insertion and forbidden role update, community creation/default
+role seed/custom role creation/outsider permission rejection. Anonymous creator
+analytics accepted 12 requests and rejected request 13 in a rolled-back transaction.
+No test groups/conversations/posts/research notes/analytics remain from these tests.
+No claim of live WebSocket end-to-end delivery or physical phone verification.
+PC browser automatic saving and restoration verification in progress.
+
+Migration history (canonical files must match these remote versions)
+20261018004741 restore_member_core_live
+20261018015451 restore_feature_rollouts_live
+20261018015522 restore_message_pins_live
+20261018015558 restore_creator_funnel_live
+20261018015638 restore_activity_capture_live
+20261018015703 restore_group_messaging_live
+20261018015858 restore_custom_community_roles_live
+20261018020134 restrict_group_conversation_rpc_anon_live
+20261018020234 allow_group_owner_insert_returning_live
