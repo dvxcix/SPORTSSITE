@@ -47,10 +47,13 @@ async function run(req: Request) {
   const results = await inBatches(games, 2, async game => {
     const requestStarted = Date.now()
     try {
-      const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?gameId=${encodeURIComponent(game.gameId)}`,
+      const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?stream=1&gameId=${encodeURIComponent(game.gameId)}`,
         { authorization: `Bearer ${process.env.CRON_SECRET}` }, NFL_CAPTURE_REQUEST_TIMEOUT_MS)
-      const body = await response.json()
-      return { ...body, gameId: game.gameId, ok: response.ok && body.incomplete !== true, deferred: response.status === 425, httpStatus: response.status }
+      const envelope = await response.json()
+      if (response.ok && (!Number.isInteger(envelope.status) || envelope.status < 100 || envelope.status > 599 || !envelope.body || typeof envelope.body !== 'object')) throw new Error('Invalid capture envelope')
+      const status = Number.isInteger(envelope.status) ? envelope.status : response.status
+      const body = envelope.body ?? envelope
+      return { ...body, gameId: game.gameId, ok: status >= 200 && status < 300 && body.incomplete !== true, deferred: status === 425, httpStatus: status }
     } catch (error) {
       // Persist only bounded diagnostic identifiers, never URLs, headers or messages.
       const failure = error as { name?: unknown; code?: unknown; syscall?: unknown; capturePhase?: unknown }

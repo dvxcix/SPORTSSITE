@@ -12,12 +12,22 @@ import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
 import { ingestNflMarketBoard } from '@/lib/nflMarketArchive'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { emptyNflCaptureStatus } from '@/lib/nflCaptureCoverage'
+import { streamNflCapture } from '@/lib/nflCaptureStream'
 import { NFL_CAPTURE_EXTRACTION_BUDGET_MS, NFL_CAPTURE_SESSION_TIMEOUT_SECONDS } from '@/lib/nflCaptureDispatch'
 
 export const maxDuration = 480
 export const revalidate = 0
 
 export async function GET(req: Request) {
+  if (new URL(req.url).searchParams.get('stream') === '1') {
+    const auth = requireBrowserbaseCronAuth(req)
+    if (auth) return auth
+    return streamNflCapture(() => capture(req))
+  }
+  return capture(req)
+}
+
+async function capture(req: Request) {
   const auth = requireBrowserbaseCronAuth(req)
   if (auth) {
     const client = await createClient()
