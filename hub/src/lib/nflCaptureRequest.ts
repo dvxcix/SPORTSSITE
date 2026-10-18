@@ -19,6 +19,9 @@ export function requestNflCapture(url: string, headers: Record<string, string>, 
         resolve(new Response(Buffer.concat(chunks), { status: response.statusCode ?? 502 }))
       })().catch(reject)
     })
+    // The total AbortSignal budget does not configure a socket's idle timeout.
+    // Override shorter agent/socket defaults while preserving the total deadline.
+    request.setTimeout(timeoutMs, () => request.destroy(Object.assign(new Error('Capture socket timeout'), { code: 'ETIMEDOUT' })))
     request.on('socket', socket => {
       if (!socket.connecting) phase = 'waiting'
       socket.once('connect', () => { phase = 'connected' })
