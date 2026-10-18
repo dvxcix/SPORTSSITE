@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { analyzeMarketDnaSlate, archiveMarketDnaDate, buildMarketDnaSlate } from '@/lib/marketDna'
+import { archiveMarketDnaDate, fitMarketDnaModel } from '@/lib/marketDna'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 
@@ -32,16 +32,19 @@ async function run(req: Request) {
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const fitOnly = new URL(req.url).searchParams.get('fitOnly') === '1'
   if (fitOnly) {
-    const slate = await buildMarketDnaSlate(todayEt)
-    const analysis = await analyzeMarketDnaSlate(todayEt, slate.games)
-    const reducer = analysis.games.find(game => game.reducer)?.reducer ?? null
+    const reducer = await fitMarketDnaModel(todayEt)
+    if (!reducer) return NextResponse.json({
+      ok: false, deferred: true, stage: 'model-fit', todayEt,
+      reason: 'At least 900 prior-date archive rows are required; no synthetic evidence substituted.',
+    }, { status: 425 })
     return NextResponse.json({
       ok: true,
       todayEt,
       stage: 'model-fit',
       modelVersion: reducer?.version ?? null,
       validation: reducer?.validation ?? null,
-      gamesAnalyzed: analysis.games.length,
+      trainingRows: reducer.trainingRows,
+      trainedThrough: reducer.trainedThrough,
     })
   }
 

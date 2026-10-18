@@ -42,7 +42,7 @@ async function run(req: Request) {
   }
 
   let response: Response
-  let body: { results?: Array<Record<string, unknown>> } | null = null
+  let body: { results?: Array<Record<string, unknown>>; gameId?: string; marketCount?: number; error?: string; skipped?: boolean } | null = null
   try {
     response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -52,13 +52,15 @@ async function run(req: Request) {
   } catch {
     response = new Response(null, { status: 502 })
   }
-  const rawResults = Array.isArray(body?.results) ? body.results : []
-  const results = selected.map((game, index) => {
-    const result = rawResults[index]
+  // The scrape route returns a flat result for one requested game, a results
+  // array for multiple games, and may return 502 with some successful rows.
+  const rawResults = Array.isArray(body?.results) ? body.results : body?.gameId ? [body] : []
+  const results = selected.map(game => {
+    const result = rawResults.find(result => result.gameId === game.gameId)
     const skipped = result?.skipped === true
-    const error = typeof result?.error === 'string' ? result.error : response.ok ? null : 'batch request failed'
+    const error = typeof result?.error === 'string' ? result.error : result ? null : 'batch result missing'
     return {
-      gameId: game.gameId, ok: (response.ok || skipped) && Boolean(result), skipped,
+      gameId: game.gameId, ok: Boolean(result) && (skipped || (!error && Number(result?.marketCount) > 0)), skipped,
       status: response.status, markets: Number(result?.marketCount ?? 0), error,
     }
   })

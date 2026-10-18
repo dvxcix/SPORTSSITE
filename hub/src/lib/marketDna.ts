@@ -1143,6 +1143,10 @@ async function loadHistoricalRowsForGames(games: MarketDnaGame[]) {
 
 async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
   const cutoff = games.map(game => game.gameDate).sort()[0]
+  return loadCanonicalArchiveBeforeDate(cutoff)
+}
+
+async function loadCanonicalArchiveBeforeDate(cutoff: string) {
   const admin = createAdminClient()
   const rows: ArchivedProfileRow[] = []
   const pageSize = 1000
@@ -1162,6 +1166,13 @@ async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
     if (page.length < pageSize) break
   }
   return rows
+}
+
+// Fitting uses prior-date evidence, not today's not-yet-published betting board.
+// Keep the same training/validation/cache path used by interactive analysis.
+export async function fitMarketDnaModel(date: string) {
+  const rows = await loadCanonicalArchiveBeforeDate(date)
+  return loadOrTrainMarketDnaRanker(date, rows)
 }
 
 function rankGameWithHistory(game: MarketDnaGame, rows: HistoricalRow[], canonicalRows: ArchivedProfileRow[]) {

@@ -32,12 +32,22 @@ async function run(request: Request) {
     return NextResponse.json({ error: 'Pipeline run recovery failed.' }, { status: 500 })
   }
   // Recover work claimed by an invocation that was terminated mid-delivery.
+  // A daily slate send may have reached Discord before termination. Its nonce
+  // only deduplicates recent requests, so never blindly replay it 10 minutes
+  // later. Leave an actionable failed item for delivery confirmation instead.
+  const interruptedBefore = new Date(Date.now() - 10 * 60_000).toISOString()
+  const { error: uncertainSlateError } = await admin.from('operational_retry_queue').update({
+    status: 'failed',
+    last_error: 'Daily slate delivery confirmation missing after interruption; inspect Discord before manual retry.',
+    updated_at: now,
+  }).eq('status', 'processing').lt('updated_at', interruptedBefore).like('payload->payload->>nonce', 'slate-%')
+  if (uncertainSlateError) return NextResponse.json({ error: 'Daily slate delivery recovery failed.' }, { status: 500 })
   await admin.from('operational_retry_queue').update({
     status: 'pending',
     next_attempt_at: now,
     last_error: 'Recovered after an interrupted replay.',
     updated_at: now,
-  }).eq('status', 'processing').lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString())
+  }).eq('status', 'processing').lt('updated_at', interruptedBefore)
   const { data: items, error } = await admin.from('operational_retry_queue')
     .select('id,provider,operation,payload,attempts,max_attempts')
     .eq('status', 'pending')
@@ -57,7 +67,7 @@ async function run(request: Request) {
       .select('id')
       .maybeSingle()
     if (!claimed) continue
-    const payload = item.payload as { channelId?: string; payload?: { content?: string; embeds?: unknown[] } }
+    const payload = item.payload as { channelId?: string; payload?: { content?: string; embeds?: unknown[]; nonce?: string } }
     let result: { ok: boolean; error?: string } = { ok: false, error: `No replay handler for ${item.provider}:${item.operation}` }
     if (item.provider === 'discord' && item.operation === 'post_channel_message' && payload.channelId && payload.payload) {
       result = await postToChannelChecked(payload.channelId, payload.payload)
@@ -68,11 +78,12 @@ async function run(request: Request) {
       await admin.from('operational_retry_queue').update({ status: 'succeeded', attempts, completed_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() }).eq('id', item.id)
     } else {
       failed += 1
-      const exhausted = attempts >= Number(item.max_attempts || 5)
+      const dailySlate = typeof payload.payload?.nonce === 'string' && payload.payload.nonce.startsWith('slate-')
+      const exhausted = dailySlate || attempts >= Number(item.max_attempts || 5)
       await admin.from('operational_retry_queue').update({
         status: exhausted ? 'failed' : 'pending',
         attempts,
-        last_error: result.error ?? 'Replay failed',
+        last_error: dailySlate ? `Daily slate delivery not confirmed; inspect Discord before manual retry. ${result.error ?? ''}` : result.error ?? 'Replay failed',
         next_attempt_at: new Date(Date.now() + Math.min(2 ** attempts * 60_000, 60 * 60_000)).toISOString(),
         updated_at: new Date().toISOString(),
       }).eq('id', item.id)

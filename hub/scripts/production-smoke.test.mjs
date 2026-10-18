@@ -149,7 +149,7 @@ test('critical pipelines write health telemetry', async () => {
   const registry = await read('src/lib/pipelineRegistry.ts')
   for (const job of jobs) {
     const source = await read(`src/app/api/cron/${job}/route.ts`)
-    assert.match(source, new RegExp(`withPipelineHealth\\('${job}', run(?:,|\\))`), `${job} is not instrumented`)
+    assert.match(source, new RegExp(`withPipelineHealth\\('${job}'\\s*,\\s*run\\s*(?:,|\\))`), `${job} is not instrumented`)
     assert.ok(registry.includes(`name: '${job}'`), `${job} is missing from the admin health registry`)
   }
 })
@@ -1725,7 +1725,8 @@ test('member context handoff is private, bounded, and restores exact product sta
   assert.match(migration, /\(select auth\.uid\(\)\) = user_id/)
   assert.match(migration, /path !~ '\^\/\(api\|auth\|admin\)/)
   assert.match(migration, /scroll_y between 0 and 10000000/)
-  assert.match(handoff, /sessionStorage\.setItem\(RESTORE_KEY, remoteContext\.path\)/)
+  assert.match(handoff, /writeContext\('sessionStorage', `\$\{RESTORE_KEY\}:\$\{userId\}`, remoteContext\)/)
+  assert.match(handoff, /await supabase\.from\('member_context_handoff'\)\.upsert/)
   assert.match(handoff, /window\.scrollTo\(\{ top: saved\.scroll_y/)
   assert.match(handoff, /SYNC_DELAY_MS = 30_000/)
   assert.match(handoff, /navigator\.onLine/)

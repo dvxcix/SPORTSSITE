@@ -42,3 +42,5 @@ Migration history (canonical files must match these remote versions)
 20261018015858 restore_custom_community_roles_live
 20261018020134 restrict_group_conversation_rpc_anon_live
 20261018020234 allow_group_owner_insert_returning_live
+
+UPDATE: PC restore PASSED: banner visible at z-index 300; saved /feed?filter=picks scroll 1326 restored exactly with Picks active. All approved repair migrations are on main. See operations-followup-release.txt for the remaining operational fixes and limits.

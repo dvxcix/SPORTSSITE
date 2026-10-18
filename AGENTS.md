@@ -39,3 +39,10 @@ Evidence and reports are in the enclosing workspace outputs directory.
 Database status: all seven reviewed repair batches are applied, plus anonymous
 group-RPC revoke and owner-read RLS correction. See hub/docs/operations/main-and-database-repair-release.txt.
 Do not replay them. Main is canonical and retains recovered NFL ancestry.
+
+PC resume check passed: visible Missions banner restored Feed/Picks at saved scroll 1326.
+Operational follow-up includes prior-archive model fitting, NFL dispatch response
+corrections, and a service-only daily slate outbox. Daily sends with uncertain
+confirmation require inspection; do not blindly replay them. See
+hub/docs/operations/operations-followup-release.txt. Historical backfill and
+individual account deletion/creator decisions are not authorized automatically.

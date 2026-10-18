@@ -3,6 +3,10 @@ import { captureNeedsRefresh, easternKickoff, type DatedCapture } from './browse
 export const NFL_CAPTURE_REQUEST_TIMEOUT_MS = 270_000
 export const NFL_CAPTURE_BATCH_SIZE = 2
 
+export function nflCaptureIsIncomplete(tabs: unknown): boolean {
+  return Array.isArray(tabs) && tabs.some(tab => tab && typeof tab === 'object' && tab.incomplete === true)
+}
+
 type AttemptRun = { started_at: string; details: unknown }
 export function recentNflCaptureAttempts(runs: AttemptRun[]): Map<string, number> {
   const attempts = new Map<string, number>()
@@ -34,7 +38,8 @@ export function selectNflCaptureCandidates<T extends DatedCapture & { gameId: st
     .slice(0, NFL_CAPTURE_BATCH_SIZE)
 }
 
-export function nflCaptureResultStatus(results: { ok: boolean; deferred?: boolean }[]): number {
+export function nflCaptureResultStatus(results: { ok: boolean; deferred?: boolean; incomplete?: boolean }[]): number {
+  if (results.some(result => result.incomplete)) return 502
   if (results.some(result => !result.ok && !result.deferred)) return 502
   return results.some(result => result.deferred) ? 425 : 200
 }

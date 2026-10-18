@@ -20,6 +20,7 @@ test('deferred markets are not failures; genuine failures remain failures', () =
   assert.equal(nflCaptureResultStatus([{ok:false,deferred:true}]), 425)
   assert.equal(nflCaptureResultStatus([{ok:false,deferred:true},{ok:false}]), 502)
   assert.equal(nflCaptureResultStatus([{ok:true}]), 200)
+  assert.equal(nflCaptureResultStatus([{ok:true,incomplete:true}]), 502)
   assert.ok(NFL_CAPTURE_REQUEST_TIMEOUT_MS > 230_000)
   assert.ok(NFL_CAPTURE_REQUEST_TIMEOUT_MS < 300_000)
 })

@@ -1,0 +1,68 @@
+SlipSurge operational follow-up — October 17, 2026 EDT
+
+Released changes follow the owner's authorization to finish the audit repairs
+through GitHub main. NFL recovered baseline remains an ancestor.
+
+PC resume verification PASSED on the clean main build:
+Cloud saved /feed?filter=picks at scroll 1326. A fresh Missions tab displayed the
+Continue banner above content (computed z-index 300; center hit-test uncovered).
+Clicking it reopened /feed?filter=picks, Picks active, scroll 1326.
+Evidence: SlipSurge-visible-resume-banner.png and SlipSurge-PC-resume-verified.png.
+This is PC-browser verification, not a physical phone claim.
+
+Model-fit correction
+The fit-only cron now reads canonical prior-date archive rows and invokes the
+same guarded model training/cache/validation path used by interactive analysis.
+It no longer requires today's Pikkit markets or fetches today's slate/outcomes.
+No current/future rows, fabricated zero picks or altered validation guard.
+Fewer than 900 archive rows yields deferred 425. Current archive has 19,206 rows,
+17,946 strict-mechanics rows, newest date October 15. No model job was replayed.
+The next normal scheduled fit must confirm production model generation.
+
+NFL dispatch corrections
+- Single-game Pikkit returns a flat result, previously discarded by the poller.
+  Accept flat/array responses, match rows by game ID, preserve per-game successes
+  inside a partially failed HTTP 502 batch, and require actual imported markets.
+- Partial FanDuel captures no longer count as successful/fully fresh. Preserve
+  valid partial archive data, report incomplete status, and retain retry eligibility.
+  Existing 2-game batch size and 30-minute attempt gap remain; no new schedules.
+- Add missing game-event and advanced-stat jobs to the admin health registry;
+  correct existing NFL schedule labels/staleness thresholds to actual vercel.json.
+- Save safe stage/model/queue details in the private pipeline ledger.
+No collectors were replayed; historical October 11 odds gaps were not fabricated.
+
+Daily slate reliability
+Fetch only real MLB schedule/probable-pitcher fields with a 12-second deadline,
+rather than loading/enriching all lineup/roster data. Upstream failure/malformed
+responses throw a classified error rather than claiming an empty successful day.
+Use existing operational retry delivery; no direct Discord send from the cron.
+New service-only RLS-protected daily_slate_alert_dispatches table and SECURITY
+INVOKER queue RPC atomically reserve the date and create one delivery queue item.
+The date survives queue retention. Server payload includes Discord enforce_nonce.
+Discord only enforces nonce uniqueness for a few minutes, so uncertain or interrupted
+daily deliveries are marked failed for inspection instead of blind later resend.
+Other existing queue operations retain their retry behavior. No test alert sent.
+Migration 20261018021107_durable_daily_slate_dispatch is applied and rolled-back
+production queue tests passed with no persisted dispatch or delivery item.
+
+Validation
+7 operational behavior tests, 7 existing pipeline regressions, 6 isolated outbox
+checks, typecheck and targeted ESLint pass. Prior 13 resume / 9 NFL / 50 database
+checks also pass. The production source-contract suite is 128/134: six existing
+failures remain (dialog semantics, nested mains, older NFL navigation/sample
+expectations, spoiler source shape, expanded-board CSS). It is not full release
+certification. The stale resume-storage assertion was updated to require complete
+account-scoped context and awaited cloud saving. A whitespace-sensitive pipeline
+assertion was corrected; it then exposed the real missing health registry entries,
+which are now fixed. Do not hide or silently waive the remaining six failures.
+
+Known limits / human operations
+Daily scheduled model fit and slate delivery await their next regular execution;
+no manual job replay or external test delivery performed. Live WebSocket delivery
+was not exercised. Vendor timeouts can still occur; the fixes correct known
+classification/readiness faults, not a guarantee that every upstream scrape succeeds.
+Account deletion / creator-application backlog needs individual human decisions;
+no mass deletion, billing, role approvals, or payments were performed. Existing
+pg_net placement and server-only RLS/advisor notices were not changed wholesale.
+Historical activity backfill remains separate; no backfill was run.
+Official nonce semantics: https://github.com/discord/discord-api-docs/blob/main/developers/resources/message.mdx

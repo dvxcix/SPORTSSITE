@@ -16,6 +16,7 @@
     "audit:production": "node scripts/audit-production.mjs",
     "test:production": "node --test scripts/production-smoke.test.mjs",
     "test:context-handoff": "node --test scripts/context-handoff.test.mjs",
+    "test:operations-readiness": "node --test scripts/operations-readiness.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:production": "node scripts/browser-smoke.mjs --production",
     "test:responsive": "node scripts/browser-smoke.mjs",
