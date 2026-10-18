@@ -25,6 +25,7 @@ async function run(req: Request) {
 
   const admin = createAdminClient()
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const preview = new URL(req.url).searchParams.get('preview') === '1'
   const config = await getDiscordConfig(admin)
   if (!config?.enabled || !config.alert_channels?.slate) return NextResponse.json({ ok: true, skipped: 'not-configured' })
   const schedule = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team`, {
@@ -39,7 +40,7 @@ async function run(req: Request) {
   if (games.some(game => !Number.isFinite(Date.parse(game.gameDate)) || !game.teams?.away?.team?.name || !game.teams?.home?.team?.name)) {
     throw Object.assign(new Error('MLB slate schedule returned malformed games'), { code: 'MLB_SCHEDULE_INVALID' })
   }
-  if (!games.length) return NextResponse.json({ ok: true, games: 0 })
+  if (!games.length) return NextResponse.json({ ok: true, games: 0, ...(preview ? { preview: true } : {}) })
 
   const lines = games
     .slice()
@@ -51,21 +52,25 @@ async function run(req: Request) {
       return `**${g.teams.away.team.name} @ ${g.teams.home.team.name}** — ${time} ET\n${away} vs ${home}`
     })
 
-  const { data: queued, error } = await admin.rpc('queue_daily_slate_alert', {
-    p_date: date,
-    p_channel_id: config.alert_channels.slate,
-    p_payload: {
+  const payload = {
       embeds: [{
         title: `Today's MLB Slate — ${games.length} game${games.length === 1 ? '' : 's'}`,
         description: lines.join('\n\n'),
         url: `${PLATFORM_URL}/dugout?date=${date}`,
         color: 0xB4FF4D,
       }],
-    },
+    }
+  if (preview) return NextResponse.json({ ok: true, preview: true, games: games.length, date, payload })
+  const { data: queued, error } = await admin.rpc('queue_daily_slate_alert', {
+    p_date: date,
+    p_channel_id: config.alert_channels.slate,
+    p_payload: payload,
   })
   if (error) throw Object.assign(new Error('Daily slate delivery could not be queued'), { code: 'DAILY_SLATE_QUEUE_FAILED' })
 
   return NextResponse.json({ ok: true, games: games.length, queued: queued === true, alreadyQueued: queued === false })
 }
 
-export const GET = withPipelineHealth('slate-drop', run)
+const trackedRun = withPipelineHealth('slate-drop', run)
+// Preview authenticates normally but must not mark real delivery healthy.
+export const GET = (req: Request) => new URL(req.url).searchParams.get('preview') === '1' ? run(req) : trackedRun(req)

@@ -182,3 +182,46 @@ test('NFL session override is bounded, other sessions keep five minutes, and tea
     if(oldProject===undefined)delete process.env.BROWSERBASE_PROJECT_ID;else process.env.BROWSERBASE_PROJECT_ID=oldProject
   }
 })
+
+test('slate preview builds the real payload without queuing or recording a delivery run', async () => {
+  const originalFetch=globalThis.fetch
+  let recorded=0
+  globalThis.fetch=async()=>Response.json({dates:[{games:[{gameDate:'2026-10-18T00:00:00Z',teams:{away:{team:{name:'Away'}},home:{team:{name:'Home'}}}}]}]})
+  try {
+    const route=load('app/api/cron/slate-drop/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':{withPipelineHealth:(_,handler)=>async req=>{recorded++;return handler(req)}},
+      '@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/platform':{PLATFORM_URL:'https://fixture.test'},
+      '@/lib/discord':{getDiscordConfig:async()=>({enabled:true,alert_channels:{slate:'123456789'}})},
+      '@/lib/supabase/admin':{createAdminClient:()=>({rpc:()=>{throw Error('preview must not queue')}})},
+    })
+    const body=await(await route.GET(new Request('https://fixture.test/slate?preview=1'))).json()
+    assert.equal(body.preview,true);assert.equal(body.games,1);assert.match(body.payload.embeds[0].description,/Away @ Home/)
+    assert.equal(recorded,0)
+  } finally {globalThis.fetch=originalFetch}
+})
+
+test('admin retry restricts actions and dispatches model fit separately from archive', async () => {
+  const originalFetch=globalThis.fetch,originalSecret=process.env.CRON_SECRET
+  const pending=[],urls=[]
+  let accountType='admin'
+  process.env.CRON_SECRET='fixture-not-a-real-secret'
+  globalThis.fetch=async url=>{urls.push(String(url));return Response.json({ok:true,preview:true,games:2})}
+  try {
+    const route=load('app/api/admin/pipeline-retry/route.ts',{
+      'node:crypto':{randomUUID:()=> 'fixture-run'},
+      'next/server':{...next,after:fn=>pending.push(fn)},
+      '@/lib/pipelineRegistry':{TRACKED_PIPELINES:[{name:'market-dna-maintenance'},{name:'slate-drop'}]},
+      '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'fixture'}}})},from:()=>({select(){return this},eq(){return this},single:async()=>({data:{account_type:accountType}})})})},
+    })
+    const request=(jobName,action)=>new Request('https://fixture.test/api/admin/pipeline-retry',{method:'POST',body:JSON.stringify({jobName,action})})
+    assert.equal((await route.POST(request('market-dna-maintenance','fit'))).status,202)
+    await pending.shift()();assert.equal(urls.pop(),'https://fixture.test/api/cron/market-dna-maintenance?fitOnly=1')
+    assert.equal((await route.POST(request('market-dna-maintenance','run'))).status,202)
+    await pending.shift()();assert.equal(urls.pop(),'https://fixture.test/api/cron/market-dna-maintenance')
+    const preview=await route.POST(request('slate-drop','preview'))
+    assert.equal((await preview.json()).games,2);assert.equal(pending.length,0)
+    assert.match(urls.pop(),/slate-drop\?preview=1$/)
+    assert.equal((await route.POST(request('slate-drop','fit'))).status,400)
+    accountType='member';assert.equal((await route.POST(request('slate-drop','preview'))).status,403)
+  } finally {globalThis.fetch=originalFetch;if(originalSecret===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=originalSecret}
+})
