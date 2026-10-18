@@ -49,3 +49,11 @@ test('retention deadline reports unfinished work', async () => {
   const result=await pruneInBatches(async()=>{throw Error('should not query')},async()=>({count:0,error:null}),Date.now()-1)
   assert.equal(result.remaining,true)
 })
+
+test('Sunday capture repairs precede next-week boards even when next week was never attempted', () => {
+  const current = new Date('2026-10-18T04:30:00Z')
+  const sunday={gameId:'sunday-partial',gameDate:'2026-10-18',gameTime:'13:00',capturedAt:0}
+  const nextWeek={gameId:'next-week',gameDate:'2026-10-25',gameTime:'13:00',capturedAt:0}
+  const attempts=new Map([['sunday-partial',current.getTime()-2*3600_000]])
+  assert.equal(selectNflCaptureCandidates([nextWeek,sunday],attempts,current)[0].gameId,'sunday-partial')
+})

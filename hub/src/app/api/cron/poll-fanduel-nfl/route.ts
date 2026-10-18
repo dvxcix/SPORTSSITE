@@ -20,13 +20,20 @@ async function run(req: Request) {
   const upcoming = await getUpcomingNflPikkitGames(7)
   const now = new Date()
   const admin = createAdminClient()
+  // Unpublished canonical players must not consume the two capture slots.
+  const { data: readyRows, error: readyError } = upcoming.length ? await admin.from('nfl_odds_current')
+    .select('game_id').in('game_id', upcoming.map(game => game.gameId))
+    .not('board->players->0', 'is', null) : { data: [], error: null }
+  if (readyError) throw new Error('Canonical capture readiness unavailable')
+  const readyIds = new Set((readyRows ?? []).map(row => row.game_id))
+  const readyGames = upcoming.filter(game => readyIds.has(game.gameId))
   const { data: attemptRows, error: attemptError } = await admin.from('pipeline_runs')
     .select('started_at,details').eq('job_name', 'poll-fanduel-nfl')
     .gte('started_at', new Date(now.getTime() - 24 * 3600_000).toISOString())
     .order('started_at', { ascending: false }).limit(100)
   if (attemptError) throw new Error('Capture attempts unavailable')
   const attempts = recentNflCaptureAttempts(attemptRows ?? [])
-  const candidates = await Promise.all(upcoming.map(async game => {
+  const candidates = await Promise.all(readyGames.map(async game => {
     const { data, error } = await admin.from('nfl_fanduel_capture_history').select('captured_at,raw_tabs').eq('game_id', game.gameId).order('captured_at', { ascending: false }).limit(1).maybeSingle()
     if (error) throw new Error('Capture status unavailable')
     const capturedAt = data?.captured_at && !nflCaptureIsIncomplete(data.raw_tabs) ? Date.parse(data.captured_at) : 0
@@ -47,6 +54,6 @@ async function run(req: Request) {
   })
   const summary = { discovered: upcoming.length, games: games.length, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
   console.info('[poll-fanduel-nfl] complete', { ...summary, results })
-  const status = nflCaptureResultStatus(results)
-  return NextResponse.json({ ...summary, results, ...(status === 425 ? { reason: 'Player markets are not ready for one or more games; retry scheduled.' } : {}) }, { status })
+  const status = upcoming.length > 0 && readyGames.length === 0 ? 425 : nflCaptureResultStatus(results)
+  return NextResponse.json({ ...summary, waitingForCanonical: upcoming.length - readyGames.length, results, ...(status === 425 ? { reason: 'Player markets are not ready for one or more games; retry scheduled.' } : {}) }, { status })
 }

@@ -35,7 +35,7 @@ export function selectNflCaptureCandidates<T extends DatedCapture & { gameId: st
         const kickoff = easternKickoff(game.gameDate, game.gameTime)?.getTime()
         return kickoff != null && kickoff - now.getTime() <= 6 * 3600_000 ? 0 : 1
       }
-      return urgency(a) - urgency(b) || checkedAt(a) - checkedAt(b) || a.gameDate.localeCompare(b.gameDate)
+      return urgency(a) - urgency(b) || a.gameDate.localeCompare(b.gameDate) || checkedAt(a) - checkedAt(b)
     })
     .slice(0, NFL_CAPTURE_BATCH_SIZE)
 }

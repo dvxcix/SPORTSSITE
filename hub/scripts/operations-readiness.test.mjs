@@ -225,3 +225,20 @@ test('admin retry restricts actions and dispatches model fit separately from arc
     accountType='member';assert.equal((await route.POST(request('slate-drop','preview'))).status,403)
   } finally {globalThis.fetch=originalFetch;if(originalSecret===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=originalSecret}
 })
+
+test('NFL dispatcher excludes games lacking canonical players before assigning capture slots',async()=>{
+  const originalFetch=globalThis.fetch,requested=[]
+  globalThis.fetch=async url=>{requested.push(String(url));return Response.json({tabs:17,markets:25,incomplete:false})}
+  try {
+    const route=load('app/api/cron/poll-fanduel-nfl/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+      '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},
+      '@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[{gameId:'sunday'},{gameId:'next-week-unpublished'}]},
+      '@/lib/nflCaptureDispatch':{recentNflCaptureAttempts:()=>new Map(),selectNflCaptureCandidates:rows=>rows.slice(0,2),nflCaptureIsIncomplete:()=>false,nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000},
+      '@/lib/supabase/admin':{createAdminClient:()=>({from(table){return{select(){return this},in(){return this},not(field,operator,value){assert.equal(field,'board->players->0');assert.equal(operator,'is');assert.equal(value,null);return Promise.resolve({data:[{game_id:'sunday'}],error:null})},eq(){return this},gte(){return this},order(){return this},limit(){return table==='pipeline_runs'?Promise.resolve({data:[],error:null}):this},maybeSingle:async()=>({data:null,error:null})}}})},
+    })
+    const body=await(await route.GET(new Request('https://fixture.test/poll'))).json()
+    assert.equal(body.waitingForCanonical,1);assert.equal(body.games,1)
+    assert.deepEqual(requested,['https://fixture.test/api/cron/scrape-fanduel-nfl?gameId=sunday'])
+  }finally{globalThis.fetch=originalFetch}
+})
