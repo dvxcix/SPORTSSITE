@@ -257,3 +257,15 @@ test('pending restore survives a streamed-route component remount', async () => 
   assert.equal(window.scrollY, 1400)
   await unmount()
 })
+
+test('returning to an open Missions tab discovers a new cross-device destination', async () => {
+  cloud.set('member-a', { path: '/missions', page_title: 'Missions', scroll_y: 0 })
+  await mount('/missions')
+  assert.equal(document.querySelector('aside'), null)
+  cloud.set('member-a', { path: '/feed?filter=picks', page_title: 'The Feed', scroll_y: 800 })
+  await act(async () => window.dispatchEvent(new window.Event('focus')))
+  assert.ok(document.querySelector('aside'), 'returning to an existing tab must refresh its remote offer')
+  await act(async () => document.querySelector('button').click())
+  assert.equal(pushed, '/feed?filter=picks')
+  await unmount()
+})

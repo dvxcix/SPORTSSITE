@@ -117,17 +117,24 @@ export function ContextHandoff() {
     let cancelled = false
     let lastSynced = ''
     const localKey = `${LOCAL_KEY}:${userId}`
-    void Promise.resolve(supabase
-      .from('member_context_handoff')
-      .select('path,page_title,scroll_y,updated_at')
-      .eq('user_id', userId)
-      .maybeSingle())
-      .then(({ data }) => {
-        if (cancelled || !data || typeof data.path !== 'string' || !isSafeProductPath(data.path) || data.path === currentPath) return
-        if (!Number.isFinite(data.scroll_y) || data.scroll_y < 0 || data.scroll_y > 10_000_000) return
-        setRemoteResult({ userId, sourcePath: currentPath, context: data as SavedContext })
-      })
-      .catch(() => { if (!cancelled) console.warn('[context-handoff] load failed') })
+    const loadRemote = () => {
+      void Promise.resolve(supabase
+        .from('member_context_handoff')
+        .select('path,page_title,scroll_y,updated_at')
+        .eq('user_id', userId)
+        .maybeSingle())
+        .then(({ data }) => {
+          if (cancelled) return
+          if (!data || typeof data.path !== 'string' || !isSafeProductPath(data.path) || data.path === currentPath) {
+            setRemoteResult(null)
+            return
+          }
+          if (!Number.isFinite(data.scroll_y) || data.scroll_y < 0 || data.scroll_y > 10_000_000) return
+          setRemoteResult({ userId, sourcePath: currentPath, context: data as SavedContext })
+        })
+        .catch(() => { if (!cancelled) console.warn('[context-handoff] load failed') })
+    }
+    loadRemote()
 
     const saveLocal = () => {
       const context: SavedContext = {
@@ -165,11 +172,16 @@ export function ContextHandoff() {
     }
     const flush = () => { void sync() }
     const onLeave = () => { void sync(true) }
-    const onVisibility = () => { if (document.visibilityState === 'hidden') onLeave() }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') onLeave()
+      else loadRemote()
+    }
     // Keep capturing later scroll changes, and retry transient/offline failures.
     const syncTimer = setInterval(flush, SYNC_DELAY_MS)
     window.addEventListener('pagehide', onLeave)
     window.addEventListener('online', flush)
+    window.addEventListener('focus', loadRemote)
+    window.addEventListener('pageshow', loadRemote)
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
@@ -179,6 +191,8 @@ export function ContextHandoff() {
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('pagehide', onLeave)
       window.removeEventListener('online', flush)
+      window.removeEventListener('focus', loadRemote)
+      window.removeEventListener('pageshow', loadRemote)
       document.removeEventListener('visibilitychange', onVisibility)
       // Do not recapture scroll/title here: Next may already show the next route.
     }
