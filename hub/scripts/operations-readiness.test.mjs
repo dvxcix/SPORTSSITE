@@ -140,3 +140,23 @@ test('an unconfirmed daily slate send is not blindly retried beyond its nonce wi
   assert.equal(recoveryCutoffs.length,2)
   assert.equal(recoveryCutoffs[0],recoveryCutoffs[1],'uncertain daily items cannot fall through a recovery cutoff gap')
 })
+
+test('the tracked-pick API forwards a strict spoiler boolean into the atomic transaction',async()=>{
+  const flags=[]
+  const route=load('app/api/posts/pick/route.ts',{
+    'next/server':next,
+    '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'fixture-user'}}})}})},
+    '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{
+      assert.equal(name,'create_tracked_pick_post');flags.push(args.p_post.is_spoiler)
+      return {data:{id:'fixture-post',picksTracked:true},error:null}
+    }})},
+    '@slipsurge/core/mlbSchedule':{getTodaysMatchups:async()=>[{gamePk:1,status:'Preview'}],isPregame:()=>true},
+    '@/lib/watchlist':{PROP_META:{}},
+    '@/lib/mentions':{notifyMentions:async()=>{}},'@/lib/notify':{notifyFollowers:async()=>{}},
+  })
+  for(const isSpoiler of [true,undefined,'true']) {
+    const request=new Request('https://fixture.test/api/posts/pick',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({isSpoiler,legs:[{game_pk:'1',game_date:'2026-10-17',mlb_id:1,prop_key:'hits1',odds:-110,player_name:'Fixture'}]})})
+    assert.equal((await route.POST(request)).status,200)
+  }
+  assert.deepEqual(flags,[true,false,false])
+})

@@ -49,6 +49,7 @@ export async function POST(req: Request) {
   const wager: number | null = typeof body?.wager === 'number' && body.wager > 0 ? body.wager : null
   const imageUrl: string | null = typeof body?.imageUrl === 'string' && body.imageUrl ? body.imageUrl : null
   const visibility: string = body?.visibility === 'followers' ? 'followers' : 'public'
+  const isSpoiler = body?.isSpoiler === true
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
   const sport: 'MLB' | 'NFL' = body?.sport === 'NFL' ? 'NFL' : 'MLB'
@@ -161,6 +162,7 @@ export async function POST(req: Request) {
     pick_data: pickData,
     media_urls: imageUrl ? [imageUrl] : [],
     visibility,
+    is_spoiler: isSpoiler,
     group_id: groupId,
     page_id: pageId,
   }

@@ -1,0 +1,27 @@
+SlipSurge final smoke and spoiler follow-up — October 17, 2026 EDT
+
+A final review distinguished real defects from outdated source-contract checks.
+Real fixes: tracked-pick API and atomic SQL RPC now preserve isSpoiler, using
+strict boolean input and default false. The RPC remains server-only SECURITY
+INVOKER, preserves auth/rate-limit/atomic post-and-pick logic and is checksum guarded
+against production drift. Migration 20261018021932_preserve_tracked_pick_spoilers
+is applied. Live true/default-false tests passed in a rolled-back transaction.
+No test picks/posts or notifications were persisted or sent.
+
+Removed nested main landmarks in admin NFL access and the MLB/NFL slate overlays;
+existing AdminShell/RootLayoutShell remain the page landmarks, and ModalSurface
+retains dialog labels, focus trapping and modal semantics. React review: no new
+state/effects, data fetching, keys or bundle changes; heading IDs/classes retained.
+
+Updated obsolete source assertions to validate actual ModalSurface delegation,
+existing selected-member NFL gates (including requireNflAccess), current week-2
+sample behavior and the existing fixed-width table layout. The app's NFL access,
+sampling policy and table styling were NOT changed to satisfy old assertions.
+Existing dedicated NFL access/sample tests pass 7/7, including grant/revoke, role
+isolation and MFA validation. Production smoke now passes 134/134, operational
+behavior 8/8, typecheck and targeted component/API lint pass.
+
+Main is the canonical source. All earlier recovered NFL changes and production
+repair commits are retained. Normal scheduled job outcomes must still be observed;
+no production collector/model/alert job was manually replayed in this maintenance.
+Historical backfill and individual account decisions remain separate.

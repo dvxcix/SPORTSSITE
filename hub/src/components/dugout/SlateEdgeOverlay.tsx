@@ -692,7 +692,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, init
           </div>
         </section>
 
-        <main className={styles.content}>
+      <div className={styles.content}>
           <section className={styles.summary} aria-label="Slate summary">
             <div className={styles.summaryCard + ' ' + styles.summaryLeader}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{displayLeader && <BatterCharge momentum={displayLeader.momentum} className={styles.batterCharge} />}{displayLeader && <Avatar entry={displayLeader} size={31} />}<strong>{displayLeader?.name ?? '—'}</strong>{displayLeaderEdge && <EdgeMark value={displayLeaderEdge.score} compact />}</span>{displayLeader && view === 'signals' ? <LeaderWindows windows={leaderWindowsFor(displayLeader)} /> : null}{displayLeader ? <EvidenceTags tags={evidenceTagsFor(displayLeader)} /> : null}<em>#1 by {activeSort.label} · {dataWindow.toUpperCase()}</em></div>
             <div className={styles.summaryCard}><small>Model ahead</small><strong>{modelAhead}</strong><em>MM +3 or more</em></div>
@@ -802,7 +802,7 @@ export function SlateEdgeOverlay({ open, date, entriesByWindow, dataWindow, init
               <div className={styles.signalChips}>{chips.map(chip => <span className={styles.signalChip} data-kind={chip.kind} data-direction={chip.direction} key={chip.label}><SignalGlyph chip={chip} /><span>{chip.label}</span></span>)}</div>
             </article>)}</div>
           </div> : <div className={styles.empty}>No multi-signal players match these filters.</div>)}
-        </main>
+      </div>
       </div>
       <SlateEdgeShareModal evidence={shareEvidence} onClose={() => setShareEvidence(null)}/>
     </ModalSurface>

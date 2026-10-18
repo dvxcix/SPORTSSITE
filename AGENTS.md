@@ -46,3 +46,8 @@ corrections, and a service-only daily slate outbox. Daily sends with uncertain
 confirmation require inspection; do not blindly replay them. See
 hub/docs/operations/operations-followup-release.txt. Historical backfill and
 individual account deletion/creator decisions are not authorized automatically.
+
+Final maintenance verification: production source suite is now 134/134; prior
+failures were reviewed, real spoiler/landmark defects fixed and obsolete source
+assertions corrected. NFL access/sample behavior was preserved and dedicated
+tests pass. See hub/docs/operations/final-maintenance-verification.txt.

@@ -66,3 +66,5 @@ no mass deletion, billing, role approvals, or payments were performed. Existing
 pg_net placement and server-only RLS/advisor notices were not changed wholesale.
 Historical activity backfill remains separate; no backfill was run.
 Official nonce semantics: https://github.com/discord/discord-api-docs/blob/main/developers/resources/message.mdx
+
+FINAL UPDATE: Remaining source-contract failures reviewed. Actual spoiler persistence and nested-main defects fixed; obsolete assertions corrected without changing NFL access/sample/layout behavior. Production suite now 134/134; dedicated NFL access/sample 7/7; operational behavior 8/8. See final-maintenance-verification.txt.
