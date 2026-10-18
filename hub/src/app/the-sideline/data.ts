@@ -232,7 +232,7 @@ export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) =
     storedGameState(game) ? Promise.resolve(storedGameState(game)) : base.bdlGameId ? loadGameState(base.bdlGameId) : Promise.resolve(null),
   ])
   return { odds: sidelinePublicBoard(attachDesignations(base, designations)), gameState: gameState ?? storedGameState(game) }
-}, ['sideline-enriched-current-v6-matchup'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, ['sideline-enriched-current-v7-exact-identity'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
   const admin = createAdminClient()
@@ -254,7 +254,7 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
   const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(raw, supplement), baselines)])
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
   return { capturedAt, board: sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr)) }
-}, ['sideline-selected-capture-v5-matchup'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+}, ['sideline-selected-capture-v6-exact-identity'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getCachedSidelineBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),

@@ -44,12 +44,13 @@ function candidateScore(candidate: PlayerDirectoryRow, player: NflOddsPlayer, ga
   const name = canonicalName(player.name)
   const candidateNames = namesFor(candidate)
   const exactName = candidateNames.includes(name)
-  const nameContainment = candidateNames.some(value => value.includes(name) || name.includes(value))
   const teamMatch = canonicalTeam(candidate.latest_team) === canonicalTeam(player.team)
   const positionMatch = positionGroup(candidate.position) === positionGroup(player.position)
   const activeSeason = (candidate.last_season ?? 0) >= game.season - 1
   const canonicalGsis = candidate.gsis_id.startsWith('00-')
-  return (exactName ? 100 : nameContainment ? 55 : 0)
+  // A first-name fragment (Cam) cannot identify Cam Bynum as Cam Taylor-Britt.
+  // Exact normalized names/explicit aliases are required before roster bonuses.
+  return (exactName ? 100 : 0)
     + (teamMatch ? 22 : 0)
     + (positionMatch ? 12 : 0)
     + (activeSeason ? 7 : 0)

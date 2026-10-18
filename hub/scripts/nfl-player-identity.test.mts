@@ -44,6 +44,14 @@ assert.equal(ambiguous,player,'ambiguous candidates must not be guessed')
 const transfer = identify(phi,[board],[wr])[0].players[0]
 assert.equal(transfer.team,'CAR','latest roster alone must not rewrite historical teams')
 console.log('PASS: same-name collision, Eagles/Carolina isolation, ambiguity, historical transfers, raw odds preservation')
+const bynum={...wr,gsis_id:'00-0036629',display_name:'Camryn Bynum',short_name:'C.Bynum',football_name:'Camryn',latest_team:'IND',position:'SAF'}
+const britt={...bynum,gsis_id:'00-0037753',display_name:'Cam Taylor-Britt',football_name:'Cam',position:'CB'}
+const cam=identify({season:2026,away:{abbr:'TEN'},home:{abbr:'IND'}},[{...board,players:[{...player,name:'Cam Bynum',team:'IND',position:'SAF'}]}],[bynum,britt])[0].players[0]
+assert.equal(cam.gsisId,bynum.gsis_id)
+const marquise={...wr,gsis_id:'00-0035662',display_name:'Marquise Brown',short_name:'M.Brown',football_name:'Marquise'}
+const derrick={...marquise,gsis_id:'00-0036220',display_name:'Derrick Brown',short_name:'D.Brown',football_name:'Derrick',latest_team:'CAR',position:'DT'}
+assert.equal(identify(phi,[{...board,players:[{...player,name:'Hollywood Brown',team:'PHI',position:'WR'}]}],[marquise,derrick])[0].players[0].gsisId,marquise.gsis_id)
+console.log('PASS: full-name aliases do not match unrelated first-name fragments')
 
 if (process.argv.includes('--live')) {
   const {createClient} = await import('@supabase/supabase-js')
