@@ -7,6 +7,7 @@ import { GameDetailClient } from './GameDetailClient'
 import { MLBGameClient } from './MLBGameClient'
 import type { GameRoomMessage } from '@/components/community/GameRoom'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getNflGameCenter } from '@/lib/nflGameCenterServer'
 
 export const revalidate = 15
 
@@ -60,6 +61,7 @@ async function fetchGameRoomMessages(supabase: SupabaseClient, sport: string, ga
 
 export default async function GameDetailPage({ params }: { params: Promise<{ sport: string; gameId: string }> }) {
   const { sport, gameId } = await params
+  if (!Object.hasOwn(SPORT_LABEL, sport)) notFound()
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -100,7 +102,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ spo
   // ── Other sports: ESPN ───────────────────────────────────────────
   const sportKey = sport as SportKey
 
-  const [games, summary] = await Promise.all([
+  const nfl = sport === 'nfl' ? await getNflGameCenter(gameId) : null
+  if (sport === 'nfl' && !nfl && !/^\d+$/.test(gameId)) notFound()
+  const [games, summary] = nfl ? [[nfl.game], nfl.summary] : await Promise.all([
     getScoreboard(sportKey),
     getGameSummary(sportKey, gameId),
   ])
@@ -140,6 +144,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ spo
       isLoggedIn={!!user}
       roomMessages={roomMessages}
       currentUserId={user?.id}
+      nflDetails={nfl ? { quarters: nfl.quarters, date: nfl.date, updatedAt: nfl.updatedAt, complete: nfl.complete } : undefined}
     />
   )
 }

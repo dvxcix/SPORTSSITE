@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, TrendingUp } from 'lucide-react'
 import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/espn-api'
@@ -10,6 +10,10 @@ import { PostCardClient } from '@/components/social/PostCardClient'
 import styles from '@/components/product/GameDetail.module.css'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { GameRoom, type GameRoomMessage } from '@/components/community/GameRoom'
+import { ScoreRefresh } from '@/components/sports/ScoreRefresh'
+import { NFLQuarterScore } from '@/components/sports/NFLQuarterScore'
+import type { NflQuarterRow } from '@/lib/nflGameCenter'
+import { useNflGameRefresh } from '@/components/sports/useNflGameRefresh'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
@@ -74,11 +78,12 @@ function buildAthleteMap(summary: ESPNSummary | null, teamMap: Record<string, Te
 }
 
 // ─── Scoreboard ───────────────────────────────────────────────────
-function Scoreboard({ summary, game, gameStatus, isLive }: {
+function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
   summary: ESPNSummary | null
   game: ESPNGame | null
   gameStatus: { state: string; label: string; isLive: boolean }
   isLive: boolean
+  sport: SportKey
 }) {
   const comp = summary?.header?.competitions?.[0] ?? game?.competitions?.[0]
   if (!comp) return null
@@ -109,7 +114,7 @@ function Scoreboard({ summary, game, gameStatus, isLive }: {
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />
           )}
           {stateStr === 'in'
-            ? `${period ? `${period && ['Q', 'P', 'H'].includes('') ? `Q${period}` : period} · ` : ''}${clock ?? ''}`
+            ? `${period ? `${sport === 'nfl' ? (period > 4 ? 'OT' : `Q${period}`) : period} · ` : ''}${clock ?? ''}`
             : gameStatus.label}
         </span>
       </div>
@@ -483,8 +488,8 @@ function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact
     return (
       <div style={{ textAlign: 'center', padding: '48px 20px' }}>
         <p style={{ fontSize: 36, marginBottom: 12 }}>🏟️</p>
-        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>No plays yet</p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Play-by-play will appear here once the game starts</p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>Play-by-play not available yet</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Check back for the latest plays.</p>
       </div>
     )
   }
@@ -531,7 +536,7 @@ function BoxScore({ summary }: { summary: ESPNSummary | null }) {
     return (
       <div style={{ textAlign: 'center', padding: '48px 20px' }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>Box score not available</p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Stats will appear once the game begins</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Check back for the latest player stats.</p>
       </div>
     )
   }
@@ -539,7 +544,7 @@ function BoxScore({ summary }: { summary: ESPNSummary | null }) {
   return (
     <div>
       {/* Team stats side-by-side */}
-      {teams && teams.length >= 2 && (
+      {teams && teams.length >= 2 && teams[0].statistics.length > 0 && (
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border)' }}>
           {/* Team headers */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, marginBottom: 12 }}>
@@ -575,7 +580,7 @@ function BoxScore({ summary }: { summary: ESPNSummary | null }) {
               {players.map((p, i) => {
                 const teamLogoUrl = teams?.[i]?.team?.logo
                 return (
-                  <button key={i} onClick={() => setTeamIdx(i)} style={{
+                  <button key={i} aria-label={p.team.abbreviation} aria-pressed={teamIdx === i} onClick={() => setTeamIdx(i)} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
                     background: teamIdx === i ? 'var(--surface-2)' : 'transparent',
@@ -690,7 +695,7 @@ function SummaryTab({ plays, gameStatus }: { plays: ESPNPlay[]; gameStatus: { st
       <div style={{ textAlign: 'center', padding: '40px 20px' }}>
         <p style={{ fontSize: 36, marginBottom: 10 }}>🏟️</p>
         <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>
-          {gameStatus.state === 'pre' ? "Game hasn't started yet" : 'Loading...'}
+          {gameStatus.state === 'pre' ? "Game hasn't started yet" : 'Play-by-play not available yet'}
         </p>
       </div>
     )
@@ -731,9 +736,9 @@ type Tab = 'summary' | 'room' | 'plays' | 'boxscore' | 'picks'
 
 export function GameDetailClient({
   sport, gameId, sportLabel,
-  game, summary, gameStatus: serverGameStatus,
+  game: initialGame, summary: initialSummary, gameStatus: serverGameStatus,
   communityPicks, initialReactions, isLoggedIn,
-  roomMessages, currentUserId,
+  roomMessages, currentUserId, nflDetails: initialNflDetails,
 }: {
   sport: SportKey
   gameId: string
@@ -747,29 +752,25 @@ export function GameDetailClient({
   isLoggedIn: boolean
   roomMessages: GameRoomMessage[]
   currentUserId?: string
+  nflDetails?: { quarters: NflQuarterRow[]; date: string; updatedAt: string | null; complete: boolean }
 }) {
   const [tab, setTab] = useState<Tab>('summary')
   const [reactions, setReactions] = useState<Reactions>(initialReactions)
+  const liveNfl = useNflGameRefresh(gameId, Boolean(initialNflDetails), initialGame?.status.type.state, initialNflDetails?.complete)
+  const game = liveNfl?.game ?? initialGame
+  const summary = liveNfl?.summary ?? initialSummary
+  const nflDetails = liveNfl ?? initialNflDetails
   // serverGameStatus.label was formatted server-side (getGameStatus's
   // toLocaleTimeString call runs on Vercel's own server clock/timezone when
   // called there, not the visitor's) — recomputed here instead so a
   // pre-game start time actually reflects whatever timezone this browser
   // is in. state/isLive don't depend on formatting, so those are fine as
   // the server computed them either way.
-  const gameStatus = game && serverGameStatus.state === 'pre' ? getGameStatus(game) : serverGameStatus
+  const gameStatus = game ? getGameStatus(game) : serverGameStatus
   const isLive = gameStatus.isLive
   const teamMap = buildTeamMap(summary, game)
   const athleteMap = buildAthleteMap(summary, teamMap)
   const plays = summary?.plays ?? []
-
-  useEffect(() => {
-    if (!isLive) return
-    const refresh = () => {
-      if (document.visibilityState === 'visible') window.location.reload()
-    }
-    const id = setInterval(refresh, 30000)
-    return () => clearInterval(id)
-  }, [isLive])
 
   const handleReact = useCallback(async (playId: string, emoji: string) => {
     if (!isLoggedIn) return
@@ -808,13 +809,19 @@ export function GameDetailClient({
 
   return (
     <div className={styles.page}>
+      <ScoreRefresh enabled={!initialNflDetails && (isLive || gameStatus.state === 'pre')} />
       {/* Back */}
-      <Link href="/sports" className={styles.back}>
+      <Link href={nflDetails ? `/sports?date=${nflDetails.date}#scores-nfl` : '/sports'} className={styles.back}>
         <ArrowLeft size={14} /> {sportLabel} Scores
       </Link>
 
       {/* Scoreboard */}
-      <Scoreboard summary={summary} game={game} gameStatus={gameStatus} isLive={isLive} />
+      <Scoreboard summary={summary} game={game} gameStatus={gameStatus} isLive={isLive} sport={sport} />
+      {nflDetails && <>
+        <NFLQuarterScore rows={nflDetails.quarters} />
+        <Link href={`/the-sideline?date=${nflDetails.date}&game=${encodeURIComponent(gameId)}`} className={styles.back}>Open The Sideline →</Link>
+        {nflDetails.updatedAt && <p style={{ color: 'var(--text-3)', fontSize: 11, margin: '8px 0' }}>Play-by-play and stats updated <time dateTime={nflDetails.updatedAt}>{new Date(nflDetails.updatedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET</time></p>}
+      </>}
 
       {/* Win prob */}
       {(gameStatus.state === 'in' || gameStatus.state === 'post') && (

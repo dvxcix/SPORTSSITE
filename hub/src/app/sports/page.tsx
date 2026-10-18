@@ -3,6 +3,8 @@ import type { SportKey } from '@slipsurge/core/espn-api'
 import { getMLBSchedule, mlbGameIsLive } from '@slipsurge/core/mlb-api'
 import { GameCard } from '@/components/sports/GameCard'
 import { MLBScoreRow } from '@/components/sports/MLBScoreRow'
+import { NFLScoreRow } from '@/components/sports/NFLScoreRow'
+import { ScoreRefresh } from '@/components/sports/ScoreRefresh'
 import { LocalDateRedirect } from '@/components/LocalDateRedirect'
 import { CalendarDays, ChevronLeft, ChevronRight, Radio, Trophy } from 'lucide-react'
 import Link from 'next/link'
@@ -86,6 +88,7 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="ss-scores-page">
+      <ScoreRefresh enabled={date === today || totalLive > 0} />
       <section className="ss-scores-hero">
         <div className="ss-scores-hero-copy">
           <span className="ss-scores-kicker"><Radio size={13} /> Score center</span>
@@ -139,10 +142,13 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
         return (
           <section id={`scores-${key}`} key={key} className="ss-scores-league">
             <LeagueHeader label={label} name={name} live={live.length} games={games.length} />
-            <div className="ss-scores-card-grid">
+            {key === 'nfl' ? <div className="ss-scores-board">
+              <div className="ss-scores-column-headings"><span>Away</span><span>Status</span><span>Home</span></div>
+              {[...live, ...rest].map(game => <NFLScoreRow key={game.id} game={game} />)}
+            </div> : <div className="ss-scores-card-grid">
               {live.map(game => <GameCard key={game.id} game={game} sport={key} />)}
               {rest.map(game => <GameCard key={game.id} game={game} sport={key} />)}
-            </div>
+            </div>}
           </section>
         )
       })}

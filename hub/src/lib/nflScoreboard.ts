@@ -6,7 +6,7 @@ import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getNflBdlGames, matchNflBdlGame, type ApiGame } from '@/lib/nflOdds'
 
-type ScheduleRow = {
+export type ScheduleRow = {
   game_id: string
   season: number
   week: number
@@ -20,7 +20,7 @@ type ScheduleRow = {
   stadium: string | null
 }
 
-type TeamRow = {
+export type TeamRow = {
   team_abbr: string
   team_name: string | null
   team_color: string | null
@@ -52,6 +52,14 @@ function canonical(value: string) {
   return ({ LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' } as Record<string, string>)[value] ?? value
 }
 
+const loadStoredGameStates = unstable_cache(async (gameIds: string[]) => {
+  const { data, error } = await createAdminClient().from('nfl_game_feeds')
+    .select('game_id,game:payload->game').eq('source', 'bdl_plays').in('game_id', gameIds)
+    .abortSignal(AbortSignal.timeout(10000))
+  if (error) throw error
+  return (data ?? []) as unknown as { game_id: string; game: ApiGame | null }[]
+}, ['nfl-scoreboard-stored-states-v1'], { revalidate: 30, tags: ['sideline:nfl-live'] })
+
 function liveState(game: ApiGame | null) {
   if (game?.status_state === 'in_progress') return { state: 'in', completed: false }
   if (game?.status_state === 'final') return { state: 'post', completed: true }
@@ -74,7 +82,7 @@ function teamPayload(abbr: string, row: TeamRow | undefined, id: string) {
   }
 }
 
-function mapStoredGame(row: ScheduleRow, teams: Map<string, TeamRow>, live: ApiGame | null): ESPNGame {
+export function mapStoredGame(row: ScheduleRow, teams: Map<string, TeamRow>, live: ApiGame | null): ESPNGame {
   const kickoff = nflKickoffAt(row)
   const status = liveState(live)
   const awayAbbr = canonical(row.away_team)
@@ -86,7 +94,7 @@ function mapStoredGame(row: ScheduleRow, teams: Map<string, TeamRow>, live: ApiG
   const detail = live?.summary ?? live?.status ?? (status.state === 'post' ? 'Final' : 'Scheduled')
   return {
     id: row.game_id,
-    appHref: `/the-sideline?date=${row.gameday}&game=${encodeURIComponent(row.game_id)}`,
+    appHref: `/sports/nfl/${encodeURIComponent(row.game_id)}`,
     uid: `slipsurge:nfl:game:${row.game_id}`,
     date: kickoff?.toISOString() ?? `${row.gameday}T12:00:00.000Z`,
     name: `${away.displayName} at ${home.displayName}`,
@@ -124,6 +132,8 @@ export async function getStoredNflScoreboard(date: string): Promise<ESPNGame[]> 
   const { rows, teams } = await loadStoredSlate(date)
   if (!rows.length) return []
   const teamMap = new Map(teams.map(team => [canonical(team.team_abbr), team]))
+  const saved = await loadStoredGameStates(rows.map(row => row.game_id)).catch(() => [])
+  const storedGames = new Map(saved.map(row => [row.game_id, row.game]))
   const pools = new Map<string, ApiGame[]>()
   await Promise.all(Array.from(new Set(rows.map(row => `${row.season}:${row.week}`))).map(async key => {
     const [season, week] = key.split(':').map(Number)
@@ -144,6 +154,11 @@ export async function getStoredNflScoreboard(date: string): Promise<ESPNGame[]> 
       away: { abbr: row.away_team },
       home: { abbr: row.home_team },
     })
-    return mapStoredGame(row, teamMap, game)
+    const stored = storedGames.get(row.game_id)
+    const validStored = stored?.visitor_team && stored?.home_team
+      && canonical(stored.visitor_team.abbreviation) === canonical(row.away_team)
+      && canonical(stored.home_team.abbreviation) === canonical(row.home_team)
+      && stored.season === row.season && stored.week === row.week ? stored : null
+    return mapStoredGame(row, teamMap, game ?? validStored)
   })
 }
