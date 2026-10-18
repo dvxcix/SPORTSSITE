@@ -160,3 +160,25 @@ test('the tracked-pick API forwards a strict spoiler boolean into the atomic tra
   }
   assert.deepEqual(flags,[true,false,false])
 })
+
+test('NFL session override is bounded, other sessions keep five minutes, and teardown releases billing',async()=>{
+  const oldKey=process.env.BROWSERBASE_API_KEY,oldProject=process.env.BROWSERBASE_PROJECT_ID
+  process.env.BROWSERBASE_API_KEY='fixture';process.env.BROWSERBASE_PROJECT_ID='fixture-project'
+  const requests=[],releases=[]
+  try {
+    const bb=load('lib/browserbase.ts',{
+      '@browserbasehq/sdk':{default:class {sessions={create:async(params)=>{requests.push(params);return{id:'fixture-session',connectUrl:'fixture-connect'}},update:async(...args)=>{releases.push(args)}}}},
+      'playwright-core':{chromium:{connectOverCDP:async()=>({contexts:()=>[{pages:()=>[{}]}],close:async()=>{}})}},
+    })
+    const regular=await bb.openSession();await regular.close()
+    const nfl=await bb.openSession({timeoutSeconds:450});await nfl.close();await nfl.close()
+    assert.deepEqual(requests.map(r=>r.timeout),[300,450])
+    assert.equal(releases.length,2)
+    assert.equal(releases[1][1].status,'REQUEST_RELEASE')
+    await assert.rejects(bb.openSession({timeoutSeconds:451}),/between 60 and 450/)
+    await assert.rejects(bb.openSession({timeoutSeconds:0}),/between 60 and 450/)
+  } finally {
+    if(oldKey===undefined)delete process.env.BROWSERBASE_API_KEY;else process.env.BROWSERBASE_API_KEY=oldKey
+    if(oldProject===undefined)delete process.env.BROWSERBASE_PROJECT_ID;else process.env.BROWSERBASE_PROJECT_ID=oldProject
+  }
+})

@@ -51,3 +51,8 @@ Final maintenance verification: production source suite is now 134/134; prior
 failures were reviewed, real spoiler/landmark defects fixed and obsolete source
 assertions corrected. NFL access/sample behavior was preserved and dedicated
 tests pass. See hub/docs/operations/final-maintenance-verification.txt.
+
+Owner-approved NFL FanDuel runtime: 360s extraction, 450s browser cap, 480s
+scrape route, 540s dispatcher request, 600s dispatcher route on existing Pro.
+Other automated browsers retain 300s default. Preserve timeout hierarchy,
+explicit release and honest incomplete-capture reporting.

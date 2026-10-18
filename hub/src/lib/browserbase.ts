@@ -90,7 +90,11 @@ export type BBSession = {
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+  const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
+  if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
+    throw new Error('Automated browser timeout must be between 60 and 450 seconds')
+  }
   const bb = client()
   const configuredProjectId = optionalProjectId()
   // Spend thresholds are admin alerts, never capture gates. Usage lookup also
@@ -115,7 +119,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
-    timeout: AUTOMATED_SESSION_TIMEOUT_SECONDS,
+    timeout: timeoutSeconds,
     proxies,
     browserSettings: {
       blockAds: true,

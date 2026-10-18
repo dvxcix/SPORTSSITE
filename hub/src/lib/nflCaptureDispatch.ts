@@ -1,6 +1,8 @@
 import { captureNeedsRefresh, easternKickoff, type DatedCapture } from './browserbaseRefresh'
 
-export const NFL_CAPTURE_REQUEST_TIMEOUT_MS = 270_000
+export const NFL_CAPTURE_EXTRACTION_BUDGET_MS = 360_000
+export const NFL_CAPTURE_SESSION_TIMEOUT_SECONDS = 450
+export const NFL_CAPTURE_REQUEST_TIMEOUT_MS = 540_000
 export const NFL_CAPTURE_BATCH_SIZE = 2
 
 export function nflCaptureIsIncomplete(tabs: unknown): boolean {

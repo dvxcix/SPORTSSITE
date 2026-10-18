@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { recentNflCaptureAttempts, selectNflCaptureCandidates, nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS } from '../src/lib/nflCaptureDispatch.ts'
+import { recentNflCaptureAttempts, selectNflCaptureCandidates, nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS, NFL_CAPTURE_EXTRACTION_BUDGET_MS, NFL_CAPTURE_SESSION_TIMEOUT_SECONDS } from '../src/lib/nflCaptureDispatch.ts'
 import { emptyNflCaptureStatus } from '../src/lib/nflCaptureCoverage.ts'
 import { pruneInBatches } from '../src/lib/retentionBatch.ts'
 const now = new Date('2026-09-23T17:00:00Z')
@@ -21,8 +21,9 @@ test('deferred markets are not failures; genuine failures remain failures', () =
   assert.equal(nflCaptureResultStatus([{ok:false,deferred:true},{ok:false}]), 502)
   assert.equal(nflCaptureResultStatus([{ok:true}]), 200)
   assert.equal(nflCaptureResultStatus([{ok:true,incomplete:true}]), 502)
-  assert.ok(NFL_CAPTURE_REQUEST_TIMEOUT_MS > 230_000)
-  assert.ok(NFL_CAPTURE_REQUEST_TIMEOUT_MS < 300_000)
+  assert.ok(NFL_CAPTURE_EXTRACTION_BUDGET_MS < NFL_CAPTURE_SESSION_TIMEOUT_SECONDS * 1000)
+  assert.ok(NFL_CAPTURE_SESSION_TIMEOUT_SECONDS * 1000 < NFL_CAPTURE_REQUEST_TIMEOUT_MS)
+  assert.ok(NFL_CAPTURE_REQUEST_TIMEOUT_MS < 600_000)
 })
 test('only completed team-only captures qualify as unpublished props', () => {
   const tab = { scraped_at: now.toISOString(), event: {title:'A @ B'}, sections:{'Game Lines':[], 'Alternate Total Points':[]} }

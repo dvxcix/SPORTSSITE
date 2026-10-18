@@ -12,8 +12,9 @@ import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
 import { ingestNflMarketBoard } from '@/lib/nflMarketArchive'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { emptyNflCaptureStatus } from '@/lib/nflCaptureCoverage'
+import { NFL_CAPTURE_EXTRACTION_BUDGET_MS, NFL_CAPTURE_SESSION_TIMEOUT_SECONDS } from '@/lib/nflCaptureDispatch'
 
-export const maxDuration = 300
+export const maxDuration = 480
 export const revalidate = 0
 
 export async function GET(req: Request) {
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
   const { data, error } = await admin.from('nfl_odds_current').select('board').eq('game_id', gameId).maybeSingle()
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
-  const session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
+  const session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, timeoutSeconds: NFL_CAPTURE_SESSION_TIMEOUT_SECONDS, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
   try {
     await session.page.route('**/*', route => {
       const type = route.request().resourceType()
@@ -54,7 +55,7 @@ export async function GET(req: Request) {
       links: await session.page.locator('a').evaluateAll(nodes => nodes.map(n => ({ text: n.textContent, href: n.getAttribute('href') })).filter(n => /patriots|seahawks|new england|seattle/i.test(n.text ?? '')).slice(0, 10)),
     } : {}) }, { status: 425 })
     await session.page.waitForTimeout(2500)
-    const tabs = await session.page.evaluate(runFanduelScrape, { maxDurationMs: 230000 }) as (FdTab & { incomplete?: boolean })[]
+    const tabs = await session.page.evaluate(runFanduelScrape, { maxDurationMs: NFL_CAPTURE_EXTRACTION_BUDGET_MS }) as (FdTab & { incomplete?: boolean })[]
     const away = game.awayName.split(' ').at(-1)!.toLowerCase()
     const home = game.homeName.split(' ').at(-1)!.toLowerCase()
     if (!tabs.length || tabs.some(t => !t.event.title.toLowerCase().includes(away) || !t.event.title.toLowerCase().includes(home))) return NextResponse.json({ error: 'Event identity mismatch' }, { status: 502 })

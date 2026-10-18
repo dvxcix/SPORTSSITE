@@ -25,3 +25,16 @@ Main is the canonical source. All earlier recovered NFL changes and production
 repair commits are retained. Normal scheduled job outcomes must still be observed;
 no production collector/model/alert job was manually replayed in this maintenance.
 Historical backfill and individual account decisions remain separate.
+
+NFL runtime increase approved by owner and released through main
+The owner explicitly approved the NFL-only extraction increase (230 to 360s),
+browser cap (300 to 450s), scrape route 480s, request 540s, dispatcher 600s.
+Vercel team is already Pro; no plan purchased or changed. Other automated browser
+sessions retain 300s defaults. Session count, two-game batch, schedule, selective
+proxy routing, 30-minute retry gap and explicit release are retained. Local tests
+pass: operations 9/9, dispatch/cost 11/11, production 134/134, typecheck and lint.
+Normal 02:22 UTC run had visited 12/15 of 17 tabs in 230s, preserving 514/408 valid
+player markets but correctly reporting incomplete. This budget repair preserves
+all market tabs/selectors. Next normal full-event capture must confirm completion;
+no collector replay has been performed. Earlier automatic approval-review rejection
+was resolved by specific human approval before committing/pushing.

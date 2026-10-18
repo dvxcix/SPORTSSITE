@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { recentNflCaptureAttempts, selectNflCaptureCandidates, nflCaptureResultStatus, nflCaptureIsIncomplete, NFL_CAPTURE_REQUEST_TIMEOUT_MS } from '@/lib/nflCaptureDispatch'
 
-export const maxDuration = 300
+export const maxDuration = 600
 export const revalidate = 0
 export const GET = withPipelineHealth('poll-fanduel-nfl', run, { allowSecondarySecret: true })
 async function inBatches<T, R>(items: T[], size: number, worker: (item: T) => Promise<R>) {
@@ -32,7 +32,7 @@ async function run(req: Request) {
     const capturedAt = data?.captured_at && !nflCaptureIsIncomplete(data.raw_tabs) ? Date.parse(data.captured_at) : 0
     return { ...game, capturedAt }
   }))
-  // One concurrent pair leaves enough time for each full 230s extraction.
+  // One concurrent pair leaves enough time for each bounded six-minute extraction.
   // Include failed/deferred attempts in rotation so unlisted props cannot
   // monopolize every run and starve the rest of the slate.
   const games = selectNflCaptureCandidates(candidates, attempts, now)
