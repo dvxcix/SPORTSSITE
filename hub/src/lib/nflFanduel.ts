@@ -1,22 +1,32 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from './supabase/admin'
 import { mergeNflOddsBoards } from './nflOddsLogic'
 import { normalizeNflSinglePlayContracts, parseNflFanduel, type FdTab } from './scrapers/nflFanduelMarkets'
 import type { SidelineOddsBoard } from './nflOddsTypes'
 
 export async function loadNflFanduel(gameId: string, at?: string): Promise<SidelineOddsBoard | null> {
-  let query = createAdminClient().from('nfl_fanduel_capture_history').select('board,raw_tabs').eq('game_id', gameId)
+  let query = createAdminClient().from('nfl_fanduel_capture_history').select('board,captured_at').eq('game_id', gameId)
   if (at) query = query.lte('captured_at', at)
   const { data, error } = await query.order('captured_at', { ascending: false }).limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   if (error) throw new Error('Supplemental markets unavailable')
   const board = data?.board as SidelineOddsBoard | null
   if (!data || !board) return null
-  // Reparse preserved source so old parsed captures cannot overwrite ATD with
-  // a four-touchdown price. This repairs display without rewriting archives.
-  return Array.isArray(data.raw_tabs) && data.raw_tabs.length
-    ? parseNflFanduel(data.raw_tabs as FdTab[], board).board
-    : board
+  if ((board as SidelineOddsBoard & { fanduelParserVersion?: number }).fanduelParserVersion === 2) return board
+  return loadRepairedCapture(gameId, data.captured_at)
 }
+
+// Archive rows are immutable. Cache their repaired board rather than rereading
+// megabytes of raw tabs on every research-page cache refresh.
+const loadRepairedCapture = unstable_cache(async (gameId: string, capturedAt: string) => {
+  const { data, error } = await createAdminClient().from('nfl_fanduel_capture_history')
+    .select('board,raw_tabs').eq('game_id', gameId).eq('captured_at', capturedAt)
+    .abortSignal(AbortSignal.timeout(20000)).maybeSingle()
+  if (error) throw new Error('Supplemental source archive unavailable')
+  if (!data) return null
+  const board = data.board as SidelineOddsBoard
+  return Array.isArray(data.raw_tabs) && data.raw_tabs.length ? parseNflFanduel(data.raw_tabs as FdTab[], board).board : board
+}, ['nfl-fanduel-repaired-contracts-v2'], { revalidate: 86400 })
 
 /** Supplement missing offers, but never replace a newer observation with an older scrape. */
 export function attachNflFanduel(base: SidelineOddsBoard, supplement: SidelineOddsBoard | null): SidelineOddsBoard {

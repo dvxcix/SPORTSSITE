@@ -6,9 +6,9 @@ import { nflFdMarket, parseNflFanduel, normalizeNflSinglePlayContracts } from '.
 import { EMPTY_SIDELINE_ODDS } from '../src/lib/nflOddsTypes'
 
 test('legacy source metadata never reaches browser payloads', () => {
-  const raw = { ...EMPTY_SIDELINE_ODDS, pikkitCapturedAt: 'today', sourceUrl: 'https://app.pikkit.com', picksCapturedAt: 'today' }
+  const raw = { ...EMPTY_SIDELINE_ODDS, fanduelParserVersion: 2, pikkitCapturedAt: 'today', sourceUrl: 'https://app.pikkit.com', picksCapturedAt: 'today' }
   const clean = sidelinePublicBoard(raw)
-  assert.doesNotMatch(JSON.stringify(clean), /pikkit|sourceUrl/i)
+  assert.doesNotMatch(JSON.stringify(clean), /pikkit|sourceUrl|fanduelParserVersion/i)
   assert.equal(clean.picksCapturedAt, 'today')
   for (const name of ['SidelineBoardClient.tsx', 'useSidelineMarket.ts', 'sidelineBoard.module.css']) assert.doesNotMatch(readFileSync(new URL(`../src/app/the-sideline/${name}`, import.meta.url), 'utf8'), /pikkit/i)
 })

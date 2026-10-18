@@ -75,5 +75,5 @@ export function parseNflFanduel(tabs: FdTab[], base: SidelineOddsBoard) {
     players.set(player.id, player)
   }
   for (const p of players.values()) for (const m of p.markets) for (const o of m.offers) o.opening ??= { ...o.current }
-  return { board: { ...base, gameLines: [], players: [...players.values()], capturedAt: tabs.map(t => t.scraped_at).sort().at(-1) ?? null } as SidelineOddsBoard, rejected: [...rejected] }
+  return { board: { ...base, fanduelParserVersion: 2, gameLines: [], players: [...players.values()], capturedAt: tabs.map(t => t.scraped_at).sort().at(-1) ?? null } as SidelineOddsBoard, rejected: [...rejected] }
 }

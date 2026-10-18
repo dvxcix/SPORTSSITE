@@ -4,6 +4,7 @@ import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { requestNflCapture } from '@/lib/nflCaptureRequest'
 import { recentNflCaptureAttempts, selectNflCaptureCandidates, nflCaptureResultStatus, nflCaptureIsIncomplete, NFL_CAPTURE_REQUEST_TIMEOUT_MS } from '@/lib/nflCaptureDispatch'
 
 export const maxDuration = 600
@@ -45,9 +46,8 @@ async function run(req: Request) {
   const games = selectNflCaptureCandidates(candidates, attempts, now)
   const results = await inBatches(games, 2, async game => {
     try {
-      const response = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?gameId=${encodeURIComponent(game.gameId)}`, {
-        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` }, signal: AbortSignal.timeout(NFL_CAPTURE_REQUEST_TIMEOUT_MS),
-      })
+      const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?gameId=${encodeURIComponent(game.gameId)}`,
+        { authorization: `Bearer ${process.env.CRON_SECRET}` }, NFL_CAPTURE_REQUEST_TIMEOUT_MS)
       const body = await response.json()
       return { ...body, gameId: game.gameId, ok: response.ok && body.incomplete !== true, deferred: response.status === 425, httpStatus: response.status }
     } catch { return { gameId: game.gameId, ok: false, error: 'Capture request failed' } }

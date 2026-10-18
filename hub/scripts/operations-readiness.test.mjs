@@ -234,6 +234,7 @@ test('NFL dispatcher excludes games lacking canonical players before assigning c
       'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
       '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},
       '@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[{gameId:'sunday'},{gameId:'next-week-unpublished'}]},
+      '@/lib/nflCaptureRequest':{requestNflCapture:(url)=>globalThis.fetch(url)},
       '@/lib/nflCaptureDispatch':{recentNflCaptureAttempts:()=>new Map(),selectNflCaptureCandidates:rows=>rows.slice(0,2),nflCaptureIsIncomplete:()=>false,nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000},
       '@/lib/supabase/admin':{createAdminClient:()=>({from(table){return{select(){return this},in(){return this},not(field,operator,value){assert.equal(field,'board->players->0');assert.equal(operator,'is');assert.equal(value,null);return Promise.resolve({data:[{game_id:'sunday'}],error:null})},eq(){return this},gte(){return this},order(){return this},limit(){return table==='pipeline_runs'?Promise.resolve({data:[],error:null}):this},maybeSingle:async()=>({data:null,error:null})}}})},
     })
@@ -241,4 +242,23 @@ test('NFL dispatcher excludes games lacking canonical players before assigning c
     assert.equal(body.waitingForCanonical,1);assert.equal(body.games,1)
     assert.deepEqual(requested,['https://fixture.test/api/cron/scrape-fanduel-nfl?gameId=sunday'])
   }finally{globalThis.fetch=originalFetch}
+})
+
+
+test('repaired immutable captures are cached by exact timestamp while current parser boards skip raw reads',async()=>{
+ let rawReads=0,version=0
+ const memo=new Map()
+ const board={players:[],...(version?{fanduelParserVersion:version}:{})}
+ const admin={from(){let columns='';return{select(value){columns=value;return this},eq(key,value){if(columns.includes('raw_tabs')&&key==='captured_at')assert.equal(value,'2026-10-18T05:00:00Z');return this},lte(){return this},order(){return this},limit(){return this},abortSignal(){return this},maybeSingle:async()=>{
+ if(columns.includes('raw_tabs')){rawReads++;return{data:{board,raw_tabs:[{sections:{}}]},error:null}}
+ return{data:{board:version?{...board,fanduelParserVersion:version}:board,captured_at:'2026-10-18T05:00:00Z'},error:null}
+ }}}}
+ const loader=load('lib/nflFanduel.ts',{
+  'server-only':{},'@/lib/supabase/admin':{},'./supabase/admin':{createAdminClient:()=>admin},
+  'next/cache':{unstable_cache:fn=>(...args)=>{const key=JSON.stringify(args);if(!memo.has(key))memo.set(key,fn(...args));return memo.get(key)}},
+  './scrapers/nflFanduelMarkets':{parseNflFanduel:()=>({board:{...board,fanduelParserVersion:2}})},
+ })
+ assert.equal((await loader.loadNflFanduel('game')).fanduelParserVersion,2)
+ await loader.loadNflFanduel('game');assert.equal(rawReads,1)
+ version=2;await loader.loadNflFanduel('game');assert.equal(rawReads,1)
 })
