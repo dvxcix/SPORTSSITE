@@ -10,14 +10,23 @@ export function ProductTelemetry() {
   useEffect(() => {
     const startedAt = performance.now()
     recordProductInteraction('route_view', { route: pathname })
+    // Background frame throttling is not foreground route latency. Discard
+    // this sample if the route starts hidden or becomes hidden before paint.
+    let interrupted = document.visibilityState !== 'visible'
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') interrupted = true
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     let secondFrame = 0
     const firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
+        if (interrupted || document.visibilityState !== 'visible') return
         const durationMs = performance.now() - startedAt
         recordProductInteraction(durationMs > 2_500 ? 'slow_interaction' : 'route_ready', { route: pathname, durationMs })
       })
     })
     return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       window.cancelAnimationFrame(firstFrame)
       window.cancelAnimationFrame(secondFrame)
     }
