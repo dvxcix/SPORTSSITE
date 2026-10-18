@@ -45,12 +45,19 @@ async function run(req: Request) {
   // monopolize every run and starve the rest of the slate.
   const games = selectNflCaptureCandidates(candidates, attempts, now)
   const results = await inBatches(games, 2, async game => {
+    const requestStarted = Date.now()
     try {
       const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?gameId=${encodeURIComponent(game.gameId)}`,
         { authorization: `Bearer ${process.env.CRON_SECRET}` }, NFL_CAPTURE_REQUEST_TIMEOUT_MS)
       const body = await response.json()
       return { ...body, gameId: game.gameId, ok: response.ok && body.incomplete !== true, deferred: response.status === 425, httpStatus: response.status }
-    } catch { return { gameId: game.gameId, ok: false, error: 'Capture request failed' } }
+    } catch (error) {
+      // Persist only bounded diagnostic identifiers, never URLs, headers or messages.
+      const failure = error as { name?: unknown; code?: unknown }
+      const identifier = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(value) ? value : undefined
+      return { gameId: game.gameId, ok: false, error: 'Capture request failed',
+        errorName: identifier(failure?.name), errorCode: identifier(failure?.code), elapsedMs: Date.now() - requestStarted }
+    }
   })
   const summary = { discovered: upcoming.length, games: games.length, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
   console.info('[poll-fanduel-nfl] complete', { ...summary, results })
