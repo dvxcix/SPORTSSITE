@@ -18,9 +18,9 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
     '@/lib/safeApiError': { safeApiError: (_tag, _error, message, status) => Response.json({ error: message }, { status }) },
     '@/lib/whopUrl': { isTrustedWhopUrl: url => typeof url === 'string' && new URL(url).hostname === 'whop.com' },
   }
-  const module = { exports: {} }
+  const compiled = { exports: {} }
   new Function('require', 'exports', 'process', 'fetch', outputText)(
-    name => { assert.ok(imports[name], name); return imports[name] }, module.exports,
+    name => { assert.ok(imports[name], name); return imports[name] }, compiled.exports,
     { env: { WHOP_API_KEY: 'test-main-key', ADDON_WHOP_KEY: 'test-addon-key' } },
     async (url, init) => {
       calls.push({ url, ...init, body: JSON.parse(init.body) })
@@ -28,7 +28,7 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
       return response ?? Response.json({ id: 'ch_test', purchase_url: 'https://whop.com/checkout/test' })
     },
   )
-  return { calls, post: planId => module.exports.POST(new Request('https://www.slipsurge.com/api/whop/checkout-session', { method: 'POST', body: JSON.stringify({ planId, metadata: { internal_user_id: 'attacker' } }) })) }
+  return { calls, post: planId => compiled.exports.POST(new Request('https://www.slipsurge.com/api/whop/checkout-session', { method: 'POST', body: JSON.stringify({ planId, metadata: { internal_user_id: 'attacker' } }) })) }
 }
 
 test('Elements configuration preserves server-authored membership attribution and business routing', async () => {
