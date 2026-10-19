@@ -176,7 +176,7 @@ test('NBA season-opening research blends prior appearances without replacing rea
 
 test('NBA shared cache coalesces cold readers across leases and retains source time on stale failure',async()=>{
   let entry:Record<string,unknown>|null=null,lease:string|null=null,loads=0,reads=0
-  const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>{reads++;return{data:entry,error:null}}})}),update:()=>({eq:()=>({eq:async()=>{lease=null;return{error:null}}})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
+  const admin={from:()=>({select:()=>({eq:()=>({abortSignal:(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);return{maybeSingle:async()=>{reads++;return{data:entry,error:null}}}}})}),update:()=>({eq:()=>({eq:async()=>{lease=null;return{error:null}}})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
     if(name==='claim_nba_source'){if(lease)return{data:false};lease=String(args.p_token);return{data:true}}
     assert.equal(args.p_token,lease)
     entry={payload:args.p_payload,fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+Number(args.p_ttl)*1000).toISOString()};lease=null;return{data:true}
@@ -665,7 +665,7 @@ test('NBA conditional refresh authenticates first, preserves meaningful changes 
 test('cold NBA cache followers wait through a slow healthy owner but respect shorter lease budgets',async()=>{
  let reads=0,waited=0,readyAfter=30,loads=0
  const entry={payload:{points:25},fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+60000).toISOString()}
- const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:++reads>readyAfter?entry:null,error:null})})})}),rpc:async()=>({data:false,error:null})}
+ const admin={from:()=>({select:()=>({eq:()=>({abortSignal:(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);return{maybeSingle:async()=>({data:++reads>readyAfter?entry:null,error:null})}}})})}),rpc:async()=>({data:false,error:null})}
  const cacheModule=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':await import('node:crypto'),'./supabase/admin':{createAdminClient:()=>admin}},fetch,{setTimeout:(callback:()=>void,ms:number)=>{waited+=ms;queueMicrotask(callback);return 0}})
  const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
  const result=await cache('slow-owner',60,300,async()=>{loads++;return{points:99}})
@@ -673,4 +673,44 @@ test('cold NBA cache followers wait through a slow healthy owner but respect sho
  reads=0;waited=0;readyAfter=Infinity
  await assert.rejects(()=>cache('short-owner',60,300,async()=>({points:99}),6),/warming/)
  assert.equal(waited,1000);assert.equal(reads,3)
+})
+
+test('NBA cache post-commit and follower reads bypass render-pass memoized initial misses with fresh signals',async()=>{
+  type CacheRow={payload:{points:number};fetched_at:string;expires_at:string}
+  type ReadBuilder={abortSignal:(next:AbortSignal)=>ReadBuilder;maybeSingle:()=>Promise<{data:CacheRow|null;error:null}>}
+  const ready:CacheRow={payload:{points:25},fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+60000).toISOString()}
+  for(const mode of ['owner','follower'] as const){
+    let entry:CacheRow|null=null,loads=0,writes=0,waits=0,reads=0
+    const signals:AbortSignal[]=[]
+    const createScopedClient=()=>{
+      let memoized=false,memo:CacheRow|null=null
+      // Model Next's render-pass GET dedupe: identical reads without an explicit
+      // signal reuse their initial response even after a separate POST commits.
+      const select=(signal?:AbortSignal):ReadBuilder=>({
+        abortSignal:(next:AbortSignal)=>select(next),
+        maybeSingle:async()=>{
+          reads++
+          if(signal){signals.push(signal);return{data:entry,error:null}}
+          if(!memoized){memo=entry;memoized=true}
+          return{data:memo,error:null}
+        },
+      })
+      return{from:()=>({select:()=>({eq:()=>select()}),update:()=>({eq:()=>({eq:async()=>({error:null})})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
+        if(name==='claim_nba_source')return{data:mode==='owner',error:null}
+        assert.equal(name,'finish_nba_source');writes++;entry={...ready,payload:args.p_payload as CacheRow['payload']};return{data:true,error:null}
+      }}
+    }
+    // Demonstrate that this fixture reproduces the original stale-miss behavior.
+    const control=createScopedClient().from().select().eq()
+    assert.equal((await control.maybeSingle()).data,null)
+    entry=ready;assert.equal((await control.maybeSingle()).data,null)
+    entry=null;reads=0
+    const cacheModule=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':await import('node:crypto'),'./supabase/admin':{createAdminClient:createScopedClient}},fetch,{setTimeout:(callback:()=>void)=>{if(++waits===2)entry=ready;queueMicrotask(callback);return 0}})
+    const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
+    const result=await cache(`memoized-${mode}`,60,300,async()=>{loads++;return{points:25}})
+    assert.equal(result.value.points,25);assert.equal(result.stale,false);assert.equal(result.fetchedAt,ready.fetched_at)
+    assert.equal(loads,mode==='owner'?1:0);assert.equal(writes,mode==='owner'?1:0);assert.equal(reads,mode==='owner'?2:3)
+    assert.equal(signals.length,reads);assert.equal(new Set(signals).size,reads)
+    assert.ok(signals.every(signal=>signal instanceof AbortSignal&&!signal.aborted))
+  }
 })

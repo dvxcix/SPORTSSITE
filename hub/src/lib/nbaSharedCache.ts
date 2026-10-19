@@ -27,7 +27,9 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
 async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds: number): Promise<NbaCached<T>> {
   const admin = createAdminClient()
   const read = async () => {
-    const { data, error } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at').eq('key', key).maybeSingle()
+    // An explicit fresh signal opts this read out of Next's render-pass GET
+    // memoization, so post-commit reads and lease followers can see new rows.
+    const { data, error } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at').eq('key', key).abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
     if (error) throw new Error('NBA shared cache unavailable')
     return data as Entry<T> | null
   }

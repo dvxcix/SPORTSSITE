@@ -45,3 +45,10 @@ NBA remains admin-only and excluded from global navigation. Public release still
 requires the owner's separate review and authorization. Morning operational
 inspection found healthy current NBA jobs; one external Pikkit page timeout
 recovered on the next scheduled run. No job replay was required.
+
+Live cold-load verification exposed a shared-cache read-after-write failure:
+Next's render-pass GET memoization reused an earlier empty Supabase response
+after the refresh committed. Each shared read now uses a fresh bounded abort
+signal to bypass that memoization. Regression coverage exercises both the owner
+reread and a waiting follower, with no duplicate provider loads. Updated NBA
+suite: 61/61; production source: 134/134; TypeScript and targeted ESLint pass.
