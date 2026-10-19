@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
-import { gradeNbaValue, nbaAverage, nbaDate, nbaHitRate, nbaMinutes, nbaName, nbaReference, nbaSample, nbaSelectionKey, nbaValue, parseNbaSelection, nbaWeightedRank, nbaTeamLogo, type PaintPlayer, type PaintStat, type PaintProp } from '../src/lib/nbaPaint.ts'
+import { nbaPeriod, nbaTarget, nbaMarketLogs, nbaPrice, gradeNbaValue, nbaAverage, nbaDate, nbaHitRate, nbaMinutes, nbaName, nbaReference, nbaSample, nbaSelectionKey, nbaValue, parseNbaSelection, nbaWeightedRank, nbaTeamLogo, type PaintPlayer, type PaintStat, type PaintProp } from '../src/lib/nbaPaint.ts'
 import { gradeNbaPick } from '../src/lib/nbaPickGrading.ts'
 import type { WatchlistItem } from '../src/lib/watchlist.ts'
 import { watchlistPickPayload } from '../src/lib/nflWatchlist.ts'
@@ -218,14 +218,14 @@ test('alternate selections preserve threshold, side, book, milestones and zeroes
   assert.equal(gradeNbaValue(25,25,'milestone'),'win')
 })
 
-test('NBA public counts reject partial periods, fuzzy identities and invalid counts without double-counting',()=>{
+test('NBA public counts isolate supported periods, reject fuzzy identities and avoid double-counting',()=>{
   const roster=[{id:1,first_name:'Jalen',last_name:'Williams'},{id:2,first_name:'Jaylin',last_name:'Williams'}] as PaintPlayer[]
   assert.equal(nbaPublicMarket('Points + Rebounds + Assists'),'points_rebounds_assists')
   assert.equal(nbaPublicMarket('Three Pointers Made'),'threes')
-  assert.equal(nbaPublicMarket('First Quarter Points'),null)
+  assert.equal(nbaPublicMarket('First Quarter Points'),'points_1q');assert.equal(nbaPublicMarket('Second Quarter Points'),null);assert.equal(nbaPublicMarket('Double Double'),'double_double')
   const result=normalizeNbaPublic({'Points':{'Jalen Williams':10,'Jaylin Williams':0,'J. Williams':90,'Invented Player':30},'Player Points':{'Jalen Williams':10},'First Quarter Points':{'Jalen Williams':99},'Rebounds':{'Jalen Williams':-5}},roster)
-  assert.equal(result.rows.length,2)
-  assert.deepEqual(result.rows.map(r=>r.picks),[10,0])
+  assert.equal(result.rows.length,3)
+  assert.deepEqual(result.rows.filter(r=>r.market==='points').map(r=>r.picks),[10,0]);assert.equal(result.rows.find(r=>r.market==='points_1q')?.picks,99)
   assert.equal(result.unmatched,2)
 })
 
@@ -434,7 +434,7 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
   assert.equal(posted.postId, 'post-1'); assert.equal(picks[0].sport, 'NBA'); assert.equal(picks[0].player_id, 'bdl:434'); assert.equal(picks[0].numeric_line, 20); assert.equal(picks[0].line, '20'); assert.equal(picks[0].player_name, 'Canonical Player')
   const myPicks = await compiled('../src/lib/myPicks.ts', { '@/lib/supabase/client': { createClient: () => client } })
   assert.equal((await (myPicks.fetchMyPicks as unknown as (owner: string) => Promise<{ id: string }[]>)('owner'))[0].id, 'post-1')
-  const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaToday: () => '2099-10-20' }, './nbaPaintData': { getPaintGame: async () => ({ status_state: 'final' }), getPaintFinalStats: async () => ({ complete: true, rows: [stat(21)] }) } })
+  const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': { getPaintGame: async () => ({ status_state: 'final' }), getPaintFinalStats: async () => ({ complete: true, rows: [stat(21)] }) } })
   const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: picks, error: null }) }
   const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: async (name: string, args: Record<string, unknown>) => { assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } })
   assert.equal(settled.graded, 1)
@@ -460,7 +460,7 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
     let calls = 0
     const pending = { id: 'p', game_pk: '123', player_id: 'bdl:434', pick_type: 'points', numeric_line: 20, market_side: 'over' }
     const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: [pending], error: null }) }
-    const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaToday: () => '2099-10-20' }, './nbaPaintData': {
+    const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': {
       getPaintGame: async () => { if (scenario === 'provider') throw new Error('provider'); return { status_state: scenario === 'live' ? 'in_progress' : 'final' } },
       getPaintFinalStats: async () => ({ complete: scenario !== 'partial', rows: scenario === 'missing' ? [] : [{ ...stat(21), player: { id: scenario === 'identity' ? 999 : 434 } }] }),
     } })
@@ -497,3 +497,17 @@ test('NBA history remains admin-gated and validates market/game before archive r
 })
 
 test('NBA public event verification rejects the right teams on the wrong date',()=>{const game={date:'2026-10-20',visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}} as Parameters<typeof nbaPublicEventMatches>[0];assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/20 2:00 PM'),true);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/21 2:00 PM'),false);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. New York Knicks 10/20 2:00 PM'),false)})
+
+test('quarter and binary markets never substitute full-game totals or season averages',()=>{
+ const full={...stat(28),reb:11,ast:12,stl:0,blk:0},quarter={...full,period:1,pts:6,reb:2,ast:3}
+ assert.equal(nbaValue(full,'points_1q'),null);assert.equal(nbaValue(quarter,'points_1q'),6);assert.equal(nbaValue(quarter,'points'),null)
+ assert.equal(nbaValue(full,'double_double'),1);assert.equal(nbaValue(full,'triple_double'),1);assert.equal(nbaValue(quarter,'double_double'),null)
+ assert.equal(nbaValue({...full,ast:null,reb:2},'double_double'),null);assert.equal(nbaValue({pts:25,reb:11,ast:10},'triple_double'),null)
+ assert.equal(nbaValue({gp:50,dd2:20},'double_double'),.4);assert.equal(nbaValue({gp:0,dd2:0},'double_double'),null)
+ const pick={id:'q',post_id:null,game_pk:'123',player_id:'bdl:434',player_name:null,pick_type:'points_1q',numeric_line:6,market_side:'milestone' as const}
+ assert.equal(gradeNbaPick(pick,[full]),null);assert.equal(gradeNbaPick(pick,[full,quarter]),'win');assert.equal(gradeNbaPick({...pick,pick_type:'points',numeric_line:28,market_side:'over'},[quarter,full]),'push')
+ const dd={...offer,prop_type:'double_double',line_value:'.5',market:{type:'milestone' as const,odds:140}}
+ assert.equal(nbaTarget(dd),'Yes');assert.equal(nbaPrice(dd,'under'),undefined);assert.equal(nbaReference([dd],'double_double')?.id,dd.id);assert.equal(nbaReference([dd],'double_double','all','under'),null)
+ const q={...dd,prop_type:'points_1q',line_value:'6'};assert.equal(nbaTarget(q),'6+');assert.equal(nbaHitRate([quarter],'points_1q',6,'over',true).rate,100)
+ const player={logs:[full],periodLogs:[quarter]} as PaintPlayer;assert.equal(nbaMarketLogs(player,'points_1q')[0],quarter);assert.equal(nbaMarketLogs(player,'points')[0],full)
+})

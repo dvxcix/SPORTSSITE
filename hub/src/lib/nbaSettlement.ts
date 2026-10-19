@@ -2,7 +2,7 @@ import 'server-only'
 import type { createAdminClient } from './supabase/admin'
 import { getPaintGame, getPaintFinalStats } from './nbaPaintData'
 import { gradeNbaPick, type NbaPendingPick } from './nbaPickGrading'
-import { nbaToday } from './nbaPaint'
+import { nbaPeriod, nbaToday } from './nbaPaint'
 
 export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>, deadline = Date.now() + 48_000) {
   const report = { checked: 0, graded: 0, skipped: 0, graded_ids: [] as string[], issues: [] as string[] }
@@ -17,12 +17,12 @@ export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>
       if (!/^\d{1,10}$/.test(id)) { report.skipped += picks.length; continue }
       const game = await getPaintGame(Number(id), true)
       if (game.status_state !== 'final' && game.status !== 'Final') { report.skipped += picks.length; continue }
-      const stats = await getPaintFinalStats(Number(id))
-      if (!stats.complete) { report.skipped += picks.length; report.issues.push('NBA final stats incomplete'); continue }
+      const periods = [...new Set(picks.map(pick => nbaPeriod(pick.pick_type)))], results = await Promise.allSettled(periods.map(period => getPaintFinalStats(Number(id), period)))
+      const stats = results.flatMap((result, index) => { if (result.status === 'fulfilled' && result.value.complete) return result.value.rows; report.issues.push(`NBA period ${periods[index]} final stats incomplete`); return [] })
       for (const pick of picks) {
         if (Date.now() > deadline - 2_000) { report.skipped++; continue }
         report.checked++
-        const result = gradeNbaPick(pick, stats.rows)
+        const result = gradeNbaPick(pick, stats)
         if (!result) { report.skipped++; continue }
         const applied = await admin.rpc('settle_nba_pick_exact', { p_pick_id: pick.id, p_result: result })
         if (applied.error) { report.skipped++; report.issues.push('NBA atomic settlement failed'); continue }

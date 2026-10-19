@@ -8,7 +8,7 @@ import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaValidatedEstimate, type NbaModelReport } from '@/lib/nbaModel'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
-import { nbaToday, nbaReference, PAINT_MARKETS } from '@/lib/nbaPaint'
+import { nbaPeriod, nbaMarketLogs, nbaToday, nbaReference, PAINT_MARKETS } from '@/lib/nbaPaint'
 export const maxDuration = 180
 async function run(request: Request) {
   const denied = requireCronAuth(request); if (denied) return denied
@@ -37,16 +37,18 @@ async function run(request: Request) {
           if (!board.statsComplete) throw new Error('Game-log coverage incomplete; score archive deferred')
           const context = await getNbaDefenseContext(board.sampleSeason, game.date)
           const rows = board.players.flatMap(player => PAINT_MARKETS.flatMap(market => {
+            if (nbaPeriod(market.key) && board.periodStatsComplete === false) return []
             const opponent = player.team.id === game.home_team.id ? game.visitor_team.id : game.home_team.id
             const matchup = context.profiles.find(profile => profile.teamId === opponent && profile.position === nbaPosition(player.position) && profile.market === market.key)
             const signal = nbaSlipSurgeScore(player, market.key, game.date, matchup, nbaGamePace(board))
             if (signal.score == null || signal.games < 5) return []
-            const sampleThrough = player.logs.map(log => log.game.date.slice(0, 10)).filter(date => date < game.date).sort().at(-1)
+            const logs = nbaMarketLogs(player, market.key)
+            const sampleThrough = logs.map(log => log.game.date.slice(0, 10)).filter(date => date < game.date).sort().at(-1)
             if (!sampleThrough) return []
             const report = models?.map(model => model.report as NbaModelReport).find(report => report.market === market.key && report.validationThrough < game.date)
-            const estimate = nbaValidatedEstimate(player.logs, market.key, game.date, report)
+            const estimate = nbaValidatedEstimate(logs, market.key, game.date, report)
             const model = estimate == null ? null : { key: report!.modelKey, method: report!.method, recentWeight: report!.recentWeight, trainedThrough: report!.trainedThrough, validationThrough: report!.validationThrough, estimate }
-            const features = { signal, model, logIds: player.logs.map(log => log.id), teamId: player.team.id, position: player.position, injury: player.injury, matchup: matchup ?? null, matchupSeason: context.ready ? context.season : null }
+            const features = { signal, model, logIds: logs.map(log => log.id), teamId: player.team.id, position: player.position, injury: player.injury, matchup: matchup ?? null, matchupSeason: context.ready ? context.season : null }
             return [{ game_id: game.id, player_id: player.id, team_id: player.team.id, market: market.key, version: signal.version, score: signal.score, sample_games: signal.games, sample_through: sampleThrough, features, fingerprint: createHash('sha256').update(JSON.stringify(features)).digest('hex'), quote: nbaReference(player.props, market.key), estimate, model_key: estimate == null ? null : report!.modelKey }]
           }))
           const { data, error } = await admin.rpc('record_nba_research_batch', { p_rows: rows })

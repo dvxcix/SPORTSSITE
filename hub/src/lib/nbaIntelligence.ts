@@ -1,11 +1,11 @@
-import { nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintBoard, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
+import { nbaBinary, nbaPeriod, nbaMarketLogs, nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintBoard, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
 
 export const NBA_SCORE_VERSION = 'nba-opportunity-v2'
 const clamp = (value: number, low = 0, high = 100) => Math.max(low, Math.min(high, value))
 const mean = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 const numeric = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const field = (logs: PaintStat[], key: keyof PaintStat) => mean(logs.map(log => log[key]).filter(numeric))
-const ceiling: Record<PaintMarket, number> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5 }
+const ceiling: Record<PaintMarket, number> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5, double_double: 1, triple_double: 1, points_1q: 35, rebounds_1q: 15, assists_1q: 12 }
 export type NbaScorePart = { key: string; label: string; value: number | null; weight: number }
 export type NbaDvp = { teamId: number; position: string; market: PaintMarket; games: number; minutes: number; per48: number | null; leaguePer48: number | null; allowance: number | null }
 export function nbaPosition(position: string | null | undefined) {
@@ -20,15 +20,16 @@ export function nbaGamePace(board: PaintBoard) {
 }
 /** Descriptive production support, not a win probability or a fitted betting edge. */
 export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null) {
-  const logs = nbaSample(player.logs.filter(log => log.game.date.slice(0, 10) < before), 30)
+  const logs = nbaSample(nbaMarketLogs(player, market).filter(log => log.game.date.slice(0, 10) < before), 30)
   const recent = logs.slice(0, 10), prior = logs.slice(10, 30)
   const minutes = mean(recent.map(log => nbaMinutes(log.min)).filter(numeric))
   const production = nbaAverage(recent, market), baseline = nbaAverage(prior, market)
   const fga = field(recent, 'fga'), fta = field(recent, 'fta'), threes = field(recent, 'fg3a')
   // Market-specific opportunity: attempts for scoring, attempts for threes;
   // observed per-36 output for categories without a recorded chance feed.
+  const binary = nbaBinary(market), quarter = nbaPeriod(market) === 1, minutesCeiling = quarter ? 12 : 36
   const per36 = production != null && minutes != null && minutes > 0 ? production / minutes * 36 : null
-  const opportunity = market === 'points' ? fga != null && fta != null ? clamp((fga + .44 * fta) / 28 * 100) : null
+  const opportunity = binary ? production == null ? null : clamp(production * 100) : market === 'points' || market === 'points_1q' ? fga != null && fta != null ? clamp((fga + .44 * fta) / (quarter ? 9.333333 : 28) * 100) : null
     : market === 'threes' ? threes == null ? null : clamp(threes / 12 * 100)
     : per36 == null ? null : clamp(per36 / ceiling[market] * 100)
   const minutesValues = recent.map(log => nbaMinutes(log.min)).filter(numeric)
@@ -36,8 +37,8 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
   const stability = minutes != null && deviation != null && minutes > 0 ? clamp(100 - deviation / minutes * 200) : null
   const form = production != null && baseline != null && prior.length >= 5 ? clamp(50 + (production - baseline) / Math.max(1, baseline) * 100) : null
   const parts: NbaScorePart[] = [
-    { key: 'opportunity', label: market === 'points' || market === 'threes' ? 'Shot opportunity' : 'Per-36 production', value: opportunity, weight: .35 },
-    { key: 'role', label: 'Minutes', value: minutes == null ? null : clamp(minutes / 36 * 100), weight: .20 },
+    { key: 'opportunity', label: binary ? 'Event frequency' : market === 'points' || market === 'points_1q' || market === 'threes' ? 'Shot opportunity' : 'Per-36 production', value: opportunity, weight: .35 },
+    { key: 'role', label: 'Minutes', value: minutes == null ? null : clamp(minutes / minutesCeiling * 100), weight: .20 },
     { key: 'form', label: 'Recent form', value: form, weight: .20 },
     { key: 'stability', label: 'Role stability', value: stability, weight: .10 },
     { key: 'matchup', label: 'Position allowance', value: matchup?.allowance == null ? null : clamp(50 + matchup.allowance * 100), weight: .10 },

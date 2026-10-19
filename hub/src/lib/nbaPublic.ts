@@ -7,6 +7,9 @@ export type NbaPublicRow={playerId:number;market:PaintMarket;picks:number}
 export type NbaPublicCapture={gameId:number;capturedAt:string;sourceUrl:string;rows:NbaPublicRow[];unmatched:number;markets:string[]}
 export function nbaPublicMarket(label:string):PaintMarket|null{
   const text=label.toLowerCase().replace(/[_-]/g,' ').replace(/\s+/g,' ').trim()
+  if(/double double/.test(text)&&!/quarter|half|\b[1-4]q\b/.test(text))return 'double_double'
+  if(/triple double/.test(text)&&!/quarter|half|\b[1-4]q\b/.test(text))return 'triple_double'
+  if(/first quarter|1st quarter|\b1q\b|\bq1\b/.test(text)){if(/points?|\bpts\b/.test(text)&&!/reb|ast|assist|three|3.?point|3pm/.test(text))return 'points_1q';if(/rebounds?|\breb\b/.test(text)&&!/point|pts|ast|assist/.test(text))return 'rebounds_1q';if(/assists?|\bast\b/.test(text)&&!/point|pts|reb/.test(text))return 'assists_1q';return null}
   if(/quarter|half|first|last|double|triple|\b[1-4]q\b|\bq[1-4]\b|\b[12]h\b/.test(text))return null
   if(/steal/.test(text)&&/block/.test(text))return null
   const keys=[/points?|\bpts\b/.test(text)&&'points',/rebounds?|\breb\b/.test(text)&&'rebounds',/assists?|\bast\b/.test(text)&&'assists'].filter(Boolean)

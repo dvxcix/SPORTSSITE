@@ -1,6 +1,6 @@
 import 'server-only'
 import { getPaintGame, getPaintProps, getPaintIdentity } from './nbaPaintData'
-import { PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
+import { nbaBinary, PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
 export type PaintPickLeg = { player_id?: string | null; player_name: string; team: string | null; game_pk: string | null; game_date: string | null; prop_key: string; prop_label: string; line?: string; numeric_line?: number | null; market_side?: 'over' | 'under' | 'milestone'; book: string | null; odds: number | null }
 export function paintOfferMatches(offer: PaintProp, leg: PaintPickLeg) {
   const player = Number(leg.player_id?.replace(/^bdl:/, ''))
@@ -34,7 +34,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
       if (![data.game.home_team.id, data.game.visitor_team.id].includes(identity.team.id)) return 'Player is no longer on this matchup roster. Refresh the board.'
       leg.player_name = `${identity.first_name} ${identity.last_name}`; leg.team = identity.team.abbreviation; leg.game_date = data.game.date; leg.line = String(leg.numeric_line)
       const label = PAINT_MARKETS.find(m => m.key === leg.prop_key)!.label
-      leg.prop_label = `${leg.market_side === 'milestone' ? `${leg.numeric_line}+` : `${leg.market_side === 'under' ? 'Under' : 'Over'} ${leg.numeric_line}`} ${label}`
+      leg.prop_label = `${nbaBinary(leg.prop_key) ? leg.market_side === 'under' ? 'No' : 'Yes' : leg.market_side === 'milestone' ? `${leg.numeric_line}+` : `${leg.market_side === 'under' ? 'Under' : 'Over'} ${leg.numeric_line}`} ${label}`
     }
     return null
   } catch { return 'NBA prices could not be verified. No pick was posted. Try again.' }

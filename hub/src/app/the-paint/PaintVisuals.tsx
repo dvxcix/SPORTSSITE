@@ -1,7 +1,7 @@
 'use client'
 import { Shield, UserRound } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
-import { nbaValue, type PaintPlayer, type PaintStat } from '@/lib/nbaPaint'
+import { gradeNbaValue, nbaValue, type PaintPlayer, type PaintStat } from '@/lib/nbaPaint'
 import styles from './paint.module.css'
 
 export function CourtMark() { return <svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><rect x="4" y="4" width="28" height="28" rx="3" stroke="currentColor" strokeWidth="1.5"/><path d="M13 4v12h10V4M4 14c0 10 28 10 28 0M4 27h28" stroke="currentColor" strokeWidth="1.5"/><circle cx="18" cy="10" r="2" fill="currentColor"/></svg> }
@@ -9,12 +9,12 @@ const code = (abbr: string) => ({ GSW: 'gs', NOP: 'no', NYK: 'ny', SAS: 'sa', UT
 export function TeamLogo({ abbr, size = 28 }: { abbr: string; size?: number }) { return <SafeImage src={`https://a.espncdn.com/i/teamlogos/nba/500/${code(abbr)}.png`} alt="" width={size} height={size} className={styles.teamLogo} fallback={<span className={styles.teamFallback} style={{ width: size, height: size }}><Shield size={Math.max(10,size*.65)} aria-hidden="true"/></span>} /> }
 export function PlayerAvatar({ player, large = false }: { player: Pick<PaintPlayer,'headshot'|'team'>; large?: boolean }) { return <span className={large ? styles.portrait : styles.avatar}><SafeImage src={player.headshot} alt="" width={large ? 190 : 62} height={large ? 138 : 46} fallback={<span className={styles.initials}><UserRound size={large ? 85 : 27} aria-hidden="true"/></span>}/>{!large && <span className={styles.avatarTeam}><TeamLogo abbr={player.team.abbreviation} size={15}/></span>}</span> }
 export const number = (value: number | null | undefined, digits = 1) => value == null || !Number.isFinite(value) ? '—' : value.toFixed(digits)
-export function TrendBars({ logs, market, line, side = 'over', tall = false }: { logs: PaintStat[]; market: string; line: number | null; side?: 'over' | 'under'; tall?: boolean }) {
+export function TrendBars({ logs, market, line, side = 'over', milestone = false, tall = false }: { logs: PaintStat[]; market: string; line: number | null; side?: 'over' | 'under'; milestone?: boolean; tall?: boolean }) {
   const values = [...logs].reverse().map(log => ({ log, value: nbaValue(log, market) }))
   const max = Math.max(1, ...values.map(v => v.value ?? 0), line ?? 0) * 1.15
   return <div className={tall ? styles.chart : styles.spark} role="img" aria-label={values.length ? `${values.length} games, oldest to newest: ${values.map(v => v.value ?? 'unavailable').join(', ')}${line != null ? `; reference line ${line}` : ''}` : 'No game sample available'}>
     {line != null && <span className={styles.chartLine} style={{ bottom: `${line / max * 100}%` }}>{tall ? line : ''}</span>}
-    {values.map(({ log, value }) => <span key={log.id} className={line != null && value != null && (side === 'over' ? value > line : value < line) ? styles.barHit : styles.bar} style={{ height: `${Math.max(2, (value ?? 0) / max * 100)}%` }} title={`${log.game.date}: ${value ?? 'No data'}`}>{tall && <b>{value ?? '—'}</b>}</span>)}
+    {values.map(({ log, value }) => <span key={log.id} className={line != null && value != null && gradeNbaValue(value,line,milestone?'milestone':side)==='win' ? styles.barHit : styles.bar} style={{ height: `${Math.max(2, (value ?? 0) / max * 100)}%` }} title={`${log.game.date}: ${value ?? 'No data'}`}>{tall && <b>{value ?? '—'}</b>}</span>)}
     {!values.length && <small>—</small>}
   </div>
 }

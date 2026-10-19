@@ -1,5 +1,5 @@
-import { nbaAverage, nbaHitRate, nbaMinutes, nbaReference, nbaSample, nbaValue, PAINT_MARKETS, type PaintPlayer, type PaintMarket } from './nbaPaint'
-import { nbaMarketRanks } from './nbaMarketMetrics'
+import { nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaReference, nbaSample, nbaValue, PAINT_MARKETS, type PaintPlayer, type PaintMarket } from './nbaPaint'
+import { nbaFormGap, nbaMarketRanks } from './nbaMarketMetrics'
 
 export type PaintScouting = { season: number; fetchedAt: string; issues: string[]; players: { id: number; advanced: Record<string, number | null>; passing: Record<string, number | null>; rebounding: Record<string, number | null>; drives: Record<string, number | null> }[] }
 
@@ -16,10 +16,10 @@ export function nbaCheatsheet(players: PaintPlayer[], vendor = 'all', side: 'ove
   return PAINT_MARKETS.flatMap(m => {
     const ranks=nbaMarketRanks(players,m.key,vendor,location)
     return players.flatMap(player=>{
-      const offer=nbaReference(player.props,m.key,vendor,side), logs=nbaSample(player.logs,10,location)
+      const offer=nbaReference(player.props,m.key,vendor,side), logs=nbaSample(nbaMarketLogs(player, m.key),10,location)
       if(!offer || logs.length<5)return []
-      const line=Number(offer.line_value), hit=nbaHitRate(logs,m.key,line,side), average=nbaAverage(logs,m.key)
-      return [{ player, market:m, offer, hit, average, season:nbaValue(player.average,m.key), mm:ranks.get(player.id)?.mm??null, gap:average==null?null:(average-line)*(side==='over'?1:-1) }]
+      const line=Number(offer.line_value), hit=nbaHitRate(logs,m.key,line,side,offer.market.type==='milestone'), average=nbaAverage(logs,m.key)
+      return [{ player, market:m, offer, hit, average, season:nbaValue(player.average,m.key), mm:ranks.get(player.id)?.mm??null, gap:nbaFormGap(average,offer,side) }]
     })
   })
 }
