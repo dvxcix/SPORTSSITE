@@ -1,0 +1,53 @@
+ThePaint ladders, market history and interface polish
+
+Scope
+- Kept page, data and post access admin-only and out of public navigation.
+- Added first-class Ladders and Movement board tools and matching player tabs.
+- Milestone and alternate O/U grids cover every supported NBA market, including
+  points, rebounds, assists, threes and combined props. Each target shows its own
+  live book price, exact saved-pick action and L20 descriptive hit rate. Best
+  prices are highlighted only within the SAME target/side/type.
+- Dedicated ladder player/book selectors replace redundant board filters; player
+  selection persists when moving between stat markets. Panel tools expose side
+  and market selection. Existing watchlist/post/grading identity paths are reused.
+- Odds-cell clicks open ladders directly; +/-MM tools open the ranked research
+  view and expose selected state. Added a prominent over/under control.
+- Improved table hover/frozen columns, internal horizontal scrolling, mobile
+  widths/touch targets, tool rails, panel spacing and drawer transitions. Reduced
+  motion remains respected; charts represent observed data without smoothing it.
+
+Actual market movement
+- Individual migration 20261019042023_nba_market_capture adds the NBA-only archive
+  and service-only record/read RPCs. RLS and grants prevent member/anonymous reads
+  or writes. No historical migration tree was replayed.
+- New cloud collector /api/cron/nba-market-capture runs every five minutes with
+  existing cron authentication/health telemetry; no laptop collector or secret
+  changes. It considers today/tomorrow, deduplicates schedules, checks pretipoff,
+  caps 16 games/four parallel reads, and reports failed/deferred captures honestly.
+- Economic fingerprints ignore provider IDs/order/timestamp-only changes. Actual
+  quote changes append snapshots, including returns to a previous price. Read API
+  is freshly admin-gated and returns baseline + latest 95 filtered captures.
+- Reference-line movement is separate from fixed-threshold price movement.
+  Book/market/player are exact; a line comparison never substitutes another book.
+  Over/under price movement compares the same CURRENT threshold and side using
+  implied probability points. Missing current quotes remain unknown.
+- Reference lines are selected near consensus; they are not asserted to be a
+  provider-designated main line. First shown is not a guaranteed sportsbook opener.
+- Preserved genuine earlier full provider capture from work/the-paint/props.json:
+  1,633 quotes observed 2026-10-19 03:22:13.060 UTC, same NBA game 21717855.
+  Verified file provenance/game identity, then inserted this and a fresh 1,666-
+  quote capture at 04:25:53.792 UTC into the new empty archive with a guard.
+  Both contain real observed quotes; no invented prior-day history or user data.
+  Database access used the authorized connector; credentials were not exported.
+
+Verification
+- NBA tests 18/18; combined NBA/NFL grading/odds tests 28/28.
+- Existing production suite 134/134; TypeScript and targeted ESLint pass.
+- SQL rollback tests verify archive deduplication, changed capture, market/player
+  filtering, empty-capture rejection and restricted privileges. Fixtures rolled back.
+- Browser verified points/rebound ladders, player preservation, real milestone
+  offers/hit rates and real movement (Daniss Jenkins FD points 9.5 -> 8.5; Cade
+  Cunningham flat line with shortening over price). Mobile/player chart verified.
+- No public feed post, payment, grading replay or unrelated collector replay.
+
+Live deployment/browser/capture verification is appended after release.

@@ -7,9 +7,25 @@ import { gradeNbaPick } from '../src/lib/nbaPickGrading.ts'
 import type { WatchlistItem } from '../src/lib/watchlist.ts'
 import { watchlistPickPayload } from '../src/lib/nflWatchlist.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
+import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
 
 const stat = (value: number | null, date = '2026-04-01', minutes = '30:30'): PaintStat => ({ id: Number(date.replaceAll('-', '')), player: { id: 434 }, team: { id: 2 }, game: { id: 123, date, status: 'Final', status_state: 'final', home_team_id: 2, visitor_team_id: 9 }, min: minutes, pts: value, reb: 5, ast: 4, fg3m: 2, stl: 0, blk: 1, turnover: 2, fga: 15, fgm: 7, fg3a: 5, fta: 3, ftm: 2 })
 const offer: PaintProp = { id: 99, game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -105 }, updated_at: '2026-10-18T12:00:00Z' }
+
+test('movement separates threshold changes from price moves, isolates books and leaves missing quotes unknown',()=>{
+  const first={captured_at:'2026-10-19T10:00:00Z',props:[offer]}
+  const rise={captured_at:'2026-10-19T11:00:00Z',props:[{...offer,line_value:'21'}]}
+  assert.equal(nbaMovement([first,rise],434,'points','fanduel').lineChange,1)
+  assert.equal(nbaMovement([first,rise],434,'points','fanduel').priceChange,null)
+  const shorter={...rise,props:[{...offer,market:{...offer.market,over_odds:-130}}]}
+  assert.equal(nbaMovement([first,shorter],434,'points','fanduel').lineChange,0)
+  assert.ok(nbaMovement([first,shorter],434,'points','fanduel').priceChange!>0)
+  assert.equal(nbaMovement([first,shorter],434,'points','draftkings').latest,null)
+  assert.equal(nbaMovement([first,{...rise,props:[]}],434,'points','fanduel').latest,null)
+  assert.equal(nbaMovement([first],434,'points','fanduel').lineChange,null)
+  assert.deepEqual(nbaEconomicSnapshot([offer]),nbaEconomicSnapshot([{...offer,id:888,updated_at:'2026-10-19T12:00:00Z',line_value:'20.0'}]))
+  assert.notDeepEqual(nbaEconomicSnapshot([offer]),nbaEconomicSnapshot(shorter.props))
+})
 
 test('NBA samples preserve nulls, valid zeroes and exact combined markets', () => {
   assert.equal(nbaValue(stat(20), 'points_rebounds_assists'), 29)
@@ -193,4 +209,31 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
     const report = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }> )({ from: () => chain, rpc: async () => { calls++; return { data: null, error: { message: 'write unavailable' } } } })
     assert.equal(report.graded, 0); assert.equal(calls, scenario === 'rpc' ? 1 : 0)
   }
+})
+
+test('NBA collector requires cron authorization, deduplicates schedules and captures only pretipoff games', async()=>{
+  let reads=0,writes=0,denied=true
+  const crypto=await import('node:crypto')
+  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
+    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,'record_nba_market_capture');assert.equal(args.p_game_id,123);writes++;return{data:true,error:null}}})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:'2099-10-20T20:00:00Z',status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
+  })
+  const get=route.GET as unknown as(request:Request)=>Promise<Response>
+  assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,401)
+  assert.equal(reads,0);assert.equal(writes,0)
+  denied=false
+  assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,200)
+  assert.equal(reads,1);assert.equal(writes,1)
+})
+
+test('NBA history remains admin-gated and validates market/game before archive reads',async()=>{
+  let denied=true,reads=0
+  const pure=await import('../src/lib/nbaPaint.ts')
+  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:()=>({abortSignal:async()=>{reads++;return{data:[],error:null}}})})},'@/lib/nbaPaint':pure})
+  const get=route.GET as unknown as(request:unknown)=>Promise<Response>
+  assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,403)
+  denied=false
+  assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=nope')})).status,400)
+  assert.equal(reads,0)
+  assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,200)
+  assert.equal(reads,1)
 })
