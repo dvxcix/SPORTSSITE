@@ -6,10 +6,10 @@ import { chromium, type Browser, type Page } from 'playwright-core'
 // creation/teardown and context persistence (Pikkit's login) only exist in
 // one place.
 
-function client(): Browserbase {
+function client(requestTimeoutMs?: number): Browserbase {
   const apiKey = process.env.BROWSERBASE_API_KEY
   if (!apiKey) throw new Error('BROWSERBASE_API_KEY is not configured')
-  return new Browserbase({ apiKey })
+  return new Browserbase({ apiKey, ...(requestTimeoutMs ? { timeout: requestTimeoutMs, maxRetries: 0 } : {}) })
 }
 
 // projectId is genuinely optional on every Browserbase SDK call — omitted,
@@ -90,12 +90,12 @@ export type BBSession = {
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
     throw new Error('Automated browser timeout must be between 60 and 450 seconds')
   }
-  const bb = client()
+  const bb = client(opts.requestTimeoutMs)
   const configuredProjectId = optionalProjectId()
   // Spend thresholds are admin alerts, never capture gates. Usage lookup also
   // stays out of this path so a billing API outage cannot stop data ingestion.
@@ -128,7 +128,13 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     },
     userMetadata,
   })
-  const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
+  let browser: Browser
+  try {
+    browser = opts.requestTimeoutMs ? await chromium.connectOverCDP(session.connectUrl, { timeout: opts.requestTimeoutMs }) : await chromium.connectOverCDP(session.connectUrl)
+  } catch (failure) {
+    await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
+    throw failure
+  }
   const context = browser.contexts()[0] ?? await browser.newContext()
   const page = context.pages()[0] ?? await context.newPage()
   let closed = false
@@ -158,8 +164,8 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // Set PIKKIT_BROWSER_GEO_STATE to a two-letter state code only when a stable
 // state is important; otherwise both setup and reuse use Browserbase's
 // managed proxy in us-east-1.
-export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}): Promise<BBSession> {
-  const bb = client()
+export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}, options: { requestTimeoutMs?: number } = {}): Promise<BBSession> {
+  const bb = client(options.requestTimeoutMs)
   const running = await bb.sessions.list({ status: 'RUNNING' })
   const manualLoginActive = running.some(session => (
     session.contextId === contextId
@@ -171,6 +177,7 @@ export async function openPikkitSession(contextId: string, metadata: Record<stri
   }
   return openSession({
     contextId,
+    requestTimeoutMs: options.requestTimeoutMs,
     geoState: pikkitGeoState(),
     // Preserve one proxied identity for Pikkit and its Cloudflare challenge,
     // while analytics/CDN traffic bypasses the metered residential proxy.

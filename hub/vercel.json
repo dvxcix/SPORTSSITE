@@ -242,7 +242,7 @@
     },
     {
       "path": "/api/cron/poll-pikkit-nba-picks",
-      "schedule": "11,41 * * * *"
+      "schedule": "1,11,21,31,41,51 * * * *"
     }
   ]
 }

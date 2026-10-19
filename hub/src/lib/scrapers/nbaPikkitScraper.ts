@@ -1,7 +1,7 @@
 // Executed in the existing cloud browser, never on the owner's laptop.
 export async function runNbaPikkitScrape(){
   const pause=(ms:number)=>new Promise(r=>setTimeout(r,ms))
-  const marketWords=/points?|rebounds?|assists?|threes?|steals?|blocks?|turnovers?|3.?point/i
+  const marketWords=/points?|rebounds?|assists?|threes?|steals?|blocks?|turnovers?|3.?point|double|triple/i
   let selector=Array.from(document.querySelectorAll('select')).map(select=>({select,score:Array.from(select.options).filter(o=>marketWords.test(o.textContent??'')).length})).sort((a,b)=>b.score-a.score)[0]
   if(!selector||selector.score<2){
     for(let attempt=0;attempt<8;attempt++){

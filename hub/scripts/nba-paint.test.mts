@@ -42,6 +42,12 @@ test('NBA slate MM uses the full slate, withholds ranks on partial coverage and 
   assert.equal(under.find(row=>row.player.id===1)?.gap,-over.find(row=>row.player.id===1)!.gap!)
   assert.ok(nbaSlateRows(boards,'points','fanduel','over',false).every(row=>row.mm===null))
   assert.equal(nbaSlateRows(boards,'points','draftkings','over',true).length,0)
+  const profile={teamId:9,position:'G',market:'points' as const,games:20,minutes:960,per48:30,leaguePer48:25,allowance:.2}
+  const contextual=nbaSlateRows(boards,'points','fanduel','over',true,[],[{gameId:123,profiles:[profile]}])
+  const expected=nbaSlipSurgeScore(players[0],'points',game.date,profile,null)
+  assert.equal(contextual.find(row=>row.player.id===1)?.score,expected.score)
+  assert.equal(contextual.find(row=>row.player.id===1)?.coverage,expected.coverage)
+  assert.equal(contextual.find(row=>row.player.id===3)?.coverage,over.find(row=>row.player.id===3)?.coverage)
 })
 
 test('NBA opposing-market signals keep exact books and price thresholds, and reject future/wrong-game public context',()=>{
@@ -341,11 +347,11 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
   assert.notEqual(nbaName('Jalen Williams'), nbaName('Jaylin Williams'))
 })
 
-async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch) {
+async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch', outputText)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
@@ -539,3 +545,25 @@ test('per-game NBA tracking is phase, identity, final-status and historical-team
  const sample=nbaTrackingSample(player,[row],'touches',5);assert.equal(sample.games,2);assert.equal(sample.known,1);assert.equal(sample.average,0);assert.equal(sample.observations[1].value,null)
  assert.equal(nbaTrackingField('usage_percentage').percentage,true);assert.equal(nbaTrackingField('touches').percentage,false);assert.equal(nbaTrackingField('matchup_fg_pct').group,'Matchup')
 })
+
+test('NBA public collection bounds startup, game work and cleanup while preserving its shared browser lease',async()=>{
+ const game={id:123,date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date(Date.now()+6*3600000)),datetime:new Date(Date.now()+6*3600000).toISOString(),status_state:'scheduled',visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}}
+ for(const scenario of ['healthy','startup-timeout','game-timeout','close-timeout','unlisted']){
+  let closed=0,released=0,captured=0,openedOptions:unknown,resolveOpening:((browser:unknown)=>void)|undefined
+  const never=()=>new Promise<never>(()=>{}),scrape=()=>{}
+  const locator={filter:()=>locator,first:()=>locator,click:async()=>{},waitFor:async()=>{}}
+  const browser={page:{setDefaultTimeout:()=>{},setDefaultNavigationTimeout:()=>{},goto:async()=>scenario==='game-timeout'?never():undefined,waitForFunction:async()=>{},waitForTimeout:async()=>{},getByText:()=>locator,evaluate:async(fn:unknown)=>fn===scrape?{complete:true,props:{Points:{'Test Player':10}}}:'verified event'},close:async()=>{closed++;if(scenario==='close-timeout')return never()}}
+  const query={select:()=>query,in:()=>query,order:()=>query,limit:async()=>({data:[],error:null})}
+  const imports={'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]})},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>query})},'@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>({release:async()=>{released++}})},'@/lib/browserbase':{openPikkitSession:async(_context:string,_metadata:unknown,options:unknown)=>{openedOptions=options;if(scenario==='startup-timeout')return new Promise(resolve=>{resolveOpening=resolve});return browser}},'@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>scenario!=='unlisted'},'@/lib/scrapers/nbaPikkitScraper':{runNbaPikkitScrape:scrape},'@/lib/nbaPublicServer':{importNbaPublic:async()=>{captured++;return{markets:5}}},'@/lib/nbaPublic':{nbaPublicEventMatches:()=>true}}
+  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',imports,fetch,{process:{env:{PIKKIT_CONTEXT_ID:'test-only'}},setTimeout:(callback:()=>void)=>setTimeout(callback,5),clearTimeout})
+  const response=await (route.GET as unknown as(request:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))
+  const result=await response.json()
+  assert.deepEqual(openedOptions,{requestTimeoutMs:15000})
+  if(scenario==='healthy'){assert.equal(response.status,200);assert.equal(captured,1);assert.equal(closed,1);assert.equal(released,1);assert.equal(result.results.length,1)}
+  if(scenario==='game-timeout'){assert.equal(response.status,502);assert.equal(captured,0);assert.equal(closed,1);assert.equal(released,1);assert.equal(result.results[0].diagnostic.deadline,true)}
+  if(scenario==='unlisted'){assert.equal(response.status,206);assert.equal(result.unavailable,1);assert.equal(result.deferred,1);assert.equal(captured,0);assert.equal(released,1)}
+  if(scenario==='close-timeout'){assert.equal(response.status,503);assert.equal(released,0);assert.ok(result.cleanupIssues.length>0)}
+  if(scenario==='startup-timeout'){assert.equal(response.status,503);assert.equal(released,0);assert.equal(closed,0);resolveOpening?.(browser);await new Promise(resolve=>setTimeout(resolve,10));assert.equal(closed,1)}
+ }
+})
+

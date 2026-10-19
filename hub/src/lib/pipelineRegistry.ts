@@ -15,7 +15,7 @@ const daily = 1_560
 export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'bdl-odds', label: 'Live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
   { name: 'nfl-bdl-odds', label: 'NFL live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
-  { name: 'poll-pikkit-nba-picks', label: 'NBA public pick capture', schedule: 'Every 30 minutes inside 48h of tipoff', staleAfterMinutes: 75, area: 'Picks' },
+  { name: 'poll-pikkit-nba-picks', label: 'NBA public pick capture', schedule: 'Every 10 minutes; refresh due after 30 minutes inside 48h of tipoff', staleAfterMinutes: 45, area: 'Picks' },
   { name: 'nba-market-capture', label: 'NBA market history', schedule: 'Every 5 minutes', staleAfterMinutes: 20, area: 'Odds' },
   { name: 'dispatch-scrapes', label: 'Lineup scrape dispatcher', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Odds' },
   { name: 'scrape-fanduel', label: 'FanDuel gap markets', schedule: 'Scheduled and lineup-triggered', staleAfterMinutes: 600, area: 'Odds' },
