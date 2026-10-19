@@ -167,6 +167,8 @@ longer truncate to the first sixteen games. Cached attempt receipts do not
 inflate newly inserted capture counts. Pikkit remembers successful unchanged
 reads separately from append-only changed-count history to preserve its cadence
 without repeatedly paying for unchanged cloud captures.
+Public attempts rotate independently of successful-count freshness, including
+unlisted and failed events; they cannot repeatedly starve other due matchups.
 
 Pikkit checks every ten minutes and captures due games at most every thirty
 minutes in the next 48 hours, oldest first. Cloud browser startup, per-game work,
@@ -182,6 +184,21 @@ read/write privileges. Every NBA research API checks a fresh server-side admin
 role before provider or service work. Guest redirect and member-denial contracts
 pass. NBA access remains unchanged until the owner approves public release.
 
+Applied NBA migrations, individually reviewed and already recorded (do not
+replay these or the historical migration tree):
+20261019035712 nba_exact_atomic_settlement
+20261019042023 nba_market_capture
+20261019045500 nba_public_pick_capture
+20261019051947 nba_research_foundation
+20261019054602 nba_research_validation
+20261019054942 nba_research_summary
+20261019060559 nba_appearance_evidence
+20261019063250 nba_period_facts
+20261019063701 nba_extended_market_semantics
+20261019064130 nba_materialized_research_inputs
+20261019065147 nba_settlement_fairness
+20261019065326 nba_validation_provenance
+
 VERIFICATION
 NBA 48/48; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
 10/10. TypeScript and targeted ESLint pass. Real browser checks cover desktop,
@@ -196,3 +213,26 @@ then separately approves opening the admin gate and adding public navigation.
 Provider gaps, pending starters and future outcomes remain explicitly unknown.
 Historical checkpoint and parity audit files are retained as work history and
 must not override this completed readiness receipt.
+
+FINAL LIVE RECEIPT — 07:55 UTC, October 19
+All three opening games now contain nba-public-v2 normalized captures:
+21717855 Boston–Detroit: 65 player-market rows, 9 markets, 07:51:32 UTC.
+21717856 Philadelphia–New York: 70 rows, 8 markets, 07:51:51 UTC.
+21717857 Oklahoma City–San Antonio: 69 rows, 9 markets, 07:55:19 UTC.
+Each excludes only two anonymous Yes rows without player identity. Actual mobile
+filters showed Jayson Tatum 421 threes picks and 25 first-quarter points picks
+as separate markets. Existing historical main-market counts were preserved.
+
+The 07:51 scheduled run completed two games but rejected the third event's
+not-yet-hydrated shell. Exact verification withheld the import. An explicit
+bounded wait for the correct event/date content was added; the targeted retry
+of that confirmed failure succeeded HTTP 200 in 49.109s with zero deferred games,
+zero failed games and no browser/lease cleanup issues. The UI reported Capture
+completed and displayed all nine markets. No blind job replay was performed.
+
+Final DB receipt: zero unfinished imports, sixteen ready validation reports,
+3,709 pregame research snapshots covering sixteen markets, zero captures after
+tip and zero future sample dates. Quote capture, research capture and rolling
+ingestion succeeded on the deployed source; unchanged model work was skipped.
+All source and schema changes are on canonical GitHub main with the required
+recovered NFL ancestor retained. The NBA gate and public navigation are held.

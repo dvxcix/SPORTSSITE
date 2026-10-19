@@ -33,14 +33,16 @@ async function run(request:Request){
   if(!upcoming.length)return NextResponse.json({games:0,skipped:'No upcoming NBA games inside the capture window'})
   const admin=createAdminClient()
   const successKey=(id:number)=>`public-success:${NBA_PUBLIC_VERSION}:${id}`
-  const {data:checks,error:checkError}=await admin.from('nba_source_cache').select('key,fetched_at').in('key',upcoming.map(g=>successKey(g.id))).limit(100)
+  const attemptKey=(id:number)=>`public-attempt:${NBA_PUBLIC_VERSION}:${id}`
+  const {data:checks,error:checkError}=await admin.from('nba_source_cache').select('key,fetched_at').in('key',upcoming.flatMap(g=>[successKey(g.id),attemptKey(g.id)])).limit(200)
   if(checkError)return NextResponse.json({error:'Public capture preflight failed'},{status:503})
   // An unchanged successful read still counts toward the refresh cadence; the
   // append-only public history keeps only changed counts and its original time.
   // A reviewed parser version change deliberately refreshes affected games once;
   // old source captures remain append-only and never masquerade as new facts.
   const last=(id:number)=>checks?.find(p=>p.key===successKey(id))?.fetched_at
-  const due=upcoming.filter(g=>!last(g.id)||Date.now()-Date.parse(last(g.id)!)>30*60000).sort((a,b)=>Date.parse(last(a.id)??'1970-01-01')-Date.parse(last(b.id)??'1970-01-01'))
+  const attempted=(id:number)=>checks?.find(p=>p.key===attemptKey(id))?.fetched_at??'1970-01-01'
+  const due=upcoming.filter(g=>!last(g.id)||Date.now()-Date.parse(last(g.id)!)>30*60000).sort((a,b)=>Date.parse(attempted(a.id))-Date.parse(attempted(b.id))||Date.parse(last(a.id)??'1970-01-01')-Date.parse(last(b.id)??'1970-01-01'))
   if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
   const lease=await acquirePikkitBrowserLease()
   if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',deferred:due.length},{status:200})
@@ -90,6 +92,8 @@ async function run(request:Request){
           const diagnostic=error instanceof NbaCaptureDeadline?{deadline:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').catch(()=>null)
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic})
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
+        }finally{
+          await bounded(nbaSharedCache(attemptKey(game.id),30,0,async()=>({game:game.id,ok:results.some(result=>result.game===game.id&&result.ok)}),10),5000,'NBA attempt receipt deadline').catch(()=>cleanupIssues.push('NBA public attempt progress could not save'))
         }
       }
     }finally{await bounded(browser.close(),15000,'NBA browser close deadline').then(()=>{browserReleased=true}).catch(()=>cleanupIssues.push('Browser release could not be confirmed; automatic 300-second browser expiry remains enabled'))}
