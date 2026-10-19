@@ -12,6 +12,8 @@ export const PAINT_TOOLS = [
   {key:'research',label:'ThePaint',icon:Layers3},
   {key:'cheatsheets',label:'Cheatsheets',icon:ClipboardList},
   {key:'usage',label:'Usage & tracking',icon:Activity},
+  {key:'score',label:'SlipSurge Score',icon:Target},
+  {key:'dvp',label:'Defense × position',icon:Shield},
   {key:'matchup',label:'Matchup Lab',icon:Target},
   {key:'availability',label:'Availability',icon:HeartPulse},
   {key:'game-markets',label:'Game markets',icon:Shield},

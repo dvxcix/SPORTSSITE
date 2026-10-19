@@ -72,6 +72,10 @@ const FAMILY_SEEDS: FamilySeed[] = [
     routes: [['/the-sideline', 'The Sideline board and internal workspaces']],
   },
   {
+    family: 'NBA research', priority: 'P0', defaults: partial,
+    routes: [['/the-paint', 'ThePaint · admin-gated NBA suite'], ['/the-paint?view=score', 'NBA SlipSurge Score'], ['/the-paint?view=dvp', 'NBA defense by position'], ['/the-paint?view=usage', 'NBA usage and tracking'], ['/the-paint?view=movement', 'NBA Market Story'], ['/the-paint?view=public', 'NBA ThePublic']],
+  },
+  {
     family: 'Community', priority: 'P0', defaults: legacy,
     routes: ['/community', '/groups', '/groups/create', '/groups/[slug]', '/groups/[slug]/settings', '/channels', '/channels/[slug]', '/forum', '/forum/new', '/forum/[category]', '/forum/thread/[id]', '/pages', '/pages/create', '/pages/[slug]', '/pages/[slug]/settings', '/events', '/events/create', '/events/[id]'],
   },

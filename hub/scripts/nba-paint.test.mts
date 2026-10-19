@@ -10,7 +10,42 @@ import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
 import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
 import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
+import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForward } from '../src/lib/nbaIntelligence.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+
+test('NBA production scoring is market-specific, bounded, sample-aware and excludes future games',()=>{
+  const logs=Array.from({length:30},(_,i)=>({...stat(20,`2026-03-${String(30-i).padStart(2,'0')}`),id:i+1,fga:18,fta:5,fg3a:8,fg3m:3,reb:7,ast:6}))
+  const player={id:1,team:{id:2},logs} as PaintPlayer
+  const score=nbaSlipSurgeScore(player,'points','2026-04-01')
+  assert.ok(score.score!>=0&&score.score!<=100);assert.equal(score.games,30)
+  assert.ok(score.coverage<1);assert.equal(score.parts.find(part=>part.key==='matchup')?.value,null)
+  assert.notEqual(score.parts[0].value,nbaSlipSurgeScore(player,'threes','2026-04-01').parts[0].value)
+  const future={...logs[0],id:500,pts:500,fga:500,game:{...logs[0].game,date:'2026-04-01'}}
+  assert.deepEqual(nbaSlipSurgeScore({...player,logs:[future,...logs]},'points','2026-04-01'),score)
+  assert.equal(nbaSlipSurgeScore({...player,logs:logs.slice(0,4)},'points','2026-04-01').score,null)
+  assert.equal(nbaSlipSurgeScore({...player,team:{id:9}} as PaintPlayer,'points','2026-04-01').newTeam,true)
+})
+
+test('NBA walk-forward estimates never train on the graded game or later outcomes',()=>{
+  const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1,game:{...stat(20).game,id:i+1,date:`2026-03-${String(i+1).padStart(2,'0')}`}}))
+  const report=nbaWalkForward(logs,'points')
+  assert.equal(report.games,10);assert.equal(report.rows[0].date,'2026-03-11')
+  assert.equal(report.rows[0].prediction,nbaProductionEstimate(logs.slice(0,10),'points','2026-03-11'))
+  assert.ok(report.mae!=null&&report.baselineMae!=null)
+  const changed=logs.map((log,i)=>i===19?{...log,pts:10000}:log)
+  assert.deepEqual(nbaWalkForward(changed,'points').rows.map(row=>row.prediction),report.rows.map(row=>row.prediction))
+  assert.equal(nbaProductionEstimate(logs.slice(0,9),'points','2026-04-01'),null)
+})
+
+test('NBA position allowances use historical defensive opponent, valid minutes, shrinkage and minimum games',()=>{
+  const logs=Array.from({length:10},(_,i)=>({...stat(i<5?20:10),id:i+1,player:{id:i+1,position:'G'},team:{id:i<5?2:9},game:{...stat(20).game,id:i+1,home_team_id:2,visitor_team_id:9}}))
+  const profiles=nbaDefenseProfiles(logs,['points'])
+  assert.ok(profiles.find(row=>row.teamId===9)!.allowance!>0)
+  assert.ok(profiles.find(row=>row.teamId===2)!.allowance!<0)
+  assert.equal(nbaDefenseProfiles(logs.slice(0,4),['points'])[0].allowance,null)
+  assert.deepEqual(nbaDefenseProfiles([...logs,...logs],['points']),profiles)
+  assert.deepEqual(nbaDefenseProfiles([...logs,{...logs[0],id:500,min:'0:00',pts:10000}],['points']),profiles)
+})
 
 test('NBA fact import preserves historical team identity and rejects malformed identities',async()=>{
   const ingestion=await compiled('../src/lib/nbaIngestion.ts',{'server-only':{},'./balldontlie':{bdlHeaders:{}},'./supabase/admin':{}})
@@ -88,9 +123,9 @@ test('NBA public counts reject partial periods, fuzzy identities and invalid cou
 })
 
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
-  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts']){
+  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false

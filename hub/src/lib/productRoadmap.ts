@@ -11,6 +11,11 @@ export type ProductRoadmapPhase = {
 
 export const PRODUCT_ROADMAP_PHASES: ProductRoadmapPhase[] = [
   {
+    id: 'nba-research', label: 'NBA Research · admin review', status: 'active', progress: 45,
+    shipped: ['ThePaint odds, exact alternate lines, MM and player research', 'Exact saved pick identity and atomic NBA grading', 'Shared cache and resumable cloud history import', 'Transparent production support scoring and defense-position tools'],
+    remaining: ['Complete and reconcile historical imports', 'Verify first player-level public capture', 'Interactive shot locations, slate tools and cross-market divergence', 'Historical model validation and final responsive browser review'],
+  },
+  {
     id: 'foundation', label: 'Foundation', status: 'complete', progress: 100,
     shipped: ['Shared shell and navigation', 'Design tokens and common states', 'Desktop, mobile, tablet, and foldable contracts'],
     remaining: [],
