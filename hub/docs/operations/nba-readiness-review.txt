@@ -89,6 +89,11 @@ are not summed. Missing counts remain unavailable, not zero. Pikkit counts are
 pick categories, not wager dollars or exact-line counts. A divergence is a
 research hypothesis, never evidence of bookmaker intent or a guaranteed edge.
 The three opening matchups have real repeat captures and interactive results.
+Observed Pikkit labels include Made Threes and player Points 1st Quarter nested
+under the Points selector. Exact aliases retain those as threes and points_1q,
+never fold quarter counts into full-game points. Normalization version
+nba-public-v2 records provenance and refreshes affected games once after this
+reviewed parser repair. Anonymous Yes rows without player identity stay excluded.
 
 TRACKING AND SHOTS
 Per-game tracking exposes 116 currently available numeric metrics with exact
@@ -138,6 +143,13 @@ fell from 3,179,254 to 1,374,449 bytes by retaining only needed typed log fields
 Authenticated conditional refreshes hash the semantic board: unchanged samples
 return an empty 304 response with the confirmed source time, preserving the
 browser's existing rows. Quote/stat/coverage changes return the complete update.
+Live request receipts confirmed HTTP 200 followed by empty HTTP 304 refreshes
+at 07:37:03, 07:38:38 and 07:40:38 UTC while preserving the 35-player board.
+A final navigation check caught a cold follower timing out before its healthy
+owner finished building the shared board. Followers now wait within a bounded
+45-second cap (shorter leases keep shorter caps); the regression simulates a
+15-second owner and proves no duplicate provider load. The error retry preserves
+the selected date/game/filters and logs only sanitized source errors.
 This is architecture/concurrency evidence, not a 6,000-user load-test claim.
 
 Cloud-only ingestion resumes guarded exact cursors, never restarts completed
@@ -171,7 +183,7 @@ role before provider or service work. Guest redirect and member-denial contracts
 pass. NBA access remains unchanged until the owner approves public release.
 
 VERIFICATION
-NBA 47/47; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
+NBA 48/48; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
 10/10. TypeScript and targeted ESLint pass. Real browser checks cover desktop,
 390px and 320px layouts, exact odds/ladders, +/-MM, player panel/footer layering,
 shared saves, shot chart filters, tracking drill-through, league DvP, public

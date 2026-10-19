@@ -625,3 +625,16 @@ test('NBA conditional refresh authenticates first, preserves meaningful changes 
  board={...board,issues:['Quarter coverage incomplete'],statsComplete:false}
  assert.equal((await get(request(statChange.headers.get('etag')!))).status,200)
 })
+
+test('cold NBA cache followers wait through a slow healthy owner but respect shorter lease budgets',async()=>{
+ let reads=0,waited=0,readyAfter=30,loads=0
+ const entry={payload:{points:25},fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+60000).toISOString()}
+ const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:++reads>readyAfter?entry:null,error:null})})})}),rpc:async()=>({data:false,error:null})}
+ const cacheModule=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':await import('node:crypto'),'./supabase/admin':{createAdminClient:()=>admin}},fetch,{setTimeout:(callback:()=>void,ms:number)=>{waited+=ms;queueMicrotask(callback);return 0}})
+ const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
+ const result=await cache('slow-owner',60,300,async()=>{loads++;return{points:99}})
+ assert.equal(result.value.points,25);assert.equal(loads,0);assert.ok(waited>12000&&waited<=45000)
+ reads=0;waited=0;readyAfter=Infinity
+ await assert.rejects(()=>cache('short-owner',60,300,async()=>({points:99}),6),/warming/)
+ assert.equal(waited,1000);assert.equal(reads,3)
+})

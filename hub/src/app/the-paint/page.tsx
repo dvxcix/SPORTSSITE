@@ -12,12 +12,13 @@ export default async function PaintPage({ searchParams }: { searchParams: Promis
   const gate = await requirePaintAccess()
   if (gate.error) notFound()
   const params = await searchParams
+  const retry=`/the-paint?${new URLSearchParams(Object.entries(params).filter((entry):entry is [string,string]=>typeof entry[1]==='string'))}`
   const data = await (async () => { try {
     const schedule = await getPaintSchedule(params.date)
     const selected = schedule.games.find(g => String(g.id) === params.game) ?? schedule.games[0]
     const board = selected ? await getPaintBoard(selected) : null
     return { schedule, board, selected }
-  } catch { return null } })()
-  if (!data) return <section className={styles.empty}><span>NBA</span><h1>ThePaint</h1><p>NBA data is temporarily unavailable.</p><a href="/the-paint">Try again</a></section>
+  } catch(error) { console.error('[ThePaint] page unavailable',{reason:error instanceof Error&&/^NBA /.test(error.message)?error.message.slice(0,180):'NBA source request failed'});return null } })()
+  if (!data) return <section className={styles.empty}><span>NBA</span><h1>ThePaint</h1><p>NBA data is temporarily unavailable.</p><a href={retry}>Try again</a></section>
   return <PaintBoardClient key={data.selected?.id ?? data.schedule.date} initial={data.board} games={data.schedule.games} days={data.schedule.days} date={data.schedule.date} />
 }

@@ -59,7 +59,11 @@ async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number
   const fallback = usable(prior, true)
   if (fallback) return fallback
   // Cold followers wait for the owner; they never fan out provider requests.
-  for (let attempt = 0; attempt < 24; attempt++) {
+  // A cold board can legitimately need several sequential stat pages. Followers
+  // wait within the route budget instead of failing after twelve seconds while
+  // the shared owner is still healthy. Short game leases retain a shorter cap.
+  const attempts=Math.floor(Math.min(45000,Math.max(1000,leaseSeconds*1000-5000))/500)
+  for (let attempt = 0; attempt < attempts; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 500))
     const result = usable(await read())
     if (result) return result
