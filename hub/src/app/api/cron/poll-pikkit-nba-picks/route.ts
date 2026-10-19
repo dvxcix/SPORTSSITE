@@ -6,9 +6,10 @@ import {nbaToday} from '@/lib/nbaPaint'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
 import {openPikkitSession} from '@/lib/browserbase'
-import {clickTabByText,findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
+import {findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
+import {nbaPublicEventMatches} from '@/lib/nbaPublic'
 export const maxDuration=300
 async function run(request:Request){
   const denied=requireBrowserbaseCronAuth(request);if(denied)return denied
@@ -42,20 +43,14 @@ async function run(request:Request){
           if(!found)throw new Error('NBA event is not listed')
           await browser.page.waitForTimeout(2200)
           const text=await browser.page.evaluate(()=>document.body.innerText)
-          if(![game.visitor_team.name,game.home_team.name].every(name=>text.toLowerCase().includes(name.toLowerCase())))throw new Error('NBA event identity could not be verified')
-          await clickTabByText(browser.page,'Odds').catch(()=>false)
-          await browser.page.waitForTimeout(900)
+          if(!nbaPublicEventMatches(game,text))throw new Error('NBA event teams and date could not be verified')
+          await browser.page.getByText('Odds',{exact:true}).filter({visible:true}).first().click({timeout:15000})
           // Responsive event navigation contains repeated tab labels. The
           // shared helper chooses the first match and swallows click errors;
           // NBA must click the visible exact tab, then wait for its controls.
-          const propsTabs=browser.page.getByText('Player Props',{exact:true})
-          let propsOpened=false
-          for(let index=0;index<Math.min(await propsTabs.count(),8);index++){
-            const tab=propsTabs.nth(index)
-            if(!await tab.isVisible())continue
-            await tab.click({timeout:5000});propsOpened=true;break
-          }
-          if(!propsOpened)throw new Error('NBA Player Props tab is unavailable')
+          const propsTab=browser.page.getByText('Player Props',{exact:true}).filter({visible:true}).first()
+          await propsTab.waitFor({state:'visible',timeout:15000}).catch(()=>{throw new Error('NBA Player Props tab is unavailable')})
+          await propsTab.click({timeout:10000})
           await browser.page.waitForFunction(()=>Array.from(document.querySelectorAll('select')).some(s=>Array.from(s.options).filter(o=>/points?|rebounds?|assists?|three|steals?|blocks?/i.test(o.textContent??'')).length>=2),{},{timeout:10000}).catch(()=>undefined)
           const payload=await browser.page.evaluate(runNbaPikkitScrape)
           if(!payload.complete){console.info('[nba-public] incomplete-controls',{game:game.id,diagnostic:payload.diagnostic??null});throw new Error('NBA public market capture was incomplete')}

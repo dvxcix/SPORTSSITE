@@ -1,4 +1,8 @@
-import { nbaName, PAINT_MARKETS, type PaintMarket, type PaintRoster } from './nbaPaint'
+import { nbaName, PAINT_MARKETS, type PaintGame, type PaintMarket, type PaintRoster } from './nbaPaint'
+export function nbaPublicEventMatches(game:Pick<PaintGame,'date'|'visitor_team'|'home_team'>,text:string){
+  const normalized=nbaName(text),[,month,day]=game.date.split('-')
+  return [game.visitor_team.full_name,game.home_team.full_name].every(name=>normalized.includes(nbaName(name)))&&new RegExp(`\\b${Number(month)}/${Number(day)}\\b`).test(text)
+}
 export type NbaPublicRow={playerId:number;market:PaintMarket;picks:number}
 export type NbaPublicCapture={gameId:number;capturedAt:string;sourceUrl:string;rows:NbaPublicRow[];unmatched:number;markets:string[]}
 export function nbaPublicMarket(label:string):PaintMarket|null{

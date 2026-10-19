@@ -9,7 +9,7 @@ import { watchlistPickPayload } from '../src/lib/nflWatchlist.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
 import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
-import { nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
+import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
 
 test('cross-market scans retain complete-pool MM, isolate books and sides, and use push-adjusted denominators',()=>{
   const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
@@ -84,7 +84,7 @@ test('NBA tracking refuses season-end data on a historical matchup before provid
 
 test('NBA Pikkit collector denies unauthorized calls before schedule or cloud browser work',async()=>{
   let reads=0
-  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_n:string,r:unknown)=>r},'@/lib/nbaPaintData':{getPaintSchedule:()=>{reads++}},'@/lib/nbaPaint':{},'@/lib/supabase/admin':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{}})
+  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_n:string,r:unknown)=>r},'@/lib/nbaPaintData':{getPaintSchedule:()=>{reads++}},'@/lib/nbaPaint':{},'@/lib/supabase/admin':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{},'@/lib/nbaPublic':{}})
   assert.equal((await (route.GET as unknown as(r:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))).status,401)
   assert.equal(reads,0)
 })
@@ -317,3 +317,5 @@ test('NBA history remains admin-gated and validates market/game before archive r
   assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,200)
   assert.equal(reads,1)
 })
+
+test('NBA public event verification rejects the right teams on the wrong date',()=>{const game={date:'2026-10-20',visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}} as Parameters<typeof nbaPublicEventMatches>[0];assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/20 2:00 PM'),true);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/21 2:00 PM'),false);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. New York Knicks 10/20 2:00 PM'),false)})
