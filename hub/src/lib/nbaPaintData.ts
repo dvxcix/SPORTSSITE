@@ -3,6 +3,8 @@ import { bdlHeaders } from '@/lib/balldontlie'
 import { nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
 import { nbaSharedCache } from './nbaSharedCache'
+import { nbaAttachOpenings } from './nbaOddsHistory'
+import { getNbaQuoteOpenings } from './nbaOddsHistoryData'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -77,6 +79,14 @@ export async function getPaintProps(gameId: number, fresh = false): Promise<Pain
   const json = await response.json(); if (!Array.isArray(json.data)) throw new PaintProviderError('props', 502)
   return json.data
 }
+export async function getPaintGameOdds(gameId: number, fresh = false): Promise<PaintGameOdds[]> {
+  if (!fresh) return (await bdl<PaintGameOdds>(`/v2/odds?game_ids[]=${gameId}`, 60)).data.filter(offer => offer.game_id == null || offer.game_id === gameId)
+  const response = await fetch(`${BASE}/v2/odds?game_ids[]=${gameId}`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12_000) })
+  if (!response.ok) throw new PaintProviderError('game odds', response.status)
+  const json = await response.json(); if (!Array.isArray(json.data)) throw new PaintProviderError('game odds', 502)
+  if (json.data.some((offer: PaintGameOdds) => offer.game_id != null && offer.game_id !== gameId)) throw new PaintProviderError('game odds identity', 502)
+  return json.data
+}
 type Average = { player: { id: number }; stats: Record<string, number | null> }
 export async function getPaintScouting(game: PaintGame): Promise<PaintScouting> {
   if ((game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final' || game.status_state === 'in_progress' || game.period > 0 || !!game.datetime && Date.parse(game.datetime) <= Date.now())) return loadPaintScouting(game)
@@ -107,7 +117,7 @@ export async function getPaintProfile(player: number, season: number) {
   return { shooting: result[0].status === 'fulfilled' ? result[0].value.data[0]?.stats ?? null : null, advanced: result[1].status === 'fulfilled' ? result[1].value.data[0]?.stats ?? null : null }
 }
 export async function getPaintBoard(game: PaintGame): Promise<PaintBoard> {
-  const cached = await nbaSharedCache(`board:v4:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
+  const cached = await nbaSharedCache(`board:v5:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
   return { ...cached.value, game, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Refresh delayed; showing last captured prices and research'] : [])] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
@@ -116,15 +126,17 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   async function optional<T>(label: string, promise: Promise<T>, fallback: T): Promise<T> { try { return await promise } catch (error) { console.error('[ThePaint]', label, { status: error instanceof PaintProviderError ? error.status : null }); issues.push(label); return fallback } }
   const teams = [game.visitor_team, game.home_team]
   const teamQuery = teams.map(t => `team_ids[]=${t.id}`).join('&')
-  const [roster, props, injuries, images, gameOdds, directory, lineups] = await Promise.all([
+  const [roster, props, injuries, images, gameOdds, directory, lineups, openings] = await Promise.all([
     (game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final') ? getPaintFinalStats(game.id).then(result => ({ complete: result.complete, rows: result.rows.filter(row => row.player.first_name && row.player.last_name).map(row => ({ ...row.player, team: row.team }) as PaintRoster) })) : pages<PaintRoster>(`/v1/players/active?${teamQuery}&per_page=100`, 3600, 2),
     optional('Sportsbook prices unavailable', getPaintProps(game.id), []),
     optional('Injury report unavailable', pages<{ player: { id: number }; status: string; description: string; return_date?: string }>(`/v1/player_injuries?${teamQuery}&per_page=100`, 300, 2), { rows: [], complete: false }),
     Promise.all(teams.map(t => optional('Some player images unavailable', artwork(t.abbreviation), { headshots: new Map<string, string | null>(), logo: null }))),
-    optional('Game lines unavailable', bdl<PaintGameOdds>(`/v2/odds?game_ids[]=${game.id}`, 60), { data: [] }),
+    optional('Game lines unavailable', getPaintGameOdds(game.id), []),
     optional('Team directory unavailable', bdl<PaintTeam & { conference: string }>('/v1/teams?per_page=100',86400), { data: [] }),
     optional('Starting lineups unavailable', bdl<{ player: { id: number }; starter: boolean }>(`/v1/lineups?game_ids[]=${game.id}&per_page=100`, 120), { data: [] }),
+    optional('Opening prices unavailable', getNbaQuoteOpenings(game.id), []),
   ])
+  const quotes = nbaAttachOpenings(game.id, props, gameOdds, openings)
   if (!roster.complete) issues.push('Roster coverage incomplete')
   const ids = roster.rows.map(p => p.id)
   const idsQuery = ids.map(id => `player_ids[]=${id}`).join('&')
@@ -169,10 +181,10 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     return { ...player, headshot: images[teams.findIndex(t => t.id === player.team.id)]?.headshots.get(nbaName(`${player.first_name} ${player.last_name}`)) ?? null,
       injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
       averageSeason: (avgMap.get(player.id)?.gp ?? 0) > 0 || !priorLogs.length ? sampleSeason : sampleSeason - 1,
-      periodLogs, logs, props: props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
+      periodLogs, logs, props: quotes.props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
   })
   for (const player of players) for (const market of ['points_1q','rebounds_1q','assists_1q']) player.average[market] = nbaAverage(player.periodLogs ?? [], market)
   if (!quarterStats.complete || !quarterBaseline.complete) issues.push('First-quarter sample incomplete')
   const baselineSeasons = [...new Set(players.flatMap(player => player.logs.map(log => log.game.season ?? sampleSeason)))].sort()
-  return { game, players, sampleSeason, baselineSeasons, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete && baseline.complete, periodStatsComplete: quarterStats.complete && quarterBaseline.complete, teamStats: teamProfiles, teamStatsSeason, teams: directory.data.filter(team => ['East','West'].includes(team.conference)), gameOdds: gameOdds.data, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
+  return { game, players, sampleSeason, baselineSeasons, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete && baseline.complete, periodStatsComplete: quarterStats.complete && quarterBaseline.complete, teamStats: teamProfiles, teamStatsSeason, teams: directory.data.filter(team => ['East','West'].includes(team.conference)), gameOdds: quotes.gameOdds, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
 }

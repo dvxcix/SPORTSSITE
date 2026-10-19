@@ -1,0 +1,47 @@
+NBA odds movement completion — October 19, 2026
+
+Morning audit found current-only NBA prices on the research board, sportsbook
+grid, ladders, player panels, cheatsheets, Score/DvP, Slate Edge and game markets.
+All now use a shared NOW / OPEN / signed delta component. Green/down arrow means
+shortening odds; red/up arrow means lengthening odds, consistent with NFL. The
+numeric delta is implied-probability percentage points, continuous across even
+money. Color indicates market direction, not a winning prediction.
+
+OPEN is SlipSurge's first captured quote for the exact game, player, sportsbook,
+market, contract type, threshold and side. It is not a guaranteed sportsbook
+launch price. Unknown history remains a dash. Saved picks retain their original
+selection price rather than being silently rewritten as a current quote.
+
+Applied migration 20261019121346_nba_exact_quote_openings recovered 6,732 genuine
+player-contract openings across three opening games and fifteen quoted markets.
+Late-listed alternatives use their own first observation, even beyond Market
+Story's retained replay window. Historical replay excludes openings observed
+after the selected capture. Cross-market signals can now include contracts
+first listed after the game's baseline snapshot.
+
+Game moneylines, spreads and totals now have append-only economic snapshots and
+immutable exact-threshold opening records. Earlier game opening prices were not
+archived; they are not invented. Their comparison begins with the new collector's
+first successful capture. A->B->A price changes are retained. Failure of one quote
+source or archive does not discard the healthy source's successful capture.
+
+Fixed false reference-line movement caused by changes at other sportsbooks.
+Movement selects the same book's own balanced reference; Q1 milestone fallback
+remains supported. A line change and a same-threshold price change stay separate.
+
+All openings load in one bounded, shared cached read per game. No per-cell API
+or database calls. Board, Slate and cross-market cache versions were updated.
+Both new tables use RLS and deny anonymous/member access. Openings cannot be
+updated by the service role. Historical backfill and trigger installation were
+locked atomically against concurrent cloud writers. No historic migration replay.
+
+Pre-release validation: NBA 60/60; production source 134/134; TypeScript and
+targeted ESLint pass. Local SQL fixtures verify late-contract backfill, exact
+identities, immutability, game history deduplication and access restrictions.
+Browser verification caught and fixed a broad legacy CSS override suppressing
+delta colors; computed styles confirm green shortening and red lengthening.
+
+NBA remains admin-only and excluded from global navigation. Public release still
+requires the owner's separate review and authorization. Morning operational
+inspection found healthy current NBA jobs; one external Pikkit page timeout
+recovered on the next scheduled run. No job replay was required.

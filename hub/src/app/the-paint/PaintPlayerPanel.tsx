@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronDown, Columns3, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { BookLogo } from '@/components/BookLogo'
-import { gradeNbaValue, nbaBinary, nbaPeriod, nbaPrice, nbaTarget, nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaOdds, nbaReference, nbaSample, nbaSeason, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintMarket, type PaintPlayer } from '@/lib/nbaPaint'
+import { gradeNbaValue, nbaBinary, nbaPeriod, nbaTarget, nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaReference, nbaSample, nbaSeason, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintMarket, type PaintPlayer } from '@/lib/nbaPaint'
 import { number, PlayerAvatar, ShotCourt, TeamLogo, TrendBars } from './PaintVisuals'
 import { PaintPickActions } from './PaintPickActions'
 import { nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
@@ -13,6 +13,7 @@ import { PaintMovement } from './PaintMovement'
 import { PaintTracking } from './PaintTracking'
 import { PaintEstimate } from './PaintEstimate'
 import { PaintShotChart } from './PaintShotChart'
+import { PaintPrice } from './PaintPrice'
 import styles from './paint.module.css'
 
 type Profile = { shooting: Record<string, number | null> | null; advanced: Record<string, number | null> | null }
@@ -59,12 +60,12 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
           {!logs.length && <div className={styles.panelEmpty}>No appearances in this sample.</div>}
         </> : <>
           <div className={styles.chartFilters}><div className={styles.segment}><button aria-pressed={!alternate} onClick={() => setAlternate(false)}>All O/U lines</button><button aria-pressed={alternate} onClick={() => setAlternate(true)}>Milestones</button></div><span className={styles.muted}>{offers.length} offers</span></div>
-          <div className={styles.offerList}>{offers.map(offer => <div className={styles.offer} key={offer.id}><span><BookLogo vendor={offer.vendor} size={23}/><strong>{offer.vendor}</strong><small>{new Date(offer.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</small></span><span><small>{alternate ? 'TARGET' : side.toUpperCase()}</small><b>{nbaTarget(offer,side)}</b></span><strong className={styles.offerOdds}>{nbaOdds(alternate ? offer.market.odds : nbaPrice(offer, side))}</strong><PaintPickActions player={player} offer={offer} side={side} game={board.game}/></div>)}</div>
+          <div className={styles.offerList}>{offers.map(offer => <div className={styles.offer} key={offer.id}><span><BookLogo vendor={offer.vendor} size={23}/><strong>{offer.vendor}</strong><small>{new Date(offer.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</small></span><span><small>{alternate ? 'TARGET' : side.toUpperCase()}</small><b>{nbaTarget(offer,side)}</b></span><span className={styles.offerOdds}><PaintPrice offer={offer} side={side}/></span><PaintPickActions player={player} offer={offer} side={side} game={board.game}/></div>)}</div>
           {!offers.length && <div className={styles.panelEmpty}>No {alternate ? 'ladder' : 'main-line'} prices posted for this market.</div>}
           <p className={styles.finePrint}>Prices are timestamped provider quotes. Posting rechecks the exact line and price before tipoff.</p>
         </>}
       </>}
     </div>
-    {tab !== 'markets' && reference && <footer className={styles.drawerFooter}><BookLogo vendor={reference.vendor} size={22}/><span><strong>{nbaTarget(reference, side)} {definition.short}</strong><small>{reference.vendor} · {nbaOdds(nbaPrice(reference, side))}</small></span><PaintPickActions player={player} offer={reference} side={side} game={board.game}/><button onClick={() => {onBookChange?.('all');setTab('markets')}}>All books<ArrowUpRight size={15}/></button></footer>}
+    {tab !== 'markets' && reference && <footer className={styles.drawerFooter}><BookLogo vendor={reference.vendor} size={22}/><span><strong>{nbaTarget(reference, side)} {definition.short}</strong><small>{reference.vendor}</small><PaintPrice offer={reference} side={side} compact/></span><PaintPickActions player={player} offer={reference} side={side} game={board.game}/><button onClick={() => {onBookChange?.('all');setTab('markets')}}>All books<ArrowUpRight size={15}/></button></footer>}
   </ModalSurface>
 }

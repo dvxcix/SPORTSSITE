@@ -8,6 +8,7 @@ import type { WatchlistItem } from '../src/lib/watchlist.ts'
 import { watchlistPickPayload } from '../src/lib/nflWatchlist.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
+import { nbaAttachOpenings, nbaGameEconomicSnapshot } from '../src/lib/nbaOddsHistory.ts'
 import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
 import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
 import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForward } from '../src/lib/nbaIntelligence.ts'
@@ -17,6 +18,8 @@ import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 import {nbaTrackingRow,nbaTrackingSample,nbaTrackingField} from '../src/lib/nbaTracking.ts'
 import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+const emptyOpeningImports={'./nbaOddsHistory':{nbaAttachOpenings},'./nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>[]}}
+function gameQuote(gameId:number):import('../src/lib/nbaPaint.ts').PaintGameOdds{return{id:gameId+1000,game_id:gameId,vendor:'fanduel',moneyline_home_odds:-140,moneyline_away_odds:120,spread_home_value:'-3.5',spread_away_value:'3.5',total_value:'215.5',updated_at:'2099-10-20T12:00:00Z'}}
 
 test('validated NBA estimates require an earlier held-out report, adequate samples and exact market observations',()=>{
   const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1}))
@@ -163,7 +166,7 @@ test('NBA season-opening research blends prior appearances without replacing rea
     if(url.includes('/stats?'))data=url.includes('seasons[]=2025')?[prior,{...prior,id:3,player:{id:500},pts:16}]:[current,{...current,id:4,pts:1000,game:{...current.game,date:'2026-10-21'}}]
     return Response.json({data,meta:{next_cursor:null}})
   }
-  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':{...pure,nbaToday:()=>'2026-10-19'},'./nbaSharedCache':cachePassthrough},fetcher)
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{...emptyOpeningImports,'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':{...pure,nbaToday:()=>'2026-10-19'},'./nbaSharedCache':cachePassthrough},fetcher)
   const board=await (provider.getPaintBoard as (game:unknown)=>Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({id:123,date:'2026-10-21',season:2026,home_team:team,visitor_team:{...team,id:9}})
   assert.deepEqual(board.baselineSeasons,[2025,2026]);assert.equal(board.statsComplete,true)
   assert.deepEqual(board.players[0].logs.map(row=>row.pts),[24,20]);assert.equal(board.players[0].average.pts,24);assert.equal(board.players[0].averageSeason,2026)
@@ -245,7 +248,7 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
   for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
@@ -265,7 +268,7 @@ test('NBA public results stay game-exact and distinguish zero production from DN
 test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{
   let reads=0
   const pure=await import('../src/lib/nbaPaint.ts')
-  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure,'./nbaSharedCache':cachePassthrough},async()=>{reads++;throw new Error('Unexpected provider read')})
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{...emptyOpeningImports,'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure,'./nbaSharedCache':cachePassthrough},async()=>{reads++;throw new Error('Unexpected provider read')})
   const scouting=await (provider.getPaintScouting as unknown as(g:unknown)=>Promise<{players:unknown[];issues:string[]}> )({date:'2000-01-01',season:1999})
   assert.equal(reads,0);assert.equal(scouting.players.length,0);assert.ok(scouting.issues.length)
 })
@@ -401,7 +404,7 @@ test('provider samples bound dates, exclude future results, and expose truncated
     if (url.includes('/stats?')) return Response.json({ data: [stat(22), stat(100, '2026-10-19')], meta: { next_cursor: 1 } })
     return Response.json({ data, meta: { next_cursor: null } })
   }
-  const adapter = await compiled('../src/lib/nbaPaintData.ts', { 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': pure, './nbaSharedCache':cachePassthrough }, fetcher)
+  const adapter = await compiled('../src/lib/nbaPaintData.ts', { ...emptyOpeningImports, 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': pure, './nbaSharedCache':cachePassthrough }, fetcher)
   const board = await (adapter.getPaintBoard as unknown as (game: unknown) => Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({ id: 123, date: '2026-10-20', season: 2026, status: '2026-10-20T23:00:00Z', datetime: '2026-10-20T23:00:00Z', home_team: team, visitor_team: { ...team, id: 9, abbreviation: 'DET' } })
   assert.equal(board.sampleSeason, 2025)
   assert.equal(board.statsComplete, false)
@@ -483,49 +486,80 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
 })
 
 test('NBA collector requires cron authorization, deduplicates schedules and captures only pretipoff games', async()=>{
-  let reads=0,writes=0,denied=true
+  let reads=0,gameReads=0,denied=true
+  const writes:string[]=[]
   const crypto=await import('node:crypto')
   const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
-    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaSharedCache':cachePassthrough,'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,'record_nba_market_capture');assert.equal(args.p_game_id,123);writes++;return{data:true,error:null}}})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
+    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaSharedCache':cachePassthrough,'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);assert.ok(['record_nba_market_capture','record_nba_game_market_capture'].includes(name));assert.equal(args.p_game_id,123);writes.push(name);return{data:true,error:null}}})})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]},getPaintGameOdds:async(id:number)=>{gameReads++;return[gameQuote(id)]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
   })
   const get=route.GET as unknown as(request:Request)=>Promise<Response>
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,401)
-  assert.equal(reads,0);assert.equal(writes,0)
+  assert.equal(reads,0);assert.equal(gameReads,0);assert.equal(writes.length,0)
   denied=false
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,200)
-  assert.equal(reads,1);assert.equal(writes,1)
+  assert.equal(reads,1);assert.equal(gameReads,1);assert.deepEqual(writes.sort(),['record_nba_game_market_capture','record_nba_market_capture'])
 })
 
 test('NBA quote capture covers the third calendar date beyond sixteen games and rotates stored attempts, including failures',async()=>{
- const calls:string[]=[],reads:number[]=[],attempts:string[]=[],writes:number[]=[]
+ const calls:string[]=[],reads:number[]=[],gameReads:number[]=[],attempts:string[]=[],writes:{name:string;game:number}[]=[]
  const games=Array.from({length:18},(_,index)=>({id:index+1,date:'2099-10-22',datetime:new Date(Date.now()+45*3600000).toISOString(),status_state:'scheduled'}))
- const prior=games.slice(0,8).map(game=>({key:'market-attempt:v1:'+game.id,fetched_at:new Date().toISOString()}))
+ const prior=games.slice(0,8).map(game=>({key:'market-attempt:v2:'+game.id,fetched_at:new Date().toISOString()}))
  let hit=false
  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
-  'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},
+  'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},
   '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<string>)=>{attempts.push(key);return{value:hit?'captured':await load()}}},
-  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:async(_name:string,args:{p_game_id:number})=>{writes.push(args.p_game_id);return{data:true,error:null}}})},
-  '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]}}
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:(name:string,args:{p_game_id:number})=>({abortSignal:async()=>{writes.push({name,game:args.p_game_id});return{data:true,error:null}}})})},
+  '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
  })
  const get=route.GET as(request:Request)=>Promise<Response>,response=await get(new Request('https://test/capture'))
- assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(writes.length,17);assert.equal(attempts.length,18);assert.ok(!reads.includes(99))
+ assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='record_nba_market_capture').length,17);assert.equal(writes.filter(row=>row.name==='record_nba_game_market_capture').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='record_nba_game_market_capture'));assert.equal(attempts.length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
  assert.equal((await response.json()).failed,1)
- hit=true;reads.length=0;writes.length=0
+ hit=true;reads.length=0;gameReads.length=0;writes.length=0
  const repeated=await get(new Request('https://test/capture')),summary=await repeated.json()
- assert.equal(repeated.status,200);assert.equal(reads.length,0);assert.equal(writes.length,0);assert.equal(summary.captured,0);assert.equal(summary.deferred,18)
+ assert.equal(repeated.status,200);assert.equal(reads.length,0);assert.equal(gameReads.length,0);assert.equal(writes.length,0);assert.equal(summary.captured,0);assert.equal(summary.deferred,18)
+})
+
+test('NBA game and player quote captures preserve the healthy archive when either source or archive fails',async()=>{
+  for(const failure of ['props-source','game-source','props-write','game-write'] as const){
+    const stored:string[]=[],requested:string[]=[]
+    const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
+      'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},'@/lib/nbaSharedCache':cachePassthrough,
+      '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async(signal:AbortSignal)=>{
+        assert.ok(signal instanceof AbortSignal);assert.equal(args.p_game_id,123);assert.match(String(args.p_fingerprint),/^[a-f0-9]{64}$/)
+        const kind=name==='record_nba_market_capture'?'props':'game'
+        assert.ok(['record_nba_market_capture','record_nba_game_market_capture'].includes(name));requested.push(kind)
+        if(failure===`${kind}-write`)return{data:null,error:{message:'fixture unavailable'}}
+        stored.push(kind);return{data:true,error:null}
+      }})})},
+      '@/lib/nbaPaintData':{
+        getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'}]}),
+        getPaintProps:async(id:number,fresh:boolean)=>{assert.equal(id,123);assert.equal(fresh,true);if(failure==='props-source')throw new Error('fixture unavailable');return[offer]},
+        getPaintGameOdds:async(id:number,fresh:boolean)=>{assert.equal(id,123);assert.equal(fresh,true);if(failure==='game-source')throw new Error('fixture unavailable');return[gameQuote(id)]},
+      },
+    })
+    const response=await(route.GET as(request:Request)=>Promise<Response>)(new Request('https://test/capture'))
+    const report=await response.json()
+    assert.equal(response.status,503,failure);assert.equal(report.failed,1,failure);assert.equal(report.captured,0,failure)
+    assert.deepEqual(stored,[failure.startsWith('props')?'game':'props'],failure)
+    assert.equal(requested.length,failure.endsWith('source')?1:2,failure)
+  }
 })
 
 test('NBA history remains admin-gated and validates market/game before archive reads',async()=>{
-  let denied=true,reads=0
+  let denied=true,reads=0,openingReads=0,openingFailed=false
+  const openingRows:import('../src/lib/nbaOddsHistory.ts').NbaQuoteOpeningRow[]=[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'over_under',line:20.5,side:'over',odds:-110,observed_at:'2026-10-19T00:00:00Z'}]
   const pure=await import('../src/lib/nbaPaint.ts')
-  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:()=>({abortSignal:async()=>{reads++;return{data:[],error:null}}})})},'@/lib/nbaPaint':pure})
+  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:()=>({abortSignal:async()=>{reads++;return{data:[],error:null}}})})},'@/lib/nbaPaint':pure,'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async(game:number)=>{assert.equal(game,123);openingReads++;if(openingFailed)throw new Error('fixture unavailable');return openingRows}}})
   const get=route.GET as unknown as(request:unknown)=>Promise<Response>
   assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,403)
   denied=false
   assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=nope')})).status,400)
-  assert.equal(reads,0)
-  assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,200)
-  assert.equal(reads,1)
+  assert.equal(reads,0);assert.equal(openingReads,0)
+  const response=await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})
+  assert.equal(response.status,200);assert.deepEqual((await response.json()).openingRows,openingRows)
+  assert.equal(reads,1);assert.equal(openingReads,1)
+  openingFailed=true
+  assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,503)
 })
 
 test('NBA public event verification rejects the right teams on the wrong date',()=>{const game={date:'2026-10-20',visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}} as Parameters<typeof nbaPublicEventMatches>[0];assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/20 2:00 PM'),true);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. Detroit Pistons 10/21 2:00 PM'),false);assert.equal(nbaPublicEventMatches(game,'Boston Celtics vs. New York Knicks 10/20 2:00 PM'),false)})

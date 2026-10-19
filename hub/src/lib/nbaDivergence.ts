@@ -1,8 +1,9 @@
 import { nbaMovement, type PaintFrame } from './nbaMovement'
 import type { NbaPublicCapture } from './nbaPublic'
 import type { PaintMarket } from './nbaPaint'
+import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 const markets: PaintMarket[] = ['points', 'threes', 'rebounds', 'assists']
-export function nbaDivergences(frames: PaintFrame[], publicCaptures: NbaPublicCapture[]) {
+export function nbaDivergences(frames: PaintFrame[], publicCaptures: NbaPublicCapture[], openingRows: NbaQuoteOpeningRow[] = []) {
   const ordered = [...frames].sort((a, b) => Date.parse(a.captured_at) - Date.parse(b.captured_at))
   if (ordered.length < 2) return []
   const latest = ordered.at(-1)!, earliest = ordered[0]
@@ -10,7 +11,7 @@ export function nbaDivergences(frames: PaintFrame[], publicCaptures: NbaPublicCa
   const publicSample = [...publicCaptures].filter(capture => capture.gameId === gameId && Date.parse(capture.capturedAt) <= Date.parse(latest.captured_at) && Date.parse(capture.capturedAt) >= Date.parse(earliest.captured_at)).sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt))[0]
   const candidates = [...new Map(latest.props.filter(prop => markets.includes(prop.prop_type as PaintMarket)).map(prop => [`${prop.player_id}:${prop.vendor}`, { playerId: prop.player_id, book: prop.vendor }])).values()]
   return candidates.flatMap(candidate => {
-    const movements = markets.map(market => ({ market, value: nbaMovement(ordered, candidate.playerId, market, candidate.book, 'over') }))
+    const movements = markets.map(market => ({ market, value: nbaMovement(ordered, candidate.playerId, market, candidate.book, 'over', openingRows) }))
     return movements.flatMap((a, index) => movements.slice(index + 1).flatMap(b => {
       const priceOpposed = a.value.priceChange != null && b.value.priceChange != null && Math.abs(a.value.priceChange) >= .25 && Math.abs(b.value.priceChange) >= .25 && a.value.priceChange * b.value.priceChange < 0
       const lineOpposed = a.value.lineChange != null && b.value.lineChange != null && a.value.lineChange * b.value.lineChange < 0
