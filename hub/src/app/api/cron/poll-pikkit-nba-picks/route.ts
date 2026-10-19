@@ -17,6 +17,23 @@ class NbaPikkitAuthenticationRequired extends Error {}
 function requirePikkitPageSession(url:string){
  if(/\/(?:login|signin|sign-in|join|auth|verify)(?:\/|$)/i.test(new URL(url).pathname))throw new NbaPikkitAuthenticationRequired('Pikkit sign-in expired; reconnect the shared Pikkit session')
 }
+function diagnosticPath(url:string):string|null{
+ try{
+  const parsed=new URL(url),path=parsed.pathname.replace(/\/+$/,'')||'/'
+  if(parsed.protocol==='about:'&&path==='blank')return 'about:blank'
+  const auth=path.match(/^\/(login|signin|sign-in|join|auth|verify)(?:\/|$)/i)
+  if(auth)return '/'+auth[1].toLowerCase()
+  if(path==='/'||/^\/leagues\/(?:nba|nfl|mlb)$/i.test(path))return path.toLowerCase()
+  return /^\/event(?:\/|$)/i.test(path)?'/event/[redacted]':'/other'
+ }catch{return null}
+}
+function diagnosticError(error:unknown){
+ if(error instanceof NbaCaptureDeadline||error instanceof Error&&error.name==='TimeoutError')return 'deadline'
+ const message=error instanceof Error?error.message:''
+ if(/(?:page|context|browser|target).*(?:closed|closing)|session closed/i.test(message))return 'page-closed'
+ if(/execution context|cannot find context/i.test(message))return 'execution-context'
+ return 'probe-failed'
+}
 async function bounded<T>(task:Promise<T>,milliseconds:number,label:string):Promise<T>{
  let timer:ReturnType<typeof setTimeout>|undefined
  try{return await Promise.race([task,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new NbaCaptureDeadline(label)),Math.max(1,milliseconds))})])}finally{if(timer)clearTimeout(timer)}
@@ -116,7 +133,11 @@ async function run(request:Request){
           if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.value.markets,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           })(),gameBudget,'NBA game capture deadline')
         }catch(error){
-          const diagnostic=error instanceof NbaCaptureDeadline?{deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').catch(()=>null)
+          // page.url() is local Playwright state: retain a safe path even when
+          // navigation leaves the remote page unable to answer a DOM probe.
+          const path=(()=>{try{return diagnosticPath(browser.page.url())}catch{return null}})()
+          const base={path,...(path&&/^\/(?:login|signin|sign-in|join|auth|verify)$/.test(path)?{authenticationRequired:true}:{})}
+          const diagnostic=error instanceof NbaCaptureDeadline?{...base,deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{...base,authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body?.innerText??'';return {bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),awayTeamMentioned:text.toLowerCase().includes(away.toLowerCase()),selectCount:document.querySelectorAll('select').length,eventCount:document.querySelectorAll('a[href*="/event/"]').length}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').then(counts=>({...base,...counts})).catch(probeError=>({...base,diagnosticError:diagnosticError(probeError)}))
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}

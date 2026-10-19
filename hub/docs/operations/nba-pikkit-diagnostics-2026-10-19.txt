@@ -1,0 +1,33 @@
+NBA Pikkit failure diagnostics — October 19, 2026
+
+Observed during the authorized opening-night heartbeat
+- Normal21:51 and22:01 Pikkit runs failed from20-second navigation timeouts.
+  All three failed game attempts had diagnostic:null: the existing bounded
+ 4-second remote DOM probe also failed. No post-timeout page contents were known.
+- At22:05 successful public observations were54 minutes old for Cade's game
+  and34 minutes old for Towns' game. Failed attempts did not advance success.
+- Odds, ingestion, history retention, cache/browser lease cleanup and automatic
+  grading were healthy. Both exact owner-only test picks remained pending with
+  zero result/nonowner notifications; no final stats existed for tomorrow's games.
+
+Scoped repair
+- Preserve a synchronous, sanitized page-path category when the remote DOM
+  diagnostic fails, with deadline/page-closed/execution-context/probe-failed.
+- Successful probes emit only body length, event/control counts and boolean
+  sign-in/away-team evidence. No page excerpts, option text or event links.
+- Authentication paths retain only their static prefix. Dynamic paths, queries
+  and fragments are redacted. An unavailable page does not imply authentication.
+-20-second navigation, one existing empty-shell reload,110-second game budget,
+ 250-second run budget,300-second route/browser cap, exact-game verification,
+  import decisions, authentication branching and lease cleanup are unchanged.
+- This repairs missing failure evidence; it does not claim to resolve an
+  upstream navigation outage. Only a later normal capture establishes recovery.
+- No manual collector replay, new collector, database mutation or launch change.
+
+Validation
+- Full NBA suite168/168 passed, including8 Pikkit recovery/diagnostic cases.
+- Existing auth/deadline/lease fixtures2/2 passed; TypeScript and ESLint passed.
+- Timeout probe fixtures cover failure, closed/detached page, stalled probe,
+  sign-in redirect and event-path redaction without importing or retrying.
+- Main/production preflight:8423069075874c932c1c1309f5a174bf741cdd54.
+- Deployment and subsequent scheduled-run evidence recorded in work/the-paint.
