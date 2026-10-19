@@ -12,7 +12,36 @@ import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
 import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
 import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForward } from '../src/lib/nbaIntelligence.ts'
 import { nbaShots,type NbaPlay } from '../src/lib/nbaShots.ts'
+import { nbaDivergences } from '../src/lib/nbaDivergence.ts'
+import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+
+test('NBA slate MM uses the full slate, withholds ranks on partial coverage and preserves exact offer sides',()=>{
+  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
+  const boards=[{game:{id:123,date:'2026-10-20'},players:players.slice(0,2),fetchedAt:'2026-10-19T00:00:00Z',issues:[]},{game:{id:456,date:'2026-10-20'},players:players.slice(2).map(player=>({...player,props:player.props.map(offer=>({...offer,game_id:456}))})),fetchedAt:'2026-10-19T00:00:00Z',issues:[]}] as unknown as import('../src/lib/nbaPaint.ts').PaintBoard[]
+  const over=nbaSlateRows(boards,'points','fanduel','over',true), under=nbaSlateRows(boards,'points','fanduel','under',true)
+  assert.equal(over.find(row=>row.player.id===1)?.mm,2)
+  assert.equal(over.find(row=>row.player.id===3)?.mm,-2)
+  assert.equal(under.find(row=>row.player.id===1)?.gap,-over.find(row=>row.player.id===1)!.gap!)
+  assert.ok(nbaSlateRows(boards,'points','fanduel','over',false).every(row=>row.mm===null))
+  assert.equal(nbaSlateRows(boards,'points','draftkings','over',true).length,0)
+})
+
+test('NBA opposing-market signals keep exact books and price thresholds, and reject future/wrong-game public context',()=>{
+  const points={...offer,market:{type:'over_under' as const,over_odds:-120,under_odds:100}}, assists={...offer,id:2,prop_type:'assists',line_value:'5.5',market:{type:'over_under' as const,over_odds:120,under_odds:-140}}
+  const frames=[{captured_at:'2026-10-19T01:00:00Z',props:[points,assists]},{captured_at:'2026-10-19T02:00:00Z',props:[{...points,market:{...points.market,over_odds:130}},{...assists,market:{...assists.market,over_odds:-150}}]}]
+  const capture={gameId:offer.game_id,capturedAt:'2026-10-19T01:30:00Z',sourceUrl:'https://app.pikkit.com/event/test',unmatched:0,markets:['points','assists'],rows:[{playerId:offer.player_id,market:'points' as const,picks:10},{playerId:offer.player_id,market:'assists' as const,picks:50}]}
+  const rows=nbaDivergences(frames,[capture])
+  assert.equal(rows.length,1);assert.equal(rows[0].kind,'price');assert.equal(rows[0].primary,'points');assert.equal(rows[0].other,'assists');assert.equal(rows[0].publicHeavierElsewhere,true)
+  assert.equal(nbaDivergences(frames,[{...capture,capturedAt:'2026-10-19T03:00:00Z'}])[0].primaryPicks,null)
+  assert.equal(nbaDivergences(frames,[{...capture,gameId:999}])[0].publicHeavierElsewhere,null)
+  const differentBooks=frames.map(frame=>({...frame,props:frame.props.map(prop=>prop.prop_type==='assists'?{...prop,vendor:'draftkings'}:prop)}))
+  assert.equal(nbaDivergences(differentBooks,[capture]).length,0)
+  const lineFrames=[frames[0],{...frames[1],props:[{...points,line_value:'22'},{...assists,line_value:'4.5'}]}]
+  const lineSignal=nbaDivergences(lineFrames,[capture])[0]
+  assert.equal(lineSignal.kind,'line');assert.equal(lineSignal.primaryMovement.priceChange,null);assert.equal(lineSignal.primaryMovement.lineChange,2)
+  assert.equal(nbaDivergences(frames.slice(0,1),[capture]).length,0)
+})
 
 test('NBA shot chart preserves attempts with invalid locations, isolates shooter and game, and excludes free throws',()=>{
   const play:NbaPlay={game_id:77,order:1,type:'Jump Shot',text:'Test Player misses 25-foot three point jumper',period:1,clock:'11:00',scoring_play:false,shooting_play:true,score_value:null,team:{id:2},coordinate_x:25,coordinate_y:25,participants:[22]}
@@ -23,6 +52,10 @@ test('NBA shot chart preserves attempts with invalid locations, isolates shooter
   assert.equal(shots[1].x,null);assert.equal(shots[1].y,null);assert.equal(shots[1].halfCourt,false)
   assert.equal(shots[2].halfCourt,false);assert.equal(shots[2].y,70)
   assert.deepEqual(nbaShots([play,play],77,player),[shots[0]])
+  const blocked={...play,text:"Other Defender blocks Test Player 's 3-foot layup",participants:[22,33]}
+  assert.equal(nbaShots([blocked],77,player).length,1)
+  assert.equal(nbaShots([blocked],77,player)[0].made,false)
+  assert.equal(nbaShots([{...blocked,participants:[33,22]}],77,player).length,0)
 })
 
 test('NBA production scoring is market-specific, bounded, sample-aware and excludes future games',()=>{
@@ -60,7 +93,7 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
 })
 
 test('NBA fact import preserves historical team identity and rejects malformed identities',async()=>{
-  const ingestion=await compiled('../src/lib/nbaIngestion.ts',{'server-only':{},'./balldontlie':{bdlHeaders:{}},'./supabase/admin':{}})
+  const ingestion=await compiled('../src/lib/nbaIngestion.ts',{'server-only':{},'./balldontlie':{bdlHeaders:{}},'./supabase/admin':{},'./nbaPaint':{nbaToday:()=>'2026-10-19'}})
   const fact=ingestion.nbaFact as (kind:string,row:unknown,season:number|null,at:string)=>Record<string,unknown>
   const source={...stat(20),player:{id:22,position:'G'},team:{id:9},game:{...stat(20).game,id:77,season:2025,date:'2026-03-01',postseason:false}}
   const result=fact('stats',source,2025,'2026-10-19T00:00:00Z')
@@ -135,9 +168,9 @@ test('NBA public counts reject partial periods, fuzzy identities and invalid cou
 })
 
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
-  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts']){
+  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false

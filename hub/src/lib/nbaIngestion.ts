@@ -1,6 +1,7 @@
 import 'server-only'
 import { bdlHeaders } from './balldontlie'
 import { createAdminClient } from './supabase/admin'
+import { nbaToday } from './nbaPaint'
 
 type Row = Record<string, unknown>
 type State = { key: string; endpoint: string; season: number | null; cursor: number | null; complete: boolean; pages: number; rows_seen: number }
@@ -26,15 +27,33 @@ export function nbaFact(kind: string, row: Row, season: number | null, fetchedAt
 }
 export async function seedNbaIngestion() {
   const admin = createAdminClient()
+  const today = nbaToday(), date = new Date(`${today}T12:00:00Z`), season = date.getUTCMonth() < 6 ? date.getUTCFullYear() - 1 : date.getUTCFullYear()
+  const start = new Date(date); start.setUTCDate(start.getUTCDate() - 3)
+  const end = new Date(date); end.setUTCDate(end.getUTCDate() + 14)
   const jobs = [
     { key: 'teams', endpoint: '/v1/teams?per_page=100', season: null },
     { key: 'players', endpoint: '/v1/players/active?per_page=100', season: null },
-    ...[2026, 2025, 2024, 2023].map(season => ({ key: `games:${season}`, endpoint: `/v1/games?seasons[]=${season}&season_type=regular&per_page=100`, season })),
-    ...[2025, 2024, 2023, 2026].map(season => ({ key: `stats:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&per_page=100`, season })),
-    ...[2025, 2024, 2023, 2026].map(season => ({ key: `advanced:${season}`, endpoint: `/nba/v2/stats/advanced?seasons[]=${season}&period=0&per_page=100`, season })),
+    { key: `games:recent:${season}`, endpoint: `/v1/games?seasons[]=${season}&season_type=regular&start_date=${start.toISOString().slice(0, 10)}&end_date=${end.toISOString().slice(0, 10)}&per_page=100`, season },
+    { key: `stats:recent:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&start_date=${start.toISOString().slice(0, 10)}&end_date=${today}&per_page=100`, season },
+    { key: `advanced:recent:${season}`, endpoint: `/nba/v2/stats/advanced?seasons[]=${season}&start_date=${start.toISOString().slice(0, 10)}&end_date=${today}&period=0&per_page=100`, season },
+    ...[season, season-1, season-2, season-3].map(season => ({ key: `games:${season}`, endpoint: `/v1/games?seasons[]=${season}&season_type=regular&per_page=100`, season })),
+    ...[season-1, season-2, season-3, season].map(season => ({ key: `stats:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&per_page=100`, season })),
+    ...[season-1, season-2, season-3, season].map(season => ({ key: `advanced:${season}`, endpoint: `/nba/v2/stats/advanced?seasons[]=${season}&period=0&per_page=100`, season })),
   ]
   const { error } = await admin.from('nba_ingestion_state').upsert(jobs, { onConflict: 'key', ignoreDuplicates: true })
   if (error) throw new Error('NBA import queue unavailable')
+  // Refresh only completed rolling scans. An unfinished scan retains its exact
+  // endpoint/date range and cursor until completion, even across midnight.
+  const rolling = jobs.filter(job => job.key.includes(':recent:') || job.key === 'players' || job.key === 'teams')
+  const { data: existing, error: rollingError } = await admin.from('nba_ingestion_state').select('key,complete,updated_at').in('key', rolling.map(job => job.key))
+  if (rollingError) throw new Error('NBA rolling coverage unavailable')
+  for (const state of existing ?? []) {
+    const cadence = state.key === 'teams' ? 86400000 : state.key === 'players' ? 21600000 : 900000
+    if (!state.complete || state.updated_at && Date.now() - Date.parse(state.updated_at) < cadence) continue
+    const job = rolling.find(job => job.key === state.key)!
+    const { error: resetError } = await admin.from('nba_ingestion_state').update({ endpoint: job.endpoint, cursor: null, complete: false, pages: 0, rows_seen: 0, last_error: null }).eq('key', state.key).eq('complete', true)
+    if (resetError) throw new Error('NBA rolling refresh could not queue')
+  }
   return jobs.map(job => job.key)
 }
 export async function runNbaIngestion(budgetMs = 42000) {

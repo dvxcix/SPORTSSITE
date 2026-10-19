@@ -4,7 +4,7 @@ import { Star, ArrowUpRight } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nbaOdds, nbaSelectionKey, PAINT_MARKETS, type PaintGame, type PaintPlayer, type PaintProp } from '@/lib/nbaPaint'
 import styles from './paint.module.css'
-export function PaintPickActions({ player, offer, side, game }: { player: PaintPlayer; offer: PaintProp; side: 'over' | 'under'; game: PaintGame }) {
+export function PaintPickActions({ player, offer, side, game }: { player: Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>; offer: PaintProp; side: 'over' | 'under'; game: PaintGame }) {
   const watchlist = useWatchlist(); const lock = useRef(false); const [busy, setBusy] = useState(false); const [error, setError] = useState('')
   const key = nbaSelectionKey(player.id, offer, side)
   const existing = watchlist.items.find(i => i.sport.toLowerCase() === 'nba' && i.game_pk === String(game.id) && i.prop_key === key && i.book === offer.vendor && i.status === 'pending')

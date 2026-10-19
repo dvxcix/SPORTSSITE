@@ -5,7 +5,7 @@ import { createAdminClient } from './supabase/admin'
 export type NbaCached<T> = { value: T; fetchedAt: string; stale: boolean }
 type Entry<T> = { payload: T | null; fetched_at: string | null; expires_at: string | null }
 /** A database lease coalesces refreshes across serverless instances, not just a process. */
-export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>): Promise<NbaCached<T>> {
+export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds = 55): Promise<NbaCached<T>> {
   const admin = createAdminClient()
   const read = async () => {
     const { data, error } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at').eq('key', key).maybeSingle()
@@ -20,7 +20,7 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
   const prior = await read(), fresh = usable(prior)
   if (fresh) return fresh
   const token = randomUUID()
-  const { data: claimed, error } = await admin.rpc('claim_nba_source', { p_key: key, p_token: token, p_seconds: 55 })
+  const { data: claimed, error } = await admin.rpc('claim_nba_source', { p_key: key, p_token: token, p_seconds: leaseSeconds })
   if (error) throw new Error('NBA shared refresh unavailable')
   if (claimed) {
     try {
