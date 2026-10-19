@@ -50,4 +50,23 @@ Verification
   Cunningham flat line with shortening over price). Mobile/player chart verified.
 - No public feed post, payment, grading replay or unrelated collector replay.
 
-Live deployment/browser/capture verification is appended after release.
+Live verification
+- Implementation 5574acc3499ce8b7573ddad57b2069b2b999b950 is on main.
+  Production Git deployment dpl_222nZ46mbe41YPyZBDyxQZi5w9Dh is READY and assigned
+  www.slipsurge.com (same source as the initially verified staged promotion).
+- Real admin browser verified milestone and alternate O/U points/rebounds,
+  per-book prices, selected player preservation, under hit rates, live movement
+  across markets, player chart timestamps and fixed-threshold price comparisons.
+- Desktop, 390px and 320px layouts have contained horizontal table scrolling;
+  document client/scroll widths match. No broken images observed. Escape closes
+  the player drawer and restores focus to the originating player action.
+- Anonymous history access redirects to login; unauthenticated collector returns
+  401. Member-denial and zero archive reads before authorization pass in tests.
+- Vercel project reports the new */5 schedule registered, cron enabled and no
+  disabledAt value. First scheduled run at 2026-10-19 04:40:13 UTC succeeded
+  (HTTP 200, ~0.5s), appending fresh captures for games 21717855/56/57.
+  First game now has three genuine captures; other opening-night games have one.
+- Final polish preserves selected view/market/side/book/sort through URL state
+  without reloading on tool changes. Browser verified Caesars/Under/Rebounds/Odds
+  survives reload AND moving from Boston/Detroit to Philadelphia/New York.
+  Movement sportsbook selection also carries between board and player panel.
