@@ -2,11 +2,11 @@ import 'server-only'
 import type { createAdminClient } from './supabase/admin'
 import { getPaintGame, getPaintFinalStats } from './nbaPaintData'
 import { gradeNbaPick, type NbaPendingPick } from './nbaPickGrading'
-import { nbaPeriod, nbaToday } from './nbaPaint'
+import { nbaPeriod } from './nbaPaint'
 
 export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>, deadline = Date.now() + 48_000) {
   const report = { checked: 0, graded: 0, skipped: 0, graded_ids: [] as string[], issues: [] as string[] }
-  const { data, error } = await admin.from('picks').select('id,post_id,game_pk,player_id,player_name,pick_type,market_side,numeric_line').eq('sport', 'NBA').eq('result', 'pending').not('game_pk', 'is', null).not('player_id', 'is', null).lte('game_date', nbaToday()).order('created_at').limit(200)
+  const { data, error } = await admin.rpc('claim_pending_nba_picks', { p_limit: 200 })
   if (error) { report.issues.push('NBA pending picks unavailable'); return report }
   const groups = new Map<string, NbaPendingPick[]>()
   for (const pick of (data ?? []) as NbaPendingPick[]) groups.set(pick.game_pk, [...(groups.get(pick.game_pk) ?? []), pick])

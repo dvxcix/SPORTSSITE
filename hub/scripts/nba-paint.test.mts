@@ -113,7 +113,7 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
 
 test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
   let reads=0
-  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
+  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
   for(const job of ['nba-research-sync','nba-model-validate','nba-research-snapshot']){
     const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
     assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
@@ -436,7 +436,7 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
   assert.equal((await (myPicks.fetchMyPicks as unknown as (owner: string) => Promise<{ id: string }[]>)('owner'))[0].id, 'post-1')
   const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': { getPaintGame: async () => ({ status_state: 'final' }), getPaintFinalStats: async () => ({ complete: true, rows: [stat(21)] }) } })
   const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: picks, error: null }) }
-  const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: async (name: string, args: Record<string, unknown>) => { assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } })
+  const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: async (name: string, args: Record<string, unknown>) => { if(name==='claim_pending_nba_picks')return{data:picks,error:null};assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } })
   assert.equal(settled.graded, 1)
 })
 
@@ -464,7 +464,7 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
       getPaintGame: async () => { if (scenario === 'provider') throw new Error('provider'); return { status_state: scenario === 'live' ? 'in_progress' : 'final' } },
       getPaintFinalStats: async () => ({ complete: scenario !== 'partial', rows: scenario === 'missing' ? [] : [{ ...stat(21), player: { id: scenario === 'identity' ? 999 : 434 } }] }),
     } })
-    const report = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }> )({ from: () => chain, rpc: async () => { calls++; return { data: null, error: { message: 'write unavailable' } } } })
+    const report = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }> )({ from: () => chain, rpc: async (name:string) => { if(name==='claim_pending_nba_picks')return{data:[pending],error:null};calls++; return { data: null, error: { message: 'write unavailable' } } } })
     assert.equal(report.graded, 0); assert.equal(calls, scenario === 'rpc' ? 1 : 0)
   }
 })
@@ -516,7 +516,7 @@ test('quarter provider failure cannot block unrelated full-game settlement',asyn
  const pending=[{id:'full',game_pk:'123',player_id:'bdl:434',pick_type:'points',numeric_line:20,market_side:'over'},{id:'quarter',game_pk:'123',player_id:'bdl:434',pick_type:'points_1q',numeric_line:6,market_side:'milestone'}],writes:string[]=[],periods:number[]=[]
  const chain={select:()=>chain,eq:()=>chain,not:()=>chain,lte:()=>chain,order:()=>chain,limit:async()=>({data:pending,error:null})}
  const settlement=await compiled('../src/lib/nbaSettlement.ts',{'server-only':{},'./nbaPickGrading':{gradeNbaPick},'./nbaPaint':{nbaPeriod,nbaToday:()=> '2099-10-20'},'./nbaPaintData':{getPaintGame:async()=>({status_state:'final'}),getPaintFinalStats:async(_id:number,period:number)=>{periods.push(period);if(period===1)throw new Error('unavailable');return{complete:true,rows:[stat(21)]}}}})
- const result=await (settlement.settleNbaPicks as (admin:unknown)=>Promise<{graded:number;skipped:number}>)({from:()=>chain,rpc:async(_name:string,args:{p_pick_id:string})=>{writes.push(args.p_pick_id);return{data:true,error:null}}})
+ const result=await (settlement.settleNbaPicks as (admin:unknown)=>Promise<{graded:number;skipped:number}>)({from:()=>chain,rpc:async(_name:string,args:{p_pick_id:string})=>{if(_name==='claim_pending_nba_picks')return{data:pending,error:null};writes.push(args.p_pick_id);return{data:true,error:null}}})
  assert.deepEqual(periods,[0,1]);assert.deepEqual(writes,['full']);assert.equal(result.graded,1);assert.equal(result.skipped,1)
 })
 test('quarter and event selections revalidate exact books, targets and canonical labels before posting',async()=>{

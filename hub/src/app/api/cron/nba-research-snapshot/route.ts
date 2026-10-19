@@ -7,6 +7,7 @@ import { getPaintBoard, getPaintSchedule } from '@/lib/nbaPaintData'
 import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaValidatedEstimate, type NbaModelReport } from '@/lib/nbaModel'
+import { nbaEconomicSnapshot } from '@/lib/nbaMovement'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaPeriod, nbaMarketLogs, nbaToday, nbaReference, PAINT_MARKETS } from '@/lib/nbaPaint'
 export const maxDuration = 180
@@ -48,8 +49,9 @@ async function run(request: Request) {
             const report = models?.map(model => model.report as NbaModelReport).find(report => report.market === market.key && report.validationThrough < game.date)
             const estimate = nbaValidatedEstimate(logs, market.key, game.date, report)
             const model = estimate == null ? null : { key: report!.modelKey, method: report!.method, recentWeight: report!.recentWeight, trainedThrough: report!.trainedThrough, validationThrough: report!.validationThrough, estimate }
+            const quote = nbaReference(player.props, market.key)
             const features = { signal, model, logIds: logs.map(log => log.id), teamId: player.team.id, position: player.position, injury: player.injury, matchup: matchup ?? null, matchupSeason: context.ready ? context.season : null }
-            return [{ game_id: game.id, player_id: player.id, team_id: player.team.id, market: market.key, version: signal.version, score: signal.score, sample_games: signal.games, sample_through: sampleThrough, features, fingerprint: createHash('sha256').update(JSON.stringify(features)).digest('hex'), quote: nbaReference(player.props, market.key), estimate, model_key: estimate == null ? null : report!.modelKey }]
+            return [{ game_id: game.id, player_id: player.id, team_id: player.team.id, market: market.key, version: signal.version, score: signal.score, sample_games: signal.games, sample_through: sampleThrough, features, fingerprint: createHash('sha256').update(JSON.stringify({features,quote:quote?nbaEconomicSnapshot([quote])[0]:null})).digest('hex'), quote, estimate, model_key: estimate == null ? null : report!.modelKey }]
           }))
           const { data, error } = await admin.rpc('record_nba_research_batch', { p_rows: rows })
           if (error) throw new Error(`NBA score archive write failed (${error.code})`)

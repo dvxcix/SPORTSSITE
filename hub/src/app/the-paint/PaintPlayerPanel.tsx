@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronDown, Columns3, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { BookLogo } from '@/components/BookLogo'
-import { gradeNbaValue, nbaBinary, nbaPrice, nbaTarget, nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaOdds, nbaReference, nbaSample, nbaSeason, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintMarket, type PaintPlayer } from '@/lib/nbaPaint'
+import { gradeNbaValue, nbaBinary, nbaPeriod, nbaPrice, nbaTarget, nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaOdds, nbaReference, nbaSample, nbaSeason, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintMarket, type PaintPlayer } from '@/lib/nbaPaint'
 import { number, PlayerAvatar, ShotCourt, TeamLogo, TrendBars } from './PaintVisuals'
 import { PaintPickActions } from './PaintPickActions'
 import { nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
@@ -21,7 +21,7 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
   const opponent = board.game.home_team.id === player.team.id ? board.game.visitor_team : board.game.home_team
   const logs = useMemo(() => nbaSample(split === 'h2h' ? nbaMarketLogs(player, market).filter(l => l.game.home_team_id === opponent.id || l.game.visitor_team_id === opponent.id) : nbaMarketLogs(player, market), window, split === 'h2h' ? 'all' : split), [player, market, window, split, opponent.id])
   const average = nbaAverage(logs, market); const hits = line != null ? nbaHitRate(logs, market, line, side, reference?.market.type === 'milestone') : null
-  const rank = nbaMarketRanks(board.players, market, book ?? 'all').get(player.id)
+  const rank = board.statsComplete && (!nbaPeriod(market) || board.periodStatsComplete !== false) ? nbaMarketRanks(board.players, market, book ?? 'all').get(player.id) : undefined
   const teamContext = nbaSlipSurgeScore(player, market, board.game.date)
   const definition = PAINT_MARKETS.find(m => m.key === market)!
   const offers = player.props.filter(p => p.prop_type === market && (book == null || book === 'all' || p.vendor === book) && (alternate ? p.market.type === 'milestone' : p.market.type === 'over_under')).sort((a, b) => Number(a.line_value) - Number(b.line_value) || a.vendor.localeCompare(b.vendor))

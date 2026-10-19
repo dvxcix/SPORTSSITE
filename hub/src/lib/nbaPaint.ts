@@ -38,7 +38,7 @@ export const nbaMarketLogs = (player: PaintPlayer, market: string) => nbaPeriod(
 export const nbaPrice = (offer: PaintProp, side: 'over' | 'under' = 'over') => offer.market.type === 'milestone' ? side === 'over' ? offer.market.odds : undefined : side === 'over' ? offer.market.over_odds : offer.market.under_odds
 export function nbaTarget(offer: PaintProp, side: 'over' | 'under' = 'over') { return nbaBinary(offer.prop_type) ? side === 'over' ? 'Yes' : 'No' : offer.market.type === 'milestone' ? `${Number(offer.line_value)}+` : `${side === 'over' ? 'O' : 'U'} ${Number(offer.line_value)}` }
 export const nbaName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g, '').replace(/[^a-z]/g, '')
-export function nbaMinutes(value: string | number | null | undefined) { if (value == null || value === '') return null; const parts = String(value).split(':').map(Number); return parts.every(Number.isFinite) ? parts[0] + (parts[1] ?? 0) / 60 : null }
+export function nbaMinutes(value: string | number | null | undefined) { if (value == null || !/^\d+(?:\.\d+|:[0-5]\d)?$/.test(String(value))) return null; const parts = String(value).split(':').map(Number); return parts[0] + (parts[1] ?? 0) / 60 }
 export function nbaAppeared(row: Partial<PaintStat>) {
   const minutes = nbaMinutes(row.min)
   if (minutes == null || minutes < 0) return false
@@ -51,7 +51,7 @@ export function nbaValue(row: Partial<PaintStat> | Record<string, number | null>
   if (!definition) return null
   if (nbaBinary(market)) {
     if ('game' in row && row.period != null && row.period !== 0) return null
-    if (!('game' in row)) { const average = row as Record<string,number|null>, count = average[market === 'double_double' ? 'dd2' : 'td3'], games = average.gp; if (typeof count === 'number' && typeof games === 'number' && games > 0) return count / games; const rate = (row as Record<string,number|null>)[market]; return typeof rate === 'number' && Number.isFinite(rate) ? rate : null }
+    if (!('game' in row)) { const average = row as Record<string,number|null>, count = average[market === 'double_double' ? 'dd2' : 'td3'], games = average.gp; if (typeof count === 'number' && typeof games === 'number' && games > 0 && count >= 0 && count <= games) return count / games; const rate = (row as Record<string,number|null>)[market]; return typeof rate === 'number' && Number.isFinite(rate) ? rate : null }
     const values = ['pts','reb','ast','stl','blk'].map(key => (row as Record<string, unknown>)[key]), required = market === 'double_double' ? 2 : 3
     const successes = values.filter(value => typeof value === 'number' && Number.isFinite(value) && value >= 10).length
     const unknown = values.filter(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0).length

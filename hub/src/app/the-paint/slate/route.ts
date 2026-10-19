@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { getPaintBoard, getPaintSchedule } from '@/lib/nbaPaintData'
-import { nbaDate, PAINT_MARKETS, type PaintBoard, type PaintMarket } from '@/lib/nbaPaint'
+import { nbaPeriod, nbaDate, PAINT_MARKETS, type PaintBoard, type PaintMarket } from '@/lib/nbaPaint'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { NbaModelReport } from '@/lib/nbaModel'
 import { nbaSlateRows } from '@/lib/nbaSlate'
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       }
       if (games.length && !boards.length) throw new Error('No NBA boards available')
       const reports = await nbaSharedCache('validated-models:v1',300,300,async()=>{const {data,error}=await createAdminClient().from('nba_model_reports').select('report').eq('version','nba-rolling-v1').order('validation_season',{ascending:false}).limit(48);if(error)throw new Error('Model reports unavailable');return (data??[]).map(row=>row.report as NbaModelReport)})
-      const complete = schedule.complete && !failed.length && games.length === schedule.games.length && boards.every(board => board.statsComplete)
+      const complete = schedule.complete && !failed.length && games.length === schedule.games.length && boards.every(board => board.statsComplete && (!nbaPeriod(market!) || board.periodStatsComplete !== false))
       return { date: schedule.date, games: schedule.games.length, loaded: boards.length, complete, failed, rows: nbaSlateRows(boards, market as PaintMarket, book, side as 'over' | 'under', complete, reports.value) }
     }, 120)
     return NextResponse.json({ ...cached.value, fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
