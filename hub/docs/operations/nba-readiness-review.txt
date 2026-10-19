@@ -1,0 +1,175 @@
+NBA readiness — owner review, October 19, 2026
+
+Review entry: https://www.slipsurge.com/the-paint?date=2026-10-20
+Admin checklist: https://www.slipsurge.com/admin/product-audit
+NBA remains admin-only, absent from global navigation and discovery. Review
+does not enable public access. This report supersedes the in-progress checkpoint.
+
+WHAT TO REVIEW
+ThePaint contains research, sportsbook comparison, alternate ladders, movement,
+custom matrices and player comparison. Its internal workspaces include
+Cheatsheets, Usage & tracking, Game tracking, SlipSurge Score, Slate Edge,
+Defense x position, Cross-market, Validation Lab, Matchup Lab, Availability,
+Game markets and ThePublic. Player panels contain trends, per-game tracking,
+alternate lines, quote history, interactive shot research and all-book prices.
+Desktop uses sortable research tables; mobile uses a workspace picker and compact
+cards with contained table scrolling. Player headshots, team and book artwork
+carry identity. The global MLB/NFL navigation has not been expanded.
+
+Market coverage: points, rebounds, assists, threes, PRA, PR, PA, RA, steals,
+blocks, turnovers, double-double, triple-double, first-quarter points/rebounds/
+assists. All 15 market types observed in opening NBA quotes are supported,
+plus turnovers. Quarter facts never substitute full-game totals. Binary markets
+use Yes/No event semantics rather than misleading 0.5+ labels. Alternate saves
+retain their actual numeric threshold, side, contract type, sportsbook and price.
+
+HISTORICAL FACTS AND HONEST COVERAGE
+Regular-season game facts reconciled to all 1,230 scheduled final games per year:
+2023–24: 43,395 rows; 2024–25: 43,371; 2025–26: 43,268. Total: 130,034.
+No final regular-season game is missing basic stats. All history cursors finished.
+Advanced feed: 34,843 / 35,103 / 34,810 rows across those seasons. This provider
+feed includes postseason games; research joins use the exact regular-season
+player/game/historical-team pairs, so postseason rows do not enter those samples.
+
+First-quarter source coverage is partial in older years: 848 / 1,097 / 1,230
+games, with 15,157 / 19,627 / 22,469 raw rows. Model-eligible appearances are
+15,009 / 19,487 / 22,303 in 848 / 1,097 / 1,227 games. Source gaps and unverified
+appearances stay unknown. A completed cursor means the available source was
+exhausted, not that the provider supplied every possible observation.
+
+Current schedules, active rosters, injuries, draft metadata, historical team
+identity, player props, game markets, actual public counts and play facts persist
+with source identities and capture times. Rookies have unknown historical samples
+until observed. New-team labels compare historical and current teams; they do not
+invent a transaction type or call every move a trade. Current injury information
+and season-end ratings are excluded from historical pregame analysis.
+
+NBA SCORE AND MODELS
+nba-opportunity-v2 is a descriptive 0–100 research index, not a win probability:
+35% opportunity, 20% minutes, 20% recent form, 10% role stability, 10% positional
+allowance, 5% game pace. Points use FGA + .44 FTA; threes use 3PA; other count
+markets use per-36 output. Quarters use quarter observations and 12-minute role
+scaling; binary events use observed event frequencies. Five known observations
+and 55% feature coverage are required; samples shrink to neutral until twenty
+appearances. Missing components remain visible. Slate Edge uses the same DvP
+and pace context as the score workspace and archived research.
+
+DvP covers all thirty teams with each defense's own latest twenty games. It uses
+opponent production per 48 position-minutes, first-listed G/F/C role, five known
+games minimum and n/(n+20) shrinkage to the league position baseline. Early-season
+fallback is labeled. This is positional allowance, not an asserted individual
+defensive assignment. Full-game and quarter observation counts are separated.
+
+nba-rolling-v1 forecasts are separately validated for all sixteen markets.
+Candidate L10 and L5/prior-15 blends are chosen on 2023–24 and 2024–25, then
+measured on held-out 2025–26 observations. Each prediction uses earlier verified
+appearances only. Count markets select by MAE; binary events select by Brier
+error. The UI reports actual training dates, source coverage and holdout size.
+Examples: points MAE 4.667740 vs L10 4.716033; rebounds 1.922723 vs 1.949343;
+double-double Brier .055149 vs .057672; triple-double .004577 vs .004816.
+First-quarter MAE: points 2.210942, rebounds .923680, assists .699955.
+These modest error changes do not establish betting profit, calibrated event
+probabilities or an odds backtest. No historical sportsbook quotes were invented.
+New rookies, inadequate samples and pages before validation completion withhold
+validated forecasts rather than leaking future results.
+
+MM, MARKET STORIES AND PUBLIC CONTEXT
+MM = sportsbook rank minus observed-production rank within the same priced pool.
+Positive means observed production ranks ahead. The baseline combines 60% season
+production and 40% L10, with five appearances minimum; quarter baselines use the
+available quarter facts. Two-sided prices are normalized without vig; one-sided
+milestone prices are labeled implied prices including vig. Slate MM uses the
+whole slate and is withheld on incomplete required coverage.
+
+Market Story distinguishes changing thresholds from changing prices at the same
+threshold/book/side. Cross-market finds opposite moves for the same player and
+book and compares actual category public counts where available. Public captures
+must match exact teams/date and exact normalized roster names. Repeated sections
+are not summed. Missing counts remain unavailable, not zero. Pikkit counts are
+pick categories, not wager dollars or exact-line counts. A divergence is a
+research hypothesis, never evidence of bookmaker intent or a guaranteed edge.
+The three opening matchups have real repeat captures and interactive results.
+
+TRACKING AND SHOTS
+Per-game tracking exposes 116 currently available numeric metrics with exact
+L5/L10/L20 appearances, venue filtering, category selection, sorting, known-sample
+counts, gapped trends and metric-preserving player drill-through. Game facts are
+matched by player, final game, phase, date and historical team. Missing tracking
+does not replace a game with a different observation or become zero. Season
+potential assists and drives remain separately labeled in Usage & tracking.
+Live database/UI check: Jalen Duren's latest five regular-season touches are
+41,46,60,43,73, yielding L5 52.6; usage values .268,.188,.205,.169,.291.
+
+Shot research uses actual 2025+ play coordinates and shooter identity. Free
+throws are excluded; invalid coordinates remain counted attempts but unplotted.
+Blocked-shot descriptions identify the defender first, so shooter ID plus the
+named blocked player are required. Court coordinates are normalized to the
+attacking rim. Game/quarter/made/missed/two/three filters, shot tooltips/list and
+five-foot heatmap bins are interactive. Verified Duren April 10 game 18447989:
+8/11 field goals, eleven located attempts, matching the box score. Q1 + made
+filter returns 2/2. Earlier play-by-play is not fabricated; season zones are
+separate labeled aggregates.
+
+SAVING, POSTING, GRADING
+Exact alternate, main over/under, first-quarter and double-double saves were
+verified in the live shared watchlist, including persistence after reload.
+The posting path rejects stale/changed prices, wrong side/book/player/game,
+started games and invalid parlay combinations. Save -> post API -> My Picks ->
+settlement is covered by integration regressions without publishing public test
+posts. Live database rollback fixtures verified atomic single/parlay grading,
+idempotent retries, parent rollup and one result notification per transition.
+Fair rotating claims keep unresolved old appearances from starving newer picks.
+
+Final grading requires exact player/game/phase, final status and verified
+appearance. A rounded zero-minute row with positive actions is an appearance;
+all-zero/no-evidence or missing-minute rows remain pending. DNP is not guessed
+as a loss or automatic void. Full-game grades continue if quarter data fails.
+Temporary save fixtures were cleaned up; SQL post/notification fixtures rolled
+back. No public test posts, wagers or payment changes were performed.
+
+SCALING AND OPERATIONS
+Shared DB caches and refresh leases coalesce independent serverless readers,
+with a bounded ten-second process cache and in-flight deduplication. A concurrency
+regression exercised eight requests from four independent instances with one
+provider load. Board cache 60s / bounded stale 300s; game browsing 15s, while
+posting/grading revalidate fresh status. Tracking uses stored facts and a shared
+900s cache; player clicks do not hit the provider independently. Board payload
+fell from 3,179,254 to 1,374,449 bytes by retaining only needed typed log fields.
+This is architecture/concurrency evidence, not a 6,000-user load-test claim.
+
+Cloud-only ingestion resumes guarded exact cursors, never restarts completed
+imports, and refreshes rolling sources every fifteen minutes, rosters six-hourly
+and teams daily. The minute dispatcher skips current rolling sources in roughly
+100ms. Models skip unchanged validated reports. Quote/research snapshots run
+every five minutes; exact economic fingerprints preserve real price changes and
+A->B->A. Research stores latest-pretip features, source log IDs, score version,
+quote and validated forecast for future final outcomes. No synthetic 2026 finals.
+
+Pikkit checks every ten minutes and captures due games at most every thirty
+minutes in the next 48 hours, oldest first. Cloud browser startup, per-game work,
+diagnostics and cleanup are bounded. Unlisted events defer honestly. Busy shared
+context defers; uncertain browser shutdown retains its safety lease. Existing
+NFL/MLB default browser limits and owner-approved NFL timeout hierarchy remain.
+One earlier Pikkit execution timed out; the later real 07:11 UTC run captured all
+three games and finished successfully in 48.060s. Timeout/cleanup regressions
+cover healthy, startup hang, game hang, release hang and unlisted scenarios.
+
+All fourteen NBA fact/cache/ledger tables have RLS and no anonymous/member direct
+read/write privileges. Every NBA research API checks a fresh server-side admin
+role before provider or service work. Guest redirect and member-denial contracts
+pass. NBA access remains unchanged until the owner approves public release.
+
+VERIFICATION
+NBA 44/44; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
+10/10. TypeScript and targeted ESLint pass. Real browser checks cover desktop,
+390px and 320px layouts, exact odds/ladders, +/-MM, player panel/footer layering,
+shared saves, shot chart filters, tracking drill-through, league DvP, public
+counts, source-backed cross-market signals, rookie/new-team filters and all
+sixteen validation rows. Tested mobile views have no horizontal page overflow
+or broken artwork. Local evidence: work/the-paint/qa-*.png.
+
+Intentional review boundary: the owner reviews presentation and source coverage,
+then separately approves opening the admin gate and adding public navigation.
+Provider gaps, pending starters and future outcomes remain explicitly unknown.
+Historical checkpoint and parity audit files are retained as work history and
+must not override this completed readiness receipt.

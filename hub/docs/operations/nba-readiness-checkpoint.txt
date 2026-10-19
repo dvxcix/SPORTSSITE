@@ -1,5 +1,9 @@
 NBA readiness checkpoint — 2026-10-19 overnight mission (still in progress)
 
+HISTORICAL CHECKPOINT. Superseded by nba-readiness-review.txt. Imports, sixteen
+market validations, expanded tracking and final responsive verification described
+below as outstanding were subsequently completed. Do not replay their jobs.
+
 Boundary: admin-only, no global NBA navigation, no public test posts or wagers.
 No existing MLB/NFL job, feature flag, account record or payment changed.
 
