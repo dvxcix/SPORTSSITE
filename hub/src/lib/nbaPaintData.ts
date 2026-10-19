@@ -1,6 +1,7 @@
 import 'server-only'
 import { bdlHeaders } from '@/lib/balldontlie'
 import { nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
+import type { PaintScouting } from './nbaResearch'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -59,6 +60,11 @@ export async function getPaintIdentity(id: number) {
   return player as PaintRoster
 }
 export async function getPaintFinalStats(id: number) { return pages<PaintStat>(`/v1/stats?game_ids[]=${id}&per_page=100`, 60, 2) }
+export async function getPaintRoster(game:PaintGame){
+  const result=await pages<PaintRoster>(`/v1/players/active?team_ids[]=${game.home_team.id}&team_ids[]=${game.visitor_team.id}&per_page=100`,300,2)
+  if(!result.complete)throw new Error('Roster incomplete')
+  return result.rows.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id))
+}
 export async function getPaintProps(gameId: number, fresh = false): Promise<PaintProp[]> {
   if (!fresh) return (await bdl<PaintProp>(`/v2/odds/player_props?game_id=${gameId}`, 60)).data
   const response = await fetch(`${BASE}/v2/odds/player_props?game_id=${gameId}`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12_000) })
@@ -67,6 +73,21 @@ export async function getPaintProps(gameId: number, fresh = false): Promise<Pain
   return json.data
 }
 type Average = { player: { id: number }; stats: Record<string, number | null> }
+export async function getPaintScouting(game: PaintGame): Promise<PaintScouting> {
+  // Full-season tracking must never leak future information into a historical board.
+  if (game.date < nbaToday()) return { season: game.season, fetchedAt: new Date().toISOString(), players: [], issues: ['Full-season tracking is unavailable for historical matchups.'] }
+  const roster = await pages<PaintRoster>(`/v1/players/active?team_ids[]=${game.home_team.id}&team_ids[]=${game.visitor_team.id}&per_page=100`, 3600, 2)
+  const ids = [...new Set(roster.rows.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id)).map(p=>p.id))]
+  if(!ids.length)throw new Error('No roster')
+  const query=ids.map(id=>`player_ids[]=${id}`).join('&')
+  const current=await bdl<Average>(`/nba/v1/season_averages/general?${query}&season=${game.season}&season_type=regular&type=base&per_page=100`,900)
+  const season=current.data.some(p=>(p.stats.gp??0)>0)?game.season:game.season-1
+  const feeds=[['advanced','general','advanced'],['passing','tracking','passing'],['rebounding','tracking','rebounding'],['drives','tracking','drives']] as const
+  const results=await Promise.allSettled(feeds.map(([,category,type])=>bdl<Average>(`/nba/v1/season_averages/${category}?${query}&season=${season}&season_type=regular&type=${type}&per_page=100`,3600)))
+  const issues=results.flatMap((r,i)=>r.status==='rejected'?[`${feeds[i][0]} sample unavailable`]:[])
+  if(!roster.complete)issues.push('Roster coverage incomplete')
+  return {season,fetchedAt:new Date().toISOString(),issues,players:ids.map(id=>({id,...Object.fromEntries(feeds.map(([key],i)=>{const result=results[i];return [key,result.status==='fulfilled'?result.value.data.find(p=>p.player.id===id)?.stats??{}:{}]}))})) as PaintScouting['players']}
+}
 export async function getPaintProfile(player: number, season: number) {
   const params = `season=${season}&season_type=regular&player_ids[]=${player}`
   const result = await Promise.allSettled([

@@ -8,6 +8,62 @@ import type { WatchlistItem } from '../src/lib/watchlist.ts'
 import { watchlistPickPayload } from '../src/lib/nflWatchlist.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
+import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
+import { nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
+
+test('cross-market scans retain complete-pool MM, isolate books and sides, and use push-adjusted denominators',()=>{
+  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
+  const rows=nbaCheatsheet(players,'fanduel','over')
+  assert.deepEqual(rows.map(r=>r.mm),[2,0,-2])
+  assert.equal([...rows].sort((a,b)=>b.mm!-a.mm!)[0].player.id,1)
+  assert.equal([...rows].sort((a,b)=>a.mm!-b.mm!)[0].player.id,3)
+  assert.equal(nbaCheatsheet(players,'draftkings').length,0)
+  assert.equal(nbaCheatsheet(players,'fanduel','under')[0].gap,-rows[0].gap!)
+  assert.equal(rows[1].hit.rate,null)
+  assert.equal(nbaCheatsheet(players.map(p=>({...p,logs:p.logs.slice(0,4)}))).length,0)
+})
+
+test('rotation trends compare non-overlapping windows, exclude DNP and retain unknown tracking',()=>{
+  const logs=Array.from({length:20},(_,i)=>({...stat(20,`2026-04-${String(20-i).padStart(2,'0')}`,i<10?'36:00':'24:00'),id:i+1}))
+  const player={logs} as PaintPlayer
+  assert.equal(nbaRole(player).minutes,36)
+  assert.equal(nbaRole(player).minutesChange,12)
+  assert.equal(nbaRole(player).per36('points'),20)
+  assert.equal(nbaRole({logs:logs.slice(0,4)} as PaintPlayer).minutesChange,null)
+  assert.equal(nbaRole({logs:[]} as unknown as PaintPlayer).fga,null)
+})
+
+test('alternate selections preserve threshold, side, book, milestones and zeroes',()=>{
+  const alt={...offer,line_value:'24.5'}, milestone={...offer,line_value:'25',market:{type:'milestone' as const,odds:200}}
+  const keys=[nbaSelectionKey(434,offer,'over'),nbaSelectionKey(434,alt,'over'),nbaSelectionKey(434,alt,'under'),nbaSelectionKey(434,milestone,'over')]
+  assert.equal(new Set(keys).size,4)
+  assert.equal(parseNbaSelection(keys[1])?.numeric_line,24.5)
+  assert.equal(parseNbaSelection(keys[2])?.market_side,'under')
+  assert.equal(parseNbaSelection(keys[3])?.market_side,'milestone')
+  assert.equal(gradeNbaValue(25,25,'milestone'),'win')
+})
+
+test('NBA public counts reject partial periods, fuzzy identities and invalid counts without double-counting',()=>{
+  const roster=[{id:1,first_name:'Jalen',last_name:'Williams'},{id:2,first_name:'Jaylin',last_name:'Williams'}] as PaintPlayer[]
+  assert.equal(nbaPublicMarket('Points + Rebounds + Assists'),'points_rebounds_assists')
+  assert.equal(nbaPublicMarket('Three Pointers Made'),'threes')
+  assert.equal(nbaPublicMarket('First Quarter Points'),null)
+  const result=normalizeNbaPublic({'Points':{'Jalen Williams':10,'Jaylin Williams':0,'J. Williams':90,'Invented Player':30},'Player Points':{'Jalen Williams':10},'First Quarter Points':{'Jalen Williams':99},'Rebounds':{'Jalen Williams':-5}},roster)
+  assert.equal(result.rows.length,2)
+  assert.deepEqual(result.rows.map(r=>r.picks),[10,0])
+  assert.equal(result.unmatched,2)
+})
+
+test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
+  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts']){
+    let denied=true
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/supabase/admin':{}})
+    const get=route.GET as unknown as(r:unknown)=>Promise<Response>
+    assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
+    denied=false
+    assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=no')})).status,400)
+  }
+})
 
 const stat = (value: number | null, date = '2026-04-01', minutes = '30:30'): PaintStat => ({ id: Number(date.replaceAll('-', '')), player: { id: 434 }, team: { id: 2 }, game: { id: 123, date, status: 'Final', status_state: 'final', home_team_id: 2, visitor_team_id: 9 }, min: minutes, pts: value, reb: 5, ast: 4, fg3m: 2, stl: 0, blk: 1, turnover: 2, fga: 15, fgm: 7, fg3a: 5, fta: 3, ftm: 2 })
 const offer: PaintProp = { id: 99, game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -105 }, updated_at: '2026-10-18T12:00:00Z' }

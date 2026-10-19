@@ -227,6 +227,10 @@
     {
       "path": "/api/cron/nba-market-capture",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/poll-pikkit-nba-picks",
+      "schedule": "11,41 * * * *"
     }
   ]
 }
