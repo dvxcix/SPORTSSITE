@@ -47,4 +47,21 @@ Pre-release verification
   Drawer, real shooting zones, book/ladders, comparison and matrix save/load
   verified. No real payment or public feed post was submitted.
 
-Live release evidence will be appended after deployment verification.
+Live release verification
+- GitHub main source: af827e10b786974c92d99baf06902579f2a4bac5.
+- Vercel production: dpl_4DZUEBnsdTVcamkKJvhjNkS14ZEJ, READY, assigned
+  www.slipsurge.com and slipsurge.com. Build passed Next.js and TypeScript.
+- Live /the-paint loaded as ParlayParty ADMIN with 35 players and current
+  quotes. Shooting profile loaded actual zone/advanced data through the gated
+  production route. Desktop and mobile shell/drawer rendered correctly with no
+  document overflow or broken images; no browser errors observed.
+- Anonymous board/profile requests redirect to sign-in (307) before data and
+  include noindex headers. Ordinary-member denial is covered by authorization
+  tests; no separate non-admin browser account is available.
+- Narrow 320px layout verified after correction: document client/scroll width
+  both 305px in the isolated preview. Live 390px mobile board and player drawer
+  also have matching document client/scroll widths.
+- NBA watchlist/pick payloads and grading are covered by isolated tests. A real
+  public feed post and final-game settlement were not executed for this preview.
+- Public menus still contain only the existing MLB/NFL tools. ThePaint remains
+  accessible by direct URL to admins only until a separately approved launch.
