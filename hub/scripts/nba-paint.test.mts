@@ -65,6 +65,21 @@ test('new NBA research APIs reject non-admins and invalid games before loading p
   }
 })
 
+test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{
+  let reads=0
+  const pure=await import('../src/lib/nbaPaint.ts')
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure},async()=>{reads++;throw new Error('Unexpected provider read')})
+  const scouting=await (provider.getPaintScouting as unknown as(g:unknown)=>Promise<{players:unknown[];issues:string[]}> )({date:'2000-01-01',season:1999})
+  assert.equal(reads,0);assert.equal(scouting.players.length,0);assert.ok(scouting.issues.length)
+})
+
+test('NBA Pikkit collector denies unauthorized calls before schedule or cloud browser work',async()=>{
+  let reads=0
+  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_n:string,r:unknown)=>r},'@/lib/nbaPaintData':{getPaintSchedule:()=>{reads++}},'@/lib/nbaPaint':{},'@/lib/supabase/admin':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{}})
+  assert.equal((await (route.GET as unknown as(r:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))).status,401)
+  assert.equal(reads,0)
+})
+
 const stat = (value: number | null, date = '2026-04-01', minutes = '30:30'): PaintStat => ({ id: Number(date.replaceAll('-', '')), player: { id: 434 }, team: { id: 2 }, game: { id: 123, date, status: 'Final', status_state: 'final', home_team_id: 2, visitor_team_id: 9 }, min: minutes, pts: value, reb: 5, ast: 4, fg3m: 2, stl: 0, blk: 1, turnover: 2, fga: 15, fgm: 7, fg3a: 5, fta: 3, ftm: 2 })
 const offer: PaintProp = { id: 99, game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -105 }, updated_at: '2026-10-18T12:00:00Z' }
 
