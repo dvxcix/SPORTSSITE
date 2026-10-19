@@ -2,6 +2,7 @@ import 'server-only'
 import { bdlHeaders } from '@/lib/balldontlie'
 import { nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
+import { nbaSharedCache } from './nbaSharedCache'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -74,6 +75,11 @@ export async function getPaintProps(gameId: number, fresh = false): Promise<Pain
 }
 type Average = { player: { id: number }; stats: Record<string, number | null> }
 export async function getPaintScouting(game: PaintGame): Promise<PaintScouting> {
+  if (game.date < nbaToday()) return loadPaintScouting(game)
+  const cached = await nbaSharedCache(`scouting:v1:${game.id}:${nbaToday()}`, 3600, 3600, () => loadPaintScouting(game))
+  return { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Tracking refresh delayed; showing last captured sample'] : [])] }
+}
+async function loadPaintScouting(game: PaintGame): Promise<PaintScouting> {
   // Full-season tracking must never leak future information into a historical board.
   if (game.date < nbaToday()) return { season: game.season, fetchedAt: new Date().toISOString(), players: [], issues: ['Full-season tracking is unavailable for historical matchups.'] }
   const roster = await pages<PaintRoster>(`/v1/players/active?team_ids[]=${game.home_team.id}&team_ids[]=${game.visitor_team.id}&per_page=100`, 3600, 2)
@@ -97,6 +103,10 @@ export async function getPaintProfile(player: number, season: number) {
   return { shooting: result[0].status === 'fulfilled' ? result[0].value.data[0]?.stats ?? null : null, advanced: result[1].status === 'fulfilled' ? result[1].value.data[0]?.stats ?? null : null }
 }
 export async function getPaintBoard(game: PaintGame): Promise<PaintBoard> {
+  const cached = await nbaSharedCache(`board:v1:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
+  return { ...cached.value, game, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Refresh delayed; showing last captured prices and research'] : [])] }
+}
+async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const issues: string[] = []
   const historical = game.date < nbaToday()
   async function optional<T>(label: string, promise: Promise<T>, fallback: T): Promise<T> { try { return await promise } catch (error) { console.error('[ThePaint]', label, { status: error instanceof PaintProviderError ? error.status : null }); issues.push(label); return fallback } }

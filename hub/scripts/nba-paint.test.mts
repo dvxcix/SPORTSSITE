@@ -10,6 +10,39 @@ import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
 import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
 import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
+const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+
+test('NBA fact import preserves historical team identity and rejects malformed identities',async()=>{
+  const ingestion=await compiled('../src/lib/nbaIngestion.ts',{'server-only':{},'./balldontlie':{bdlHeaders:{}},'./supabase/admin':{}})
+  const fact=ingestion.nbaFact as (kind:string,row:unknown,season:number|null,at:string)=>Record<string,unknown>
+  const source={...stat(20),player:{id:22,position:'G'},team:{id:9},game:{...stat(20).game,id:77,season:2025,date:'2026-03-01',postseason:false}}
+  const result=fact('stats',source,2025,'2026-10-19T00:00:00Z')
+  assert.equal(result.team_id,9);assert.equal(result.player_id,22);assert.equal(result.game_id,77);assert.equal(result.season,2025)
+  assert.equal(result.payload,source)
+  assert.throws(()=>fact('stats',{...source,team:{}},2025,''))
+  assert.throws(()=>fact('games',{id:5,date:'2026-01-01',season:2025,home_team:{id:2},visitor_team:{id:2}},2025,''))
+})
+
+test('NBA shared cache coalesces cold readers across leases and retains source time on stale failure',async()=>{
+  let entry:Record<string,unknown>|null=null,lease:string|null=null,loads=0
+  const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:entry,error:null})})}),update:()=>({eq:()=>({eq:async()=>{lease=null;return{error:null}}})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
+    if(name==='claim_nba_source'){if(lease)return{data:false};lease=String(args.p_token);return{data:true}}
+    assert.equal(args.p_token,lease)
+    entry={payload:args.p_payload,fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+Number(args.p_ttl)*1000).toISOString()};lease=null;return{data:true}
+  }}
+  const crypto=await import('node:crypto')
+  const module=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':crypto,'./supabase/admin':{createAdminClient:()=>admin}})
+  const cache=module.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
+  const load=async()=>{loads++;await new Promise(r=>setTimeout(r,10));return{points:25}}
+  const results=await Promise.all(Array.from({length:8},()=>cache('test',60,300,load)))
+  assert.equal(loads,1);assert.ok(results.every(r=>r.value.points===25&&!r.stale))
+  const sourceTime=results[0].fetchedAt
+  entry={payload:{points:25},fetched_at:sourceTime,expires_at:new Date(Date.now()-1000).toISOString()}
+  const stale=await cache('test',60,300,async()=>{throw new Error('provider failed')})
+  assert.equal(stale.stale,true);assert.equal(stale.fetchedAt,sourceTime)
+  entry={payload:{points:25},fetched_at:sourceTime,expires_at:new Date(Date.now()-400000).toISOString()}
+  await assert.rejects(()=>cache('test',60,300,async()=>{throw new Error('provider failed')}),/provider failed/)
+})
 
 test('cross-market scans retain complete-pool MM, isolate books and sides, and use push-adjusted denominators',()=>{
   const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
@@ -77,7 +110,7 @@ test('NBA public results stay game-exact and distinguish zero production from DN
 test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{
   let reads=0
   const pure=await import('../src/lib/nbaPaint.ts')
-  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure},async()=>{reads++;throw new Error('Unexpected provider read')})
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure,'./nbaSharedCache':cachePassthrough},async()=>{reads++;throw new Error('Unexpected provider read')})
   const scouting=await (provider.getPaintScouting as unknown as(g:unknown)=>Promise<{players:unknown[];issues:string[]}> )({date:'2000-01-01',season:1999})
   assert.equal(reads,0);assert.equal(scouting.players.length,0);assert.ok(scouting.issues.length)
 })
@@ -210,7 +243,7 @@ test('provider samples bound dates, exclude future results, and expose truncated
     if (url.includes('/stats?')) return Response.json({ data: [stat(22), stat(100, '2026-10-19')], meta: { next_cursor: 1 } })
     return Response.json({ data, meta: { next_cursor: null } })
   }
-  const adapter = await compiled('../src/lib/nbaPaintData.ts', { 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': pure }, fetcher)
+  const adapter = await compiled('../src/lib/nbaPaintData.ts', { 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': pure, './nbaSharedCache':cachePassthrough }, fetcher)
   const board = await (adapter.getPaintBoard as unknown as (game: unknown) => Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({ id: 123, date: '2026-10-20', season: 2026, status: '2026-10-20T23:00:00Z', datetime: '2026-10-20T23:00:00Z', home_team: team, visitor_team: { ...team, id: 9, abbreviation: 'DET' } })
   assert.equal(board.sampleSeason, 2025)
   assert.equal(board.statsComplete, false)

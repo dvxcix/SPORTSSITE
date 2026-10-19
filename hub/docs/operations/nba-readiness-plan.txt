@@ -1,0 +1,60 @@
+NBA readiness mission — owner-authorized 2026-10-19 overnight work
+
+Release boundary: NBA stays admin-only and absent from global navigation.
+The owner reviews before any audience/access expansion. Production changes,
+NBA data/schema additions, historical imports and cloud jobs are authorized.
+Do not change MLB/NFL behavior, replay unrelated jobs, publish test posts,
+place wagers, or modify payments. Do not consume a reset unless actually
+needed and eligible; account showed92% remaining at mission start.
+
+Acceptance workstreams (not complete until evidenced):
+1. Finish initial Pikkit capture and existing modal/alt-line verification.
+2. Durable NBA source layer: normalized teams/players/games/regular-season
+   stats, advanced/tracking samples, game/prop quotes, public counts and
+   play/shot facts. Keep provider IDs, timestamps, game/season/phase identity,
+   cursors and coverage. Individually guarded migrations, service-only writes.
+3. Shared cache and ingestion: cloud collectors, DB-backed cache/leases and
+   stale-on-error behavior. No one-provider-fetch-per-viewer architecture.
+   Bound API calls, cursor progress, retries, freshness and operational health.
+4. Import and reconcile recent historical seasons before current-season
+   launch. Prioritize2023–2025 regular seasons plus2026 schedule/current
+   roster. Expose actual coverage and expand only within provider availability.
+5. NBA SlipSurge Score: sport-specific opportunity/role, scoring/shooting,
+   playmaking/rebounding, form, opponent and pace context. Transparent formula,
+   minimum samples/shrinkage, no future leakage, reproducible score versions.
+   Validate historical predictions with temporal holdouts; distinguish a
+   descriptive0–100 research index from a calibrated probability. Archive
+   pregame features/scores for honest prospective grading.
+6. Cross-market analysis: exact-book/side/threshold price moves, line moves,
+   actual public category counts/change, paired opposing moves and observed
+   role/volume support. Identify divergence hypotheses; never assert a
+   bookmaker's hidden intent or treat public counts as wager dollars.
+7. DvP/matchup and slate tools: full slate ranking, player/team filtering,
+   opponent allowances by position/market, window/context controls, coverage,
+   click-through to the same player/market/book, no fabricated projections.
+8. Interactive shot research: true play coordinates where available,
+   made/missed/two/three/period/game filters, shot details, correct court
+   orientation, identity and coordinate validation. Season zone aggregates
+   remain separately labeled. Provider play-by-play starts in2025.
+9. Rookies/new-team context: draft/experience provenance and current vs
+   historical team identity. Never relabel all new-team players as trades
+   without transaction evidence. Preserve the team on each historical stat.
+10. Complete NBA navigation within the hidden suite and admin audit inventory.
+    Extend player panels, odds/ladders, research export/replay where useful.
+11. Full save/post/My Picks/final-grade regression, idempotence/access tests,
+    live shared-cache/concurrency/provider-failure checks, desktop/mobile
+    browser checks320/390/desktop, keyboard/touch, no intercepting overlays,
+    no broken artwork, all source checks green, GitHub main canonical.
+
+Working evidence:
+- Existing parity release is on main2dd142037943cb42b430cc387d663bc88a644303.
+- Initial NBA27/27, NFL odds5/5 and grading5/5, production134/134; typecheck
+  and targeted lint passed. Three saved NBA test fixtures archived.
+- Pikkit source reached the correct Celtics/Pistons event and exposes Player
+  Props. Shared first-match helper was swallowing clicks on hidden/repeated
+  responsive labels; new code waits for exact visible Odds/Player Props tabs.
+  First successful player-prop capture still requires live verification.
+- NBA modal used220 while the resume surface uses the shared popover layer;
+  fixed to shared modal500 and enlarged footer controls. Verify live clicks.
+- No calibrated NBA model, complete historical DB import or shot-event UI
+  existed at mission start. These are real work, not assumed completed parity.

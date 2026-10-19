@@ -37,7 +37,7 @@ async function run(request:Request){
         if(Date.now()-started>190000)break
         try{
           await browser.page.goto('https://app.pikkit.com/leagues/nba',{waitUntil:'domcontentloaded'})
-          await browser.page.waitForTimeout(3000)
+          await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
           let found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
           if(!found){await browser.page.waitForTimeout(3000);found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)}
           if(!found)throw new Error('NBA event is not listed')
@@ -58,7 +58,7 @@ async function run(request:Request){
           const imported=await importNbaPublic(game,payload)
           results.push({game:game.id,ok:true,markets:imported.markets})
         }catch(error){
-          const diagnostic=await browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name).catch(()=>null)
+          const diagnostic=await browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name).catch(()=>null)
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic})
         }
       }

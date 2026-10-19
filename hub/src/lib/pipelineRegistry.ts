@@ -3,7 +3,7 @@ export type PipelineDefinition = {
   label: string
   schedule: string
   staleAfterMinutes: number
-  area: 'Odds' | 'MLB data' | 'NFL data' | 'Alerts' | 'Billing' | 'Picks' | 'Maintenance'
+  area: 'Odds' | 'MLB data' | 'NFL data' | 'NBA data' | 'Alerts' | 'Billing' | 'Picks' | 'Maintenance'
 }
 
 const everyMinute = 4
@@ -68,4 +68,5 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'publish-scheduled-posts', label: 'Creator scheduled publishing', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Maintenance' },
   { name: 'prune-notifications', label: 'Notification and telemetry retention', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
   { name: 'archive-stale-watchlist', label: 'Watchlist archive', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
+  { name: 'nba-research-sync', label: 'NBA historical research ingestion', schedule: 'Every minute, resumable batches', staleAfterMinutes: 10, area: 'NBA data' },
 ]
