@@ -11,8 +11,8 @@ async function responseMetadata(response: Response, jobName: string) {
   try {
     const body = await response.clone().json() as Record<string, unknown>
     if (response.ok) return { error: null, details: Object.fromEntries(['checked', 'captured', 'unchanged', 'failed', 'unavailable', 'due', 'cleanupIssues', 'reason', 'graded', 'games', 'deferred', 'pages', 'rows', 'remaining', 'synced', 'season', 'coverage', 'results', 'gamesComputed', 'windowsComputed', 'stage', 'modelVersion', 'trainingRows', 'trainedThrough', 'queued', 'alreadyQueued', 'skipped'].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
-    const reason = typeof body.reason === 'string' ? body.reason : `HTTP ${response.status}`
-    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage', 'gamesWaiting', 'gamesComputed', 'windowsComputed']
+    const reason = typeof body.reason === 'string' ? body.reason : Array.isArray(body.cleanupIssues)&&typeof body.cleanupIssues[0]==='string'?body.cleanupIssues[0]:`HTTP ${response.status}`
+    const details = Object.fromEntries(['cleanupIssues', 'unavailable', 'deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage', 'gamesWaiting', 'gamesComputed', 'windowsComputed']
       .filter(key => body[key] !== undefined)
       .map(key => [key, body[key]]))
     return { error: reason.slice(0, 2000), details }
