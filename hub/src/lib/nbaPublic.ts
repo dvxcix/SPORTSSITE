@@ -1,10 +1,11 @@
 import { nbaName, PAINT_MARKETS, type PaintGame, type PaintMarket, type PaintRoster } from './nbaPaint'
+export const NBA_PUBLIC_VERSION='nba-public-v2'
 export function nbaPublicEventMatches(game:Pick<PaintGame,'date'|'visitor_team'|'home_team'>,text:string){
   const normalized=nbaName(text),[,month,day]=game.date.split('-')
   return [game.visitor_team.full_name,game.home_team.full_name].every(name=>normalized.includes(nbaName(name)))&&new RegExp(`\\b${Number(month)}/${Number(day)}\\b`).test(text)
 }
 export type NbaPublicRow={playerId:number;market:PaintMarket;picks:number}
-export type NbaPublicCapture={gameId:number;capturedAt:string;sourceUrl:string;rows:NbaPublicRow[];unmatched:number;markets:string[]}
+export type NbaPublicCapture={gameId:number;capturedAt:string;sourceUrl:string;rows:NbaPublicRow[];unmatched:number;markets:string[];normalizationVersion?:string}
 export function nbaPublicMarket(label:string):PaintMarket|null{
   const text=label.toLowerCase().replace(/[_-]/g,' ').replace(/\s+/g,' ').trim()
   if(/double double/.test(text)&&!/quarter|half|\b[1-4]q\b/.test(text))return 'double_double'
