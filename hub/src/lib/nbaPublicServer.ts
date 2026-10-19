@@ -8,7 +8,8 @@ export async function importNbaPublic(game:PaintGame,payload:{url:string;capture
   if(!/^https:\/\/app\.pikkit\.com\/event\/[a-z0-9-]+\/?$/i.test(payload.url))throw new Error('Unverified event URL')
   const captured=Date.parse(payload.capturedAt)
   if(!Number.isFinite(captured)||captured>Date.now()+60000||captured<Date.now()-3600000)throw new Error('Stale capture')
-  const {rows,unmatched}=normalizeNbaPublic(payload.props,await getPaintRoster(game))
+  const roster=await getPaintRoster(game),{rows,unmatched}=normalizeNbaPublic(payload.props,roster)
+  if(unmatched)console.info('[nba-public] unmatched source labels',{game:game.id,categories:Object.keys(payload.props),labels:Object.entries(payload.props).flatMap(([category,entries])=>Object.keys(entries).filter(name=>normalizeNbaPublic({[category]:{[name]:entries[name]}},roster).unmatched>0).map(name=>({category,name}))).slice(0,40)})
   if(!rows.length)throw new Error('No verified NBA player counts')
   const snapshot:NbaPublicCapture={gameId:game.id,capturedAt:new Date(captured).toISOString(),sourceUrl:payload.url,rows,unmatched,markets:[...new Set(rows.map(r=>r.market))]}
   const hash=createHash('sha256').update(JSON.stringify(rows)).digest('hex')

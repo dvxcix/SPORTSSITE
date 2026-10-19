@@ -37,7 +37,8 @@ export function normalizeNbaPublic(props:Record<string,Record<string,number>>,ro
         const suffix=normalized.slice(name.length)
         // Source may append "Points" while its selector says "Player Points".
         const suffixes=PAINT_MARKETS.find(m=>m.key===market)
-        return !!suffixes&&[nbaName(suffixes.label),nbaName(suffixes.key),nbaName(`Player ${suffixes.label}`)].includes(suffix)
+        const aliases=market==='threes'?['Three Pointers','Three Pointers Made','3-Pointers','3-Pointers Made','3PM','3PT','3PT FG','3 Point Field Goals','Three Point Field Goals Made']:[]
+        return !!suffixes&&[suffixes.label,suffixes.key,...aliases].flatMap(label=>[nbaName(label),nbaName(`Player ${label}`)]).includes(suffix)
       })
       if(matches.length!==1){unmatched++;continue}
       const key=`${matches[0].id}:${market}`,prior=found.get(key)
