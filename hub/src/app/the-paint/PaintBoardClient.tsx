@@ -35,6 +35,7 @@ export function PaintBoardClient({ initial, games, days, date }: { initial: Pain
   const [trackingMetric,setTrackingMetric]=useState('usage_percentage')
   const [refreshing, setRefreshing] = useState(false); const [refreshError, setRefreshError] = useState(''); const refreshLock = useRef(false); const requestRef = useRef<AbortController | null>(null); const watchlist = useWatchlist()
   const gameId = board?.game.id
+  const revisionRef=useRef<string|null>(null)
   const coreView=['research','odds','ladders','movement'].includes(view)
   const openResearch=(id:number,nextMarket?:PaintMarket)=>{if(nextMarket)setMarket(nextMarket);setDetailTab('trends');setDetail(id)}
   useEffect(()=>{
@@ -50,7 +51,14 @@ export function PaintBoardClient({ initial, games, days, date }: { initial: Pain
     refreshLock.current = true; setRefreshing(true)
     const controller = new AbortController(); requestRef.current = controller
     const timeout = setTimeout(() => controller.abort(), 55_000)
-    try { const response = await fetch(`/the-paint/board?game=${gameId}`, { cache: 'no-store', signal: controller.signal }); if (!response.ok) throw new Error('refresh'); const next = await response.json() as PaintBoard; if (next.game.id !== gameId || !Array.isArray(next.players)) throw new Error('shape'); setBoard(next); setRefreshError('') }
+    try {
+      const response = await fetch(`/the-paint/board?game=${gameId}`, { cache: 'no-store', signal: controller.signal,headers:revisionRef.current?{'If-None-Match':revisionRef.current}:{} })
+      if(response.status===304){const fetchedAt=response.headers.get('X-NBA-Fetched-At');if(fetchedAt&&!controller.signal.aborted){setBoard(previous=>previous?{...previous,fetchedAt}:previous);setRefreshError('')}return}
+      if (!response.ok) throw new Error('refresh')
+      const next = await response.json() as PaintBoard
+      if (next.game.id !== gameId || !Array.isArray(next.players)) throw new Error('shape')
+      if(!controller.signal.aborted){revisionRef.current=response.headers.get('ETag');setBoard(next);setRefreshError('')}
+    }
     catch { if (!controller.signal.aborted) setRefreshError('Refresh failed. Showing your last loaded board.'); else if (requestRef.current === controller) setRefreshError('Refresh timed out. Your board is preserved.') }
     finally { clearTimeout(timeout); refreshLock.current = false; setRefreshing(false) }
   }, [gameId])

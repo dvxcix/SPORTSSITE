@@ -135,6 +135,9 @@ provider load. Board cache 60s / bounded stale 300s; game browsing 15s, while
 posting/grading revalidate fresh status. Tracking uses stored facts and a shared
 900s cache; player clicks do not hit the provider independently. Board payload
 fell from 3,179,254 to 1,374,449 bytes by retaining only needed typed log fields.
+Authenticated conditional refreshes hash the semantic board: unchanged samples
+return an empty 304 response with the confirmed source time, preserving the
+browser's existing rows. Quote/stat/coverage changes return the complete update.
 This is architecture/concurrency evidence, not a 6,000-user load-test claim.
 
 Cloud-only ingestion resumes guarded exact cursors, never restarts completed
@@ -168,7 +171,7 @@ role before provider or service work. Guest redirect and member-denial contracts
 pass. NBA access remains unchanged until the owner approves public release.
 
 VERIFICATION
-NBA 46/46; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
+NBA 47/47; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
 10/10. TypeScript and targeted ESLint pass. Real browser checks cover desktop,
 390px and 320px layouts, exact odds/ladders, +/-MM, player panel/footer layering,
 shared saves, shot chart filters, tracking drill-through, league DvP, public

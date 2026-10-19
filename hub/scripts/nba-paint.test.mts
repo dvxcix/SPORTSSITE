@@ -600,3 +600,22 @@ test('unchanged successful NBA public reads enforce thirty-minute cadence withou
  const response=await (route.GET as(request:Request)=>Promise<Response>)(new Request('https://test/capture'))
  assert.equal(response.status,200);assert.equal((await response.json()).skipped,'Captures are current');assert.equal(opens,0)
 })
+
+test('NBA conditional refresh authenticates first, preserves meaningful changes and returns no repeated historical payload',async()=>{
+ let denied=true,reads=0
+ let board={game:{id:123},fetchedAt:'2026-10-19T07:00:00Z',issues:[] as string[],statsComplete:true,players:[{id:434,injury:null,logs:[stat(20)],props:[offer]}]}
+ const route=await compiled('../src/app/the-paint/board/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({},{status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>board}})
+ const get=route.GET as(request:unknown)=>Promise<Response>,request=(etag?:string)=>({nextUrl:new URL('https://test/board?game=123'),headers:new Headers(etag?{'if-none-match':etag}:{})})
+ assert.equal((await get(request())).status,403);assert.equal(reads,0)
+ denied=false
+ const first=await get(request()),etag=first.headers.get('etag')!
+ assert.equal(first.status,200);assert.ok(etag);assert.equal(first.headers.get('cache-control'),'private, no-store')
+ board={...board,fetchedAt:'2026-10-19T07:01:00Z',players:board.players.map(player=>({...player,props:player.props.map(prop=>({...prop,updated_at:'2026-10-19T07:01:00Z'}))}))}
+ const same=await get(request(etag));assert.equal(same.status,304);assert.equal(await same.text(),'');assert.equal(same.headers.get('x-nba-fetched-at'),board.fetchedAt)
+ board={...board,players:board.players.map(player=>({...player,logs:[stat(21)]}))}
+ const statChange=await get(request(etag));assert.equal(statChange.status,200);assert.notEqual(statChange.headers.get('etag'),etag)
+ board={...board,players:board.players.map(player=>({...player,props:player.props.map(prop=>({...prop,market:{...prop.market,over_odds:130}}))}))}
+ const priceChange=await get(request(statChange.headers.get('etag')!));assert.equal(priceChange.status,200)
+ board={...board,issues:['Quarter coverage incomplete'],statsComplete:false}
+ assert.equal((await get(request(statChange.headers.get('etag')!))).status,200)
+})
