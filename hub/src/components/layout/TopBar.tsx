@@ -18,6 +18,8 @@ import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FloatingSurface } from '@/components/ui/FloatingSurface'
 import { EmojiText } from '@/components/social/EmojiText'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
@@ -42,8 +44,10 @@ type QuickResults = {
   teams: { id: number; abbr: string; name: string; gamePk: number | null }[]
   nflPlayers: { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null; team_logo_espn: string | null }[]
   nflTeams: { team_abbr: string; team_name: string; team_logo_espn: string | null }[]
+  nbaPlayers: NbaSearchPlayer[]
+  nbaTeams: NbaSearchTeam[]
 }
-const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [], nflPlayers: [], nflTeams: [] }
+const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [], nflPlayers: [], nflTeams: [], nbaPlayers: [], nbaTeams: [] }
 
 function compactTimeAgo(date: string) {
   const elapsed = Math.max(0, Date.now() - new Date(date).getTime())
@@ -123,6 +127,7 @@ function TopbarNotificationEntry({
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile, loading } = useAuth()
+  const nbaAccess = hasNbaAccess(profile?.account_type)
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -166,57 +171,66 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   useEffect(() => {
     const query = search.trim()
     if (query.length < 2) { setQuickResults(EMPTY_RESULTS); setQuickLoading(false); return }
-    let cancelled = false
+    const controller = new AbortController()
+    setQuickResults(EMPTY_RESULTS)
     setQuickLoading(true)
     const t = setTimeout(async () => {
-      const postCols = 'id, content, pick_data, author_id, author:users!posts_author_id_fkey(username, display_name)'
-      const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData] = await Promise.all([
-        supabase.from('users')
-          .select('id, username, display_name, avatar_url')
-          .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-          .limit(3),
-        supabase.from('posts').select(postCols)
-          .ilike('content', `%${query}%`)
-          .eq('visibility', 'public')
-          .order('created_at', { ascending: false })
-          .limit(3),
-        // Same content-then-pick_data merge as the full /search results page
-        // (SearchClient.tsx) — a pick's player name usually only lives in
-        // pick_data, not the caption, so content-only search missed it here
-        // too. Can't do this as a single .or() query — PostgREST's logic
-        // tree grammar rejects a `column::type` cast (confirmed live via a
-        // PGRST100 parse error), so it's a separate bounded fetch merged
-        // client-side instead.
-        supabase.from('posts').select(postCols)
-          .in('post_type', ['pick', 'parlay'])
-          .eq('visibility', 'public')
-          .order('created_at', { ascending: false })
-          .limit(150),
-        fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
-        fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
-      ])
-      if (cancelled) return
-      const q = query.toLowerCase()
-      const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
-      const seen = new Set<string>()
-      const blockedSet = new Set(blockedIdsRef.current)
-      const p = [...(byContent ?? []), ...byPickData]
-        .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
-        .filter((post: any) => !blockedSet.has(post.author_id))
-        .slice(0, 3)
-      setQuickResults({
-        users: (u ?? []).filter((r: any) => !blockedSet.has(r.id)), posts: p,
-        players: (sportsData.players ?? []).slice(0, 3),
-        teams: (sportsData.teams ?? []).slice(0, 2),
-        nflPlayers: (nflData.players ?? []).slice(0, 3),
-        nflTeams: (nflData.teams ?? []).slice(0, 2),
-      })
-      setQuickLoading(false)
+      try {
+        const postCols = 'id, content, pick_data, author_id, author:users!posts_author_id_fkey(username, display_name)'
+        const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData, nbaData] = await Promise.all([
+          supabase.from('users')
+            .select('id, username, display_name, avatar_url')
+            .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+            .limit(3).abortSignal(controller.signal),
+          supabase.from('posts').select(postCols)
+            .ilike('content', `%${query}%`)
+            .eq('visibility', 'public')
+            .order('created_at', { ascending: false })
+            .limit(3).abortSignal(controller.signal),
+          // Same content-then-pick_data merge as the full /search results page
+          // (SearchClient.tsx) — a pick's player name usually only lives in
+          // pick_data, not the caption, so content-only search missed it here
+          // too. Can't do this as a single .or() query — PostgREST's logic
+          // tree grammar rejects a `column::type` cast (confirmed live via a
+          // PGRST100 parse error), so it's a separate bounded fetch merged
+          // client-side instead.
+          supabase.from('posts').select(postCols)
+            .in('post_type', ['pick', 'parlay'])
+            .eq('visibility', 'public')
+            .order('created_at', { ascending: false })
+            .limit(150).abortSignal(controller.signal),
+          fetch(`/api/search/sports?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+          fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+          nbaAccess ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`, { cache: 'no-store', signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
+        ])
+        if (controller.signal.aborted) return
+        const q = query.toLowerCase()
+        const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
+        const seen = new Set<string>()
+        const blockedSet = new Set(blockedIdsRef.current)
+        const p = [...(byContent ?? []), ...byPickData]
+          .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
+          .filter((post: any) => !blockedSet.has(post.author_id))
+          .slice(0, 3)
+        setQuickResults({
+          users: (u ?? []).filter((r: any) => !blockedSet.has(r.id)), posts: p,
+          players: (sportsData.players ?? []).slice(0, 3),
+          teams: (sportsData.teams ?? []).slice(0, 2),
+          nflPlayers: (nflData.players ?? []).slice(0, 3),
+          nflTeams: (nflData.teams ?? []).slice(0, 2),
+          nbaPlayers: (nbaData.players ?? []).slice(0, 3),
+          nbaTeams: (nbaData.teams ?? []).slice(0, 2),
+        })
+      } catch {
+        if (!controller.signal.aborted) setQuickResults(EMPTY_RESULTS)
+      } finally {
+        if (!controller.signal.aborted) setQuickLoading(false)
+      }
     }, 250)
-    return () => { cancelled = true; clearTimeout(t) }
-  }, [search, supabase])
+    return () => { controller.abort(); clearTimeout(t) }
+  }, [search, supabase, nbaAccess])
 
-  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0
+  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
   const visibleNotifications = useMemo(() => {
     if (notifFilter === 'unread') return notifications.filter(notification => !notification.read)
     if (notifFilter === 'mentions') return notifications.filter(notification => notification.type === 'mention')
@@ -391,6 +405,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         <input
           ref={searchInputRef}
           value={search}
+          maxLength={64}
           onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
           onFocus={() => setQuickOpen(true)}
           placeholder="Search picks, users, teams…"
@@ -465,6 +480,21 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                         {p.latest_team && <NflTeamLogo abbr={p.latest_team} logoUrl={p.team_logo_espn} size={12} />}
                       </div>
                     </div>
+                  </button>
+                ))}
+                {nbaAccess && quickResults.nbaTeams.map(team => (
+                  <button type="button" key={`nba-team-${team.id}`} onClick={() => goTo(`/nba/teams/${team.id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 44, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }} className="notif-dropdown-item">
+                    <TeamLogo logo={team.logo} name={team.name} size={28}/>
+                    <span style={{ minWidth: 0, flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{team.name}</span>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)' }}>NBA</span>
+                  </button>
+                ))}
+                {nbaAccess && quickResults.nbaPlayers.map(player => (
+                  <button type="button" key={`nba-player-${player.id}`} onClick={() => goTo(`/nba/players/${player.id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }} className="notif-dropdown-item">
+                    <PlayerAvatar headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={30}/>
+                    <span style={{ minWidth: 0, flex: 1 }}><span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span><span style={{ fontSize: 10, color: 'var(--text-3)' }}>{[player.position, player.teamName].filter(Boolean).join(' · ')}</span></span>
                   </button>
                 ))}
                 {quickResults.users.map(u => (

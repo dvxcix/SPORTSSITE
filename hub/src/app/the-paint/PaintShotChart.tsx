@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type { PaintPlayer } from '@/lib/nbaPaint'
+import { nbaAppeared, type PaintPlayer } from '@/lib/nbaPaint'
 import type { NbaShot } from '@/lib/nbaShots'
 import styles from './paint.module.css'
 type ShotResult = { gameId: number; playerId: number; shots: NbaShot[]; boxScoreAttempts: number | null; coverageMatches: boolean; fetchedAt: string; stale: boolean }
 export function PaintShotChart({ player }: { player: PaintPlayer }) {
-  const games = useMemo(() => [...new Map(player.logs.filter(log => (log.game.season ?? 0) >= 2025).map(log => [log.game.id, log.game])).values()].sort((a, b) => b.date.localeCompare(a.date)), [player.logs])
+  const games = useMemo(() => [...new Map(player.logs.filter(log => (log.game.season ?? 0) >= 2025 && (log.game.status === 'Final' || log.game.status_state === 'final') && nbaAppeared(log)).map(log => [log.game.id, log.game])).values()].sort((a, b) => b.date.localeCompare(a.date)), [player.logs])
   const [gameId, setGameId] = useState(games[0]?.id ?? 0), [result, setResult] = useState<ShotResult | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
   const [period, setPeriod] = useState('all'), [outcome, setOutcome] = useState('all'), [points, setPoints] = useState('all'), [selected, setSelected] = useState<number | null>(null), [heat, setHeat] = useState(false)
   useEffect(() => {

@@ -571,11 +571,6 @@
       "count": 1
     }
   },
-  "src/components/dugout/PostBetModal.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/components/dugout/RecentFormSplits.tsx": {
     "react-hooks/set-state-in-effect": {
       "count": 1
@@ -604,7 +599,7 @@
   },
   "src/components/layout/TopBar.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 9
+      "count": 8
     },
     "react-hooks/set-state-in-effect": {
       "count": 1

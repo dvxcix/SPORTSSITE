@@ -26,6 +26,7 @@ test('team league collisions and historical raw storage remain separate', () => 
   assert.equal(favorites.resolveFavoriteTeam('ATL', catalog)?.key, 'MLB:ATL')
   assert.equal(favorites.resolveFavoriteTeam('ATL', catalog, ['NFL'])?.key, 'NFL:ATL')
   assert.equal(favorites.resolveFavoriteTeam('MLB:ATL', catalog, ['NFL'])?.key, 'MLB:ATL')
+  assert.equal(favorites.resolveFavoriteTeam('MLB:ATL', catalog)?.href, '/mlb/teams/144')
   assert.equal(favorites.resolveFavoriteTeam('NFL:ATL', catalog)?.key, 'NFL:ATL')
   assert.deepEqual(favorites.toggleFavoriteTeam(nflTeam, ['ATL'], catalog), ['ATL', 'NFL:ATL'])
   assert.deepEqual(favorites.toggleFavoriteTeam(nflTeam, ['ATL', 'NFL:ATL'], catalog), ['ATL'])
@@ -97,14 +98,31 @@ test('favorites API saves/removes exact NFL and NBA IDs while preserving unrelat
   assert.deepEqual(fixture.current(), previous)
 })
 
-test('favorite entity writes enforce eight-player limit without replacing existing selections', async () => {
+test('favorite entity writes allow eight per league while preserving a full MLB roster', async () => {
   const fixture = await routeFixture()
   const eight = Array.from({ length: 8 }, (_, index) => ({ ...mlb, mlb_id: index + 1 }))
   await fixture.patch({ players: eight })
+  assert.equal((await fixture.patch({ action: 'add', player: nba })).status, 200)
+  assert.equal((await fixture.patch({ action: 'add', player: nfl })).status, 200)
+  assert.deepEqual(fixture.current().favorite_players.slice(0, 8), eight)
+  const basketball = Array.from({ length: 8 }, (_, index) => ({ ...nba, player_id: String(index + 1) }))
+  await fixture.patch({ players: [...eight, nfl, ...basketball] })
   assert.equal((await fixture.patch({ action: 'add', player: nba })).status, 400)
-  assert.deepEqual(fixture.current().favorite_players, eight)
+  assert.deepEqual(fixture.current().favorite_players, [...eight, nfl, ...basketball])
   assert.equal((await fixture.patch({ action: 'add', player: eight[0] })).status, 200)
-  assert.deepEqual(fixture.current().favorite_players, eight)
+  assert.deepEqual(fixture.current().favorite_players, [...eight, nfl, ...basketball])
+})
+
+test('normalizer keeps eight players from each league and bounds only that league overflow', () => {
+  const baseball = Array.from({ length: 9 }, (_, index) => ({ ...mlb, mlb_id: index + 1 }))
+  const football = Array.from({ length: 9 }, (_, index) => ({ ...nfl, player_id: `00-00${index}` }))
+  const basketball = Array.from({ length: 9 }, (_, index) => ({ ...nba, player_id: String(index + 1) }))
+  const values = favorites.normalizeFavoritePlayers([...baseball, ...football, ...basketball])
+  assert.equal(values.length, 24)
+  assert.deepEqual(values.filter(p => favorites.favoritePlayerSport(p) === 'mlb'), baseball.slice(0, 8))
+  assert.deepEqual(values.filter(p => favorites.favoritePlayerSport(p) === 'nfl'), football.slice(0, 8))
+  assert.deepEqual(values.filter(p => favorites.favoritePlayerSport(p) === 'nba'), basketball.slice(0, 8))
+  assert.equal(favorites.normalizeFavoritePlayers(values, false).length, 16)
 })
 
 test('onboarding persists NFL favorites, keeps MLB storage and restricts new NBA selections by trusted role', async () => {

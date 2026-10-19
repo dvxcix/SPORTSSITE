@@ -3,12 +3,13 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 
 export type FavoriteSport = 'mlb' | 'nfl' | 'nba'
+export const FAVORITE_PLAYERS_PER_SPORT = 8
 export type FavoritePlayer = { mlb_id: number; name: string; team: string; sport?: 'mlb' } | {
   sport: 'nfl' | 'nba'; player_id: string; name: string; team: string
   headshot?: string | null; team_logo?: string | null
 }
 export type FavoriteTeam = { key: string; sport: FavoriteSport; id: string; abbr: string; name: string; logo: string | null; href: string }
-export const MLB_FAVORITE_TEAMS: FavoriteTeam[] = MLB_TEAMS.map(team => ({ key: `MLB:${team.abbr}`, sport: 'mlb', id: String(team.id), abbr: team.abbr, name: team.name, logo: getTeamLogoUrl(team.abbr) ?? null, href: '' }))
+export const MLB_FAVORITE_TEAMS: FavoriteTeam[] = MLB_TEAMS.map(team => ({ key: `MLB:${team.abbr}`, sport: 'mlb', id: String(team.id), abbr: team.abbr, name: team.name, logo: getTeamLogoUrl(team.abbr) ?? null, href: `/mlb/teams/${team.id}` }))
 
 export function favoritePlayerSport(player: FavoritePlayer): FavoriteSport { return player.sport ?? 'mlb' }
 export function favoritePlayerKey(player: FavoritePlayer) { return 'mlb_id' in player ? `mlb:${player.mlb_id}` : `${player.sport}:${player.player_id}` }
@@ -23,7 +24,7 @@ function imageUrl(value: unknown) {
 /** Read old MLB JSON without rewriting its storage shape; other leagues carry an explicit identity. */
 export function normalizeFavoritePlayers(value: unknown, allowNba = true): FavoritePlayer[] {
   if (!Array.isArray(value)) return []
-  const result: FavoritePlayer[] = [], seen = new Set<string>()
+  const result: FavoritePlayer[] = [], seen = new Set<string>(), counts = new Map<FavoriteSport, number>()
   for (const item of value) {
     if (!item || typeof item !== 'object') continue
     const p = item as Record<string, unknown>
@@ -42,8 +43,9 @@ export function normalizeFavoritePlayers(value: unknown, allowNba = true): Favor
       player = { mlb_id: id, name, team }
     }
     const key = favoritePlayerKey(player)
-    if (!seen.has(key)) { result.push(player); seen.add(key) }
-    if (result.length === 8) break
+    const sport = favoritePlayerSport(player), count = counts.get(sport) ?? 0
+    if (!seen.has(key) && count < FAVORITE_PLAYERS_PER_SPORT) { result.push(player); seen.add(key); counts.set(sport, count + 1) }
+    if (result.length === FAVORITE_PLAYERS_PER_SPORT * 3) break
   }
   return result
 }

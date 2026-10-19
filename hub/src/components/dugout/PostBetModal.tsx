@@ -1,6 +1,6 @@
 'use client'
 import { nbaTeamLogo } from '@/lib/nbaPaint'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -13,10 +13,11 @@ import { ModalSurface } from '@/components/ui/ModalSurface'
 // Posts one or more watchlist legs as a bet — a straight bet for one leg, a
 // parlay for 2+. Every leg must share a book by the time this opens (the
 // caller is responsible for enforcing that before letting the user get here).
-export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[]; onClose: () => void; onPosted?: () => void }) {
+export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[]; onClose: () => void; onPosted?: (postId: string) => void }) {
   const wl = useWatchlist()
   const [wager, setWager] = useState('')
   const [posting, setPosting] = useState(false)
+  const submitting = useRef(false)
   const [error, setError] = useState('')
   const nbaOnly = legs.every(leg => leg.sport.toLowerCase() === 'nba')
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>(nbaOnly ? 'private' : 'public')
@@ -29,23 +30,26 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   const payout = combined != null && hasWager ? calcPayout(wagerNum, combined) : null
 
   async function submit() {
+    if (submitting.current || combined == null) return
+    submitting.current = true
     setPosting(true); setError('')
     try {
-      await wl.postBet(legs, { wagerAmount: hasWager ? wagerNum : null, visibility })
-      onPosted?.()
+      const { postId } = await wl.postBet(legs, { wagerAmount: hasWager ? wagerNum : null, visibility })
+      onPosted?.(postId)
       onClose()
-    } catch (e: any) {
-      setError(e.message || 'Failed to post')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to post')
     } finally {
+      submitting.current = false
       setPosting(false)
     }
   }
 
   return (
-    <ModalSurface open onClose={onClose} labelledBy="post-bet-title" backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+    <ModalSurface open onClose={() => { if (!submitting.current) onClose() }} labelledBy="post-bet-title" backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
-          <button type="button" onClick={onClose} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={16} /></button>
+          <button type="button" disabled={posting} onClick={() => { if (!submitting.current) onClose() }} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: posting ? 'default' : 'pointer' }}><X size={16} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>

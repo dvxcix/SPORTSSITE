@@ -3,7 +3,7 @@ import { resolveAuthedClient } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
-import { favoritePlayerKey, favoritePlayerSport, favoriteUpdates, normalizeFavoritePlayers, normalizeFavoriteTeams, resolveFavoriteTeam } from '@/lib/sportFavorites'
+import { FAVORITE_PLAYERS_PER_SPORT, favoritePlayerKey, favoritePlayerSport, favoriteUpdates, normalizeFavoritePlayers, normalizeFavoriteTeams, resolveFavoriteTeam } from '@/lib/sportFavorites'
 import { safeApiError } from '@/lib/safeApiError'
 
 export const dynamic = 'force-dynamic'
@@ -49,7 +49,8 @@ export async function PATCH(request: Request) {
       const player = normalizeFavoritePlayers([body.player])[0]
       if (!player || favoritePlayerSport(player) === 'nba' && !auth.allowNba) return NextResponse.json({ error: 'That player is unavailable.' }, { status: 403, headers })
       const key = favoritePlayerKey(player)
-      if (body.action === 'add' && currentPlayers.length >= 8 && !currentPlayers.some(item => favoritePlayerKey(item) === key)) return NextResponse.json({ error: 'Choose up to 8 favorite players. Edit your favorites in Settings.' }, { status: 400, headers })
+      const sport = favoritePlayerSport(player), count = currentPlayers.filter(item => favoritePlayerSport(item) === sport).length
+      if (body.action === 'add' && count >= FAVORITE_PLAYERS_PER_SPORT && !currentPlayers.some(item => favoritePlayerKey(item) === key)) return NextResponse.json({ error: `Choose up to ${FAVORITE_PLAYERS_PER_SPORT} favorite ${sport.toUpperCase()} players. Edit your favorites in Settings.` }, { status: 400, headers })
       players = body.action === 'add' ? [...currentPlayers, player] : currentPlayers.filter(item => favoritePlayerKey(item) !== key)
     }
   }

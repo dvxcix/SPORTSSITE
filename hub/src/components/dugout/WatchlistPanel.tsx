@@ -10,7 +10,7 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PostBetModal } from './PostBetModal'
 import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
-import { Share2 } from 'lucide-react'
+import { CheckCircle2, Share2, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
@@ -112,6 +112,7 @@ export function WatchlistButton() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [modalLegs, setModalLegs] = useState<WatchlistItem[] | null>(null)
+  const [postedId, setPostedId] = useState<string | null>(null)
   const [confirmingClearAll, setConfirmingClearAll] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
   const [sharing, setSharing] = useState(false)
@@ -145,6 +146,11 @@ export function WatchlistButton() {
   function exitSelectMode() {
     setSelectMode(false)
     setSelectedIds(new Set())
+  }
+
+  function startPost(legs: WatchlistItem[]) {
+    setPostedId(null)
+    setModalLegs(legs)
   }
 
   async function clearAll() {
@@ -206,6 +212,12 @@ export function WatchlistButton() {
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{wl.pendingCount} pending</span>
               <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
+            {postedId && <div role="status" aria-atomic="true" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 12px 12px', padding: '8px 10px', border: '1px solid var(--border-2)', borderRadius: 9, background: 'var(--accent-dim)' }}>
+              <CheckCircle2 size={17} color="var(--accent)" aria-hidden="true"/>
+              <strong style={{ fontSize: 12, color: 'var(--text-1)' }}>Pick posted</strong>
+              <Link href={`/posts/${encodeURIComponent(postedId)}`} onClick={() => setOpen(false)} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 36, marginLeft: 'auto', color: 'var(--accent)', fontSize: 12, fontWeight: 800 }}>View pick</Link>
+              <button type="button" aria-label="Dismiss posting confirmation" onClick={() => setPostedId(null)} style={{ display: 'grid', placeItems: 'center', minWidth: 36, minHeight: 36, border: 0, background: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={14}/></button>
+            </div>}
             {pendingItems.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
                 {!selectMode && (
@@ -290,7 +302,7 @@ export function WatchlistButton() {
                     key={item.id} item={item} wl={wl}
                     selectMode={selectMode} selected={selectedIds.has(item.id)}
                     onToggleSelect={toggleSelect}
-                    onPostSingle={i => setModalLegs([i])}
+                    onPostSingle={i => startPost([i])}
                   />
                 ))
               )}
@@ -308,7 +320,7 @@ export function WatchlistButton() {
                 )}
                 <button
                   disabled={booksMismatch || selectedItems.length < 2}
-                  onClick={() => setModalLegs(selectedItems)}
+                  onClick={() => startPost(selectedItems)}
                   style={{
                     width: '100%', padding: '9px', borderRadius: 8, border: 'none',
                     background: booksMismatch || selectedItems.length < 2 ? 'var(--surface-3)' : 'var(--accent)',
@@ -326,7 +338,7 @@ export function WatchlistButton() {
         <PostBetModal
           legs={modalLegs}
           onClose={() => setModalLegs(null)}
-          onPosted={() => { exitSelectMode() }}
+          onPosted={postId => { setPostedId(postId); exitSelectMode() }}
         />
       )}
 

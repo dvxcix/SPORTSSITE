@@ -1216,7 +1216,8 @@ test('icon-only product controls retain explicit accessible names and button sem
     assert.ok(source.includes('aria-label='), `${files[index]} has no named icon controls`)
   }
   const modalSurface = await read('src/components/ui/ModalSurface.tsx')
-  assert.match(contents[0], /<ModalSurface open onClose=\{onClose\} labelledBy="post-bet-title"/)
+  assert.match(contents[0], /<ModalSurface open onClose=\{[^\n]+labelledBy="post-bet-title"/)
+  assert.ok(contents[0].includes('if (!submitting.current) onClose()'), 'pending posts cannot be dismissed and accidentally resubmitted')
   assert.match(modalSurface, /role="dialog"/)
   assert.match(modalSurface, /aria-modal="true"/)
   assert.ok(contents[4].includes('role="dialog"'))

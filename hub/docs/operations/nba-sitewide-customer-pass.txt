@@ -67,7 +67,7 @@ https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticate
 https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 
 Local functional verification
-- Consolidated NBA suite 107/107, production smoke 134/134, NFL grading and
+- Consolidated NBA suite 114/114, production smoke 134/134, NFL grading and
   research navigation 13/13; TypeScript and all changed/new TS file lint pass.
 - nba-pick-privacy.test.mts: 5/5 tests passed. Actual watchlist serialization and
   fresh NBA validator preserve +350 Over 29.5, -480 Under 29.5 and inclusive 30+
@@ -118,7 +118,32 @@ Evidence (workspace-relative)
 - work/the-paint/settle_nba_pick_exact.live.sql
 - hub/scripts/nba-pick-privacy.test.mts
 
-PENDING — root completes after deployment/live browser QA
+First live customer pass
+- be3d38d78eecae528db84e0dece4767a4923bf71 reached READY as
+  dpl_6894uTCVXDMWMz7zMiQTdUSiiXd8 and owns www.slipsurge.com.
+- Desktop full search found Towns; NBA saved search persisted/reopened; player
+  history showed three seasons with original teams. PTS sort returned 40 as
+  highest. Actual Apr 10 shots loaded, shot selection, Q1 filtering and heatmap
+  worked (Q1 3/4). Team profile showed 82 games, roster search and exact links.
+- Knicks team favorite persisted across reload, then restored to its original
+  off state. Existing eight MLB favorites exposed the shared-cap issue; fixed
+  to eight players per league without removing any MLB selections.
+- Desktop Towns 25+ points, FanDuel +360 was saved and posted Only me with no
+  wager. My Picks showed it pending. Live DB verifies exact player447/game
+  21717856/date2026-10-20/threshold25/milestone/price360/bookfanduel and zero
+  notifications. Transaction-local RLS checks: owner sees one post/one pick;
+  nonowner sees zero/zero. No production result was changed.
+- Phone390x844: NBA peer section and all research tools visible; Ladders opened
+  correctly. Cade Over25.5 points BetParx +115 saved separately and accurately.
+  Document/body/viewport all380 CSS pixels: no page-wide horizontal overflow.
+- Anonymous search is401; protected profile/score redirect to sign-in. Unit
+  tests independently verify member denial before source reads.
+- Follow-up fixes add TopBar NBA results, admin entity registry, per-league
+  favorite capacity, reset favorite controls on entity navigation, completed
+  appearance shot defaults, hidden-route robot headers, and exact post links
+  with duplicate-submit protection.
+
+PENDING — root completes after follow-up deployment/live browser QA
 - Final GitHub main commit, deployment ID/state and production URL verification.
 - Consolidated typecheck/lint/source/navigation/privacy/favorites test results.
 - Desktop: research -> player panel -> compare -> exact alt save -> Only me

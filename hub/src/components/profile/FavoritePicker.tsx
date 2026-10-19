@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Check, Loader2, Search, X } from 'lucide-react'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
-import { MLB_FAVORITE_TEAMS, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, favoriteSearchPlayers, favoriteTeamSelected, toggleFavoriteTeam, type FavoritePlayer, type FavoriteSport, type FavoriteTeam } from '@/lib/sportFavorites'
+import { FAVORITE_PLAYERS_PER_SPORT, MLB_FAVORITE_TEAMS, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, favoriteSearchPlayers, favoriteTeamSelected, toggleFavoriteTeam, type FavoritePlayer, type FavoriteSport, type FavoriteTeam } from '@/lib/sportFavorites'
 
 export function FavoritePicker({ teams, players, sports = [], allowNba = false, onTeamsChange, onPlayersChange }: {
   teams: string[]; players?: FavoritePlayer[]; sports?: string[]; allowNba?: boolean
@@ -40,12 +40,12 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = false, 
     }, 300)
     return () => { clearTimeout(timer); controller.abort() }
   }, [query, sport, searchEnabled])
-  const selectedPlayers = (players ?? []).filter(player => allowNba || favoritePlayerSport(player) !== 'nba')
+  const selectedPlayers = (players ?? []).filter(player => favoritePlayerSport(player) === sport && (allowNba || sport !== 'nba'))
   const visibleCatalog = catalog.filter(team => allowNba || team.sport !== 'nba')
   function changeQuery(value: string) { setQuery(value); setResults([]); setSearching(value.trim().length >= 2); setSearchError(false) }
   function changeSport(value: FavoriteSport) { setSport(value); changeQuery('') }
   function addPlayer(player: FavoritePlayer) {
-    if (!onPlayersChange || (players?.length ?? 0) >= 8) return
+    if (!onPlayersChange || selectedPlayers.length >= FAVORITE_PLAYERS_PER_SPORT) return
     if (!(players ?? []).some(item => favoritePlayerKey(item) === favoritePlayerKey(player))) onPlayersChange([...(players ?? []), player])
     changeQuery('')
   }
@@ -64,12 +64,12 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = false, 
       {sport !== 'mlb' && visibleCatalog.every(team => team.sport !== sport) && <p className="mt-2 text-xs text-zinc-400">{catalogError ? <>Teams could not be loaded. <button type="button" className="text-lime-300 underline" onClick={() => setAttempt(value => value + 1)}>Try again</button></> : 'Loading teams…'}</p>}
     </section>
     {onPlayersChange && <section aria-label="Favorite players">
-      <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold text-zinc-400">Favorite players</h3><span className="text-[10px] text-zinc-500">{selectedPlayers.length}/8</span></div>
+      <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold text-zinc-400">Favorite {sport.toUpperCase()} players</h3><span className="text-[10px] text-zinc-500">{selectedPlayers.length}/{FAVORITE_PLAYERS_PER_SPORT}</span></div>
       {selectedPlayers.length > 0 && <div className="mb-3 flex flex-wrap gap-2">{selectedPlayers.map(player => {
         const artwork = favoritePlayerImages(player)
         return <span key={favoritePlayerKey(player)} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1.5 pr-1"><PlayerAvatar headshot={artwork.headshot} teamLogo={artwork.logo} teamAbbr={favoritePlayerSport(player) === 'mlb' ? player.team : null} name={player.name} size={28}/><span className="text-xs font-semibold text-white">{player.name}</span><button type="button" className="grid size-8 place-items-center rounded-full text-zinc-400 hover:bg-red-400/10 hover:text-red-300" aria-label={`Remove ${player.name}`} onClick={() => onPlayersChange((players ?? []).filter(item => favoritePlayerKey(item) !== favoritePlayerKey(player)))}><X size={13}/></button></span>
       })}</div>}
-      <div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-3.5 text-zinc-500"/><input value={query} onChange={event => changeQuery(event.target.value)} aria-label={`Search favorite ${sport.toUpperCase()} players`} placeholder={`Search ${sport.toUpperCase()} players…`} maxLength={64} disabled={(players?.length ?? 0) >= 8} className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-sm text-white outline-none transition focus:border-lime-400/50 disabled:opacity-50"/></div>
+      <div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-3.5 text-zinc-500"/><input value={query} onChange={event => changeQuery(event.target.value)} aria-label={`Search favorite ${sport.toUpperCase()} players`} placeholder={`Search ${sport.toUpperCase()} players…`} maxLength={64} disabled={selectedPlayers.length >= FAVORITE_PLAYERS_PER_SPORT} className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-sm text-white outline-none transition focus:border-lime-400/50 disabled:opacity-50"/></div>
       {query.trim().length >= 2 && <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/30" aria-live="polite">
         {searching ? <p className="flex items-center gap-2 p-3 text-xs text-zinc-400"><Loader2 size={14} className="animate-spin"/>Searching…</p> : searchError ? <p className="p-3 text-xs text-zinc-400">Search is unavailable. Try again shortly.</p> : !results.length ? <p className="p-3 text-xs text-zinc-400">No players found.</p> : results.map(player => {
           const artwork = favoritePlayerImages(player), selected = (players ?? []).some(item => favoritePlayerKey(item) === favoritePlayerKey(player))

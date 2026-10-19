@@ -61,7 +61,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Identity & sports entities', priority: 'P1', defaults: partial,
-    routes: ['/profile/[username]', '/players/[id]', '/mlb/teams/[id]', '/nfl/players/[id]', '/nfl/teams/[abbr]', '/leaderboard'],
+    routes: ['/profile/[username]', '/players/[id]', '/mlb/teams/[id]', '/nfl/players/[id]', '/nfl/teams/[abbr]', ['/nba/players/[id]', 'NBA player profiles · admin-gated'], ['/nba/teams/[id]', 'NBA team profiles · admin-gated'], '/leaderboard'],
   },
   {
     family: 'MLB research', priority: 'P0', defaults: partial,
@@ -169,6 +169,8 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/mlb/teams/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/nfl/players/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/nfl/teams/[abbr]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/nba/players/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/nba/teams/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/leaderboard': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/dugout': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/workspace': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
