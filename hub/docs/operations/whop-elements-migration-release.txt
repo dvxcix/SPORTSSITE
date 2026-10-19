@@ -35,3 +35,12 @@ under both SlipSurge and Parlay Party (add-on) unified Websites/domain managers.
 Release target: promote the above tested production deployment to www.slipsurge.com
 after fast-forwarding GitHub main. Runtime source is identical to the tested 315a88e9
 commit; later commits contain test-lint and this operational record only.
+
+Release verified: promoted dpl_3AkJvt3Afd7LTudE46u1LMC8SPLi to production.
+www.slipsurge.com resolves to that READY deployment. HTTP /pricing 200; all 23
+referenced script assets returned 200. Combined production scripts include the
+Elements CDN loader and checkoutConfigurationId contract, and exclude the old
+js.whop.com/static/checkout/loader.js. Anonymous checkout POST returns 401.
+Canceled return shows the failure message and no success banner, also confirmed
+in the signed-in PC browser. Both businesses show www.slipsurge.com / Apple Pay
+enabled in Whop. Device-wallet transactions and a completed purchase were not run.
