@@ -45,4 +45,21 @@ Verification
 - Local browser checked real NBA data, signed ranks, sportsbook prices, save
   toggle and mobile odds layout with equal document/scroll widths at 390px.
 
-Live UI verification is recorded after the GitHub-backed release below.
+Live verification
+- Main implementation bf9172754f4faa9be78e01b7453a4430b9c1d253 deployed READY as
+  dpl_Ci7GjoHaJMPK3RjA7kzd4aubFppK with www.slipsurge.com assigned.
+- Real admin browser showed per-book prices/logos, signed MM and both sort
+  directions; no PRIVATE PREVIEW or BallDontLie text. No document overflow.
+- Saved a real Cade Cunningham / FanDuel Over 23.5 Points quote at -136.
+  Reloaded the page, opened the shared watchlist and confirmed persistence.
+  Opened Post Pick and verified exact name, headshot, logo, line and price.
+  Closed before publishing; database/API integration covers the submit path.
+- Archived only that disposable saved fixture afterward (reversible); no pending
+  NBA test selections or public test posts/picks remain. Saved-only board filter
+  now explicitly excludes archived selections. Stale-price errors tell users
+  to replace the old saved selection with the current quote.
+- Local mobile odds tables verified at 390px and 320px with matching document
+  client/scroll widths. Missing quotes stay blank and line differences stay visible.
+- Final-game grading is verified using provider-shaped fixtures plus the actual
+  atomic database RPC in rolled-back transactions. No future NBA game result or
+  real customer grading job was fabricated/replayed for testing.

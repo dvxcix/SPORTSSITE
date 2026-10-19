@@ -29,7 +29,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
       const data = games.get(leg.game_pk!)!
       const starts = Date.parse(data.game.datetime ?? data.game.status)
       if (!Number.isFinite(starts) || starts <= Date.now() || !['scheduled', undefined, 'unknown'].includes(data.game.status_state)) return `${leg.player_name}'s game has already started or is unavailable.`
-      if (!data.props.some(p => paintOfferMatches(p, leg))) return `${leg.player_name}'s selected NBA price changed. Refresh the board and try again.`
+      if (!data.props.some(p => paintOfferMatches(p, leg))) return `${leg.player_name}'s selected NBA price changed. Remove the old saved selection and save the current price from ThePaint.`
       const identity = identities.get(Number(leg.player_id!.slice(4)))!
       if (![data.game.home_team.id, data.game.visitor_team.id].includes(identity.team.id)) return 'Player is no longer on this matchup roster. Refresh the board.'
       leg.player_name = `${identity.first_name} ${identity.last_name}`; leg.team = identity.team.abbreviation; leg.game_date = data.game.date; leg.line = String(leg.numeric_line)
