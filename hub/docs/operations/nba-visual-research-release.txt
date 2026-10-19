@@ -25,8 +25,17 @@ Local verification
   remain covered.
 - Shared production source contracts: 134/134 passing.
 - TypeScript and all modified application TypeScript/TSX ESLint checks pass.
-- Build and deployed browser verification are recorded separately in this task's
-  work/the-paint evidence. Do not treat source tests as visual certification.
+- Local compilation and typechecking succeeded; local prerendering could not run
+  without this checkout's Supabase environment. The configured Vercel production
+  build passed for 74286823575744c18cc7768966abe45e14e7befc
+  (dpl_CZb89cZT8Ne8qJLnuhuUvCTvHxtH).
+- Live desktop review verified team/book logo menus, exact selection identity,
+  score dials and heatmap rendering. Mobile review verified readable role cells
+  and identified excess header space. A scoped follow-up compacts the mobile
+  calendar, matchup strip and repeated workspace heading, retains 44px targets,
+  and keeps desktop research table headings visible while scrolling.
+- Follow-up TypeScript, ESLint and 17 affected interaction regressions pass.
+  Final deployed browser evidence is recorded in work/the-paint.
 
 Baseline refreshed from GitHub main and live Vercel before changes and release:
 dc7dc681e89477cf8b8d19d25abe1de19ab46b00, dpl_2fWAPKSHQzHZTrmVpkoV2aMXxgGV.

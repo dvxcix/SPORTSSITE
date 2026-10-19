@@ -69,7 +69,7 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
           return <button type="button" key={game.id} ref={selected ? activeGame : undefined} className={styles.game} aria-pressed={selected} aria-label={`${game.visitor_team.full_name} at ${game.home_team.full_name}, ${gameTime(game)}${hasScore ? `, ${game.visitor_team_score} to ${game.home_team_score}` : ' Eastern'}`} onClick={() => onChange(game.date, game.id)}>
             <span className={styles.teams}><TeamLogo abbr={game.visitor_team.abbreviation} size={36}/><span className={styles.score}>{hasScore ? <><b>{game.visitor_team_score}</b><i>–</i><b>{game.home_team_score}</b></> : <i className={styles.versus}>vs</i>}</span><TeamLogo abbr={game.home_team.abbreviation} size={36}/></span>
             <span className={styles.gameTime} data-live={game.status_state === 'in_progress'}>{game.status_state === 'in_progress' && <i/>}{gameTime(game)}</span>
-            {selected && <Check className={styles.selected} size={11}/>} 
+            {selected && <Check className={styles.selected} size={11}/>}
           </button>
         })}
       </nav>
