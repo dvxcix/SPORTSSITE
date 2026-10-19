@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Activity, AtSign, Award, Bell, Bookmark, BookOpen, ChartSpline, CloudSun, Coins,
   Compass, Crosshair, Flame, FlaskConical, Hash, History, Home, Layers3,
-  LayoutGrid, Link2, MessageCircle, MessagesSquare, Search, Settings2,
+  LayoutGrid, Link2, ListOrdered, MessageCircle, MessagesSquare, Search, Settings2,
   ShoppingBag, Table2, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react'
 
@@ -28,9 +28,28 @@ export const productAreaMeta: Record<ProductArea, { label: string; eyebrow: stri
 
 export const primaryNavigation: ProductNavItem[] = [
   { href: '/feed', label: 'Home', icon: Home, matches: ['/feed', '/explore', '/search', '/hashtag', '/post', '/profile', '/notifications'] },
-  { href: '/dugout', label: 'Research', icon: FlaskConical, matches: ['/dugout', '/the-sideline', '/workspace', '/sports', '/batter-cost', '/odds-terminal', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/synergy', '/daily-recap', '/spray-charts', '/the-public', '/nfl'] },
+  { href: '/dugout', label: 'Research', icon: FlaskConical, matches: ['/dugout', '/the-sideline', '/the-paint', '/nba', '/workspace', '/sports', '/batter-cost', '/odds-terminal', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/synergy', '/daily-recap', '/spray-charts', '/the-public', '/nfl'] },
   { href: '/community', label: 'Community', icon: MessagesSquare, badge: 'LIVE', matches: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog'] },
   { href: '/picks', label: 'Picks', icon: TrendingUp, matches: ['/picks', '/bookmarks', '/missions', '/activity'] },
+]
+
+/** Visibility is admin-gated by every consumer through nbaAccessPolicy. */
+export const nbaResearchNavigation: ProductNavItem[] = [
+  { href: '/the-paint', label: 'ThePaint · NBA', shortLabel: 'ThePaint', icon: Layers3 },
+  { href: '/the-paint?view=odds', label: 'NBA Odds', shortLabel: 'Odds', icon: ChartSpline },
+  { href: '/the-paint?view=ladders', label: 'NBA Ladders', shortLabel: 'Ladders', icon: ListOrdered },
+  { href: '/the-paint?view=movement', label: 'NBA Market Story', shortLabel: 'Market Story', icon: TrendingUp },
+  { href: '/the-paint?view=cheatsheets', label: 'NBA Cheatsheets', shortLabel: 'Cheatsheets', icon: Table2 },
+  { href: '/the-paint?view=score', label: 'NBA SlipSurge Score', shortLabel: 'SlipSurge Score', icon: Crosshair },
+  { href: '/the-paint?view=slate', label: 'NBA Slate Edge', shortLabel: 'Slate Edge', icon: Layers3 },
+  { href: '/the-paint?view=public', label: 'NBA ThePublic', shortLabel: 'ThePublic', icon: Users },
+  { href: '/the-paint?view=divergence', label: 'NBA Cross-market', shortLabel: 'Cross-market', icon: Activity },
+  { href: '/the-paint?view=dvp', label: 'NBA Defense × position', shortLabel: 'Defense × position', icon: Trophy },
+  { href: '/the-paint?view=usage', label: 'NBA Role & minutes', shortLabel: 'Role & minutes', icon: Activity },
+  { href: '/the-paint?view=tracking', label: 'NBA Game tracking', shortLabel: 'Game tracking', icon: Activity },
+  { href: '/the-paint?view=matchup', label: 'NBA Matchup Lab', shortLabel: 'Matchup Lab', icon: Crosshair },
+  { href: '/the-paint?view=availability', label: 'NBA Availability', shortLabel: 'Availability', icon: Users },
+  { href: '/the-paint?view=game-markets', label: 'NBA Game markets', shortLabel: 'Game markets', icon: Coins },
 ]
 
 export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
@@ -52,6 +71,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/the-sideline?mode=public', label: 'NFL Public', shortLabel: 'NFL Public', icon: Users },
     { href: '/the-sideline?mode=markets', label: 'NFL Sportsbooks', shortLabel: 'NFL Books', icon: ChartSpline },
     { href: '/the-sideline?mode=research', label: 'NFL Matchup Lab', shortLabel: 'Matchups', icon: Crosshair },
+    ...nbaResearchNavigation,
     { href: '/the-public', label: 'The Public', shortLabel: 'Public', icon: Users },
     { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
     { href: '/odds-terminal', label: 'Odds Terminal', shortLabel: 'Terminal', icon: ChartSpline },

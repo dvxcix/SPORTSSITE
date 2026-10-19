@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { hasNbaAccess } from '../src/lib/nbaAccessPolicy.ts'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { nbaPeriod, nbaTarget, nbaMarketLogs, nbaPrice, gradeNbaValue, nbaAverage, nbaDate, nbaHitRate, nbaMinutes, nbaName, nbaReference, nbaSample, nbaSelectionKey, nbaValue, parseNbaSelection, nbaWeightedRank, nbaTeamLogo, type PaintPlayer, type PaintStat, type PaintProp } from '../src/lib/nbaPaint.ts'
@@ -365,7 +366,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
   for (const [id, role, error, status] of [[null, null, null, 401], ['u', 'member', null, 403], ['u', 'admin', 'db error', 403], ['u', 'admin', null, undefined]] as const) {
-    const gate = await compiled('../src/lib/paintAccess.ts', { 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: id, supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role }, error }) }) }) }) } }) } })
+    const gate = await compiled('../src/lib/paintAccess.ts', { '@/lib/nbaAccessPolicy': { hasNbaAccess }, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: id, supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role }, error }) }) }) }) } }) } })
     const result = await gate.requirePaintAccess() as { error?: Response; userId?: string }
     assert.equal(result.error?.status, status)
     if (!status) assert.equal(result.userId, id)

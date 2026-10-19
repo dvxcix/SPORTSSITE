@@ -1,3 +1,5 @@
+import type { FavoritePlayer } from '@/lib/sportFavorites'
+
 export interface User {
   id: string
   email: string
@@ -17,7 +19,7 @@ export interface User {
   following_count: number
   pick_record: { wins: number; losses: number; pushes: number }
   favorite_teams: string[]
-  favorite_players: { mlb_id: number; name: string; team: string }[]
+  favorite_players: FavoritePlayer[]
   social_links: Record<string, string>
   // Real OAuth-linked handles (Discord/X), synced from auth.identities when
   // a user connects via Settings > Connected Accounts > Verify — distinct
@@ -147,7 +149,7 @@ export interface Post {
     options: { text: string; votes: number }[]
     ends_at: string
   }
-  visibility: 'public' | 'followers' | 'subscribers'
+  visibility: 'public' | 'followers' | 'subscribers' | 'private'
   is_spoiler?: boolean
   is_premium: boolean
   reaction_count: number

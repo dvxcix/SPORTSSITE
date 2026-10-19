@@ -1044,7 +1044,7 @@ test('global discovery supports durable member-scoped saved searches', async () 
   assert.ok(search.includes(".from('saved_searches').upsert"))
   assert.ok(search.includes("onConflict: 'user_id,query_key,result_tab'"))
   assert.ok(search.includes(".from('saved_searches').delete"))
-  assert.ok(search.includes('setQ(saved.query); setTab(saved.result_tab)'))
+  assert.ok(search.includes("setQ(saved.query); setTab(saved.result_tab === 'nba' && !nbaAllowed ? 'all' : saved.result_tab)"), 'saved searches restore their tab while hidden NBA searches fall back for members')
   assert.ok(search.includes('aria-labelledby="saved-searches-heading"'))
   assert.ok(search.includes('role="alert"'))
   assert.ok(migration.includes('alter table public.saved_searches enable row level security'))
@@ -1177,12 +1177,18 @@ test('product experience audit tracks every completed route dimension', async ()
 
 test('settings editors expose programmatic field names and announced failures', async () => {
   const profile = await read('src/components/settings/ProfileForm.tsx')
+  const favorites = await read('src/components/profile/FavoritePicker.tsx')
   const account = await read('src/components/settings/AccountSettingsForm.tsx')
   const deletion = await read('src/components/settings/AccountDeletionControl.tsx')
   const notifications = await read('src/components/settings/NotificationSettingsForm.tsx')
-  for (const label of ['Display name', 'Username', 'Bio', 'Location', 'Website', 'Search favorite MLB players']) {
+  for (const label of ['Display name', 'Username', 'Bio', 'Location', 'Website']) {
     assert.ok(profile.includes(`aria-label="${label}"`), `profile editor omits ${label} field name`)
   }
+  assert.ok(profile.includes('<FavoritePicker teams={form.favorite_teams} players={form.favorite_players}'))
+  assert.ok(favorites.includes('aria-label={`Search favorite ${sport.toUpperCase()} players`}'))
+  assert.ok(favorites.includes('aria-label="Favorite league"'))
+  assert.ok(favorites.includes('aria-live="polite"'))
+  assert.ok(favorites.includes('aria-label={`Remove ${player.name}`}'))
   for (const label of ['Email address', 'New password', 'Confirm new password']) {
     assert.ok(account.includes(`aria-label="${label}"`), `account editor omits ${label} field name`)
   }
@@ -1494,7 +1500,8 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(onboardingSave.includes('createAdminClient()'))
   assert.ok(onboardingSave.includes("safeApiError('account-onboarding-save'"))
   assert.ok(onboardingSave.includes("'Cache-Control': 'private, no-store, max-age=0'"))
-  assert.ok(onboardingSave.includes('favorite_players: favoritePlayers(body.favoritePlayers)'))
+  assert.ok(onboardingSave.includes("import { favoriteUpdates } from '@/lib/sportFavorites'"))
+  assert.ok(onboardingSave.includes('...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile.account_type))'))
   assert.ok(onboardingSave.includes('banner_url: safeImageUrl(body.bannerUrl)'))
   assert.ok(onboardingPage.includes(".from('groups')"))
 })

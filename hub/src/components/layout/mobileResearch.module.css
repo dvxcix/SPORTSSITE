@@ -9,3 +9,6 @@
 .sheet a:hover{background:#233124}.sheet :is(button,a):focus-visible{outline:2px solid #a7ff3f;outline-offset:2px}
 @keyframes enter{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
+
+/* Three peer sports fit the same research picker without narrow cards. */
+.boards[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.boards[data-count="3"] .board{flex-direction:column;align-items:center;text-align:center;gap:6px;padding:12px 5px}.boards[data-count="3"] .board>span{flex:0}.boards[data-count="3"] .board>svg{display:none}.boards[data-count="3"] .board strong{font-size:12px}.marks:has(img:nth-child(3)){gap:2px}.marks:has(img:nth-child(3)) img{width:19px;height:22px}

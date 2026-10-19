@@ -1,0 +1,2 @@
+'use client'
+export default function NbaError({ reset }: { reset: () => void }) { return <div className="mx-auto max-w-xl px-4 py-16 text-center"><h1 className="text-xl font-bold">NBA profile unavailable</h1><p className="mt-3 text-sm text-zinc-400">The data could not load. Please try again.</p><button onClick={reset} className="mt-5 rounded-lg bg-lime-300 px-5 py-3 font-bold text-black">Try again</button></div> }

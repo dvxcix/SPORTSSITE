@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import { favoriteUpdates } from '@/lib/sportFavorites'
 import { safeApiError } from '@/lib/safeApiError'
 
 export const dynamic = 'force-dynamic'
@@ -29,21 +31,6 @@ function safeImageUrl(value: unknown) {
   }
 }
 
-function favoritePlayers(value: unknown) {
-  if (!Array.isArray(value)) return []
-  const seen = new Set<number>()
-  return value.flatMap(item => {
-    if (!item || typeof item !== 'object') return []
-    const player = item as Record<string, unknown>
-    const mlbId = Number(player.mlb_id)
-    const name = typeof player.name === 'string' ? player.name.trim().slice(0, 100) : ''
-    const team = typeof player.team === 'string' ? player.team.trim().slice(0, 12) : ''
-    if (!Number.isInteger(mlbId) || mlbId <= 0 || !name || seen.has(mlbId)) return []
-    seen.add(mlbId)
-    return [{ mlb_id: mlbId, name, team }]
-  }).slice(0, 8)
-}
-
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -54,6 +41,7 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>
   try {
     body = await request.json() as Record<string, unknown>
+    if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Invalid body')
   } catch {
     return NextResponse.json({ error: 'Account setup details were invalid.' }, { status: 400 })
   }
@@ -61,7 +49,6 @@ export async function POST(request: Request) {
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim().slice(0, 60) : ''
   const bio = typeof body.bio === 'string' ? body.bio.trim().slice(0, 280) : ''
   const sports = boundedStrings(body.sports, ALLOWED_SPORTS, 8)
-  const teams = boundedStrings(body.teams, null, 64, 12)
   const contentMix = boundedStrings(body.contentMix, ALLOWED_CONTENT, 6)
   const marketFocus = boundedStrings(body.marketFocus, ALLOWED_MARKETS, 6)
   const requestedAlerts = body.alerts && typeof body.alerts === 'object' ? body.alerts as Record<string, unknown> : {}
@@ -69,7 +56,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('users')
-    .select('id, notification_settings, interest_settings')
+    .select('id, account_type, favorite_teams, favorite_players, notification_settings, interest_settings')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -89,8 +76,7 @@ export async function POST(request: Request) {
     bio: bio || undefined,
     avatar_url: safeImageUrl(body.avatarUrl) || undefined,
     banner_url: safeImageUrl(body.bannerUrl) || undefined,
-    favorite_teams: teams,
-    favorite_players: favoritePlayers(body.favoritePlayers),
+    ...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile.account_type)),
     favorite_sports: sports,
     interest_settings: { ...interests, content_mix: contentMix, market_focus: marketFocus, discovery_mode: interests.discovery_mode ?? 'balanced' },
     is_private: body.isPrivate === true,

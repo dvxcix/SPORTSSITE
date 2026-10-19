@@ -22,6 +22,12 @@ export async function POST(request: NextRequest) {
   if (!rate.available) return NextResponse.json({ error: 'Reaction delivery is temporarily unavailable' }, { status: 503 })
   if (!rate.allowed) return NextResponse.json({ error: 'Reaction limit reached. Try again later.' }, { status: 429 })
 
+  // Check through viewer RLS before invoking the service-role notification RPC.
+  const { data: post, error: postError } = await supabase.from('posts').select('id,visibility').eq('id', postId).maybeSingle()
+  if (postError) return NextResponse.json({ error: 'Post access could not be checked' }, { status: 503 })
+  if (!post) return NextResponse.json({ error: 'Post unavailable' }, { status: 404 })
+  if (post.visibility === 'private') return NextResponse.json({ ok: true })
+
   const { error } = await createAdminClient().rpc('notify_reaction_server', {
     p_actor_id: user.id,
     p_post_id: postId,

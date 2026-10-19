@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { ArrowDown, ArrowDownRight, ArrowUpRight, ChevronDown, Columns3, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { BookLogo } from '@/components/BookLogo'
@@ -42,7 +43,7 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
     return () => controller.abort()
   }, [player.id, board.sampleSeason, tab, board.historical])
   return <ModalSurface open onClose={close} label={`${player.first_name} ${player.last_name} research`} backdropClassName={styles.drawerBackdrop} backdropStyle={{ justifyContent: 'flex-end', alignItems: 'stretch' }} panelClassName={styles.drawer}>
-    <header className={styles.drawerTop}><span><TeamLogo abbr={player.team.abbreviation} size={23}/>{player.team.full_name}</span><button className={styles.iconButton} onClick={close} aria-label="Close player details"><X size={20}/></button></header>
+    <header className={styles.drawerTop}><span><Link href={`/nba/teams/${player.team.id}`} className="inline-flex items-center gap-2"><TeamLogo abbr={player.team.abbreviation} size={23}/>{player.team.full_name}</Link></span><Link className={styles.iconButton} href={`/nba/players/${player.id}`} aria-label={`Open ${player.first_name} ${player.last_name} full profile`}><ArrowUpRight size={19}/></Link><button className={styles.iconButton} onClick={close} aria-label="Close player details"><X size={20}/></button></header>
     <div className={styles.playerHero}><div><span className={styles.playerPosition}>#{player.jersey_number || '—'} · {player.position} · {player.height || '—'}</span>{player.draft_year!=null&&<span className={styles.draftContext}>{player.draft_year} draft{player.draft_number!=null?' · #'+player.draft_number:''}</span>}<h2>{player.first_name}<strong>{player.last_name}</strong></h2><span className={styles.playerOpponent}><TeamLogo abbr={opponent.abbreviation} size={20}/>vs {opponent.name}</span></div><PlayerAvatar player={player} large/></div>
     {teamContext.newTeam && <div className={styles.teamContext}><strong>New team</strong>{teamContext.priorTeams.map(id=>{const team=board.teams?.find(team=>team.id===id);return team?<span key={id}><TeamLogo abbr={team.abbreviation} size={20}/>{team.full_name}</span>:null})}<span>→</span><span><TeamLogo abbr={player.team.abbreviation} size={20}/>{player.team.full_name}</span></div>}
     <div className={styles.playerStrip}>{[{ label: 'PTS', value: player.average.pts }, { label: 'REB', value: player.average.reb }, { label: 'AST', value: player.average.ast }, { label: 'MIN', value: player.average.min }].map(s => <span key={s.label}><b>{number(s.value)}</b><small>{s.label}</small></span>)}</div>

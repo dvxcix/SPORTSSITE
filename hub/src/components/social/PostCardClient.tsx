@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart, BadgeCheck, EyeOff, VolumeX } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, LockKeyhole, Pencil, Trash2, Heart, BadgeCheck, EyeOff, VolumeX } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -173,7 +173,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const displayNowMs = renderedAt ?? new Date(initialPost.created_at).getTime()
 
   useEffect(() => {
-    setRenderedAt(Date.now())
+    const frame = requestAnimationFrame(() => setRenderedAt(Date.now()))
+    return () => cancelAnimationFrame(frame)
   }, [])
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
   const post = { ...initialPost, pick_data: pickData, content }
@@ -194,6 +195,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     }
   }, [showMenu])
   const isOwnPost = !!user && user.id === post.author_id
+  const isPrivate = post.visibility === 'private'
   // Edit window matches the "edit within 10 minutes" behavior the rest of
   // the app doesn't otherwise enforce anywhere — delete has no such limit,
   // same as every mainstream social app (X included).
@@ -320,7 +322,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   }
 
   async function toggleRepost() {
-    if (!user) return
+    if (!user || isPrivate) return
     const wasReposted = reposted
     setReposted(!wasReposted)
     setRepostCount(c => wasReposted ? c - 1 : c + 1)
@@ -367,6 +369,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // shape to render into an image, so those keep the original bare-link
   // native-share behavior.
   async function share() {
+    if (isPrivate) return
     if (!post.pick_data) {
       const url = window.location.origin + '/posts/' + post.id
       try {
@@ -456,11 +459,11 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     setCommentCount(c => c + 1)
     setReplyText('')
     setReplyingTo(null)
-    await notify(supabase, {
+    if (!isPrivate) await notify(supabase, {
       userId: parentAuthorId, actorId: user.id, type: 'comment',
       message: 'replied to your comment', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
-    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply', [parentAuthorId])
+    if (!isPrivate) await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply', [parentAuthorId])
   }
 
   function insertCommentEmoji(insertion: string) {
@@ -489,11 +492,11 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     setCommentTree(t => [...t, { ...(data as any), parent_id: null, reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }])
     setCommentCount(c => c + 1)
     setCommentText('')
-    await notify(supabase, {
+    if (!isPrivate) await notify(supabase, {
       userId: post.author_id, actorId: user.id, type: 'comment',
       message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
-    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment', [post.author_id])
+    if (!isPrivate) await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment', [post.author_id])
   }
 
   function startEditComment(c: CommentNode) {
@@ -668,6 +671,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   </Link>
                   <span style={{ color: 'var(--text-4)', fontSize: 12 }}>·</span>
                   <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at, displayNowMs)}</span>
+                  {isPrivate && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)', fontSize: 11 }}><LockKeyhole size={12} aria-hidden="true"/>Only me</span>}
                 </div>
 
                 {/* More menu */}
@@ -718,10 +722,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         />
                         </>
                       )}
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
+                      {!isPrivate && <button type="button" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
                         className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Link2 size={12} /> Copy link
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
@@ -995,7 +999,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   hoverColor="var(--blue)"
                   onClick={toggleComments}
                 />
-                <ActionBtn
+                {!isPrivate && <ActionBtn
                   icon={<Repeat2 size={15} />}
                   label={repostCount > 0 ? `${repostCount} Repost${repostCount === 1 ? '' : 's'}` : 'Repost'}
                   active={reposted}
@@ -1003,7 +1007,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   hoverBg="rgba(46,213,115,0.08)"
                   hoverColor="var(--green)"
                   onClick={toggleRepost}
-                />
+                />}
                 <ActionBtn
                   icon={<Heart size={15} fill={quickLiked ? 'currentColor' : 'none'} />}
                   label={quickLikeCount > 0 ? `${quickLikeCount} Like${quickLikeCount === 1 ? '' : 's'}` : 'Like'}
@@ -1023,12 +1027,12 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     hoverColor="var(--gold)"
                     onClick={toggleBookmark}
                   />
-                  <ActionBtn
+                  {!isPrivate && <ActionBtn
                     icon={<Share2 size={15} />}
                     label="Share"
                     hoverBg="var(--surface-3)"
                     onClick={share}
-                  />
+                  />}
                 </div>
               </div>
             </div>
@@ -1127,7 +1131,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         <ReportModal targetId={reportingCommentId} targetType="comment" onClose={() => setReportingCommentId(null)} />
       )}
 
-      {shareModalOpen && (
+      {!isPrivate && shareModalOpen && (
         <ShareImageModal postId={post.id} onClose={() => setShareModalOpen(false)} />
       )}
 

@@ -22,10 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient()
   const { data: post } = await supabase
     .from('posts')
-    .select('pick_data, content, author:users!posts_author_id_fkey(display_name, username)')
+    .select('visibility, pick_data, content, author:users!posts_author_id_fkey(display_name, username)')
     .eq('id', id)
     .single()
   if (!post) return {}
+  if (post.visibility === 'private') return { title: 'Only me • SlipSurge', robots: { index: false, follow: false, nocache: true } }
   const author = (Array.isArray(post.author) ? post.author[0] : post.author) as { display_name?: string; username?: string } | null
   const name = author?.display_name || author?.username || 'Someone'
   const title = `${name} on SlipSurge`

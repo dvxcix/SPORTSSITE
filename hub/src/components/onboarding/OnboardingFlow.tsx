@@ -8,19 +8,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronRight, Loader2, Upload } from "lucide-react";
-import { MLB_TEAMS } from "@slipsurge/core/mlbTeams";
-import { getTeamLogoUrl } from "@slipsurge/core/mlbTeamColors";
 import {
   SuggestedUsers,
   type SuggestedUser,
 } from "@/components/social/SuggestedUsers";
 import { trackProductEvent } from "@/lib/productAnalytics";
 import { Switch } from "@/components/ui/Switch";
-import { NflTeamLogo } from "@/components/shared/NflTeamLogo";
-import { Search, Users, X } from "lucide-react";
-import { mlbTeamAbbrById } from "@slipsurge/core/mlbTeams";
-import { mlbHeadshot } from "@slipsurge/core/mlb-api";
-import { PlayerAvatar } from "@/components/sports/PlayerAvatar";
+import { Users } from "lucide-react";
+import { FavoritePicker } from "@/components/profile/FavoritePicker";
+import { normalizeFavoritePlayers, type FavoritePlayer } from "@/lib/sportFavorites";
 import { SafeImage } from "@/components/ui/SafeImage";
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
@@ -65,8 +61,6 @@ const slide = {
   exit: { opacity: 0, x: -16 },
 };
 
-type FavoritePlayer = { mlb_id: number; name: string; team: string };
-type PlayerSearchResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null };
 type SuggestedGroup = { id: string; slug: string; name: string; description?: string | null; avatar_url?: string | null; emoji?: string | null; member_count?: number | null };
 
 export function OnboardingFlow({
@@ -75,18 +69,14 @@ export function OnboardingFlow({
   accountType,
   suggestedUsers,
   suggestedGroups,
-  nflTeams,
+  allowNba = false,
 }: {
   userId: string;
   initialProfile: any;
   accountType: "user" | "creator";
   suggestedUsers: SuggestedUser[];
   suggestedGroups: SuggestedGroup[];
-  nflTeams: Array<{
-    team_abbr: string;
-    team_name: string;
-    team_logo_espn: string | null;
-  }>;
+  allowNba?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -96,10 +86,7 @@ export function OnboardingFlow({
   const [bio, setBio] = useState(initialProfile?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url ?? "");
   const [bannerUrl, setBannerUrl] = useState(initialProfile?.banner_url ?? "");
-  const [favoritePlayers, setFavoritePlayers] = useState<FavoritePlayer[]>(initialProfile?.favorite_players ?? []);
-  const [playerQuery, setPlayerQuery] = useState("");
-  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
-  const [playerSearching, setPlayerSearching] = useState(false);
+  const [favoritePlayers, setFavoritePlayers] = useState<FavoritePlayer[]>(() => normalizeFavoritePlayers(initialProfile?.favorite_players));
   const [destination, setDestination] = useState<"feed" | "pricing" | "connections">("feed");
   const [teams, setTeams] = useState<string[]>(
     initialProfile?.favorite_teams ?? [],
@@ -178,7 +165,7 @@ export function OnboardingFlow({
           if (typeof draft.bannerUrl === "string")
             setBannerUrl(draft.bannerUrl);
           if (Array.isArray(draft.favoritePlayers))
-            setFavoritePlayers(draft.favoritePlayers.slice(0, 8));
+            setFavoritePlayers(normalizeFavoritePlayers(draft.favoritePlayers));
           if (draft.destination === "feed" || draft.destination === "pricing" || draft.destination === "connections")
             setDestination(draft.destination);
           if (Array.isArray(draft.teams))
@@ -259,31 +246,6 @@ export function OnboardingFlow({
     teams,
   ]);
 
-  useEffect(() => {
-    if (playerQuery.trim().length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset stale async results when the query becomes inactive
-      setPlayerResults([]);
-      setPlayerSearching(false);
-      return;
-    }
-    const controller = new AbortController();
-    setPlayerSearching(true);
-    const timer = setTimeout(() => {
-      fetch(`/api/search/sports?q=${encodeURIComponent(playerQuery.trim())}`, { signal: controller.signal })
-        .then((response) => response.ok ? response.json() : { players: [] })
-        .then((data) => setPlayerResults((data.players ?? []).slice(0, 8)))
-        .catch(() => {})
-        .finally(() => setPlayerSearching(false));
-    }, 300);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [playerQuery]);
-
-  function toggleTeam(abbr: string) {
-    setTeams((prev) =>
-      prev.includes(abbr) ? prev.filter((x) => x !== abbr) : [...prev, abbr],
-    );
-  }
-
   function toggleSport(sport: string) {
     setSports((prev) =>
       prev.includes(sport)
@@ -333,18 +295,6 @@ export function OnboardingFlow({
     } finally {
       setBannerUploading(false);
     }
-  }
-
-  function addFavoritePlayer(player: PlayerSearchResult) {
-    if (favoritePlayers.some((item) => item.mlb_id === player.mlbId)) return;
-    if (favoritePlayers.length >= 8) { setError("Choose up to 8 favorite players."); return; }
-    setFavoritePlayers((current) => [...current, {
-      mlb_id: player.mlbId,
-      name: player.name,
-      team: mlbTeamAbbrById(player.teamId) ?? player.teamName ?? "",
-    }]);
-    setPlayerQuery("");
-    setPlayerResults([]);
   }
 
   async function finish() {
@@ -624,7 +574,7 @@ export function OnboardingFlow({
                   copy="Choose what you follow. You can refine this anytime."
                 />
                 <div className="ss-onboarding-sports">
-                  {SPORTS.map((sport) => (
+                  {SPORTS.filter((sport) => allowNba || sport !== "NBA").map((sport) => (
                     <button
                       key={sport}
                       type="button"
@@ -636,57 +586,7 @@ export function OnboardingFlow({
                     </button>
                   ))}
                 </div>
-                {(sports.length === 0 || sports.includes("MLB")) && (
-                  <div>
-                    <p className="ss-onboarding-kicker">Favorite MLB teams</p>
-                    <div className="ss-onboarding-teams">
-                      {MLB_TEAMS.map((t) => (
-                        <button
-                          key={t.abbr}
-                          type="button"
-                          aria-pressed={teams.includes(t.abbr)}
-                          onClick={() => toggleTeam(t.abbr)}
-                          className={
-                            teams.includes(t.abbr) ? "is-selected" : ""
-                          }
-                        >
-                          <Image
-                            src={getTeamLogoUrl(t.abbr) ?? "/logo.png"}
-                            alt=""
-                            width={18}
-                            height={18}
-                          />
-                          {t.shortName}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {sports.includes("NFL") && nflTeams.length > 0 && (
-                  <div>
-                    <p className="ss-onboarding-kicker">Favorite NFL teams</p>
-                    <div className="ss-onboarding-teams">
-                      {nflTeams.map((team) => (
-                        <button
-                          key={team.team_abbr}
-                          type="button"
-                          aria-pressed={teams.includes(team.team_abbr)}
-                          onClick={() => toggleTeam(team.team_abbr)}
-                          className={
-                            teams.includes(team.team_abbr) ? "is-selected" : ""
-                          }
-                        >
-                          <NflTeamLogo
-                            abbr={team.team_abbr}
-                            logoUrl={team.team_logo_espn}
-                            size={18}
-                          />
-                          {team.team_name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <FavoritePicker teams={teams} players={favoritePlayers} sports={sports} allowNba={allowNba} onTeamsChange={setTeams} onPlayersChange={setFavoritePlayers}/>
                 <div>
                   <p className="ss-onboarding-kicker">
                     What should lead your home?
@@ -729,37 +629,6 @@ export function OnboardingFlow({
                         {label}
                       </button>
                     ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="ss-onboarding-kicker">Favorite MLB players</p>
-                  {favoritePlayers.length > 0 && (
-                    <div className="ss-onboarding-player-chips">
-                      {favoritePlayers.map((player) => (
-                        <span key={player.mlb_id}>
-                          <PlayerAvatar headshot={mlbHeadshot(player.mlb_id)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.name} size={24}/>
-                          <b>{player.name}</b>
-                          <button type="button" onClick={() => setFavoritePlayers((current) => current.filter((item) => item.mlb_id !== player.mlb_id))} aria-label={`Remove ${player.name}`}><X size={12}/></button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="ss-onboarding-player-search">
-                    <Search size={14}/>
-                    <input value={playerQuery} onChange={(event) => setPlayerQuery(event.target.value)} aria-label="Search favorite MLB players" placeholder="Search players…"/>
-                    {(playerSearching || playerResults.length > 0) && playerQuery.trim().length >= 2 && (
-                      <div className="ss-onboarding-player-results">
-                        {playerSearching && playerResults.length === 0 ? <p>Searching…</p> : playerResults.map((player) => {
-                          const abbr = mlbTeamAbbrById(player.teamId) ?? player.teamName ?? "";
-                          return (
-                            <button key={player.mlbId} type="button" onClick={() => addFavoritePlayer(player)}>
-                              <PlayerAvatar headshot={mlbHeadshot(player.mlbId)} teamLogo={getTeamLogoUrl(abbr)} teamAbbr={abbr} name={player.name} size={28}/>
-                              <span><b>{player.name}</b><small>{abbr || player.position || "MLB"}</small></span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <StepNav

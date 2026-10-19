@@ -10,7 +10,7 @@ let sessionSport: ResearchSport = 'mlb'
 function readSport(): ResearchSport {
   try {
     const saved = localStorage.getItem(KEY)
-    if (saved === 'mlb' || saved === 'nfl') return saved
+    if (saved === 'mlb' || saved === 'nfl' || saved === 'nba') return saved
   } catch { /* Blocked storage still supports an in-memory preference. */ }
   return sessionSport
 }

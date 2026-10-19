@@ -13,7 +13,7 @@ const STATUSES = ['pending', 'actioned', 'dismissed']
 // one had to manually guess what "post abc12345…" even was. Resolves each
 // report's actual content so the row shows what's really being reported,
 // with a link straight to it (or to the parent post, for a comment).
-async function resolveTargets(supabase: any, reports: any[]) {
+async function resolveTargets(supabase: any, reports: any[], viewerId: string) {
   const idsByType: Record<string, Set<string>> = {}
   for (const r of reports) {
     if (!r.target_type || !r.target_id) continue
@@ -23,14 +23,17 @@ async function resolveTargets(supabase: any, reports: any[]) {
   const previews: Record<string, Record<string, { label: string; href: string }>> = {}
 
   if (idsByType.post?.size) {
-    const { data } = await supabase.from('posts').select('id, content, author:users!posts_author_id_fkey(username)').in('id', Array.from(idsByType.post))
+    const { data } = await supabase.from('posts').select('id, content, author:users!posts_author_id_fkey(username)').in('id', Array.from(idsByType.post)).or(`visibility.neq.private,author_id.eq.${viewerId}`)
     previews.post = {}
     for (const p of data ?? []) previews.post[p.id] = { label: p.content?.slice(0, 80) || '(no text)', href: `/posts/${p.id}` }
   }
   if (idsByType.comment?.size) {
     const { data } = await supabase.from('comments').select('id, content, post_id').in('id', Array.from(idsByType.comment))
+    const parentIds = [...new Set((data ?? []).map((comment: { post_id: string }) => comment.post_id))]
+    const { data: parents } = parentIds.length ? await supabase.from('posts').select('id').in('id', parentIds).or(`visibility.neq.private,author_id.eq.${viewerId}`) : { data: [] }
+    const visibleParents = new Set((parents ?? []).map((post: { id: string }) => post.id))
     previews.comment = {}
-    for (const c of data ?? []) previews.comment[c.id] = { label: c.content?.slice(0, 80) || '(no text)', href: `/posts/${c.post_id}` }
+    for (const c of data ?? []) if (visibleParents.has(c.post_id)) previews.comment[c.id] = { label: c.content?.slice(0, 80) || '(no text)', href: `/posts/${c.post_id}` }
   }
   if (idsByType.user?.size) {
     const { data } = await supabase.from('users').select('id, username, display_name').in('id', Array.from(idsByType.user))
@@ -82,7 +85,7 @@ export default async function AdminReportsPage({
   if (q) query = query.in('reporter_id', reporterIds?.length ? reporterIds : ['00000000-0000-0000-0000-000000000000'])
 
   const { data: reports } = await query
-  const previews = await resolveTargets(supabase, reports ?? [])
+  const previews = await resolveTargets(supabase, reports ?? [], user.id)
 
   const pending = (reports ?? []).filter((r: any) => r.status === 'pending')
   const reviewed = (reports ?? []).filter((r: any) => r.status !== 'pending')

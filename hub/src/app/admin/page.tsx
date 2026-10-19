@@ -70,7 +70,7 @@ export default async function AdminDashboard() {
     { data: pipelineData },
   ] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }),
-    supabase.from('posts').select('*', { count: 'exact', head: true }),
+    supabase.from('posts').select('*', { count: 'exact', head: true }).neq('visibility', 'private'),
     supabase.from('groups').select('*', { count: 'exact', head: true }),
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('creator_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -78,7 +78,7 @@ export default async function AdminDashboard() {
     supabase.from('provider_webhook_events').select('*', { count: 'exact', head: true }).eq('status', 'failed'),
     supabase.from('notification_delivery_attempts').select('*', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', dayAgo),
     supabase.from('users').select('id, username, display_name, avatar_url, account_type, created_at').order('created_at', { ascending: false }).limit(6),
-    supabase.from('posts').select('id, content, created_at, author:users!posts_author_id_fkey(username)').order('created_at', { ascending: false }).limit(6),
+    supabase.from('posts').select('id, content, created_at, author:users!posts_author_id_fkey(username)').neq('visibility', 'private').order('created_at', { ascending: false }).limit(6),
     supabase.from('pipeline_runs').select('job_name,status,started_at').order('started_at', { ascending: false }).limit(400),
   ])
 

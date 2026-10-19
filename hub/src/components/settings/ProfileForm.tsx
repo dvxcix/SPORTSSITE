@@ -5,15 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AtSign, Check, ChevronRight, Loader2, Upload, X, Search, Sparkles } from 'lucide-react'
+import { AtSign, Check, ChevronRight, Loader2, Upload, Sparkles } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
-import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
-import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { mlbHeadshot } from '@slipsurge/core/mlb-api'
-import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { FavoritePicker } from '@/components/profile/FavoritePicker'
+import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
@@ -38,8 +36,6 @@ const SPORTSBOOKS = [
 ]
 
 type SocialPlatform = { id: string; key: string; name: string; icon_url: string; url_template: string | null }
-type FavoritePlayer = { mlb_id: number; name: string; team: string }
-type PlayerSearchResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }
 
 export function ProfileForm({ profile }: { profile: any }) {
   const router = useRouter()
@@ -56,7 +52,7 @@ export function ProfileForm({ profile }: { profile: any }) {
     avatar_ring_color: profile?.avatar_ring_color ?? '#b6ff3b',
     favorite_sports: (profile?.favorite_sports ?? []) as string[],
     favorite_teams: (profile?.favorite_teams ?? []) as string[],
-    favorite_players: (profile?.favorite_players ?? []) as FavoritePlayer[],
+    favorite_players: normalizeFavoritePlayers(profile?.favorite_players),
     social_links: (profile?.social_links ?? {}) as Record<string, string>,
     sportsbooks: (profile?.sportsbooks ?? []) as string[],
   })
@@ -72,22 +68,6 @@ export function ProfileForm({ profile }: { profile: any }) {
     supabase.from('social_platforms').select('*').order('sort_order').order('name')
       .then(({ data }) => setPlatforms((data ?? []) as SocialPlatform[]))
   }, [supabase])
-
-  const [playerQuery, setPlayerQuery] = useState('')
-  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([])
-  const [playerSearching, setPlayerSearching] = useState(false)
-  useEffect(() => {
-    if (playerQuery.trim().length < 2) { setPlayerResults([]); return }
-    let cancelled = false
-    setPlayerSearching(true)
-    const t = setTimeout(() => {
-      fetch(`/api/search/sports?q=${encodeURIComponent(playerQuery.trim())}`)
-        .then(r => r.ok ? r.json() : { players: [] })
-        .then(d => { if (!cancelled) setPlayerResults(d.players ?? []) })
-        .finally(() => { if (!cancelled) setPlayerSearching(false) })
-    }, 300)
-    return () => { cancelled = true; clearTimeout(t) }
-  }, [playerQuery])
 
   async function uploadImage(file: File, kind: 'avatar' | 'banner') {
     setError('')
@@ -112,15 +92,6 @@ export function ProfileForm({ profile }: { profile: any }) {
     }))
   }
 
-  function toggleTeam(abbr: string) {
-    setForm(f => ({
-      ...f,
-      favorite_teams: f.favorite_teams.includes(abbr)
-        ? f.favorite_teams.filter(x => x !== abbr)
-        : [...f.favorite_teams, abbr],
-    }))
-  }
-
   function toggleSportsbook(key: string) {
     setForm(f => ({
       ...f,
@@ -137,18 +108,6 @@ export function ProfileForm({ profile }: { profile: any }) {
       else delete next[platformKey]
       return { ...f, social_links: next }
     })
-  }
-
-  function addFavoritePlayer(p: PlayerSearchResult) {
-    if (form.favorite_players.some(x => x.mlb_id === p.mlbId)) return
-    if (form.favorite_players.length >= 8) { setError('Up to 8 favorite players.'); return }
-    const team = mlbTeamAbbrById(p.teamId) ?? p.teamName ?? ''
-    setForm(f => ({ ...f, favorite_players: [...f.favorite_players, { mlb_id: p.mlbId, name: p.name, team }] }))
-    setPlayerQuery(''); setPlayerResults([])
-  }
-
-  function removeFavoritePlayer(mlbId: number) {
-    setForm(f => ({ ...f, favorite_players: f.favorite_players.filter(x => x.mlb_id !== mlbId) }))
   }
 
   async function save(event: React.FormEvent) {
@@ -170,12 +129,12 @@ export function ProfileForm({ profile }: { profile: any }) {
         avatar_ring_style: form.avatar_ring_style,
         avatar_ring_color: form.avatar_ring_color,
         favorite_sports: form.favorite_sports,
-        favorite_teams: form.favorite_teams,
-        favorite_players: form.favorite_players,
         social_links: form.social_links,
         sportsbooks: form.sportsbooks,
       }).eq('id', profile.id)
       if (err) { setError('Your profile could not be saved. Try again.'); return }
+      const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams: form.favorite_teams, players: form.favorite_players }) }).catch(() => null)
+      if (!favoritesResponse?.ok) { setError('Your profile was saved, but favorites could not be saved. Please try again.'); return }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
       router.refresh()
     } catch {
@@ -284,7 +243,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Sports</label>
         <div className="flex flex-wrap gap-2">
-          {SPORTS.map(s => {
+          {SPORTS.filter(s => hasNbaAccess(profile?.account_type) || s !== 'NBA').map(s => {
             const logo = sportLogoUrl(s)
             return (
               <button key={s} type="button" aria-pressed={form.favorite_sports.includes(s)} onClick={() => toggleSport(s)}
@@ -298,54 +257,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Teams</label>
-        <div className="flex flex-wrap gap-2">
-          {MLB_TEAMS.map(t => (
-            <button key={t.abbr} type="button" aria-pressed={form.favorite_teams.includes(t.abbr)} onClick={() => toggleTeam(t.abbr)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_teams.includes(t.abbr) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
-              <SafeImage src={getTeamLogoUrl(t.abbr)} alt="" className="w-4 h-4 object-contain" />
-              {t.shortName}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Players</label>
-        {form.favorite_players.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {form.favorite_players.map(p => (
-              <div key={p.mlb_id} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full pl-1.5 pr-2 py-1">
-                <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={24} />
-                <span className="text-xs font-bold text-white">{p.name}</span>
-                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} aria-label={`Remove ${p.name} from favorite players`} className="grid size-8 shrink-0 place-items-center rounded-full text-zinc-500 transition hover:bg-red-400/10 hover:text-red-400"><X size={13} /></button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input aria-label="Search favorite MLB players" value={playerQuery} onChange={e => setPlayerQuery(e.target.value)} placeholder="Search MLB players…"
-            className={inputClass} style={{ paddingLeft: 32 }} />
-          {(playerSearching || playerResults.length > 0) && playerQuery.trim().length >= 2 && (
-            <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shadow-xl">
-              {playerSearching && playerResults.length === 0 ? (
-                <p className="text-xs text-zinc-500 px-3 py-2">Searching…</p>
-              ) : (
-                playerResults.map(p => (
-                  <button key={p.mlbId} type="button" onClick={() => addFavoritePlayer(p)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-700/60 text-left">
-                    <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={getTeamLogoUrl(mlbTeamAbbrById(p.teamId))} teamAbbr={mlbTeamAbbrById(p.teamId)} name={p.name} size={26} />
-                    <span className="text-sm text-white flex-1 truncate">{p.name}</span>
-                    <span className="text-xs text-zinc-500">{p.position} · {p.teamName}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <FavoritePicker teams={form.favorite_teams} players={form.favorite_players} sports={form.favorite_sports} allowNba={hasNbaAccess(profile?.account_type)} onTeamsChange={teams => setForm(current => ({ ...current, favorite_teams: teams }))} onPlayersChange={players => setForm(current => ({ ...current, favorite_players: players }))}/>
 
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Sportsbooks You Use</label>

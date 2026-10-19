@@ -18,6 +18,8 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   const [wager, setWager] = useState('')
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
+  const nbaOnly = legs.every(leg => leg.sport.toLowerCase() === 'nba')
+  const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>(nbaOnly ? 'private' : 'public')
 
   const isParlay = legs.length > 1
   const oddsList = legs.map(l => l.odds).filter((o): o is number => o != null)
@@ -29,7 +31,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   async function submit() {
     setPosting(true); setError('')
     try {
-      await wl.postBet(legs, { wagerAmount: hasWager ? wagerNum : null })
+      await wl.postBet(legs, { wagerAmount: hasWager ? wagerNum : null, visibility })
       onPosted?.()
       onClose()
     } catch (e: any) {
@@ -84,6 +86,17 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
           </div>
         )}
 
+        {nbaOnly && (
+          <div style={{ marginBottom: 12 }}>
+            <label htmlFor="post-bet-audience" style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', fontWeight: 700, marginBottom: 4 }}>Audience</label>
+            <select id="post-bet-audience" value={visibility} disabled={posting} onChange={event => setVisibility(event.target.value as typeof visibility)} style={{ width: '100%', minHeight: 44, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, padding: '8px 10px', color: 'var(--text-1)', fontSize: 14 }}>
+              <option value="private">Only me</option>
+              <option value="followers">Followers</option>
+              <option value="public">Everyone</option>
+            </select>
+            {visibility === 'private' && <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '6px 0 0' }}>Only-me picks stay private and are excluded from public records.</p>}
+          </div>
+        )}
         {error && <p role="alert" style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
         <button

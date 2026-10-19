@@ -15,8 +15,8 @@ type WatchlistCtx = {
   add: (item: NewWatchlistItem) => Promise<WatchlistItem>
   remove: (id: string) => Promise<void>
   removeMany: (ids: string[]) => Promise<void>
-  postToFeed: (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => Promise<{ postId: string; pickId: string }>
-  postBet: (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; wagerAmount?: number | null }) => Promise<{ postId: string; pickIds: string[] }>
+  postToFeed: (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean; visibility?: 'public'|'followers'|'private' }) => Promise<{ postId: string; pickId: string }>
+  postBet: (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; visibility?: 'public'|'followers'|'private'; wagerAmount?: number | null }) => Promise<{ postId: string; pickIds: string[] }>
   isSaved: (mlbId: number | null, propKey: string, book: string | null) => boolean
   pendingCount: number
   signedIn: boolean
@@ -96,14 +96,14 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refresh])
 
-  const postToFeed = useCallback(async (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => {
+  const postToFeed = useCallback(async (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean; visibility?: 'public'|'followers'|'private' }) => {
     if (!user) throw new Error('Sign in to post')
     // Posting sends it to My Picks but deliberately leaves the watchlist
     // item itself untouched, so it keeps showing here for further plays.
     return await postWatchlistItemToFeed(user.id, item, opts)
   }, [user])
 
-  const postBet = useCallback(async (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; wagerAmount?: number | null }) => {
+  const postBet = useCallback(async (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; visibility?: 'public'|'followers'|'private'; wagerAmount?: number | null }) => {
     if (!user) throw new Error('Sign in to post')
     // Same as postToFeed — posting doesn't remove the legs from the watchlist.
     return await postBetToFeed(user.id, legs, opts)

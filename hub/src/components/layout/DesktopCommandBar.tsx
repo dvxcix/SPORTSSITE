@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { useNflAccess } from '@/lib/useNflAccess'
+import { useAuth } from '@/context/AuthContext'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
+import { hasNbaAccess, isNbaToolHref } from '@/lib/nbaAccessPolicy'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Search, Wifi, WifiOff } from 'lucide-react'
 import { getContextNavigation, routeMatches } from './navigationConfig'
-import { researchSportForPath, researchToolActive, researchToolHref } from './researchNavigation'
+import { researchSportForPath, resolveResearchSport, researchToolActive, researchToolHref } from './researchNavigation'
 import { useResearchSport } from './useResearchSport'
 
 export function DesktopCommandBar() {
@@ -15,11 +17,14 @@ export function DesktopCommandBar() {
   const searchParams = useSearchParams()
   const { sport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
+  const { profile } = useAuth()
+  const nbaAccess = hasNbaAccess(profile?.account_type)
+  const selectedSport = resolveResearchSport(sport, nflAccess, nbaAccess)
   const router = useRouter()
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const context = getContextNavigation(pathname)
   const ContextIcon = context.meta.icon
-  const shortcuts = context.items.filter(item => !item.ultimateOnly && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === (nflAccess ? sport : 'mlb'))).slice(0, 5)
+  const shortcuts = context.items.filter(item => !item.ultimateOnly && (!isNflToolHref(item.href) || nflAccess) && (!isNbaToolHref(item.href) || nbaAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === selectedSport)).slice(0, 5)
 
   useEffect(() => {
     const markOnline = () => setOnline(true)
@@ -48,7 +53,7 @@ export function DesktopCommandBar() {
       <div className="ss-desktop-workspaces" aria-label="Workspaces">
         {shortcuts.map(item => {
           const Icon = item.icon
-          const active = isNflToolHref(item.href) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item)
+          const active = (isNflToolHref(item.href) || isNbaToolHref(item.href)) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item)
           return (
             <Link key={item.href} href={researchToolHref(item.href, pathname, searchParams)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined}>
               <Icon size={13} />

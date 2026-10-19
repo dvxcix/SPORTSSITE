@@ -1,3 +1,5 @@
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -10,10 +12,7 @@ export default async function InterestSettingsPage() {
   if (!user) redirect('/auth/login?next=/settings/interests')
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: nflTeams }] = await Promise.all([
-    admin.from('users').select('favorite_sports,favorite_teams,interest_settings').eq('id', user.id).single(),
-    admin.from('nfl_teams').select('team_abbr,team_name,team_logo_espn').order('team_name'),
-  ])
+  const { data: profile } = await admin.from('users').select('account_type,favorite_sports,favorite_teams,favorite_players,interest_settings').eq('id', user.id).single()
 
   return <SettingsShell active="/settings/interests" title="Your interests" description="Tune the sports, teams, markets, and conversations that shape your experience.">
     <InterestSettingsForm
@@ -21,7 +20,8 @@ export default async function InterestSettingsPage() {
       favoriteSports={profile?.favorite_sports ?? []}
       favoriteTeams={profile?.favorite_teams ?? []}
       settings={profile?.interest_settings ?? {}}
-      nflTeams={nflTeams ?? []}
+      favoritePlayers={normalizeFavoritePlayers(profile?.favorite_players)}
+      allowNba={hasNbaAccess(profile?.account_type)}
     />
   </SettingsShell>
 }

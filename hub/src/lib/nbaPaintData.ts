@@ -30,7 +30,7 @@ async function pages<T>(path: string, ttl: number, limit = 24) {
 }
 const espnCode = (abbr: string) => ({ GSW: 'gs', NOP: 'no', NYK: 'ny', SAS: 'sa', UTA: 'utah' }[abbr] ?? abbr.toLowerCase())
 type EspnAthlete = { fullName: string; headshot?: { href?: string }; athletes?: EspnAthlete[] }
-async function artwork(abbr: string) {
+export async function artwork(abbr: string) {
   const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${espnCode(abbr)}/roster`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(10_000) })
   if (!response.ok) throw new Error('Roster images unavailable')
   const json = await response.json() as { athletes?: EspnAthlete[]; team?: { logo?: string; color?: string } }

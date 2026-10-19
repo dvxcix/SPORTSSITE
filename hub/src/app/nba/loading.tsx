@@ -1,0 +1,1 @@
+export default function NbaLoading() { return <div className="mx-auto max-w-5xl px-4 py-10" role="status"><div className="h-32 animate-pulse rounded-2xl bg-zinc-900"/><p className="mt-4 text-sm text-zinc-400">Loading NBA profile…</p></div> }

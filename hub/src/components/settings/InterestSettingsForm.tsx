@@ -1,12 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Image from 'next/image'
+import { FavoritePicker } from '@/components/profile/FavoritePicker'
+import { normalizeFavoritePlayers, type FavoritePlayer } from '@/lib/sportFavorites'
 import { Check, Loader2 } from 'lucide-react'
-import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { createClient } from '@/lib/supabase/client'
-import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 
 type InterestSettings = {
   content_mix?: string[]
@@ -29,16 +27,18 @@ const MODES = [
   ['live', 'Live first', 'Prioritize active games, movement, and breaking updates.'],
 ] as const
 
-export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, settings, nflTeams }: {
+export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, favoritePlayers, settings, allowNba = false }: {
   userId: string
   favoriteSports: string[]
   favoriteTeams: string[]
   settings: InterestSettings
-  nflTeams: Array<{ team_abbr: string; team_name: string; team_logo_espn: string | null }>
+  favoritePlayers: FavoritePlayer[]
+  allowNba?: boolean
 }) {
   const supabase = useMemo(() => createClient(), [])
   const [sports, setSports] = useState(favoriteSports)
   const [teams, setTeams] = useState(favoriteTeams)
+  const [players, setPlayers] = useState(() => normalizeFavoritePlayers(favoritePlayers))
   const [contentMix, setContentMix] = useState(settings.content_mix ?? ['research', 'picks', 'live-games'])
   const [marketFocus, setMarketFocus] = useState(settings.market_focus ?? ['player-props', 'milestones'])
   const [discoveryMode, setDiscoveryMode] = useState<InterestSettings['discovery_mode']>(settings.discovery_mode ?? 'balanced')
@@ -53,27 +53,22 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, se
     setSaving(true); setSaved(false); setError('')
     const { error: saveError } = await supabase.from('users').update({
       favorite_sports: sports,
-      favorite_teams: teams,
       interest_settings: { content_mix: contentMix, market_focus: marketFocus, discovery_mode: discoveryMode },
     }).eq('id', userId)
+    if (saveError) { setSaving(false); setError('Could not save your interests. Try again.'); return }
+    const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams, players }) }).catch(() => null)
     setSaving(false)
-    if (saveError) { setError('Could not save your interests. Try again.'); return }
+    if (!favoritesResponse?.ok) { setError('Your interests were saved, but favorites could not be saved. Please try again.'); return }
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2200)
   }
 
   return <div className="ss-interest-settings">
     <PreferenceSection title="Sports" description="Choose the leagues that shape your home and discovery views.">
-      <ChoiceGrid>{SPORTS.map(sport => <Choice key={sport} selected={sports.includes(sport)} onClick={() => toggle(sport, sports, setSports)}>{sport}</Choice>)}</ChoiceGrid>
+      <ChoiceGrid>{SPORTS.filter(sport => allowNba || sport !== 'NBA').map(sport => <Choice key={sport} selected={sports.includes(sport)} onClick={() => toggle(sport, sports, setSports)}>{sport}</Choice>)}</ChoiceGrid>
     </PreferenceSection>
 
-    {(sports.length === 0 || sports.includes('MLB')) && <PreferenceSection title="MLB teams" description="Favorite teams stay close across scores, research, and community.">
-      <ChoiceGrid>{MLB_TEAMS.map(team => <Choice key={team.abbr} selected={teams.includes(team.abbr)} onClick={() => toggle(team.abbr, teams, setTeams)}><Image src={getTeamLogoUrl(team.abbr) ?? '/logo.png'} alt="" width={20} height={20}/>{team.shortName}</Choice>)}</ChoiceGrid>
-    </PreferenceSection>}
-
-    {sports.includes('NFL') && nflTeams.length > 0 && <PreferenceSection title="NFL teams" description="Your teams surface first during the week and on game day.">
-      <ChoiceGrid>{nflTeams.map(team => <Choice key={team.team_abbr} selected={teams.includes(team.team_abbr)} onClick={() => toggle(team.team_abbr, teams, setTeams)}><NflTeamLogo abbr={team.team_abbr} logoUrl={team.team_logo_espn} size={20}/>{team.team_name}</Choice>)}</ChoiceGrid>
-    </PreferenceSection>}
+    <PreferenceSection title="Teams & players" description="Keep your favorites close."><FavoritePicker teams={teams} players={players} sports={sports} allowNba={allowNba} onTeamsChange={setTeams} onPlayersChange={setPlayers}/></PreferenceSection>
 
     <PreferenceSection title="Home mix" description="Set the kinds of activity that deserve the most space.">
       <ChoiceGrid>{CONTENT.map(([value, label]) => <Choice key={value} selected={contentMix.includes(value)} onClick={() => toggle(value, contentMix, setContentMix)}>{label}</Choice>)}</ChoiceGrid>

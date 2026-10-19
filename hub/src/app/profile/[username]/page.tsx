@@ -323,7 +323,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       )}
 
       <AchievementsSection achievements={achievements} />
-      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} />
+      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} sports={profile.favorite_sports ?? []} />
 
       <div className="border-t border-white/[.07]" />
 

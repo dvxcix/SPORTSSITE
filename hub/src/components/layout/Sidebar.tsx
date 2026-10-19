@@ -19,13 +19,16 @@ import { useNflAccess } from '@/lib/useNflAccess'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { useResearchSport } from './useResearchSport'
 import { ResearchSportSwitcher } from './ResearchSportSwitcher'
-import { researchToolHref } from './researchNavigation'
+import { researchToolActive, researchToolHref, resolveResearchSport } from './researchNavigation'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import { nbaResearchNavigation } from './navigationConfig'
 import navigationStyles from './researchNavigation.module.css'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
 const MLB_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png'
 const NFL_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png'
+const NBA_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png'
 
 // Mirrors --sidebar-w / --sidebar-w-collapsed in globals.css — kept as
 // plain numbers here because the collapse toggle transitions this value,
@@ -37,9 +40,9 @@ const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
-  flagKey?: string; badge?: string; badgeColor?: string; ultimateOnly?: boolean; nflOnly?: boolean
+  flagKey?: string; badge?: string; badgeColor?: string; ultimateOnly?: boolean; nflOnly?: boolean; nbaOnly?: boolean
 }
-type NavItem = NavLink | { section: string; logo?: string; nflOnly?: boolean } | null
+type NavItem = NavLink | { section: string; logo?: string; nflOnly?: boolean; nbaOnly?: boolean } | null
 
 const nav: NavItem[] = [
   { section: 'Community' },
@@ -73,6 +76,9 @@ const nav: NavItem[] = [
   { href: '/the-sideline?mode=markets', icon: ChartSpline, label: 'Sportsbooks', nflOnly: true },
   { href: '/the-sideline?mode=research', icon: Crosshair, label: 'Matchup Lab', nflOnly: true },
   null,
+  { section: 'NBA Research', logo: NBA_LOGO_URL, nbaOnly: true },
+  ...nbaResearchNavigation.map(item => ({ href: item.href, icon: item.icon, label: item.shortLabel ?? item.label, nbaOnly: true })),
+  null,
   { section: 'Connect' },
   { href: '/community',   icon: Users,         label: 'Community' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
@@ -94,10 +100,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const path = usePathname()
   const searchParams = useSearchParams()
   const sidelineMode = searchParams.get('mode') ?? ''
+  const paintView = searchParams.get('view') ?? ''
   const { profile } = useAuth()
   const { allowed: nflAccess } = useNflAccess()
   const { sport, chooseSport } = useResearchSport(path)
-  const selectedSport = nflAccess ? sport : 'mlb'
+  const nbaAccess = hasNbaAccess(profile?.account_type)
+  const selectedSport = resolveResearchSport(sport, nflAccess, nbaAccess)
   const [menuSearch, setMenuSearch] = useState('')
   const drawerRef = useRef<HTMLElement>(null)
   const closeRef = useRef(onClose)
@@ -125,7 +133,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // Tapping a nav link should close the drawer on mobile — otherwise the
   // new page loads underneath a sidebar that's still covering half the
   // screen until you notice and dismiss it yourself.
-  useEffect(() => { onClose() }, [path, sidelineMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { onClose() }, [path, sidelineMode, paintView]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the page behind the mobile drawer stationary while it is open.
   useEffect(() => {
@@ -173,6 +181,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const permittedNav = nav.filter(item => {
     if (!item) return true
     if (item.nflOnly && !nflAccess) return false
+    if (item.nbaOnly && !nbaAccess) return false
     if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
     return !item.flagKey || flags[item.flagKey] !== false
@@ -192,13 +201,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   })
 
   function active(href: string) {
-    const [pathname, query = ''] = href.split('?')
-    if (pathname === '/the-sideline') {
-      const targetMode = new URLSearchParams(query).get('mode') ?? ''
-      return path === pathname && sidelineMode === targetMode
-    }
-    if (href === '/feed') return path === '/feed'
-    return path === pathname || path.startsWith(pathname + '/')
+    return researchToolActive(href, path, searchParams)
   }
 
   return (
@@ -301,7 +304,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </button>
 
       <div className={navigationStyles.controls}>
-        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
+        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
         {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page or tool" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
       </div>
       {/* Remount the scroll area when switching sports so its first tool is visible. */}

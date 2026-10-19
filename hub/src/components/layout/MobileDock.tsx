@@ -9,6 +9,8 @@ import { primaryNavigation, routeMatches } from './navigationConfig'
 import { useResearchSport } from './useResearchSport'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { useAuth } from '@/context/AuthContext'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import { availableResearchSports } from './researchNavigation'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { MobileResearchPicker } from './MobileResearchPicker'
@@ -19,6 +21,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
   const { sport, chooseSport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
   const { profile } = useAuth()
+  const nbaAccess = hasNbaAccess(profile?.account_type)
   const [pickerPath, setPickerPath] = useState<string | null>(null)
   const pickerOpen = pickerPath === pathname && !hidden
   const tier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
@@ -32,7 +35,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
           const Icon = item.icon
           const active = routeMatches(pathname, item)
           if (item.label === 'Research') return <button key={item.href} type="button" data-label="Research" className={cn('ss-mobile-dock-item', (active || pickerOpen) && 'is-active')} aria-label="Choose sport and research tools" aria-haspopup="dialog" aria-expanded={pickerOpen} onClick={() => setPickerPath(pathname)}>
-            <span className={styles.marks}>{(nflAccess ? ['nfl','mlb'] : ['mlb']).map(league => <SafeImage key={league} src={`https://a.espncdn.com/i/teamlogos/leagues/500/${league}.png`} alt="" fallback={<span>{league.toUpperCase()}</span>} />)}</span>
+            <span className={styles.marks}>{availableResearchSports(nflAccess, nbaAccess).sort((a,b) => a === 'nfl' ? -1 : b === 'nfl' ? 1 : 0).map(league => <SafeImage key={league} src={`https://a.espncdn.com/i/teamlogos/leagues/500/${league}.png`} alt="" fallback={<span>{league.toUpperCase()}</span>} />)}</span>
             <span>Research</span>
           </button>
           return (
@@ -48,7 +51,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
         </button>
       </div>
     </nav>
-    {pickerOpen && <Suspense fallback={null}><MobileResearchPicker path={pathname} sport={sport} nflAccess={nflAccess} hasUltimate={hasUltimate} onSport={chooseSport} onClose={() => setPickerPath(null)} /></Suspense>}
+    {pickerOpen && <Suspense fallback={null}><MobileResearchPicker path={pathname} sport={sport} nflAccess={nflAccess} nbaAccess={nbaAccess} hasUltimate={hasUltimate} onSport={chooseSport} onClose={() => setPickerPath(null)} /></Suspense>}
     </>
   )
 }

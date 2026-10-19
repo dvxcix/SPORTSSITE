@@ -1,0 +1,136 @@
+NBA sitewide customer pass — release QA
+Prepared 2026-10-19; database verification 14:04:24 UTC.
+
+Status
+Database changes are applied and independently verified read-only. Application
+deployment and live desktop/mobile customer-flow checks remain PENDING below.
+NBA remains admin-gated; this document does not authorize public release.
+Source base: f5bec42b3d12a478049309aa0a24259d96197933 plus the reviewed working
+changes. Root records the final GitHub/deployment commit after release.
+
+Scope of this pass
+- Carry NBA through research navigation, search, profiles/favorites and player/
+  team destinations while retaining existing MLB/NFL behavior and NBA access.
+- Research, compare, save an exact alternate line, and post an owner-only
+  tracked test through the actual UI/API; verify its pending My Picks entry.
+- Validate grading against genuine finalized historical NBA facts locally.
+  A newly posted upcoming-game test remains pending until real final data.
+
+Owner-only pick behavior
+- NBA Post Pick offers an Audience selector, default Only me. Fresh auth/admin,
+  pregame state, exact sportsbook/player/game/market/type/threshold/side/price,
+  and canonical player identity checks still run before the atomic post RPC.
+- Only-me picks stay private, receive no follower/mention broadcast and do not
+  enter public pick records or the leaderboard. Owner settlement notices remain.
+- Shared-post controls and notifications respect private parents. Follower,
+  public, creator access and all non-private records retain their prior rules.
+- Public/private conversion of tracked posts and relinking private pick rows
+  are blocked. Deleting a private parent cascades its picks normally.
+- Activity replay records only an owner-visible generic event. No public
+  posts_count field or post-linked XP award was found in this audit.
+
+Applied database migrations
+- 20261019140342 — nba_owner_only_pick_posts
+- 20261019140353 — nba_saved_search_tab
+Applied by root after explicit user approval and exact live preflight. No prior
+migration tree was replayed; no historical posts, results or records were edited.
+
+Independent live schema verification
+- Four restrictive policies installed: private post SELECT, linked pick ALL,
+  linked comment ALL, and private repost ALL. Both prior permissive social read
+  policies retain their exact hashes.
+- RLS remains enabled on posts, picks, comments, reposts and notifications.
+- Enabled BEFORE triggers enforce tracked visibility, pick-parent linkage and
+  owner-only post/comment notification recipients before delivery triggers.
+- Five helper/trigger functions live in private with an empty search_path.
+  Boolean rule helpers have the grants needed by RLS. Trigger functions cannot
+  be directly executed by anon, authenticated or service_role.
+- recompute_user_pick_record differs from its exact preflight definition only
+  by excluding private parent posts. All win/loss/push/parlay math is preserved.
+  Live function definition MD5: 50894e0e6f54ef1519f3fcaaa55328b9.
+- Saved-search constraint accepts all/users/posts/picks/community/mlb/nfl/nba.
+  The previous seven values are unchanged. No other tab is accepted.
+- There were zero private posts at this verification point, before UI testing.
+
+Security advisor
+Read at 14:04 UTC: no ERROR findings. Existing-object notices comprise pg_net in
+public (1 WARN), anonymous executable public definer functions (2 WARN), signed-in
+executable public definer functions (24 WARN), and RLS tables without policies
+(78 INFO, including deliberate service-only data tables). No new private helper
+or changed social table is named. Root compared all 105 findings with the
+pre-migration 14:00:52 UTC snapshot, excluding observation timestamps: zero
+added or removed findings.
+References:
+https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public
+https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable
+https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+
+Local functional verification
+- Consolidated NBA suite 107/107, production smoke 134/134, NFL grading and
+  research navigation 13/13; TypeScript and all changed/new TS file lint pass.
+- nba-pick-privacy.test.mts: 5/5 tests passed. Actual watchlist serialization and
+  fresh NBA validator preserve +350 Over 29.5, -480 Under 29.5 and inclusive 30+
+  milestone contracts. Private broadcasts are absent; public/follower behavior
+  continues. Auth/admin denial, started games, changed price, failed atomic
+  write, non-NBA private and group/page private paths all fail closed.
+- Local PostgreSQL/PGlite used the exact live original policies/function before
+  applying the two migration drafts. Anonymous access worked without private
+  schema USAGE. Followers could not read/comment/repost private parents; owners
+  could read them. Visibility changes, post_type workaround, and private pick
+  relinks to public/null or public-to-private were rejected. Parent deletion
+  cascaded private rows without changing the public record. Owner notification
+  succeeded while external post/comment notifications were rejected even under
+  service_role. Saved-search old/new/invalid values behaved as intended.
+
+Historical grading proof
+Genuine imported production facts: Tyrese Maxey, finalized 2026-04-12 game
+18448009. Full game: 21 points, 2 rebounds, 1 assist; first quarter: 5 points,
+1 rebound, 0 assists. These facts were read, not modified or re-ingested.
+The current gradeNbaPick application code and the exact live settlement SQL
+were executed only against local test selections and a local PostgreSQL fixture.
+Live settle_nba_pick_exact definition MD5: 4ff6147a1bc73e1ba6b60ac12a4942c3.
+
+Verified cases:
+  Points Over 20.5       win
+  Points Under 21.5      win
+  Points Over 21         push
+  Points Over 21.5       loss
+  Points 21+ milestone   win
+  Q1 Points Under 5.5    win
+  Q1 Points 5+ milestone win
+  PRA Over 23.5          win
+
+Every SQL replay updated the exact pick and parent result, timestamped grading,
+notified only the owner once, returned false on repeat settlement, and left the
+public pick record unchanged. Wrong-player data and a full-game row supplied
+for a Q1 selection remained unresolved. No real historical pick was fabricated,
+no production result was forced, and no collector/settlement job was replayed.
+
+Evidence (workspace-relative)
+- work/the-paint/private-pick-live-preflight.json
+- work/the-paint/recompute_user_pick_record.before.sql
+- work/the-paint/private-pick-live-verification.json
+- work/the-paint/private-pick-live-security-advisors.json
+- work/the-paint/private-pick-sql-verification.json
+- work/the-paint/verify-private-picks.mjs
+- work/the-paint/nba-historical-grading-facts.json
+- work/the-paint/settle_nba_pick_exact.live.sql
+- hub/scripts/nba-pick-privacy.test.mts
+
+PENDING — root completes after deployment/live browser QA
+- Final GitHub main commit, deployment ID/state and production URL verification.
+- Consolidated typecheck/lint/source/navigation/privacy/favorites test results.
+- Desktop: research -> player panel -> compare -> exact alt save -> Only me
+  post -> My Picks/detail; confirm exact line, side, price, book and pending.
+- Mobile: repeat research/compare/save/post/detail interactions, spacing,
+  viewport overflow, modal keyboard/tap behavior and transitions.
+- NBA search, player/team destination, favorite toggling, saved-search restore,
+  onboarding/profile/preferences and navigation entry-point checks.
+- Non-admin/anonymous NBA route and API denial plus hidden navigation checks.
+- Read-only post-test DB check: owner-only post and linked pick, no follower
+  notification, no public record or leaderboard effect. Record no personal
+  account identifiers in this document.
+- Preserve the genuine upcoming test as pending until the normal final-data
+  settlement schedule grades it; do not describe historical local replay as
+  already completed live settlement of that upcoming pick.

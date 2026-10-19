@@ -50,12 +50,14 @@ export async function POST(req: Request) {
   const content: string = typeof body?.content === 'string' ? body.content : ''
   const wager: number | null = typeof body?.wager === 'number' && body.wager > 0 ? body.wager : null
   const imageUrl: string | null = typeof body?.imageUrl === 'string' && body.imageUrl ? body.imageUrl : null
-  const visibility: string = body?.visibility === 'followers' ? 'followers' : 'public'
+  const visibility: string = body?.visibility === 'private' ? 'private' : body?.visibility === 'followers' ? 'followers' : 'public'
   const isSpoiler = body?.isSpoiler === true
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
   const sport = body?.sport === 'NBA' ? 'NBA' : body?.sport === 'NFL' ? 'NFL' : 'MLB'
   if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
+  if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in ThePaint.' }, { status: 403 })
+  if (visibility === 'private' && (groupId || pageId)) return NextResponse.json({ error: 'Only-me picks belong in your personal picks.' }, { status: 400 })
 
   if (pageId) {
     const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
@@ -198,13 +200,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your pick was not posted. Please try again.' }, { status: 503 })
   }
   // A notification error must not turn a committed post into a retry/duplicate.
-  try {
-    await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
-    await notifyFollowers(admin, {
-      actorId: user.id, type: 'new_pick', message: `posted a new ${isParlay ? 'parlay' : 'pick'}`,
-      link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
-    })
-  } catch (error) { console.error('[posts/pick] notification failed', error) }
+  if (visibility !== 'private') {
+    try {
+      await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
+      await notifyFollowers(admin, {
+        actorId: user.id, type: 'new_pick', message: `posted a new ${isParlay ? 'parlay' : 'pick'}`,
+        link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+      })
+    } catch (error) { console.error('[posts/pick] notification failed', error) }
+  }
 
   return NextResponse.json(post)
 }

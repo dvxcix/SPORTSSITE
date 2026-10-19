@@ -16,8 +16,10 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
-type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl'
+type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl' | 'nba'
 
 const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
 const RECENT_SEARCHES_KEY = 'slipsurge:recent-searches'
@@ -46,6 +48,10 @@ export function SearchClient() {
   const [mlbDate, setMlbDate] = useState<string | null>(null)
   const [nflPlayers, setNflPlayers] = useState<NflPlayerResult[]>([])
   const [nflTeams, setNflTeams] = useState<NflTeamResult[]>([])
+  const [nbaPlayers, setNbaPlayers] = useState<NbaSearchPlayer[]>([])
+  const [nbaTeams, setNbaTeams] = useState<NbaSearchTeam[]>([])
+  const [nbaAllowed, setNbaAllowed] = useState(false)
+  const [nbaError, setNbaError] = useState('')
   const [groups, setGroups] = useState<CommunityResult[]>([])
   const [pages, setPages] = useState<CommunityResult[]>([])
   const [channels, setChannels] = useState<CommunityResult[]>([])
@@ -80,6 +86,7 @@ export function SearchClient() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setCurrentUserId(user.id)
+      supabase.from('users').select('account_type').eq('id', user.id).maybeSingle().then(({ data }) => setNbaAllowed(hasNbaAccess(data?.account_type)))
       getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
       supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', user.id).order('last_used_at', { ascending: false }).limit(12)
         .then(({ data }) => setSavedSearches((data ?? []) as SavedSearch[]))
@@ -88,12 +95,12 @@ export function SearchClient() {
 
   const doSearch = useCallback(async (query: string) => {
     const runId = ++searchRunRef.current
-    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); setGroups([]); setPages([]); setChannels([]); setEvents([]); setLoading(false); return }
+    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); setNbaPlayers([]); setNbaTeams([]); setNbaError(''); setGroups([]); setPages([]); setChannels([]); setEvents([]); setLoading(false); return }
     setLoading(true)
     const filterQuery = query.replace(/[,%()]/g, ' ').trim().slice(0, 64)
 
     const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
-    const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData] = await Promise.all([
+    const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData, nbaData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
         .or(`username.ilike.%${filterQuery}%,display_name.ilike.%${filterQuery}%`)
@@ -128,6 +135,7 @@ export function SearchClient() {
       supabase.from('events').select('id,title,description,cover_image,start_date,going_count').or(`title.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('start_date', { ascending: true }).limit(8),
       fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
       fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+      nbaAllowed ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [], error: 'NBA search is temporarily unavailable.' }).catch(() => ({ players: [], teams: [], error: 'NBA search is temporarily unavailable.' })) : Promise.resolve({ players: [], teams: [] }),
     ])
 
     const q = query.toLowerCase()
@@ -148,12 +156,15 @@ export function SearchClient() {
     setMlbDate(sportsData.date ?? null)
     setNflPlayers(nflData.players ?? [])
     setNflTeams(nflData.teams ?? [])
+    setNbaPlayers(nbaData.players ?? [])
+    setNbaTeams(nbaData.teams ?? [])
+    setNbaError(nbaData.error ?? '')
     setGroups((groupRows ?? []).map(group => ({ ...group, count: group.member_count ?? 0 })))
     setPages((pageRows ?? []).map(page => ({ ...page, count: page.follower_count ?? 0 })))
     setChannels((channelRows ?? []).map(channel => ({ id: channel.id, slug: channel.slug, name: channel.name, description: channel.description, avatar_url: null, emoji: channel.icon || '#', count: channel.member_count ?? 0 })))
     setEvents(eventRows ?? [])
     setLoading(false)
-  }, [supabase])
+  }, [supabase, nbaAllowed])
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(q), 300)
@@ -200,7 +211,7 @@ export function SearchClient() {
   }
 
   async function openSavedSearch(saved: SavedSearch) {
-    setQ(saved.query); setTab(saved.result_tab)
+    setQ(saved.query); setTab(saved.result_tab === 'nba' && !nbaAllowed ? 'all' : saved.result_tab)
     const lastUsedAt = new Date().toISOString()
     setSavedSearches(current => current.map(item => item.id === saved.id ? { ...item, last_used_at: lastUsedAt } : item).sort((a, b) => b.last_used_at.localeCompare(a.last_used_at)))
     await supabase.from('saved_searches').update({ last_used_at: lastUsedAt }).eq('id', saved.id).eq('user_id', currentUserId)
@@ -209,12 +220,13 @@ export function SearchClient() {
   // Picks used to only match post_type === 'pick', silently excluding
   // parlays — same bug already found/fixed on /feed and /picks.
   const picks = posts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0 || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
+  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
   const showMlb = tab === 'all' || tab === 'mlb'
   const showNfl = tab === 'all' || tab === 'nfl'
+  const showNba = nbaAllowed && (tab === 'all' || tab === 'nba')
   const showCommunity = tab === 'all' || tab === 'community'
 
   return (
@@ -280,7 +292,7 @@ export function SearchClient() {
         <>
           {/* Tabs */}
           <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 scrollbar-hide">
-            {([['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ['community', 'Community'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
+            {([['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ...(nbaAllowed ? [['nba', 'NBA']] : []), ['community', 'Community'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as [SearchTab, string][]).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
                 className={`min-w-16 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {l}
@@ -415,6 +427,18 @@ export function SearchClient() {
             </div>
           )}
 
+          {showNba && (nbaPlayers.length > 0 || nbaTeams.length > 0) && <section className="mb-6" aria-label="NBA search results">
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400"><SafeImage src={sportLogoUrl('NBA')} alt="" className="h-5 w-5 object-contain"/>NBA</h3>
+            <div className="space-y-2">
+              {nbaTeams.map(team => <Link key={`team-${team.id}`} href={`/nba/teams/${team.id}`} className="ss-search-result flex items-center gap-3 p-3">
+                <TeamLogo logo={team.logo} name={team.name} size={40}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{team.name}</p><p className="text-xs text-zinc-400">Team profile</p></div><ArrowRight size={16} aria-hidden="true"/>
+              </Link>)}
+              {nbaPlayers.map(player => <Link key={`player-${player.id}`} href={`/nba/players/${player.id}`} className="ss-search-result flex items-center gap-3 p-3">
+                <PlayerAvatar headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={44}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{player.name}</p><p className="truncate text-xs text-zinc-400">{[player.position, player.teamName].filter(Boolean).join(' · ')}</p></div><ArrowRight size={16} aria-hidden="true"/>
+              </Link>)}
+            </div>
+          </section>}
+
           {/* Users */}
           {showUsers && users.length > 0 && (
             <div className="mb-6">
@@ -495,7 +519,9 @@ export function SearchClient() {
         </>
       )}
 
-      {q.trim() && !loading && !hasResults && (
+      {q.trim() && showNba && nbaError && <p role="status" className="mb-4 text-sm text-zinc-400">{nbaError}</p>}
+
+      {q.trim() && !loading && !hasResults && !nbaError && (
         <div className="text-center py-16">
           <p className="text-3xl mb-3">🔍</p>
           <p className="text-zinc-400 font-medium">No results for "{q}"</p>

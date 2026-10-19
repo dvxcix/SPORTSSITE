@@ -91,6 +91,7 @@ async function fetchRankedLeaderboard() {
       .from('posts')
       .select('id, author_id, sport, pick_data, created_at')
       .in('post_type', ['pick', 'parlay'])
+      .or('visibility.is.null,visibility.neq.private')
       .not('pick_data', 'is', null)
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })

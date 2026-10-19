@@ -701,9 +701,6 @@
   },
   "src/components/settings/ProfileForm.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 2
     }
   },
