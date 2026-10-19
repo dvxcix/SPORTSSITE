@@ -110,14 +110,14 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
   return (
     <div className={styles.page}>
-      {checkoutStatus === 'success' && (
+      {(checkoutStatus === 'succeeded' || checkoutStatus === 'success') && (
         <div className={`${styles.statusBanner} ${styles.statusSuccess}`}>
           Payment received. Your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
         </div>
       )}
-      {checkoutStatus === 'error' && (
+      {(['failed', 'canceled', 'error'].includes(checkoutStatus ?? '')) && (
         <div className={`${styles.statusBanner} ${styles.statusError}`}>
-          Checkout didn&apos;t complete. No charge was made. Try again whenever you&apos;re ready.
+          Checkout didn&apos;t complete. Check your payment status before trying again.
         </div>
       )}
       {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}

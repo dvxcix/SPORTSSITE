@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { contentSecurityPolicy } from "@whop/elements";
 
 const privateRoutes = [
   '/admin/:path*',
@@ -63,7 +64,7 @@ const nextConfig: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           {
             key: 'Content-Security-Policy-Report-Only',
-            value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://*.whop.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.ads-twitter.com https://*.whop.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss://*.supabase.co; frame-src 'self' https://*.whop.com; media-src 'self' blob: https:; worker-src 'self' blob:; upgrade-insecure-requests",
+            value: contentSecurityPolicy().merge("default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://*.whop.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.ads-twitter.com https://*.whop.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss://*.supabase.co; frame-src 'self' https://*.whop.com; media-src 'self' blob: https:; worker-src 'self' blob:; upgrade-insecure-requests"),
           },
         ],
       },

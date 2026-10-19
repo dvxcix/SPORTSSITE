@@ -8,10 +8,10 @@ import { isTrustedWhopUrl } from '@/lib/whopUrl'
 
 export const revalidate = 0
 
-// Creates a Whop Checkout Session server-to-server, attaching the current
+// Creates a Whop Elements checkout configuration server-to-server, attaching the current
 // SlipSurge account's id as metadata so the webhook can reliably map a
 // completed payment back to the right account (no email-matching guesswork).
-// The embed on /pricing renders against the returned sessionId rather than a
+// Elements on /pricing renders against the returned checkoutConfigurationId rather than a
 // bare planId. See plan doc "Account linking" for why this exists.
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch('https://api.whop.com/api/v2/checkout_sessions', {
+    const res = await fetch('https://api.whop.com/api/v1/checkout_configurations', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -60,10 +60,10 @@ export async function POST(req: Request) {
     if (!res.ok) return safeApiError('whop-checkout-session', { status: res.status }, 'Checkout is temporarily unavailable', 502)
 
     const data = await res.json().catch(() => null)
-    if (!data || typeof data.id !== 'string' || !isTrustedWhopUrl(data.purchase_url)) {
+    if (!data || typeof data.id !== 'string' || !data.id.startsWith('ch_') || !isTrustedWhopUrl(data.purchase_url)) {
       return safeApiError('whop-checkout-session-shape', null, 'Checkout is temporarily unavailable', 502)
     }
-    return NextResponse.json({ sessionId: data.id, purchaseUrl: data.purchase_url })
+    return NextResponse.json({ checkoutConfigurationId: data.id, purchaseUrl: data.purchase_url }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     return safeApiError('whop-checkout-session', error, 'Checkout is temporarily unavailable', 502)
   }

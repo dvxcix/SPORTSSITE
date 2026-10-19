@@ -3,19 +3,19 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { WhopCheckoutEmbed } from '@whop/checkout/react'
+import { WhopElements, Checkout, CheckoutElement } from '@whop/elements-react'
+import { loadWhop } from '@whop/elements'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { trackProductEvent } from '@/lib/productAnalytics'
+import { isTrustedWhopUrl } from '@/lib/whopUrl'
 
-// Whop's embed accepts EITHER planId OR sessionId (mutually exclusive per its
-// own types) — we always use sessionId here, created server-side with the
-// logged-in user's internal id attached as metadata (see
-// /api/whop/checkout-session), so the webhook can map a completed payment
-// back to the right SlipSurge account without email-matching.
+// The server authors account-linking metadata in a checkout configuration.
+// Elements creates its own session; fulfillment stays in the signed webhooks.
 export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { planId: string; label: string; loggedIn: boolean; highlight?: boolean }) {
   const router = useRouter()
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [checkoutConfigurationId, setCheckoutConfigurationId] = useState<string | null>(null)
+  const [purchaseUrl, setPurchaseUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Decided in JS, not a CSS @media breakpoint — reported live twice now that
@@ -33,7 +33,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   // as the modal is actually open (see globals.css), not just while this
   // component happens to be mounted.
   useEffect(() => {
-    if (!sessionId) return
+    if (!checkoutConfigurationId) return
     document.body.classList.add('ss-modal-open')
     const mq = window.matchMedia('(max-width: 640px)')
     const update = () => setIsMobile(mq.matches)
@@ -43,7 +43,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
       document.body.classList.remove('ss-modal-open')
       mq.removeEventListener('change', update)
     }
-  }, [sessionId])
+  }, [checkoutConfigurationId])
 
   async function startCheckout() {
     trackProductEvent('pricing_checkout_clicked', { plan_id: planId, logged_in: loggedIn })
@@ -58,10 +58,12 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId }),
+        signal: AbortSignal.timeout(25_000),
       })
       const data = await res.json()
-      if (!res.ok || typeof data?.sessionId !== 'string') throw new Error('checkout_session_failed')
-      setSessionId(data.sessionId)
+      if (!res.ok || typeof data?.checkoutConfigurationId !== 'string' || !data.checkoutConfigurationId.startsWith('ch_') || !isTrustedWhopUrl(data.purchaseUrl)) throw new Error('checkout_session_failed')
+      setPurchaseUrl(data.purchaseUrl)
+      setCheckoutConfigurationId(data.checkoutConfigurationId)
       trackProductEvent('pricing_checkout_opened', { plan_id: planId })
     } catch {
       setError('Checkout could not be opened. Please try again.')
@@ -83,7 +85,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         {loading ? 'Loading…' : label}
       </Button>
       {error && <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>{error}</p>}
-      {sessionId && createPortal(
+      {checkoutConfigurationId && createPortal(
         // The overlay itself is the ONE scrollable element (not a flex-
         // centered overlay wrapping a separately-scrollable card) — on
         // mobile the card is just tall in-flow content the overlay scrolls
@@ -152,31 +154,35 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
             }}>
               <button
                 type="button"
-                onClick={() => setSessionId(null)}
+                onClick={() => setCheckoutConfigurationId(null)}
                 aria-label="Close checkout"
                 style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}
               >
                 <X size={20} color="var(--text-3)" />
               </button>
-              <WhopCheckoutEmbed
-                sessionId={sessionId}
-                // No ?status= of our own here — Whop appends the real
-                // "success" or "error" outcome to this URL itself for the
-                // redirect-based payment flows (3DS, etc). Hardcoding
-                // "success" ourselves would make a failed payment redirect
-                // to a URL that still claims success once Whop's own value
-                // gets appended alongside/after ours.
-                returnUrl={`${window.location.origin}/pricing`}
-                theme="dark"
-                themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
-                onComplete={() => {
-                  setSessionId(null)
-                  trackProductEvent('pricing_checkout_completed', { plan_id: planId })
-                  router.push('/pricing?status=success')
-                  router.refresh()
-                }}
-                fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
-              />
+              <WhopElements
+                elements={loadWhop()}
+                appearance={{ theme: { appearance: 'dark', accentColor: 'lime' } }}
+                onLoadError={() => setError('Secure checkout could not load. Close it and try again.')}
+              >
+                <Checkout
+                  key={checkoutConfigurationId}
+                  checkoutConfiguration={checkoutConfigurationId}
+                  returnUrl={`${window.location.origin}/pricing`}
+                  onComplete={result => {
+                    if (result.result === 'payment') {
+                      trackProductEvent('pricing_checkout_completed', { plan_id: planId })
+                    }
+                  }}
+                >
+                  <CheckoutElement
+                    onError={() => setError('Secure checkout could not load. Close it and try again.')}
+                    fallback={<div role="status" style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
+                  />
+                </Checkout>
+              </WhopElements>
+              {error && <p role="alert" style={{ color: '#f87171', marginTop: 12 }}>{error}</p>}
+              {purchaseUrl && <a href={purchaseUrl} style={{ display: 'block', marginTop: 16, color: 'var(--text-3)', fontSize: 13 }}>Continue securely on Whop</a>}
             </div>
           </div>
         </div>,
