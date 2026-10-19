@@ -1,6 +1,6 @@
-import { nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
+import { nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintBoard, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
 
-export const NBA_SCORE_VERSION = 'nba-opportunity-v1'
+export const NBA_SCORE_VERSION = 'nba-opportunity-v2'
 const clamp = (value: number, low = 0, high = 100) => Math.max(low, Math.min(high, value))
 const mean = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 const numeric = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
@@ -12,8 +12,14 @@ export function nbaPosition(position: string | null | undefined) {
   const first = position?.toUpperCase().split('-')[0]
   return first === 'C' ? 'C' : first && /G/.test(first) ? 'G' : first && /F/.test(first) ? 'F' : null
 }
+export function nbaGamePace(board: PaintBoard) {
+  if (board.historical) return null
+  const teams = [board.game.home_team.id, board.game.visitor_team.id]
+  const values = teams.map(id => board.teamStats?.find(row => row.team.id === id)?.stats.pace)
+  return values.every((value): value is number => numeric(value) && value > 0) ? mean(values) : null
+}
 /** Descriptive production support, not a win probability or a fitted betting edge. */
-export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null) {
+export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null) {
   const logs = nbaSample(player.logs.filter(log => log.game.date.slice(0, 10) < before), 30)
   const recent = logs.slice(0, 10), prior = logs.slice(10, 30)
   const minutes = mean(recent.map(log => nbaMinutes(log.min)).filter(numeric))
@@ -33,15 +39,20 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
     { key: 'opportunity', label: market === 'points' || market === 'threes' ? 'Shot opportunity' : 'Per-36 production', value: opportunity, weight: .35 },
     { key: 'role', label: 'Minutes', value: minutes == null ? null : clamp(minutes / 36 * 100), weight: .20 },
     { key: 'form', label: 'Recent form', value: form, weight: .20 },
-    { key: 'stability', label: 'Role stability', value: stability, weight: .15 },
+    { key: 'stability', label: 'Role stability', value: stability, weight: .10 },
     { key: 'matchup', label: 'Position allowance', value: matchup?.allowance == null ? null : clamp(50 + matchup.allowance * 100), weight: .10 },
+    { key: 'pace', label: 'Game pace', value: pace == null || !Number.isFinite(pace) || pace <= 0 ? null : clamp(50 + (pace - 100) * 5), weight: .05 },
   ]
   const valid = parts.filter(part => part.value != null), coverage = valid.reduce((sum, part) => sum + part.weight, 0)
   // Shrink sparse samples toward neutral; missing features remain visible.
   const raw = coverage ? valid.reduce((sum, part) => sum + part.value! * part.weight, 0) / coverage : null
-  const score = recent.length >= 5 && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
+  const marketGames = recent.filter(log => nbaValue(log, market) != null).length
+  const score = marketGames >= 5 && coverage >= .55 && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
   const historicalTeams = [...new Set(logs.map(log => log.team.id))]
-  return { version: NBA_SCORE_VERSION, score, games: logs.length, coverage, parts, minutes, production, baseline, newTeam: historicalTeams.length > 0 && !historicalTeams.includes(player.team.id), priorTeams: historicalTeams }
+  const year = Number(before.slice(0, 4)), season = Number(before.slice(5, 7)) < 7 ? year - 1 : year
+  const previousSeasonTeams = [...new Set(logs.filter(log => log.game.season != null && log.game.season < season).map(log => log.team.id))]
+  const priorTeams = previousSeasonTeams.length ? previousSeasonTeams : historicalTeams
+  return { version: NBA_SCORE_VERSION, score, games: logs.length, marketGames, coverage, parts, minutes, production, baseline, pace: pace ?? null, newTeam: priorTeams.length > 0 && !priorTeams.includes(player.team.id), priorTeams }
 }
 
 /** A transparent rolling production baseline, evaluated before each next game. */
@@ -64,26 +75,26 @@ export function nbaWalkForward(logs: PaintStat[], market: PaintMarket) {
 
 /** Allowance is production per 48 position-minutes, shrunk toward the league mean. */
 export function nbaDefenseProfiles(stats: PaintStat[], markets: readonly PaintMarket[]) {
-  const groups = new Map<string, { teamId: number; position: string; games: Set<number>; minutes: number; totals: Map<PaintMarket, { value: number; minutes: number }> }>()
+  const groups = new Map<string, { teamId: number; position: string; totals: Map<PaintMarket, { value: number; minutes: number; games: Set<number> }> }>()
   for (const log of [...new Map(stats.map(row => [row.id, row])).values()]) {
     const minutes = nbaMinutes(log.min), position = nbaPosition(log.player.position)
     if (minutes == null || minutes <= 0 || !position || log.game.postseason === true || !['Final', 'final'].includes(log.game.status_state ?? log.game.status)) continue
     const opponent = log.team.id === log.game.home_team_id ? log.game.visitor_team_id : log.team.id === log.game.visitor_team_id ? log.game.home_team_id : null
     if (!opponent) continue
-    const key = `${opponent}:${position}`, group = groups.get(key) ?? { teamId: opponent, position, games: new Set<number>(), minutes: 0, totals: new Map() }
-    group.games.add(log.game.id); group.minutes += minutes
+    const key = `${opponent}:${position}`, group = groups.get(key) ?? { teamId: opponent, position, totals: new Map() }
     for (const market of markets) {
       const value = nbaValue(log, market); if (value == null) continue
-      const total = group.totals.get(market) ?? { value: 0, minutes: 0 }
-      total.value += value; total.minutes += minutes; group.totals.set(market, total)
+      const total = group.totals.get(market) ?? { value: 0, minutes: 0, games: new Set<number>() }
+      total.value += value; total.minutes += minutes; total.games.add(log.game.id); group.totals.set(market, total)
     }
     groups.set(key, group)
   }
   return [...groups.values()].flatMap(group => markets.map(market => {
     const total = group.totals.get(market)
-    const league = [...groups.values()].filter(other => other.position === group.position).map(other => other.totals.get(market)).filter((row): row is { value: number; minutes: number } => !!row)
+    const league = [...groups.values()].filter(other => other.position === group.position).flatMap(other => { const total = other.totals.get(market); return total ? [total] : [] })
     const leagueMinutes = league.reduce((sum, row) => sum + row.minutes, 0), leagueValue = league.reduce((sum, row) => sum + row.value, 0)
     const per48 = total && total.minutes > 0 ? total.value / total.minutes * 48 : null, leaguePer48 = leagueMinutes > 0 ? leagueValue / leagueMinutes * 48 : null
-    return { teamId: group.teamId, position: group.position, market, games: group.games.size, minutes: total?.minutes ?? 0, per48, leaguePer48, allowance: group.games.size >= 5 && per48 != null && leaguePer48 != null && leaguePer48 > 0 ? (per48 / leaguePer48 - 1) * group.games.size / (group.games.size + 20) : null } satisfies NbaDvp
+    const games = total?.games.size ?? 0
+    return { teamId: group.teamId, position: group.position, market, games, minutes: total?.minutes ?? 0, per48, leaguePer48, allowance: games >= 5 && per48 != null && leaguePer48 != null && leaguePer48 > 0 ? (per48 / leaguePer48 - 1) * games / (games + 20) : null } satisfies NbaDvp
   }))
 }

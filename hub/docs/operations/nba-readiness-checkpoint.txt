@@ -1,0 +1,85 @@
+NBA readiness checkpoint — 2026-10-19 overnight mission (still in progress)
+
+Boundary: admin-only, no global NBA navigation, no public test posts or wagers.
+No existing MLB/NFL job, feature flag, account record or payment changed.
+
+Canonical source releases already on main: 73739eb6 (durable facts/shared cache),
+bebcd7f1 (production support/DvP), 6ef5b0bb (shot research), fe5a35bf (slate and
+paired market signals/rolling source refresh). This commit adds the research
+ledger, temporal validation, season-opening baselines and appearance corrections.
+
+Data evidence:
+- 2023 regular-season stats: 43,395 rows; 2024: 43,371; 2025: 43,268.
+  All three basic-stat cursors completed; 130,034 total records. 2025 reconciled
+  to all 1,230 regular-season game IDs. Advanced data continues in bounded cloud
+  batches. Current 2026 schedule/active rosters are stored and rolling refreshes
+  cover recent finals and the next fourteen days. No laptop bulk collector.
+- Pikkit successfully captured all three opening matchups: 42,40,44 recognized
+  player/market counts. Full teams/date checked; exact names matched within
+  current rosters. Counts are categories, not wager dollars or exact thresholds.
+- True play locations inspected against a real completed game. Coordinates are
+  already normalized to the attacking rim (25,0), with invalid sentinels removed
+  from plotting while attempts stay counted. Blocked shots require both shooter
+  ID and the named blocked player, since descriptions begin with the defender.
+
+NBA score nba-opportunity-v2 is a descriptive 0–100 index, not a pick probability.
+Weights: opportunity35%, minutes20%, recent form20%, role stability10%, position
+allowance10%, game pace5%. Points use FGA+.44FTA, threes use 3PA, other markets
+use observed per-36 output. Missing ingredients remain unknown; five known market
+observations and55% feature coverage are required. Samples shrink toward neutral
+until20 appearances. Pace100 is neutral; each possession changes that component
+by5 points. Position allowances use actual production per48 position-minutes,
+primary roster roles, a five-game minimum per market and n/(n+20) shrinkage.
+Historical pages never load later season-end ratings. Early-season forms retain
+prior regular-season appearances until20 current appearances; actual season
+averages and baseline seasons are labeled separately. Team/DvP profiles use the
+previous season until sufficient current coverage exists.
+
+Production model nba-rolling-v1 is separate from that index. Candidates include
+the last-ten baseline and blends of the last five with the preceding fifteen.
+Weights are chosen using 2023–24 and2024–25 only, then tested on2025–26. The first
+official points report selected50%/50%: 46,065 training observations and25,578
+held-out observations; MAE4.667740 versus L10 baseline4.716033. This modest error
+reduction is not an odds backtest, calibrated pick probability or ROI claim.
+Other market reports are queued to run once from completed source coverage.
+
+Applied individually (do not replay):
+20261019051947 nba_research_foundation
+20261019054602 nba_research_validation
+20261019054942 nba_research_summary
+20261019060559 nba_appearance_evidence
+All facts/caches/models/research ledgers are RLS-enabled and service-only. Member
+and anonymous table/function permissions were checked and denied. Snapshot
+guards reject after-tip captures, future samples, wrong identities and quote
+identity changes. Last-fingerprint dedup preserves A→B→A. Rollback checks proved
+exact final grading and idempotence; all verification fixtures were rolled back.
+
+Real defect found during import: minutes are rounded, and two2025 records had
+positive actions at zero minutes (GG Jackson: steal; Trey Jemison: rebound).
+Zero minutes cannot establish DNP. Positive actions with recorded minutes prove
+appearance; all-zero/no-evidence rows remain pending. Missing minutes also remain
+unverified. The shared sample, public results, pick grader, model eligibility and
+research ledger now agree. Impossible old DNP test fixtures carried rebounds,
+assists and attempts; these were corrected to genuine all-zero fixtures, with a
+separate regression for the real brief-appearance pattern. No guessed DNP loss
+or automatic void is introduced. The source also names season turnovers tov;
+that field is normalized to the game-log turnover key.
+
+Cache: bounded ten-second process cache, in-process request coalescing, shared
+database leases, accurate source timestamps, bounded stale fallback and hard
+expiry. Game browsing caches15s; posting/grading bypass it for fresh status.
+Only expired ephemeral NBA cache entries older than seven days are pruned; facts,
+market history, public counts and research snapshots persist. Research forecasts
+and outcomes live in their own ledger, never user pick records. Latest pre-tip
+capture is the fixed policy for prospective aggregate evaluation.
+
+Verification so far: NBA39/39; production source134/134; NFL odds5/5 and grading5/5;
+typecheck and targeted ESLint passed. Live all-books modal action passed above
+the resume surface, exact saves were verified and archived, real public counts
+rendered, and DvP returned genuine20-game windows. Final desktop/mobile verification
+of the expanded suite and complete advanced/model reconciliation remain.
+
+Additional actual provider markets found during the audit: full-game double and
+triple doubles, plus first-quarter points/rebounds/assists. These require their
+own outcome/period semantics and must not be silently treated as full-game sum
+stats. Finish their coverage before claiming the provider market audit complete.

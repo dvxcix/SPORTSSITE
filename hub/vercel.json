@@ -1,6 +1,14 @@
 {
   "crons": [
     {
+      "path": "/api/cron/nba-model-validate",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/nba-research-snapshot",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/nba-research-sync",
       "schedule": "* * * * *"
     },

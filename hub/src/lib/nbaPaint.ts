@@ -1,12 +1,12 @@
 // Provider identities and descriptive statistics, shared without server credentials.
 export type PaintTeam = { id: number; abbreviation: string; full_name: string; name: string; city?: string }
 export type PaintGame = { id: number; date: string; season: number; status: string; status_state?: string; datetime: string | null; period: number; home_team: PaintTeam; visitor_team: PaintTeam; home_team_score: number; visitor_team_score: number }
-export type PaintRoster = { id: number; first_name: string; last_name: string; position: string; jersey_number?: string; height?: string; team: PaintTeam }
+export type PaintRoster = { id: number; first_name: string; last_name: string; position: string; jersey_number?: string; height?: string; draft_year?: number | null; draft_round?: number | null; draft_number?: number | null; college?: string; team: PaintTeam }
 export type PaintStat = { id: number; player: { id: number; first_name?: string; last_name?: string; position?: string; height?: string; jersey_number?: string }; team: { id: number }; game: { id: number; date: string; datetime?: string | null; status: string; status_state?: string; home_team_id: number; visitor_team_id: number; season?: number; postseason?: boolean }; min: string; pts: number | null; reb: number | null; ast: number | null; fg3m: number | null; stl: number | null; blk: number | null; turnover: number | null; fga: number | null; fgm: number | null; fg3a: number | null; fta: number | null; ftm: number | null }
 export type PaintProp = { id: number; game_id: number; player_id: number; vendor: string; prop_type: string; line_value: string; market: { type: 'over_under' | 'milestone'; over_odds?: number; under_odds?: number; odds?: number }; updated_at: string }
-export type PaintPlayer = PaintRoster & { headshot: string | null; injury: { status: string; description: string; return_date?: string } | null; average: Record<string, number | null>; logs: PaintStat[]; props: PaintProp[] }
+export type PaintPlayer = PaintRoster & { headshot: string | null; injury: { status: string; description: string; return_date?: string } | null; average: Record<string, number | null>; averageSeason?: number; logs: PaintStat[]; props: PaintProp[] }
 export type PaintGameOdds = { id: number; vendor: string; spread_home_value: string | null; spread_away_value: string | null; spread_home_odds?: number | null; spread_away_odds?: number | null; moneyline_home_odds: number | null; moneyline_away_odds: number | null; total_value: string | null; total_over_odds?: number | null; total_under_odds?: number | null; updated_at: string }
-export type PaintBoard = { game: PaintGame; players: PaintPlayer[]; sampleSeason: number; historical: boolean; sampleEnd: string; fetchedAt: string; issues: string[]; statsComplete: boolean; teamStats?: { team: PaintTeam; stats: Record<string, number | null> }[]; gameOdds?: PaintGameOdds[]; starters?: number[] }
+export type PaintBoard = { game: PaintGame; players: PaintPlayer[]; sampleSeason: number; baselineSeasons?: number[]; historical: boolean; sampleEnd: string; fetchedAt: string; issues: string[]; statsComplete: boolean; teamStatsSeason?: number; teamStats?: { team: PaintTeam; stats: Record<string, number | null> }[]; gameOdds?: PaintGameOdds[]; starters?: number[] }
 export const PAINT_MARKETS = [
   { key: 'points', label: 'Points', short: 'PTS', stats: ['pts'] },
   { key: 'rebounds', label: 'Rebounds', short: 'REB', stats: ['reb'] },
@@ -23,6 +23,13 @@ export const PAINT_MARKETS = [
 export type PaintMarket = typeof PAINT_MARKETS[number]['key']
 export const nbaName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g, '').replace(/[^a-z]/g, '')
 export function nbaMinutes(value: string | number | null | undefined) { if (value == null || value === '') return null; const parts = String(value).split(':').map(Number); return parts.every(Number.isFinite) ? parts[0] + (parts[1] ?? 0) / 60 : null }
+export function nbaAppeared(row: Partial<PaintStat>) {
+  const minutes = nbaMinutes(row.min)
+  if (minutes == null || minutes < 0) return false
+  // Provider minutes can round a brief appearance to zero. Positive player
+  // actions prove participation; all-zero rows remain unverified, not DNPs.
+  return minutes > 0 || ['pts','reb','ast','fg3m','stl','blk','turnover','fga','fgm','fg3a','fta','ftm'].some(key => { const value = (row as Record<string, unknown>)[key]; return typeof value === 'number' && Number.isFinite(value) && value > 0 })
+}
 export function nbaValue(row: Partial<PaintStat> | Record<string, number | null>, market: string): number | null {
   const definition = PAINT_MARKETS.find(m => m.key === market)
   if (!definition) return null
@@ -31,7 +38,7 @@ export function nbaValue(row: Partial<PaintStat> | Record<string, number | null>
 }
 export function nbaSample(logs: PaintStat[], count: number, location: 'all' | 'home' | 'away' = 'all') {
   const unique = [...new Map(logs.map(l => [l.id, l])).values()]
-  return unique.filter(l => (nbaMinutes(l.min) ?? 0) > 0 && (location === 'all' || (location === 'home' ? l.team.id === l.game.home_team_id : l.team.id === l.game.visitor_team_id)))
+  return unique.filter(l => nbaAppeared(l) && (location === 'all' || (location === 'home' ? l.team.id === l.game.home_team_id : l.team.id === l.game.visitor_team_id)))
     .sort((a, b) => b.game.date.localeCompare(a.game.date) || b.game.id - a.game.id).slice(0, count)
 }
 export function nbaAverage(logs: PaintStat[], market: string) { const values = logs.map(l => nbaValue(l, market)).filter((v): v is number => v != null); return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null }

@@ -15,7 +15,7 @@ export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>
     if (Date.now() + 37_000 > deadline) { report.skipped += picks.length; report.issues.push('NBA time budget reached'); continue }
     try {
       if (!/^\d{1,10}$/.test(id)) { report.skipped += picks.length; continue }
-      const game = await getPaintGame(Number(id))
+      const game = await getPaintGame(Number(id), true)
       if (game.status_state !== 'final' && game.status !== 'Final') { report.skipped += picks.length; continue }
       const stats = await getPaintFinalStats(Number(id))
       if (!stats.complete) { report.skipped += picks.length; report.issues.push('NBA final stats incomplete'); continue }

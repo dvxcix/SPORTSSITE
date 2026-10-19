@@ -14,11 +14,27 @@ import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForwa
 import { nbaShots,type NbaPlay } from '../src/lib/nbaShots.ts'
 import { nbaDivergences } from '../src/lib/nbaDivergence.ts'
 import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
+import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+
+test('validated NBA estimates require an earlier held-out report, adequate samples and exact market observations',()=>{
+  const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1}))
+  const report={ready:true,version:'nba-rolling-v1',market:'points',method:'blend',recentWeight:.35,modelKey:'test',trainingSeasons:[2023,2024],trainingGames:20000,trainingPlayers:500,trainingMae:4,trainedThrough:'2025-04-13',validationSeason:2025,validationGames:10000,validationPlayers:500,validationMae:4,validationRmse:6,validationBias:0,baselineMae:4.2,validationFrom:'2025-10-20',validationThrough:'2026-04-13'} satisfies NbaModelReport
+  assert.equal(nbaValidatedEstimate(logs,'points','2026-10-20',report),20.5)
+  assert.equal(nbaValidatedEstimate(logs,'points','2026-10-20',{...report,method:'last10'}),24.5)
+  assert.equal(nbaValidatedEstimate(logs,'points','2026-04-01',report),null)
+  assert.equal(nbaValidatedEstimate(logs,'rebounds','2026-10-20',report),null)
+  assert.equal(nbaValidatedEstimate(logs,'points','2026-10-20',{...report,trainingGames:0}),null)
+  assert.equal(nbaValidatedEstimate(logs.slice(0,9),'points','2026-10-20',report),null)
+  assert.equal(nbaValidatedEstimate(logs.map((log,i)=>i<11?{...log,pts:null}:log),'points','2026-10-20',report),null)
+  assert.equal(nbaValidatedEstimate([...logs,{...stat(1000,'2026-10-20'),id:500}],'points','2026-10-20',report),20.5)
+})
 
 test('NBA slate MM uses the full slate, withholds ranks on partial coverage and preserves exact offer sides',()=>{
   const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
-  const boards=[{game:{id:123,date:'2026-10-20'},players:players.slice(0,2),fetchedAt:'2026-10-19T00:00:00Z',issues:[]},{game:{id:456,date:'2026-10-20'},players:players.slice(2).map(player=>({...player,props:player.props.map(offer=>({...offer,game_id:456}))})),fetchedAt:'2026-10-19T00:00:00Z',issues:[]}] as unknown as import('../src/lib/nbaPaint.ts').PaintBoard[]
+  const game={id:123,date:'2026-10-20',season:2026,status:'Scheduled',datetime:'2026-10-20T23:00:00Z',period:0,home_team:players[0].team,visitor_team:{...players[0].team,id:9},home_team_score:0,visitor_team_score:0}
+  const meta={sampleSeason:2025,historical:false,sampleEnd:'2026-04-13',statsComplete:true,fetchedAt:'2026-10-19T00:00:00Z',issues:[]}
+  const boards=[{...meta,game,players:players.slice(0,2)},{...meta,game:{...game,id:456},players:players.slice(2).map(player=>({...player,props:player.props.map(offer=>({...offer,game_id:456}))}))}] satisfies import('../src/lib/nbaPaint.ts').PaintBoard[]
   const over=nbaSlateRows(boards,'points','fanduel','over',true), under=nbaSlateRows(boards,'points','fanduel','under',true)
   assert.equal(over.find(row=>row.player.id===1)?.mm,2)
   assert.equal(over.find(row=>row.player.id===3)?.mm,-2)
@@ -68,6 +84,7 @@ test('NBA production scoring is market-specific, bounded, sample-aware and exclu
   const future={...logs[0],id:500,pts:500,fga:500,game:{...logs[0].game,date:'2026-04-01'}}
   assert.deepEqual(nbaSlipSurgeScore({...player,logs:[future,...logs]},'points','2026-04-01'),score)
   assert.equal(nbaSlipSurgeScore({...player,logs:logs.slice(0,4)},'points','2026-04-01').score,null)
+  assert.equal(nbaSlipSurgeScore({...player,logs:logs.map(log=>({...log,pts:null}))},'points','2026-04-01').score,null)
   assert.equal(nbaSlipSurgeScore({...player,team:{id:9}} as PaintPlayer,'points','2026-04-01').newTeam,true)
 })
 
@@ -90,6 +107,30 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
   assert.equal(nbaDefenseProfiles(logs.slice(0,4),['points'])[0].allowance,null)
   assert.deepEqual(nbaDefenseProfiles([...logs,...logs],['points']),profiles)
   assert.deepEqual(nbaDefenseProfiles([...logs,{...logs[0],id:500,min:'0:00',pts:10000}],['points']),profiles)
+  const incomplete=nbaDefenseProfiles(logs.slice(0,5).map((log,i)=>i===4?{...log,pts:null}:log),['points'])[0]
+  assert.equal(incomplete.games,4);assert.equal(incomplete.allowance,null)
+})
+
+test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
+  let reads=0
+  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
+  for(const job of ['nba-research-sync','nba-model-validate','nba-research-snapshot']){
+    const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
+    assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
+  }
+  const model=await compiled('../src/app/the-paint/models/route.ts',{...imports,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:Response.json({},{status:403})})}})
+  assert.equal((await(model.GET as()=>Promise<Response>)()).status,403);assert.equal(reads,0)
+})
+
+test('rounded zero-minute player actions preserve appearances and exact grading without guessing all-zero rows',()=>{
+  const brief={...stat(0,'2025-11-07','0'),stl:1}
+  const unknown=stat(0,'2025-11-08','0')
+  assert.equal(nbaSample([brief,unknown],10).length,1)
+  const pick={id:'p',post_id:null,game_pk:'123',player_id:'bdl:434',player_name:'Test',pick_type:'points',numeric_line:.5,market_side:'under' as const}
+  assert.equal(gradeNbaPick(pick,[brief]),'win')
+  assert.equal(gradeNbaPick({...pick,pick_type:'steals',market_side:'over'},[brief]),'win')
+  assert.equal(gradeNbaPick(pick,[unknown]),null)
+  assert.equal(gradeNbaPick(pick,[{...brief,min:null} as unknown as PaintStat]),null)
 })
 
 test('NBA fact import preserves historical team identity and rejects malformed identities',async()=>{
@@ -103,25 +144,46 @@ test('NBA fact import preserves historical team identity and rejects malformed i
   assert.throws(()=>fact('games',{id:5,date:'2026-01-01',season:2025,home_team:{id:2},visitor_team:{id:2}},2025,''))
 })
 
+test('NBA season-opening research blends prior appearances without replacing real current averages or inventing rookie data',async()=>{
+  const pure=await import('../src/lib/nbaPaint.ts'),team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
+  const current={...stat(24,'2026-10-20'),id:1,player:{id:434},game:{...stat(24).game,id:100,date:'2026-10-20',season:2026}}
+  const prior={...stat(20,'2026-04-10'),id:2,player:{id:434},game:{...stat(20).game,id:101,date:'2026-04-10',season:2025}}
+  const fetcher:typeof fetch=async input=>{
+    const url=String(input);let data:unknown[]=[]
+    if(url.includes('espn.com'))return Response.json({athletes:[]})
+    if(url.includes('/players/active'))data=[434,500,600].map(id=>({id,first_name:'Test',last_name:String(id),team,position:'G'}))
+    if(url.includes('/season_averages/general')&&!url.includes('team_season'))data=[{player:{id:434},stats:{gp:1,pts:24,min:32}},{player:{id:500},stats:{gp:0,pts:0,min:0}},{player:{id:600},stats:{gp:0,pts:0,min:0}}]
+    if(url.includes('/stats?'))data=url.includes('seasons[]=2025')?[prior,{...prior,id:3,player:{id:500},pts:16}]:[current,{...current,id:4,pts:1000,game:{...current.game,date:'2026-10-21'}}]
+    return Response.json({data,meta:{next_cursor:null}})
+  }
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':{...pure,nbaToday:()=>'2026-10-19'},'./nbaSharedCache':cachePassthrough},fetcher)
+  const board=await (provider.getPaintBoard as (game:unknown)=>Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({id:123,date:'2026-10-21',season:2026,home_team:team,visitor_team:{...team,id:9}})
+  assert.deepEqual(board.baselineSeasons,[2025,2026]);assert.equal(board.statsComplete,true)
+  assert.deepEqual(board.players[0].logs.map(row=>row.pts),[24,20]);assert.equal(board.players[0].average.pts,24);assert.equal(board.players[0].averageSeason,2026)
+  assert.equal(board.players[1].average.pts,16);assert.equal(board.players[1].averageSeason,2025)
+  assert.equal(board.players[2].average.pts,null);assert.equal(board.players[2].logs.length,0)
+})
+
 test('NBA shared cache coalesces cold readers across leases and retains source time on stale failure',async()=>{
-  let entry:Record<string,unknown>|null=null,lease:string|null=null,loads=0
-  const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:entry,error:null})})}),update:()=>({eq:()=>({eq:async()=>{lease=null;return{error:null}}})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
+  let entry:Record<string,unknown>|null=null,lease:string|null=null,loads=0,reads=0
+  const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>{reads++;return{data:entry,error:null}}})}),update:()=>({eq:()=>({eq:async()=>{lease=null;return{error:null}}})})}),rpc:async(name:string,args:Record<string,unknown>)=>{
     if(name==='claim_nba_source'){if(lease)return{data:false};lease=String(args.p_token);return{data:true}}
     assert.equal(args.p_token,lease)
     entry={payload:args.p_payload,fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+Number(args.p_ttl)*1000).toISOString()};lease=null;return{data:true}
   }}
   const crypto=await import('node:crypto')
-  const module=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':crypto,'./supabase/admin':{createAdminClient:()=>admin}})
-  const cache=module.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
+  const instances=await Promise.all(Array.from({length:4},()=>compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':crypto,'./supabase/admin':{createAdminClient:()=>admin}})))
+  const caches=instances.map(instance=>instance.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache),cache=caches[0]
   const load=async()=>{loads++;await new Promise(r=>setTimeout(r,10));return{points:25}}
-  const results=await Promise.all(Array.from({length:8},()=>cache('test',60,300,load)))
+  const results=await Promise.all(Array.from({length:8},(_,i)=>caches[i%4]('test',60,300,load)))
   assert.equal(loads,1);assert.ok(results.every(r=>r.value.points===25&&!r.stale))
+  const priorReads=reads;await cache('test',60,300,load);assert.equal(reads,priorReads);assert.equal(loads,1)
   const sourceTime=results[0].fetchedAt
   entry={payload:{points:25},fetched_at:sourceTime,expires_at:new Date(Date.now()-1000).toISOString()}
-  const stale=await cache('test',60,300,async()=>{throw new Error('provider failed')})
+  const stale=await cache('stale',60,300,async()=>{throw new Error('provider failed')})
   assert.equal(stale.stale,true);assert.equal(stale.fetchedAt,sourceTime)
   entry={payload:{points:25},fetched_at:sourceTime,expires_at:new Date(Date.now()-400000).toISOString()}
-  await assert.rejects(()=>cache('test',60,300,async()=>{throw new Error('provider failed')}),/provider failed/)
+  await assert.rejects(()=>cache('expired',60,300,async()=>{throw new Error('provider failed')}),/provider failed/)
 })
 
 test('cross-market scans retain complete-pool MM, isolate books and sides, and use push-adjusted denominators',()=>{
@@ -180,11 +242,11 @@ test('new NBA research APIs reject non-admins and invalid games before loading p
 
 test('NBA public results stay game-exact and distinguish zero production from DNP and unknown minutes',async()=>{
   const pure=await import('../src/lib/nbaPaint.ts')
-  const route=await compiled('../src/app/the-paint/results/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'admin'})},'@/lib/nbaPaint':pure,'@/lib/nbaPaintData':{getPaintGame:async()=>({id:123,status:'Final'}),getPaintFinalStats:async()=>({complete:true,rows:[{...stat(0),player:{id:1}},{...stat(0),player:{id:2},min:'0:00'},{...stat(0),player:{id:3},min:null},{...stat(50),game:{...stat(50).game,id:456}}]})}})
+  const route=await compiled('../src/app/the-paint/results/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'admin'})},'@/lib/nbaPaint':pure,'@/lib/nbaPaintData':{getPaintGame:async()=>({id:123,status:'Final'}),getPaintFinalStats:async()=>({complete:true,rows:[{...stat(0),player:{id:1}},{...stat(0,'2026-04-01','0:00'),player:{id:2}},{...stat(0),player:{id:3},min:null},{...stat(50),game:{...stat(50).game,id:456}}]})}})
   const response=await (route.GET as unknown as(r:unknown)=>Promise<Response>)({nextUrl:new URL('https://test/the-paint/results?game=123')})
   const json=await response.json();assert.equal(json.status,'final');assert.equal(json.players.length,3)
   assert.equal(json.players[0].played,true);assert.equal(json.players[0].values.points,0)
-  assert.equal(json.players[1].played,false);assert.equal(json.players[2].played,null)
+  assert.equal(json.players[1].played,null);assert.equal(json.players[2].played,null)
 })
 
 test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{
@@ -202,7 +264,10 @@ test('NBA Pikkit collector denies unauthorized calls before schedule or cloud br
   assert.equal(reads,0)
 })
 
-const stat = (value: number | null, date = '2026-04-01', minutes = '30:30'): PaintStat => ({ id: Number(date.replaceAll('-', '')), player: { id: 434 }, team: { id: 2 }, game: { id: 123, date, status: 'Final', status_state: 'final', home_team_id: 2, visitor_team_id: 9 }, min: minutes, pts: value, reb: 5, ast: 4, fg3m: 2, stl: 0, blk: 1, turnover: 2, fga: 15, fgm: 7, fg3a: 5, fta: 3, ftm: 2 })
+const stat = (value: number | null, date = '2026-04-01', minutes = '30:30'): PaintStat => {
+  const zero=nbaMinutes(minutes)===0
+  return { id: Number(date.replaceAll('-', '')), player: { id: 434 }, team: { id: 2 }, game: { id: 123, date, status: 'Final', status_state: 'final', home_team_id: 2, visitor_team_id: 9 }, min: minutes, pts: value, reb: zero?0:5, ast: zero?0:4, fg3m: zero?0:2, stl: 0, blk: zero?0:1, turnover: zero?0:2, fga: zero?0:15, fgm: zero?0:7, fg3a: zero?0:5, fta: zero?0:3, ftm: zero?0:2 }
+}
 const offer: PaintProp = { id: 99, game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -105 }, updated_at: '2026-10-18T12:00:00Z' }
 
 test('movement separates threshold changes from price moves, isolates books and leaves missing quotes unknown',()=>{

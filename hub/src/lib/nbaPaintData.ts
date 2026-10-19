@@ -46,7 +46,11 @@ export async function getPaintSchedule(requestedDate?: string) {
   const selectedDate = all.some(g => g.date === date) ? date : all[0]?.date ?? date
   return { date: selectedDate, requestedDate: date, games: all.filter(g => g.date === selectedDate), days: [...new Set(all.map(g => g.date))], complete: result.complete }
 }
-export async function getPaintGame(id: number) {
+export async function getPaintGame(id: number, fresh = false): Promise<PaintGame> {
+  if (fresh) return loadPaintGame(id)
+  return (await nbaSharedCache(`game:v1:${id}`, 15, 0, () => loadPaintGame(id), 25)).value
+}
+async function loadPaintGame(id: number) {
   const response = await fetch(`${BASE}/v1/games/${id}`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12_000) })
   if (!response.ok) throw new PaintProviderError('game', response.status)
   const json = await response.json(); const game = json.data ?? json
@@ -103,7 +107,7 @@ export async function getPaintProfile(player: number, season: number) {
   return { shooting: result[0].status === 'fulfilled' ? result[0].value.data[0]?.stats ?? null : null, advanced: result[1].status === 'fulfilled' ? result[1].value.data[0]?.stats ?? null : null }
 }
 export async function getPaintBoard(game: PaintGame): Promise<PaintBoard> {
-  const cached = await nbaSharedCache(`board:v1:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
+  const cached = await nbaSharedCache(`board:v2:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
   return { ...cached.value, game, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Refresh delayed; showing last captured prices and research'] : [])] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
@@ -136,16 +140,30 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     historical ? Promise.resolve({ data: [] }) : optional('Team ratings unavailable', bdl<{ team: PaintTeam; stats: Record<string, number | null> }>(`/nba/v1/team_season_averages/general?${teamQuery}&season=${sampleSeason}&season_type=regular&type=advanced&per_page=100`, 3600), { data: [] }),
   ])
   if (!stats.complete) issues.push('Game-log coverage incomplete; rates use returned games only')
+  const needsBaseline = sampleSeason === game.season && game.date < `${game.season + 1}-01-01` && roster.rows.some(player => nbaSample(stats.rows.filter(row => row.player.id === player.id), 20).length < 20)
+  const baseline = needsBaseline ? await optional('Prior-season game-log baseline unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason - 1}&season_type=regular&start_date=${sampleSeason}-02-01&end_date=${sampleSeason}-07-01&per_page=100`, 3600), { rows: [], complete: false }) : { rows: [] as PaintStat[], complete: true }
+  if (!baseline.complete) issues.push('Prior-season game-log baseline incomplete')
+  let teamProfiles = teamStats.data, teamStatsSeason = sampleSeason
+  if (!historical && sampleSeason === game.season && (teamProfiles.length < 2 || teamProfiles.some(row => (row.stats.gp ?? 0) < 5))) {
+    const prior = await optional('Prior-season team profiles unavailable', bdl<{ team: PaintTeam; stats: Record<string, number | null> }>(`/nba/v1/team_season_averages/general?${teamQuery}&season=${sampleSeason - 1}&season_type=regular&type=advanced&per_page=100`, 3600), { data: [] })
+    const verified = prior.data.filter(row => teams.some(team => team.id === row.team.id))
+    if (new Set(verified.map(row => row.team.id)).size === 2) { teamProfiles = verified; teamStatsSeason = sampleSeason - 1 }
+  }
   if (!injuries.complete) issues.push('Injury coverage incomplete')
-  const avgMap = new Map(seasonAverages.data.map(a => [a.player.id, a.stats]))
+  const avgMap = new Map(seasonAverages.data.map(a => [a.player.id, { ...a.stats, turnover: a.stats.turnover ?? a.stats.tov ?? null }]))
   const players: PaintPlayer[] = roster.rows.map(player => {
-    const logs = nbaSample(stats.rows.filter(s => s.player.id === player.id && s.game.date < game.date && s.game.date <= sampleEnd && (s.game.season == null || s.game.season === sampleSeason) && s.game.postseason !== true && (s.game.status_state === 'final' || s.game.status === 'Final')), 40)
+    const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
+    const currentLogs = stats.rows.filter(row => valid(row, sampleSeason) && row.game.date.slice(0, 10) <= sampleEnd)
+    const priorLogs = nbaSample(currentLogs, 20).length < 20 ? baseline.rows.filter(row => valid(row, sampleSeason - 1) && row.game.date.slice(0, 10) <= `${sampleSeason}-07-01`) : []
+    const logs = nbaSample([...currentLogs, ...priorLogs], 40)
     const sampleAvg: Record<string, number | null> = {}
     for (const key of ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm']) { const values = logs.map(s => (s as unknown as Record<string, number | null>)[key]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)); sampleAvg[key] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null }
     const mins = logs.map(s => nbaMinutes(s.min)).filter((v): v is number => v != null); sampleAvg.min = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null
     return { ...player, headshot: images[teams.findIndex(t => t.id === player.team.id)]?.headshots.get(nbaName(`${player.first_name} ${player.last_name}`)) ?? null,
-      injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : avgMap.get(player.id) ?? sampleAvg,
+      injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
+      averageSeason: (avgMap.get(player.id)?.gp ?? 0) > 0 || !priorLogs.length ? sampleSeason : sampleSeason - 1,
       logs, props: props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
   })
-  return { game, players, sampleSeason, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete, teamStats: teamStats.data, gameOdds: gameOdds.data, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
+  const baselineSeasons = [...new Set(players.flatMap(player => player.logs.map(log => log.game.season ?? sampleSeason)))].sort()
+  return { game, players, sampleSeason, baselineSeasons, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete && baseline.complete, teamStats: teamProfiles, teamStatsSeason, gameOdds: gameOdds.data, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
 }

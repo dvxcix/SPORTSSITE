@@ -4,8 +4,27 @@ import { createAdminClient } from './supabase/admin'
 
 export type NbaCached<T> = { value: T; fetchedAt: string; stale: boolean }
 type Entry<T> = { payload: T | null; fetched_at: string | null; expires_at: string | null }
+const local = new Map<string, { cached: NbaCached<unknown>; until: number }>()
+const inFlight = new Map<string, Promise<NbaCached<unknown>>>()
 /** A database lease coalesces refreshes across serverless instances, not just a process. */
 export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds = 55): Promise<NbaCached<T>> {
+  const hit = local.get(key)
+  if (hit && hit.until > Date.now()) return hit.cached as NbaCached<T>
+  const pending = inFlight.get(key)
+  if (pending) return pending as Promise<NbaCached<T>>
+  const task = readSharedCache(key, ttl, staleSeconds, load, leaseSeconds)
+  inFlight.set(key, task)
+  try {
+    const cached = await task
+    if (!cached.stale) {
+      local.delete(key)
+      local.set(key, { cached, until: Math.min(Date.now() + 10000, Date.parse(cached.fetchedAt) + ttl * 1000) })
+      while (local.size > 24) local.delete(local.keys().next().value!)
+    }
+    return cached
+  } finally { if (inFlight.get(key) === task) inFlight.delete(key) }
+}
+async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds: number): Promise<NbaCached<T>> {
   const admin = createAdminClient()
   const read = async () => {
     const { data, error } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at').eq('key', key).maybeSingle()

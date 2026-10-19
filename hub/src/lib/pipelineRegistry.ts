@@ -69,4 +69,6 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'prune-notifications', label: 'Notification and telemetry retention', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
   { name: 'archive-stale-watchlist', label: 'Watchlist archive', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
   { name: 'nba-research-sync', label: 'NBA historical research ingestion', schedule: 'Every minute, resumable batches', staleAfterMinutes: 10, area: 'NBA data' },
+  { name: 'nba-model-validate', label: 'NBA temporal model validation', schedule: 'Every 5 minutes until reference seasons are validated', staleAfterMinutes: 20, area: 'NBA data' },
+  { name: 'nba-research-snapshot', label: 'NBA pregame score ledger and research grading', schedule: 'Every 5 minutes', staleAfterMinutes: 20, area: 'NBA data' },
 ]

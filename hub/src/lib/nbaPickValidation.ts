@@ -22,7 +22,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
     }
     const identities = new Map<number, Awaited<ReturnType<typeof getPaintIdentity>>>()
     await Promise.all([
-      ...[...new Set(legs.map(l => l.game_pk!))].map(async id => { const [game, props] = await Promise.all([getPaintGame(Number(id)), getPaintProps(Number(id), true)]); games.set(id, { game, props }) }),
+      ...[...new Set(legs.map(l => l.game_pk!))].map(async id => { const [game, props] = await Promise.all([getPaintGame(Number(id), true), getPaintProps(Number(id), true)]); games.set(id, { game, props }) }),
       ...[...new Set(legs.map(l => Number(l.player_id!.slice(4))))].map(async id => { identities.set(id, await getPaintIdentity(id)) }),
     ])
     for (const leg of legs) {
