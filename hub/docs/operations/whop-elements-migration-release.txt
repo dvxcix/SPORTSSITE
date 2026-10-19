@@ -1,0 +1,37 @@
+Whop Elements checkout migration — October 18, 2026 (America/New_York)
+
+Replaced @whop/checkout 0.4.0 with @whop/elements and @whop/elements-react 1.9.0.
+Shared pricing/Discord add-on button now mounts WhopElements > Checkout > CheckoutElement.
+The authenticated checkout endpoint creates v1 checkout_configurations with server-authored
+internal_user_id metadata; main and add-on business routing, allowlist, rate limits,
+timeouts and signed webhook fulfillment remain. The browser receives a ch_ configuration,
+never API keys. Hosted checkout is available as a fallback from the same configuration.
+Elements succeeded/failed/canceled return statuses are recognized alongside old returns.
+CSP uses the provider's contentSecurityPolicy merge for page-side wallets and frames.
+No recurring memberships, billing amounts, entitlements, webhook keys, flags or jobs changed.
+Creator-offer purchases already use v1 checkout configurations and Whop-hosted checkout;
+creator payouts use a separate payout SDK and are outside the retiring checkout embed.
+Tracked source scan found no remaining legacy checkout package, embed component or data embed.
+
+Validation: typecheck; targeted ESLint; production source suite 134/134; membership access
+5/5; new Elements route/policy tests 4/4 (auth, business keys, attribution, response/error guards).
+Remote production-configured build READY: dpl_3AkJvt3Afd7LTudE46u1LMC8SPLi, source 315a88e9.
+Subsequent test-only lint correction does not alter runtime source.
+Protected staged /pricing serves correctly; succeeded return renders the success banner;
+anonymous checkout POST is rejected by authentication.
+Local build compiles and typechecks, but full prerender requires public Supabase values
+that Vercel marks sensitive and does not export; remote build verified with real settings.
+
+Actual Whop-hosted Elements frames were rendered through a local public-plan harness:
+Basic $9.99/month; Advanced 7 days then $24.99/month; Advanced $249.99/year;
+Ultimate 3 days then $34.99/month; Ultimate $329.99/year; Discord add-on $10 + $0.50
+existing service fee/month. Card, ACH and PayPal controls rendered. No payment details
+were entered or purchase submitted. This is form verification, not a completed transaction.
+No regular member test account exists; owner admin account hides purchase buttons.
+Whop dashboard owner key already has checkout-configuration and domain capabilities;
+main production webhook is Active v1. www.slipsurge.com already shows Apple Pay enabled
+under both SlipSurge and Parlay Party (add-on) unified Websites/domain managers. No credentials/scopes changed.
+
+Release target: promote the above tested production deployment to www.slipsurge.com
+after fast-forwarding GitHub main. Runtime source is identical to the tested 315a88e9
+commit; later commits contain test-lint and this operational record only.
