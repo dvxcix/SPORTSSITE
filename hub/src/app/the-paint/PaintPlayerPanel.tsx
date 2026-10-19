@@ -16,6 +16,7 @@ import { PaintEstimate } from './PaintEstimate'
 import { PaintShotChart } from './PaintShotChart'
 import { PaintPrice } from './PaintPrice'
 import styles from './paint.module.css'
+import { nbaHeatStyle } from './paintHeat'
 
 export type PaintPlayerTab = 'trends' | 'court' | 'markets' | 'ladder' | 'movement' | 'tracking'
 
@@ -59,7 +60,7 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
         <div className={styles.mobileMm}><span>MM <b className={(rank?.mm ?? 0) > 0 ? styles.hit : (rank?.mm ?? 0) < 0 ? styles.miss : styles.muted}>{rank ? `${rank.mm > 0 ? '+' : ''}${rank.mm}` : '—'}</b></span>{rank && <small>Book #{rank.marketRank} · Stats #{rank.statRank}</small>}</div><div className={styles.panelMarket}><select aria-label="Player detail market" value={market} onChange={e => changeMarket(e.target.value as PaintMarket)}>{PAINT_MARKETS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}</select><div className={styles.segment}>{(['over', 'under'] as const).map(s => <button key={s} aria-pressed={s === side} onClick={() => changeSide(s)}>{s === 'over' ? 'Over' : 'Under'}</button>)}</div></div>
         {tab === 'trends' ? <>
           <PaintEstimate player={player} market={market} game={board.game.id}/>
-          <div className={styles.trendSummary}><div><span>{window}-game average</span><strong>{nbaBinary(market) && average != null ? `${(average*100).toFixed(1)}%` : number(average)}<small>{definition.short}</small></strong></div><div><span>Market line</span><strong>{reference ? nbaTarget(reference,side) : '—'}</strong></div><div className={styles.summaryHit}><span>Hit rate · {side}</span><strong>{hits?.rate == null ? '—' : `${Math.round(hits.rate)}%`}</strong><small>{hits ? `${hits.wins}/${hits.games} · ${hits.pushes} pushes` : 'No current line'}</small></div></div>
+          <div className={styles.trendSummary}><div><span>{window}-game average</span><strong>{nbaBinary(market) && average != null ? `${(average*100).toFixed(1)}%` : number(average)}<small>{definition.short}</small></strong></div><div><span>Market line</span><strong>{reference ? nbaTarget(reference,side) : '—'}</strong></div><div className={styles.summaryHit} style={nbaHeatStyle(hits?.rate)} data-heat={hits?.rate == null ? "none" : hits.rate >= 70 ? "hot" : hits.rate >= 50 ? "warm" : "cold"}><span>Hit rate · {side}</span><strong>{hits?.rate == null ? '—' : `${Math.round(hits.rate)}%`}</strong><small>{hits ? `${hits.wins}/${hits.games-hits.pushes} · ${hits.pushes} pushes` : 'No current line'}</small></div></div>
           <div className={styles.chartFilters}><div className={styles.segment}>{[5, 10, 20].map(n => <button key={n} aria-pressed={window === n} onClick={() => setWindow(n)}>L{n}</button>)}</div><select aria-label="Player game-log split" value={split} onChange={e => setSplit(e.target.value as typeof split)}><option value="all">All games</option><option value="home">Home</option><option value="away">Away</option><option value="h2h">vs {opponent.name}</option></select></div>
           <TrendBars logs={logs} market={market} line={line} side={side} milestone={reference?.market.type === 'milestone'} tall/>
           <div className={styles.chartCaption}><span>Oldest → newest</span><span>{logs.length} appearances · {nbaSeason(board.sampleSeason)}</span></div>

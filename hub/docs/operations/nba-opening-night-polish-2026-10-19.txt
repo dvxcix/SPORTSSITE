@@ -1,0 +1,54 @@
+NBA opening-night monitoring and interaction polish — October 19, 2026
+
+Scope
+- Owner-authorized NBA polish and monitoring through opening night. NBA remains
+  admin-only, with existing account-type guards on navigation, entities and APIs.
+- Baseline main/production 681a9955b19a1f317a4c22b1b31fa7fbd112b1e1,
+  deployment dpl_4XUUMxnw3z78DMRd2akLVAY1EWxC. Required NFL ancestry retained.
+- No access flags, database policies, grading outcomes, pricing formulas,
+  secrets or cloud schedules changed. No manual collector replay.
+
+Customer-facing repairs
+- Book-grid, primary-board and Score quote drilldowns carry the exact book,
+  side, line and contract type into the player panel. General player navigation
+  clears obsolete quote state. Push counts agree with push-excluded percentages.
+- Matchup spread numbers now pair with spread prices instead of moneylines.
+- Initial failures in research tools stop saying Loading and provide retry.
+  Refresh failures preserve prior data with an explicit last-loaded notice.
+- Market Story resumes refresh on visibility/focus and bounds/coalesces requests.
+- Consistent gradient hit/score cells, readable secondary values, best-price
+  labels, stronger mobile targets, a persistent player-panel close control and
+  bottom save action. Unknown values stay neutral; no score formulas changed.
+- Research tables expose labeled keyboard scroll regions. Entity mobile controls
+  are 44px. Global search announces and scrolls its active keyboard selection.
+- Shared modal focus stays contained from initial Tab/Shift+Tab, including nested
+  portal dialogs; closing restores the opener and preserves parent scroll locks.
+
+Collector resilience
+- Observed intermittent Pikkit empty league shells on normal scheduled runs.
+  A single reload is allowed only on the NBA league URL with fewer than400
+  visible characters, no event links, no market selectors, no login text, and
+  at least60s remaining inside both existing deadlines. Populated schedules,
+  sign-in redirects and low-budget runs retain the existing behavior.
+- Existing110s game/250s run budgets, shared lease and explicit cleanup remain.
+  emptyShellReloaded marks actual recovery attempts in the existing run evidence.
+
+Monitoring
+- Thread heartbeat nba-opening-night-readiness runs hourly through
+  October22,2026 at16:00UTC, stopping early after both exact test picks settle
+  correctly and the final health check passes. Quiet on unchanged state.
+- Existing private Cade Cunningham Over25.5(+115 BetParx) and Karl-Anthony
+  Towns25+(+360 FanDuel) picks remain pending before their October20 games.
+- Exact pick/post/game IDs, read-only health SQL, final-stat comparison and
+  incident thresholds are in work/the-paint/nba-opening-night-monitoring.txt/.sql.
+- Monitoring uses existing cloud collectors; no laptop collector was created.
+
+Validation before release
+- NBA suite160/160, production source suite134/134, NFL odds/grading10/10.
+- Whole-project TypeScript and targeted ESLint pass. Includes actual React DOM
+  tests for exact quote drilldowns, retry/error states and modal/search keyboard
+  behavior, plus bounded Pikkit recovery/auth/deadline tests.
+- Separate pre-existing operations-readiness assertion still expects an old NFL
+  dispatcher URL without stream=1; left outside this NBA scope.
+- Future-game settlement cannot be certified before final official data arrives.
+  Live responsive checks and deployment receipt are recorded in work/the-paint.

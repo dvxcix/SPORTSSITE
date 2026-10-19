@@ -100,7 +100,8 @@ export function ModalSurface({
         aria-describedby={describedBy}
         tabIndex={-1}
         onKeyDown={event => {
-          if (event.key !== 'Tab') return
+          // React portal events bubble through parents even when their dialogs are elsewhere in the DOM.
+          if (event.key !== 'Tab' || !event.currentTarget.contains(event.target as Node)) return
           const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])
             .filter(element => element.offsetParent !== null)
           if (focusable.length === 0) {
@@ -110,10 +111,11 @@ export function ModalSurface({
           }
           const first = focusable[0]
           const last = focusable[focusable.length - 1]
-          if (event.shiftKey && document.activeElement === first) {
+          const startsAtPanel = !focusable.includes(document.activeElement as HTMLElement)
+          if (event.shiftKey && (document.activeElement === first || startsAtPanel)) {
             event.preventDefault()
             last.focus()
-          } else if (!event.shiftKey && document.activeElement === last) {
+          } else if (!event.shiftKey && (document.activeElement === last || startsAtPanel)) {
             event.preventDefault()
             first.focus()
           }

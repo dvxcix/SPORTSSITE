@@ -7,6 +7,7 @@ export function PaintEstimate({ player, market, game }: { player: PaintPlayer; m
   const key = `${game}:${player.id}:${market}`
   const [state, setState] = useState<{ key: string; estimate: number | null; games: number } | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
     fetch(`/the-paint/estimate?${new URLSearchParams({ game: String(game), player: String(player.id), market })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) })
@@ -14,7 +15,7 @@ export function PaintEstimate({ player, market, game }: { player: PaintPlayer; m
       .then(data => { if (!controller.signal.aborted) { setState({ key, estimate: data.estimate, games: data.games }); setFailure(null) } })
       .catch(() => { if (!controller.signal.aborted) setFailure(key) })
     return () => controller.abort()
-  }, [game, player.id, market, key])
+  }, [game, player.id, market, key, retry])
   const data = state?.key === key ? state : null, binary = nbaBinary(market)
-  return <div className={styles.estimateCard}><span><small>{binary ? 'RECENT FREQUENCY' : 'PROJECTION'}</small><strong>{data?.estimate == null ? '—' : binary ? (data.estimate * 100).toFixed(1) + '%' : number(data.estimate)}</strong></span><div>{data?.estimate == null ? <small>{failure === key ? 'Projection unavailable' : !data ? 'Loading projection…' : 'More game history needed'}</small> : <><b>{PAINT_MARKETS.find(item => item.key === market)?.label}</b><small>{data.games} recent appearances</small></>}</div></div>
+  return <div className={styles.estimateCard}><span><small>{binary ? 'RECENT FREQUENCY' : 'PROJECTION'}</small><strong>{data?.estimate == null ? '—' : binary ? (data.estimate * 100).toFixed(1) + '%' : number(data.estimate)}</strong></span><div>{data?.estimate == null ? <small role="status">{failure === key ? 'Projection unavailable' : !data ? 'Loading projection…' : 'More game history needed'}</small> : <><b>{PAINT_MARKETS.find(item => item.key === market)?.label}</b><small>{data.games} recent appearances</small></>}{failure === key && <button className={styles.filterToggle} onClick={() => { setFailure(null); setRetry(value => value + 1) }}>Retry</button>}</div></div>
 }

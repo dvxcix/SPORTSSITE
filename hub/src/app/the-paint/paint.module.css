@@ -102,3 +102,56 @@
   .comparison[data-count="2"] thead small{font-size:9px;line-height:1.4}
   .comparison[data-count="2"] thead th>.avatar{margin-bottom:8px}
 }
+
+/* Readable data surfaces, with intensity following the value rather than fixed bands. */
+.heat[data-heat],.summaryHit[data-heat]{
+  background:linear-gradient(135deg,rgb(var(--heat-rgb,165 180 199) / var(--heat-strength,.06)),transparent 92%),#121d27;
+  box-shadow:inset 0 0 0 1px rgb(var(--heat-rgb,165 180 199) / .16);
+  color:#e2ebee;
+}
+.heat[data-heat=hot],.summaryHit[data-heat=hot] strong{color:#d0f2b3}
+.heat[data-heat=cold],.summaryHit[data-heat=cold] strong{color:#f2c0c8}
+.heat[data-heat=warm],.summaryHit[data-heat=warm] strong{color:#e2e9ed}
+.heat[data-heat=none],.summaryHit[data-heat=none]{background:#16212b;box-shadow:none;color:#a3b1c1}
+.heat small{opacity:1;color:#bdcbd2;font-size:10px}
+.summaryHit[data-heat]{border-radius:8px;padding:10px;align-self:start}
+.summaryHit[data-heat] strong{font-size:25px}
+.summaryHit[data-heat=none] strong{color:#a3b1c1}
+.trendSummary>.summaryHit>span,.trendSummary>.summaryHit>small{color:#b1c1cc}
+.average small,.boardMeta,.boardFooter,.muted{color:#a4b3c3}
+.priceQuote .priceNow small,.priceQuote .priceOpen small{font-size:9px;color:#acbdcc}
+.priceDelta.priceDelta{color:#a9b7c7}
+.priceDelta[data-direction=shorter]{color:#c5eaa4}.priceDelta[data-direction=longer]{color:#f2afb8}
+.miss{color:#edb1ba}.hit{color:#c0e69e}
+.ladderTable td[data-best=true]{background:#a9df7410}
+.ladderQuote{position:relative;flex-wrap:wrap}
+.bestPrice{display:block;flex-basis:100%;font-size:9px;font-weight:650;line-height:1.4;letter-spacing:.15px;color:#d1efb2}
+.ladderTable td[data-best=true] .priceNow b{color:#d1efb2}
+.researchScroll:focus-visible,.oddsScroll:focus-visible,.tableScroll:focus-visible{outline:2px solid #b4ff4d;outline-offset:-2px;border-radius:6px}
+.drawerTop{position:sticky;top:0;z-index:6;background:#0c121bf5;padding-bottom:10px;border-bottom:1px solid #273440;flex-shrink:0}
+.drawerTop>button{min-width:44px;min-height:44px;border:1px solid #314252;background:#14212c}
+.drawerFooter .pickActions>button{min-width:44px;min-height:44px;background:#203127;border-color:#526d43;color:#d6efbe}
+.drawerFooter .pickActions>button.saved{background:#b4ff4d;border-color:#b4ff4d;color:#17210c}
+.playerSample>button{min-height:36px}
+@media(max-width:640px){
+  .filters>select,.extraFilters select,.panelMarket select,.drawer .chartFilters select{min-height:44px}
+  .drawer .segment button,.panelTabs button,.playerSample>button,.logTable th button{min-height:44px}
+  .drawer .segment button{min-width:44px}
+  .mobilePlayer .iconButton,.boardRowActions .pickActions button,.compareCheck,.checked,.openPlayer{min-width:44px;min-height:44px}
+  .search button{min-width:44px;min-height:44px;margin-right:-10px;justify-content:center}
+  .offer .pickActions>button{min-width:44px;min-height:44px}
+  .playerHero,.playerStrip,.playerSample,.panelTabs{flex-shrink:0}
+  .panelMarket{flex-wrap:wrap;gap:10px;margin-bottom:18px}
+  .playerSample{gap:8px;padding-inline:14px}
+  .summaryHit[data-heat]{padding:8px}
+  .trendSummary{grid-template-columns:1fr .8fr 1fr;gap:8px}
+  .trendSummary strong{font-size:24px}
+  .trendSummary strong small{display:block;margin:5px 0 0;font-size:10px}
+  .mobileStats .heat small{font-size:10px}
+  .bestPrice{font-size:10px}
+  .drawerFooter:has(.priceQuote){flex-wrap:wrap;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .drawerFooter>span:not(.pickActions){min-width:0}
+  .researchTable th button:not(.playerButton):not(.marketLink),.researchTable .marketLink{min-height:44px}
+  .gameLine>button,.matrixActions button{min-height:44px}
+}
+@media(prefers-reduced-motion:no-preference){.pickActions>button:active,.iconButton:active{transform:scale(.96)}.drawerTop>button:hover{background:#203140}}

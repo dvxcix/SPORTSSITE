@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
@@ -57,6 +57,8 @@ export function GlobalCommandPalette() {
   const [query, setQuery] = useState('')
   const [sports, setSports] = useState<{ query: string; items: CommandItem[] }>({ query: '', items: [] })
   const [active, setActive] = useState(0)
+  const resultsId = useId()
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const show = () => { setActive(0); setOpen(true) }
@@ -93,17 +95,21 @@ export function GlobalCommandPalette() {
       && (!value || `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)))
   }, [query, nflAccess, nbaAccess])
   const items = useMemo(() => [...local, ...(sports.query === query.trim() ? sports.items.filter(item => nbaAccess || !isNbaToolHref(item.href)) : [])], [local, sports, query, nbaAccess])
+  const activeIndex = Math.min(active, Math.max(0, items.length - 1))
+  useEffect(() => {
+    if (open) resultsRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [open, activeIndex, items])
   function close() { setOpen(false); setQuery(''); setSports({ query: '', items: [] }) }
   function navigate(href: string) { close(); router.push(href) }
   if (!open) return null
   return <Modal onClose={close} maxWidth={650} label="Search SlipSurge"><div className={styles.shell}>
     <div className={styles.header}><Search size={18}/><input autoFocus className={styles.input} value={query} onChange={event => { setQuery(event.target.value); setActive(0) }} onKeyDown={event => {
-      if (event.key === 'ArrowDown') { event.preventDefault(); setActive(index => Math.max(0, Math.min(items.length - 1, index + 1))) }
-      if (event.key === 'ArrowUp') { event.preventDefault(); setActive(index => Math.max(0, index - 1)) }
-      if (event.key === 'Enter') { event.preventDefault(); if (items[active]) navigate(items[active].href); else if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`) }
+      if (event.key === 'ArrowDown') { event.preventDefault(); setActive(Math.max(0, Math.min(items.length - 1, activeIndex + 1))) }
+      if (event.key === 'ArrowUp') { event.preventDefault(); setActive(Math.max(0, activeIndex - 1)) }
+      if (event.key === 'Enter') { event.preventDefault(); if (items[activeIndex]) navigate(items[activeIndex].href); else if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`) }
       if (event.key === 'Escape') close()
-    }} placeholder="Search people, players, teams, tools…" aria-label="Search SlipSurge" autoComplete="off"/>{query ? <button type="button" className={styles.key} onClick={() => { setQuery(''); setActive(0) }} aria-label="Clear search"><X size={12}/></button> : <kbd className={styles.key}>ESC</kbd>}</div>
-    <div className={styles.body} role="listbox" aria-label="Search results">{items.length ? <div className={styles.section}><span className={styles.label}>{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} type="button" className={styles.item} data-active={active === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={active === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span><ChevronRight className={styles.arrow} size={15}/></button> })}</div> : <div className={styles.empty}><Search size={24}/><strong>No matching results</strong><span>Press Enter to search the full network.</span></div>}</div>
+    }} placeholder="Search people, players, teams, tools…" aria-label="Search SlipSurge" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={resultsId} aria-activedescendant={items.length ? `${resultsId}-${items[activeIndex].id}` : undefined} autoComplete="off"/>{query ? <button type="button" className={styles.key} onClick={() => { setQuery(''); setActive(0) }} aria-label="Clear search"><X size={12}/></button> : <kbd className={styles.key}>ESC</kbd>}</div>
+    <div ref={resultsRef} id={resultsId} className={styles.body} role="listbox" aria-label="Search results">{items.length ? <div className={styles.section} role="group" aria-label={query ? 'Results' : 'Navigate'}><span className={styles.label} aria-hidden="true">{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} id={`${resultsId}-${item.id}`} type="button" tabIndex={-1} className={styles.item} data-active={activeIndex === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={activeIndex === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span><ChevronRight className={styles.arrow} size={15}/></button> })}</div> : <div className={styles.empty}><Search size={24}/><strong>No matching results</strong><span>Press Enter to search the full network.</span></div>}</div>
     <div className={styles.footer}><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Open</span><span><kbd>ESC</kbd> Close</span></div>
   </div></Modal>
 }

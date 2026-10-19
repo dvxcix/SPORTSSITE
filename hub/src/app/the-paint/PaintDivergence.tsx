@@ -33,6 +33,7 @@ export function PaintDivergence({ board, open }: { board: PaintBoard; open: (id:
     return () => { controller.abort(); stop() }
   }, [board.game.id, retry])
   const snapshot = state?.game === board.game.id ? state.data : null
+  const refresh = () => { setError(''); setRetry(value => value + 1) }
   const players = useMemo(() => new Map(board.players.map(player => [player.id, player])), [board.players])
   const rows = useMemo(() => (snapshot?.rows ?? []).filter(row => {
     const player = players.get(row.playerId)
@@ -42,10 +43,10 @@ export function PaintDivergence({ board, open }: { board: PaintBoard; open: (id:
     return compareResearch(value(a), value(b), sort === 'name') || a.playerId - b.playerId
   }), [snapshot, players, book, focus, query, sort])
   return <section className={styles.researchTool}>
-    <header className={styles.toolHeading}><div><h3>Cross-market signals</h3><span>Same player · same sportsbook · opposing moves</span></div><button className={styles.iconButton} aria-label="Refresh cross-market signals" onClick={() => setRetry(value => value + 1)}><RefreshCw size={16}/></button></header>
+    <header className={styles.toolHeading}><div><h3>Cross-market signals</h3><span>Same player · same sportsbook · opposing moves</span></div><button className={styles.iconButton} aria-label="Refresh cross-market signals" onClick={refresh}><RefreshCw size={16}/></button></header>
     <div className={styles.toolControls}><select aria-label="Cross-market sportsbook" value={book} onChange={event => setBook(event.target.value)}><option value="all">All books</option>{[...new Set(snapshot?.rows.map(row => row.book) ?? [])].sort().map(vendor => <option key={vendor}>{vendor}</option>)}</select><label className={styles.search}><input aria-label="Search cross-market players" placeholder="Find a player" value={query} onChange={event => setQuery(event.target.value)}/></label><select aria-label="Sort cross-market signals" value={sort} onChange={event => setSort(event.target.value)}><option value="public">Public pick difference</option><option value="price">Largest price move</option><option value="line">Largest line move</option><option value="name">Player name</option></select><button aria-pressed={focus} onClick={() => setFocus(value => !value)}><UsersRound size={14}/> More picks in related market</button></div>
-    {error && <p role="status" className={polish.status}>{error}</p>}
-    {!snapshot ? <div className={polish.empty}>Loading market signals…</div> : !rows.length ? <div className={polish.empty}>{snapshot.captures < 2 ? 'Waiting for the next price move.' : 'No opposing moves match these filters.'}</div> : <>
+    {error && <p role="status" className={polish.status}>{snapshot ? error : 'Market signals could not load.'} <button onClick={refresh}>Retry</button></p>}
+    {!snapshot ? !error && <div className={polish.empty} role="status">Loading market signals…</div> : !rows.length ? <div className={polish.empty}>{snapshot.captures < 2 ? 'Waiting for the next price move.' : 'No opposing moves match these filters.'}</div> : <>
       <div className={polish.status}><strong>{rows.length} market pairs</strong><span>Over prices · category pick totals</span>{snapshot.stale && <span>Last available signals</span>}</div>
       <div className={polish.cards}>{rows.map(row => {
         const player = players.get(row.playerId)!

@@ -11,6 +11,8 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement, IS_REACT_ACT_ENVIRONMENT: true })
 const { createRoot } = await import('react-dom/client')
 const state = { role: 'user', pushed: [] as string[] }
+const scrolled: string[] = []
+dom.window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this.id) }
 ;(globalThis as typeof globalThis & { nbaCommandFixture: typeof state }).nbaCommandFixture = state
 const stubs: Record<string, string> = {
   'next/navigation': `export const useRouter=()=>({push(href){globalThis.nbaCommandFixture.pushed.push(href)}})`,
@@ -98,5 +100,23 @@ test('late NBA responses cannot replace a newer query or remain visible after ac
     await ui.flush(); assert.equal(ui.requests.filter(request => request.path === '/api/search/nba').length, nbaCalls)
     await ui.click(ui.host.querySelector('[aria-label="Clear search"]'))
     assert.equal(ui.result('MLB Result'), undefined); assert.ok(ui.result('Community Feed'))
+  } finally { await ui.close() }
+})
+
+test('keyboard search announces and scrolls the active result and opens the selected NBA player', async () => {
+  const ui = await harness('admin')
+  try {
+    await ui.open(); await ui.type('tatum'); await ui.flush()
+    const input = ui.host.querySelector('input')!
+    assert.equal(input.getAttribute('role'), 'combobox')
+    assert.equal(input.getAttribute('aria-controls'), ui.host.querySelector('[role="listbox"]')!.id)
+    assert.equal(ui.host.querySelectorAll('[role="option"][tabindex="-1"]').length, 4)
+    for (let i = 0; i < 2; i++) await act(async () => input.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
+    const player = ui.result('Jayson Tatum')!
+    assert.equal(input.getAttribute('aria-activedescendant'), player.id)
+    assert.equal(player.getAttribute('aria-selected'), 'true')
+    assert.equal(scrolled.at(-1), player.id)
+    await act(async () => input.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    assert.deepEqual(state.pushed, ['/nba/players/434'])
   } finally { await ui.close() }
 })

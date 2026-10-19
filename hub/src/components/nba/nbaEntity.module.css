@@ -32,5 +32,8 @@
 .bio span { display:flex; gap:6px; align-items:center; }
 .bio b { color:var(--text-1); }
 .srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+.iconLink { display:inline-flex; align-items:center; justify-content:center; min-width:36px; min-height:36px; border-radius:8px; }
+.scrollRegion:focus-visible,.iconLink:focus-visible,.teamRail a:focus-visible,.sortable th button:focus-visible,.tabs button:focus-visible,.seasonButton:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 @media(max-width:640px) { .game { padding:10px; gap:8px; }.gameTeams { gap:8px; }.gameTeams span { flex-direction:column; font-size:10px; }.gameDate { flex-basis:62px; }.sectionHeading input { width:100%; }.actions a { flex:1 0 auto; justify-content:center; }.roster td { padding:9px 5px; }.rosterPlayer { gap:7px; }.rosterPlayer strong { font-size:12px; } }
 @media(prefers-reduced-motion:reduce) { .actions a { transition:none; } }
+@media(max-width:640px) { .iconLink,.teamRail a { min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; }.sortable th button,.tabs button,.seasonButton { min-height:44px; min-width:44px; }.actions a { min-height:44px; }.sectionHeading select,.sectionHeading input { min-height:44px; } }

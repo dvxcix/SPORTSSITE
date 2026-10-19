@@ -4,3 +4,4 @@
 .sortHeader svg{flex-shrink:0;transition:transform .16s ease}
 @media(prefers-reduced-motion:reduce){.sortHeader svg{transition:none}}
 .selectedQuote>th,.selectedQuote>td{box-shadow:inset 0 1px #b4ff4d88,inset 0 -1px #b4ff4d88;background-color:#b4ff4d0c}.selectedQuote>th:first-child{color:#caff86}
+@media(max-width:640px){.sortHeader{min-height:44px}}
