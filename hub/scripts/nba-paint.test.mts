@@ -11,7 +11,19 @@ import { nbaEconomicSnapshot,nbaMovement } from '../src/lib/nbaMovement.ts'
 import { nbaCheatsheet,nbaRole } from '../src/lib/nbaResearch.ts'
 import { nbaPublicEventMatches,nbaPublicMarket,normalizeNbaPublic } from '../src/lib/nbaPublic.ts'
 import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForward } from '../src/lib/nbaIntelligence.ts'
+import { nbaShots,type NbaPlay } from '../src/lib/nbaShots.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+
+test('NBA shot chart preserves attempts with invalid locations, isolates shooter and game, and excludes free throws',()=>{
+  const play:NbaPlay={game_id:77,order:1,type:'Jump Shot',text:'Test Player misses 25-foot three point jumper',period:1,clock:'11:00',scoring_play:false,shooting_play:true,score_value:null,team:{id:2},coordinate_x:25,coordinate_y:25,participants:[22]}
+  const player={id:22,first_name:'Test',last_name:'Player'}
+  const shots=nbaShots([play,{...play,order:2,coordinate_x:-214748340,coordinate_y:-214748365},{...play,order:3,participants:[33,22]},{...play,order:4,game_id:88},{...play,order:5,type:'Free Throw',text:'Test Player makes free throw 1 of 2',score_value:1,scoring_play:true},{...play,order:6,coordinate_y:70}],77,player)
+  assert.equal(shots.length,3);assert.equal(shots[0].points,3);assert.equal(shots[0].made,false)
+  assert.equal(shots[0].x,25);assert.equal(shots[0].y,25);assert.equal(shots[0].halfCourt,true)
+  assert.equal(shots[1].x,null);assert.equal(shots[1].y,null);assert.equal(shots[1].halfCourt,false)
+  assert.equal(shots[2].halfCourt,false);assert.equal(shots[2].y,70)
+  assert.deepEqual(nbaShots([play,play],77,player),[shots[0]])
+})
 
 test('NBA production scoring is market-specific, bounded, sample-aware and excludes future games',()=>{
   const logs=Array.from({length:30},(_,i)=>({...stat(20,`2026-03-${String(30-i).padStart(2,'0')}`),id:i+1,fga:18,fta:5,fg3a:8,fg3m:3,reb:7,ast:6}))
