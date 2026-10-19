@@ -18,6 +18,6 @@ export default async function PaintPage({ searchParams }: { searchParams: Promis
     const board = selected ? await getPaintBoard(selected) : null
     return { schedule, board, selected }
   } catch { return null } })()
-  if (!data) return <section className={styles.empty}><span>NBA / PRIVATE PREVIEW</span><h1>ThePaint</h1><p>NBA data is temporarily unavailable.</p><a href="/the-paint">Try again</a></section>
+  if (!data) return <section className={styles.empty}><span>NBA</span><h1>ThePaint</h1><p>NBA data is temporarily unavailable.</p><a href="/the-paint">Try again</a></section>
   return <PaintBoardClient key={data.selected?.id ?? data.schedule.date} initial={data.board} games={data.schedule.games} days={data.schedule.days} date={data.schedule.date} />
 }

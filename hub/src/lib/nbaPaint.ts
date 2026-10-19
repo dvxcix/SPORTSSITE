@@ -41,10 +41,10 @@ export function nbaHitRate(logs: PaintStat[], market: string, line: number, side
   return { wins, pushes, games, rate: games - pushes ? wins / (games - pushes) * 100 : null }
 }
 export function nbaReference(props: PaintProp[], market: string, vendor = 'all', side: 'over' | 'under' = 'over') {
-  const offers = props.filter(p => p.prop_type === market && p.market.type === 'over_under' && (vendor === 'all' || p.vendor === vendor) && Number.isFinite(Number(p.line_value)) && (side === 'over' ? p.market.over_odds : p.market.under_odds) != null)
+  const offers = props.filter(p => p.prop_type === market && p.market.type === 'over_under' && Number.isFinite(Number(p.line_value)) && (side === 'over' ? p.market.over_odds : p.market.under_odds) != null)
   const counts = new Map<string, number>(); for (const p of offers) counts.set(String(Number(p.line_value)), (counts.get(String(Number(p.line_value))) ?? 0) + 1)
   const line = [...counts].sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))[0]?.[0]
-  return offers.filter(p => Number(p.line_value) === Number(line)).sort((a, b) => (b.market[side === 'over' ? 'over_odds' : 'under_odds'] ?? -Infinity) - (a.market[side === 'over' ? 'over_odds' : 'under_odds'] ?? -Infinity))[0] ?? null
+  return offers.filter(p => vendor === 'all' ? Number(p.line_value) === Number(line) : p.vendor === vendor).sort((a, b) => Math.abs(Number(a.line_value) - Number(line)) - Math.abs(Number(b.line_value) - Number(line)) || (b.market[side === 'over' ? 'over_odds' : 'under_odds'] ?? -Infinity) - (a.market[side === 'over' ? 'over_odds' : 'under_odds'] ?? -Infinity))[0] ?? null
 }
 export const nbaOdds = (value: number | null | undefined) => value == null ? '—' : value > 0 ? `+${value}` : String(value)
 export const nbaSeason = (season: number) => `${season}–${String(season + 1).slice(-2)}`

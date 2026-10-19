@@ -6,6 +6,7 @@ import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { safeApiError } from '@/lib/safeApiError'
+import { settleNbaPicks } from '@/lib/nbaSettlement'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -42,7 +43,8 @@ async function run(req: Request) {
     .not('mlb_id', 'is', null)
 
   if (error) return safeApiError('grade-live-picks-query', error)
-  if (!pending?.length) return NextResponse.json({ won: 0, settled: 0, checked: 0, message: 'No pending MLB picks with game_pk + mlb_id' })
+  const nbaTask = settleNbaPicks(admin)
+  if (!pending?.length) return NextResponse.json({ won: 0, settled: 0, checked: 0, nba: await nbaTask })
 
   const byGame = new Map<string, typeof pending>()
   for (const p of pending) {
@@ -131,7 +133,7 @@ async function run(req: Request) {
     }
   }
 
-  return NextResponse.json({ won, settled, checked, notified })
+  return NextResponse.json({ won, settled, checked, notified, nba: await nbaTask })
 }
 
 export const GET = withPipelineHealth('grade-live-picks', run)

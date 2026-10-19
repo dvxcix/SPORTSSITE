@@ -18,6 +18,7 @@ import { ShareImageModal } from './ShareImageModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { nbaTeamLogo } from '@/lib/nbaPaint'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { fmtUsd } from '@slipsurge/core/parlayCalc'
 import { LinkifiedText } from './LinkifiedText'
@@ -830,12 +831,12 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {post.pick_data.legs.map((leg: any, i: number) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <PlayerAvatar headshot={leg.headshot_url} teamLogo={getTeamLogoUrl(leg.team)} teamAbbr={leg.team} name={leg.player_name} size={30} />
+                          <PlayerAvatar headshot={leg.headshot_url} teamLogo={(post.sport === 'NBA' ? nbaTeamLogo(leg.team) : getTeamLogoUrl(leg.team))} teamAbbr={leg.team} name={leg.player_name} size={30} />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</p>
                             <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
-                              {getTeamLogoUrl(leg.team)
-                                ? <SafeImage src={getTeamLogoUrl(leg.team)} alt={leg.team} style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                              {(post.sport === 'NBA' ? nbaTeamLogo(leg.team) : getTeamLogoUrl(leg.team))
+                                ? <SafeImage src={(post.sport === 'NBA' ? nbaTeamLogo(leg.team) : getTeamLogoUrl(leg.team))} alt={leg.team} style={{ width: 12, height: 12, objectFit: 'contain' }} />
                                 : <span>{leg.team}</span>}
                               · {leg.prop_label ?? leg.line}
                             </p>
@@ -861,7 +862,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <PlayerAvatar
                         headshot={post.pick_data.headshot_url}
-                        teamLogo={getTeamLogoUrl(post.pick_data.team)}
+                        teamLogo={(post.sport === 'NBA' ? nbaTeamLogo(post.pick_data.team) : getTeamLogoUrl(post.pick_data.team))}
                         teamAbbr={post.pick_data.team}
                         name={post.pick_data.player_name}
                         size={42}
@@ -869,8 +870,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{post.pick_data.player_name}</p>
                         <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>
-                          {getTeamLogoUrl(post.pick_data.team)
-                            ? <SafeImage src={getTeamLogoUrl(post.pick_data.team)} alt={post.pick_data.team ?? ''} style={{ width: 13, height: 13, objectFit: 'contain' }} />
+                          {(post.sport === 'NBA' ? nbaTeamLogo(post.pick_data.team) : getTeamLogoUrl(post.pick_data.team))
+                            ? <SafeImage src={(post.sport === 'NBA' ? nbaTeamLogo(post.pick_data.team) : getTeamLogoUrl(post.pick_data.team))} alt={post.pick_data.team ?? ''} style={{ width: 13, height: 13, objectFit: 'contain' }} />
                             : <span>{post.pick_data.team}</span>}
                           · {post.pick_data.prop_label ?? post.pick_data.line}
                         </p>

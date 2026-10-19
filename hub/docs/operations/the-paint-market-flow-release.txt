@@ -1,0 +1,48 @@
+ThePaint market and tracked-pick completion
+
+Owner request: remove preview/provider branding, restore visible odds and signed
+MM, verify save/post/grade behavior, and retain private access during polishing.
+
+Changes
+- Removed visible PRIVATE PREVIEW and BallDontLie labels. Server admin gates,
+  noindex responses and exclusion from public navigation remain in force.
+- Added a full sportsbook comparison with each book's own line/price/save action,
+  FanDuel/DraftKings/Caesars ordering, and internally scrolling mobile tables.
+- Research board and mobile cards include signed MM and +MM/-MM sorting.
+  MM = sportsbook rank minus NBA performance rank within the same priced pool.
+  Performance blends 60% season and 40% L10 observed production, minimum five
+  appearances. Two-sided prices use normalized implied probability. Unknown
+  samples remain unranked. This is a descriptive stat rank, not a trained model.
+- Single-book quote selection now stays closest to the consensus line instead
+  of accidentally picking the lowest alternate line.
+- Posting rejects mixed books and duplicate player/market legs server-side,
+  verifies exact fresh quotes and tipoff, and stores canonical name/team/date/line.
+- NBA post and My Picks cards use NBA team logos rather than MLB artwork.
+- Added NBA-only atomic service RPC: settle_nba_pick_exact(uuid,text).
+  Applied individually as 20261019035712_nba_exact_atomic_settlement. No historical
+  migration replay, flags, collector changes, existing data rewrite or job replay.
+- Settlement locks parent then child, matches game/player/market/side/line,
+  updates pick and post atomically, serializes parlay legs, and ignores retries.
+  Mismatched post data raises and rolls back. MLB/NFL settlement paths unchanged.
+- NBA final settlement now also runs on the existing two-minute grading schedule,
+  concurrently with MLB processing, with the daily route retained as fallback.
+  Future dates are excluded; bounded provider reads and a deadline limit work.
+  No live-game losses, guesses from absent stats, or unknown/DNP losses.
+
+Verification
+- NBA 15/15; combined NBA/NFL grading/odds regressions 25/25.
+- Existing production source suite 134/134; TypeScript and targeted ESLint pass.
+- Integration test executes save helper -> shared post helper -> actual POST
+  handler -> My Picks reader -> NBA final settlement. External systems mocked;
+  verifies canonical identity, numeric line, side, book, price and tracking IDs.
+- Failure tests cover changed price, started game, mixed books, duplicates,
+  unavailable provider, incomplete/live/missing/wrong-player stats and RPC errors.
+- Live SQL transaction tests insert saved selections under authenticated RLS,
+  verify owner read and other-owner denial, call the real posting RPC, settle
+  separate lines/sides and straight/parlay results, check replay protection,
+  verify atomic mismatch rollback and service-only execution permissions.
+  ALL fixtures and rate-limit/activity writes roll back; no public test post.
+- Local browser checked real NBA data, signed ranks, sportsbook prices, save
+  toggle and mobile odds layout with equal document/scroll widths at 390px.
+
+Live UI verification is recorded after the GitHub-backed release below.
