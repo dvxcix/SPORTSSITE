@@ -53,7 +53,7 @@ async function run(request:Request){
           const imported=await importNbaPublic(game,payload)
           results.push({game:game.id,ok:true,markets:imported.markets})
         }catch(error){
-          const diagnostic=await browser.page.evaluate(()=>({path:location.pathname,selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketControls:document.body.innerText.split('\n').map(t=>t.trim()).filter(t=>t.length<100&&/props|points|rebounds|assists|odds|popular|all markets|full game|celtics|pistons|october|oct 20/i.test(t)).slice(0,50),events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)})).catch(()=>null)
+          const diagnostic=await browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name).catch(()=>null)
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic})
         }
       }

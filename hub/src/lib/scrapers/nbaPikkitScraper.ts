@@ -7,6 +7,10 @@ export async function runNbaPikkitScrape(){
     const category=Array.from(document.querySelectorAll('select')).find(s=>Array.from(s.options).some(o=>o.textContent?.trim()==='Game Props'))
     const option=category&&Array.from(category.options).find(o=>o.textContent?.trim()==='Game Props')
     if(category&&option){category.value=option.value;category.dispatchEvent(new Event('change',{bubbles:true}));await pause(1800)}
+    for(let attempt=0;attempt<8;attempt++){
+      if(Array.from(document.querySelectorAll('select')).some(s=>Array.from(s.options).filter(o=>marketWords.test(o.textContent??'')).length>=2))break
+      await pause(1000)
+    }
     selector=Array.from(document.querySelectorAll('select')).map(select=>({select,score:Array.from(select.options).filter(o=>marketWords.test(o.textContent??'')).length})).sort((a,b)=>b.score-a.score)[0]
   }
   if(!selector||selector.score<2)return {url:location.href,capturedAt:new Date().toISOString(),props:{},complete:false,diagnostic:{selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketControls:Array.from(document.querySelectorAll('button,[role="tab"]')).map(n=>n.textContent?.trim()??'').filter(t=>/props|points|rebounds|assists|odds|popular|all markets/i.test(t)).slice(0,30)}}
