@@ -150,7 +150,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     if (new Set(verified.map(row => row.team.id)).size === 2) { teamProfiles = verified; teamStatsSeason = sampleSeason - 1 }
   }
   if (!injuries.complete) issues.push('Injury coverage incomplete')
-  const avgMap = new Map(seasonAverages.data.map(a => [a.player.id, { ...a.stats, turnover: a.stats.turnover ?? a.stats.tov ?? null }]))
+  const avgMap = new Map<number, Record<string, number | null>>(seasonAverages.data.map(a => [a.player.id, { ...a.stats, turnover: a.stats.turnover ?? a.stats.tov ?? null }]))
   const players: PaintPlayer[] = roster.rows.map(player => {
     const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
     const currentLogs = stats.rows.filter(row => valid(row, sampleSeason) && row.game.date.slice(0, 10) <= sampleEnd)

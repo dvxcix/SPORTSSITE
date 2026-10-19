@@ -8,7 +8,7 @@ type State = { key: string; endpoint: string; season: number | null; cursor: num
 const record = (value: unknown): Row => value && typeof value === 'object' ? value as Row : {}
 const id = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null
 export function nbaFact(kind: string, row: Row, season: number | null, fetchedAt: string): Row {
-  const base = { id: id(row.id), payload: row, fetched_at: fetchedAt }
+  const base = { id: id(row.id), payload: kind === 'period1' ? { ...row, period: 1 } : row, fetched_at: fetchedAt }
   if (!base.id) throw new Error('NBA fact missing identity')
   if (kind === 'teams') return base
   if (kind === 'players') return { ...base, team_id: id(record(row.team).id) }
@@ -23,7 +23,7 @@ export function nbaFact(kind: string, row: Row, season: number | null, fetchedAt
   if (!id(player.id) || !id(game.id)) throw new Error('NBA stat identity invalid')
   if (kind === 'advanced') return { ...base, player_id: player.id, game_id: game.id, season: gameSeason }
   if (!id(team.id)) throw new Error('NBA stat historical team missing')
-  return { ...base, player_id: player.id, game_id: game.id, team_id: team.id, season: gameSeason, game_date: date, postseason: game.postseason === true, position: player.position ?? null }
+  return { ...base, ...(kind === 'period1' ? { period: 1 } : {}), player_id: player.id, game_id: game.id, team_id: team.id, season: gameSeason, game_date: date, postseason: game.postseason === true, position: player.position ?? null }
 }
 export async function seedNbaIngestion() {
   const admin = createAdminClient()
@@ -35,9 +35,11 @@ export async function seedNbaIngestion() {
     { key: 'players', endpoint: '/v1/players/active?per_page=100', season: null },
     { key: `games:recent:${season}`, endpoint: `/v1/games?seasons[]=${season}&season_type=regular&start_date=${start.toISOString().slice(0, 10)}&end_date=${end.toISOString().slice(0, 10)}&per_page=100`, season },
     { key: `stats:recent:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&start_date=${start.toISOString().slice(0, 10)}&end_date=${today}&per_page=100`, season },
+    { key: `period1:recent:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&start_date=${start.toISOString().slice(0, 10)}&end_date=${today}&period=1&per_page=100`, season },
     { key: `advanced:recent:${season}`, endpoint: `/nba/v2/stats/advanced?seasons[]=${season}&start_date=${start.toISOString().slice(0, 10)}&end_date=${today}&period=0&per_page=100`, season },
     ...[season, season-1, season-2, season-3].map(season => ({ key: `games:${season}`, endpoint: `/v1/games?seasons[]=${season}&season_type=regular&per_page=100`, season })),
     ...[season-1, season-2, season-3, season].map(season => ({ key: `stats:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&per_page=100`, season })),
+    ...[season-1, season-2, season-3, season].map(season => ({ key: `period1:${season}`, endpoint: `/v1/stats?seasons[]=${season}&season_type=regular&period=1&per_page=100`, season })),
     ...[season-1, season-2, season-3, season].map(season => ({ key: `advanced:${season}`, endpoint: `/nba/v2/stats/advanced?seasons[]=${season}&period=0&per_page=100`, season })),
   ]
   const { error } = await admin.from('nba_ingestion_state').upsert(jobs, { onConflict: 'key', ignoreDuplicates: true })
@@ -63,17 +65,18 @@ export async function runNbaIngestion(budgetMs = 42000) {
   const states = (data as State[]).sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key))
   let pages = 0, rows = 0
   for (const state of states) {
-    const kind = state.key.split(':')[0], table = { teams: 'nba_teams', players: 'nba_players', games: 'nba_games', stats: 'nba_player_game_stats', advanced: 'nba_advanced_game_stats' }[kind]
+    const kind = state.key.split(':')[0], table = { teams: 'nba_teams', players: 'nba_players', games: 'nba_games', stats: 'nba_player_game_stats', period1: 'nba_player_period_stats', advanced: 'nba_advanced_game_stats' }[kind]
     if (!table) continue
     while (Date.now() - started < budgetMs && !state.complete && pages < 30) {
       try {
+        if (!/^\/(?:v1\/(?:teams|players\/active|games|stats)|nba\/v2\/stats\/advanced)\?/.test(state.endpoint)) throw new Error('NBA import endpoint invalid')
         const response = await fetch(`https://api.balldontlie.io${state.endpoint}${state.cursor == null ? '' : `&cursor=${state.cursor}`}`, { headers: bdlHeaders, cache: 'no-store', signal: AbortSignal.timeout(12000) })
         if (!response.ok) throw new Error(`NBA import provider HTTP ${response.status}`)
         const body = await response.json() as { data: Row[]; meta?: { next_cursor?: number | null } }
         if (!Array.isArray(body.data)) throw new Error('NBA import payload invalid')
         const fetchedAt = new Date().toISOString(), facts = body.data.map(row => nbaFact(kind, row, state.season, fetchedAt))
         if (facts.length) {
-          const { error: writeError } = await admin.from(table).upsert(facts, { onConflict: 'id' })
+          const { error: writeError } = await admin.from(table).upsert(facts, { onConflict: kind === 'period1' ? 'period,id' : 'id' })
           if (writeError) throw new Error(`NBA ${kind} write failed (${writeError.code})`)
         }
         const next = body.meta?.next_cursor ?? null
