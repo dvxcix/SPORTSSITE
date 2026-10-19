@@ -65,6 +65,10 @@ async function run(request:Request){
           if(!found){await browser.page.waitForTimeout(3000);found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)}
           if(!found)throw new Error('NBA event is not listed')
           await browser.page.waitForTimeout(2200)
+          // Event routes hydrate asynchronously after navigation. Wait for the
+          // exact matchup/date content before verifying it; an empty shell is
+          // not evidence of the wrong event and must never be imported.
+          await browser.page.waitForFunction(({names,date})=>{const text=document.body.innerText,normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');return names.every(name=>normalize(text).includes(normalize(name)))&&text.includes(date)},{names:[game.visitor_team.full_name,game.home_team.full_name],date:game.date.split('-').slice(1).map(Number).join('/')},{timeout:15000}).catch(()=>undefined)
           const text=await browser.page.evaluate(()=>document.body.innerText)
           if(!nbaPublicEventMatches(game,text))throw new Error('NBA event teams and date could not be verified')
           await browser.page.getByText('Odds',{exact:true}).filter({visible:true}).first().click({timeout:15000})
