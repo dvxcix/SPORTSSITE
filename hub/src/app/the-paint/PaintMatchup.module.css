@@ -1,0 +1,8 @@
+.starters.starters{display:block;padding-top:11px;color:#a6b7ca}
+.starterStatus{display:block;font-size:10px;line-height:1.4}
+.starterList{display:flex;flex-wrap:wrap;gap:7px;list-style:none;padding:0;margin:8px 0 0}
+.starterLink{display:flex;align-items:center;justify-content:center;width:46px;min-height:48px;border:1px solid #344557;border-radius:11px;background:#172331;transition:background 140ms ease,border-color 140ms ease}
+.starterLink:hover{background:#25364a;border-color:#657f6a}
+.starterLink:focus-visible{outline:2px solid #b4ff4d;outline-offset:3px}
+.starterLink>span{width:40px;height:40px}
+@media(prefers-reduced-motion:reduce){.starterLink{transition:none}}

@@ -14,6 +14,8 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
   fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
+  betparx:    { favicon: '/sportsbooks/betparx.png',    initials: 'BP', bg: '#a900ff', color: '#fff' },
+  ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: '#fff' },
   kalshi:     { favicon: 'https://kalshi.com/Kalshi_Favicon.png?v=20260807', initials: 'K', bg: '#014737', color: '#00DD94' },
   polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#2E5CFF' },
 }
@@ -27,13 +29,20 @@ export function normalizeVendor(v: string): string {
   if (k === 'caesars' || k === 'cz' || k === 'williamhillus' || k === 'williamhill') return 'caesars'
   if (k === 'fanatics' || k === 'fan') return 'fanatics'
   if (k === 'betrivers' || k === 'br') return 'betrivers'
+  if (k === 'ballybet' || k === 'ballys' || k === 'bally') return 'ballybet'
+  if (k === 'betparx' || k === 'parx') return 'betparx'
   if (k === 'kalshi' || k === 'kal') return 'kalshi'
   if (k === 'polymarket' || k === 'poly' || k === 'pm') return 'polymarket'
   return k
 }
 
+export function bookName(vendor: string): string {
+  const names: Record<string, string> = { fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', pinnacle: 'Pinnacle', fanatics: 'Fanatics', betparx: 'betPARX', ballybet: 'Bally Bet', kalshi: 'Kalshi', polymarket: 'Polymarket' }
+  return names[normalizeVendor(vendor)] ?? vendor.replaceAll('_', ' ')
+}
+
 export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number }) {
-  const [err, setErr] = useState(false)
+  const [failedVendor, setFailedVendor] = useState<string | null>(null)
   const key = normalizeVendor(vendor)
   const book = BOOKS[key]
 
@@ -51,12 +60,12 @@ export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number 
     )
   }
 
-  if (!err) {
+  if (failedVendor !== key) {
     return (
       <SafeImage
         src={book.favicon}
-        alt={`${vendor} logo`}
-        onError={() => setErr(true)}
+        alt={`${bookName(vendor)} logo`}
+        onError={() => setFailedVendor(key)}
         style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, verticalAlign: 'middle', borderRadius: 2 }}
       />
     )

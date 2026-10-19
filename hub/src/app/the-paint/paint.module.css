@@ -157,3 +157,21 @@
   .gameLine>button,.matrixActions button{min-height:44px}
 }
 @media(prefers-reduced-motion:no-preference){.pickActions>button:active,.iconButton:active{transform:scale(.96)}.drawerTop>button:hover{background:#203140}}
+
+/* A consistent research canvas: dense rows, clear actions, continuous heat. */
+.header{margin-bottom:18px}.headerActions .iconButton{width:44px;height:44px;border-radius:10px}
+.context{margin:18px 0 14px}.contextLabel{color:#9cafbf}.context h2{font-size:22px;font-weight:650}
+.sampleBadge{color:#b4c1ce}.sampleBadge small{color:#91a3b6}
+.board{border-color:#2b3947;border-radius:12px}
+.filters{gap:8px;padding:12px}.search{min-height:44px;border-radius:9px;background:#101b24;border-color:#30404e;max-width:360px}.search input{font-size:13px}.search input::placeholder{color:#9aabbc}
+.filterToggle{height:44px;min-width:44px;border-radius:9px}.filters>select{height:44px;border-radius:9px;color:#c7d3df}
+.table th{color:#a1b4c7;font-size:11px;background:#14212c}.table th button{min-height:44px;font-size:11px}.table td{height:76px;padding-block:8px;border-bottom-color:#263440}
+.table tbody tr:hover,.researchTable tbody tr:hover{background:#16232e}
+.tableScroll,.researchScroll{scrollbar-color:#3d5264 #101923;scrollbar-width:thin}
+.researchTable th{background:#14212c;color:#a6b8ca}.researchTable td,.researchTable th{padding:9px 10px}.researchTable th button{min-height:44px}.researchTable td{border-bottom-color:#273643}
+.playerButton{min-height:54px;gap:12px}.playerButton strong{font-size:13px;font-weight:650}.playerButton small{color:#9cb0c3;line-height:1.4}
+.heat[data-heat],.summaryHit[data-heat]{background:var(--heat-fill,#1e2a35);color:var(--heat-ink,#dce7f2);border:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.heat[data-heat=none]{background:transparent;color:#92a4b7;border-color:transparent}.heat small{opacity:.88}
+.openPlayer,.boardRowActions .pickActions button{min-width:44px;min-height:44px}.openPlayer{border-radius:8px}.openPlayer:hover{background:#233329}
+.marketRail button{min-height:44px}.segment button{min-height:44px}.toolNav{gap:6px}.toolNav button{border-radius:8px}
+@media(max-width:640px){.paint{padding-inline:12px}.header{gap:8px;margin-bottom:14px}.headerActions{gap:5px}.headerActions .iconButton{width:44px;height:44px}.identity{gap:8px}.mark{width:34px;height:34px}.identity h1{font-size:25px}.identity h1 i{font-size:8px;margin-left:7px}.context h2{font-size:20px}.context{gap:8px}.sampleBadge{font-size:9px}.sampleBadge small{font-size:9px}.filters{padding:10px}.search{flex-basis:100%;max-width:none}.researchTable td,.researchTable th{padding:8px}.researchTable th:first-child{min-width:180px}.playerButton{gap:10px}.playerButton strong{font-size:12px}.researchTable .playerButton{min-width:168px}.mobileStats .heat{min-height:54px}.mobileStats{gap:7px}.mobilePlayer{border-bottom-color:#304151}}

@@ -1,0 +1,9 @@
+Local sportsbook artwork added for NBA research selectors:
+
+betparx.png
+Official betPARX website touch icon, fetched 2026-10-19.
+https://www.betparx.com/assets/images/touch-icons/website-betparx-primary-apple-touch-icons-020222-256x256.png
+
+ballybet.webp
+Official Bally Bet website application icon, fetched 2026-10-19.
+https://assets.ballys.com/asset/f3b98405-9ad7-45da-9689-d2977a6f728b/ballybet-na-192x192.webp

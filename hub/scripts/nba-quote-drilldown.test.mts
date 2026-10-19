@@ -18,7 +18,6 @@ const stubs: Record<string, string> = {
   'next/navigation': `export const useSearchParams=()=>new URLSearchParams(globalThis.nbaQuoteFixture.search);export const useRouter=()=>({push(){}})`,
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   '@/components/ui/ModalSurface': `import React from 'react';export const ModalSurface=({open,label,children})=>open?<div role="dialog" aria-label={label}>{children}</div>:null`,
-  '@/components/BookLogo': `import React from 'react';export const BookLogo=({vendor})=><span data-book-logo={vendor}/>`,
   '@/context/WatchlistContext': `export const useWatchlist=()=>({items:[]})`,
   '@/lib/nbaRefresh': `export const watchNbaRefresh=()=>()=>{}`,
   './PaintPickActions': `import React from 'react';export const PaintPickActions=({offer,side})=><button data-testid="pick" data-book={offer.vendor} data-side={side} data-type={offer.market.type} data-line={offer.line_value}>Save</button>`,
@@ -71,7 +70,7 @@ async function harness(view: string, side = 'over', offer: PaintProp | null = nu
 function assertSelected(host: Element, quote: PaintProp, side: string) {
   const dialog = host.querySelector('[role="dialog"]')!
   assert.ok(dialog)
-  assert.equal((dialog.querySelector('[aria-label="Player sportsbook"]') as HTMLSelectElement).value, quote.vendor)
+  assert.equal(dialog.querySelector('[data-paint-entity-select="book"]')?.getAttribute('data-value'), quote.vendor)
   const pick = [...dialog.querySelectorAll('[data-testid="pick"]')].find(element => element.getAttribute('data-book') === quote.vendor && element.getAttribute('data-type') === quote.market.type && element.getAttribute('data-line') === quote.line_value)!
   assert.ok(pick)
   assert.equal(pick.getAttribute('data-book'), quote.vendor); assert.equal(pick.getAttribute('data-type'), quote.market.type)
@@ -95,12 +94,30 @@ test('sportsbook quote drilldown keeps exact main, alt, milestone and Under cont
   }
 })
 
+test('sportsbook headers keep real logos and accessible names without repeated team or vendor text', async () => {
+  const ui = await harness('odds')
+  try {
+    const header = ui.host.querySelector('button[aria-label="Sort FanDuel odds"]')!
+    assert.ok(header)
+    assert.equal(header.textContent, '')
+    assert.equal(header.querySelector('img')?.getAttribute('src'), '/sportsbooks/fanduel.ico')
+    assert.equal(ui.host.querySelector('tbody th button small'), null)
+    await ui.click([...ui.host.querySelectorAll('tbody th button')].find(button => button.textContent?.includes('Test Player')))
+    const dialog = ui.host.querySelector('[role="dialog"]')!
+    const ladderHeader = dialog.querySelector('th[aria-label="FanDuel"]')!
+    assert.ok(ladderHeader)
+    assert.equal(ladderHeader.textContent, '')
+    assert.equal(ladderHeader.querySelector('img')?.getAttribute('src'), '/sportsbooks/fanduel.ico')
+    assert.ok(dialog.querySelectorAll('[data-testid="pick"]').length > 0)
+  } finally { await ui.close() }
+})
+
 test('ordinary player opens retain the general all-book ladder without a stale selected threshold', async () => {
   const ui = await harness('odds')
   try {
     await ui.click([...ui.host.querySelectorAll('tbody th button')].find(button => button.textContent?.includes('Test Player')))
     const dialog = ui.host.querySelector('[role="dialog"]')!
-    assert.equal((dialog.querySelector('[aria-label="Player sportsbook"]') as HTMLSelectElement).value, 'all')
+    assert.equal(dialog.querySelector('[data-paint-entity-select="book"]')?.getAttribute('data-value'), 'all')
     assert.equal(new URL(window.location.href).searchParams.has('line'), false)
     assert.equal(dialog.querySelector('footer'), null)
     assert.ok([...dialog.querySelectorAll('[data-testid="pick"]')].every(pick => pick.getAttribute('data-type') === 'milestone'))
@@ -162,7 +179,7 @@ test('ordinary desktop and mobile player opens clear an orphaned URL quote inste
     try {
       await ui.click([...ui.host.querySelectorAll('button')].filter(button => button.getAttribute('aria-label') === label).at(index))
       const dialog = ui.host.querySelector('[role="dialog"]')!
-      assert.equal((dialog.querySelector('[aria-label="Player sportsbook"]') as HTMLSelectElement).value, 'all')
+      assert.equal(dialog.querySelector('[data-paint-entity-select="book"]')?.getAttribute('data-value'), 'all')
       assert.equal(new URL(window.location.href).searchParams.has('line'), false)
       assert.equal(new URL(window.location.href).searchParams.get('panel'), 'trends')
       assert.equal(dialog.querySelector('footer [data-testid="pick"]')?.getAttribute('data-line'), main.line_value)

@@ -11,8 +11,12 @@ import { PaintPrice } from './PaintPrice'
 import { PaintSortHeader } from './PaintSortHeader'
 import { PaintMarketSupport } from './PaintMarketSupport'
 import { compareResearch, PaintHitCell, PaintMatchupIcons, PaintMmCell, PaintScoreCell } from './PaintResearchCells'
+import { PaintBookSelect } from './PaintEntitySelect'
+import { PaintHeatCell } from './PaintHeatCell'
+import { nbaCenteredHeat } from './paintHeat'
 import styles from './paint.module.css'
 import polish from './research-polish.module.css'
+import dials from './research-dials.module.css'
 
 type Slate = { date: string; games: number; loaded: number; complete: boolean; defenseUnavailable?: number; failed: number[]; rows: NbaSlateViewRow[]; fetchedAt: string; stale: boolean }
 export function PaintSlate({ date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange: (book: string) => void; books: string[] }) {
@@ -42,12 +46,15 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
     const value = (row: typeof a) => sort === 'name' ? `${row.player.first_name} ${row.player.last_name}` : sort === 'mm' ? row.mm : sort === 'gap' ? row.gap : sort === 'hit' ? row.hit.rate : sort === 'average' ? row.average : sort === 'estimate' ? row.estimate : sort === 'line' ? Number(row.offer.line_value) : sort === 'odds' ? nbaPrice(row.offer, side) : sort === 'market' ? row.marketSupport?.signal ? row.marketSupport.signal.relatedPicks - row.marketSupport.signal.targetPicks : null : row.score
     return compareResearch(value(a), value(b), ascending) || a.player.id - b.player.id
   }), [slate, query, focus, sort, side, ascending])
+  const averagePool = slate?.rows.map(row => row.average) ?? []
+  const estimatePool = slate?.rows.map(row => row.estimate) ?? []
+  const gapPool = slate?.rows.map(row => row.gap) ?? []
   const href = (row: NonNullable<typeof slate>['rows'][number], nextMarket = market) => `/the-paint?${new URLSearchParams({ date: row.game.date, game: String(row.game.id), player: String(row.player.id), market: nextMarket, book: row.offer.vendor, side, view: 'research' })}`
   const header = (label: string, column: string) => <PaintSortHeader key={column} label={label} column={column} active={sort} ascending={ascending} onSort={sortBy}/>
-  return <section className={styles.researchTool}>
+  return <section className={`${styles.researchTool} ${dials.surface}`}>
     <header className={styles.toolHeading}><div><h3>Slate Edge</h3><span>Every matchup. One board.</span></div><button className={styles.iconButton} aria-label="Refresh NBA slate edge" onClick={refresh}><RefreshCw size={16}/></button></header>
     <div className={styles.toolControls}>
-      <select aria-label="Slate edge sportsbook" value={book} onChange={event => onBookChange(event.target.value)}><option value="all">All books</option>{[...new Set([book, ...books])].filter(vendor => vendor !== 'all').map(vendor => <option key={vendor}>{vendor}</option>)}</select>
+      <PaintBookSelect label="Slate edge sportsbook" value={book} onChange={onBookChange} books={books}/>
       <select aria-label="Slate edge market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
       <select aria-label="Slate edge side" value={side} onChange={event => onSideChange(event.target.value as 'over' | 'under')}><option value="over">Over</option><option value="under">Under</option></select>
       <label className={styles.search}><input aria-label="Search NBA slate players or teams" value={query} onChange={event => setQuery(event.target.value)} placeholder="Player or team"/></label>
@@ -56,11 +63,11 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
     {error && <p role="status" className={polish.status}>{slate ? 'The slate could not refresh. Last loaded prices are shown.' : 'The slate could not load.'} <button onClick={refresh}>Retry</button></p>}
     {!slate ? !error && <div className={polish.empty} role="status">Loading the slate…</div> : <>
       <div className={polish.status}><strong>{slate.loaded}/{slate.games} matchups</strong><span>{rows.length} players</span><time dateTime={slate.fetchedAt}>{new Date(slate.fetchedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</time>{slate.stale && <span>Last available prices</span>}{!slate.complete && <span>Partial slate · MM unavailable</span>}{!!slate.defenseUnavailable && <span>Some matchup data unavailable</span>}{side === 'under' ? <span>Under-side public counts unavailable</span> : !!slate.rows.length && slate.rows.every(row => row.marketSupport?.status === 'unavailable') && <span>Market context unavailable</span>}</div>
-      <div className={styles.researchScroll} role="region" aria-label="NBA slate edge table" tabIndex={0}><table className={`${styles.researchTable} ${polish.table}`}><caption className={styles.srOnly}>NBA slate players, scores, odds and market signals</caption><thead><tr>{header('Player', 'name')}{header('Score', 'score')}{header('Slate MM', 'mm')}{header('Market signals', 'market')}{header('L10', 'average')}{header(nbaBinary(market) ? 'Frequency' : 'Projection', 'estimate')}{header('Form vs line', 'gap')}{header('L10 hit rate', 'hit')}{header('Target', 'line')}{header('Odds', 'odds')}<th><span className={styles.srOnly}>Save pick</span></th></tr></thead><tbody>{rows.slice(0, limit).map(row => <tr key={`${row.game.id}:${row.player.id}`}>
+      <div className={styles.researchScroll} role="region" aria-label="NBA slate edge table" tabIndex={0}><table className={`${styles.researchTable} ${polish.table} ${dials.table}`}><caption className={styles.srOnly}>NBA slate players, scores, odds and market signals</caption><thead><tr>{header('Player', 'name')}{header('Score', 'score')}{header('Slate MM', 'mm')}{header('Market signals', 'market')}{header('L10', 'average')}{header(nbaBinary(market) ? 'Frequency' : 'Projection', 'estimate')}{header('Form vs line', 'gap')}{header('L10 hit rate', 'hit')}{header('Target', 'line')}{header('Odds', 'odds')}<th><span className={styles.srOnly}>Save pick</span></th></tr></thead><tbody>{rows.slice(0, limit).map(row => <tr key={`${row.game.id}:${row.player.id}`}>
         <td><a className={styles.playerButton} href={href(row)}><PlayerAvatar player={row.player}/><span><strong>{row.player.first_name} {row.player.last_name}</strong><span className={polish.playerMeta}><PaintMatchupIcons game={row.game}/></span></span><ArrowUpRight size={14}/></a></td>
         <td><PaintScoreCell score={row.score}/></td><td><PaintMmCell mm={row.mm}/></td><td><PaintMarketSupport support={row.marketSupport} href={(next, actualBook, quote) => `/the-paint?${new URLSearchParams({ date: row.game.date, game: String(row.game.id), player: String(row.player.id), market: next, book: actualBook, side: 'over', view: 'research', panel: 'ladder', line: String(quote.line), type: quote.type })}`}/></td>
-        <td>{marketNumber(row.average, market)}</td><td>{row.estimate == null ? '—' : marketNumber(row.estimate, market)}</td>
-        <td><span className={polish.heat} data-level={row.gap == null ? 'none' : row.gap > 0 ? 'high' : row.gap < 0 ? 'low' : 'mid'}>{row.gap == null ? '—' : `${row.gap > 0 ? '+' : ''}${number(row.gap)}${nbaBinary(market) ? ' pp' : ''}`}</span></td><td><PaintHitCell {...row.hit}/></td>
+        <td><PaintHeatCell value={row.average} pool={averagePool} label="Last 10 production">{marketNumber(row.average, market)}</PaintHeatCell></td><td><PaintHeatCell value={row.estimate} pool={estimatePool} label={nbaBinary(market) ? 'Frequency' : 'Projection'}>{marketNumber(row.estimate, market)}</PaintHeatCell></td>
+        <td><PaintHeatCell value={row.gap} heat={nbaCenteredHeat(row.gap, gapPool)} tone="performance" label="Form versus line">{row.gap == null ? '—' : `${row.gap > 0 ? '+' : ''}${number(row.gap)}${nbaBinary(market) ? ' pp' : ''}`}</PaintHeatCell></td><td><PaintHitCell {...row.hit}/></td>
         <td><a className={styles.lineButton} href={href(row)}><strong>{nbaTarget(row.offer, side)}</strong></a></td><td><a className={styles.lineButton} href={href(row)}><span><BookLogo vendor={row.offer.vendor} size={15}/><PaintPrice offer={row.offer} side={side} compact/></span></a></td><td><PaintPickActions player={row.player} offer={row.offer} side={side} game={row.game}/></td>
       </tr>)}</tbody></table></div>
       {rows.length > limit && <button className={styles.filterToggle} onClick={() => setLimit(value => value + 50)}>Show 50 more</button>}{!rows.length && <div className={polish.empty}>No offers match these filters.</div>}

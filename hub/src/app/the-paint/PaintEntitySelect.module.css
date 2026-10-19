@@ -1,0 +1,19 @@
+.trigger.trigger{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;min-width:64px;height:44px;min-height:44px;padding:5px 9px;border:1px solid #344252;border-radius:12px;background:#101923;color:#c9d6e5;cursor:pointer;line-height:1;transition:background 140ms ease,border-color 140ms ease,box-shadow 140ms ease}
+.trigger:hover,.trigger[data-state=open]{background:#1a2734;border-color:#647c66}
+.trigger:focus-visible{outline:2px solid #b4ff4d;outline-offset:3px}
+.mark{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0}
+.mark img,.optionMark img{display:block;max-width:100%;max-height:100%;object-fit:contain}
+.chevron{flex-shrink:0;color:#9caec2;transition:transform 140ms ease}
+.trigger[data-state=open] .chevron{transform:rotate(180deg)}
+.menu{z-index:1000;box-sizing:border-box;width:244px;max-width:calc(100vw - 24px);max-height:min(420px,var(--radix-dropdown-menu-content-available-height));overflow-y:auto;overscroll-behavior:contain;padding:6px;border:1px solid #3a4b5e;border-radius:16px;background:#101822;color:#e8eff8;box-shadow:0 20px 60px #0008,0 2px 8px #0006;outline:none;transform-origin:var(--radix-dropdown-menu-content-transform-origin);animation:appear 140ms ease-out;scrollbar-width:thin;scrollbar-color:#45546a transparent}
+.heading{padding:10px 10px 8px;color:#9aaec4;font-size:11px;font-weight:700;letter-spacing:.04em}
+.option{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:10px;min-height:48px;padding:6px 9px;border-radius:10px;cursor:pointer;outline:none;user-select:none;transition:background 100ms ease,color 100ms ease}
+.option[data-highlighted]{background:#273546;color:#fff}
+.option[data-state=checked]{background:#b4ff4d13;color:#deffb3}
+.option[data-state=checked][data-highlighted]{background:#b4ff4d26}
+.optionMark{display:grid;place-items:center;width:34px;height:34px}
+.optionLabel{min-width:0;font-size:13px;line-height:1.3;font-weight:600;overflow-wrap:anywhere}
+.selected{display:flex;align-items:center;justify-content:center;color:#b4ff4d}
+@keyframes appear{from{opacity:0;transform:translateY(-3px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:640px){.trigger.trigger{min-width:60px}.menu{width:232px}.option{min-height:50px}}
+@media(prefers-reduced-motion:reduce){.trigger,.chevron,.option{transition:none}.menu{animation:none}}

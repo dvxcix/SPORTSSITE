@@ -1,0 +1,16 @@
+.cell{display:flex;min-height:44px;min-width:64px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 10px;border:1px solid rgb(255 255 255/.1);border-radius:7px;background:var(--heat-fill,#252b35);color:var(--heat-ink,#d4dce6);font-size:13px;font-weight:750;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cell small{color:inherit;font-size:10px;font-weight:500;line-height:1.2;opacity:.9}
+.cell[data-heat-value="neutral"]{border-color:rgb(255 255 255/.05);color:#aebaca;background:#242b34}
+.legend{display:inline-flex;align-items:center;gap:7px;color:var(--text-3);font-size:10px;font-weight:550;white-space:nowrap}
+.legend i{height:7px;width:74px;border-radius:3px;background:linear-gradient(90deg,rgb(38 49 83),rgb(34 70 91),rgb(20 109 105));box-shadow:inset 0 0 0 1px rgb(255 255 255/.12)}
+.legend i[data-tone="performance"]{background:linear-gradient(90deg,rgb(118 43 61),rgb(45 55 69),rgb(48 115 71))}
+.table tbody td{padding:4px!important}
+.table thead th button{min-height:44px}
+.table tbody th{padding-block:8px!important}
+.metric{display:grid;gap:5px;min-width:0}
+.metric>small{font-size:11px;color:var(--text-3)}
+.metric .cell{min-height:56px;font-size:19px}
+.metricHero .cell{min-height:94px;font-size:32px}
+.controls button,.controls select{min-height:44px}
+.legendRow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 10px}
+@media(max-width:640px){.cell{min-width:60px;padding:8px 7px;font-size:12px}.metric .cell{font-size:16px}.metricHero .cell{font-size:28px}.legendRow{gap:7px}}

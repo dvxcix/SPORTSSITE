@@ -12,7 +12,6 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, H
 const { createRoot } = await import('react-dom/client')
 const stubs: Record<string, string> = {
   '@/lib/nbaRefresh': 'export const watchNbaRefresh=()=>()=>{}',
-  '@/components/BookLogo': 'export const BookLogo=()=>null',
   '@/components/ui/ModalSurface': 'export const ModalSurface=({children})=>children',
   './PaintPickActions': 'export const PaintPickActions=()=>null',
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
@@ -98,6 +97,32 @@ test('matchup spread lines display their spread prices rather than moneylines', 
     assert.ok(ui.host.textContent?.includes('-109'))
     assert.equal(ui.host.textContent?.includes('+250'), false)
     assert.equal(ui.host.textContent?.includes('-300'), false)
+  } finally { await ui.close() }
+})
+
+test('matchup starter portraits match confirmed IDs per team and preserve pending teams', async () => {
+  const away = { id: 11, first_name: 'Jayson', last_name: 'Tatum', team: board.game.visitor_team, headshot: 'https://example.test/tatum.png' }
+  const home = { id: 12, first_name: 'Cade', last_name: 'Cunningham', team: board.game.home_team, headshot: 'https://example.test/cunningham.png' }
+  const lineup = { ...board, players: [away, home], starters: [away.id, 99999] }
+  const ui = await harness('PaintMatchup', { board: lineup }, {})
+  try {
+    await ui.click('Matchup')
+    const awayPanel = ui.host.querySelector('[aria-label="Boston Celtics matchup"]')!
+    const homePanel = ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
+    assert.ok(awayPanel.textContent?.includes('1 confirmed starter'))
+    const player = awayPanel.querySelector('a[aria-label="Jayson Tatum, confirmed starter"]')!
+    assert.equal(player.getAttribute('href'), '/nba/players/11')
+    assert.equal(player.querySelector('img')?.getAttribute('src'), away.headshot)
+    assert.equal(awayPanel.querySelectorAll('li').length, 1, 'unmatched provider IDs do not invent a player')
+    assert.ok(homePanel.textContent?.includes('Starters pending'))
+    assert.equal(homePanel.querySelector('footer a'), null)
+    assert.equal(ui.host.textContent?.includes('provider'), false)
+    await ui.render({ board: { ...lineup, starters: [away.id, home.id] } })
+    assert.ok(homePanel.querySelector('a[aria-label="Cade Cunningham, confirmed starter"]'))
+    await ui.render({ board: { ...lineup, starters: [] } })
+    assert.equal(ui.host.querySelectorAll('footer a').length, 0)
+    assert.ok(awayPanel.textContent?.includes('Starters pending'))
+    assert.ok(homePanel.textContent?.includes('Starters pending'))
   } finally { await ui.close() }
 })
 

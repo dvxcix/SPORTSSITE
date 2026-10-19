@@ -1,0 +1,33 @@
+NBA visual research release — October 19, 2026
+
+Owner-requested corrections to the unfinished NBA presentation. NBA remains
+admin-only; no launch flag, collector, grading, score formula or database change.
+
+Scope
+- Shared accessible logo selectors across NBA boards, panels and deeper tools.
+  Official local betPARX and Bally Bet artwork added with asset source notes.
+- New compact logo matchup/date slate header; exact dates and game IDs preserved.
+- Canonical MechanicsScoreRing reused for SlipSurge Score and Slate Edge, including
+  the existing central bolt. Unavailable scores use a neutral dash, never zero.
+- Continuous heatmaps for role/minutes, tracking, cheatsheets, DvP, matchup team
+  metrics, rotations and player season/game history. Pools remain stable through
+  player filtering; equal/missing samples stay neutral. Volume is descriptive;
+  matchup advantage has a separate scale, with defensive/Under direction handled.
+- Logo-only odds/ladder book headers, real starter portraits and team-specific
+  confirmation states. Unknown starter IDs never create phantom players.
+- NBA entity metric hierarchy and compact logo game rows improved for mobile.
+- Touch targets, contrast, dense table spacing, reduced-motion behavior and
+  portalled selector keyboard/focus handling reviewed.
+
+Local verification
+- NBA regression suite: 189/189 passing, including 21 additional interaction and
+  heatmap cases. Exact alt contracts, book/side identity and private-pick behavior
+  remain covered.
+- Shared production source contracts: 134/134 passing.
+- TypeScript and all modified application TypeScript/TSX ESLint checks pass.
+- Build and deployed browser verification are recorded separately in this task's
+  work/the-paint evidence. Do not treat source tests as visual certification.
+
+Baseline refreshed from GitHub main and live Vercel before changes and release:
+dc7dc681e89477cf8b8d19d25abe1de19ab46b00, dpl_2fWAPKSHQzHZTrmVpkoV2aMXxgGV.
+Required recovered NFL ancestry retained.
