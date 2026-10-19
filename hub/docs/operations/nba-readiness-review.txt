@@ -145,6 +145,14 @@ every five minutes; exact economic fingerprints preserve real price changes and
 A->B->A. Research stores latest-pretip features, source log IDs, score version,
 quote and validated forecast for future final outcomes. No synthetic 2026 finals.
 
+Collectors cover all three calendar dates intersecting the rolling 48-hour
+window. Quote and research attempts rotate oldest-first, including unsuccessful
+attempts, so missing data cannot permanently starve later games. Quote scans no
+longer truncate to the first sixteen games. Cached attempt receipts do not
+inflate newly inserted capture counts. Pikkit remembers successful unchanged
+reads separately from append-only changed-count history to preserve its cadence
+without repeatedly paying for unchanged cloud captures.
+
 Pikkit checks every ten minutes and captures due games at most every thirty
 minutes in the next 48 hours, oldest first. Cloud browser startup, per-game work,
 diagnostics and cleanup are bounded. Unlisted events defer honestly. Busy shared
@@ -160,7 +168,7 @@ role before provider or service work. Guest redirect and member-denial contracts
 pass. NBA access remains unchanged until the owner approves public release.
 
 VERIFICATION
-NBA 44/44; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
+NBA 46/46; production source 134/134; NFL odds 5/5; NFL grading 5/5; NFL Pikkit
 10/10. TypeScript and targeted ESLint pass. Real browser checks cover desktop,
 390px and 320px layouts, exact odds/ladders, +/-MM, player panel/footer layering,
 shared saves, shot chart filters, tracking drill-through, league DvP, public

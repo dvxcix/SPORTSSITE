@@ -269,7 +269,7 @@ test('NBA tracking refuses season-end data on a historical matchup before provid
 
 test('NBA Pikkit collector denies unauthorized calls before schedule or cloud browser work',async()=>{
   let reads=0
-  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_n:string,r:unknown)=>r},'@/lib/nbaPaintData':{getPaintSchedule:()=>{reads++}},'@/lib/nbaPaint':{},'@/lib/supabase/admin':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{},'@/lib/nbaPublic':{}})
+  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_n:string,r:unknown)=>r},'@/lib/nbaPaintData':{getPaintSchedule:()=>{reads++}},'@/lib/nbaPaint':{},'@/lib/supabase/admin':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{},'@/lib/nbaPublic':{},'@/lib/nbaSharedCache':{}})
   assert.equal((await (route.GET as unknown as(r:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))).status,401)
   assert.equal(reads,0)
 })
@@ -483,7 +483,7 @@ test('NBA collector requires cron authorization, deduplicates schedules and capt
   let reads=0,writes=0,denied=true
   const crypto=await import('node:crypto')
   const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
-    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,'record_nba_market_capture');assert.equal(args.p_game_id,123);writes++;return{data:true,error:null}}})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:'2099-10-20T20:00:00Z',status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
+    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaSharedCache':cachePassthrough,'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:async(name:string,args:Record<string,unknown>)=>{assert.equal(name,'record_nba_market_capture');assert.equal(args.p_game_id,123);writes++;return{data:true,error:null}}})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
   })
   const get=route.GET as unknown as(request:Request)=>Promise<Response>
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,401)
@@ -491,6 +491,25 @@ test('NBA collector requires cron authorization, deduplicates schedules and capt
   denied=false
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,200)
   assert.equal(reads,1);assert.equal(writes,1)
+})
+
+test('NBA quote capture covers the third calendar date beyond sixteen games and rotates stored attempts, including failures',async()=>{
+ const calls:string[]=[],reads:number[]=[],attempts:string[]=[],writes:number[]=[]
+ const games=Array.from({length:18},(_,index)=>({id:index+1,date:'2099-10-22',datetime:new Date(Date.now()+45*3600000).toISOString(),status_state:'scheduled'}))
+ const prior=games.slice(0,8).map(game=>({key:'market-attempt:v1:'+game.id,fetched_at:new Date().toISOString()}))
+ let hit=false
+ const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
+  'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},
+  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<string>)=>{attempts.push(key);return{value:hit?'captured':await load()}}},
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:async(_name:string,args:{p_game_id:number})=>{writes.push(args.p_game_id);return{data:true,error:null}}})},
+  '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]}}
+ })
+ const get=route.GET as(request:Request)=>Promise<Response>,response=await get(new Request('https://test/capture'))
+ assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(writes.length,17);assert.equal(attempts.length,18);assert.ok(!reads.includes(99))
+ assert.equal((await response.json()).failed,1)
+ hit=true;reads.length=0;writes.length=0
+ const repeated=await get(new Request('https://test/capture')),summary=await repeated.json()
+ assert.equal(repeated.status,200);assert.equal(reads.length,0);assert.equal(writes.length,0);assert.equal(summary.captured,0);assert.equal(summary.deferred,18)
 })
 
 test('NBA history remains admin-gated and validates market/game before archive reads',async()=>{
@@ -557,7 +576,7 @@ test('NBA public collection bounds startup, game work and cleanup while preservi
   const locator={filter:()=>locator,first:()=>locator,click:async()=>{},waitFor:async()=>{}}
   const browser={page:{setDefaultTimeout:()=>{},setDefaultNavigationTimeout:()=>{},goto:async()=>scenario==='game-timeout'?never():undefined,waitForFunction:async()=>{},waitForTimeout:async()=>{},getByText:()=>locator,evaluate:async(fn:unknown)=>fn===scrape?{complete:true,props:{Points:{'Test Player':10}}}:'verified event'},close:async()=>{closed++;if(scenario==='close-timeout')return never()}}
   const query={select:()=>query,in:()=>query,order:()=>query,limit:async()=>({data:[],error:null})}
-  const imports={'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]})},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>query})},'@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>({release:async()=>{released++}})},'@/lib/browserbase':{openPikkitSession:async(_context:string,_metadata:unknown,options:unknown)=>{openedOptions=options;if(scenario==='startup-timeout')return new Promise(resolve=>{resolveOpening=resolve});return browser}},'@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>scenario!=='unlisted'},'@/lib/scrapers/nbaPikkitScraper':{runNbaPikkitScrape:scrape},'@/lib/nbaPublicServer':{importNbaPublic:async()=>{captured++;return{markets:5}}},'@/lib/nbaPublic':{nbaPublicEventMatches:()=>true}}
+  const imports={'@/lib/nbaSharedCache':cachePassthrough,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]})},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>query})},'@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>({release:async()=>{released++}})},'@/lib/browserbase':{openPikkitSession:async(_context:string,_metadata:unknown,options:unknown)=>{openedOptions=options;if(scenario==='startup-timeout')return new Promise(resolve=>{resolveOpening=resolve});return browser}},'@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>scenario!=='unlisted'},'@/lib/scrapers/nbaPikkitScraper':{runNbaPikkitScrape:scrape},'@/lib/nbaPublicServer':{importNbaPublic:async()=>{captured++;return{markets:5}}},'@/lib/nbaPublic':{nbaPublicEventMatches:()=>true}}
   const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',imports,fetch,{process:{env:{PIKKIT_CONTEXT_ID:'test-only'}},setTimeout:(callback:()=>void)=>setTimeout(callback,5),clearTimeout})
   const response=await (route.GET as unknown as(request:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))
   const result=await response.json()
@@ -570,3 +589,14 @@ test('NBA public collection bounds startup, game work and cleanup while preservi
  }
 })
 
+
+test('unchanged successful NBA public reads enforce thirty-minute cadence without inventing history captures',async()=>{
+ let opens=0
+ const game={id:123,datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},old=new Date(Date.now()-3600000).toISOString()
+ const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{
+  'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]})},'@/lib/nbaPaint':{nbaToday:()=> '2026-10-19'},'@/lib/nbaSharedCache':{},'@/lib/pikkitBrowserLease':{},'@/lib/browserbase':{openPikkitSession:()=>{opens++;throw new Error('unexpected browser')}},'@/lib/scrapers/gameMatch':{},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{},'@/lib/nbaPublic':{},
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:(table:string)=>{const query={select:()=>query,in:()=>query,order:()=>query,limit:async()=>({data:table==='nba_public_captures'?[{game_id:123,captured_at:old}]:[{key:'public-success:v1:123',fetched_at:new Date().toISOString()}],error:null})};return query}})}
+ },fetch,{process:{env:{PIKKIT_CONTEXT_ID:'test-only'}}})
+ const response=await (route.GET as(request:Request)=>Promise<Response>)(new Request('https://test/capture'))
+ assert.equal(response.status,200);assert.equal((await response.json()).skipped,'Captures are current');assert.equal(opens,0)
+})

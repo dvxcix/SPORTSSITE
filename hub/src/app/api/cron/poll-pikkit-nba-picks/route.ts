@@ -10,6 +10,7 @@ import {findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
 import {nbaPublicEventMatches} from '@/lib/nbaPublic'
+import {nbaSharedCache} from '@/lib/nbaSharedCache'
 export const maxDuration=300
 class NbaCaptureDeadline extends Error {}
 async function bounded<T>(task:Promise<T>,milliseconds:number,label:string):Promise<T>{
@@ -30,9 +31,15 @@ async function run(request:Request){
   // a busy shared browser defers this job without disrupting NFL or MLB.
   const upcoming=schedule.games.filter(g=>['scheduled','unknown',undefined].includes(g.status_state)&&Date.parse(g.datetime??g.status)>Date.now()&&Date.parse(g.datetime??g.status)-Date.now()<48*3600000&&(!requested||String(g.id)===requested))
   if(!upcoming.length)return NextResponse.json({games:0,skipped:'No upcoming NBA games inside the capture window'})
-  const {data:prior,error}=await createAdminClient().from('nba_public_captures').select('game_id,captured_at').in('game_id',upcoming.map(g=>g.id)).order('captured_at',{ascending:false}).limit(200)
-  if(error)return NextResponse.json({error:'Public capture preflight failed'},{status:503})
-  const last=(id:number)=>prior?.find(p=>p.game_id===id)?.captured_at
+  const admin=createAdminClient()
+  const [{data:prior,error},{data:checks,error:checkError}]=await Promise.all([
+    admin.from('nba_public_captures').select('game_id,captured_at').in('game_id',upcoming.map(g=>g.id)).order('captured_at',{ascending:false}).limit(200),
+    admin.from('nba_source_cache').select('key,fetched_at').in('key',upcoming.map(g=>'public-success:v1:'+g.id)).limit(100),
+  ])
+  if(error||checkError)return NextResponse.json({error:'Public capture preflight failed'},{status:503})
+  // An unchanged successful read still counts toward the refresh cadence; the
+  // append-only public history keeps only changed counts and its original time.
+  const last=(id:number)=>[prior?.find(p=>p.game_id===id)?.captured_at,checks?.find(p=>p.key==='public-success:v1:'+id)?.fetched_at].filter((value):value is string=>!!value).sort().at(-1)
   const due=upcoming.filter(g=>!last(g.id)||Date.now()-Date.parse(last(g.id)!)>30*60000).sort((a,b)=>Date.parse(last(a.id)??'1970-01-01')-Date.parse(last(b.id)??'1970-01-01'))
   if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
   const lease=await acquirePikkitBrowserLease()
@@ -72,8 +79,8 @@ async function run(request:Request){
           if(!payload.complete){console.info('[nba-public] incomplete-controls',{game:game.id,diagnostic:payload.diagnostic??null});throw new Error('NBA public market capture was incomplete')}
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
           if(Date.parse(game.datetime??game.status)<=Date.now())throw new Error('Game started during capture')
-          const imported=await importNbaPublic(game,payload)
-          if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.markets})
+          const imported=await nbaSharedCache(`public-success:v1:${game.id}`,1800,0,()=>importNbaPublic(game,payload),25)
+          if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.value.markets})
           })(),Math.min(110000,remaining()-25000),'NBA game capture deadline')
         }catch(error){
           const diagnostic=error instanceof NbaCaptureDeadline?{deadline:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').catch(()=>null)

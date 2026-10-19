@@ -1,5 +1,10 @@
 ThePaint NBA research parity audit — 2026-10-19
 
+HISTORICAL AUDIT. Superseded by nba-readiness-review.txt, including completed
+historical imports, sixteen validated markets, shots, DvP, tracking and final QA.
+The public collector now checks every ten minutes with thirty-minute successful
+read cadence. Do not use the in-progress counts below as current release status.
+
 Scope: compare ThePaint with TheSideline and TheDugout, complete NBA research
 tools and visual flows, retain hidden/admin-only access. Owner explicitly
 selected Pikkit as NBA public-pick source. Existing MLB/NFL jobs untouched.

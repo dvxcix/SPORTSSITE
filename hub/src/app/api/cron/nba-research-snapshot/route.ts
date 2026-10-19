@@ -22,8 +22,8 @@ async function run(request: Request) {
     if (gradeError) throw new Error('NBA research outcomes could not update')
     const { data: models, error: modelError } = await admin.from('nba_model_reports').select('report').eq('version', 'nba-rolling-v1').order('validation_season', { ascending: false }).limit(33)
     if (modelError) throw new Error('NBA research models unavailable')
-    const today = nbaToday(), tomorrow = new Date(`${today}T12:00:00Z`); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-    const schedules = await Promise.all([getPaintSchedule(today), getPaintSchedule(tomorrow.toISOString().slice(0, 10))])
+    const today = nbaToday(), dates=[0,1,2].map(offset=>{const date=new Date(today+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+offset);return date.toISOString().slice(0,10)})
+    const schedules = await Promise.all(dates.map(date=>getPaintSchedule(date)))
     const games = [...new Map(schedules.flatMap(schedule => schedule.games).map(game => [game.id, game])).values()].filter(game => Date.parse(game.datetime ?? game.status) > Date.now() && Date.parse(game.datetime ?? game.status) - Date.now() < 48 * 3600000 && ['scheduled', 'unknown', undefined].includes(game.status_state))
     const { data: attempts, error: attemptsError } = await admin.from('nba_source_cache').select('key,fetched_at').in('key', games.map(game => `snapshot-attempt:v1:${game.id}`))
     if (attemptsError) throw new Error('NBA capture progress unavailable')
@@ -33,7 +33,8 @@ async function run(request: Request) {
       if (Date.now() - started > 60000) break
       try {
         let inserted = 0
-        await nbaSharedCache(`snapshot-attempt:v1:${game.id}`, 300, 0, async () => {
+        const attempt=await nbaSharedCache(`snapshot-attempt:v1:${game.id}`, 300, 0, async () => {
+          try{
           const board = await getPaintBoard(game)
           if (!board.statsComplete) throw new Error('Game-log coverage incomplete; score archive deferred')
           const context = await getNbaDefenseContext(board.sampleSeason, game.date)
@@ -57,8 +58,9 @@ async function run(request: Request) {
           if (error) throw new Error(`NBA score archive write failed (${error.code})`)
           inserted = data as number
           return { inserted: data as number }
+          }catch(failure){return {reason:failure instanceof Error?failure.message:'NBA score capture failed'}}
         }, 110)
-        results.push({ game: game.id, inserted })
+        results.push({ game: game.id, inserted, ...('reason' in attempt.value?{reason:attempt.value.reason}:{}) })
       } catch (failure) { results.push({ game: game.id, reason: failure instanceof Error ? failure.message : 'NBA score capture failed' }) }
     }
     const { error: pruneError } = await admin.rpc('prune_nba_source_cache', { p_limit: 500 })
