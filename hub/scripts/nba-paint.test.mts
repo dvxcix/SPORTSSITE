@@ -123,7 +123,7 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
 
 test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
   let reads=0
-  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
+  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
   for(const job of ['nba-research-sync','nba-model-validate','nba-research-snapshot']){
     const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
     assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
@@ -248,7 +248,7 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
   for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
@@ -503,11 +503,11 @@ test('NBA collector requires cron authorization, deduplicates schedules and capt
 test('NBA quote capture covers the third calendar date beyond sixteen games and rotates stored attempts, including failures',async()=>{
  const calls:string[]=[],reads:number[]=[],gameReads:number[]=[],attempts:string[]=[],writes:{name:string;game:number}[]=[]
  const games=Array.from({length:18},(_,index)=>({id:index+1,date:'2099-10-22',datetime:new Date(Date.now()+45*3600000).toISOString(),status_state:'scheduled'}))
- const prior=games.slice(0,8).map(game=>({key:'market-attempt:v2:'+game.id,fetched_at:new Date().toISOString()}))
+ const prior=games.slice(0,8).map(game=>({key:'market-attempt:v3:'+game.id,fetched_at:new Date().toISOString()}))
  let hit=false
  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
   'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},
-  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<string>)=>{attempts.push(key);return{value:hit?'captured':await load()}}},
+  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{attempts.push(key);return{value:hit?{status:'captured'}:await load()}}},
   '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:(name:string,args:{p_game_id:number})=>({abortSignal:async()=>{writes.push({name,game:args.p_game_id});return{data:true,error:null}}})})},
   '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
  })
@@ -713,4 +713,30 @@ test('NBA cache post-commit and follower reads bypass render-pass memoized initi
     assert.equal(signals.length,reads);assert.equal(new Set(signals).size,reads)
     assert.ok(signals.every(signal=>signal instanceof AbortSignal&&!signal.aborted))
   }
+})
+
+test('NBA customer projections authenticate first and return results without model internals',async()=>{
+  let reads=0, denied=true
+  const model={ready:true,version:'nba-rolling-v1',market:'points',method:'blend',recentWeight:.35,modelKey:'internal-method',trainingSeasons:[2023,2024],trainingGames:20000,trainingPlayers:500,trainingMae:4,trainedThrough:'2025-04-13',validationSeason:2025,validationGames:10000,validationPlayers:500,validationMae:4,validationRmse:6,validationBias:0,baselineMae:4.2,validationFrom:'2025-10-20',validationThrough:'2026-04-13'} satisfies NbaModelReport
+  const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1}))
+  const query={select:()=>query,eq:()=>query,order:()=>query,limit:()=>query,abortSignal:async()=>({data:[{report:model}],error:null})}
+  const imports={
+    'next/server':{NextResponse:{json:Response.json}},
+    '@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({},{status:403})}:{}},
+    '@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>({game:{id:123,date:'2026-10-20'},players:[{id:434,logs}],fetchedAt:'2026-10-19T12:00:00Z'})},
+    '@/lib/nbaPaint':await import('../src/lib/nbaPaint.ts'),
+    '@/lib/nbaModel':{nbaValidatedEstimate},
+    '@/lib/nbaSharedCache':cachePassthrough,
+    '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>{reads++;return query}})},
+  }
+  const route=await compiled('../src/app/the-paint/estimate/route.ts',imports)
+  const invoke=(search='game=123&player=434&market=points')=>(route.GET as(r:unknown)=>Promise<Response>)({nextUrl:new URL('https://test/the-paint/estimate?'+search)})
+  assert.equal((await invoke()).status,403);assert.equal(reads,0)
+  denied=false
+  assert.equal((await invoke('game=123&player=434&market=invalid')).status,400);assert.equal(reads,0)
+  const response=await invoke(),body=await response.json()
+  assert.equal(response.status,200);assert.equal(body.estimate,20.5);assert.equal(body.games,20)
+  assert.deepEqual(Object.keys(body).sort(),['estimate','fetchedAt','gameId','games','market','playerId'].sort())
+  assert.equal(JSON.stringify(body).includes('internal-method'),false)
+  assert.equal((await invoke('game=123&player=999&market=points')).status,404)
 })

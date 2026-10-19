@@ -15,5 +15,5 @@ export async function importNbaPublic(game:PaintGame,payload:{url:string;capture
   const hash=createHash('sha256').update(JSON.stringify(rows)).digest('hex')
   const {data,error}=await createAdminClient().rpc('record_nba_public_capture',{p_game_id:game.id,p_game_date:game.date,p_captured_at:snapshot.capturedAt,p_fingerprint:hash,p_snapshot:snapshot})
   if(error)throw new Error('NBA public capture could not save')
-  return {changed:data,players:new Set(rows.map(r=>r.playerId)).size,markets:snapshot.markets.length,unmatched}
+  return {changed:data,players:new Set(rows.map(r=>r.playerId)).size,markets:snapshot.markets.length,unmatched,fingerprint:hash,observedAt:snapshot.capturedAt}
 }

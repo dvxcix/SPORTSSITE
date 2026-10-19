@@ -1,6 +1,9 @@
 import { nbaBinary, nbaPeriod, nbaMarketLogs, nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintBoard, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
+import { nbaMarketSupport, type NbaMarketInput } from './nbaMarketSignal'
+import { nbaPosition } from './nbaPosition'
+export { nbaPosition } from './nbaPosition'
 
-export const NBA_SCORE_VERSION = 'nba-opportunity-v2'
+export const NBA_SCORE_VERSION = 'nba-opportunity-market-v3'
 const clamp = (value: number, low = 0, high = 100) => Math.max(low, Math.min(high, value))
 const mean = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 const numeric = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
@@ -8,10 +11,6 @@ const field = (logs: PaintStat[], key: keyof PaintStat) => mean(logs.map(log => 
 const ceiling: Record<PaintMarket, number> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5, double_double: 1, triple_double: 1, points_1q: 35, rebounds_1q: 15, assists_1q: 12 }
 export type NbaScorePart = { key: string; label: string; value: number | null; weight: number }
 export type NbaDvp = { teamId: number; position: string; market: PaintMarket; games: number; minutes: number; per48: number | null; leaguePer48: number | null; allowance: number | null }
-export function nbaPosition(position: string | null | undefined) {
-  const first = position?.toUpperCase().split('-')[0]
-  return first === 'C' ? 'C' : first && /G/.test(first) ? 'G' : first && /F/.test(first) ? 'F' : null
-}
 export function nbaGamePace(board: PaintBoard) {
   if (board.historical) return null
   const teams = [board.game.home_team.id, board.game.visitor_team.id]
@@ -19,7 +18,7 @@ export function nbaGamePace(board: PaintBoard) {
   return values.every((value): value is number => numeric(value) && value > 0) ? mean(values) : null
 }
 /** Descriptive production support, not a win probability or a fitted betting edge. */
-export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null) {
+export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null, marketInput?: NbaMarketInput) {
   const logs = nbaSample(nbaMarketLogs(player, market).filter(log => log.game.date.slice(0, 10) < before), 30)
   const recent = logs.slice(0, 10), prior = logs.slice(10, 30)
   const minutes = mean(recent.map(log => nbaMinutes(log.min)).filter(numeric))
@@ -48,12 +47,22 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
   // Shrink sparse samples toward neutral; missing features remain visible.
   const raw = coverage ? valid.reduce((sum, part) => sum + part.value! * part.weight, 0) / coverage : null
   const marketGames = recent.filter(log => nbaValue(log, market) != null).length
-  const score = marketGames >= 5 && coverage >= .55 && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
+  const baseScore = marketGames >= 5 && coverage >= .55 && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
+  const {score,marketSupport}=nbaContextualScore(baseScore,player.id,market,before,marketInput)
   const historicalTeams = [...new Set(logs.map(log => log.team.id))]
   const year = Number(before.slice(0, 4)), season = Number(before.slice(5, 7)) < 7 ? year - 1 : year
   const previousSeasonTeams = [...new Set(logs.filter(log => log.game.season != null && log.game.season < season).map(log => log.team.id))]
   const priorTeams = previousSeasonTeams.length ? previousSeasonTeams : historicalTeams
-  return { version: NBA_SCORE_VERSION, score, games: logs.length, marketGames, coverage, parts, minutes, production, baseline, pace: pace ?? null, newTeam: priorTeams.length > 0 && !priorTeams.includes(player.team.id), priorTeams }
+  return { version: NBA_SCORE_VERSION, score, baseScore, marketSupport, games: logs.length, marketGames, coverage, parts, minutes, production, baseline, pace: pace ?? null, newTeam: priorTeams.length > 0 && !priorTeams.includes(player.team.id), priorTeams }
+}
+
+/** Shared by board, slate and archival scoring; production remains required. */
+export function nbaContextualScore(baseScore:number|null,playerId:number,market:PaintMarket,before:string,marketInput?:NbaMarketInput){
+  const tip=marketInput?.context?.tipAt
+  const contextDate=tip&&Number.isFinite(Date.parse(tip))?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date(tip)):null
+  const support=nbaMarketSupport(marketInput?.offer.player_id===playerId&&marketInput.offer.prop_type===market&&contextDate===before?marketInput:undefined)
+  const marketSupport=baseScore==null?{...support,adjustment:0}:support
+  return {score:baseScore==null?null:Math.round(clamp(baseScore+marketSupport.adjustment)),marketSupport}
 }
 
 /** A transparent rolling production baseline, evaluated before each next game. */

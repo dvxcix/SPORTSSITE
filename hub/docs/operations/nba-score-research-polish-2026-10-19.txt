@@ -1,0 +1,70 @@
+NBA Score, Slate Edge and research polish — 2026-10-19
+
+Scope and access
+ThePaint remains admin-gated and excluded from member navigation. Existing save,
+post and grading contracts remain intact. No migration or manual collector replay
+is part of this change. Release source is reconciled through GitHub main.
+
+Internal scoring contract
+nba-opportunity-market-v3 preserves the established opportunity/minutes/form/
+stability/matchup/pace score and its minimum sample requirements. One bounded
+0–8 research-priority adjustment may apply to a selected over or milestone quote.
+This is descriptive research context, not a calibrated win probability, demonstrated
+betting profit, or an inference about a bookmaker's intent.
+
+The target's exact same-book contract must lengthen by at least 0.25 implied
+probability points while a mapped related category at that book shortens by at
+least 0.25 points. The related category must have at least 10 more observed Pikkit
+picks; combined category counts must be at least 20. Counts represent categories,
+not dollars or side-specific allocations. Under receives no inferred public boost.
+
+Adjustment = 8 × clamp(min(target lengthening, related shortening)/5)
+ × clamp((related share - .5)/.35) × clamp(combined picks/100)
+ × related picks/(related picks + strongest opposing category's picks).
+Each clamp is 0..1. Round adjustment to 0.1; retain strongest pair only; round and
+clamp final score to 0..100. Additional correlated supporting categories never stack.
+Defensive events/turnovers have no unsupported mappings; quarter markets only pair
+within the same quarter. A production score remains required.
+
+The displayed current price must match the evidence's game/player/book/market/type/
+threshold/side. Verified price observations expire after 15 minutes and public
+observations after 90 minutes. Public evidence cannot postdate the price observation.
+Historical context freezes before tipoff. Future/mismatched/stale evidence contributes
+nothing. A warm shared cache and outer Slate cache cannot prolong a boost.
+
+Operational safeguards
+market-attempt:v3 receipts include successful player-quote fingerprints and observed
+times. A successful game-line capture alone cannot freshen an older player-price tape.
+Public receipts similarly bind to the selected capture fingerprint. Shared context
+loads once per game, without provider reads or database calls per player/cell.
+Research archives use the same formula and exact reference; polling-only verification
+timestamps are excluded from deduplication identity while provenance remains stored.
+Defense failures preserve production-only scores. Customer responses and browser
+components omit scoring weights, model reports, error metrics and training details.
+
+Customer experience
+ThePaint is the central player/odds/ladder/Market Story board. Deeper workspaces
+remain accessible within it. Player trends consolidates role/minutes and game tracking.
+Validation Lab is removed; old view=models links return to the board. Exact opposing
+move links preserve player, market, sportsbook, over side, threshold and type, open
+the corresponding ladder mode, highlight the quote and survive reload.
+Score/Slate/Public/odds/tracking tables support sorting with missing values last.
+Mobile filters retain readable values at 320px; hidden table labels no longer cause
+page overflow. Player/team identity, logos, heatmaps and +MM/-MM remain available.
+
+Verification before release
+76/76 NBA regressions, including 14 new market-context cases; 134/134 production
+source smoke tests. TypeScript and targeted ESLint pass.
+Browser preview checks: desktop Score sorting; 390px exact paired quote -> Assists
+O5.5 FanDuel Alt O/U -> reload; 320px board controls and research containment.
+Positive signal UI fixture explicitly labels its two synthetic OPEN prices and
+synthetic public counts. It is not production evidence and is not shipped.
+Real read-only capture audit at 12:40 UTC found 53/75/57 eligible exact offers in
+games 21717855/21717856/21717857, including alternate thresholds. Example: Towns,
+DraftKings threes O1.5 +128 to +140; assists O4.5 -147 to -154; Pikkit 75 vs 471.
+These are timestamped observations; subsequent live quotes may change eligibility.
+
+Local detailed evidence: work/the-paint/research-polish-tests.log,
+research-polish-production-tests.log, nba-market-signal-live-input.json and
+nba-market-signal-live-result.json. Production deployment verification is recorded
+in the companion release receipt after the GitHub-triggered build is ready.

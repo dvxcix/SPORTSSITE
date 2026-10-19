@@ -2,13 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
 import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
+import { getNbaMarketContext } from '@/lib/nbaMarketSignalData'
+import { nbaMarketSupportView } from '@/lib/nbaMarketSignal'
+import { nbaGamePace,nbaPosition,nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
+import { nbaReference,nbaPeriod,PAINT_MARKETS,type PaintMarket } from '@/lib/nbaPaint'
+import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
 export const maxDuration = 60
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
   const id = request.nextUrl.searchParams.get('game')
-  if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Invalid matchup' }, { status: 400 })
+  const market=request.nextUrl.searchParams.get('market')??'points',book=request.nextUrl.searchParams.get('book')??'all',side=request.nextUrl.searchParams.get('side')??'over'
+  if (!id || !/^\d{1,10}$/.test(id) || !PAINT_MARKETS.some(item=>item.key===market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over','under'].includes(side)) return NextResponse.json({ error: 'Invalid matchup' }, { status: 400 })
   try {
     const board = await getPaintBoard(await getPaintGame(Number(id)))
-    return NextResponse.json(await getNbaDefenseContext(board.sampleSeason, board.game.date), { headers: { 'Cache-Control': 'private, no-store' } })
+    let defenseTimer:ReturnType<typeof setTimeout>|undefined
+    const defenseLoad=Promise.race([
+      getNbaDefenseContext(board.sampleSeason,board.game.date),
+      new Promise<never>((_resolve,reject)=>{defenseTimer=setTimeout(()=>reject(new Error('Defense context unavailable')),18_000)}),
+    ]).catch(()=>({ready:false,season:board.sampleSeason,before:board.game.date,teams:board.teams,profiles:[],games:0,rows:0,fetchedAt:null,stale:false})).finally(()=>{if(defenseTimer)clearTimeout(defenseTimer)})
+    const [defense,marketContext]=await Promise.all([defenseLoad,getNbaMarketContext(board.game)])
+    const ranks=nbaMarketRanks(board.players,market as PaintMarket,book)
+    const scores=board.players.map(player=>{
+      const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id
+      const matchup=defense.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market)
+      const offer=nbaReference(player.props,market,book,side as 'over'|'under')
+      const score=nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined)
+      const mm=board.statsComplete&&(!nbaPeriod(market)||board.periodStatsComplete!==false)?ranks.get(player.id)?.mm??null:null
+      return {playerId:player.id,score:score.score,offer:offer??null,mm,minutes:score.minutes,production:score.production,newTeam:score.newTeam,marketSupport:nbaMarketSupportView(score.marketSupport)}
+    })
+    return NextResponse.json({...defense,scores,market,book,side}, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Defense research could not load. Try again shortly.' }, { status: 503 }) }
 }
