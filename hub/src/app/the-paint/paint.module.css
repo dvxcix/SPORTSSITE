@@ -130,6 +130,7 @@
 .researchScroll:focus-visible,.oddsScroll:focus-visible,.tableScroll:focus-visible{outline:2px solid #b4ff4d;outline-offset:-2px;border-radius:6px}
 .drawerTop{position:sticky;top:0;z-index:6;background:#0c121bf5;padding-bottom:10px;border-bottom:1px solid #273440;flex-shrink:0}
 .drawerTop>button{min-width:44px;min-height:44px;border:1px solid #314252;background:#14212c}
+.drawerTop>span>a{display:inline-flex;align-items:center;gap:8px;min-height:44px}
 .drawerFooter .pickActions>button{min-width:44px;min-height:44px;background:#203127;border-color:#526d43;color:#d6efbe}
 .drawerFooter .pickActions>button.saved{background:#b4ff4d;border-color:#b4ff4d;color:#17210c}
 .playerSample>button{min-height:36px}
@@ -137,6 +138,7 @@
   .filters>select,.extraFilters select,.panelMarket select,.drawer .chartFilters select{min-height:44px}
   .drawer .segment button,.panelTabs button,.playerSample>button,.logTable th button{min-height:44px}
   .drawer .segment button{min-width:44px}
+  .logTable th button{min-width:44px}
   .mobilePlayer .iconButton,.boardRowActions .pickActions button,.compareCheck,.checked,.openPlayer{min-width:44px;min-height:44px}
   .search button{min-width:44px;min-height:44px;margin-right:-10px;justify-content:center}
   .offer .pickActions>button{min-width:44px;min-height:44px}

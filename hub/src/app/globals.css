@@ -931,6 +931,12 @@ img { max-width: 100%; }
   .ss-mobile-scroll-clearance { padding-bottom: var(--mobile-dock-clearance) !important; scroll-padding-bottom: var(--mobile-dock-clearance); }
 }
 
+/* Offscreen navigation must also leave keyboard and assistive-technology navigation. */
+@media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
+  .ss-site-sidebar.-translate-x-full { visibility: hidden; pointer-events: none; }
+  .ss-site-sidebar.translate-x-0 { visibility: visible; }
+}
+
 /* An unfolded phone can expose a tablet-width CSS viewport. Treat touch-only
    foldables as mobile through 1024px so their drawer, bottom dock, safe-area
    clearance, and touch toolbars do not silently switch to desktop behavior. */

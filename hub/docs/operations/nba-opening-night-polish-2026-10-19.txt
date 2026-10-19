@@ -44,7 +44,7 @@ Monitoring
 - Monitoring uses existing cloud collectors; no laptop collector was created.
 
 Validation before release
-- NBA suite160/160, production source suite134/134, NFL odds/grading10/10.
+- NBA suite165/165, production source suite134/134, NFL odds/grading10/10.
 - Whole-project TypeScript and targeted ESLint pass. Includes actual React DOM
   tests for exact quote drilldowns, retry/error states and modal/search keyboard
   behavior, plus bounded Pikkit recovery/auth/deadline tests.
@@ -52,3 +52,15 @@ Validation before release
   dispatcher URL without stream=1; left outside this NBA scope.
 - Future-game settlement cannot be certified before final official data arrives.
   Live responsive checks and deployment receipt are recorded in work/the-paint.
+
+Live QA follow-up
+- Exact milestone save/review/removal passed on mobile; existing two test picks
+  retained. Profile discovery, shot selection/filtering and book-exact drilldown passed.
+- Removed the unrelated main-line footer while browsing ladders. Switching ladder
+  types clears obsolete exact-quote highlights. Best-price badges require competing
+  books at the same line. Normal shot coverage no longer adds validation text.
+- NBA route searches prioritize NBA entities and display honest pending states.
+- Closed mobile/foldable sidebar now leaves keyboard/assistive navigation via
+  a breakpoint-scoped visibility rule; desktop visibility stays intact.
+- Mobile team links and log-sort targets meet44px; live responsive verification
+  covers360px,390px and1440px. Final receipt records actual results.

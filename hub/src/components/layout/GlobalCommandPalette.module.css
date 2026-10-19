@@ -10,5 +10,7 @@
 .icon{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-3);color:var(--text-3)}.item[data-active=true] .icon{border-color:color-mix(in srgb,var(--accent) 30%,var(--border));background:var(--accent-dim);color:var(--accent)}
 .copy{min-width:0}.copy strong,.copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.copy strong{color:inherit;font-size:12px;font-weight:850}.copy span{margin-top:2px;color:var(--text-4);font-size:9px}.arrow{color:var(--text-4)}
 .empty{display:grid;min-height:190px;place-content:center;gap:8px;color:var(--text-3);text-align:center}.empty svg{margin:auto;color:var(--text-4)}.empty strong{color:var(--text-2);font-size:13px}.empty span{font-size:10px}
+.searching{padding:10px 18px 0;color:var(--text-3);font-size:12px}
 .footer{display:flex;align-items:center;gap:13px;padding:10px 16px;border-top:1px solid var(--hairline);background:rgba(0,0,0,.12);color:var(--text-4);font-size:9px}.footer span{display:flex;align-items:center;gap:5px}.footer kbd{display:grid;min-width:20px;height:20px;place-items:center;border:1px solid var(--border);border-radius:6px;background:var(--surface-3);font:800 8px var(--font-mono,monospace)}
-@media(max-width:640px){.header{padding:14px}.body{max-height:65dvh}.footer{display:none}.item{min-height:52px}}
+@media(max-width:640px){.header{padding:14px}.input{font-size:16px}button.key{flex:0 0 44px;min-width:44px;height:44px}.body{max-height:65dvh}.footer{display:none}.item{min-height:52px}}
+@media(prefers-reduced-motion:reduce){.item{transition:none}.item:hover,.item[data-active=true]{transform:none}.body{scroll-behavior:auto}}

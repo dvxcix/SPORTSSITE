@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { hasNbaAccess, isNbaToolHref } from '@/lib/nbaAccessPolicy'
@@ -50,6 +50,7 @@ type NbaResults = { players?: NbaSearchPlayer[]; teams?: NbaSearchTeam[] }
 
 export function GlobalCommandPalette() {
   const router = useRouter()
+  const pathname = usePathname()
   const { allowed: nflAccess } = useNflAccess()
   const { profile } = useAuth()
   const nbaAccess = hasNbaAccess(profile?.account_type)
@@ -94,7 +95,14 @@ export function GlobalCommandPalette() {
     return destinations.filter(item => (!isNflToolHref(item.href) || nflAccess) && (!isNbaToolHref(item.href) || nbaAccess)
       && (!value || `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)))
   }, [query, nflAccess, nbaAccess])
-  const items = useMemo(() => [...local, ...(sports.query === query.trim() ? sports.items.filter(item => nbaAccess || !isNbaToolHref(item.href)) : [])], [local, sports, query, nbaAccess])
+  const searchPending = query.trim().length >= 2 && sports.query !== query.trim()
+  const items = useMemo(() => {
+    const results = sports.query === query.trim() ? sports.items.filter(item => nbaAccess || !isNbaToolHref(item.href)) : []
+    const ordered = nbaAccess && isNbaToolHref(pathname ?? '')
+      ? [...results.filter(item => isNbaToolHref(item.href)), ...results.filter(item => !isNbaToolHref(item.href))]
+      : results
+    return [...local, ...ordered]
+  }, [local, sports, query, nbaAccess, pathname])
   const activeIndex = Math.min(active, Math.max(0, items.length - 1))
   useEffect(() => {
     if (open) resultsRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
@@ -109,7 +117,8 @@ export function GlobalCommandPalette() {
       if (event.key === 'Enter') { event.preventDefault(); if (items[activeIndex]) navigate(items[activeIndex].href); else if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`) }
       if (event.key === 'Escape') close()
     }} placeholder="Search people, players, teams, tools…" aria-label="Search SlipSurge" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={resultsId} aria-activedescendant={items.length ? `${resultsId}-${items[activeIndex].id}` : undefined} autoComplete="off"/>{query ? <button type="button" className={styles.key} onClick={() => { setQuery(''); setActive(0) }} aria-label="Clear search"><X size={12}/></button> : <kbd className={styles.key}>ESC</kbd>}</div>
-    <div ref={resultsRef} id={resultsId} className={styles.body} role="listbox" aria-label="Search results">{items.length ? <div className={styles.section} role="group" aria-label={query ? 'Results' : 'Navigate'}><span className={styles.label} aria-hidden="true">{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} id={`${resultsId}-${item.id}`} type="button" tabIndex={-1} className={styles.item} data-active={activeIndex === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={activeIndex === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span><ChevronRight className={styles.arrow} size={15}/></button> })}</div> : <div className={styles.empty}><Search size={24}/><strong>No matching results</strong><span>Press Enter to search the full network.</span></div>}</div>
+    {searchPending && items.length > 0 && <div className={styles.searching} role="status">Searching players and teams…</div>}
+    <div ref={resultsRef} id={resultsId} className={styles.body} role="listbox" aria-label="Search results" aria-busy={searchPending}>{items.length ? <div className={styles.section} role="group" aria-label={query ? 'Results' : 'Navigate'}><span className={styles.label} aria-hidden="true">{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} id={`${resultsId}-${item.id}`} type="button" tabIndex={-1} className={styles.item} data-active={activeIndex === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={activeIndex === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span><ChevronRight className={styles.arrow} size={15}/></button> })}</div> : <div className={styles.empty} role="status"><Search size={24}/><strong>{searchPending ? 'Searching…' : 'No matching results'}</strong><span>{searchPending ? 'Finding players and teams.' : 'Press Enter to search the full network.'}</span></div>}</div>
     <div className={styles.footer}><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Open</span><span><kbd>ESC</kbd> Close</span></div>
   </div></Modal>
 }

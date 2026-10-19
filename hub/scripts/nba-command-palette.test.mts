@@ -10,12 +10,12 @@ const { JSDOM } = require('jsdom')
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://www.slipsurge.com' })
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement, IS_REACT_ACT_ENVIRONMENT: true })
 const { createRoot } = await import('react-dom/client')
-const state = { role: 'user', pushed: [] as string[] }
+const state = { role: 'user', pathname: '/feed', pushed: [] as string[] }
 const scrolled: string[] = []
 dom.window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this.id) }
 ;(globalThis as typeof globalThis & { nbaCommandFixture: typeof state }).nbaCommandFixture = state
 const stubs: Record<string, string> = {
-  'next/navigation': `export const useRouter=()=>({push(href){globalThis.nbaCommandFixture.pushed.push(href)}})`,
+  'next/navigation': `export const useRouter=()=>({push(href){globalThis.nbaCommandFixture.pushed.push(href)}});export const usePathname=()=>globalThis.nbaCommandFixture.pathname`,
   '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaCommandFixture.role}})`,
   '@/lib/useNflAccess': `export const useNflAccess=()=>({allowed:true})`,
   '@/components/ui/Modal': `import React from 'react';export const Modal=({children})=><div role="dialog">{children}</div>`,
@@ -26,15 +26,15 @@ new Function('require', 'module', 'exports', bundled.outputFiles.find(file => fi
 
 const nbaResult = (name = 'Jayson Tatum') => ({ players: [{ id: 434, name, position: 'F', teamId: 2, teamName: 'Boston Celtics', headshot: 'https://example.test/tatum.png', teamLogo: 'https://example.test/boston.png' }], teams: [{ id: 2, name: 'Boston Celtics', abbr: 'BOS', logo: 'https://example.test/boston.png' }] })
 const originalFetch = globalThis.fetch
-async function harness(role: string, nba: (query: string) => Promise<unknown> = async () => nbaResult()) {
-  state.role = role; state.pushed = []
+async function harness(role: string, nba: (query: string) => Promise<unknown> = async () => nbaResult(), options: { pathname?: string; emptyOtherSports?: boolean } = {}) {
+  state.role = role; state.pathname = options.pathname ?? '/feed'; state.pushed = []
   const requests: { path: string; signal: AbortSignal | null | undefined }[] = []
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input), 'https://www.slipsurge.com')
     requests.push({ path: url.pathname, signal: init?.signal })
     if (url.pathname === '/api/search/nba') return Response.json(await nba(url.searchParams.get('q') ?? ''))
-    if (url.pathname === '/api/search/sports') return Response.json({ players: [{ mlbId: 99, name: 'MLB Result', teamName: 'MLB team' }] })
-    if (url.pathname === '/api/search/nfl') return Response.json({ players: [{ gsis_id: 'nfl-id', display_name: 'NFL Result', latest_team: 'BAL' }] })
+    if (url.pathname === '/api/search/sports') return Response.json({ players: options.emptyOtherSports ? [] : [{ mlbId: 99, name: 'MLB Result', teamName: 'MLB team' }] })
+    if (url.pathname === '/api/search/nfl') return Response.json({ players: options.emptyOtherSports ? [] : [{ gsis_id: 'nfl-id', display_name: 'NFL Result', latest_team: 'BAL' }] })
     throw new Error('Unexpected request ' + url)
   }
   const host = document.createElement('div'); document.body.append(host)
@@ -118,5 +118,54 @@ test('keyboard search announces and scrolls the active result and opens the sele
     assert.equal(scrolled.at(-1), player.id)
     await act(async () => input.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
     assert.deepEqual(state.pushed, ['/nba/players/434'])
+  } finally { await ui.close() }
+})
+
+test('search remains pending through debounce and a delayed response, then shows a genuine empty result', async () => {
+  let resolveSearch!: (value: unknown) => void
+  const response = new Promise(resolve => { resolveSearch = resolve })
+  const ui = await harness('admin', async () => response, { emptyOtherSports: true })
+  try {
+    await ui.open(); await ui.type('unmatched')
+    assert.equal(ui.requests.length, 0)
+    assert.equal(ui.host.querySelector('[role="listbox"]')?.getAttribute('aria-busy'), 'true')
+    assert.equal(ui.host.querySelector('[role="status"] strong')?.textContent, 'Searching…')
+    assert.equal(ui.host.textContent?.includes('No matching results'), false)
+    await ui.flush()
+    assert.equal(ui.requests.length, 3)
+    assert.equal(ui.host.textContent?.includes('No matching results'), false)
+    await act(async () => { resolveSearch({ players: [], teams: [] }); await response })
+    assert.equal(ui.host.querySelector('[role="listbox"]')?.getAttribute('aria-busy'), 'false')
+    assert.equal(ui.host.querySelector('[role="status"] strong')?.textContent, 'No matching results')
+    await ui.type('u')
+    assert.equal(ui.host.querySelector('[role="listbox"]')?.getAttribute('aria-busy'), 'false')
+    assert.equal(ui.host.textContent?.includes('Searching'), false)
+  } finally { await ui.close() }
+})
+
+test('NBA routes prioritize NBA players and teams while other routes retain the existing order', async () => {
+  const ui = await harness('admin', async () => nbaResult(), { pathname: '/the-paint' })
+  const labels = () => [...ui.host.querySelectorAll('[role="option"] strong')].map(node => node.textContent)
+  try {
+    await ui.open(); await ui.type('tatum'); await ui.flush()
+    const nbaFirst = ['Jayson Tatum', 'Boston Celtics', 'MLB Result', 'NFL Result']
+    assert.deepEqual(labels(), nbaFirst)
+    for (const pathname of ['/nba/players/434', '/nba/teams/2']) {
+      state.pathname = pathname; await ui.render()
+      assert.deepEqual(labels(), nbaFirst)
+    }
+    state.pathname = '/the-sideline'; await ui.render()
+    assert.deepEqual(labels(), ['MLB Result', 'NFL Result', 'Jayson Tatum', 'Boston Celtics'])
+    assert.equal(ui.requests.length, 3, 'route prioritization reuses current results')
+  } finally { await ui.close() }
+})
+
+test('being on an NBA route never grants member search access to NBA', async () => {
+  const ui = await harness('user', async () => nbaResult(), { pathname: '/nba/players/434' })
+  try {
+    await ui.open(); await ui.type('tatum'); await ui.flush()
+    assert.deepEqual([...ui.host.querySelectorAll('[role="option"] strong')].map(node => node.textContent), ['MLB Result', 'NFL Result'])
+    assert.equal(ui.requests.some(request => request.path === '/api/search/nba'), false)
+    assert.equal(ui.host.textContent?.includes('Jayson Tatum'), false)
   } finally { await ui.close() }
 })

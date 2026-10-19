@@ -45,10 +45,12 @@ const main: PaintProp = { id: 1, game_id: 123, player_id: 434, vendor: 'fanduel'
 const alt: PaintProp = { ...main, id: 2, vendor: 'draftkings', line_value: '24.5', market: { type: 'over_under', over_odds: 210, under_odds: -280 } }
 const milestone: PaintProp = { ...main, id: 3, vendor: 'caesars', line_value: '30', market: { type: 'milestone', odds: 500 } }
 const quarterMilestone: PaintProp = { ...milestone, id: 4, prop_type: 'points_1q', line_value: '5' }
+const sameBookMilestone: PaintProp = { ...milestone, id: 5, vendor: main.vendor, line_value: main.line_value }
+const tiedMilestone: PaintProp = { ...sameBookMilestone, id: 6, vendor: 'draftkings' }
 const board: PaintBoard = {
   game: { id: 123, date: '2026-10-20', season: 2026, status: 'Scheduled', status_state: 'scheduled', datetime: '2026-10-20T23:00:00Z', period: 0, home_team: team, visitor_team: { ...team, id: 9, name: 'Pistons', full_name: 'Detroit Pistons' }, home_team_score: 0, visitor_team_score: 0 },
   sampleSeason: 2025, historical: false, sampleEnd: '2026-04-13', statsComplete: true, fetchedAt: '2026-10-19T14:00:00Z', issues: [],
-  players: [{ id: 434, first_name: 'Test', last_name: 'Player', position: 'G', team, headshot: null, injury: null, average: { pts: 22, min: 30 }, props: [main, alt, milestone, quarterMilestone], logs: [21, 22, 23, 24, 20].map((pts, i) => ({ id: i + 10, pts, reb: 5, ast: 4, fg3m: 2, stl: 1, blk: 0, turnover: 1, fga: 14, fgm: 8, fg3a: 6, fta: 5, ftm: 3, min: '30:00', player: { id: 434 }, team, game: { id: i + 10, date: `2026-04-${String(i + 1).padStart(2, '0')}`, status: 'Final', season: 2025, home_team_id: 2, visitor_team_id: 9 } } satisfies PaintStat)) }],
+  players: [{ id: 434, first_name: 'Test', last_name: 'Player', position: 'G', team, headshot: null, injury: null, average: { pts: 22, min: 30 }, props: [main, alt, milestone, quarterMilestone, sameBookMilestone, tiedMilestone], logs: [21, 22, 23, 24, 20].map((pts, i) => ({ id: i + 10, pts, reb: 5, ast: 4, fg3m: 2, stl: 1, blk: 0, turnover: 1, fga: 14, fgm: 8, fg3a: 6, fta: 5, ftm: 3, min: '30:00', player: { id: 434 }, team, game: { id: i + 10, date: `2026-04-${String(i + 1).padStart(2, '0')}`, status: 'Final', season: 2025, home_team_id: 2, visitor_team_id: 9 } } satisfies PaintStat)) }],
 }
 const originalFetch = globalThis.fetch
 async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '') {
@@ -70,7 +72,8 @@ function assertSelected(host: Element, quote: PaintProp, side: string) {
   const dialog = host.querySelector('[role="dialog"]')!
   assert.ok(dialog)
   assert.equal((dialog.querySelector('[aria-label="Player sportsbook"]') as HTMLSelectElement).value, quote.vendor)
-  const pick = dialog.querySelector('footer [data-testid="pick"]')!
+  const pick = [...dialog.querySelectorAll('[data-testid="pick"]')].find(element => element.getAttribute('data-book') === quote.vendor && element.getAttribute('data-type') === quote.market.type && element.getAttribute('data-line') === quote.line_value)!
+  assert.ok(pick)
   assert.equal(pick.getAttribute('data-book'), quote.vendor); assert.equal(pick.getAttribute('data-type'), quote.market.type)
   assert.equal(pick.getAttribute('data-line'), quote.line_value); assert.equal(pick.getAttribute('data-side'), side)
   assert.equal(new URL(window.location.href).searchParams.get('line'), quote.line_value)
@@ -85,6 +88,7 @@ test('sportsbook quote drilldown keeps exact main, alt, milestone and Under cont
       assert.ok(button, `${quote.vendor} ${side} ${target}: ${[...ui.host.querySelectorAll('button[aria-label]')].map(button => button.getAttribute('aria-label')).join('; ')}`)
       await ui.click(button)
       assertSelected(ui.host, quote, side)
+      assert.equal(ui.host.querySelector('[role="dialog"] footer'), null)
       const active = [...ui.host.querySelectorAll('[role="dialog"] button[aria-pressed="true"]')].map(button => button.textContent)
       assert.ok(active.includes(quote.market.type === 'milestone' ? 'Milestones' : 'Alt O/U'))
     } finally { await ui.close() }
@@ -98,6 +102,47 @@ test('ordinary player opens retain the general all-book ladder without a stale s
     const dialog = ui.host.querySelector('[role="dialog"]')!
     assert.equal((dialog.querySelector('[aria-label="Player sportsbook"]') as HTMLSelectElement).value, 'all')
     assert.equal(new URL(window.location.href).searchParams.has('line'), false)
+    assert.equal(dialog.querySelector('footer'), null)
+    assert.ok([...dialog.querySelectorAll('[data-testid="pick"]')].every(pick => pick.getAttribute('data-type') === 'milestone'))
+  } finally { await ui.close() }
+})
+
+test('switching ladder contract type clears the selected URL quote and keeps only exact rung save actions', async () => {
+  const ui = await harness('odds')
+  try {
+    await ui.click(ui.byLabel('Analyze Test Player, O 20, fanduel'))
+    for (const [label, type] of [['Milestones', 'milestone'], ['Alt O/U', 'over_under']] as const) {
+      const dialog = ui.host.querySelector('[role="dialog"]')!
+      await ui.click([...dialog.querySelectorAll('button')].find(button => button.textContent === label))
+      assert.equal(new URL(window.location.href).searchParams.has('line'), false)
+      assert.equal(new URL(window.location.href).searchParams.has('type'), false)
+      assert.equal([...dialog.querySelectorAll('button')].find(button => button.textContent === label)?.getAttribute('aria-pressed'), 'true')
+      assert.equal(dialog.querySelector('footer'), null)
+      const picks = [...dialog.querySelectorAll('[data-testid="pick"]')]
+      assert.equal(picks.length, 1)
+      assert.equal(picks[0].getAttribute('data-book'), main.vendor)
+      assert.equal(picks[0].getAttribute('data-line'), main.line_value)
+      assert.equal(picks[0].getAttribute('data-type'), type)
+      assert.equal(dialog.querySelector('[data-best="true"]'), null)
+      assert.doesNotMatch(dialog.textContent ?? '', /Best price/)
+    }
+    const dialog = ui.host.querySelector('[role="dialog"]')!
+    await ui.click([...dialog.querySelectorAll('button')].find(button => button.textContent === 'Overview'))
+    assert.equal(dialog.querySelector('footer [data-testid="pick"]')?.getAttribute('data-type'), 'over_under')
+  } finally { await ui.close() }
+})
+
+test('ladder best-price badges require competing books at the exact line and retain tied prices', async () => {
+  const ui = await harness('odds')
+  try {
+    await ui.click([...ui.host.querySelectorAll('tbody th button')].find(button => button.textContent?.includes('Test Player')))
+    const rows = [...ui.host.querySelectorAll('[role="dialog"] tbody tr')]
+    const competing = rows.find(row => row.querySelector('th')?.textContent === '20+')!
+    const unique = rows.find(row => row.querySelector('th')?.textContent === '30+')!
+    assert.equal(competing.querySelectorAll('[data-best="true"]').length, 2)
+    assert.equal((competing.textContent?.match(/Best price/g) ?? []).length, 2)
+    assert.equal(unique.querySelectorAll('[data-best="true"]').length, 0)
+    assert.doesNotMatch(unique.textContent ?? '', /Best price/)
   } finally { await ui.close() }
 })
 
