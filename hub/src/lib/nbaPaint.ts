@@ -26,6 +26,12 @@ export const PAINT_MARKETS = [
   { key: 'assists_1q', label: 'First-quarter assists', short: 'Q1 AST', stats: ['ast'] },
 ] as const
 export type PaintMarket = typeof PAINT_MARKETS[number]['key']
+/** Keep complete raw facts in storage; send only research fields to each browser. */
+export function nbaCompactStat(row: PaintStat): PaintStat {
+  const { id, period, min, pts, reb, ast, fg3m, stl, blk, turnover, fga, fgm, fg3a, fta, ftm } = row
+  const { id: gameId, date, datetime, status, status_state, home_team_id, visitor_team_id, season, postseason } = row.game
+  return { id, ...(period == null ? {} : { period }), min, pts, reb, ast, fg3m, stl, blk, turnover, fga, fgm, fg3a, fta, ftm, player: { id: row.player.id, position: row.player.position }, team: { id: row.team.id }, game: { id: gameId, date, datetime, status, status_state, home_team_id, visitor_team_id, season, postseason } }
+}
 export const nbaPeriod = (market: string) => market.endsWith('_1q') ? 1 : 0
 export const nbaBinary = (market: string) => market === 'double_double' || market === 'triple_double'
 export const nbaMarketLogs = (player: PaintPlayer, market: string) => nbaPeriod(market) ? player.periodLogs ?? [] : player.logs

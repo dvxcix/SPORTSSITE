@@ -13,8 +13,10 @@ export async function getNbaDefenseContext(season: number, before: string, allow
     if (allowFallback && season >= 2025) { const previous = await getNbaDefenseContext(season - 1, before, false); if (previous.ready) return previous }
     return { ready: false, season, before, profiles: [], games: 0, rows: state?.rows_seen ?? 0, fetchedAt: state?.updated_at ?? null, stale: false }
   }
+  const { data: periodState, error: periodError } = await admin.from('nba_ingestion_state').select('complete').eq('key', `period1:${season}`).maybeSingle()
+  if (periodError) throw new Error('NBA quarter coverage unavailable')
   try {
-  const cached = await nbaSharedCache(`dvp:v3:${season}:${before}`, 3600, 3600, async () => {
+  const cached = await nbaSharedCache(`dvp:v4:${season}:${before}:${periodState?.complete===true}`, 3600, 3600, async () => {
     const { data: games, error } = await admin.from('nba_games').select('payload').eq('season', season).eq('postseason', false).lt('game_date', before).order('game_date', { ascending: false }).limit(1000)
     if (error) throw new Error('NBA defensive game coverage unavailable')
     const counts = new Map<number, number>(), ids = new Set<number>()
@@ -30,8 +32,8 @@ export async function getNbaDefenseContext(season: number, before: string, allow
     const list = [...ids], stats: PaintStat[] = []
     for (let offset = 0; offset < list.length; offset += 60) {
       const batch = list.slice(offset, offset + 60)
-      for (let page = 0; page < 5; page++) {
-        const { data, error: readError } = await admin.from('nba_player_game_stats').select('payload').in('game_id', batch).order('id').range(page * 1000, page * 1000 + 999)
+      for(const table of ['nba_player_game_stats',...(periodState?.complete?['nba_player_period_stats']:[])]) for (let page = 0; page < 5; page++) {
+        const { data, error: readError } = await admin.from(table).select('payload').in('game_id', batch).order('id').range(page * 1000, page * 1000 + 999)
         if (readError) throw new Error('NBA defensive statistics unavailable')
         stats.push(...(data ?? []).map(row => row.payload as PaintStat))
         if ((data?.length ?? 0) < 1000) break

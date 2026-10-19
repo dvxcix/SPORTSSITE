@@ -77,7 +77,7 @@ export function nbaWalkForward(logs: PaintStat[], market: PaintMarket) {
 /** Allowance is production per 48 position-minutes, shrunk toward the league mean. */
 export function nbaDefenseProfiles(stats: PaintStat[], markets: readonly PaintMarket[]) {
   const groups = new Map<string, { teamId: number; position: string; totals: Map<PaintMarket, { value: number; minutes: number; games: Set<number> }> }>()
-  for (const log of [...new Map(stats.map(row => [row.id, row])).values()]) {
+  for (const log of [...new Map(stats.map(row => [`${row.period??0}:${row.id}`, row])).values()]) {
     const minutes = nbaMinutes(log.min), position = nbaPosition(log.player.position)
     if (minutes == null || minutes <= 0 || !position || log.game.postseason === true || !['Final', 'final'].includes(log.game.status_state ?? log.game.status)) continue
     const opponent = log.team.id === log.game.home_team_id ? log.game.visitor_team_id : log.team.id === log.game.visitor_team_id ? log.game.home_team_id : null

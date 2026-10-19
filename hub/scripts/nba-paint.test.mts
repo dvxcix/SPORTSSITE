@@ -511,3 +511,21 @@ test('quarter and binary markets never substitute full-game totals or season ave
  const q={...dd,prop_type:'points_1q',line_value:'6'};assert.equal(nbaTarget(q),'6+');assert.equal(nbaHitRate([quarter],'points_1q',6,'over',true).rate,100)
  const player={logs:[full],periodLogs:[quarter]} as PaintPlayer;assert.equal(nbaMarketLogs(player,'points_1q')[0],quarter);assert.equal(nbaMarketLogs(player,'points')[0],full)
 })
+
+test('quarter provider failure cannot block unrelated full-game settlement',async()=>{
+ const pending=[{id:'full',game_pk:'123',player_id:'bdl:434',pick_type:'points',numeric_line:20,market_side:'over'},{id:'quarter',game_pk:'123',player_id:'bdl:434',pick_type:'points_1q',numeric_line:6,market_side:'milestone'}],writes:string[]=[],periods:number[]=[]
+ const chain={select:()=>chain,eq:()=>chain,not:()=>chain,lte:()=>chain,order:()=>chain,limit:async()=>({data:pending,error:null})}
+ const settlement=await compiled('../src/lib/nbaSettlement.ts',{'server-only':{},'./nbaPickGrading':{gradeNbaPick},'./nbaPaint':{nbaPeriod,nbaToday:()=> '2099-10-20'},'./nbaPaintData':{getPaintGame:async()=>({status_state:'final'}),getPaintFinalStats:async(_id:number,period:number)=>{periods.push(period);if(period===1)throw new Error('unavailable');return{complete:true,rows:[stat(21)]}}}})
+ const result=await (settlement.settleNbaPicks as (admin:unknown)=>Promise<{graded:number;skipped:number}>)({from:()=>chain,rpc:async(_name:string,args:{p_pick_id:string})=>{writes.push(args.p_pick_id);return{data:true,error:null}}})
+ assert.deepEqual(periods,[0,1]);assert.deepEqual(writes,['full']);assert.equal(result.graded,1);assert.equal(result.skipped,1)
+})
+test('quarter and event selections revalidate exact books, targets and canonical labels before posting',async()=>{
+ const pure=await import('../src/lib/nbaPaint.ts')
+ for(const market of ['double_double','triple_double','points_1q','rebounds_1q','assists_1q']){
+  const quote={...offer,prop_type:market,line_value:market.endsWith('_1q')?'6':'.5',market:{type:'milestone' as const,odds:140}}
+  const selection=parseNbaSelection(nbaSelectionKey(434,quote,'over'))!;assert.equal(selection.prop_key,market)
+  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaPaintData':{getPaintGame:async()=>({id:123,datetime:'2099-10-20T20:00:00Z',date:'2099-10-20',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}),getPaintProps:async()=>[quote],getPaintIdentity:async()=>({first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}})}})
+  const leg={...selection,player_name:'Test',team:'OLD',game_pk:'123',game_date:'2099-10-20',prop_label:'untrusted',book:'fanduel',odds:140}
+  assert.equal(await (validator.validatePaintPickLegs as (legs:unknown[])=>Promise<unknown>)([leg]),null);assert.equal(leg.player_name,'Canonical Player');assert.match(leg.prop_label,market.endsWith('_1q')?/^6\+ First-quarter/:/^Yes /)
+ }
+})

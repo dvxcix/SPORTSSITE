@@ -1,6 +1,6 @@
 import 'server-only'
 import { bdlHeaders } from '@/lib/balldontlie'
-import { nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
+import { nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
 import { nbaSharedCache } from './nbaSharedCache'
 
@@ -107,7 +107,7 @@ export async function getPaintProfile(player: number, season: number) {
   return { shooting: result[0].status === 'fulfilled' ? result[0].value.data[0]?.stats ?? null : null, advanced: result[1].status === 'fulfilled' ? result[1].value.data[0]?.stats ?? null : null }
 }
 export async function getPaintBoard(game: PaintGame): Promise<PaintBoard> {
-  const cached = await nbaSharedCache(`board:v3:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
+  const cached = await nbaSharedCache(`board:v4:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game))
   return { ...cached.value, game, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Refresh delayed; showing last captured prices and research'] : [])] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
@@ -158,10 +158,10 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
     const currentLogs = stats.rows.filter(row => valid(row, sampleSeason) && row.game.date.slice(0, 10) <= sampleEnd)
     const priorLogs = nbaSample(currentLogs, 20).length < 20 ? baseline.rows.filter(row => valid(row, sampleSeason - 1) && row.game.date.slice(0, 10) <= `${sampleSeason}-07-01`) : []
-    const logs = nbaSample([...currentLogs, ...priorLogs], 40)
+    const logs = nbaSample([...currentLogs, ...priorLogs], 40).map(nbaCompactStat)
     const currentQuarters = quarterStats.rows.filter(row => valid(row,sampleSeason) && row.game.date.slice(0,10)<=sampleEnd)
     const priorQuarters = nbaSample(currentQuarters,20).length<20 ? quarterBaseline.rows.filter(row=>valid(row,sampleSeason-1)) : []
-    const periodLogs = nbaSample([...currentQuarters,...priorQuarters].map(row => ({ ...row, period: 1 })), 40)
+    const periodLogs = nbaSample([...currentQuarters,...priorQuarters].map(row => ({ ...row, period: 1 })), 40).map(nbaCompactStat)
     const sampleAvg: Record<string, number | null> = {}
     for (const key of ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm']) { const values = logs.map(s => (s as unknown as Record<string, number | null>)[key]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)); sampleAvg[key] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null }
     for (const market of ['double_double','triple_double']) sampleAvg[market] = nbaAverage(logs, market)
