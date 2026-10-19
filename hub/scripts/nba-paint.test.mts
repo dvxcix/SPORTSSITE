@@ -55,14 +55,23 @@ test('NBA public counts reject partial periods, fuzzy identities and invalid cou
 })
 
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
-  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts']){
+  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/supabase/admin':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=no')})).status,400)
   }
+})
+
+test('NBA public results stay game-exact and distinguish zero production from DNP and unknown minutes',async()=>{
+  const pure=await import('../src/lib/nbaPaint.ts')
+  const route=await compiled('../src/app/the-paint/results/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'admin'})},'@/lib/nbaPaint':pure,'@/lib/nbaPaintData':{getPaintGame:async()=>({id:123,status:'Final'}),getPaintFinalStats:async()=>({complete:true,rows:[{...stat(0),player:{id:1}},{...stat(0),player:{id:2},min:'0:00'},{...stat(0),player:{id:3},min:null},{...stat(50),game:{...stat(50).game,id:456}}]})}})
+  const response=await (route.GET as unknown as(r:unknown)=>Promise<Response>)({nextUrl:new URL('https://test/the-paint/results?game=123')})
+  const json=await response.json();assert.equal(json.status,'final');assert.equal(json.players.length,3)
+  assert.equal(json.players[0].played,true);assert.equal(json.players[0].values.points,0)
+  assert.equal(json.players[1].played,false);assert.equal(json.players[2].played,null)
 })
 
 test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{

@@ -4,9 +4,6 @@ export async function runNbaPikkitScrape(){
   const marketWords=/points?|rebounds?|assists?|threes?|steals?|blocks?|turnovers?|3.?point/i
   let selector=Array.from(document.querySelectorAll('select')).map(select=>({select,score:Array.from(select.options).filter(o=>marketWords.test(o.textContent??'')).length})).sort((a,b)=>b.score-a.score)[0]
   if(!selector||selector.score<2){
-    const category=Array.from(document.querySelectorAll('select')).find(s=>Array.from(s.options).some(o=>o.textContent?.trim()==='Game Props'))
-    const option=category&&Array.from(category.options).find(o=>o.textContent?.trim()==='Game Props')
-    if(category&&option){category.value=option.value;category.dispatchEvent(new Event('change',{bubbles:true}));await pause(1800)}
     for(let attempt=0;attempt<8;attempt++){
       if(Array.from(document.querySelectorAll('select')).some(s=>Array.from(s.options).filter(o=>marketWords.test(o.textContent??'')).length>=2))break
       await pause(1000)
@@ -18,8 +15,8 @@ export async function runNbaPikkitScrape(){
   const props:Record<string,Record<string,number>>={};let complete=true;const started=Date.now()
   for(const option of options){
     if(Date.now()-started>80000){complete=false;break}
-    const select=selector.select
-    if(!select.isConnected){complete=false;break}
+    const select=Array.from(document.querySelectorAll('select')).find(s=>Array.from(s.options).some(o=>o.value===option.value&&o.textContent?.trim()===option.label))
+    if(!select){complete=false;break}
     select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));await pause(1200)
     const rows=document.body.innerText.split('\n').map(s=>s.trim()).filter(Boolean), counts:Record<string,number>={}
     for(let i=1;i<rows.length;i++){

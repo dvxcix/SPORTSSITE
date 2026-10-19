@@ -45,8 +45,18 @@ async function run(request:Request){
           if(![game.visitor_team.name,game.home_team.name].every(name=>text.toLowerCase().includes(name.toLowerCase())))throw new Error('NBA event identity could not be verified')
           await clickTabByText(browser.page,'Odds').catch(()=>false)
           await browser.page.waitForTimeout(900)
-          await clickTabByText(browser.page,'Player Props',false).catch(()=>false)
-          await browser.page.waitForTimeout(900)
+          // Responsive event navigation contains repeated tab labels. The
+          // shared helper chooses the first match and swallows click errors;
+          // NBA must click the visible exact tab, then wait for its controls.
+          const propsTabs=browser.page.getByText('Player Props',{exact:true})
+          let propsOpened=false
+          for(let index=0;index<Math.min(await propsTabs.count(),8);index++){
+            const tab=propsTabs.nth(index)
+            if(!await tab.isVisible())continue
+            await tab.click({timeout:5000});propsOpened=true;break
+          }
+          if(!propsOpened)throw new Error('NBA Player Props tab is unavailable')
+          await browser.page.waitForFunction(()=>Array.from(document.querySelectorAll('select')).some(s=>Array.from(s.options).filter(o=>/points?|rebounds?|assists?|three|steals?|blocks?/i.test(o.textContent??'')).length>=2),{},{timeout:10000}).catch(()=>undefined)
           const payload=await browser.page.evaluate(runNbaPikkitScrape)
           if(!payload.complete){console.info('[nba-public] incomplete-controls',{game:game.id,diagnostic:payload.diagnostic??null});throw new Error('NBA public market capture was incomplete')}
           if(Date.parse(game.datetime??game.status)<=Date.now())throw new Error('Game started during capture')
