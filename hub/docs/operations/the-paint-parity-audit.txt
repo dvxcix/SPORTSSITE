@@ -1,0 +1,72 @@
+ThePaint NBA research parity audit — 2026-10-19
+
+Scope: compare ThePaint with TheSideline and TheDugout, complete NBA research
+tools and visual flows, retain hidden/admin-only access. Owner explicitly
+selected Pikkit as NBA public-pick source. Existing MLB/NFL jobs untouched.
+
+Compared implementation:
+- Sideline: core/props/usage/tracking/team/custom boards, player detail,
+  matchup lab, cheatsheets, sportsbook comparison, public pick counts,
+  market story, save/post/grading, historical context.
+- Dugout: signal/market/props/power/custom views, recency windows, MM,
+  observed mechanics/Statcast, player inspectors, comparisons, public counts,
+  odds/history, save/post, weather/park context, persistent matrices.
+
+NBA tools and data boundaries:
+- ThePaint: original research/odds/ladders/movement preserved.
+- Cheatsheets: every available supported player-market reference, book and
+  side, same full-roster MM pool, L5 average, L10 hit rate, side-adjusted
+  L10-minus-line, positive/negative MM filters, exact-line save actions.
+- Usage/tracking: sortable L5/L10/L20 minutes/FGA/3PA/FTA/points per36;
+  non-overlapping minutes change; actual season usage, potential assists,
+  rebound chances and drives. Season tracking is separately labeled and
+  deliberately not relabeled as an L5/L10/L20 tracking sample.
+- Matchup Lab: team pace/offensive/defensive/net ratings, true shooting,
+  rebound share, home/road context, clickable rotation sorted by minutes.
+- Availability: injuries/description/return date and confirmed starters,
+  injury-only filter, clickable players; absence from injury list is not
+  represented as confirmed availability.
+- Game markets: each book's moneyline, spread with its price, total O/U
+  with its price. Values are never silently aligned across different lines.
+- ThePublic: Pikkit player-market counts, shares within matched market,
+  prior-capture count change, filters/search and player drilldown. Counts
+  are explicitly not wager dollars or exact threshold/side volumes.
+- Per-player trends, shooting zones, combined markets, H2H/home/away,
+  comparisons, weighted matrix, saved picks, posting and exact grading
+  remain integrated. Selected sportsbook now applies throughout panels.
+
+Do not claim literal NFL/MLB parity: NFL NGS/plays/TD routes, baseball
+Statcast/pitch mechanics, weather and park factors are sport-specific.
+NBA has observed stats and market ranks, not a fitted NBA win-probability
+model or a synthesized player-specific defense-vs-position forecast.
+Older NBA line history is not backfilled with invented observations.
+
+Operations:
+- NBA market capture remains every5min.
+- New NBA public capture every30min (:11/:41 UTC), games within48h of tip,
+  missing/old captures prioritized, existing shared Pikkit browser lease,
+  pregame guard, bounded300s runtime/default300s cloud browser, explicit
+  browser/lease release, incomplete captures rejected, honest failures.
+- Admin-only capture action allows checking an individual selected game.
+- NBA-only service archive migration 20261019045500_nba_public_pick_capture
+  applied individually after live absent-table/RPC preflight. RLS enabled,
+  anon/member access and RPC execute revoked. NBA snapshots append in time
+  order, stale/replayed timestamps cannot replace the latest capture.
+- Page remains noindex; all new data/capture routes require fresh admin
+  role access. No NBA addition to global navigation or sitemap.
+
+Verification so far:
+- NBA23/23; NFL odds5/5; NFL grading5/5; production source134/134.
+- Typecheck and targeted ESLint passed before initial GitHub build.
+- Live tracking:35 players, all four feeds, no feed issues; actual keys
+  potential_ast/reb_chances/drives/usg_pct verified from provider response.
+- Browser desktop and390px mobile: cheatsheet positive MM filtering,
+  usage populated, Matchup Lab and game markets, no document overflow.
+- Production save check: Cade20+ points/FD-320, O26.5 points/BetParx+138,
+  U26.5 points/BetParx-186 saved as distinct canonical identities and all
+  persisted on reload. Shared watchlist displayed all three exactly.
+  Three known test rows reversibly archived; no public test post made.
+- Archive rollback insert test passed; anon/member SELECT and anon RPC
+  execution false. Test archive insertion rolled back.
+
+Final release and actual public capture verification follow below.

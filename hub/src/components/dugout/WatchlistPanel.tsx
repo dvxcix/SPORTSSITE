@@ -41,7 +41,7 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
       <PlayerAvatar
         headshot={item.headshot_url}
         teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : item.sport.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)}
-        teamAbbr={item.team}
+        teamAbbr={item.sport.toLowerCase() === 'nba' ? undefined : item.team}
         name={item.player_name}
         size={34}
         showTeam={item.sport.toLowerCase() === 'nba' ? !!nbaTeamLogo(item.team) : item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}
@@ -52,11 +52,11 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             href={`/players/${item.mlb_id}`}
             style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
           >
-            {item.player_name} {item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
+            {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
           </Link>
         ) : (
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.player_name} {item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
+            {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
           </div>
         )}
         <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginTop: 1 }}>{item.prop_label}</div>
@@ -82,7 +82,7 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             <button
               onClick={() => onPostSingle(item)}
               style={{
-                fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
+                fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6, ...(item.sport.toLowerCase() === 'nba' ? { minHeight: 44, minWidth: 54 } : {}),
                 background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
               }}
             >

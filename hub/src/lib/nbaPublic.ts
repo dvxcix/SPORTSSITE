@@ -3,7 +3,8 @@ export type NbaPublicRow={playerId:number;market:PaintMarket;picks:number}
 export type NbaPublicCapture={gameId:number;capturedAt:string;sourceUrl:string;rows:NbaPublicRow[];unmatched:number;markets:string[]}
 export function nbaPublicMarket(label:string):PaintMarket|null{
   const text=label.toLowerCase().replace(/[_-]/g,' ').replace(/\s+/g,' ').trim()
-  if(/quarter|half|first|last|double|triple/.test(text))return null
+  if(/quarter|half|first|last|double|triple|\b[1-4]q\b|\bq[1-4]\b|\b[12]h\b/.test(text))return null
+  if(/steal/.test(text)&&/block/.test(text))return null
   const keys=[/points?|\bpts\b/.test(text)&&'points',/rebounds?|\breb\b/.test(text)&&'rebounds',/assists?|\bast\b/.test(text)&&'assists'].filter(Boolean)
   if(keys.length>1){const key=keys.join('_');return PAINT_MARKETS.some(m=>m.key===key)?key as PaintMarket:null}
   if(/three|3.?point|3pm/.test(text))return 'threes'

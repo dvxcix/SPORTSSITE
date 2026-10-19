@@ -44,6 +44,7 @@ async function run(request:Request){
           await clickTabByText(browser.page,'Odds').catch(()=>false)
           await browser.page.waitForTimeout(900)
           await clickTabByText(browser.page,'Player Props',false).catch(()=>false)
+          await browser.page.waitForTimeout(900)
           const payload=await browser.page.evaluate(runNbaPikkitScrape)
           if(!payload.complete)throw new Error('NBA public market capture was incomplete')
           if(Date.parse(game.datetime??game.status)<=Date.now())throw new Error('Game started during capture')
