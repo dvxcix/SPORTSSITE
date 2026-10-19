@@ -28,7 +28,7 @@ async function run(request:Request){
   if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
   const lease=await acquirePikkitBrowserLease()
   if(!lease)return NextResponse.json({reason:'Pikkit browser busy; deferred to the next run',deferred:due.length},{status:423})
-  const results:{game:number;ok:boolean;reason?:string;markets?:number}[]=[]
+  const results:{game:number;ok:boolean;reason?:string;markets?:number;diagnostic?:unknown}[]=[]
   try{
     const browser=await openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length})
     try{
@@ -36,8 +36,10 @@ async function run(request:Request){
         if(Date.now()-started>190000)break
         try{
           await browser.page.goto('https://app.pikkit.com/leagues/nba',{waitUntil:'domcontentloaded'})
-          await browser.page.waitForTimeout(1800)
-          if(!await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name))throw new Error('NBA event is not listed')
+          await browser.page.waitForTimeout(3000)
+          let found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
+          if(!found){await browser.page.waitForTimeout(3000);found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)}
+          if(!found)throw new Error('NBA event is not listed')
           await browser.page.waitForTimeout(2200)
           const text=await browser.page.evaluate(()=>document.body.innerText)
           if(![game.visitor_team.name,game.home_team.name].every(name=>text.toLowerCase().includes(name.toLowerCase())))throw new Error('NBA event identity could not be verified')
@@ -50,7 +52,10 @@ async function run(request:Request){
           if(Date.parse(game.datetime??game.status)<=Date.now())throw new Error('Game started during capture')
           const imported=await importNbaPublic(game,payload)
           results.push({game:game.id,ok:true,markets:imported.markets})
-        }catch(error){results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed'})}
+        }catch(error){
+          const diagnostic=await browser.page.evaluate(()=>({path:location.pathname,selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketControls:Array.from(document.querySelectorAll('button,[role="tab"]')).map(n=>n.textContent?.trim()??'').filter(t=>/props|points|rebounds|assists|odds|popular|all markets/i.test(t)).slice(0,30),events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)})).catch(()=>null)
+          results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic})
+        }
       }
     }finally{await browser.close()}
   }finally{await lease.release()}
