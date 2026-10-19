@@ -237,6 +237,9 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
   const threes=normalizeNbaPublic({'Three Pointers Made':{'Jalen Williams Three Pointers Made':12,'Jaylin Williams 3-Pointers':4,'J. Williams Three Pointers Made':90,'Jalen Williams Points':77}},roster)
   assert.deepEqual(threes.rows.map(row=>[row.playerId,row.market,row.picks]),[[1,'threes',12],[2,'threes',4]])
   assert.equal(threes.unmatched,2)
+  const nested=normalizeNbaPublic({'Points':{'Jalen Williams Points':300,'Jalen Williams Points 1st Quarter':27,'Jaylin Williams Points 2nd Quarter':99},'Three Pointers':{'Jalen Williams Made Threes':21}},roster)
+  assert.deepEqual(nested.rows.map(row=>[row.playerId,row.market,row.picks]),[[1,'points',300],[1,'points_1q',27],[1,'threes',21]])
+  assert.equal(nested.unmatched,1)
 })
 
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{

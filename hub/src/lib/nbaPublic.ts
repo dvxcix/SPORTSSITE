@@ -24,26 +24,30 @@ export function nbaPublicMarket(label:string):PaintMarket|null{
 export function normalizeNbaPublic(props:Record<string,Record<string,number>>,roster:PaintRoster[]){
   const found=new Map<string,NbaPublicRow>();let unmatched=0
   for(const [label,entries] of Object.entries(props)){
-    const market=nbaPublicMarket(label);if(!market||!entries||typeof entries!=='object'||Array.isArray(entries))continue
+    const categoryMarket=nbaPublicMarket(label);if(!categoryMarket||!entries||typeof entries!=='object'||Array.isArray(entries))continue
     for(const [raw,count] of Object.entries(entries)){
       if(!Number.isSafeInteger(count)||count<0||count>10000000)continue
       // Exact normalized names after removing the exact category suffix. Never fuzzy-match.
       const cleaned=raw.replace(/\s+(Over|Under)\s+[+-]?\d+(\.\d+)?$/i,'').trim()
       const normalized=nbaName(cleaned)
-      const matches=roster.filter(p=>{
+      const matches=roster.flatMap(p=>{
         const name=nbaName(`${p.first_name} ${p.last_name}`)
-        if(normalized===name)return true
-        if(!normalized.startsWith(name))return false
+        if(normalized===name)return [{id:p.id,market:categoryMarket}]
+        if(!normalized.startsWith(name))return []
         const suffix=normalized.slice(name.length)
-        // Source may append "Points" while its selector says "Player Points".
-        const suffixes=PAINT_MARKETS.find(m=>m.key===market)
-        const aliases=market==='threes'?['Three Pointers','Three Pointers Made','3-Pointers','3-Pointers Made','3PM','3PT','3PT FG','3 Point Field Goals','Three Point Field Goals Made']:[]
-        return !!suffixes&&[suffixes.label,suffixes.key,...aliases].flatMap(label=>[nbaName(label),nbaName(`Player ${label}`)]).includes(suffix)
+        const candidates:PaintMarket[]=[categoryMarket,...(['points','rebounds','assists'].includes(categoryMarket)?[`${categoryMarket}_1q` as PaintMarket]:[])]
+        const market=candidates.find(market=>{
+          const definition=PAINT_MARKETS.find(item=>item.key===market)!
+          const aliases=market==='threes'?['Made Threes','Threes Made','Three Pointers','Three Pointers Made','3-Pointers','3-Pointers Made','3PM','3PT','3PT FG','3 Point Field Goals','Three Point Field Goals Made']:[]
+          if(market.endsWith('_1q')){const base=PAINT_MARKETS.find(item=>item.key===market.slice(0,-3))!.label;aliases.push(`${base} 1st Quarter`,`${base} First Quarter`,`1st Quarter ${base}`,`1Q ${base}`,`Q1 ${base}`)}
+          return [definition.label,definition.key,...aliases].flatMap(label=>[nbaName(label),nbaName(`Player ${label}`)]).includes(suffix)
+        })
+        return market?[{id:p.id,market}]:[]
       })
       if(matches.length!==1){unmatched++;continue}
-      const key=`${matches[0].id}:${market}`,prior=found.get(key)
+      const {id:playerId,market}=matches[0],key=`${playerId}:${market}`,prior=found.get(key)
       // Repeated source sections aren't independent picks and must not be summed.
-      if(!prior||count>prior.picks)found.set(key,{playerId:matches[0].id,market,picks:count})
+      if(!prior||count>prior.picks)found.set(key,{playerId,market,picks:count})
     }
   }
   return {rows:[...found.values()].sort((a,b)=>a.playerId-b.playerId||a.market.localeCompare(b.market)),unmatched}
