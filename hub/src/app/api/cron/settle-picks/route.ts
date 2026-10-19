@@ -96,7 +96,7 @@ async function run(req: Request) {
   const nba = await settleNbaPicks(admin, startedAt + 55_000)
   graded += nba.graded; skipped += nba.skipped; graded_ids.push(...nba.graded_ids)
   for (const issue of nba.issues) skipped_reasons[issue] = (skipped_reasons[issue] ?? 0) + 1
-  return NextResponse.json({ graded, skipped, skipped_reasons, graded_ids })
+  return NextResponse.json({ graded, skipped, skipped_reasons, graded_ids, nba })
 }
 
 export const GET = withPipelineHealth('settle-picks', run)

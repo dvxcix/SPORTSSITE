@@ -1,0 +1,100 @@
+NBA collectors, history, cache and grading operational review — 2026-10-19
+
+Scope and baseline
+- Task-authorized NBA operational fixes only; NBA remains admin-only through
+  nbaAccessPolicy/paintAccess. No navigation launch, secret change, manual
+  collector replay, forced pick result or unrelated repair.
+- Started from verified GitHub main and production de52023407451d358595054264f3ad911642c7fd,
+  deployment dpl_DCQNQ9pmF1NqZUSzfa8EMkGMZgFy. Required recovered NFL ancestry
+  6c3811b0882e1b1a6694a30849273f3e210cd69c retained.
+
+Existing cloud schedules verified against the live run ledger
+- NBA ingestion: every minute, completed rolling sources refresh every15min;
+  active rosters every6h, team directory every24h. Historical scans resume
+  saved cursors and are not replayed on every tick.
+- Odds history, research snapshots/outcome grading, and model readiness:
+  every5min. Models already ready skip redundant fitting.
+- Pikkit: minute1/11/21/31/41/51,30min per-game refresh, next48h coverage.
+- Shared live-pick grader: every2min. Daily final settlement:14:00UTC.
+- No laptop scheduler or duplicate collector was added.
+
+Live preflight evidence (14:31–14:38UTC)
+- Last6h: ingestion360/360, odds72/72, research72/72, models72/72,
+  Pikkit36/36 successful; live grading179 successful/1 transient timeout,
+  recovered on subsequent normal ticks. Daily14:00UTC settlement succeeded.
+- All22 ingestion queue states had no recorded errors. Completed2023–2025
+  full-game stats total130,034 rows; historical advanced/Q1 imports also
+  complete according to provider cursors. Completeness of a provider scan
+  does not imply every historical game has Q1/advanced source coverage.
+- Current active roster526, current-season schedule1,200 games;16 model
+  readiness reports. Research9,659 snapshots with no after-tip captures or
+  future samples. New-season regular-season stats correctly empty pre-opener.
+- Odds reconstruction matched all7,243 exact opening contracts to first
+  observed persisted frames: no missing/extra openings, wrong opening price
+  or timestamp. No duplicate adjacent frames, wrong-game current contracts,
+  unsupported contracts or future captures found.
+- Three games inside the Pikkit window each have repeat captures (13/13/12
+  at inspection),9/8/9 markets and72/73/75 player-market rows. One game has
+  no blocks category; unavailable source categories remain unknown, not0.
+- Cache footprint approximately4.5MB; no hanging leases. Existing snapshot
+  cron already calls bounded prune_nba_source_cache(500), removing expired
+  entries older than7days. Retention/job definitions remain unchanged.
+- Two owner-only Oct20 test picks remain pending; zero eligible final picks.
+
+Repairs
+- Rolling ingestion resumes from its last completed date with a three-day
+  correction overlap after an outage. Game scans subtract their14-day forward
+  schedule window when deriving the verified-results checkpoint. Unfinished
+  cursor/range pairs remain untouched; completed catch-up returns to normal
+  rolling bounds. Previous-season tails are bounded and queued once.
+- Market-history reads now use exact game/market/player shared-cache keys,
+  60-second TTL and database refresh coalescing; at most96 frames,12-second
+  source query timeout, no expired-history fallback. Access checks run first.
+- Pikkit busy/unlisted/partial batches report425/deferred instead of false
+  success. Confirmed expired-login redirects stop the batch with an explicit
+  reconnect reason. Shared-lease release failures reach NBA cleanup health;
+  release stays one-shot and the safety expiry remains in place.
+- Grading selection no longer marks unvisited picks attempted. Workers
+  checkpoint only actual attempts, retaining priority for budget-skipped
+  games/picks. Atomic exact-contract settlement and private-post behavior
+  are unchanged. Selector and write RPCs are capped at five seconds and the
+  remaining batch budget, reserving two seconds for attempt checkpoints.
+  Exhausted batches do not start new work or blindly retry uncertain writes.
+  Daily responses include the same NBA report as live grading.
+- Operational ledger stores bounded claimed/attempted/checked/graded/skipped
+  counts and sanitized issues, never pick IDs/names. Partial work, checkpoint
+  failure and malformed reports no longer appear as successful grading.
+  Admin health uses the general label Deferred for all deferred pipelines.
+
+Individually reviewed database repair
+- Applied nba_attempted_settlement_rotation, recorded20261019143829.
+  The local CLI-generated migration was renamed to match that live version.
+- Guard required original selector hash97b74fd2ce997ec943aa14a573b4f31a.
+  New hash93fe62ccb2a898626bd74b127aee141f matches local PostgreSQL verification.
+- Selector stays SECURITY INVOKER and executable only by service_role;
+  anon/authenticated denied. No tables, policies or settlement outcomes changed.
+- Exact settlement function hash remains4ff6147a1bc73e1ba6b60ac12a4942c3.
+- Security advisors before/after identical:78 RLS-with-no-policy notices,
+ 1 existing extension warning,2 anonymous/24 authenticated definer warnings.
+  These are existing shared-site findings, not new NBA access grants.
+- PostgreSQL fixture6/6: original starvation reproduced,200/201 selection
+  rotation, same-game partial progress, future/settled/other-sport exclusions,
+  service-only execution and guard replay rejection.
+
+Verification and limits
+- Consolidated NBA regressions 135/135; production source regressions 134/134;
+  NFL Pikkit/grading/odds 20/20. Whole-project TypeScript and targeted ESLint
+  pass. The grading subset includes stalled selector/write and expired-budget
+  regressions; the cache subset exercises cross-instance refresh coalescing.
+- One existing operations-readiness assertion still expects the old NFL
+  dispatcher URL without stream=1; unrelated source/test left untouched.
+- Release SHA and normal post-release run evidence are
+  recorded in the release verification receipt under work/the-paint/.
+- No real future-game result was forced. Historical grading fixtures prove
+  exact-contract logic and idempotent SQL; the two future owner test picks
+  must settle through normal final-data collection after their games.
+
+Evidence
+- work/the-paint/nba-operations-preflight-2026-10-19.json
+- work/the-paint/nba-collector-history-audit-2026-10-19.txt
+- work/the-paint/nba-settlement-rotation-verification.json

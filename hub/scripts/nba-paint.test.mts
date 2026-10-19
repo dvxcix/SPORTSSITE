@@ -461,8 +461,8 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
   const myPicks = await compiled('../src/lib/myPicks.ts', { '@/lib/supabase/client': { createClient: () => client } })
   assert.equal((await (myPicks.fetchMyPicks as unknown as (owner: string) => Promise<{ id: string }[]>)('owner'))[0].id, 'post-1')
   const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': { getPaintGame: async () => ({ status_state: 'final' }), getPaintFinalStats: async () => ({ complete: true, rows: [stat(21)] }) } })
-  const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: picks, error: null }) }
-  const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: async (name: string, args: Record<string, unknown>) => { if(name==='claim_pending_nba_picks')return{data:picks,error:null};assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } })
+  const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: picks, error: null }), upsert: () => ({ abortSignal: async () => ({ error: null }) }) }
+  const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: (name: string, args: Record<string, unknown>) => ({ abortSignal: async (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); if(name==='claim_pending_nba_picks')return{data:picks,error:null};assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } }) })
   assert.equal(settled.graded, 1)
 })
 
@@ -485,12 +485,12 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
   for (const scenario of ['partial', 'live', 'identity', 'missing', 'provider', 'rpc']) {
     let calls = 0
     const pending = { id: 'p', game_pk: '123', player_id: 'bdl:434', pick_type: 'points', numeric_line: 20, market_side: 'over' }
-    const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: [pending], error: null }) }
+    const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: [pending], error: null }), upsert: () => ({ abortSignal: async () => ({ error: null }) }) }
     const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': {
       getPaintGame: async () => { if (scenario === 'provider') throw new Error('provider'); return { status_state: scenario === 'live' ? 'in_progress' : 'final' } },
       getPaintFinalStats: async () => ({ complete: scenario !== 'partial', rows: scenario === 'missing' ? [] : [{ ...stat(21), player: { id: scenario === 'identity' ? 999 : 434 } }] }),
     } })
-    const report = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }> )({ from: () => chain, rpc: async (name:string) => { if(name==='claim_pending_nba_picks')return{data:[pending],error:null};calls++; return { data: null, error: { message: 'write unavailable' } } } })
+    const report = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }> )({ from: () => chain, rpc: (name:string) => ({ abortSignal: async (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); if(name==='claim_pending_nba_picks')return{data:[pending],error:null};calls++; return { data: null, error: { message: 'write unavailable' } } } }) })
     assert.equal(report.graded, 0); assert.equal(calls, scenario === 'rpc' ? 1 : 0)
   }
 })
@@ -559,7 +559,7 @@ test('NBA history remains admin-gated and validates market/game before archive r
   let denied=true,reads=0,openingReads=0,openingFailed=false
   const openingRows:import('../src/lib/nbaOddsHistory.ts').NbaQuoteOpeningRow[]=[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'over_under',line:20.5,side:'over',odds:-110,observed_at:'2026-10-19T00:00:00Z'}]
   const pure=await import('../src/lib/nbaPaint.ts')
-  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/supabase/admin':{createAdminClient:()=>({rpc:()=>({abortSignal:async()=>{reads++;return{data:[],error:null}}})})},'@/lib/nbaPaint':pure,'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async(game:number)=>{assert.equal(game,123);openingReads++;if(openingFailed)throw new Error('fixture unavailable');return openingRows}}})
+  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/nbaPaint':pure,'@/lib/nbaOddsHistoryData':{getNbaMarketFrames:async(game:number,market:string,player:number|null)=>{assert.equal(game,123);assert.equal(market,'points');assert.equal(player,null);reads++;return[]},getNbaQuoteOpenings:async(game:number)=>{assert.equal(game,123);openingReads++;if(openingFailed)throw new Error('fixture unavailable');return openingRows}}})
   const get=route.GET as unknown as(request:unknown)=>Promise<Response>
   assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,403)
   denied=false
@@ -590,9 +590,9 @@ test('quarter and binary markets never substitute full-game totals or season ave
 
 test('quarter provider failure cannot block unrelated full-game settlement',async()=>{
  const pending=[{id:'full',game_pk:'123',player_id:'bdl:434',pick_type:'points',numeric_line:20,market_side:'over'},{id:'quarter',game_pk:'123',player_id:'bdl:434',pick_type:'points_1q',numeric_line:6,market_side:'milestone'}],writes:string[]=[],periods:number[]=[]
- const chain={select:()=>chain,eq:()=>chain,not:()=>chain,lte:()=>chain,order:()=>chain,limit:async()=>({data:pending,error:null})}
+ const chain={select:()=>chain,eq:()=>chain,not:()=>chain,lte:()=>chain,order:()=>chain,limit:async()=>({data:pending,error:null}),upsert:()=>({abortSignal:async()=>({error:null})})}
  const settlement=await compiled('../src/lib/nbaSettlement.ts',{'server-only':{},'./nbaPickGrading':{gradeNbaPick},'./nbaPaint':{nbaPeriod,nbaToday:()=> '2099-10-20'},'./nbaPaintData':{getPaintGame:async()=>({status_state:'final'}),getPaintFinalStats:async(_id:number,period:number)=>{periods.push(period);if(period===1)throw new Error('unavailable');return{complete:true,rows:[stat(21)]}}}})
- const result=await (settlement.settleNbaPicks as (admin:unknown)=>Promise<{graded:number;skipped:number}>)({from:()=>chain,rpc:async(_name:string,args:{p_pick_id:string})=>{if(_name==='claim_pending_nba_picks')return{data:pending,error:null};writes.push(args.p_pick_id);return{data:true,error:null}}})
+ const result=await (settlement.settleNbaPicks as (admin:unknown)=>Promise<{graded:number;skipped:number}>)({from:()=>chain,rpc:(_name:string,args:{p_pick_id:string})=>({abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);if(_name==='claim_pending_nba_picks')return{data:pending,error:null};writes.push(args.p_pick_id);return{data:true,error:null}}})})
  assert.deepEqual(periods,[0,1]);assert.deepEqual(writes,['full']);assert.equal(result.graded,1);assert.equal(result.skipped,1)
 })
 test('quarter and event selections revalidate exact books, targets and canonical labels before posting',async()=>{
@@ -617,22 +617,25 @@ test('per-game NBA tracking is phase, identity, final-status and historical-team
 
 test('NBA public collection bounds startup, game work and cleanup while preserving its shared browser lease',async()=>{
  const game={id:123,date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date(Date.now()+6*3600000)),datetime:new Date(Date.now()+6*3600000).toISOString(),status_state:'scheduled',visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}}
- for(const scenario of ['healthy','startup-timeout','game-timeout','close-timeout','unlisted','unlisted-rotation']){
-  let eventReady=false
+ for(const scenario of ['healthy','startup-timeout','game-timeout','close-timeout','release-failed','unlisted','unlisted-rotation','partly-unlisted','auth-expired','auth-delayed']){
+  let eventReady=false,leagueReady=false
   let closed=0,released=0,captured=0,openedOptions:unknown,resolveOpening:((browser:unknown)=>void)|undefined
   const never=()=>new Promise<never>(()=>{}),scrape=()=>{}
   const locator={filter:()=>locator,first:()=>locator,click:async()=>{},waitFor:async()=>{}}
-  const browser={page:{setDefaultTimeout:()=>{},setDefaultNavigationTimeout:()=>{},goto:async()=>scenario==='game-timeout'?never():undefined,waitForFunction:async(_fn:unknown,arg:unknown)=>{if(arg&&typeof arg==='object'&&'names' in arg)eventReady=true},waitForTimeout:async()=>{},getByText:()=>locator,evaluate:async(fn:unknown)=>fn===scrape?{complete:true,props:{Points:{'Test Player':10}}}:'verified event'},close:async()=>{closed++;if(scenario==='close-timeout')return never()}}
+  const browser={page:{setDefaultTimeout:()=>{},setDefaultNavigationTimeout:()=>{},goto:async()=>scenario==='game-timeout'?never():undefined,url:()=>scenario==='auth-expired'||scenario==='auth-delayed'&&leagueReady?'https://app.pikkit.com/login':'https://app.pikkit.com/leagues/nba',waitForFunction:async(_fn:unknown,arg:unknown)=>{leagueReady=true;if(arg&&typeof arg==='object'&&'names' in arg)eventReady=true},waitForTimeout:async()=>{},getByText:()=>locator,evaluate:async(fn:unknown)=>fn===scrape?{complete:true,props:{Points:{'Test Player':10}}}:'verified event'},close:async()=>{closed++;if(scenario==='close-timeout')return never()}}
   const query={select:()=>query,in:()=>query,order:()=>query,limit:async()=>({data:scenario==='unlisted-rotation'?[{key:'public-attempt:nba-public-v2:123',fetched_at:new Date().toISOString()}]:[],error:null})}
-  const imports={'@/lib/nbaSharedCache':cachePassthrough,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:scenario==='unlisted-rotation'?[game,{...game,id:456}]:[game]})},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>query})},'@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>({release:async()=>{released++}})},'@/lib/browserbase':{openPikkitSession:async(_context:string,_metadata:unknown,options:unknown)=>{openedOptions=options;if(scenario==='startup-timeout')return new Promise(resolve=>{resolveOpening=resolve});return browser}},'@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>!scenario.startsWith('unlisted')},'@/lib/scrapers/nbaPikkitScraper':{runNbaPikkitScrape:scrape},'@/lib/nbaPublicServer':{importNbaPublic:async()=>{captured++;return{markets:5}}},'@/lib/nbaPublic':{NBA_PUBLIC_VERSION:'nba-public-v2',nbaPublicEventMatches:()=>eventReady}}
+  const imports={'@/lib/nbaSharedCache':cachePassthrough,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:['unlisted-rotation','partly-unlisted','auth-expired'].includes(scenario)?[game,{...game,id:456}]:[game]})},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>query})},'@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>({release:async()=>{released++;return scenario!=='release-failed'}})},'@/lib/browserbase':{openPikkitSession:async(_context:string,_metadata:unknown,options:unknown)=>{openedOptions=options;if(scenario==='startup-timeout')return new Promise(resolve=>{resolveOpening=resolve});return browser}},'@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>!scenario.startsWith('unlisted')&&(scenario!=='partly-unlisted'||captured===0)},'@/lib/scrapers/nbaPikkitScraper':{runNbaPikkitScrape:scrape},'@/lib/nbaPublicServer':{importNbaPublic:async()=>{captured++;return{markets:5}}},'@/lib/nbaPublic':{NBA_PUBLIC_VERSION:'nba-public-v2',nbaPublicEventMatches:()=>eventReady}}
   const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',imports,fetch,{process:{env:{PIKKIT_CONTEXT_ID:'test-only'}},setTimeout:(callback:()=>void)=>setTimeout(callback,5),clearTimeout})
   const response=await (route.GET as unknown as(request:Request)=>Promise<Response>)(new Request('https://test/api/cron/poll-pikkit-nba-picks'))
   const result=await response.json()
   assert.deepEqual(openedOptions,{requestTimeoutMs:15000})
   if(scenario==='healthy'){assert.equal(response.status,200);assert.equal(captured,1);assert.equal(closed,1);assert.equal(released,1);assert.equal(result.results.length,1)}
   if(scenario==='game-timeout'){assert.equal(response.status,502);assert.equal(captured,0);assert.equal(closed,1);assert.equal(released,1);assert.equal(result.results[0].diagnostic.deadline,true)}
-  if(scenario==='unlisted'){assert.equal(response.status,206);assert.equal(result.unavailable,1);assert.equal(result.deferred,1);assert.equal(captured,0);assert.equal(released,1)}
-  if(scenario==='unlisted-rotation'){assert.equal(response.status,206);assert.deepEqual(result.results.map((row:{game:number})=>row.game),[456,123]);assert.equal(result.unavailable,2);assert.equal(result.deferred,2);assert.equal(captured,0);assert.equal(released,1)}
+  if(scenario==='unlisted'){assert.equal(response.status,425);assert.equal(result.unavailable,1);assert.equal(result.deferred,1);assert.equal(captured,0);assert.equal(released,1)}
+  if(scenario==='unlisted-rotation'){assert.equal(response.status,425);assert.deepEqual(result.results.map((row:{game:number})=>row.game),[456,123]);assert.equal(result.unavailable,2);assert.equal(result.deferred,2);assert.equal(captured,0);assert.equal(released,1)}
+  if(scenario==='partly-unlisted'){assert.equal(response.status,425);assert.equal(result.failed,0);assert.equal(result.unavailable,1);assert.equal(result.deferred,1);assert.equal(captured,1);assert.equal(released,1)}
+  if(scenario.startsWith('auth-')){assert.equal(response.status,503);assert.match(result.reason,/sign-in expired/);assert.equal(result.results.length,1);assert.equal(result.results[0].diagnostic.authenticationRequired,true);assert.equal(captured,0);assert.equal(closed,1);assert.equal(released,1)}
+  if(scenario==='release-failed'){assert.equal(response.status,503);assert.equal(captured,1);assert.equal(closed,1);assert.equal(released,1);assert.match(result.cleanupIssues[0],/lease release could not be confirmed/)}
   if(scenario==='close-timeout'){assert.equal(response.status,503);assert.equal(released,0);assert.ok(result.cleanupIssues.length>0)}
   if(scenario==='startup-timeout'){assert.equal(response.status,503);assert.equal(released,0);assert.equal(closed,0);resolveOpening?.(browser);await new Promise(resolve=>setTimeout(resolve,10));assert.equal(closed,1)}
  }
@@ -650,7 +653,26 @@ test('unchanged successful NBA public reads enforce thirty-minute cadence withou
  assert.equal(response.status,200);assert.equal((await response.json()).skipped,'Captures are current');assert.equal(opens,0);assert.equal(claims,0)
  currentVersion=false
  const outdated=await (route.GET as(request:Request)=>Promise<Response>)(new Request('https://test/capture'))
- assert.equal((await outdated.json()).stage,'deferred');assert.equal(claims,1);assert.equal(opens,0)
+ assert.equal(outdated.status,425);assert.equal((await outdated.json()).stage,'deferred');assert.equal(claims,1);assert.equal(opens,0)
+})
+
+test('Pikkit lease release reports RPC failure and keeps a single result without blind retries',async()=>{
+ for(const failure of [false,true]){
+  const calls:string[]=[]
+  const leaseModule=await compiled('../src/lib/pikkitBrowserLease.ts',{
+   'node:crypto':await import('node:crypto'),
+   '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:Record<string,unknown>)=>{
+    calls.push(name);assert.equal(args.p_lease_key,'pikkit-persisted-context')
+    if(name==='try_acquire_browser_automation_lease'){assert.equal(args.p_ttl_seconds,360);return{data:true,error:null}}
+    assert.equal(name,'release_browser_automation_lease');assert.equal(args.p_cooldown_seconds,8)
+    return{error:failure?{message:'Test schema cache failure'}:null}
+   }})},
+  })
+  const lease=await (leaseModule.acquirePikkitBrowserLease as()=>Promise<{release:()=>Promise<boolean>}> )()
+  assert.deepEqual(await Promise.all([lease.release(),lease.release()]),[!failure,!failure])
+  assert.equal(await lease.release(),!failure)
+  assert.deepEqual(calls,['try_acquire_browser_automation_lease','release_browser_automation_lease'])
+ }
 })
 
 test('NBA conditional refresh authenticates first, preserves meaningful changes and returns no repeated historical payload',async()=>{

@@ -312,7 +312,7 @@ export default async function PipelineHealthPage() {
         {rows.map(({ pipeline, run, evidence, state }) => {
           const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' || state === 'deferred' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
           const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'deferred' ? 'text-amber-300' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' || state === 'timed_out' ? 'text-red-400' : 'text-amber-400'
-          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state === 'deferred' ? 'Waiting for Statcast' : state
+          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state === 'deferred' ? 'Deferred' : state
           const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
           const ageMinutes = run?.started_at ? Math.max(1, (Date.now() - new Date(run.started_at).getTime()) / 60_000) : 0
           return (

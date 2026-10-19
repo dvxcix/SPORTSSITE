@@ -7,7 +7,7 @@ const CONTEXT_SYNC_COOLDOWN_SECONDS = 8
 
 export type PikkitBrowserLease = {
   ownerId: string
-  release: () => Promise<void>
+  release: () => Promise<boolean>
 }
 
 // Browserbase explicitly warns against opening simultaneous sessions with
@@ -25,18 +25,17 @@ export async function acquirePikkitBrowserLease(): Promise<PikkitBrowserLease | 
   if (error) throw new Error(`Pikkit browser lease failed: ${error.message}`)
   if (data !== true) return null
 
-  let released = false
+  let releaseResult: Promise<boolean> | undefined
   return {
     ownerId,
-    release: async () => {
-      if (released) return
-      released = true
+    release: () => releaseResult ??= (async () => {
       const { error: releaseError } = await admin.rpc('release_browser_automation_lease', {
         p_lease_key: LEASE_KEY,
         p_owner_id: ownerId,
         p_cooldown_seconds: CONTEXT_SYNC_COOLDOWN_SECONDS,
       })
       if (releaseError) console.error('[pikkit-browser-lease] release failed', { message: releaseError.message })
-    },
+      return !releaseError
+    })(),
   }
 }

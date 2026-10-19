@@ -7,6 +7,26 @@ type Row = Record<string, unknown>
 type State = { key: string; endpoint: string; season: number | null; cursor: number | null; complete: boolean; pages: number; rows_seen: number }
 const record = (value: unknown): Row => value && typeof value === 'object' ? value as Row : {}
 const id = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null
+function completedRollingThrough(key: string, endpoint: string) {
+  const params = new URLSearchParams(endpoint.split('?')[1]), through = params.get('end_date')
+  if (!params.get('start_date') || !through || !/^\d{4}-\d{2}-\d{2}$/.test(through)) return null
+  const checkpoint = new Date(`${through}T12:00:00Z`)
+  if (!Number.isFinite(checkpoint.getTime())) return null
+  // Games include fourteen future days, so their completed scan only verifies
+  // results through end_date minus fourteen. Other feeds end on the scan day.
+  if (key.startsWith('games:')) checkpoint.setUTCDate(checkpoint.getUTCDate() - 14)
+  return checkpoint
+}
+function nextRollingEndpoint(key: string, endpoint: string, previous: string) {
+  if (!key.includes(':recent:')) return endpoint
+  const start = new URLSearchParams(endpoint.split('?')[1]).get('start_date'), checkpoint = completedRollingThrough(key, previous)
+  if (!start || !checkpoint) return endpoint
+  // Carry that checkpoint forward after an outage, with the same three-day
+  // correction overlap, instead of silently dropping the intervening games.
+  checkpoint.setUTCDate(checkpoint.getUTCDate() - 3)
+  const resume = checkpoint.toISOString().slice(0, 10)
+  return resume < start ? endpoint.replace(/start_date=\d{4}-\d{2}-\d{2}/, `start_date=${resume}`) : endpoint
+}
 export function nbaFact(kind: string, row: Row, season: number | null, fetchedAt: string): Row {
   const base = { id: id(row.id), payload: kind === 'period1' ? { ...row, period: 1 } : row, fetched_at: fetchedAt }
   if (!base.id) throw new Error('NBA fact missing identity')
@@ -47,16 +67,36 @@ export async function seedNbaIngestion() {
   // Refresh only completed rolling scans. An unfinished scan retains its exact
   // endpoint/date range and cursor until completion, even across midnight.
   const rolling = jobs.filter(job => job.key.includes(':recent:') || job.key === 'players' || job.key === 'teams')
-  const { data: existing, error: rollingError } = await admin.from('nba_ingestion_state').select('key,complete,updated_at').in('key', rolling.map(job => job.key))
+  const priorKeys = ['games', 'stats', 'period1', 'advanced'].map(kind => `${kind}:recent:${season - 1}`)
+  const { data: existing, error: rollingError } = await admin.from('nba_ingestion_state').select('key,endpoint,complete,updated_at').in('key', [...rolling.map(job => job.key), ...priorKeys])
   if (rollingError) throw new Error('NBA rolling coverage unavailable')
+  const tails: { key: string; endpoint: string; season: number }[] = []
   for (const state of existing ?? []) {
+    if (priorKeys.includes(state.key)) {
+      // An unfinished prior-season scan must finish its original cursor first.
+      // Its tail then runs once under a separate non-rolling key, so an outage
+      // spanning July does not strand the final games or re-open history forever.
+      const checkpoint = state.complete ? completedRollingThrough(state.key, state.endpoint) : null
+      const through = `${season}-06-30`
+      if (checkpoint && checkpoint.toISOString().slice(0, 10) < through) {
+        checkpoint.setUTCDate(checkpoint.getUTCDate() - 3)
+        tails.push({ key: state.key.replace(':recent:', ':tail:'), season: season - 1,
+          endpoint: state.endpoint.replace(/start_date=\d{4}-\d{2}-\d{2}/, `start_date=${checkpoint.toISOString().slice(0, 10)}`).replace(/end_date=\d{4}-\d{2}-\d{2}/, `end_date=${through}`) })
+      }
+      continue
+    }
     const cadence = state.key === 'teams' ? 86400000 : state.key === 'players' ? 21600000 : 900000
     if (!state.complete || state.updated_at && Date.now() - Date.parse(state.updated_at) < cadence) continue
     const job = rolling.find(job => job.key === state.key)!
-    const { error: resetError } = await admin.from('nba_ingestion_state').update({ endpoint: job.endpoint, cursor: null, complete: false, pages: 0, rows_seen: 0, last_error: null }).eq('key', state.key).eq('complete', true)
+    const endpoint = nextRollingEndpoint(state.key, job.endpoint, state.endpoint)
+    const { error: resetError } = await admin.from('nba_ingestion_state').update({ endpoint, cursor: null, complete: false, pages: 0, rows_seen: 0, last_error: null }).eq('key', state.key).eq('complete', true)
     if (resetError) throw new Error('NBA rolling refresh could not queue')
   }
-  return jobs.map(job => job.key)
+  if (tails.length) {
+    const { error: tailError } = await admin.from('nba_ingestion_state').upsert(tails, { onConflict: 'key', ignoreDuplicates: true })
+    if (tailError) throw new Error('NBA prior-season recovery unavailable')
+  }
+  return [...jobs.slice(0, 6), ...tails, ...jobs.slice(6)].map(job => job.key)
 }
 export async function runNbaIngestion(budgetMs = 42000) {
   const admin = createAdminClient(), started = Date.now(), keys = await seedNbaIngestion()

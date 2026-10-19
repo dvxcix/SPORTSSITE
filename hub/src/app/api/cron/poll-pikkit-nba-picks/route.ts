@@ -13,6 +13,10 @@ import {NBA_PUBLIC_VERSION,nbaPublicEventMatches} from '@/lib/nbaPublic'
 import {nbaSharedCache} from '@/lib/nbaSharedCache'
 export const maxDuration=300
 class NbaCaptureDeadline extends Error {}
+class NbaPikkitAuthenticationRequired extends Error {}
+function requirePikkitPageSession(url:string){
+ if(/\/(?:login|signin|sign-in|join|auth|verify)(?:\/|$)/i.test(new URL(url).pathname))throw new NbaPikkitAuthenticationRequired('Pikkit sign-in expired; reconnect the shared Pikkit session')
+}
 async function bounded<T>(task:Promise<T>,milliseconds:number,label:string):Promise<T>{
  let timer:ReturnType<typeof setTimeout>|undefined
  try{return await Promise.race([task,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new NbaCaptureDeadline(label)),Math.max(1,milliseconds))})])}finally{if(timer)clearTimeout(timer)}
@@ -37,7 +41,7 @@ async function run(request:Request){
   const {data:checks,error:checkError}=await admin.from('nba_source_cache').select('key,fetched_at').in('key',upcoming.flatMap(g=>[successKey(g.id),attemptKey(g.id)])).limit(200)
   if(checkError)return NextResponse.json({error:'Public capture preflight failed'},{status:503})
   // An unchanged successful read still counts toward the refresh cadence; the
-  // append-only public history keeps only changed counts and its original time.
+  // append-only public history preserves its actual observation time and counts.
   // A reviewed parser version change deliberately refreshes affected games once;
   // old source captures remain append-only and never masquerade as new facts.
   const last=(id:number)=>checks?.find(p=>p.key===successKey(id))?.fetched_at
@@ -45,7 +49,7 @@ async function run(request:Request){
   const due=upcoming.filter(g=>!last(g.id)||Date.now()-Date.parse(last(g.id)!)>30*60000).sort((a,b)=>Date.parse(attempted(a.id))-Date.parse(attempted(b.id))||Date.parse(last(a.id)??'1970-01-01')-Date.parse(last(b.id)??'1970-01-01'))
   if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
   const lease=await acquirePikkitBrowserLease()
-  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',deferred:due.length},{status:200})
+  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length},{status:425})
   const results:{game:number;ok:boolean;reason?:string;markets?:number;diagnostic?:unknown}[]=[]
   let timedOut=false,browserOpened=false,browserReleased=false,runError:string|null=null
   const cleanupIssues:string[]=[],remaining=()=>250000-(Date.now()-started)
@@ -62,7 +66,12 @@ async function run(request:Request){
         try{
           await bounded((async()=>{
           await browser.page.goto('https://app.pikkit.com/leagues/nba',{waitUntil:'domcontentloaded',timeout:20000})
+          // A confirmed sign-in redirect requires operator attention. Do not
+          // misreport it as an unlisted event or spend the rest of the batch
+          // repeating the same unauthenticated navigation.
+          requirePikkitPageSession(browser.page.url())
           await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
+          requirePikkitPageSession(browser.page.url())
           let found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
           if(!found){await browser.page.waitForTimeout(3000);found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)}
           if(!found)throw new Error('NBA event is not listed')
@@ -89,8 +98,9 @@ async function run(request:Request){
           if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.value.markets})
           })(),Math.min(110000,remaining()-25000),'NBA game capture deadline')
         }catch(error){
-          const diagnostic=error instanceof NbaCaptureDeadline?{deadline:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').catch(()=>null)
+          const diagnostic=error instanceof NbaCaptureDeadline?{deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body.innerText;const start=text.toLowerCase().indexOf(away.toLowerCase());return {path:location.pathname,bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),selects:Array.from(document.querySelectorAll('select')).map(s=>Array.from(s.options).map(o=>o.textContent?.trim()).slice(0,40)),marketExcerpt:start>=0?text.slice(start,start+3500):null,events:Array.from(document.querySelectorAll('a[href*="/event/"]')).map(a=>({path:a.getAttribute('href'),label:a.textContent?.trim().slice(0,160)})).slice(0,12)}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').catch(()=>null)
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic})
+          if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
           await bounded(nbaSharedCache(attemptKey(game.id),30,0,async()=>({game:game.id,ok:results.some(result=>result.game===game.id&&result.ok)}),10),5000,'NBA attempt receipt deadline').catch(()=>cleanupIssues.push('NBA public attempt progress could not save'))
@@ -99,10 +109,10 @@ async function run(request:Request){
     }finally{await bounded(browser.close(),15000,'NBA browser close deadline').then(()=>{browserReleased=true}).catch(()=>cleanupIssues.push('Browser release could not be confirmed; automatic 300-second browser expiry remains enabled'))}
   }catch(error){timedOut=true;runError=error instanceof NbaCaptureDeadline?error.message:'Pikkit browser could not open'}finally{
     if(!browserOpened||!browserReleased)cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
-    else await bounded(lease.release(),10000,'NBA browser lease release deadline').catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
+    else await bounded(lease.release(),10000,'NBA browser lease release deadline').then(released=>{if(released===false)cleanupIssues.push('Shared browser lease release could not be confirmed; automatic lease expiry remains enabled')}).catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
   }
   const unavailable=results.filter(result=>!result.ok&&result.reason==='NBA event is not listed').length
   const failed=results.filter(result=>!result.ok&&result.reason!=='NBA event is not listed').length,deferred=due.length-results.length+unavailable
-  return NextResponse.json({games:upcoming.length,due:due.length,failed,unavailable,deferred,results,reason:runError,cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?206:200})
+  return NextResponse.json({games:upcoming.length,due:due.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
 }
 export const GET=withPipelineHealth('poll-pikkit-nba-picks',run,{allowSecondarySecret:true})
