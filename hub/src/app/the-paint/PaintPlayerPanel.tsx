@@ -78,6 +78,6 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
         </>}
       </>}
     </div>
-    {tab !== 'markets' && tab !== 'ladder' && reference && <footer className={styles.drawerFooter}><BookLogo vendor={reference.vendor} size={22}/><span><strong>{nbaTarget(reference, side)} {definition.short}</strong><small>{reference.vendor}</small><PaintPrice offer={reference} side={side} compact/></span><PaintPickActions player={player} offer={reference} side={side} game={board.game}/><button onClick={() => {onClearQuote?.();onBookChange?.('all');changeTab('markets')}}>All books<ArrowUpRight size={15}/></button></footer>}
+    {tab !== 'markets' && tab !== 'ladder' && reference && <footer className={styles.drawerFooter}><BookLogo vendor={reference.vendor} size={22}/><span><strong>{nbaTarget(reference, side)} {definition.short}</strong><PaintPrice offer={reference} side={side} compact/></span><PaintPickActions player={player} offer={reference} side={side} game={board.game}/><button onClick={() => {onClearQuote?.();onBookChange?.('all');changeTab('markets')}}>All books<ArrowUpRight size={15}/></button></footer>}
   </ModalSurface>
 }
