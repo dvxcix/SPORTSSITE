@@ -1,5 +1,6 @@
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket } from './nflOddsTypes'
 import type { NewWatchlistItem } from './watchlist'
+import { parseNbaSelection } from './nbaPaint'
 
 export type NflSavedSelection = {
   player_id: string
@@ -27,7 +28,9 @@ export function nflWatchlistSelection(player: NflOddsPlayer, market: NflPlayerMa
 }
 
 export function watchlistPickPayload(item: NewWatchlistItem) {
-  const sport = item.sport?.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
+  const sport = item.sport?.toUpperCase() === 'NBA' ? 'NBA' : item.sport?.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
+  const nba = sport === 'NBA' ? parseNbaSelection(item.prop_key) : null
+  if (sport === 'NBA' && !nba) throw new Error('Re-save this NBA selection from ThePaint to attach its exact market.')
   if (sport === 'NFL' && !item.nfl_selection) {
     throw new Error(`Please re-save ${item.player_name}'s NFL selection from The Sideline to attach its exact market.`)
   }
@@ -35,6 +38,6 @@ export function watchlistPickPayload(item: NewWatchlistItem) {
     sport, mlb_id: item.mlb_id, player_name: item.player_name, team: item.team,
     headshot_url: item.headshot_url, game_pk: item.game_pk, game_date: item.game_date,
     prop_key: item.prop_key, prop_label: item.prop_label, line: item.line, book: item.book, odds: item.odds,
-    ...(sport === 'NFL' ? item.nfl_selection : {}),
+    ...(sport === 'NFL' ? item.nfl_selection : sport === 'NBA' ? nba : {}),
   }
 }

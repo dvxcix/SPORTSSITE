@@ -10,11 +10,13 @@ import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 import { findNflPickOffer } from '@/lib/nflPickOffer'
+import { validatePaintPickLegs } from '@/lib/nbaPickValidation'
+import { requirePaintAccess } from '@/lib/paintAccess'
 
 export const revalidate = 0
 
 type Leg = {
-  sport?: 'MLB' | 'NFL'
+  sport?: 'MLB' | 'NFL' | 'NBA'
   player_id?: string | null
   mlb_id: number | null; player_name: string; team: string | null; headshot_url: string | null
   game_pk: string | null; game_date: string | null
@@ -52,7 +54,8 @@ export async function POST(req: Request) {
   const isSpoiler = body?.isSpoiler === true
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
-  const sport: 'MLB' | 'NFL' = body?.sport === 'NFL' ? 'NFL' : 'MLB'
+  const sport = body?.sport === 'NBA' ? 'NBA' : body?.sport === 'NFL' ? 'NFL' : 'MLB'
+  if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
 
   if (pageId) {
     const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
@@ -111,6 +114,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
       }
     }
+  } else if (sport === 'NBA') {
+    const error = await validatePaintPickLegs(legs)
+    if (error) return NextResponse.json({ error }, { status: 409 })
   } else {
     const bundles = new Map<string, Awaited<ReturnType<typeof getSidelineOddsBundle>>>()
     for (const l of legs) {

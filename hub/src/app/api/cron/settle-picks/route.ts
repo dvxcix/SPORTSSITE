@@ -7,11 +7,14 @@ import { fetchLiveFeed, settleFinalPick } from '@/lib/pickGrading'
 import { safeApiError } from '@/lib/safeApiError'
 import { applyNflPickResult, gradeNflPick, type NflPendingPick } from '@/lib/nflPickGrading'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
+import { gradeNbaPick, type NbaPendingPick } from '@/lib/nbaPickGrading'
+import { getPaintFinalStats, getPaintGame } from '@/lib/nbaPaintData'
 
 export const revalidate = 0
 export const maxDuration = 60
 
 async function run(req: Request) {
+  const startedAt = Date.now()
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -91,6 +94,36 @@ async function run(req: Request) {
     }
   }
 
+  // The existing settlement schedule handles NBA too; no duplicate collector/job.
+  const { data: nbaPending, error: nbaError } = await admin.from('picks')
+    .select('id,post_id,game_pk,player_id,player_name,pick_type,market_side,numeric_line')
+    .eq('sport', 'NBA').eq('result', 'pending').not('game_pk', 'is', null).not('player_id', 'is', null)
+    .order('created_at').limit(200)
+  if (nbaError) return safeApiError('settle-nba-picks-query', nbaError)
+  const nbaByGame = new Map<string, NbaPendingPick[]>()
+  for (const pick of (nbaPending ?? []) as NbaPendingPick[]) nbaByGame.set(pick.game_pk, [...(nbaByGame.get(pick.game_pk) ?? []), pick])
+  for (const [id, picks] of nbaByGame) {
+    // Leave time for a game read, up to two stat pages, and result writes.
+    // Unprocessed selections remain pending for the existing next scheduled run.
+    if (Date.now() - startedAt > 15_000) {
+      skipped += picks.length
+      skipped_reasons['nba:time-budget'] = (skipped_reasons['nba:time-budget'] ?? 0) + picks.length
+      continue
+    }
+    try {
+      if (!/^\d{1,10}$/.test(id)) { skipped += picks.length; continue }
+      const game = await getPaintGame(Number(id))
+      if (game.status_state !== 'final' && game.status !== 'Final') { skipped += picks.length; continue }
+      const stats = await getPaintFinalStats(Number(id))
+      if (!stats.complete) { skipped += picks.length; continue }
+      for (const pick of picks) {
+        if (Date.now() - startedAt > 52_000) { skipped++; continue }
+        const result = gradeNbaPick(pick, stats.rows)
+        if (!result || !await applyNflPickResult(admin, pick, result)) { skipped++; continue }
+        graded++; graded_ids.push(pick.id)
+      }
+    } catch { skipped += picks.length; skipped_reasons['nba:data-unavailable'] = (skipped_reasons['nba:data-unavailable'] ?? 0) + picks.length }
+  }
   return NextResponse.json({ graded, skipped, skipped_reasons, graded_ids })
 }
 

@@ -1,3 +1,4 @@
+import { nbaTeamLogo } from '@/lib/nbaPaint'
 /* eslint-disable @next/next/no-img-element -- ImageResponse/Satori requires native image elements. */
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
@@ -100,7 +101,7 @@ function PlayerCard({ item, origin }: { item: any; origin: string }) {
   const sorted = books.length
     ? books.sort((a, b) => b[1] - a[1]).slice(0, MAX_BOOKS_SHOWN)
     : (item.book && item.odds != null ? [[item.book, item.odds] as [string, number]] : [])
-  const teamLogo = item.sport?.toLowerCase() === 'nfl' ? null : getTeamLogoUrl(item.team)
+  const teamLogo = item.sport?.toLowerCase() === 'nfl' ? null : item.sport?.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)
 
   return (
     <div style={{

@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { contentSecurityPolicy } from "@whop/elements";
 
 const privateRoutes = [
+  '/the-paint/:path*',
   '/admin/:path*',
   '/api/:path*',
   '/auth/:path*',

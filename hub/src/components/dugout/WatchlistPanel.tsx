@@ -1,4 +1,5 @@
 'use client'
+import { nbaTeamLogo } from '@/lib/nbaPaint'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
@@ -39,11 +40,11 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
       )}
       <PlayerAvatar
         headshot={item.headshot_url}
-        teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : getTeamLogoUrl(item.team)}
+        teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : item.sport.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)}
         teamAbbr={item.team}
         name={item.player_name}
         size={34}
-        showTeam={item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}
+        showTeam={item.sport.toLowerCase() === 'nba' ? !!nbaTeamLogo(item.team) : item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         {item.mlb_id ? (
@@ -333,7 +334,7 @@ export function WatchlistButton() {
         itemIds={pendingItems.map(item => item.id)}
         onClose={() => setSharing(false)}
         sport={pendingItems.length && pendingItems.every(item => item.sport.toLowerCase() === pendingItems[0].sport.toLowerCase())
-          ? pendingItems[0].sport.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
+          ? pendingItems[0].sport.toUpperCase() === 'NBA' ? 'NBA' : pendingItems[0].sport.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
           : null}
       />}
     </>

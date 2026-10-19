@@ -1,0 +1,50 @@
+ThePaint NBA private preview
+
+Scope
+- /the-paint is an admin-only NBA research board. Fresh server authorization
+  protects the page, board/profile data routes, and NBA pick posting. No public
+  navigation or sitemap entry was added. Page metadata and response headers
+  exclude indexing. Guest/member/role-read-error behavior fails closed.
+- Uses the existing server-side BallDontLie credentials and NBA subscription;
+  no credential copies, database migrations, collectors, or new scheduled jobs.
+- Existing MLB/NFL flows remain intact. Shared saved-pick and share views now
+  recognize NBA and use NBA team artwork.
+
+Design and behavior
+- Real matchup tiles, ESPN headshots matched by exact normalized team/name,
+  logo/initial fallback, sortable research table and dedicated mobile cards.
+- Eleven core prop markets, main prices and ladders, sportsbook/team/position
+  filters, venue and over/under splits, L5/L10/L20 descriptive heatmaps, trends,
+  injury reports, confirmed starters when published, game lines/team ratings.
+- Sliding player research with game logs, shooting-zone percentages/attempts,
+  advanced season metrics, sportsbook offers, and side-by-side comparison.
+- Custom stat matrix ranks observed matchup-roster stats. Browser-local saved
+  weights are explicitly labeled; scores are not modeled win probabilities.
+- Existing watchlist stores exact BDL identity/game/market/side/book/line/price.
+  Posting checks the fresh exact offer, canonical roster identity and tipoff.
+  The existing settlement schedule handles final NBA stats with a time budget;
+  DNP/missing/partial data remain pending. No settlement job was manually run.
+- Refreshes visible tabs once per minute; failed refresh retains the last board.
+
+Data boundaries
+- Opening-season samples explicitly use the prior regular season until current
+  season averages exist. DNPs, future games and postseason are excluded; cursor
+  truncation is surfaced. Missing numeric stats remain unknown, not zero.
+- Historical matchup samples exclude subsequent results; current injuries and
+  season-end shooting/team ratings are hidden for those dates.
+- Provider live quotes are not an archived odds-movement history. No synthetic
+  projections, guessed starting lineups, shot locations, or generated analysis.
+- NBA is a private initial release, not a claim of every MLB/NFL feature parity.
+
+Pre-release verification
+- TypeScript check passed; targeted ESLint passed.
+- NBA tests 11/11; combined NBA/NFL grading/odds regressions 21/21.
+- Existing production source suite 134/134.
+- Isolated browser preview used the actual UI and live NBA adapter with an
+  in-memory watchlist only. Opening matchup returned 35 players, all 35 exact
+  headshots, over 1,600 offers, 1,018 logs, and no provider coverage warnings.
+- Desktop and 390px mobile layouts checked; no document overflow/broken images.
+  Drawer, real shooting zones, book/ladders, comparison and matrix save/load
+  verified. No real payment or public feed post was submitted.
+
+Live release evidence will be appended after deployment verification.

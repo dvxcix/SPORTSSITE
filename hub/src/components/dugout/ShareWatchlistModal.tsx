@@ -16,7 +16,7 @@ import styles from './ShareWatchlistModal.module.css'
 // Download + native file-share (which attaches the PNG bytes directly, no
 // URL needed — covers sharing to X/Instagram/Messages from a phone just
 // fine) plus a desktop-friendly "Copy Image" cover the same ground instead.
-export function ShareWatchlistModal({ onClose, sport, itemIds }: { onClose: () => void; sport: 'MLB' | 'NFL' | null; itemIds: string[] }) {
+export function ShareWatchlistModal({ onClose, sport, itemIds }: { onClose: () => void; sport: 'MLB' | 'NFL' | 'NBA' | null; itemIds: string[] }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -93,7 +93,7 @@ export function ShareWatchlistModal({ onClose, sport, itemIds }: { onClose: () =
       if ('error' in upload) throw new Error(upload.error)
       const { data, error: insertError } = await supabase.from('posts').insert({
         author_id: user.id,
-        content: sport === 'NFL' ? 'Sideline research card' : sport === 'MLB' ? 'Dugout research card' : 'SlipSurge research card',
+        content: sport === 'NBA' ? 'Paint research card' : sport === 'NFL' ? 'Sideline research card' : sport === 'MLB' ? 'Dugout research card' : 'SlipSurge research card',
         post_type: 'analysis',
         sport,
         media_urls: [upload.publicUrl],
