@@ -207,6 +207,15 @@ test('cross-market scans retain complete-pool MM, isolate books and sides, and u
   assert.equal(nbaCheatsheet(players,'fanduel','under')[0].gap,-rows[0].gap!)
   assert.equal(rows[1].hit.rate,null)
   assert.equal(nbaCheatsheet(players.map(p=>({...p,logs:p.logs.slice(0,4)}))).length,0)
+  const incomplete=nbaCheatsheet(players,'fanduel','over','all',{statsComplete:false})
+  assert.ok(incomplete.every(row=>row.mm===null))
+  assert.deepEqual(incomplete.map(row=>({offer:row.offer,hit:row.hit})),rows.map(row=>({offer:row.offer,hit:row.hit})), 'Incomplete rank coverage must retain actual prices and observed hit samples')
+  const quarters=players.map(player=>({...player,average:{...player.average,points_1q:player.average.pts/4},periodLogs:player.logs.map(log=>({...log,period:1,pts:log.pts!/4})),props:[...player.props,{...player.props[0],prop_type:'points_1q',line_value:String(Number(player.props[0].line_value)/4)}]}))
+  const quarterIncomplete=nbaCheatsheet(quarters,'fanduel','over','all',{statsComplete:true,periodStatsComplete:false})
+  assert.deepEqual(quarterIncomplete.filter(row=>row.market.key==='points').map(row=>row.mm),[2,0,-2])
+  assert.equal(quarterIncomplete.filter(row=>row.market.key==='points_1q').length,3)
+  assert.ok(quarterIncomplete.filter(row=>row.market.key==='points_1q').every(row=>row.mm===null))
+  assert.deepEqual(nbaCheatsheet(quarters,'fanduel','over','all',{statsComplete:true,periodStatsComplete:true}).filter(row=>row.market.key==='points_1q').map(row=>row.mm),[2,0,-2])
 })
 
 test('rotation trends compare non-overlapping windows, exclude DNP and retain unknown tracking',()=>{

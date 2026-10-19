@@ -3,10 +3,13 @@ Prepared 2026-10-19; database verification 14:04:24 UTC.
 
 Status
 Database changes are applied and independently verified read-only. Application
-deployment and live desktop/mobile customer-flow checks remain PENDING below.
+customer flows have been exercised live on desktop and a 390x844 phone viewport.
 NBA remains admin-gated; this document does not authorize public release.
-Source base: f5bec42b3d12a478049309aa0a24259d96197933 plus the reviewed working
-changes. Root records the final GitHub/deployment commit after release.
+Source base: f5bec42b3d12a478049309aa0a24259d96197933. GitHub main contains
+be3d38d78eecae528db84e0dece4767a4923bf71 and follow-up
+19bc1895b66b0a159590f65cd97c58821429b9d7, both verified READY in production.
+Final release metadata and screenshots are recorded in work/the-paint after
+matching the production alias to the GitHub commit containing this report.
 
 Scope of this pass
 - Carry NBA through research navigation, search, profiles/favorites and player/
@@ -143,19 +146,53 @@ First live customer pass
   appearance shot defaults, hidden-route robot headers, and exact post links
   with duplicate-submit protection.
 
-PENDING — root completes after follow-up deployment/live browser QA
-- Final GitHub main commit, deployment ID/state and production URL verification.
-- Consolidated typecheck/lint/source/navigation/privacy/favorites test results.
-- Desktop: research -> player panel -> compare -> exact alt save -> Only me
-  post -> My Picks/detail; confirm exact line, side, price, book and pending.
-- Mobile: repeat research/compare/save/post/detail interactions, spacing,
-  viewport overflow, modal keyboard/tap behavior and transitions.
-- NBA search, player/team destination, favorite toggling, saved-search restore,
-  onboarding/profile/preferences and navigation entry-point checks.
-- Non-admin/anonymous NBA route and API denial plus hidden navigation checks.
-- Read-only post-test DB check: owner-only post and linked pick, no follower
-  notification, no public record or leaderboard effect. Record no personal
-  account identifiers in this document.
-- Preserve the genuine upcoming test as pending until the normal final-data
-  settlement schedule grades it; do not describe historical local replay as
-  already completed live settlement of that upcoming pick.
+Follow-up live customer pass
+- 19bc1895b66b0a159590f65cd97c58821429b9d7 is READY as
+  dpl_G11x3jEtZz6YsHko1qrV9aYFTx6t; www.slipsurge.com resolves to it.
+- Mobile Cade Over25.5 Points BetParx+115 posted Only me without a wager. The
+  persistent Pick posted confirmation linked to the exact owner-only detail.
+  Live DB confirms player17896075/game21717855/date2026-10-20/threshold25.5/
+  sideover/price115/bookbetparx, pending, no wager, zero notifications.
+  Post: f44a128d-9cd9-45de-bc86-8a7c9d99ce2f.
+- Nonowner authenticated RLS sees zero posts and zero picks for BOTH desktop
+  and mobile tests. Exact public-record exclusion was verified in live schema
+  and the local settlement fixture; no production settlement was forced.
+- +MM desc displayed +2 then +1; -MM asc displayed -2 first. These controls
+  sort, not filter. Unpriced MM stays last. Sign filters remain separate in
+  Slate/Cheatsheets. Same-book current/open prices and signed probability
+  deltas remain alongside each saved/current quote.
+- Mobile player panel, sportsbook comparison, exact alt persistence, image/
+  logo rendering and full-profile links worked. Desktop side-by-side player
+  comparison worked. A phone layout issue hiding the second comparison player
+  is corrected in this release; three-player comparisons retain scrolling.
+- Mobile TopBar Towns search opened the exact NBA profile. NBA player favorite
+  persisted across reload despite eight existing MLB favorites; restored to
+  original off. Shot chart opened Apr10, the latest completed appearance,
+  instead of a DNP. All12 attempts loaded and matched the final box score.
+  Player-profile viewport/body/document widths all380: no page overflow.
+- Settings/Interests showed NBA/NFL/MLB leagues, full team logos and separate
+  eight-player capacities. NFL Patrick Mahomes favorite saved and persisted
+  after reload, then was removed and saved to restore original state. All
+  original eight MLB players and selected MLB teams were preserved.
+- Desktop Ctrl-K Knicks search showed NBA player and team results and opened
+  /nba/teams/20. Full search/saved NBA search was verified in the first pass.
+- Browser error log was empty during the follow-up flow. Account onboarding
+  was not rerun on the established owner; its real handler and shared picker
+  are covered by the passing role/persistence tests.
+- Final consistency fix withholds Cheatsheets MM on incomplete historical
+  coverage, independently for Q1. Prices and observed hit samples remain.
+  Expanded the existing regression; consolidated NBA suite remains114/114.
+
+Release limits and retained review data
+- NBA remains admin-only everywhere: routes, APIs, navigation, search and
+  profile favorites. No public launch flag changed. Anonymous access checked
+  live; member denial exercised against actual handlers before data reads.
+  No regular-member browser account was available for a second live login.
+- Two genuine upcoming test picks remain pending until normal final-data
+  settlement. Historical local replay proves grading logic/SQL, not a future
+  live game's completed settlement. No collector job or result was replayed.
+- Owner test watchlist entries and saved NBA Towns search remain for review.
+  Temporary player/team favorite changes were restored.
+- Follow-up screenshots: customer-pass-mobile-posted.png,
+  customer-pass-mobile-private-pick.png, customer-pass-mobile-player-panel.png,
+  customer-pass-desktop-my-picks.png, customer-pass-mobile-navigation.png.

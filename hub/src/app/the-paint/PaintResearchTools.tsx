@@ -32,7 +32,7 @@ function Delta({value}:{value:number|null}){return <span className={value==null?
 export function PaintCheatsheets({board,players,vendor,side,location,open}:{board:PaintBoard;players:PaintPlayer[];vendor:string;side:'over'|'under';location:'all'|'home'|'away';open:(id:number,market?:PaintMarket)=>void}){
   const [focus,setFocus]=useState('all'),[sort,setSort]=useState<'name'|'mm'|'line'|'price'|'l5'|'hit'|'gap'>('mm'),[ascending,setAscending]=useState(false)
   // Rank against the complete priced matchup pool; filtering never changes a player's MM.
-  const scan=useMemo(()=>nbaCheatsheet(board.players,vendor,side,location).map(row=>({...row,l5:nbaAverage(nbaSample(nbaMarketLogs(row.player,row.market.key),5,location),row.market.key)})),[board.players,vendor,side,location])
+  const scan=useMemo(()=>nbaCheatsheet(board.players,vendor,side,location,{statsComplete:board.statsComplete,periodStatsComplete:board.periodStatsComplete}).map(row=>({...row,l5:nbaAverage(nbaSample(nbaMarketLogs(row.player,row.market.key),5,location),row.market.key)})),[board.players,board.statsComplete,board.periodStatsComplete,vendor,side,location])
   const rows=useMemo(()=>scan.filter(r=>players.some(p=>p.id===r.player.id)&&(focus==='all'||focus==='positive'&&r.mm!=null&&r.mm>0||focus==='negative'&&r.mm!=null&&r.mm<0||focus===r.market.key)).sort((a,b)=>{
     if(sort==='name')return(ascending?1:-1)*(`${a.player.last_name} ${a.player.first_name}`.localeCompare(`${b.player.last_name} ${b.player.first_name}`))||a.market.key.localeCompare(b.market.key)
     const value=(row:typeof a)=>sort==='hit'?row.hit.rate:sort==='gap'?row.gap:sort==='line'?Number(row.offer.line_value):sort==='price'?nbaPrice(row.offer,side):sort==='l5'?row.l5:row.mm

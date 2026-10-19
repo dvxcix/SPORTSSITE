@@ -91,3 +91,14 @@
 /* nba-research-polish: ordered controls and contained accessible labels */
 .researchScroll{position:relative;min-width:0;width:100%}.srOnly{top:0;left:0;margin:-1px;padding:0;border:0;clip-path:inset(50%)}
 @media(max-width:640px){.filters>.search{order:0;max-width:none}.filters>select[aria-label="Filter team"],.filters>select[aria-label="Filter sportsbook"]{order:1}.filters>select[aria-label="Sort NBA players"]{order:2;grid-column:1/-1}.filters>.filterToggle,.filters>.filterToggle:last-child{order:3}.filters>.filterToggle>span{display:inline}}
+
+/* Keep both players visible in a phone comparison; three players still scroll. */
+@media(max-width:640px){
+  .comparison[data-count="2"] table{table-layout:fixed;min-width:0;width:100%}
+  .comparison[data-count="2"] th,.comparison[data-count="2"] td{min-width:0;padding:11px 5px;white-space:normal;overflow-wrap:anywhere}
+  .comparison[data-count="2"] th:first-child{width:68px;font-size:10px;line-height:1.45;padding-left:0}
+  .comparison[data-count="2"] thead th{vertical-align:top}
+  .comparison[data-count="2"] thead strong{font-size:11px;line-height:1.4}
+  .comparison[data-count="2"] thead small{font-size:9px;line-height:1.4}
+  .comparison[data-count="2"] thead th>.avatar{margin-bottom:8px}
+}
