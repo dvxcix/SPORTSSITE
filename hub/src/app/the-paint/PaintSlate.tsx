@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpRight, RefreshCw } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { nbaBinary, nbaPrice, nbaTarget, PAINT_MARKETS, type PaintMarket } from '@/lib/nbaPaint'
-import type { nbaSlateRows } from '@/lib/nbaSlate'
+import type { NbaSlateViewRow } from '@/lib/nbaSlate'
 import { PlayerAvatar, marketNumber, number } from './PaintVisuals'
 import { PaintPickActions } from './PaintPickActions'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
@@ -14,7 +14,7 @@ import { compareResearch, PaintHitCell, PaintMatchupIcons, PaintMmCell, PaintSco
 import styles from './paint.module.css'
 import polish from './research-polish.module.css'
 
-type Slate = { date: string; games: number; loaded: number; complete: boolean; defenseUnavailable?: number; failed: number[]; rows: ReturnType<typeof nbaSlateRows>; fetchedAt: string; stale: boolean }
+type Slate = { date: string; games: number; loaded: number; complete: boolean; defenseUnavailable?: number; failed: number[]; rows: NbaSlateViewRow[]; fetchedAt: string; stale: boolean }
 export function PaintSlate({ date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange: (book: string) => void; books: string[] }) {
   const [state, setState] = useState<{ key: string; data: Slate } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0), [query, setQuery] = useState(''), [focus, setFocus] = useState('all'), [sort, setSort] = useState('score'), [ascending, setAscending] = useState(false), [limit, setLimit] = useState(50)
   const key = `${date}:${market}:${book}:${side}`
@@ -54,7 +54,7 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
     {error && <p role="status" className={polish.status}>{error}</p>}
     {!slate ? <div className={polish.empty}>Loading the slate…</div> : <>
       <div className={polish.status}><strong>{slate.loaded}/{slate.games} matchups</strong><span>{rows.length} players</span><time dateTime={slate.fetchedAt}>{new Date(slate.fetchedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</time>{slate.stale && <span>Last available prices</span>}{!slate.complete && <span>Partial slate · MM unavailable</span>}{!!slate.defenseUnavailable && <span>Some matchup data unavailable</span>}{side === 'under' ? <span>Under-side public counts unavailable</span> : !!slate.rows.length && slate.rows.every(row => row.marketSupport?.status === 'unavailable') && <span>Market context unavailable</span>}</div>
-      <div className={styles.researchScroll}><table className={`${styles.researchTable} ${polish.table}`}><caption className={styles.srOnly}>NBA slate players, scores, odds and market signals</caption><thead><tr>{header('Player', 'name')}{header('Score', 'score')}{header('MM', 'mm')}{header('Market signals', 'market')}{header('L10', 'average')}{header(nbaBinary(market) ? 'Frequency' : 'Projection', 'estimate')}{header('Form vs line', 'gap')}{header('L10 hit rate', 'hit')}{header('Target', 'line')}{header('Odds', 'odds')}<th><span className={styles.srOnly}>Save pick</span></th></tr></thead><tbody>{rows.slice(0, limit).map(row => <tr key={`${row.game.id}:${row.player.id}`}>
+      <div className={styles.researchScroll}><table className={`${styles.researchTable} ${polish.table}`}><caption className={styles.srOnly}>NBA slate players, scores, odds and market signals</caption><thead><tr>{header('Player', 'name')}{header('Score', 'score')}{header('Slate MM', 'mm')}{header('Market signals', 'market')}{header('L10', 'average')}{header(nbaBinary(market) ? 'Frequency' : 'Projection', 'estimate')}{header('Form vs line', 'gap')}{header('L10 hit rate', 'hit')}{header('Target', 'line')}{header('Odds', 'odds')}<th><span className={styles.srOnly}>Save pick</span></th></tr></thead><tbody>{rows.slice(0, limit).map(row => <tr key={`${row.game.id}:${row.player.id}`}>
         <td><a className={styles.playerButton} href={href(row)}><PlayerAvatar player={row.player}/><span><strong>{row.player.first_name} {row.player.last_name}</strong><span className={polish.playerMeta}><PaintMatchupIcons game={row.game}/></span></span><ArrowUpRight size={14}/></a></td>
         <td><PaintScoreCell score={row.score}/></td><td><PaintMmCell mm={row.mm}/></td><td><PaintMarketSupport support={row.marketSupport} href={(next, actualBook, quote) => `/the-paint?${new URLSearchParams({ date: row.game.date, game: String(row.game.id), player: String(row.player.id), market: next, book: actualBook, side: 'over', view: 'research', panel: 'ladder', line: String(quote.line), type: quote.type })}`}/></td>
         <td>{marketNumber(row.average, market)}</td><td>{row.estimate == null ? '—' : marketNumber(row.estimate, market)}</td>

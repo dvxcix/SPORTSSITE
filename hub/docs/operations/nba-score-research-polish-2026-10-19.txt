@@ -68,3 +68,24 @@ Local detailed evidence: work/the-paint/research-polish-tests.log,
 research-polish-production-tests.log, nba-market-signal-live-input.json and
 nba-market-signal-live-result.json. Production deployment verification is recorded
 in the companion release receipt after the GitHub-triggered build is ready.
+
+Live release verification
+GitHub main 8a3c63a1ea9fa7d0278a4c1c8016d71c731d27ea deployed READY as
+dpl_EbWiae4Qst2Z5KcyxoeWGWUmsz2C and owns the www.slipsurge.com alias.
+Authenticated production browser verified Towns threes Score 48 on both Score
+and Slate Edge, with +128 -> +140 and related assists -147 -> -154, 75 vs 471
+observed category picks. The exact related Assists O4.5 DraftKings ladder link
+selected Alt O/U, highlighted the correct quote and survived a browser reload.
+The player Overview projection loaded as 4.2 assists from 20 recent appearances.
+Desktop and 390px mobile screenshots are stored under work/the-paint; 320px
+live board filters are readable with no document horizontal overflow.
+The production mobile browser reported no console errors or warnings.
+Unauthenticated page, intelligence, slate and estimate requests redirect to login;
+NBA remains absent from global sport navigation. No access gate was enabled.
+
+Final copy clarification: Slate MM names its slate-wide rank pool explicitly;
+the matchup board/Score MM uses the selected matchup pool. Towns threes had
+Slate MM +1 and matchup MM 0 while the underlying SlipSurge Score remained 48.
+This is an intentional rank-scope difference, not two score formulas.
+The Slate client now explicitly consumes the sanitized NbaSlateViewRow type.
+TypeScript and targeted ESLint passed after this type/copy-only clarification.
