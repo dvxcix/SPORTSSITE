@@ -13,6 +13,7 @@ export const PAINT_TOOLS = [
   {key:'research',label:'ThePaint',icon:Layers3},
   {key:'cheatsheets',label:'Cheatsheets',icon:ClipboardList},
   {key:'usage',label:'Usage & tracking',icon:Activity},
+  {key:'tracking',label:'Game tracking',icon:Activity},
   {key:'score',label:'SlipSurge Score',icon:Target},
   {key:'slate',label:'Slate Edge',icon:Layers3},
   {key:'dvp',label:'Defense × position',icon:Shield},

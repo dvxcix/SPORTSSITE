@@ -14,6 +14,7 @@ import { nbaDefenseProfiles,nbaProductionEstimate,nbaSlipSurgeScore,nbaWalkForwa
 import { nbaShots,type NbaPlay } from '../src/lib/nbaShots.ts'
 import { nbaDivergences } from '../src/lib/nbaDivergence.ts'
 import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
+import {nbaTrackingRow,nbaTrackingSample,nbaTrackingField} from '../src/lib/nbaTracking.ts'
 import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
 
@@ -113,7 +114,7 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
 
 test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
   let reads=0
-  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
+  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
   for(const job of ['nba-research-sync','nba-model-validate','nba-research-snapshot']){
     const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
     assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
@@ -230,9 +231,9 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
 })
 
 test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
-  for(const file of ['../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
+  for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
@@ -528,4 +529,13 @@ test('quarter and event selections revalidate exact books, targets and canonical
   const leg={...selection,player_name:'Test',team:'OLD',game_pk:'123',game_date:'2099-10-20',prop_label:'untrusted',book:'fanduel',odds:140}
   assert.equal(await (validator.validatePaintPickLegs as (legs:unknown[])=>Promise<unknown>)([leg]),null);assert.equal(leg.player_name,'Canonical Player');assert.match(leg.prop_label,market.endsWith('_1q')?/^6\+ First-quarter/:/^Yes /)
  }
+})
+
+test('per-game NBA tracking is phase, identity, final-status and historical-team exact, with honest missing windows',()=>{
+ const log=stat(20,'2026-04-10'),raw={id:1,period:0,game:{...log.game},player:{id:log.player.id},team:{id:log.team.id},usage_percentage:.25,touches:0,net_rating:-5,matchup_minutes:'7:30',game_id:123}
+ const row=nbaTrackingRow(raw,log)!;assert.equal(row.values.touches,0);assert.equal(row.values.net_rating,-5);assert.equal(row.values.matchup_minutes,7.5);assert.equal(row.values.game_id,undefined)
+ assert.equal(nbaTrackingRow({...raw,period:1},log),null);assert.equal(nbaTrackingRow({...raw,game:{...raw.game,status:'Live',status_state:'in_progress'}},log),null);assert.equal(nbaTrackingRow({...raw,team:{id:999}},log),null);assert.equal(nbaTrackingRow({...raw,player:{id:999}},log),null)
+ const older={...stat(10,'2026-04-09'),id:2,game:{...stat(10,'2026-04-09').game,id:124}},player={logs:[log,older],id:log.player.id} as PaintPlayer
+ const sample=nbaTrackingSample(player,[row],'touches',5);assert.equal(sample.games,2);assert.equal(sample.known,1);assert.equal(sample.average,0);assert.equal(sample.observations[1].value,null)
+ assert.equal(nbaTrackingField('usage_percentage').percentage,true);assert.equal(nbaTrackingField('touches').percentage,false);assert.equal(nbaTrackingField('matchup_fg_pct').group,'Matchup')
 })

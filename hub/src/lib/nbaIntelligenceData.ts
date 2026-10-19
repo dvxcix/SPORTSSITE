@@ -5,7 +5,7 @@ import { nbaDefenseProfiles } from './nbaIntelligence'
 import { nbaMinutes, PAINT_MARKETS, type PaintTeam, type PaintGame, type PaintStat } from './nbaPaint'
 
 class NbaDefenseCoverageError extends Error {}
-export async function getNbaDefenseContext(season: number, before: string, allowFallback = true): Promise<{ teams?: PaintTeam[]; ready: boolean; season: number; before: string; profiles: ReturnType<typeof nbaDefenseProfiles>; games: number; rows: number; fetchedAt: string | null; stale: boolean }> {
+export async function getNbaDefenseContext(season: number, before: string, allowFallback = true): Promise<{ teams?: PaintTeam[]; ready: boolean; season: number; before: string; profiles: ReturnType<typeof nbaDefenseProfiles>; games: number; rows: number; quarterRows?: number; fetchedAt: string | null; stale: boolean }> {
   const admin = createAdminClient()
   const { data: state, error: stateError } = await admin.from('nba_ingestion_state').select('complete,rows_seen,updated_at').eq('key', `stats:${season}`).maybeSingle()
   if (stateError) throw new Error('NBA history coverage unavailable')
@@ -16,7 +16,7 @@ export async function getNbaDefenseContext(season: number, before: string, allow
   const { data: periodState, error: periodError } = await admin.from('nba_ingestion_state').select('complete').eq('key', `period1:${season}`).maybeSingle()
   if (periodError) throw new Error('NBA quarter coverage unavailable')
   try {
-  const cached = await nbaSharedCache(`dvp:v4:${season}:${before}:${periodState?.complete===true}`, 3600, 3600, async () => {
+  const cached = await nbaSharedCache(`dvp:v5:${season}:${before}:${periodState?.complete===true}`, 3600, 3600, async () => {
     const { data: games, error } = await admin.from('nba_games').select('payload').eq('season', season).eq('postseason', false).lt('game_date', before).order('game_date', { ascending: false }).limit(1000)
     if (error) throw new Error('NBA defensive game coverage unavailable')
     const counts = new Map<number, number>(), ids = new Set<number>()
@@ -57,7 +57,7 @@ export async function getNbaDefenseContext(season: number, before: string, allow
       return allowed.get(opponent)?.has(row.game.id) && row.game.date.slice(0, 10) < before
     })
     const teams = [...new Map((games ?? []).flatMap(row => { const game = row.payload as PaintGame; return [game.home_team,game.visitor_team] }).map(team => [team.id,team])).values()]
-    return { teams, profiles: nbaDefenseProfiles(filtered, PAINT_MARKETS.map(market => market.key)), games: ids.size, rows: filtered.filter(row => (nbaMinutes(row.min) ?? 0) > 0).length }
+    return { teams, profiles: nbaDefenseProfiles(filtered, PAINT_MARKETS.map(market => market.key)), games: ids.size, rows: filtered.filter(row => (row.period??0)===0 && (nbaMinutes(row.min) ?? 0) > 0).length, quarterRows: filtered.filter(row => row.period===1 && (nbaMinutes(row.min)??0)>0).length }
   })
   return { ready: true, season, before, ...cached.value, fetchedAt: cached.fetchedAt, stale: cached.stale }
   } catch (error) {

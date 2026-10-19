@@ -6,6 +6,7 @@ import { nbaBinary, nbaPrice, nbaTarget, PAINT_MARKETS, nbaOdds, type PaintMarke
 import type { nbaSlateRows } from '@/lib/nbaSlate'
 import { PlayerAvatar, number } from './PaintVisuals'
 import { PaintPickActions } from './PaintPickActions'
+import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import styles from './paint.module.css'
 type Slate = { date: string; games: number; loaded: number; complete: boolean; failed: number[]; rows: ReturnType<typeof nbaSlateRows>; fetchedAt: string; stale: boolean }
 export function PaintSlate({ date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange:(book:string)=>void; books:string[] }) {
@@ -24,8 +25,8 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
       } catch { if (!controller.signal.aborted) setError('The slate could not refresh. Retry to load the latest captured boards.') }
       finally { pending = false }
     }
-    void update(); const timer = setInterval(() => { if (document.visibilityState === 'visible') void update() }, 60000)
-    return () => { controller.abort(); clearInterval(timer) }
+    void update(); const stop = watchNbaRefresh(update)
+    return () => { controller.abort(); stop() }
   }, [date, market, book, side, key, retry])
   const slate = state?.key === key ? state.data : null
   const rows = useMemo(() => (slate?.rows ?? []).filter(row => `${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (focus === 'all' || focus === 'positive' && (row.mm ?? 0) > 0 || focus === 'negative' && (row.mm ?? 0) < 0 || focus === 'plus' && (nbaPrice(row.offer,side)??0)>0)).sort((a, b) => {
