@@ -12,7 +12,7 @@ import { PaintPrice } from './PaintPrice'
 import { PaintSortHeader } from './PaintSortHeader'
 import { PaintMarketSupport } from './PaintMarketSupport'
 import { compareResearch, PaintHitCell, PaintMatchupIcons, PaintMmCell, PaintScoreCell } from './PaintResearchCells'
-import { PaintBookSelect } from './PaintEntitySelect'
+import { PaintBookSelect,PaintTeamSelect } from './PaintEntitySelect'
 import { PaintHeatCell } from './PaintHeatCell'
 import { nbaCenteredHeat } from './paintHeat'
 import styles from './paint.module.css'
@@ -23,6 +23,7 @@ type Slate = { date: string; games: number; loaded: number; complete: boolean; d
 export function PaintSlate({ selection, date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { selection?: NbaMarketSelection; date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange: (book: string) => void; books: string[] }) {
   const [state, setState] = useState<{ key: string; data: Slate } | null>(null), [errorKey, setErrorKey] = useState<string | null>(null), [retry, setRetry] = useState(0), [query, setQuery] = useState(''), [focus, setFocus] = useState('all'), [sort, setSort] = useState('score'), [ascending, setAscending] = useState(false), [limit, setLimit] = useState(50)
   const contract=selection?.type??'',target=selection?.line==null?'':String(selection.line)
+  const [team,setTeam]=useState('all'),[gameFilter,setGameFilter]=useState('all')
   const key = `${date}:${market}:${book}:${side}:${contract}:${target}`
   useEffect(() => {
     const controller = new AbortController(); let pending = false
@@ -44,10 +45,10 @@ export function PaintSlate({ selection, date, market, book, side, onMarketChange
   const error = errorKey === key
   const refresh = () => { setErrorKey(null); setRetry(value => value + 1) }
   const sortBy = (column: string) => { if (sort === column) setAscending(value => !value); else { setSort(column); setAscending(column === 'name') } }
-  const rows = useMemo(() => (slate?.rows ?? []).filter(row => `${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (focus === 'all' || focus === 'positive' && (row.mm ?? 0) > 0 || focus === 'negative' && (row.mm ?? 0) < 0 || focus === 'plus' && (nbaPrice(row.offer, side) ?? 0) > 0 || focus === 'signals' && row.marketSignals?.status === 'confirmed')).sort((a, b) => {
+  const rows = useMemo(() => (slate?.rows ?? []).filter(row => (team==='all'||String(row.player.team.id)===team)&&(gameFilter==='all'||String(row.game.id)===gameFilter)&& `${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (focus === 'all' || focus === 'positive' && (row.mm ?? 0) > 0 || focus === 'negative' && (row.mm ?? 0) < 0 || focus === 'plus' && (nbaPrice(row.offer, side) ?? 0) > 0 || focus === 'signals' && row.marketSignals?.status === 'confirmed')).sort((a, b) => {
     const value = (row: typeof a) => sort === 'name' ? `${row.player.first_name} ${row.player.last_name}` : sort === 'mm' ? row.mm : sort === 'gap' ? row.gap : sort === 'hit' ? row.hit.rate : sort === 'average' ? row.average : sort === 'estimate' ? row.estimate : sort === 'line' ? Number(row.offer.line_value) : sort === 'odds' ? nbaPrice(row.offer, side) : sort === 'market' ? row.marketSignals?.signal ? row.marketSignals.signal.relatedPicks - row.marketSignals.signal.targetPicks : null : row.score
     return compareResearch(value(a), value(b), ascending) || a.player.id - b.player.id
-  }), [slate, query, focus, sort, side, ascending])
+  }), [slate, query, focus, sort, side, ascending,team,gameFilter])
   const averagePool = slate?.rows.map(row => row.average) ?? []
   const estimatePool = slate?.rows.map(row => row.estimate) ?? []
   const gapPool = slate?.rows.map(row => row.gap) ?? []
@@ -55,7 +56,7 @@ export function PaintSlate({ selection, date, market, book, side, onMarketChange
   const header = (label: string, column: string) => <PaintSortHeader key={column} label={label} column={column} active={sort} ascending={ascending} onSort={sortBy}/>
   return <section className={`${styles.researchTool} ${dials.surface}`}>
     <header className={styles.toolHeading}><div><h3>Slate Edge</h3></div><button className={styles.iconButton} aria-label="Refresh NBA slate edge" onClick={refresh}><RefreshCw size={16}/></button></header>
-    <div className={styles.toolControls}>
+    <div className={styles.toolControls}><PaintTeamSelect label="Slate edge team" value={team} onChange={setTeam} teams={[...new Map((slate?.rows??[]).map(row=>[row.player.team.id,row.player.team])).values()]}/><select aria-label="Slate edge game" value={gameFilter} onChange={e=>setGameFilter(e.target.value)}><option value="all">All games</option>{[...new Map((slate?.rows??[]).map(row=>[row.game.id,row.game])).values()].map(game=><option key={game.id} value={game.id}>{game.visitor_team.abbreviation} @ {game.home_team.abbreviation}</option>)}</select><select aria-label="Sort slate edge" value={sort+':'+(ascending?'asc':'desc')} onChange={e=>{const [column,direction]=e.target.value.split(':');setSort(column);setAscending(direction==='asc')}}>{[['score:desc','Highest score'],['score:asc','Lowest score'],['mm:desc','Highest MM'],['mm:asc','Lowest MM'],['odds:desc','Highest odds'],['odds:asc','Lowest odds'],['hit:desc','Highest hit rate'],['hit:asc','Lowest hit rate'],['gap:desc','Largest form gap'],['name:asc','Player A–Z'],['gap:asc','Lowest form gap'],['average:desc','Highest average'],['average:asc','Lowest average'],['estimate:desc','Highest estimate'],['estimate:asc','Lowest estimate'],['line:desc','Highest target'],['line:asc','Lowest target'],['market:desc','Highest market signal'],['market:asc','Lowest market signal'],['name:desc','Highest player name']].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>
       <PaintBookSelect label="Slate edge sportsbook" value={book} onChange={onBookChange} books={books}/>
       <select aria-label="Slate edge market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
       <select aria-label="Slate edge side" value={side} onChange={event => onSideChange(event.target.value as 'over' | 'under')}><option value="over">Over</option><option value="under">Under</option></select>

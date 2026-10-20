@@ -11,11 +11,14 @@ import { compareResearch } from './PaintResearchCells'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import styles from './paint.module.css'
 import polish from './research-polish.module.css'
+import { PaintMilestoneSignals } from './PaintMilestoneSignals'
+import type { NbaMilestoneMove } from '@/lib/nbaMilestoneSignals'
 
-type Snapshot = { rows: ReturnType<typeof nbaDivergences>; captures: number; publicCapturedAt: string | null; latestAt: string | null; stale: boolean }
+type Snapshot = { rows: ReturnType<typeof nbaDivergences>; milestones:NbaMilestoneMove[]; captures: number; publicCapturedAt: string | null; latestAt: string | null; stale: boolean }
 const label = (market: PaintMarket) => PAINT_MARKETS.find(item => item.key === market)?.label ?? market
 const delta = (value: number | null) => value == null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(1)}`
-export function PaintDivergence({ board, open }: { board: PaintBoard; open: (id: number, market?: PaintMarket) => void }) {
+export function PaintDivergence({ board, open,initialMarket,initialTarget,initialBook }: { initialMarket?:PaintMarket;initialTarget?:number;initialBook?:string;board: PaintBoard; open: (id: number, market?: PaintMarket) => void }) {
+  const [mode,setMode]=useState<'milestone'|'over_under'>('milestone')
   const [state, setState] = useState<{ game: number; data: Snapshot } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0), [book, setBook] = useState('all'), [focus, setFocus] = useState(false), [query, setQuery] = useState(''), [sort, setSort] = useState('public')
   useEffect(() => {
     const controller = new AbortController(); let pending = false
@@ -43,7 +46,9 @@ export function PaintDivergence({ board, open }: { board: PaintBoard; open: (id:
     const value = (row: typeof a) => sort === 'name' ? `${players.get(row.playerId)?.first_name} ${players.get(row.playerId)?.last_name}` : sort === 'price' ? row.kind === 'price' ? Math.abs(row.primaryMovement.priceChange ?? 0) : null : sort === 'line' ? row.kind === 'line' ? Math.abs(row.primaryMovement.lineChange ?? 0) : null : row.primaryPicks != null && row.otherPicks != null ? row.otherPicks - row.primaryPicks : null
     return compareResearch(value(a), value(b), sort === 'name') || a.playerId - b.playerId
   }), [snapshot, players, book, focus, query, sort])
+  if(mode==='milestone')return <PaintMilestoneSignals initialMarket={initialMarket} initialTarget={initialTarget} initialBook={initialBook} board={board} moves={snapshot?.milestones??[]} onOverUnder={()=>setMode('over_under')} loading={!snapshot&&!error} error={snapshot?error:error?'Market signals could not load.':''} retry={refresh} stale={snapshot?.stale??false}/>
   return <section className={styles.researchTool}>
+    <div className={styles.segment}><button onClick={()=>setMode('milestone')}>Milestones · N+</button><button aria-pressed>O/U references</button></div>
     <header className={styles.toolHeading}><div><h3>Cross-market signals</h3></div><button className={styles.iconButton} aria-label="Refresh cross-market signals" onClick={refresh}><RefreshCw size={16}/></button></header>
     <div className={styles.toolControls}><PaintBookSelect label="Cross-market sportsbook" value={book} onChange={setBook} books={[...new Set(snapshot?.rows.map(row => row.book) ?? [])].sort()}/><label className={styles.search}><input aria-label="Search cross-market players" placeholder="Find a player" value={query} onChange={event => setQuery(event.target.value)}/></label><select aria-label="Sort cross-market signals" value={sort} onChange={event => setSort(event.target.value)}><option value="public">Public pick difference</option><option value="price">Largest price move</option><option value="line">Largest line move</option><option value="name">Player name</option></select><button aria-pressed={focus} onClick={() => setFocus(value => !value)}><UsersRound size={14}/> More picks in related market</button></div>
     {error && <p role="status" className={polish.status}>{snapshot ? error : 'Market signals could not load.'} <button onClick={refresh}>Retry</button></p>}

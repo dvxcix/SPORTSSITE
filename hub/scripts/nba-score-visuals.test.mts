@@ -15,7 +15,7 @@ const stubs: Record<string, string> = {
   'next/image': 'import React from "react";export default function Image(props){return <img {...props}/>}',
   '@/components/BookLogo': 'export const BookLogo=()=>null',
   './PaintPickActions': 'export const PaintPickActions=()=>null',
-  './PaintEntitySelect': 'export const PaintBookSelect=()=>null',
+  './PaintEntitySelect': 'export const PaintBookSelect=()=>null; export const PaintTeamSelect=()=>null',
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
 }
 const bundle = await build({ stdin: { contents: 'export {PaintMarketSupport} from "./src/app/the-paint/PaintMarketSupport"; export {PaintScoreCell} from "./src/app/the-paint/PaintResearchCells"; export {PaintIntelligence} from "./src/app/the-paint/PaintIntelligence"; export {PaintSlate} from "./src/app/the-paint/PaintSlate"', resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'score-visuals.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'score-fixture', setup(builder) {

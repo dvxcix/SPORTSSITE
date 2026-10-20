@@ -14,7 +14,7 @@ import { PaintPrice } from './PaintPrice'
 import { PaintSortHeader } from './PaintSortHeader'
 import { PaintMarketSupport } from './PaintMarketSupport'
 import { compareResearch, PaintMmCell, PaintScoreCell } from './PaintResearchCells'
-import { PaintBookSelect } from './PaintEntitySelect'
+import { PaintBookSelect,PaintTeamSelect } from './PaintEntitySelect'
 import { PaintHeatCell, PaintHeatLegend } from './PaintHeatCell'
 import { nbaCenteredHeat } from './paintHeat'
 import styles from './paint.module.css'
@@ -26,6 +26,7 @@ type Context = { teams?: PaintTeam[]; season: number; ready: boolean; profiles: 
 export function PaintIntelligence({ selection, board, market, book, side, mode, open, onMarketChange, onBookChange, onSideChange }: { selection?: NbaMarketSelection; board: PaintBoard; market: PaintMarket; book: string; side: 'over' | 'under'; mode: 'score' | 'dvp'; open: (id: number, market?: PaintMarket, book?: string, panel?: 'trends' | 'ladder' | 'movement' | 'tracking' | 'court' | 'markets', quote?: { line: number; type: 'over_under' | 'milestone' }, side?: 'over' | 'under') => void; onMarketChange: (market: PaintMarket) => void; onBookChange: (book: string) => void; onSideChange: (side: 'over' | 'under') => void }) {
   const [contextState, setContext] = useState<{ key: string; data: Context } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
   const [query, setQuery] = useState(''), [position, setPosition] = useState('all'), [ascending, setAscending] = useState(false), [sort, setSort] = useState('score')
+  const [team,setTeam]=useState('all')
   const [scope, setScope] = useState<'league' | 'matchup'>('league')
   const contract=selection?.type??'',target=selection?.line==null?'':String(selection.line)
   const contextKey = `${board.game.id}:${market}:${book}:${side}:${contract}:${target}`
@@ -55,10 +56,10 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
     const matchup = context?.profiles.find(profile => profile.teamId === opponent.id && profile.position === nbaPosition(player.position) && profile.market === market)
     const signal = context?.scores?.find(row => row.playerId === player.id) ?? { score: null, mm: null, offer: null, minutes: null, production: null, newTeam: false, marketSignals: null }
     return { player, opponent, matchup, signal, offer: signal.offer, mm: signal.mm }
-  }).filter(row => `${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (position === 'all' || nbaPosition(row.player.position) === position)).sort((a, b) => {
+  }).filter(row => (team==='all'||String(row.player.team.id)===team)&&`${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (position === 'all' || nbaPosition(row.player.position) === position)).sort((a, b) => {
     const value = (row: typeof a) => sort === 'name' ? `${row.player.first_name} ${row.player.last_name}` : sort === 'mm' ? row.mm : sort === 'minutes' ? row.signal.minutes : sort === 'production' ? row.signal.production : sort === 'defense' ? row.matchup?.per48 : sort === 'allowance' ? row.matchup?.allowance : sort === 'line' ? row.offer ? Number(row.offer.line_value) : null : sort === 'odds' ? row.offer ? nbaPrice(row.offer, side) : null : sort === 'market' ? row.signal.marketSignals?.signal ? row.signal.marketSignals.signal.relatedPicks - row.signal.marketSignals.signal.targetPicks : null : row.signal.score
     return compareResearch(value(a), value(b), ascending) || a.player.id - b.player.id
-  }), [board, market, side, context, query, position, ascending, sort])
+  }), [board, market, side, context, query, position, ascending, sort,team])
   const leagueSort = ['name', 'position', 'games', 'defense', 'league', 'allowance'].includes(sort) ? sort : 'allowance'
   // Keep color domains stable when a user searches or filters positions.
   const defensePools = useMemo(() => {
@@ -80,7 +81,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
   const header = (label: string, column: string, active = sort) => <PaintSortHeader key={column} label={label} column={column} active={active} ascending={ascending} onSort={sortBy}/>
   return <section className={`${styles.researchTool} ${dials.surface}`}>
     <header className={styles.toolHeading}><div><h3>{mode === 'score' ? 'SlipSurge Score' : 'Defense × position'}</h3></div><button className={styles.iconButton} aria-label="Refresh NBA matchup context" onClick={() => setRetry(value => value + 1)}><RefreshCw size={16}/></button></header>
-    <div className={styles.toolControls}>
+    <div className={styles.toolControls}>{(mode==='score'||scope==='matchup')&&<><PaintTeamSelect label="Score team" value={team} onChange={setTeam} teams={[board.game.visitor_team,board.game.home_team]}/><select aria-label="Sort NBA score" value={sort+':'+(ascending?'asc':'desc')} onChange={e=>{const [column,direction]=e.target.value.split(':');setSort(column);setAscending(direction==='asc')}}>{[['score:desc','Highest score'],['score:asc','Lowest score'],['mm:desc','Highest MM'],['mm:asc','Lowest MM'],['odds:desc','Highest odds'],['odds:asc','Lowest odds'],['line:desc','Highest target'],['line:asc','Lowest target'],['production:desc','Highest production'],['minutes:desc','Most minutes'],['name:asc','Player A–Z'],['production:asc','Lowest production'],['minutes:asc','Lowest minutes'],['defense:desc','Highest defense per 48'],['defense:asc','Lowest defense per 48'],['allowance:desc','Highest defensive allowance'],['allowance:asc','Lowest defensive allowance'],['market:desc','Highest market signal'],['market:asc','Lowest market signal'],['name:desc','Highest player name']].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></>}
       <select aria-label="Score stat market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
       {(mode === 'score' || scope === 'matchup') && <><PaintBookSelect label="Score sportsbook" value={book} onChange={onBookChange} books={board.players.flatMap(player => player.props.map(offer => offer.vendor))}/>
       <select aria-label="Score market side" value={side} onChange={event => onSideChange(event.target.value as 'over' | 'under')}><option value="over">Over</option><option value="under">Under</option></select></>}
