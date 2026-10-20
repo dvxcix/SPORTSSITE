@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
   const admin = createAdminClient()
   const [{ data: profile }, { data: suggested }, { data: suggestedGroups }] = await Promise.all([
     admin.from('users')
-      .select('username, display_name, bio, avatar_url, banner_url, favorite_teams, favorite_players, account_type, tier, favorite_sports, interest_settings, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
+      .select('username, display_name, bio, avatar_url, banner_url, favorite_teams, favorite_players, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_sports, interest_settings, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
       .eq('id', user.id)
       .single(),
     supabase.from('users')
@@ -45,7 +45,7 @@ export default async function OnboardingPage() {
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}
           suggestedGroups={suggestedGroups ?? []}
-          allowNba={hasNbaAccess(profile?.account_type)}
+          allowNba={hasNbaAccess(profile)}
         />
       </div>
     </div>

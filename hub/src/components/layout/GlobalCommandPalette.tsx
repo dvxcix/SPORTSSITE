@@ -6,14 +6,15 @@ import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { hasNbaAccess, isNbaToolHref } from '@/lib/nbaAccessPolicy'
 import { useAuth } from '@/context/AuthContext'
-import { ChevronRight, Search, ShieldCheck, UserRound, X } from 'lucide-react'
+import { ChevronRight, LockKeyhole, Search, ShieldCheck, UserRound, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { SafeImage } from '@/components/ui/SafeImage'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 import { areaNavigation, productAreaMeta, type ProductArea } from './navigationConfig'
+import { NBA_UPGRADE_HREF } from './researchNavigation'
 import styles from './GlobalCommandPalette.module.css'
 
-type CommandItem = { id: string; label: string; detail: string; href: string; icon: typeof Search; image?: string | null; keywords?: string }
+type CommandItem = { id: string; label: string; detail: string; href: string; icon: typeof Search; image?: string | null; keywords?: string; locked?: boolean }
 const destinationDetails: Record<string, string> = {
   '/feed': 'Posts, picks, and live conversations',
   '/explore': 'People, games, creators, and communities',
@@ -31,12 +32,12 @@ const destinations: CommandItem[] = (() => {
   const seen = new Set<string>()
   return (Object.entries(areaNavigation) as Array<[ProductArea, typeof areaNavigation[ProductArea]]>).flatMap(([area, items]) =>
     items.flatMap(item => {
-      if (item.ultimateOnly || seen.has(item.href)) return []
+      if ((item.ultimateOnly && !isNbaToolHref(item.href)) || seen.has(item.href)) return []
       seen.add(item.href)
       return [{
         id: `${area}-${item.href}`,
         label: item.label,
-        detail: destinationDetails[item.href] ?? `${productAreaMeta[area].label} · ${productAreaMeta[area].eyebrow}`,
+        detail: isNbaToolHref(item.href) ? 'NBA research · Ultimate' : destinationDetails[item.href] ?? `${productAreaMeta[area].label} · ${productAreaMeta[area].eyebrow}`,
         href: item.href,
         icon: item.icon,
         keywords: `${area} ${item.shortLabel ?? ''} ${productAreaMeta[area].eyebrow}`,
@@ -53,7 +54,7 @@ export function GlobalCommandPalette() {
   const pathname = usePathname()
   const { allowed: nflAccess } = useNflAccess()
   const { profile } = useAuth()
-  const nbaAccess = hasNbaAccess(profile?.account_type)
+  const nbaAccess = hasNbaAccess(profile)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [sports, setSports] = useState<{ query: string; items: CommandItem[] }>({ query: '', items: [] })
@@ -92,8 +93,9 @@ export function GlobalCommandPalette() {
   }, [query, nbaAccess, open])
   const local = useMemo(() => {
     const value = query.trim().toLowerCase()
-    return destinations.filter(item => (!isNflToolHref(item.href) || nflAccess) && (!isNbaToolHref(item.href) || nbaAccess)
+    return destinations.filter(item => (!isNflToolHref(item.href) || nflAccess)
       && (!value || `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)))
+      .map(item => isNbaToolHref(item.href) && !nbaAccess ? { ...item, href: NBA_UPGRADE_HREF, detail: 'NBA research · Upgrade to Ultimate', locked: true } : item)
   }, [query, nflAccess, nbaAccess])
   const searchPending = query.trim().length >= 2 && sports.query !== query.trim()
   const items = useMemo(() => {
@@ -118,7 +120,7 @@ export function GlobalCommandPalette() {
       if (event.key === 'Escape') close()
     }} placeholder="Search people, players, teams, tools…" aria-label="Search SlipSurge" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={resultsId} aria-activedescendant={items.length ? `${resultsId}-${items[activeIndex].id}` : undefined} autoComplete="off"/>{query ? <button type="button" className={styles.key} onClick={() => { setQuery(''); setActive(0) }} aria-label="Clear search"><X size={12}/></button> : <kbd className={styles.key}>ESC</kbd>}</div>
     {searchPending && items.length > 0 && <div className={styles.searching} role="status">Searching players and teams…</div>}
-    <div ref={resultsRef} id={resultsId} className={styles.body} role="listbox" aria-label="Search results" aria-busy={searchPending}>{items.length ? <div className={styles.section} role="group" aria-label={query ? 'Results' : 'Navigate'}><span className={styles.label} aria-hidden="true">{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} id={`${resultsId}-${item.id}`} type="button" tabIndex={-1} className={styles.item} data-active={activeIndex === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={activeIndex === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span><ChevronRight className={styles.arrow} size={15}/></button> })}</div> : <div className={styles.empty} role="status"><Search size={24}/><strong>{searchPending ? 'Searching…' : 'No matching results'}</strong><span>{searchPending ? 'Finding players and teams.' : 'Press Enter to search the full network.'}</span></div>}</div>
+    <div ref={resultsRef} id={resultsId} className={styles.body} role="listbox" aria-label="Search results" aria-busy={searchPending}>{items.length ? <div className={styles.section} role="group" aria-label={query ? 'Results' : 'Navigate'}><span className={styles.label} aria-hidden="true">{query ? 'Results' : 'Navigate'}</span>{items.map((item, index) => { const Icon = item.icon; return <button key={item.id} id={`${resultsId}-${item.id}`} type="button" tabIndex={-1} className={styles.item} data-active={activeIndex === index} onMouseEnter={() => setActive(index)} onClick={() => navigate(item.href)} role="option" aria-selected={activeIndex === index}><span className={styles.icon}>{item.image ? <SafeImage src={item.image} alt="" width={28} height={28} style={{ objectFit: 'contain', borderRadius: 6 }} fallback={<Icon size={16}/>}/> : <Icon size={16}/>}</span><span className={styles.copy}><strong>{item.label}</strong><span>{item.detail}</span></span>{item.locked ? <LockKeyhole className={styles.arrow} size={15} aria-label="Ultimate required"/> : <ChevronRight className={styles.arrow} size={15} aria-hidden="true"/>}</button> })}</div> : <div className={styles.empty} role="status"><Search size={24}/><strong>{searchPending ? 'Searching…' : 'No matching results'}</strong><span>{searchPending ? 'Finding players and teams.' : 'Press Enter to search the full network.'}</span></div>}</div>
     <div className={styles.footer}><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Open</span><span><kbd>ESC</kbd> Close</span></div>
   </div></Modal>
 }

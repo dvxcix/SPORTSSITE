@@ -8,7 +8,7 @@ import { PRODUCT_EXPERIENCE_ROUTES } from '../src/lib/productExperienceAudit.ts'
 const player = { id: 447, name: 'Karl-Anthony Towns', position: 'C', teamId: 20, teamName: 'New York Knicks', headshot: 'https://a.espncdn.com/i/headshots/nba/players/full/3136195.png', teamLogo: 'https://a.espncdn.com/i/teamlogos/nba/500/ny.png' }
 const team = { id: 20, name: 'New York Knicks', abbr: 'NYK', logo: player.teamLogo }
 
-async function quickSearch(role: string, nbaResponse: Promise<{ players: typeof player[]; teams: typeof team[] }> = Promise.resolve({ players: [player], teams: [team] })) {
+async function quickSearch(role: string, nbaResponse: Promise<{ players: typeof player[]; teams: typeof team[] }> = Promise.resolve({ players: [player], teams: [team] }), tier = 'free', granted: string | null = null) {
   const source = await readFile(new URL('../src/components/layout/TopBar.tsx', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const effects: (() => (() => void) | void)[] = [], timers: (() => Promise<void>)[] = []
@@ -27,7 +27,7 @@ async function quickSearch(role: string, nbaResponse: Promise<{ players: typeof 
     },
     'react/jsx-runtime': { jsx: () => null, jsxs: () => null },
     'next/navigation': { useRouter: () => ({ push: () => null }) },
-    '@/context/AuthContext': { useAuth: () => ({ user: null, profile: { account_type: role, tier: 'free' }, loading: false }) },
+    '@/context/AuthContext': { useAuth: () => ({ user: null, profile: { account_type: role, tier, admin_granted_tier: granted }, loading: false }) },
     '@/lib/supabase/client': { createClient: () => ({ from: () => query }) },
     '@/lib/emoji': { useCustomEmojis: () => [] },
     '@slipsurge/core/tiers': { effectiveTier: () => 'free', hasFullAccessOverride: () => false },
@@ -47,13 +47,16 @@ async function quickSearch(role: string, nbaResponse: Promise<{ players: typeof 
   return { run: timers[0], cleanup: cleanup!, results, requests, databaseSignals }
 }
 
-test('TopBar requests NBA identities only for trusted admin account type', async () => {
-  for (const role of ['user', 'creator', 'beta', 'admin']) {
-    const search = await quickSearch(role)
+test('TopBar requests NBA identities only with trusted Ultimate or admin access', async () => {
+  for (const [role,tier,granted,allowed] of [
+    ['user','free',null,false], ['creator','advanced',null,false], ['beta','free',null,false],
+    ['admin','free',null,true], ['user','ultimate',null,true], ['user','free','ultimate',true],
+  ] as const) {
+    const search = await quickSearch(role,undefined,tier,granted)
     await search.run()
     const request = search.requests.find(item => item.url.startsWith('/api/search/nba?'))
-    assert.equal(Boolean(request), role === 'admin')
-    assert.equal(search.results.at(-1)?.nbaPlayers.length, role === 'admin' ? 1 : 0)
+    assert.equal(Boolean(request), allowed)
+    assert.equal(search.results.at(-1)?.nbaPlayers.length, allowed ? 1 : 0)
     if (request) { assert.equal(request.cache, 'no-store'); assert.deepEqual(search.results.at(-1)?.nbaPlayers[0], player); assert.deepEqual(search.results.at(-1)?.nbaTeams[0], team) }
     search.cleanup()
   }
@@ -92,6 +95,6 @@ test('admin audit registry includes both gated NBA entity surfaces without dupli
     const rows = PRODUCT_EXPERIENCE_ROUTES.filter(route => route.route === path)
     assert.equal(rows.length, 1)
     assert.equal(rows[0].family, 'Identity & sports entities')
-    assert.ok(rows[0].label.includes('admin-gated'))
+    assert.ok(rows[0].label.includes('Ultimate'))
   }
 })

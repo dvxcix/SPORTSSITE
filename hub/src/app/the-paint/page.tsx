@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintSchedule } from '@/lib/nbaPaintData'
 import { PaintBoardClient } from './PaintBoardClient'
@@ -10,7 +10,7 @@ export const maxDuration = 60
 export const metadata: Metadata = { title: 'ThePaint • SlipSurge', robots: { index: false, follow: false, nocache: true } }
 export default async function PaintPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const gate = await requirePaintAccess()
-  if (gate.error) notFound()
+  if (gate.error) return <NbaAccessFallback status={gate.error.status} />
   const params = await searchParams
   const retry=`/the-paint?${new URLSearchParams(Object.entries(params).filter((entry):entry is [string,string]=>typeof entry[1]==='string'))}`
   const data = await (async () => { try {

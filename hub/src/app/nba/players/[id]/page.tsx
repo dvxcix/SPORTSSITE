@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowUpRight, ChartNoAxesCombined, CircleDot, Clock3, Crosshair, Layers, UserRound, Waypoints } from 'lucide-react'
 import { requirePaintAccess } from '@/lib/paintAccess'
+import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { getNbaPlayerEntity } from '@/lib/nbaDirectory'
 import { nbaEntityId, nbaPlayerName, nbaResearchHref } from '@/lib/nbaEntities'
 import { nbaSeason, nbaTeamLogo, type PaintPlayer } from '@/lib/nbaPaint'
@@ -16,7 +17,7 @@ import metrics from '@/components/nba/nbaEntityMetrics.module.css'
 
 export const metadata: Metadata = { title: 'NBA Player • SlipSurge', robots: { index: false, follow: false } }
 export default async function NbaPlayerPage({ params }: { params: Promise<{ id: string }> }) {
-  const gate = await requirePaintAccess(); if (gate.error) notFound()
+  const gate = await requirePaintAccess(); if (gate.error) return <NbaAccessFallback status={gate.error.status} />
   const id = nbaEntityId((await params).id); if (!id) notFound()
   const data = await getNbaPlayerEntity(id); if (!data) notFound()
   const { player, seasons, logs, teams, image, games } = data

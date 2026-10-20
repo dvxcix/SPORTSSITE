@@ -67,15 +67,16 @@ for (const scenario of scenarios) {
   })
 }
 
-test('Market Story failure does not claim capture tracking and Retry loads the actual empty history', async () => {
+test('Market Story distinguishes failed history from a successfully loaded empty history', async () => {
   const ui = await harness('PaintMovement', { board, players: [], market: 'points', book: 'all' }, { frames: [], openingRows: [] })
   try {
     assert.ok(ui.host.textContent?.includes('Market history could not load.'))
     assert.equal(ui.host.textContent?.includes('Loading market history'), false)
-    assert.equal(ui.host.textContent?.includes('Tracking this matchup'), false)
+    assert.equal(ui.host.textContent?.includes('No odds history yet.'), false)
     ui.succeed(); await ui.click('Retry')
     assert.equal(ui.requests(), 2)
-    assert.ok(ui.host.textContent?.includes('Tracking this matchup'))
+    assert.ok(ui.host.textContent?.includes('No odds history yet.'))
+    assert.equal(ui.host.textContent?.includes('Market history could not load.'), false)
   } finally { await ui.close() }
 })
 

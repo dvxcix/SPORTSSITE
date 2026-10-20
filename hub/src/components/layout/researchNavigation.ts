@@ -10,18 +10,25 @@ export function researchSportForPath(path: string): ResearchSport | null {
   return mlbRoutes.some(route => path === route || path.startsWith(route + '/')) ? 'mlb' : null
 }
 
-export function availableResearchSports(nflAccess: boolean, nbaAccess = false): ResearchSport[] {
-  return ['mlb', ...(nflAccess ? ['nfl' as const] : []), ...(nbaAccess ? ['nba' as const] : [])]
+export const NBA_UPGRADE_HREF = '/pricing#plan-ultimate'
+
+/** Discovery is public; access is checked separately before opening a tool. */
+export function availableResearchSports(nflAccess: boolean): ResearchSport[] {
+  return ['mlb', ...(nflAccess ? ['nfl' as const] : []), 'nba']
 }
 
-/** A persisted sport preference never grants access or exposes hidden tools. */
-export function resolveResearchSport(sport: ResearchSport, nflAccess: boolean, nbaAccess = false): ResearchSport {
-  return availableResearchSports(nflAccess, nbaAccess).includes(sport) ? sport : 'mlb'
+/** A persisted sport preference selects a menu, never grants access. */
+export function resolveResearchSport(sport: ResearchSport, nflAccess: boolean): ResearchSport {
+  return availableResearchSports(nflAccess).includes(sport) ? sport : 'mlb'
 }
 
 export function researchHome(sport: ResearchSport, nflAccess: boolean, nbaAccess = false) {
-  const selected = resolveResearchSport(sport, nflAccess, nbaAccess)
-  return selected === 'nba' ? '/the-paint' : selected === 'nfl' ? '/the-sideline' : '/dugout'
+  const selected = resolveResearchSport(sport, nflAccess)
+  return selected === 'nba' ? (nbaAccess ? '/the-paint' : NBA_UPGRADE_HREF) : selected === 'nfl' ? '/the-sideline' : '/dugout'
+}
+
+export function researchNavigationHref(href: string, path: string, search: { get(key: string): string | null }, nbaAccess: boolean) {
+  return isNbaToolHref(href) && !nbaAccess ? NBA_UPGRADE_HREF : researchToolHref(href, path, search)
 }
 
 /** Keep a sport's shared research context; never leak a panel, selection, or unrelated query. */

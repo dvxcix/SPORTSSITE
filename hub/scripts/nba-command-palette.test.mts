@@ -10,13 +10,13 @@ const { JSDOM } = require('jsdom')
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://www.slipsurge.com' })
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement, IS_REACT_ACT_ENVIRONMENT: true })
 const { createRoot } = await import('react-dom/client')
-const state = { role: 'user', pathname: '/feed', pushed: [] as string[] }
+const state = { role: 'user', tier: 'free', pathname: '/feed', pushed: [] as string[] }
 const scrolled: string[] = []
 dom.window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this.id) }
 ;(globalThis as typeof globalThis & { nbaCommandFixture: typeof state }).nbaCommandFixture = state
 const stubs: Record<string, string> = {
   'next/navigation': `export const useRouter=()=>({push(href){globalThis.nbaCommandFixture.pushed.push(href)}});export const usePathname=()=>globalThis.nbaCommandFixture.pathname`,
-  '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaCommandFixture.role}})`,
+  '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaCommandFixture.role,tier:globalThis.nbaCommandFixture.tier}})`,
   '@/lib/useNflAccess': `export const useNflAccess=()=>({allowed:true})`,
   '@/components/ui/Modal': `import React from 'react';export const Modal=({children})=><div role="dialog">{children}</div>`,
 }
@@ -26,8 +26,8 @@ new Function('require', 'module', 'exports', bundled.outputFiles.find(file => fi
 
 const nbaResult = (name = 'Jayson Tatum') => ({ players: [{ id: 434, name, position: 'F', teamId: 2, teamName: 'Boston Celtics', headshot: 'https://example.test/tatum.png', teamLogo: 'https://example.test/boston.png' }], teams: [{ id: 2, name: 'Boston Celtics', abbr: 'BOS', logo: 'https://example.test/boston.png' }] })
 const originalFetch = globalThis.fetch
-async function harness(role: string, nba: (query: string) => Promise<unknown> = async () => nbaResult(), options: { pathname?: string; emptyOtherSports?: boolean } = {}) {
-  state.role = role; state.pathname = options.pathname ?? '/feed'; state.pushed = []
+async function harness(role: string, nba: (query: string) => Promise<unknown> = async () => nbaResult(), options: { pathname?: string; emptyOtherSports?: boolean; tier?: string } = {}) {
+  state.role = role; state.tier = options.tier ?? 'free'; state.pathname = options.pathname ?? '/feed'; state.pushed = []
   const requests: { path: string; signal: AbortSignal | null | undefined }[] = []
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input), 'https://www.slipsurge.com')
@@ -56,16 +56,36 @@ async function harness(role: string, nba: (query: string) => Promise<unknown> = 
   return { host, requests, render, open, type, flush, click, close, result }
 }
 
-test('member command search never requests or renders NBA and retains MLB/NFL and generic destinations', async () => {
+test('lower-tier command search discovers NBA upgrades without requesting NBA identities', async () => {
   const ui = await harness('user')
   try {
     await ui.open()
     assert.ok(ui.result('Community Feed'))
-    assert.equal(ui.host.textContent?.includes('ThePaint'), false)
+    assert.ok(ui.result('ThePaint · NBA'))
+    await ui.type('NBA')
+    assert.equal(ui.host.querySelectorAll('[role="option"]').length,15)
+    assert.ok([...ui.host.querySelectorAll('[role="option"]')].every(node=>node.textContent?.includes('Upgrade to Ultimate')))
+    await ui.click(ui.result('NBA Ladders'))
+    assert.deepEqual(state.pushed,['/pricing#plan-ultimate'])
+    await ui.open()
     await ui.type('tatum'); await ui.flush()
     assert.equal(ui.requests.some(request => request.path === '/api/search/nba'), false)
     assert.ok(ui.result('MLB Result')); assert.ok(ui.result('NFL Result'))
     assert.equal(ui.result('Jayson Tatum'), undefined)
+  } finally { await ui.close() }
+})
+
+test('Ultimate member command results open NBA tools and fetch NBA identities', async () => {
+  const ui = await harness('user',async()=>nbaResult(),{tier:'ultimate'})
+  try {
+    await ui.open();await ui.type('NBA Ladders')
+    const tool=ui.result('NBA Ladders')
+    assert.ok(tool);assert.equal(tool.textContent?.includes('Upgrade'),false)
+    await ui.click(tool);assert.deepEqual(state.pushed,['/the-paint?view=ladders'])
+    await ui.open();await ui.type('tatum');await ui.flush()
+    assert.equal(ui.requests.filter(request=>request.path==='/api/search/nba').length,1)
+    await ui.click(ui.result('Jayson Tatum'))
+    assert.deepEqual(state.pushed,['/the-paint?view=ladders','/nba/players/434'])
   } finally { await ui.close() }
 })
 

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('users')
-    .select('id, account_type, favorite_teams, favorite_players, notification_settings, interest_settings')
+    .select('id, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_teams, favorite_players, notification_settings, interest_settings')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     bio: bio || undefined,
     avatar_url: safeImageUrl(body.avatarUrl) || undefined,
     banner_url: safeImageUrl(body.bannerUrl) || undefined,
-    ...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile.account_type)),
+    ...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile)),
     favorite_sports: sports,
     interest_settings: { ...interests, content_mix: contentMix, market_focus: marketFocus, discovery_mode: interests.discovery_mode ?? 'balanced' },
     is_private: body.isPrivate === true,

@@ -21,12 +21,8 @@ export default async function PricingPage({
   let rawTier: Tier = 'free'
   let discordAdvancedClaimed = false
   let adminGrantedTier: Tier | null = null
-  // Admin/beta full access bypasses every tier gate regardless of what's
-  // actually purchased or claimed (see hasFullAccessOverride) — showing
-  // "Advanced — Current" and a live "Get Ultimate" buy button to an admin
-  // account would both undersell what it already has and invite a pointless
-  // purchase. fullAccessReason drives a page-level banner instead of any
-  // per-card state.
+  // Preserve the existing admin/beta context. PricingClient keeps NBA's
+  // Ultimate upgrade available to beta accounts without that membership.
   let fullAccessReason: 'admin' | 'beta' | null = null
   if (user) {
     const { data } = await createAdminClient().from('users').select('tier, discord_advanced_claimed, admin_granted_tier, account_type, beta_access_active').eq('id', user.id).maybeSingle()

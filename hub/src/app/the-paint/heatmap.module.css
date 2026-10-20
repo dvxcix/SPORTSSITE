@@ -6,6 +6,9 @@
 .legend i[data-tone="performance"]{background:linear-gradient(90deg,rgb(118 43 61),rgb(45 55 69),rgb(48 115 71))}
 .table tbody td{padding:4px!important}
 .table thead th button{min-height:44px}
+.groupedHeader thead tr:first-child th{padding:7px 10px;font-size:11px;font-weight:650;color:#c2d3df;border-bottom:1px solid #314354}
+.groupedHeader thead tr:first-child th:not(:first-child){text-align:left}
+@media(min-width:641px){.table.groupedHeader thead{position:sticky;top:0;z-index:4}.table.groupedHeader thead th{position:static}}
 .table tbody th{padding-block:8px!important}
 .metric{display:grid;gap:5px;min-width:0}
 .metric>small{font-size:11px;color:var(--text-3)}

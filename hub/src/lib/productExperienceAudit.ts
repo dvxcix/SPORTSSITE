@@ -61,7 +61,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Identity & sports entities', priority: 'P1', defaults: partial,
-    routes: ['/profile/[username]', '/players/[id]', '/mlb/teams/[id]', '/nfl/players/[id]', '/nfl/teams/[abbr]', ['/nba/players/[id]', 'NBA player profiles · admin-gated'], ['/nba/teams/[id]', 'NBA team profiles · admin-gated'], '/leaderboard'],
+    routes: ['/profile/[username]', '/players/[id]', '/mlb/teams/[id]', '/nfl/players/[id]', '/nfl/teams/[abbr]', ['/nba/players/[id]', 'NBA player profiles · Ultimate'], ['/nba/teams/[id]', 'NBA team profiles · Ultimate'], '/leaderboard'],
   },
   {
     family: 'MLB research', priority: 'P0', defaults: partial,
@@ -73,7 +73,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'NBA research', priority: 'P0', defaults: shared,
-    routes: [['/the-paint', 'ThePaint · admin-gated NBA suite'], ['/the-paint?view=odds', 'NBA exact sportsbook comparison'], ['/the-paint?view=ladders', 'NBA alternate-line ladders'], ['/the-paint?view=cheatsheets', 'NBA cross-market cheatsheets'], ['/the-paint?view=score', 'NBA SlipSurge Score'], ['/the-paint?view=slate', 'NBA Slate Edge'], ['/the-paint?view=dvp', 'NBA league defense by position'], ['/the-paint?view=usage', 'NBA usage and season tracking'], ['/the-paint?view=tracking', 'NBA per-game tracking and player trends'], ['/the-paint?view=movement', 'NBA Market Story and quote replay'], ['/the-paint?view=divergence', 'NBA opposing-market divergence'], ['/the-paint?view=matchup', 'NBA Matchup Lab'], ['/the-paint?view=availability', 'NBA availability, rookies and new teams'], ['/the-paint?view=game-markets', 'NBA game markets'], ['/the-paint?view=public', 'NBA ThePublic · Pikkit counts']],
+    routes: [['/the-paint', 'ThePaint · Ultimate NBA suite'], ['/the-paint?view=odds', 'NBA exact sportsbook comparison'], ['/the-paint?view=ladders', 'NBA alternate-line ladders'], ['/the-paint?view=cheatsheets', 'NBA cross-market cheatsheets'], ['/the-paint?view=score', 'NBA SlipSurge Score'], ['/the-paint?view=slate', 'NBA Slate Edge'], ['/the-paint?view=dvp', 'NBA league defense by position'], ['/the-paint?view=usage', 'NBA usage and season tracking'], ['/the-paint?view=tracking', 'NBA per-game tracking and player trends'], ['/the-paint?view=movement', 'NBA Market Story and quote replay'], ['/the-paint?view=divergence', 'NBA opposing-market divergence'], ['/the-paint?view=matchup', 'NBA Matchup Lab'], ['/the-paint?view=availability', 'NBA availability, rookies and new teams'], ['/the-paint?view=game-markets', 'NBA game markets'], ['/the-paint?view=public', 'NBA ThePublic · public pick counts']],
   },
   {
     family: 'Community', priority: 'P0', defaults: legacy,

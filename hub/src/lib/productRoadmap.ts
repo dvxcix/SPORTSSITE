@@ -11,9 +11,9 @@ export type ProductRoadmapPhase = {
 
 export const PRODUCT_ROADMAP_PHASES: ProductRoadmapPhase[] = [
   {
-    id: 'nba-research', label: 'NBA Research · owner review', status: 'active', progress: 95,
-    shipped: ['ThePaint: 16 markets, exact alternate lines, odds comparison, MM and player panels', 'Three regular seasons imported; shared caches, cloud refresh and coverage receipts', 'NBA opportunity score, full-slate ranking, 30-team DvP, usage and per-game tracking', 'Interactive shot chart, cross-market divergence, Market Story and real Pikkit counts', '16 temporal model validations, pregame research ledger and exact atomic pick settlement', 'Desktop and 320/390px browser verification; NBA and existing production regressions pass'],
-    remaining: ['Owner review of the admin-only NBA suite and readiness report', 'Public navigation/access release only after explicit owner approval'],
+    id: 'nba-research', label: 'NBA Research · Ultimate launch', status: 'active', progress: 98,
+    shipped: ['ThePaint: 16 markets, exact alternate lines, odds comparison, MM and player panels', 'Three regular seasons imported; shared caches, cloud refresh and coverage receipts', 'NBA opportunity score, full-slate ranking, 30-team DvP, usage and per-game tracking', 'Interactive shot chart, cross-market divergence, Market Story and real public pick counts', '16 temporal model validations, pregame research ledger and exact atomic pick settlement', 'Desktop and 320/390px browser verification; NBA and existing production regressions pass'],
+    remaining: ['Opening-night monitoring and official final-stat verification of both owner-only test picks'],
   },
   {
     id: 'foundation', label: 'Foundation', status: 'complete', progress: 100,

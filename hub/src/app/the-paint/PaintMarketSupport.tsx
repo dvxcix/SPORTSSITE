@@ -14,12 +14,12 @@ type QuoteHref = (market: PaintMarket, book: string, quote: NbaMarketSignal['tar
 const label = (market: PaintMarket) => PAINT_MARKETS.find(item => item.key === market)?.label ?? market
 export function PaintMarketPair({ signal, publicAt, onOpen, href }: { signal: Signal; publicAt?: string | null; onOpen?: OpenQuote; href?: QuoteHref }) {
   return <div className={polish.signalDetails}>
-    <div className={polish.signalHeader}><BookLogo vendor={signal.book} size={20}/><span>{signal.book}</span></div>
+    <div className={polish.signalHeader}><BookLogo vendor={signal.book} size={20}/></div>
     <div className={polish.signalPair}>{[{ quote: signal.target, picks: signal.targetPicks }, { quote: signal.related, picks: signal.relatedPicks }].map(({ quote, picks }) => {
       const content = <><strong>{label(quote.market)} · {nbaBinary(quote.market) ? 'Yes' : quote.type === 'milestone' ? `${quote.line}+` : `O ${quote.line}`}</strong><span className={polish.signalDirection} data-direction={quote.changePp < 0 ? 'longer' : 'shorter'}>{quote.changePp < 0 ? <ArrowUpRight size={13}/> : <ArrowDownRight size={13}/>} {quote.changePp < 0 ? 'Lengthening' : 'Shortening'}</span><PaintPriceValue current={quote.now} opening={quote.open} at={quote.openedAt} compact/><small>{picks.toLocaleString()} category picks</small></>
       return href ? <a key={quote.market} className={polish.signalQuote} href={href(quote.market, signal.book, quote)}>{content}</a> : <button key={quote.market} className={polish.signalQuote} onClick={() => onOpen?.(quote.market, signal.book, quote)}>{content}</button>
     })}</div>
-    <div className={polish.signalFoot}><span>Public counts cover each category.</span>{publicAt && <time dateTime={publicAt}>{new Date(publicAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</time>}</div>
+    {publicAt && <div className={polish.signalFoot}><time dateTime={publicAt}>{new Date(publicAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</time></div>}
   </div>
 }
 export function PaintMarketSupport({ support, onOpen, href }: { support?: Support | null; onOpen?: OpenQuote; href?: QuoteHref }) {

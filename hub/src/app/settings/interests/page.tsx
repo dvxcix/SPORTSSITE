@@ -12,7 +12,7 @@ export default async function InterestSettingsPage() {
   if (!user) redirect('/auth/login?next=/settings/interests')
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('users').select('account_type,favorite_sports,favorite_teams,favorite_players,interest_settings').eq('id', user.id).single()
+  const { data: profile } = await admin.from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier,favorite_sports,favorite_teams,favorite_players,interest_settings').eq('id', user.id).single()
 
   return <SettingsShell active="/settings/interests" title="Your interests" description="Tune the sports, teams, markets, and conversations that shape your experience.">
     <InterestSettingsForm
@@ -21,7 +21,7 @@ export default async function InterestSettingsPage() {
       favoriteTeams={profile?.favorite_teams ?? []}
       settings={profile?.interest_settings ?? {}}
       favoritePlayers={normalizeFavoritePlayers(profile?.favorite_players)}
-      allowNba={hasNbaAccess(profile?.account_type)}
+      allowNba={hasNbaAccess(profile)}
     />
   </SettingsShell>
 }

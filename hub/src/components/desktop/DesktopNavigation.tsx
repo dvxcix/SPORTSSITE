@@ -6,15 +6,16 @@ import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { hasNbaAccess, isNbaToolHref } from '@/lib/nbaAccessPolicy'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { ChevronLeft, ChevronRight, Crown, Settings2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, LockKeyhole, Settings2 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
-import { researchHome, researchSportForPath, resolveResearchSport, researchToolActive, researchToolHref } from '@/components/layout/researchNavigation'
+import { researchHome, researchSportForPath, resolveResearchSport, researchToolActive, researchNavigationHref } from '@/components/layout/researchNavigation'
 import { useResearchSport } from '@/components/layout/useResearchSport'
 import { ResearchSportSwitcher } from '@/components/layout/ResearchSportSwitcher'
+import navigationStyles from '@/components/layout/researchNavigation.module.css'
 
 export function DesktopNavigation() {
   const pathname = usePathname()
@@ -22,8 +23,8 @@ export function DesktopNavigation() {
   const { sport, chooseSport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
   const { profile, loading } = useAuth()
-  const nbaAccess = hasNbaAccess(profile?.account_type)
-  const selectedSport = resolveResearchSport(sport, nflAccess, nbaAccess)
+  const nbaAccess = hasNbaAccess(profile)
+  const selectedSport = resolveResearchSport(sport, nflAccess)
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
   const contextCollapsed = collapsed && !channelsWorkspace
@@ -31,7 +32,7 @@ export function DesktopNavigation() {
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
-  const items = context.items.filter(item => (!item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess) && (!isNbaToolHref(item.href) || nbaAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === selectedSport))
+  const items = context.items.filter(item => (isNbaToolHref(item.href) || !item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === selectedSport))
   const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
   const accessLabel = !profile
     ? (loading ? 'Checking access…' : 'Refresh account')
@@ -77,15 +78,19 @@ export function DesktopNavigation() {
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
           </button>
           {context.area === 'research' && <ResearchSportSwitcher sport={selectedSport} onChange={chooseSport} nflAccess={nflAccess} nbaAccess={nbaAccess} compact={contextCollapsed} />}
-          <div className="ss-desktop-context-label">{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}</div>
-          <nav aria-label={`${context.meta.label} navigation`}>
+          <div className={`ss-desktop-context-label ${navigationStyles.heading}`}>{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}{context.area === 'research' && selectedSport === 'nba' && <span className={navigationStyles.membership}>ULTIMATE</span>}</div>
+          <nav className={navigationStyles.desktopTools} aria-label={`${context.area === 'research' ? selectedSport.toUpperCase() + ' research' : context.meta.label} navigation`}>
             {items.map(item => {
               const Icon = item.icon
-              const active = (isNflToolHref(item.href) || isNbaToolHref(item.href)) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item)
+              const nbaTool = isNbaToolHref(item.href)
+              const locked = nbaTool && !nbaAccess
+              const active = !locked && ((isNflToolHref(item.href) || nbaTool) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item))
+              const label = nbaTool ? item.shortLabel ?? item.label : item.label
               return (
-                <Link key={item.href} href={researchToolHref(item.href, pathname, searchParams)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined}>
-                  <Icon size={15} />
-                  <span>{item.label}</span>
+                <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} className={navigationStyles.toolLink} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={locked ? `${label} · Ultimate required` : label}>
+                  <Icon size={15} aria-hidden="true" />
+                  <span>{label}</span>
+                  {locked && !contextCollapsed && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}
                   {item.badge && <em>{item.badge}</em>}
                 </Link>
               )

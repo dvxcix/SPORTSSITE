@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { availableResearchSports, resolveResearchSport, researchHome, researchSportForPath, researchToolActive, researchToolHref } from '../src/components/layout/researchNavigation'
+import { availableResearchSports, resolveResearchSport, researchHome, researchSportForPath, researchToolActive, researchToolHref, researchNavigationHref, NBA_UPGRADE_HREF } from '../src/components/layout/researchNavigation'
 import { hasNbaAccess, isNbaToolHref } from '../src/lib/nbaAccessPolicy'
 import { nbaResearchNavigation, primaryNavigation, routeMatches } from '../src/components/layout/navigationConfig'
 
@@ -42,18 +42,21 @@ test('exactly one NFL tool is active for each mode', () => {
   }
 })
 
-test('NBA discovery requires an admin independently of NFL or stored preferences', () => {
-  for (const role of [undefined, null, '', 'user', 'ultimate', 'beta', 'creator', 'Admin']) {
-    const nbaAccess = hasNbaAccess(role)
+test('NBA discovery is public but stored preference never grants Ultimate tool access', () => {
+  for (const profile of [undefined, null, {}, { account_type: 'user', tier: 'advanced' }, { account_type: 'beta', tier: 'free' }, { account_type: 'ultimate' }, { account_type: 'Admin' }]) {
+    const nbaAccess = hasNbaAccess(profile)
     assert.equal(nbaAccess, false)
-    assert.deepEqual(availableResearchSports(true, nbaAccess), ['mlb', 'nfl'])
-    assert.equal(resolveResearchSport('nba', true, nbaAccess), 'mlb')
-    assert.equal(researchHome('nba', true, nbaAccess), '/dugout')
+    assert.deepEqual(availableResearchSports(true), ['mlb', 'nfl', 'nba'])
+    assert.equal(resolveResearchSport('nba', true), 'nba')
+    assert.equal(researchHome('nba', true, nbaAccess), NBA_UPGRADE_HREF)
+    assert.equal(researchNavigationHref('/the-paint?view=score', '/the-paint', new URLSearchParams('game=123'), nbaAccess), NBA_UPGRADE_HREF)
   }
-  assert.equal(hasNbaAccess('admin'), true)
-  assert.deepEqual(availableResearchSports(true, true), ['mlb','nfl','nba'])
-  assert.deepEqual(availableResearchSports(false, true), ['mlb','nba'])
-  assert.equal(researchHome('nba', false, true), '/the-paint')
+  for (const profile of [{ account_type: 'admin' }, { account_type: 'user', tier: 'ultimate' }, { account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }]) {
+    assert.equal(hasNbaAccess(profile), true)
+    assert.equal(researchHome('nba', false, hasNbaAccess(profile)), '/the-paint')
+    assert.equal(researchNavigationHref('/the-paint?view=score', '/the-paint', new URLSearchParams('game=123'), hasNbaAccess(profile)), '/the-paint?view=score&game=123')
+  }
+  assert.deepEqual(availableResearchSports(false), ['mlb','nba'])
 })
 
 test('NBA page families are recognized without matching similarly named public paths', () => {
@@ -80,6 +83,8 @@ test('NBA tool links preserve selected matchup, market and book without carrying
 
 test('every NBA workspace selects exactly its own global navigation item', () => {
   assert.equal(new Set(nbaResearchNavigation.map(item=>item.href)).size,nbaResearchNavigation.length)
+  assert.equal(nbaResearchNavigation.length,15)
+  assert.ok(nbaResearchNavigation.every(item=>item.ultimateOnly))
   for (const item of nbaResearchNavigation) {
     const search = new URLSearchParams(item.href.split('?')[1] ?? '')
     assert.deepEqual(nbaResearchNavigation.filter(candidate=>researchToolActive(candidate.href,'/the-paint',search)).map(candidate=>candidate.href),[item.href])

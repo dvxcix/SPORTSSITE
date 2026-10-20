@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowUpRight, CircleDot, Layers, Scale, Shield, Trophy } from 'lucide-react'
 import { requirePaintAccess } from '@/lib/paintAccess'
+import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { getNbaTeamEntity } from '@/lib/nbaDirectory'
 import { nbaEntityId, nbaResearchHref } from '@/lib/nbaEntities'
 import { nbaSeason, type PaintGame } from '@/lib/nbaPaint'
@@ -21,7 +22,7 @@ function GameRow({ game, final = false }: { game: PaintGame; final?: boolean }) 
   return <Link className={metrics.game} href={nbaResearchHref(game)} aria-label={`${game.visitor_team.full_name} at ${game.home_team.full_name}, ${game.date}, ${status}${hasScore ? `, ${game.visitor_team_score} to ${game.home_team_score}` : ''}`}><time className={metrics.gameTime} dateTime={game.date}>{new Date(`${game.date.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}<small data-live={live}>{status}</small></time><span className={metrics.matchup} aria-hidden="true"><span><TeamLogo abbr={game.visitor_team.abbreviation} size={34}/>{hasScore && <b>{game.visitor_team_score}</b>}</span><i>{hasScore ? '–' : 'at'}</i><span>{hasScore && <b>{game.home_team_score}</b>}<TeamLogo abbr={game.home_team.abbreviation} size={34}/></span></span><ArrowUpRight size={17} aria-hidden="true"/></Link>
 }
 export default async function NbaTeamPage({ params }: { params: Promise<{ id: string }> }) {
-  const gate = await requirePaintAccess(); if (gate.error) notFound()
+  const gate = await requirePaintAccess(); if (gate.error) return <NbaAccessFallback status={gate.error.status} />
   const id = nbaEntityId((await params).id); if (!id) notFound()
   const data = await getNbaTeamEntity(id); if (!data) notFound()
   const { team, games, recent, roster, season, record } = data

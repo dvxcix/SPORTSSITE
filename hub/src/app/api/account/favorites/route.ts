@@ -13,10 +13,10 @@ async function account() {
   const { userId } = await resolveAuthedClient()
   if (!userId) return { error: NextResponse.json({ error: 'Sign in to save favorites.' }, { status: 401, headers }) }
   const admin = createAdminClient()
-  const { data: profile, error } = await admin.from('users').select('id,account_type,favorite_teams,favorite_players,favorite_sports').eq('id', userId).maybeSingle()
+  const { data: profile, error } = await admin.from('users').select('id,account_type,tier,discord_advanced_claimed,admin_granted_tier,favorite_teams,favorite_players,favorite_sports').eq('id', userId).maybeSingle()
   if (error) return { error: safeApiError('favorites-account', error, 'Favorites could not be loaded.') }
   if (!profile) return { error: NextResponse.json({ error: 'Your profile is not ready.' }, { status: 409, headers }) }
-  return { admin, profile, allowNba: hasNbaAccess(profile.account_type) }
+  return { admin, profile, allowNba: hasNbaAccess(profile) }
 }
 
 export async function GET() {

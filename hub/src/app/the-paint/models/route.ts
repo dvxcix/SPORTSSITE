@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { requirePaintAccess } from '@/lib/paintAccess'
+import { requirePaintAdmin } from '@/lib/paintAccess'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import type { NbaModelReport } from '@/lib/nbaModel'
 export async function GET() {
-  const gate = await requirePaintAccess(); if (gate.error) return gate.error
+  const gate = await requirePaintAdmin(); if (gate.error) return gate.error
   try {
     const cached = await nbaSharedCache('model-reports:v1', 300, 300, async () => {
       const admin = createAdminClient()

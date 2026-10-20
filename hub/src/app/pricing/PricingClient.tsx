@@ -50,7 +50,7 @@ const TIERS: TierDef[] = [
     monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
   },
   {
-    tier: 'ultimate', label: 'Ultimate', tagline: 'Every research tool for members who want the complete workspace.',
+    tier: 'ultimate', label: 'Ultimate', tagline: 'The complete MLB, NFL and NBA research workspace.',
     monthlyPlanId: 'plan_tCrVAX62uKyEq', annualPlanId: 'plan_1eWRTXv0XXTrI',
     monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium', trialDaysMonthly: 3,
   },
@@ -72,6 +72,8 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
   { label: 'Full Slate Breakdown', minTier: 'advanced' },
   { label: 'The Dugout, our proprietary Game Matrix', minTier: 'ultimate' },
+  { label: 'TheSideline · NFL research', minTier: 'ultimate' },
+  { label: 'ThePaint · NBA research, odds and ladders', minTier: 'ultimate' },
   { label: 'The Public', minTier: 'advanced' },
   { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
@@ -80,7 +82,7 @@ const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
 const PLAN_GUIDE = [
   { href: '#plan-basic', label: 'Start with Basic', detail: 'Community, live scores, and core MLB research' },
   { href: '#plan-advanced', label: 'Choose Advanced', detail: 'Add full-slate analysis and public market context' },
-  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'Unlock The Dugout, Odds Terminal, and every tool' },
+  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'TheDugout, TheSideline and ThePaint' },
 ]
 
 export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {
@@ -98,10 +100,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   // /admin/users is also not a real Whop subscription, so it gets the same
   // "nothing to cancel" treatment instead of the dead-end cancel link.
   adminGrantedTier?: Tier | null
-  // Admin/beta accounts bypass every tier gate outright — set, every card's
-  // buy/cancel/claim CTA is suppressed in favor of one banner, instead of
-  // showing a purchased-looking "Advanced — Current" or inviting a pointless
-  // real purchase on top of access they already have.
+  // Admins have full access. Beta covers existing tools; NBA requires Ultimate.
   fullAccessReason?: 'admin' | 'beta' | null
   checkoutStatus: string | null
 }) {
@@ -169,12 +168,13 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
         {fullAccess && (
           <div className={styles.accessBanner}>
-            {fullAccessReason === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access — full access to every tier while the beta program is active.'}
+            {fullAccessReason === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access is active for included tools. NBA research requires Ultimate.'}
           </div>
         )}
 
         <div className={styles.cards}>
           {TIERS.map(t => {
+            const fullAccess = fullAccessReason === 'admin' || fullAccessReason === 'beta' && t.tier !== 'ultimate'
             const isCurrent = t.tier === currentTier
             const cardRank = TIER_RANK[t.tier]
             const realRank = TIER_RANK[rawTier]

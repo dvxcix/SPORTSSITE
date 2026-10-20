@@ -1502,7 +1502,7 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(onboardingSave.includes("safeApiError('account-onboarding-save'"))
   assert.ok(onboardingSave.includes("'Cache-Control': 'private, no-store, max-age=0'"))
   assert.ok(onboardingSave.includes("import { favoriteUpdates } from '@/lib/sportFavorites'"))
-  assert.ok(onboardingSave.includes('...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile.account_type))'))
+  assert.ok(onboardingSave.includes('...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile))'))
   assert.ok(onboardingSave.includes('banner_url: safeImageUrl(body.bannerUrl)'))
   assert.ok(onboardingPage.includes(".from('groups')"))
 })

@@ -52,7 +52,7 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
   const href = (row: NonNullable<typeof slate>['rows'][number], nextMarket = market) => `/the-paint?${new URLSearchParams({ date: row.game.date, game: String(row.game.id), player: String(row.player.id), market: nextMarket, book: row.offer.vendor, side, view: 'research' })}`
   const header = (label: string, column: string) => <PaintSortHeader key={column} label={label} column={column} active={sort} ascending={ascending} onSort={sortBy}/>
   return <section className={`${styles.researchTool} ${dials.surface}`}>
-    <header className={styles.toolHeading}><div><h3>Slate Edge</h3><span>Every matchup. One board.</span></div><button className={styles.iconButton} aria-label="Refresh NBA slate edge" onClick={refresh}><RefreshCw size={16}/></button></header>
+    <header className={styles.toolHeading}><div><h3>Slate Edge</h3></div><button className={styles.iconButton} aria-label="Refresh NBA slate edge" onClick={refresh}><RefreshCw size={16}/></button></header>
     <div className={styles.toolControls}>
       <PaintBookSelect label="Slate edge sportsbook" value={book} onChange={onBookChange} books={books}/>
       <select aria-label="Slate edge market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>

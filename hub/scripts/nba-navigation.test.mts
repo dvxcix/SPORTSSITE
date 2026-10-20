@@ -3,11 +3,11 @@ import test from 'node:test'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
-import { createElement } from 'react'
+import { act, createElement, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 const require = createRequire(import.meta.url)
-const state = { role: 'user', path: '/the-paint', nfl: true }
+const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true }
 ;(globalThis as typeof globalThis & { nbaNavFixture: typeof state }).nbaNavFixture = state
 const stubs: Record<string,string> = {
   'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view=public&game=123');export const useRouter=()=>({push(){},back(){}});`,
@@ -15,7 +15,7 @@ const stubs: Record<string,string> = {
   'next/image': `import React from 'react';export default function Image({priority,...props}){return <img {...props}/>}`,
   '@/components/ui/SafeImage': `import React from 'react';export function SafeImage({fallback,...props}){return <img {...props}/>}`,
   '@/components/social/MemberAvatar': `import React from 'react';export const MemberAvatar=()=> <span>Avatar</span>`,
-  '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaNavFixture.role,tier:'ultimate',username:'tester'},loading:false})`,
+  '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaNavFixture.role,tier:globalThis.nbaNavFixture.tier,admin_granted_tier:globalThis.nbaNavFixture.granted,beta_access_active:globalThis.nbaNavFixture.beta,username:'tester'},loading:false})`,
   '@/lib/useNflAccess': `export const useNflAccess=()=>({allowed:globalThis.nbaNavFixture.nfl})`,
   '@/lib/useSidebarCollapsed': `export const useSidebarCollapsed=()=>({collapsed:false,toggle(){}})`,
   '@/lib/featureFlags': `export const fetchFeatureFlagsClient=async()=>({})`,
@@ -26,35 +26,85 @@ new Function('require','module','exports',bundled.outputFiles.find(file=>file.pa
 const noop = () => {}
 const render = (name: string, props: Record<string,unknown> = {}) => renderToStaticMarkup(createElement(compiled.exports[name],props))
 
-test('all navigation shells hide NBA from members even on a stored/current NBA route', () => {
-  for (const role of ['user','creator','beta','']) {
-    state.role = role
-    for (const name of ['Sidebar','DesktopNavigation','DesktopCommandBar','MobileDock']) {
+test('all navigation shells expose NBA while lower-tier tools link to Ultimate upgrade', () => {
+  for (const tier of ['free','basic','advanced']) {
+    state.role = 'user'; state.tier = tier; state.granted = null; state.beta = false
+    for (const name of ['Sidebar','DesktopNavigation','DesktopCommandBar']) {
       const html=render(name,{open:true,onClose:noop,onMenuClick:noop})
-      assert.doesNotMatch(html,/href="\/the-paint|leagues\/500\/nba\.png|NBA Research/,name+' '+role)
+      assert.doesNotMatch(html,/href="\/the-paint/,name+' '+tier)
+      assert.match(html,/href="\/pricing#plan-ultimate"/,name+' '+tier)
+      assert.match(html,/Ultimate required/,name+' '+tier)
+      assert.equal((html.match(/aria-current="page"/g)??[]).length,0,name)
+    }
+    assert.match(render('MobileDock',{onMenuClick:noop}),/leagues\/500\/nba\.png/)
+  }
+})
+
+test('Ultimate, granted Ultimate and admin shells expose each NBA tool once and mark the exact current tool', () => {
+  for (const access of [{role:'admin',tier:'free',granted:null},{role:'user',tier:'ultimate',granted:null},{role:'user',tier:'free',granted:'ultimate'}]) {
+    Object.assign(state,access,{beta:false})
+    for (const name of ['Sidebar','DesktopNavigation']) {
+      const html=render(name,{open:true,onClose:noop})
+      assert.match(html,/href="\/the-paint/,name)
+      assert.match(html,/leagues\/500\/nba\.png/,name)
+      assert.equal((html.match(/aria-current="page"/g)??[]).length,1,name)
+      assert.match(html,/view=public[^\"]*"[^>]*aria-current="page"/,name)
+      for (const view of ['odds','ladders','movement','cheatsheets','score','slate','public','divergence','dvp','usage','tracking','matchup','availability','game-markets']) assert.equal((html.match(new RegExp(`href="/the-paint\\?view=${view}&`,'g'))??[]).length,1,name+' '+view)
+      assert.doesNotMatch(html,/>NBA (Odds|Ladders|SlipSurge Score)</)
+      assert.doesNotMatch(html,/Ultimate required/)
     }
   }
 })
 
-test('admin desktop and drawer shells expose NBA as a peer and mark the exact current tool', () => {
-  state.role='admin'
-  for (const name of ['Sidebar','DesktopNavigation']) {
-    const html=render(name,{open:true,onClose:noop})
-    assert.match(html,/href="\/the-paint/,name)
-    assert.match(html,/leagues\/500\/nba\.png/,name)
-    assert.equal((html.match(/aria-current="page"/g)??[]).length,1,name)
-    assert.match(html,/view=public[^\"]*"[^>]*aria-current="page"/,name)
-  }
-  assert.match(render('MobileDock',{onMenuClick:noop}),/leagues\/500\/nba\.png/)
-})
-
-test('mobile sport picker and switcher refuse NBA preference without explicit NBA access', () => {
+test('mobile sport picker and switcher show every NBA tool with explicit Ultimate lock state', () => {
   for (const allowed of [false,true]) {
     const html=render('MobileResearchPicker',{path:'/the-paint',sport:'nba',nflAccess:true,nbaAccess:allowed,hasUltimate:true,onSport:noop,onClose:noop})
     const switcher=render('ResearchSportSwitcher',{sport:'nba',nflAccess:true,nbaAccess:allowed,onChange:noop})
-    if (allowed) { assert.match(html,/NBA tools/);assert.match(html,/href="\/the-paint\?view=ladders/);assert.match(switcher,/>NBA<\/span>/) }
-    else { assert.doesNotMatch(html,/href="\/the-paint|NBA tools/);assert.doesNotMatch(switcher,/>NBA<\/span>/) }
+    assert.match(html,/NBA tools/);assert.match(switcher,/>NBA<\/span>/)
+    if (allowed) { assert.match(html,/href="\/the-paint\?view=ladders/);assert.doesNotMatch(html,/Ultimate required/) }
+    else { assert.doesNotMatch(html,/href="\/the-paint/);assert.equal((html.match(/href="\/pricing#plan-ultimate"/g)??[]).length,15);assert.match(switcher,/aria-label="NBA research · Ultimate required"/) }
     assert.match(html,/NFL tools/)
     assert.match(html,/MLB tools/)
   }
+})
+
+test('unrelated beta override cannot unlock NBA navigation',()=>{
+  Object.assign(state,{role:'user',tier:'free',granted:null,beta:true})
+  for(const name of ['Sidebar','DesktopNavigation','DesktopCommandBar']) {
+    const html=render(name,{open:true,onClose:noop})
+    assert.doesNotMatch(html,/href="\/the-paint/)
+    assert.match(html,/Ultimate required/)
+  }
+})
+
+test('mobile NBA tab changes the actual tool menu and dismissing restores focus and page scroll',async()=>{
+  const {JSDOM}=require('jsdom')
+  const dom=new JSDOM('<!doctype html><html><body><button id="opener">Research</button></body></html>',{url:'https://www.slipsurge.com'})
+  Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
+  dom.window.matchMedia=()=>({matches:true,addEventListener(){},removeEventListener(){}})
+  dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
+  const {createRoot}=await import('react-dom/client')
+  const opener=document.getElementById('opener')!;opener.focus()
+  const host=document.createElement('div');document.body.append(host)
+  const root=createRoot(host)
+  function Fixture(){
+    const [sport,setSport]=useState('mlb'),[open,setOpen]=useState(true)
+    return open?createElement(compiled.exports.MobileResearchPicker,{path:'/feed',sport,nflAccess:true,nbaAccess:false,hasUltimate:false,onSport:setSport,onClose:()=>setOpen(false)}):null
+  }
+  try{
+    await act(async()=>root.render(createElement(Fixture)))
+    assert.equal(document.body.style.overflow,'hidden')
+    assert.ok(host.querySelector('nav[aria-label="MLB quick tools"]'))
+    const tab=host.querySelector('button[aria-label="NBA tools · Ultimate required"]')!
+    await act(async()=>tab.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
+    assert.equal(tab.getAttribute('aria-pressed'),'true')
+    const links=[...host.querySelectorAll('nav[aria-label="NBA quick tools"] a')]
+    assert.equal(links.length,14)
+    assert.ok(links.every(link=>link.getAttribute('href')==='/pricing#plan-ultimate'))
+    await act(async()=>host.querySelector('dialog')!.dispatchEvent(new dom.window.Event('cancel',{bubbles:false,cancelable:true})))
+    assert.equal(host.querySelector('dialog'),null)
+    assert.equal(document.body.style.overflow,'')
+    assert.equal(document.activeElement,opener)
+  }finally{await act(async()=>root.unmount());host.remove();dom.window.close()}
 })

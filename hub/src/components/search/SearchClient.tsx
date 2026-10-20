@@ -86,7 +86,7 @@ export function SearchClient() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setCurrentUserId(user.id)
-      supabase.from('users').select('account_type').eq('id', user.id).maybeSingle().then(({ data }) => setNbaAllowed(hasNbaAccess(data?.account_type)))
+      supabase.from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).maybeSingle().then(({ data }) => setNbaAllowed(hasNbaAccess(data)))
       getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
       supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', user.id).order('last_used_at', { ascending: false }).limit(12)
         .then(({ data }) => setSavedSearches((data ?? []) as SavedSearch[]))

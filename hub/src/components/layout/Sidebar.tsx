@@ -8,7 +8,7 @@ import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, Calendar, BookOpen, ShoppingBag,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
-  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History,
+  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History, LockKeyhole,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
@@ -19,7 +19,7 @@ import { useNflAccess } from '@/lib/useNflAccess'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { useResearchSport } from './useResearchSport'
 import { ResearchSportSwitcher } from './ResearchSportSwitcher'
-import { researchToolActive, researchToolHref, resolveResearchSport } from './researchNavigation'
+import { researchToolActive, researchNavigationHref, resolveResearchSport } from './researchNavigation'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nbaResearchNavigation } from './navigationConfig'
 import navigationStyles from './researchNavigation.module.css'
@@ -104,8 +104,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const { profile } = useAuth()
   const { allowed: nflAccess } = useNflAccess()
   const { sport, chooseSport } = useResearchSport(path)
-  const nbaAccess = hasNbaAccess(profile?.account_type)
-  const selectedSport = resolveResearchSport(sport, nflAccess, nbaAccess)
+  const nbaAccess = hasNbaAccess(profile)
+  const selectedSport = resolveResearchSport(sport, nflAccess)
   const [menuSearch, setMenuSearch] = useState('')
   const drawerRef = useRef<HTMLElement>(null)
   const closeRef = useRef(onClose)
@@ -181,7 +181,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const permittedNav = nav.filter(item => {
     if (!item) return true
     if (item.nflOnly && !nflAccess) return false
-    if (item.nbaOnly && !nbaAccess) return false
     if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
     return !item.flagKey || flags[item.flagKey] !== false
@@ -325,15 +324,18 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                   ? <SafeImage src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
                   : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
                 {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
+                {!isCollapsed && item.nbaOnly && <span className={navigationStyles.membership}>ULTIMATE</span>}
               </div>
             )
           }
           const Icon = item.icon
-          const isActive = active(item.href)
+          const locked = !!item.nbaOnly && !nbaAccess
+          const isActive = !locked && active(item.href)
           const idleBg = 'transparent'
           const link = (
-            <Link key={item.href} href={researchToolHref(item.href, path, searchParams)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={isCollapsed ? item.label : undefined} title={isCollapsed ? item.label : undefined} style={{
+            <Link key={item.href} href={researchNavigationHref(item.href, path, searchParams, nbaAccess)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} title={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
+              minHeight: 44,
               justifyContent: isCollapsed ? 'center' : 'flex-start',
               padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
               fontSize: 13, fontWeight: isActive ? 700 : 500,
@@ -348,6 +350,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
               {!isCollapsed && <span style={{ flex: 1, lineHeight: 1.2 }}>{item.label}</span>}
+              {!isCollapsed && locked && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}
               {!isCollapsed && item.badge && (
                 <span style={{
                   fontSize: 9, fontWeight: 900, letterSpacing: '0.04em',

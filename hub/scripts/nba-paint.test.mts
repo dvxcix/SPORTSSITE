@@ -129,7 +129,7 @@ test('NBA maintenance and model reads deny access before any source or ledger wo
     const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
     assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
   }
-  const model=await compiled('../src/app/the-paint/models/route.ts',{...imports,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:Response.json({},{status:403})})}})
+  const model=await compiled('../src/app/the-paint/models/route.ts',{...imports,'@/lib/paintAccess':{requirePaintAdmin:async()=>({error:Response.json({},{status:403})})}})
   assert.equal((await(model.GET as()=>Promise<Response>)()).status,403);assert.equal(reads,0)
 })
 
@@ -255,7 +255,7 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
   assert.equal(nested.unmatched,1)
 })
 
-test('new NBA research APIs reject non-admins and invalid games before loading providers',async()=>{
+test('NBA research APIs reject denied access and invalid games before loading providers',async()=>{
   for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
     let denied=true
     const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
@@ -374,7 +374,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
-  for (const [id, role, error, status] of [[null, null, null, 401], ['u', 'member', null, 403], ['u', 'admin', 'db error', 403], ['u', 'admin', null, undefined]] as const) {
+  for (const [id, role, error, status] of [[null, null, null, 401], ['u', 'member', null, 403], ['u', 'admin', 'db error', 503], ['u', 'admin', null, undefined]] as const) {
     const gate = await compiled('../src/lib/paintAccess.ts', { '@/lib/nbaAccessPolicy': { hasNbaAccess }, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: id, supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role }, error }) }) }) }) } }) } })
     const result = await gate.requirePaintAccess() as { error?: Response; userId?: string }
     assert.equal(result.error?.status, status)
@@ -555,7 +555,7 @@ test('NBA game and player quote captures preserve the healthy archive when eithe
   }
 })
 
-test('NBA history remains admin-gated and validates market/game before archive reads',async()=>{
+test('NBA history enforces membership and validates market/game before archive reads',async()=>{
   let denied=true,reads=0,openingReads=0,openingFailed=false
   const openingRows:import('../src/lib/nbaOddsHistory.ts').NbaQuoteOpeningRow[]=[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'over_under',line:20.5,side:'over',odds:-110,observed_at:'2026-10-19T00:00:00Z'}]
   const pure=await import('../src/lib/nbaPaint.ts')

@@ -127,7 +127,7 @@ function TopbarNotificationEntry({
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile, loading } = useAuth()
-  const nbaAccess = hasNbaAccess(profile?.account_type)
+  const nbaAccess = hasNbaAccess(profile)
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)

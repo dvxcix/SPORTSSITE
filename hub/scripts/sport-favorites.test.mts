@@ -33,7 +33,7 @@ test('team league collisions and historical raw storage remain separate', () => 
   assert.deepEqual(favorites.normalizeFavoriteTeams(['NYY', 'MLB:ATL', 'NFL:ATL', 'NBA:1']), ['NYY', 'MLB:ATL', 'NFL:ATL', 'NBA:1'])
 })
 
-test('non-admin edits preserve stored hidden NBA choices without adding new ones', () => {
+test('non-entitled edits preserve stored NBA choices without adding new ones', () => {
   const existing = { favorite_teams: ['ATL', 'NBA:1'], favorite_players: [mlb, nba] }
   const update = favorites.favoriteUpdates({ teams: ['NFL:ATL', 'NBA:2'], players: [nfl, { ...nba, player_id: '999' }] }, existing, false)
   assert.deepEqual(update.favorite_teams, ['NFL:ATL', 'NBA:1'])
@@ -49,8 +49,8 @@ test('search responses preserve exact league provider IDs and valid imagery', ()
   assert.equal(favorites.favoriteSearchPlayers('nba', [null, {}, { id: 'bad' }]).length, 0)
 })
 
-async function routeFixture(role: string | null = 'admin') {
-  let profile = { id: 'owner', account_type: role, favorite_teams: ['NYY'], favorite_players: [mlb] as favorites.FavoritePlayer[], favorite_sports: ['MLB'] }
+async function routeFixture(role: string | null = 'admin', entitlement: { tier?: string; admin_granted_tier?: string; discord_advanced_claimed?: boolean } = {}) {
+  let profile = { id: 'owner', account_type: role, ...entitlement, favorite_teams: ['NYY'], favorite_players: [mlb] as favorites.FavoritePlayer[], favorite_sports: ['MLB'] }
   let updates = 0, catalogLoads = 0
   const admin = { from: () => ({ select: () => ({ eq: (_key: string, id: string) => { assert.equal(id, 'owner'); return { maybeSingle: async () => ({ data: profile, error: null }) } } }), update: (value: Partial<typeof profile>) => ({ eq: async (_key: string, id: string) => { assert.equal(id, 'owner'); updates++; profile = { ...profile, ...value }; return { error: null } } }) }) }
   const imports: Record<string, unknown> = {
@@ -98,6 +98,19 @@ test('favorites API saves/removes exact NFL and NBA IDs while preserving unrelat
   assert.deepEqual(fixture.current(), previous)
 })
 
+test('paid and admin-granted Ultimate members can save NBA favorites while Advanced cannot', async () => {
+  for (const entitlement of [{ tier: 'ultimate' }, { tier: 'free', admin_granted_tier: 'ultimate' }]) {
+    const member = await routeFixture('user', entitlement)
+    assert.ok(((await member.get()).body.catalog as favorites.FavoriteTeam[]).some(team => team.sport === 'nba'))
+    assert.equal((await member.patch({ action: 'add', player: nba })).status, 200)
+    assert.equal((await member.patch({ action: 'add', team: 'NBA:1' })).status, 200)
+    assert.ok(member.current().favorite_players.some(player => favorites.favoritePlayerKey(player) === 'nba:123'))
+  }
+  const advanced = await routeFixture('user', { tier: 'free', discord_advanced_claimed: true })
+  assert.equal((await advanced.patch({ action: 'add', player: nba })).status, 403)
+  assert.equal(advanced.counts().updates, 0)
+})
+
 test('favorite entity writes allow eight per league while preserving a full MLB roster', async () => {
   const fixture = await routeFixture()
   const eight = Array.from({ length: 8 }, (_, index) => ({ ...mlb, mlb_id: index + 1 }))
@@ -125,12 +138,12 @@ test('normalizer keeps eight players from each league and bounds only that leagu
   assert.equal(favorites.normalizeFavoritePlayers(values, false).length, 16)
 })
 
-test('onboarding persists NFL favorites, keeps MLB storage and restricts new NBA selections by trusted role', async () => {
+test('onboarding persists NFL and MLB favorites while NBA follows effective Ultimate or admin', async () => {
   const source = await readFile(new URL('../src/app/api/account/onboarding/route.ts', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  for (const role of ['admin', 'user']) {
+  for (const [entitlement, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, false], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
     let saved: Record<string, unknown> | null = null
-    const profile = { id: 'owner', account_type: role, favorite_teams: ['NYY'], favorite_players: [mlb], notification_settings: { dm: true }, interest_settings: {} }
+    const profile = { id: 'owner', ...entitlement, favorite_teams: ['NYY'], favorite_players: [mlb], notification_settings: { dm: true }, interest_settings: {} }
     const imports: Record<string, unknown> = {
       'next/server': { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status ?? 200 }) } },
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) } }) },
@@ -144,24 +157,24 @@ test('onboarding persists NFL favorites, keeps MLB storage and restricts new NBA
     assert.equal(result.status, 200)
     assert.ok(saved)
     const values = saved as Record<string, unknown>
-    assert.deepEqual(values.favorite_teams, role === 'admin' ? ['NYY', 'NFL:ATL', 'NBA:1'] : ['NYY', 'NFL:ATL'])
-    assert.deepEqual((values.favorite_players as favorites.FavoritePlayer[]).map(favorites.favoritePlayerKey), role === 'admin' ? ['mlb:123', 'nfl:00-0033873', 'nba:123'] : ['mlb:123', 'nfl:00-0033873'])
+    assert.deepEqual(values.favorite_teams, allowed ? ['NYY', 'NFL:ATL', 'NBA:1'] : ['NYY', 'NFL:ATL'])
+    assert.deepEqual((values.favorite_players as favorites.FavoritePlayer[]).map(favorites.favoritePlayerKey), allowed ? ['mlb:123', 'nfl:00-0033873', 'nba:123'] : ['mlb:123', 'nfl:00-0033873'])
     assert.equal((values.notification_settings as Record<string, boolean>).dm, true)
     assert.equal(typeof values.onboarding_completed_at, 'string')
   }
 })
 
-test('public profile cards hide NBA identities from non-admin viewers while showing NFL correctly', async () => {
+test('public profile NBA favorites follow viewer effective Ultimate while retaining NFL for every viewer', async () => {
   const source = await readFile(new URL('../src/components/profile/FavoritesSection.tsx', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  for (const role of ['admin', 'user']) {
+  for (const [viewer, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, false], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
     const imports: Record<string, unknown> = {
       'react/jsx-runtime': jsxRuntime,
       'next/link': { default: ({ href, className, children }: Record<string, unknown>) => jsxRuntime.jsx('a', { href, className, children }) },
       '@/components/sports/PlayerAvatar': { PlayerAvatar: ({ name }: { name: string }) => jsxRuntime.jsx('span', { 'data-player': name }) },
       '@/components/ui/SafeImage': { SafeImage: (props: Record<string, unknown>) => jsxRuntime.jsx('img', props) },
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'viewer' } } }) } }) },
-      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role } }) }) }) }) }) },
+      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: viewer }) }) }) }) }) },
       '@/lib/nbaAccessPolicy': { hasNbaAccess }, '@/lib/sportFavorites': favorites,
       '@/lib/favoriteCatalog': { getFavoriteCatalog: async (allowNba: boolean) => catalog.filter(team => allowNba || team.sport !== 'nba') },
     }
@@ -170,8 +183,8 @@ test('public profile cards hide NBA identities from non-admin viewers while show
     const html = renderToStaticMarkup(await mod.exports.FavoritesSection({ teams: ['NFL:ATL', 'NBA:1'], players: [mlb, nfl, nba] }))
     assert.ok(html.includes('/nfl/players/00-0033873'))
     assert.ok(html.includes('Atlanta Falcons'))
-    assert.equal(html.includes('/nba/players/123'), role === 'admin')
-    assert.equal(html.includes('Basketball Player'), role === 'admin')
-    assert.equal(html.includes('Atlanta Hawks'), role === 'admin')
+    assert.equal(html.includes('/nba/players/123'), allowed)
+    assert.equal(html.includes('Basketball Player'), allowed)
+    assert.equal(html.includes('Atlanta Hawks'), allowed)
   }
 })

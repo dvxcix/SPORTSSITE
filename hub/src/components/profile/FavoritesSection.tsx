@@ -13,8 +13,8 @@ export async function FavoritesSection({ teams, players, sports = [] }: { teams:
   if (teams.some(key => key.startsWith('NBA:')) || normalizeFavoritePlayers(players).some(player => favoritePlayerSport(player) === 'nba')) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: viewer } = user ? await createAdminClient().from('users').select('account_type').eq('id', user.id).maybeSingle() : { data: null }
-    allowNba = hasNbaAccess(viewer?.account_type)
+    const { data: viewer } = user ? await createAdminClient().from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).maybeSingle() : { data: null }
+    allowNba = hasNbaAccess(viewer)
   }
   const catalog = await getFavoriteCatalog(allowNba).catch(() => MLB_FAVORITE_TEAMS)
   const visibleTeams = [...new Map(normalizeFavoriteTeams(teams, allowNba).flatMap(key => { const team = resolveFavoriteTeam(key, catalog, sports); return team ? [[team.key, team] as const] : [] })).values()]

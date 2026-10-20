@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
-import { ArrowUpRight, Layers3, X } from 'lucide-react'
+import { ArrowUpRight, Layers3, LockKeyhole, X } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { areaNavigation } from './navigationConfig'
-import { availableResearchSports, researchHome, researchSportForPath, researchToolActive, researchToolHref, resolveResearchSport, type ResearchSport } from './researchNavigation'
+import { availableResearchSports, researchHome, researchSportForPath, researchToolActive, researchNavigationHref, resolveResearchSport, type ResearchSport } from './researchNavigation'
 import styles from './mobileResearch.module.css'
 
 export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false, hasUltimate, onSport, onClose }: {
@@ -17,9 +17,10 @@ export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false
   const closeRef = useRef(onClose)
   useEffect(() => { closeRef.current = onClose }, [onClose])
   const search = useSearchParams()
-  const sports = availableResearchSports(nflAccess, nbaAccess).sort((a,b) => a === 'nfl' ? -1 : b === 'nfl' ? 1 : 0)
-  const selected = resolveResearchSport(sport, nflAccess, nbaAccess)
-  const tools = areaNavigation.research.filter(item => researchSportForPath(item.href.split('?')[0]) === selected && !['/dugout', '/the-sideline', '/the-paint'].includes(item.href) && (!item.ultimateOnly || hasUltimate))
+  const sports = availableResearchSports(nflAccess).sort((a,b) => a === 'nfl' ? -1 : b === 'nfl' ? 1 : 0)
+  const selected = resolveResearchSport(sport, nflAccess)
+  const nbaLocked = selected === 'nba' && !nbaAccess
+  const tools = areaNavigation.research.filter(item => researchSportForPath(item.href.split('?')[0]) === selected && !['/dugout', '/the-sideline', '/the-paint'].includes(item.href) && (selected === 'nba' || !item.ultimateOnly || hasUltimate))
 
   useEffect(() => {
     const node = dialog.current
@@ -33,21 +34,21 @@ export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false
     return () => { media.removeEventListener('change', resized); node?.close(); document.body.style.overflow = previous; if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }) }
   }, [])
 
-  const href = (value: string) => researchToolHref(value, path, search)
+  const href = (value: string) => researchNavigationHref(value, path, search, nbaAccess)
   return <dialog ref={dialog} className={styles.sheet} aria-labelledby="research-picker-title" onCancel={onClose} onClose={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className={styles.content}>
       <header className={styles.header}><div><small>YOUR SPORTS</small><h2 id="research-picker-title">Research</h2></div><button type="button" onClick={onClose} aria-label="Close research menu"><X size={20} /></button></header>
       <div className={styles.boards} data-count={sports.length}>
-        {sports.map(value => <Link key={value} prefetch={false} href={href(researchHome(value, nflAccess, nbaAccess))} className={styles.board} data-current={researchSportForPath(path) === value} onClick={() => { onSport(value); onClose() }}>
+        {sports.map(value => <Link key={value} prefetch={false} href={href(researchHome(value, nflAccess, nbaAccess))} className={styles.board} data-current={researchSportForPath(path) === value && (value !== 'nba' || nbaAccess)} aria-label={value === 'nba' && !nbaAccess ? 'ThePaint · NBA research · Ultimate required' : undefined} onClick={() => { onSport(value); onClose() }}>
           <SafeImage src={`https://a.espncdn.com/i/teamlogos/leagues/500/${value}.png`} alt="" />
-          <span><small>{value.toUpperCase()}</small><strong>{value === 'nba' ? 'ThePaint' : value === 'nfl' ? 'The Sideline' : 'The Dugout'}</strong></span><ArrowUpRight size={16} aria-hidden="true" />
+          <span><small>{value.toUpperCase()}</small><strong>{value === 'nba' ? 'ThePaint' : value === 'nfl' ? 'The Sideline' : 'The Dugout'}</strong>{value === 'nba' && <em>{!nbaAccess && <LockKeyhole size={10} aria-hidden="true" />}Ultimate</em>}</span><ArrowUpRight size={16} aria-hidden="true" />
         </Link>)}
       </div>
       <div className={styles.tabs} role="group" aria-label="Sport tools">
-        {sports.map(value => <button key={value} type="button" aria-pressed={selected === value} onClick={() => onSport(value)}>{value.toUpperCase()} tools</button>)}
+        {sports.map(value => <button key={value} type="button" aria-pressed={selected === value} onClick={() => onSport(value)} aria-label={`${value.toUpperCase()} tools${value === 'nba' && !nbaAccess ? ' · Ultimate required' : ''}`}>{value.toUpperCase()} tools</button>)}
       </div>
       <nav className={styles.tools} aria-label={selected.toUpperCase() + ' quick tools'}>
-        {tools.map(item => <Link key={item.href} href={href(item.href)} prefetch={false} aria-current={researchToolActive(item.href, path, search) ? 'page' : undefined} onClick={onClose}><item.icon size={18} aria-hidden="true" /><span>{item.label.replace(/^(NFL|NBA) /, '')}</span></Link>)}
+        {tools.map(item => <Link key={item.href} href={href(item.href)} prefetch={false} aria-current={!nbaLocked && researchToolActive(item.href, path, search) ? 'page' : undefined} aria-label={nbaLocked ? `${item.shortLabel ?? item.label} · Ultimate required` : undefined} onClick={onClose}><item.icon size={18} aria-hidden="true" /><span>{item.shortLabel ?? item.label.replace(/^(NFL|NBA) /, '')}</span>{nbaLocked && <LockKeyhole size={12} className={styles.lock} aria-hidden="true" />}</Link>)}
       </nav>
       <Link className={styles.workspace} href="/workspace" prefetch={false} onClick={onClose}><Layers3 size={18} aria-hidden="true" /><span>Research Workspace</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
     </div>

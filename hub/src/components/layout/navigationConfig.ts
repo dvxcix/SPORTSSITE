@@ -33,7 +33,7 @@ export const primaryNavigation: ProductNavItem[] = [
   { href: '/picks', label: 'Picks', icon: TrendingUp, matches: ['/picks', '/bookmarks', '/missions', '/activity'] },
 ]
 
-/** Visibility is admin-gated by every consumer through nbaAccessPolicy. */
+/** Public destinations; consumers offer an Ultimate upgrade without fetching gated data. */
 export const nbaResearchNavigation: ProductNavItem[] = [
   { href: '/the-paint', label: 'ThePaint · NBA', shortLabel: 'ThePaint', icon: Layers3 },
   { href: '/the-paint?view=odds', label: 'NBA Odds', shortLabel: 'Odds', icon: ChartSpline },
@@ -45,12 +45,12 @@ export const nbaResearchNavigation: ProductNavItem[] = [
   { href: '/the-paint?view=public', label: 'NBA ThePublic', shortLabel: 'ThePublic', icon: Users },
   { href: '/the-paint?view=divergence', label: 'NBA Cross-market', shortLabel: 'Cross-market', icon: Activity },
   { href: '/the-paint?view=dvp', label: 'NBA Defense × position', shortLabel: 'Defense × position', icon: Trophy },
-  { href: '/the-paint?view=usage', label: 'NBA Role & minutes', shortLabel: 'Role & minutes', icon: Activity },
+  { href: '/the-paint?view=usage', label: 'NBA Player trends', shortLabel: 'Player trends', icon: Activity },
   { href: '/the-paint?view=tracking', label: 'NBA Game tracking', shortLabel: 'Game tracking', icon: Activity },
   { href: '/the-paint?view=matchup', label: 'NBA Matchup Lab', shortLabel: 'Matchup Lab', icon: Crosshair },
   { href: '/the-paint?view=availability', label: 'NBA Availability', shortLabel: 'Availability', icon: Users },
   { href: '/the-paint?view=game-markets', label: 'NBA Game markets', shortLabel: 'Game markets', icon: Coins },
-]
+].map(item => ({ ...item, ultimateOnly: true }))
 
 export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
   social: [

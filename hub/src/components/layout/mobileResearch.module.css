@@ -12,3 +12,5 @@
 
 /* Three peer sports fit the same research picker without narrow cards. */
 .boards[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.boards[data-count="3"] .board{flex-direction:column;align-items:center;text-align:center;gap:6px;padding:12px 5px}.boards[data-count="3"] .board>span{flex:0}.boards[data-count="3"] .board>svg{display:none}.boards[data-count="3"] .board strong{font-size:12px}.marks:has(img:nth-child(3)){gap:2px}.marks:has(img:nth-child(3)) img{width:19px;height:22px}
+.board em{display:flex;align-items:center;justify-content:center;gap:3px;color:#a9b7c6;font-size:9px;font-style:normal;font-weight:750}
+.tools a>span{flex:1;min-width:0}.tools .lock{color:#91a0b2}
