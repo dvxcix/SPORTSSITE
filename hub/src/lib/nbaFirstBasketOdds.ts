@@ -12,7 +12,7 @@ export function nbaFirstEvent(events:FirstOddsEvent[],game:PaintGame){
 // price group. Unknown book semantics are withheld rather than guessed.
 const firstRules:Record<string,'first_score'|'first_field_goal'>={fanduel:'first_score',draftkings:'first_score',williamhill_us:'first_score',betmgm:'first_field_goal',fanatics:'first_field_goal'}
 const methodName=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'')
-const methodKeys:Record<string,string>={'2pt':'2pt','3pt':'3pt','twopointer':'2pt','2pointer':'2pt','2pointfieldgoal':'2pt','3pointer':'3pt','3pointfieldgoal':'3pt','threepointer':'3pt',freethrow:'free_throw',dunk:'dunk',layup:'layup',other:'other'}
+const methodKeys:Record<string,string>={'2pt':'2pt','3pt':'3pt','twopointer':'2pt','2pointer':'2pt','2pointfieldgoal':'2pt','3pointer':'3pt','3pointfieldgoal':'3pt','threepointer':'3pt','threepointfieldgoal':'3pt','twopointfieldgoal':'2pt',freethrow:'free_throw',dunk:'dunk',layup:'layup',other:'other'}
 const hash=(value:string)=>{let n=2166136261;for(const c of value)n=Math.imul(n^c.charCodeAt(0),16777619);return -((n>>>0)+1)}
 export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,players:PaintPlayer[],asOf=Date.now()):{rows:FirstBasketRow[];unmatched:number;withheldMethods?:string[]}{
   if(nbaFirstEvent([event],game)?.id!==event.id)return {rows:[],unmatched:1}

@@ -58,8 +58,10 @@ test('missing or nonfinal facts, DNPs, unverified starts and opening gaps never 
 })
 
 test('numeric first-basket methods preserve 2-point versus 3-point identity',()=>{
- const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_method_of_first_basket',outcomes:[{name:'2-pointer',description:'Test Player',price:700},{name:'3-pointer',description:'Test Player',price:1200}]}]}]}
+ for(const [two,three] of [['2-pointer','3-pointer'],['Two Point Field Goal','Three Point Field Goal']]){
+ const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_method_of_first_basket',outcomes:[{name:two,description:'Test Player',price:700},{name:three,description:'Test Player',price:1200}]}]}]}
  assert.deepEqual(nbaNormalizeFirstOdds(sample,game,[player],now).rows.map(r=>r.offer.prop_type),['first_score_2pt','first_score_3pt'])
+ }
 })
 
 test('first-basket normalization diagnostics remain admin-only',async()=>{
