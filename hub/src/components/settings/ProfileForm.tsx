@@ -11,7 +11,6 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FavoritePicker } from '@/components/profile/FavoritePicker'
 import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
@@ -243,7 +242,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Sports</label>
         <div className="flex flex-wrap gap-2">
-          {SPORTS.filter(s => hasNbaAccess(profile) || s !== 'NBA').map(s => {
+          {SPORTS.map(s => {
             const logo = sportLogoUrl(s)
             return (
               <button key={s} type="button" aria-pressed={form.favorite_sports.includes(s)} onClick={() => toggleSport(s)}
@@ -257,7 +256,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       </div>
 
-      <FavoritePicker teams={form.favorite_teams} players={form.favorite_players} sports={form.favorite_sports} allowNba={hasNbaAccess(profile)} onTeamsChange={teams => setForm(current => ({ ...current, favorite_teams: teams }))} onPlayersChange={players => setForm(current => ({ ...current, favorite_players: players }))}/>
+      <FavoritePicker teams={form.favorite_teams} players={form.favorite_players} sports={form.favorite_sports} allowNba={true} onTeamsChange={teams => setForm(current => ({ ...current, favorite_teams: teams }))} onPlayersChange={players => setForm(current => ({ ...current, favorite_players: players }))}/>
 
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Sportsbooks You Use</label>

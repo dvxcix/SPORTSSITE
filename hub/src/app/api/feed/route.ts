@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
-import { fetchFeedPage, type FeedFilter } from '@/lib/feedQuery'
+import { fetchFeedPage, feedSport, type FeedFilter } from '@/lib/feedQuery'
 
 const VALID_FILTERS: FeedFilter[] = ['latest', 'top', 'picks', 'following']
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
 
   const { posts: rawPosts, nextCursor, hasMore } = await fetchFeedPage(supabase, {
-    filter, userId: user?.id, blockedIds, cursor, pageSize: 20,
+    filter, userId: user?.id, blockedIds, cursor, pageSize: 20, sport: feedSport(searchParams.get('sport')),
   })
   const posts = await attachUserReactions(rawPosts, user?.id)
 

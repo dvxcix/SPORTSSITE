@@ -52,6 +52,7 @@ test('Ultimate, granted Ultimate and admin shells expose each NBA tool once and 
       for (const view of ['odds','ladders','movement','cheatsheets','score','slate','public','divergence','dvp','usage','tracking','matchup','availability','game-markets']) assert.equal((html.match(new RegExp(`href="/the-paint\\?view=${view}&`,'g'))??[]).length,1,name+' '+view)
       assert.doesNotMatch(html,/>NBA (Odds|Ladders|SlipSurge Score)</)
       assert.doesNotMatch(html,/Ultimate required/)
+      assert.doesNotMatch(html,/>ULTIMATE</)
     }
   }
 })

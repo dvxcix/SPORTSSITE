@@ -78,7 +78,7 @@ export function DesktopNavigation() {
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
           </button>
           {context.area === 'research' && <ResearchSportSwitcher sport={selectedSport} onChange={chooseSport} nflAccess={nflAccess} nbaAccess={nbaAccess} compact={contextCollapsed} />}
-          <div className={`ss-desktop-context-label ${navigationStyles.heading}`}>{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}{context.area === 'research' && selectedSport === 'nba' && <span className={navigationStyles.membership}>ULTIMATE</span>}</div>
+          <div className={`ss-desktop-context-label ${navigationStyles.heading}`}>{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}</div>
           <nav className={navigationStyles.desktopTools} aria-label={`${context.area === 'research' ? selectedSport.toUpperCase() + ' research' : context.meta.label} navigation`}>
             {items.map(item => {
               const Icon = item.icon

@@ -24,15 +24,18 @@ interface FeedComposerProps {
   onPost?: () => void
   groupId?: string
   pageId?: string
+  preferredSport?: 'MLB' | 'NFL' | 'NBA'
+  initialGameId?: string
+  openPickBuilder?: boolean
 }
 
-export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
+export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
   const { user, profile } = useAuth()
   const [content, setContent] = useState('')
-  const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>('take')
-  const [showPickForm, setShowPickForm] = useState(false)
+  const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>(openPickBuilder ? 'pick' : 'take')
+  const [showPickForm, setShowPickForm] = useState(openPickBuilder)
   const [showPollForm, setShowPollForm] = useState(false)
-  const [sport, setSport] = useState('MLB')
+  const [sport, setSport] = useState(() => preferredSport ?? profile?.favorite_sports?.find((value: string) => SPORTS.includes(value)) ?? 'MLB')
   const [legs, setLegs] = useState<ComposedPick[]>([])
   const [wager, setWager] = useState('')
   const [pollOptions, setPollOptions] = useState(['', ''])
@@ -254,6 +257,8 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
           {showPickForm && (
             <>
               <PickComposer
+                initialSport={sport === 'NBA' ? 'NBA' : sport === 'NFL' ? 'NFL' : 'MLB'}
+                initialGameId={initialGameId}
                 legs={legs}
                 onAddLeg={l => setLegs(prev => [...prev, l])}
                 onRemoveLeg={i => setLegs(prev => prev.filter((_, j) => j !== i))}

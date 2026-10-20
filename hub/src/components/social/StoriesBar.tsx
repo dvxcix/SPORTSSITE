@@ -21,7 +21,7 @@ export function StoriesBar() {
 
       const { data } = await supabase
         .from('stories')
-        .select('id, author:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), media_url, created_at')
+        .select('id, author:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), media_url, story_type, content, bg_color, created_at')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(12)

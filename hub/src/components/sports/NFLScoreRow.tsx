@@ -5,13 +5,13 @@ import { getGameStatus, getTeams, type ESPNGame } from '@slipsurge/core/espn-api
 import { TeamLogo } from './PlayerAvatar'
 import styles from './NFLScoreRow.module.css'
 
-export function NFLScoreRow({ game }: { game: ESPNGame }) {
+export function NFLScoreRow({ game, sport = 'nfl' }: { game: ESPNGame; sport?: 'nfl' | 'nba' }) {
   const { away, home } = getTeams(game)
   if (!away || !home) return null
   const status = getGameStatus(game)
   const showScore = status.state !== 'pre'
   return (
-    <Link href={`/sports/nfl/${encodeURIComponent(game.id)}`} className={styles.row} aria-label={`${game.name} · ${status.label} · Game details`}>
+    <Link href={`/sports/${sport}/${encodeURIComponent(game.id)}`} className={styles.row} aria-label={`${game.name} · ${status.label} · Game details`}>
       <div className={styles.team}>
         <TeamLogo logo={away.team.logo} name={away.team.abbreviation} size={30} />
         <span className={styles.name}><span className={styles.full}>{away.team.displayName}</span><span className={styles.short}>{away.team.abbreviation}</span></span>

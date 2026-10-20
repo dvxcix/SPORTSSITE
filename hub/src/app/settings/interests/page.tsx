@@ -1,4 +1,3 @@
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -21,7 +20,7 @@ export default async function InterestSettingsPage() {
       favoriteTeams={profile?.favorite_teams ?? []}
       settings={profile?.interest_settings ?? {}}
       favoritePlayers={normalizeFavoritePlayers(profile?.favorite_players)}
-      allowNba={hasNbaAccess(profile)}
+      allowNba={true}
     />
   </SettingsShell>
 }

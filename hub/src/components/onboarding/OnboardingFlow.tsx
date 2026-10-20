@@ -69,7 +69,7 @@ export function OnboardingFlow({
   accountType,
   suggestedUsers,
   suggestedGroups,
-  allowNba = false,
+  allowNba = true,
 }: {
   userId: string;
   initialProfile: any;

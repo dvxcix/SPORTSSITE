@@ -5,6 +5,7 @@ import { PostCardClient } from './PostCardClient'
 
 interface FeedListProps {
   filter: string
+  sport?: string
   initialPosts: any[]
   initialCursor: string | null
   initialHasMore: boolean
@@ -18,7 +19,7 @@ function keyFor(post: any) {
 // .limit(30) with no way to see anything past it) with real infinite
 // scroll, backed by the same fetchFeedPage the initial SSR load uses via
 // GET /api/feed — so pagination logic lives in exactly one place.
-export function FeedList({ filter, initialPosts, initialCursor, initialHasMore }: FeedListProps) {
+export function FeedList({ filter, sport, initialPosts, initialCursor, initialHasMore }: FeedListProps) {
   const [posts, setPosts] = useState(initialPosts)
   const [cursor, setCursor] = useState(initialCursor)
   const [hasMore, setHasMore] = useState(initialHasMore)
@@ -33,14 +34,14 @@ export function FeedList({ filter, initialPosts, initialCursor, initialHasMore }
     setPosts(initialPosts)
     setCursor(initialCursor)
     setHasMore(initialHasMore)
-  }, [filter, initialPosts, initialCursor, initialHasMore])
+  }, [filter, sport, initialPosts, initialCursor, initialHasMore])
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMore || !cursor) return
     loadingRef.current = true
     setLoading(true)
     try {
-      const res = await fetch(`/api/feed?filter=${encodeURIComponent(filter)}&cursor=${encodeURIComponent(cursor)}`)
+      const res = await fetch(`/api/feed?filter=${encodeURIComponent(filter)}&cursor=${encodeURIComponent(cursor)}${sport ? `&sport=${encodeURIComponent(sport)}` : ''}`)
       if (!res.ok) { setHasMore(false); return }
       const body = await res.json()
       setPosts(prev => {
@@ -56,7 +57,7 @@ export function FeedList({ filter, initialPosts, initialCursor, initialHasMore }
       loadingRef.current = false
       setLoading(false)
     }
-  }, [filter, cursor, hasMore])
+  }, [filter, sport, cursor, hasMore])
 
   useEffect(() => {
     const el = sentinelRef.current

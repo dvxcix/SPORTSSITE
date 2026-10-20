@@ -14,6 +14,7 @@ import { ScoreRefresh } from '@/components/sports/ScoreRefresh'
 import { NFLQuarterScore } from '@/components/sports/NFLQuarterScore'
 import type { NflQuarterRow } from '@/lib/nflGameCenter'
 import { useNflGameRefresh } from '@/components/sports/useNflGameRefresh'
+import { gameCenterStatus, basketballQuarters } from '@/lib/gameCenterPresentation'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
@@ -114,7 +115,7 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />
           )}
           {stateStr === 'in'
-            ? `${period ? `${sport === 'nfl' ? (period > 4 ? 'OT' : `Q${period}`) : period} · ` : ''}${clock ?? ''}`
+            ? `${period ? `${sport === 'nfl' || sport === 'nba' ? (period > 4 ? `OT${period > 5 ? period - 4 : ''}` : `Q${period}`) : period} · ` : ''}${clock ?? ''}`
             : gameStatus.label}
         </span>
       </div>
@@ -738,7 +739,7 @@ export function GameDetailClient({
   sport, gameId, sportLabel,
   game: initialGame, summary: initialSummary, gameStatus: serverGameStatus,
   communityPicks, initialReactions, isLoggedIn,
-  roomMessages, currentUserId, nflDetails: initialNflDetails,
+  roomMessages, currentUserId, nflDetails: initialNflDetails, nbaReference,
 }: {
   sport: SportKey
   gameId: string
@@ -753,6 +754,7 @@ export function GameDetailClient({
   roomMessages: GameRoomMessage[]
   currentUserId?: string
   nflDetails?: { quarters: NflQuarterRow[]; date: string; updatedAt: string | null; complete: boolean }
+  nbaReference?: { id: string; date: string }
 }) {
   const [tab, setTab] = useState<Tab>('summary')
   const [reactions, setReactions] = useState<Reactions>(initialReactions)
@@ -766,7 +768,7 @@ export function GameDetailClient({
   // pre-game start time actually reflects whatever timezone this browser
   // is in. state/isLive don't depend on formatting, so those are fine as
   // the server computed them either way.
-  const gameStatus = game ? getGameStatus(game) : serverGameStatus
+  const gameStatus = gameCenterStatus(summary, game, game ? getGameStatus(game) : serverGameStatus)
   const isLive = gameStatus.isLive
   const teamMap = buildTeamMap(summary, game)
   const athleteMap = buildAthleteMap(summary, teamMap)
@@ -817,6 +819,8 @@ export function GameDetailClient({
 
       {/* Scoreboard */}
       <Scoreboard summary={summary} game={game} gameStatus={gameStatus} isLive={isLive} sport={sport} />
+      {sport === 'nba' && <NFLQuarterScore rows={basketballQuarters(summary)} />}
+      {nbaReference && <Link href={`/the-paint?date=${nbaReference.date}&game=${nbaReference.id}`} className={styles.back}>Open The Paint →</Link>}
       {nflDetails && <>
         <NFLQuarterScore rows={nflDetails.quarters} />
         <Link href={`/the-sideline?date=${nflDetails.date}&game=${encodeURIComponent(gameId)}`} className={styles.back}>Open The Sideline →</Link>
@@ -840,7 +844,7 @@ export function GameDetailClient({
       {/* Post pick CTA */}
       <div className={styles.cta}>
         <p className={styles.ctaText}>Got a pick on this game?</p>
-        <Link href={`/feed?pick=true&game=${gameId}&sport=${sport}`} className={styles.ctaButton}>
+        <Link href={`/feed?pick=true&game=${nbaReference?.id ?? gameId}&sport=${sport}`} className={styles.ctaButton}>
           Post Pick →
         </Link>
       </div>
@@ -886,7 +890,7 @@ export function GameDetailClient({
           <CommunityPicksTab
             picks={communityPicks}
             sport={sport}
-            gameId={gameId}
+            gameId={nbaReference?.id ?? gameId}
           />
         )}
       </div>

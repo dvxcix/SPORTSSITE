@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "audit:production": "node scripts/audit-production.mjs",
     "test:production": "node --test scripts/production-smoke.test.mjs",
+    "test:cross-sport": "node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts",
     "test:context-handoff": "node --test scripts/context-handoff.test.mjs",
     "test:operations-readiness": "node --test scripts/operations-readiness.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",

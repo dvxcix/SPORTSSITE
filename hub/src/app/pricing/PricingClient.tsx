@@ -68,7 +68,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Community access: posts, DMs, groups, channels, and notifications', minTier: 'basic' },
   { label: 'Community leaderboard', minTier: 'free' },
   { label: 'Player research & search', minTier: 'basic' },
-  { label: 'Live scores & play-by-play', minTier: 'basic' },
+  { label: 'MLB, NFL & NBA live scores, box scores & play-by-play', minTier: 'basic' },
   { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
   { label: 'Full Slate Breakdown', minTier: 'advanced' },
   { label: 'The Dugout, our proprietary Game Matrix', minTier: 'ultimate' },
@@ -77,7 +77,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'The Public', minTier: 'advanced' },
   { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
-const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
+const FREE_ROWS = ['Browse the MLB, NFL & NBA community feed', 'View & manage your profile', 'Choose MLB, NFL & NBA favorite teams and players']
 
 const PLAN_GUIDE = [
   { href: '#plan-basic', label: 'Start with Basic', detail: 'Community, live scores, and core MLB research' },

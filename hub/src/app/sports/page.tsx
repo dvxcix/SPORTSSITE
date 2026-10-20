@@ -142,9 +142,9 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
         return (
           <section id={`scores-${key}`} key={key} className="ss-scores-league">
             <LeagueHeader label={label} name={name} live={live.length} games={games.length} />
-            {key === 'nfl' ? <div className="ss-scores-board">
+            {key === 'nfl' || key === 'nba' ? <div className="ss-scores-board">
               <div className="ss-scores-column-headings"><span>Away</span><span>Status</span><span>Home</span></div>
-              {[...live, ...rest].map(game => <NFLScoreRow key={game.id} game={game} />)}
+              {[...live, ...rest].map(game => <NFLScoreRow key={game.id} game={game} sport={key} />)}
             </div> : <div className="ss-scores-card-grid">
               {live.map(game => <GameCard key={game.id} game={game} sport={key} />)}
               {rest.map(game => <GameCard key={game.id} game={game} sport={key} />)}

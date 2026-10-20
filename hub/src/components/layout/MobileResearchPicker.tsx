@@ -41,7 +41,7 @@ export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false
       <div className={styles.boards} data-count={sports.length}>
         {sports.map(value => <Link key={value} prefetch={false} href={href(researchHome(value, nflAccess, nbaAccess))} className={styles.board} data-current={researchSportForPath(path) === value && (value !== 'nba' || nbaAccess)} aria-label={value === 'nba' && !nbaAccess ? 'ThePaint · NBA research · Ultimate required' : undefined} onClick={() => { onSport(value); onClose() }}>
           <SafeImage src={`https://a.espncdn.com/i/teamlogos/leagues/500/${value}.png`} alt="" />
-          <span><small>{value.toUpperCase()}</small><strong>{value === 'nba' ? 'ThePaint' : value === 'nfl' ? 'The Sideline' : 'The Dugout'}</strong>{value === 'nba' && <em>{!nbaAccess && <LockKeyhole size={10} aria-hidden="true" />}Ultimate</em>}</span><ArrowUpRight size={16} aria-hidden="true" />
+          <span><small>{value.toUpperCase()}</small><strong>{value === 'nba' ? 'ThePaint' : value === 'nfl' ? 'The Sideline' : 'The Dugout'}</strong>{value === 'nba' && !nbaAccess && <em><LockKeyhole size={10} aria-hidden="true" />Ultimate required</em>}</span><ArrowUpRight size={16} aria-hidden="true" />
         </Link>)}
       </div>
       <div className={styles.tabs} role="group" aria-label="Sport tools">

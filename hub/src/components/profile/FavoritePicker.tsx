@@ -6,7 +6,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FAVORITE_PLAYERS_PER_SPORT, MLB_FAVORITE_TEAMS, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, favoriteSearchPlayers, favoriteTeamSelected, toggleFavoriteTeam, type FavoritePlayer, type FavoriteSport, type FavoriteTeam } from '@/lib/sportFavorites'
 
-export function FavoritePicker({ teams, players, sports = [], allowNba = false, onTeamsChange, onPlayersChange }: {
+export function FavoritePicker({ teams, players, sports = [], allowNba = true, onTeamsChange, onPlayersChange }: {
   teams: string[]; players?: FavoritePlayer[]; sports?: string[]; allowNba?: boolean
   onTeamsChange: (teams: string[]) => void; onPlayersChange?: (players: FavoritePlayer[]) => void
 }) {
@@ -32,7 +32,7 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = false, 
     const controller = new AbortController()
     const timer = setTimeout(() => {
       setSearching(true); setSearchError(false)
-      fetch(`/api/search/${sport === 'mlb' ? 'sports' : sport}?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
+      fetch(sport === 'nba' ? `/api/account/favorites/players?q=${encodeURIComponent(query.trim())}` : `/api/search/${sport === 'mlb' ? 'sports' : sport}?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
         .then(async response => { if (!response.ok) throw new Error('Unavailable'); return response.json() })
         .then(data => { if (!controller.signal.aborted) setResults(favoriteSearchPlayers(sport, data.players)) })
         .catch(() => { if (!controller.signal.aborted) { setResults([]); setSearchError(true) } })

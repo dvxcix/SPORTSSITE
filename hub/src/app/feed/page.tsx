@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
-import { fetchFeedPage, type FeedFilter } from '@/lib/feedQuery'
+import { fetchFeedPage, feedSport, type FeedFilter } from '@/lib/feedQuery'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { FeedList } from '@/components/social/FeedList'
 import { StoriesBar } from '@/components/social/StoriesBar'
@@ -20,15 +20,16 @@ const VALID_FILTERS: FeedFilter[] = ['latest', 'top', 'picks', 'following']
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>
+  searchParams: Promise<{ filter?: string; sport?: string; game?: string; pick?: string }>
 }) {
-  const { filter: filterParam = 'latest' } = await searchParams
+  const { filter: filterParam = 'latest', sport: sportParam, game, pick } = await searchParams
+  const sport = feedSport(sportParam)
   const filter: FeedFilter = VALID_FILTERS.includes(filterParam as FeedFilter) ? (filterParam as FeedFilter) : 'latest'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const [{ posts: rawPosts, nextCursor, hasMore }, storiesEnabled] = await Promise.all([
-    fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20 }),
+    fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20, sport }),
     isFeatureEnabledServer(FEATURE_FLAGS.stories),
   ])
   const posts = await attachUserReactions(rawPosts, user?.id)
@@ -71,7 +72,7 @@ export default async function FeedPage({
               return (
                 <Link
                   key={f.key}
-                  href={`/feed?filter=${f.key}`}
+                  href={`/feed?filter=${f.key}${sport ? `&sport=${sport}` : ''}`}
                   className={`ss-feed-filter ${filter === f.key ? 'is-active' : ''}`}
                   aria-current={filter === f.key ? 'page' : undefined}
                 >
@@ -81,10 +82,13 @@ export default async function FeedPage({
               )
             })}
           </nav>
+          <nav className="ss-feed-filters" aria-label="Feed sports">
+            {(['All', 'MLB', 'NFL', 'NBA'] as const).map(league => <Link key={league} href={`/feed?filter=${filter}${league === 'All' ? '' : `&sport=${league}`}`} className={`ss-feed-filter ${(sport ?? 'All') === league ? 'is-active' : ''}`} aria-current={(sport ?? 'All') === league ? 'page' : undefined}>{league}</Link>)}
+          </nav>
           {storiesEnabled && <StoriesBar />}
 
           <div className="ss-feed-composer-wrap">
-            <FeedComposer />
+            <FeedComposer key={`${sport ?? 'all'}:${game ?? ''}:${pick ?? ''}`} preferredSport={sport} initialGameId={game && /^[a-zA-Z0-9_-]{1,80}$/.test(game) ? game : undefined} openPickBuilder={pick === 'true'} />
           </div>
 
           {posts.length === 0 ? (
@@ -107,7 +111,7 @@ export default async function FeedPage({
               )}
             </div>
           ) : (
-            <FeedList filter={filter} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} />
+            <FeedList key={`${filter}:${sport ?? 'all'}`} filter={filter} sport={sport} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} />
           )}
         </div>
       </section>

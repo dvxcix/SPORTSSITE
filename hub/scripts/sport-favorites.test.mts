@@ -70,7 +70,7 @@ async function routeFixture(role: string | null = 'admin', entitlement: { tier?:
   return { get: mod.exports.GET, patch, current: () => profile, counts: () => ({ updates, catalogLoads }) }
 }
 
-test('favorites API authenticates before reading catalog and enforces NBA visibility/writes', async () => {
+test('favorites API requires sign-in and makes all three leagues available to ordinary members', async () => {
   const anonymous = await routeFixture(null)
   assert.equal((await anonymous.get()).status, 401)
   assert.equal((await anonymous.patch({ action: 'add', player: nba })).status, 401)
@@ -78,10 +78,10 @@ test('favorites API authenticates before reading catalog and enforces NBA visibi
   const member = await routeFixture('user')
   const read = await member.get()
   assert.equal(read.headers['Cache-Control'], 'private, no-store, max-age=0')
-  assert.ok(!(read.body.catalog as favorites.FavoriteTeam[]).some(team => team.sport === 'nba'))
-  assert.equal((await member.patch({ action: 'add', player: nba })).status, 403)
-  assert.equal((await member.patch({ action: 'add', team: 'NBA:1' })).status, 403)
-  assert.equal(member.counts().updates, 0)
+  assert.ok((read.body.catalog as favorites.FavoriteTeam[]).some(team => team.sport === 'nba'))
+  assert.equal((await member.patch({ action: 'add', player: nba })).status, 200)
+  assert.equal((await member.patch({ action: 'add', team: 'NBA:1' })).status, 200)
+  assert.equal(member.counts().updates, 2)
 })
 
 test('favorites API saves/removes exact NFL and NBA IDs while preserving unrelated favorites', async () => {
@@ -98,7 +98,7 @@ test('favorites API saves/removes exact NFL and NBA IDs while preserving unrelat
   assert.deepEqual(fixture.current(), previous)
 })
 
-test('paid and admin-granted Ultimate members can save NBA favorites while Advanced cannot', async () => {
+test('NBA favorites are independent of research membership, including free and Advanced accounts', async () => {
   for (const entitlement of [{ tier: 'ultimate' }, { tier: 'free', admin_granted_tier: 'ultimate' }]) {
     const member = await routeFixture('user', entitlement)
     assert.ok(((await member.get()).body.catalog as favorites.FavoriteTeam[]).some(team => team.sport === 'nba'))
@@ -107,8 +107,8 @@ test('paid and admin-granted Ultimate members can save NBA favorites while Advan
     assert.ok(member.current().favorite_players.some(player => favorites.favoritePlayerKey(player) === 'nba:123'))
   }
   const advanced = await routeFixture('user', { tier: 'free', discord_advanced_claimed: true })
-  assert.equal((await advanced.patch({ action: 'add', player: nba })).status, 403)
-  assert.equal(advanced.counts().updates, 0)
+  assert.equal((await advanced.patch({ action: 'add', player: nba })).status, 200)
+  assert.equal(advanced.counts().updates, 1)
 })
 
 test('favorite entity writes allow eight per league while preserving a full MLB roster', async () => {
@@ -138,10 +138,10 @@ test('normalizer keeps eight players from each league and bounds only that leagu
   assert.equal(favorites.normalizeFavoritePlayers(values, false).length, 16)
 })
 
-test('onboarding persists NFL and MLB favorites while NBA follows effective Ultimate or admin', async () => {
+test('onboarding persists MLB, NFL and NBA favorites for every account tier', async () => {
   const source = await readFile(new URL('../src/app/api/account/onboarding/route.ts', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  for (const [entitlement, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, false], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
+  for (const [entitlement, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, true], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
     let saved: Record<string, unknown> | null = null
     const profile = { id: 'owner', ...entitlement, favorite_teams: ['NYY'], favorite_players: [mlb], notification_settings: { dm: true }, interest_settings: {} }
     const imports: Record<string, unknown> = {
@@ -164,10 +164,10 @@ test('onboarding persists NFL and MLB favorites while NBA follows effective Ulti
   }
 })
 
-test('public profile NBA favorites follow viewer effective Ultimate while retaining NFL for every viewer', async () => {
+test('public profiles display MLB, NFL and NBA favorites regardless of viewer membership', async () => {
   const source = await readFile(new URL('../src/components/profile/FavoritesSection.tsx', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  for (const [viewer, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, false], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
+  for (const [viewer, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, true], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
     const imports: Record<string, unknown> = {
       'react/jsx-runtime': jsxRuntime,
       'next/link': { default: ({ href, className, children }: Record<string, unknown>) => jsxRuntime.jsx('a', { href, className, children }) },

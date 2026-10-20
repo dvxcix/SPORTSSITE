@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { Spotlight } from '@/components/ui/spotlight'
 
 export default async function OnboardingPage() {
@@ -45,7 +44,7 @@ export default async function OnboardingPage() {
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}
           suggestedGroups={suggestedGroups ?? []}
-          allowNba={hasNbaAccess(profile)}
+          allowNba={true}
         />
       </div>
     </div>

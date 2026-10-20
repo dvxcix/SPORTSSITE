@@ -10,7 +10,7 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PROP_META } from '@/lib/watchlist'
 import styles from './PickComposer.module.css'
 
-type Sport = 'MLB' | 'NFL'
+type Sport = 'MLB' | 'NFL' | 'NBA'
 type Offer = { vendor: string; side: 'milestone' | 'over' | 'under'; odds: number }
 type Market = { key: string; prop_type: string; label: string; line: number | null; offers: Offer[] }
 type Player = {
@@ -20,6 +20,7 @@ type Player = {
   team: string
   position: string
   headshot_url: string | null
+  team_logo_url?: string | null
   markets: Market[]
 }
 type Game = {
@@ -98,11 +99,15 @@ function selectionKey(market: Market) {
 }
 
 function labelFor(market: Market, side: Offer['side']) {
+  if (market.prop_type === 'double_double' || market.prop_type === 'triple_double') return `${side === 'under' ? 'No' : 'Yes'} ${market.label}`
+  if (market.key.endsWith(':milestone') && market.line != null) return `${market.line}+ ${market.label}`
   if (side === 'milestone' || market.line == null) return market.label
   return `${side === 'over' ? 'Over' : 'Under'} ${market.line} ${market.label}`
 }
 
-export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
+export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSport = 'MLB', initialGameId }: {
+  initialSport?: Sport
+  initialGameId?: string
   legs: ComposedPick[]
   onAddLeg: (pick: ComposedPick) => void
   onRemoveLeg: (index: number) => void
@@ -111,7 +116,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
   const easternToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const lockedSport = legs[0]?.sport ?? null
   const lockedBook = legs[0]?.book ?? null
-  const [selectedSport, setSelectedSport] = useState<Sport>('MLB')
+  const [selectedSport, setSelectedSport] = useState<Sport>(initialSport)
   const sport = lockedSport ?? selectedSport
   const [gameDate, setGameDate] = useState(easternToday)
   const [games, setGames] = useState<Game[]>([])
@@ -128,7 +133,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
 
   useEffect(() => {
     let cancelled = false
-    const endpoint = sport === 'NFL' ? '/api/composer/nfl-games' : `/api/composer/games?date=${easternToday}`
+    const endpoint = sport === 'NBA' ? `/api/composer/nba-games?date=${easternToday}` : sport === 'NFL' ? '/api/composer/nfl-games' : `/api/composer/games?date=${easternToday}`
     fetch(endpoint)
       .then(async response => {
         if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Games are unavailable.')
@@ -138,12 +143,13 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
         if (cancelled) return
         const date = payload.date ?? easternToday
         setGameDate(date)
+        if (initialGameId && sport === initialSport) setGameKey(initialGameId)
         setGames(sport === 'MLB' ? normalizeMlbGames((payload.games ?? []) as RawMlbGame[], date) : (payload.games ?? []))
       })
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Games are unavailable.') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [sport, easternToday])
+  }, [sport, easternToday, initialGameId, initialSport])
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -240,9 +246,9 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
       </header>
 
       <div className={styles.sportTabs} aria-label="Sport">
-        {(['MLB', 'NFL'] as const).map(item => (
+        {(['MLB', 'NFL', 'NBA'] as const).map(item => (
           <button key={item} type="button" data-active={sport === item} disabled={!!lockedSport && lockedSport !== item} onClick={() => chooseSport(item)}>
-            {item === 'MLB' ? '⚾' : '🏈'} {item}
+            {item === 'MLB' ? '⚾' : item === 'NFL' ? '🏈' : '🏀'} {item}
           </button>
         ))}
       </div>
@@ -279,7 +285,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
         {game && <div className={styles.field} ref={playerRef}>
           <span>Player</span>
           {player ? <div className={styles.selectedPlayer}>
-            <PlayerAvatar headshot={player.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(player.team) : undefined} teamAbbr={player.team} name={player.name} size={34} />
+            <PlayerAvatar headshot={player.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(player.team) : player.team_logo_url ?? (player.team === game.homeAbbr ? game.homeLogo : game.awayLogo)} teamAbbr={sport === 'MLB' ? player.team : undefined} name={player.name} size={34} />
             <div><strong>{player.name}</strong><small>{player.team} · {player.position}</small></div>
             <Check size={15} />
             <button type="button" onClick={() => setPlayerId('')} aria-label="Change player"><X size={14} /></button>
@@ -288,7 +294,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
             <input value={playerQuery} onChange={event => { setPlayerQuery(event.target.value); setPlayerOpen(true) }} onFocus={() => setPlayerOpen(true)} placeholder="Search this matchup" />
             {playerOpen && <div className={styles.playerMenu}>
               {filteredPlayers.length ? filteredPlayers.map(item => <button type="button" key={item.player_id ?? item.mlb_id} onClick={() => choosePlayer(item)}>
-                <PlayerAvatar headshot={item.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(item.team) : undefined} teamAbbr={item.team} name={item.name} size={30} />
+                <PlayerAvatar headshot={item.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(item.team) : item.team_logo_url ?? (item.team === game.homeAbbr ? game.homeLogo : game.awayLogo)} teamAbbr={sport === 'MLB' ? item.team : undefined} name={item.name} size={30} />
                 <span><strong>{item.name}</strong><small>{item.team} · {item.position}</small></span>
               </button>) : <p>No matching players</p>}
             </div>}

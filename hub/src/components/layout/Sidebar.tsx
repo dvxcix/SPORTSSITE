@@ -324,7 +324,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                   ? <SafeImage src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
                   : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
                 {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
-                {!isCollapsed && item.nbaOnly && <span className={navigationStyles.membership}>ULTIMATE</span>}
               </div>
             )
           }

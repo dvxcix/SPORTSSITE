@@ -15,6 +15,9 @@ import { FollowButton } from '@/components/social/FollowButton'
 import { TierGate } from '@/components/layout/TierGate'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { getScoreboard } from '@slipsurge/core/espn-api'
+import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
+import { GameCard } from '@/components/sports/GameCard'
 
 export const revalidate = 60
 
@@ -92,7 +95,7 @@ export default async function ExplorePage() {
 
   const [
     { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
-    { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity,
+    { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity, nflGames, nbaGames,
   ] = await Promise.all([
     supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
@@ -107,6 +110,8 @@ export default async function ExplorePage() {
     supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')
       .eq('is_public', true).order('member_count', { ascending: false }).limit(4),
     getSlateActivity(date).catch(() => ({ schedule: [], homeRuns: [], nearHomeRuns: [] })),
+    getStoredNflScoreboard(date).catch(() => []),
+    getScoreboard('nba', date).catch(() => []),
   ])
 
   const [topPosts, trendingPicks] = await Promise.all([
@@ -142,9 +147,9 @@ export default async function ExplorePage() {
           <Link href="/search" className="ss-explore-search"><Search size={16} /> Search SlipSurge</Link>
           <div className="ss-explore-pulse" aria-label="Today's activity summary">
             <Metric value={allGames.length} label="MLB games" />
-            <Metric value={liveGames} label="Live now" live={liveGames > 0} />
-            <Metric value={homeRuns.length} label="Home runs" />
-            <Metric value={nearHomeRuns.length} label="Near home runs" />
+            <Metric value={nflGames.length} label="NFL games" />
+            <Metric value={nbaGames.length} label="NBA games" />
+            <Metric value={liveGames + [...nflGames, ...nbaGames].filter(game => game.status.type.state === 'in').length} label="Live now" live={liveGames > 0 || [...nflGames, ...nbaGames].some(game => game.status.type.state === 'in')} />
           </div>
         </header>
 
@@ -160,7 +165,12 @@ export default async function ExplorePage() {
 
         <div className="ss-explore-layout">
           <div className="ss-explore-main">
-            <SectionHeader icon={<Activity size={16} />} eyebrow="TODAY" title="Around the slate" href="/dugout" linkLabel="Open The Dugout" />
+            <SectionHeader icon={<Activity size={16} />} eyebrow="TODAY" title="Around the slate" href={`/sports?date=${date}`} linkLabel="All live scores" />
+            {([{ sport: 'nfl' as const, label: 'NFL', games: nflGames }, { sport: 'nba' as const, label: 'NBA', games: nbaGames }]).map(league => <section key={league.sport} className="ss-explore-section" aria-label={`${league.label} games`}>
+              <SectionHeader icon={<Activity size={16}/>} eyebrow={league.label} title={`${league.label} slate`} href={`/sports?date=${date}#scores-${league.sport}`} linkLabel="Scores & play-by-play"/>
+              <div className="ss-explore-games">{league.games.length ? league.games.slice(0, 8).map(game => <GameCard key={game.id} game={game} sport={league.sport}/>) : <EmptyCard title={`No ${league.label} games scheduled`} detail="Browse another date in Live Scores."/>}</div>
+            </section>)}
+            <SectionHeader icon={<Activity size={16}/>} eyebrow="MLB" title="MLB slate" href={`/sports?date=${date}#scores-mlb`} linkLabel="Scores & play-by-play"/>
             <div className="ss-explore-games">
               {games.length ? games.map((game: any) => <GameDiscoveryCard key={game.gamePk} game={game} />) : (
                 <EmptyCard title="No MLB games scheduled" detail="The next slate will appear here when it is available." />
@@ -251,7 +261,7 @@ function EventBoard({ className, icon, title, href, items, empty }: { className:
 }
 
 function ToolCard() {
-  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Go beyond the surface.</h2><span>Track market movement, compare the full board, and open advanced daily research.</span><div><Link href="/odds-terminal"><BarChart3 size={14} /> Odds Terminal</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
+  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Your sports. Your research.</h2><span>MLB, NFL and NBA workspaces together in Ultimate.</span><div><Link href="/dugout">The Dugout · MLB</Link><Link href="/the-sideline">The Sideline · NFL</Link><Link href="/the-paint">The Paint · NBA</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
 }
 
 function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {

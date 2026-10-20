@@ -1,21 +1,12 @@
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
 import { MLB_FAVORITE_TEAMS, favoritePlayerHref, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, normalizeFavoritePlayers, normalizeFavoriteTeams, resolveFavoriteTeam } from '@/lib/sportFavorites'
 
 export async function FavoritesSection({ teams, players, sports = [] }: { teams: string[]; players: unknown; sports?: string[] }) {
   if (!teams.length && !normalizeFavoritePlayers(players).length) return null
-  let allowNba = false
-  if (teams.some(key => key.startsWith('NBA:')) || normalizeFavoritePlayers(players).some(player => favoritePlayerSport(player) === 'nba')) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: viewer } = user ? await createAdminClient().from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).maybeSingle() : { data: null }
-    allowNba = hasNbaAccess(viewer)
-  }
+  const allowNba = true
   const catalog = await getFavoriteCatalog(allowNba).catch(() => MLB_FAVORITE_TEAMS)
   const visibleTeams = [...new Map(normalizeFavoriteTeams(teams, allowNba).flatMap(key => { const team = resolveFavoriteTeam(key, catalog, sports); return team ? [[team.key, team] as const] : [] })).values()]
   const visiblePlayers = normalizeFavoritePlayers(players, allowNba)

@@ -12,6 +12,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), [])
   const [type, setType] = useState<'text' | 'image'>('text')
   const [text, setText] = useState('')
+  const [sport, setSport] = useState('')
   const [bg, setBg] = useState('#111111')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
@@ -56,7 +57,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
     const { error: insertErr } = await supabase.from('stories').insert({
       author_id: userId,
       story_type: type,
-      content: text || null,
+      content: [sport ? `#${sport}` : '', text.trim()].filter(Boolean).join(' ') || null,
       media_url: mediaUrl || null,
       bg_color: bg,
       expires_at: expires,
@@ -71,6 +72,11 @@ export function CreateStoryForm({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-4">
+      <label className="block text-xs font-bold text-zinc-400">Sport
+        <select aria-label="Story sport" value={sport} onChange={event => setSport(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white">
+          <option value="">All sports</option>{['MLB', 'NFL', 'NBA'].map(league => <option key={league} value={league}>{league}</option>)}
+        </select>
+      </label>
       {/* Toggle */}
       <div className="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
         <button onClick={() => setType('text')}
@@ -95,7 +101,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       {type === 'text' ? (
         <div className="space-y-3">
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
-            placeholder="What's your story?"
+            placeholder="Share your MLB, NFL or NBA moment…"
             className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-2">Background Color</label>

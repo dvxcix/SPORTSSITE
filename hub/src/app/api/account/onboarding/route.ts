@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { favoriteUpdates } from '@/lib/sportFavorites'
 import { safeApiError } from '@/lib/safeApiError'
 
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
     bio: bio || undefined,
     avatar_url: safeImageUrl(body.avatarUrl) || undefined,
     banner_url: safeImageUrl(body.bannerUrl) || undefined,
-    ...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, hasNbaAccess(profile)),
+    ...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, true),
     favorite_sports: sports,
     interest_settings: { ...interests, content_mix: contentMix, market_focus: marketFocus, discovery_mode: interests.discovery_mode ?? 'balanced' },
     is_private: body.isPrivate === true,

@@ -8,6 +8,7 @@ import { MLBGameClient } from './MLBGameClient'
 import type { GameRoomMessage } from '@/components/community/GameRoom'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getNflGameCenter } from '@/lib/nflGameCenterServer'
+import { nbaGameReference } from '@/lib/nbaGameReference'
 
 export const revalidate = 15
 
@@ -33,11 +34,12 @@ type GamePickPost = {
   [key: string]: unknown
 }
 
-async function fetchCommunityPicksForGame(supabase: SupabaseClient, gameId: string) {
+async function fetchCommunityPicksForGame(supabase: SupabaseClient, gameId: string, sport: string) {
   const { data } = await supabase
     .from('posts')
     .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)')
     .in('post_type', ['pick', 'parlay'])
+    .ilike('sport', sport)
     .order('created_at', { ascending: false })
     .limit(300)
 
@@ -71,7 +73,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ spo
     const feed = await getMLBGameFeed(gameId)
     if (!feed) notFound()
 
-    const [communityPicks, roomMessages] = await Promise.all([fetchCommunityPicksForGame(supabase, gameId), fetchGameRoomMessages(supabase, sport, gameId)])
+    const [communityPicks, roomMessages] = await Promise.all([fetchCommunityPicksForGame(supabase, gameId, sport), fetchGameRoomMessages(supabase, sport, gameId)])
 
     const { data: reactionsRaw } = await supabase
       .from('play_reactions')
@@ -113,7 +115,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ spo
   if (!game && !summary) notFound()
 
   const teams = game ? getTeams(game) : { away: undefined, home: undefined }
-  const [communityPicks, roomMessages] = await Promise.all([fetchCommunityPicksForGame(supabase, gameId), fetchGameRoomMessages(supabase, sport, gameId)])
+  const nbaReference = sport === 'nba' ? await nbaGameReference(summary, game ?? null).catch(() => null) : null
+  const [communityPicks, roomMessages] = await Promise.all([fetchCommunityPicksForGame(supabase, nbaReference?.id ?? gameId, sport), fetchGameRoomMessages(supabase, sport, gameId)])
 
   const { data: reactionsRaw } = await supabase
     .from('play_reactions')
@@ -144,6 +147,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ spo
       isLoggedIn={!!user}
       roomMessages={roomMessages}
       currentUserId={user?.id}
+      nbaReference={nbaReference ?? undefined}
       nflDetails={nfl ? { quarters: nfl.quarters, date: nfl.date, updatedAt: nfl.updatedAt, complete: nfl.complete } : undefined}
     />
   )

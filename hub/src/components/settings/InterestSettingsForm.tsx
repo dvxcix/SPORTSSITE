@@ -27,7 +27,7 @@ const MODES = [
   ['live', 'Live first', 'Prioritize active games, movement, and breaking updates.'],
 ] as const
 
-export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, favoritePlayers, settings, allowNba = false }: {
+export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, favoritePlayers, settings, allowNba = true }: {
   userId: string
   favoriteSports: string[]
   favoriteTeams: string[]

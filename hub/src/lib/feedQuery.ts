@@ -4,6 +4,11 @@ import type { Post } from '@/lib/supabase/types'
 export const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
 
 export type FeedFilter = 'latest' | 'top' | 'picks' | 'following'
+export type FeedSport = 'MLB' | 'NFL' | 'NBA'
+export function feedSport(value: string | null | undefined): FeedSport | undefined {
+  const sport = value?.toUpperCase()
+  return sport === 'MLB' || sport === 'NFL' || sport === 'NBA' ? sport : undefined
+}
 
 type FeedReposter = NonNullable<Post['reposted_by']> & { id?: string }
 export type FeedPost = Omit<Post, 'reposted_by'> & {
@@ -45,8 +50,9 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   blockedIds: string[]
   cursor?: string | null
   pageSize?: number
+  sport?: FeedSport
 }): Promise<FeedPageResult> {
-  const { filter, userId, blockedIds, cursor, pageSize = 20 } = opts
+  const { filter, userId, blockedIds, cursor, pageSize = 20, sport } = opts
   const blockedSet = new Set(blockedIds)
   const hiddenPostIds = new Set<string>()
   const mutedAuthorIds = new Set<string>()
@@ -75,7 +81,9 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   // need to know which pagination style a given filter uses.
   if (filter === 'top') {
     const offset = cursor ? parseInt(cursor, 10) || 0 : 0
-    const { data } = await supabase.from('posts').select(POST_WITH_AUTHOR)
+    let query = supabase.from('posts').select(POST_WITH_AUTHOR)
+    if (sport) query = query.ilike('sport', sport)
+    const { data } = await query
       .order('reaction_count', { ascending: false })
       .range(offset, offset + pageSize - 1)
     const posts = asFeedPosts(data).filter(p => !blockedSet.has(p.author_id) && !isSuppressed(p))
@@ -84,6 +92,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   }
 
   let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).order('created_at', { ascending: false }).limit(pageSize)
+  if (sport) postQuery = postQuery.ilike('sport', sport)
   if (filter === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
   if (followedIds) postQuery = postQuery.in('author_id', followedIds)
   if (cursor) postQuery = postQuery.lt('created_at', cursor)
@@ -102,6 +111,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
     .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
     .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
   if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
+  if (sport) reposted = reposted.filter(p => p.sport?.toUpperCase() === sport)
 
   const typedRawPosts = asFeedPosts(rawPosts)
   const merged = [...typedRawPosts, ...reposted]

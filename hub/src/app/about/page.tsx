@@ -15,6 +15,15 @@ export default function AboutPage() {
         For MLB, SlipSurge goes deeper than a feed — The Dugout surfaces live odds deltas, Statcast splits, pitch-mix
         breakdowns, and opening-vs-current line movement across sportsbooks, all in one board.
       </Section>
+      <Section title="The Sideline · NFL">
+        Follow NFL matchups, compare player props and ladders, and research the slate in The Sideline.
+      </Section>
+      <Section title="The Paint · NBA">
+        Compare NBA odds and alternate lines, explore player trends and defense by position, and build your research in The Paint.
+      </Section>
+      <Section title="Your sports, together">
+        Follow MLB, NFL and NBA teams and players, share picks and stories, and open live scores, box scores and play-by-play from one community. Ultimate includes all three research workspaces.
+      </Section>
       <Section title="Not a sportsbook">
         SlipSurge is a social and content platform. We don't accept wagers or process bets — any odds or payout
         numbers you see on a post are self-reported by the user who posted it. See our{' '}
