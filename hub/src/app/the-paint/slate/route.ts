@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const date = request.nextUrl.searchParams.get('date'), market = request.nextUrl.searchParams.get('market'), book = request.nextUrl.searchParams.get('book') ?? 'all', side = request.nextUrl.searchParams.get('side') ?? 'over'
   if (!date || nbaDate(date) !== date || !PAINT_MARKETS.some(item => item.key === market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over', 'under'].includes(side)) return NextResponse.json({ error: 'Invalid NBA slate filters' }, { status: 400 })
   try {
-    const cached = await nbaSharedCache(`slate:v6:${date}:${market}:${book}:${side}`, 120, 300, async () => {
+    const cached = await nbaSharedCache(`slate:v7:${date}:${market}:${book}:${side}`, 120, 300, async () => {
       const started = Date.now(), schedule = await getPaintSchedule(date), boards: PaintBoard[] = [], failed: number[] = []
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {

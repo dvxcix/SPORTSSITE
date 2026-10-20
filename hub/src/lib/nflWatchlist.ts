@@ -30,7 +30,7 @@ export function nflWatchlistSelection(player: NflOddsPlayer, market: NflPlayerMa
 export function watchlistPickPayload(item: NewWatchlistItem) {
   const sport = item.sport?.toUpperCase() === 'NBA' ? 'NBA' : item.sport?.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
   const nba = sport === 'NBA' ? parseNbaSelection(item.prop_key) : null
-  if (sport === 'NBA' && !nba) throw new Error('Re-save this NBA selection from ThePaint to attach its exact market.')
+  if (sport === 'NBA' && !nba) throw new Error('Re-save this NBA selection from The Court to attach its exact market.')
   if (sport === 'NFL' && !item.nfl_selection) {
     throw new Error(`Please re-save ${item.player_name}'s NFL selection from The Sideline to attach its exact market.`)
   }

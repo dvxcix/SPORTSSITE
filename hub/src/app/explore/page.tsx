@@ -261,7 +261,7 @@ function EventBoard({ className, icon, title, href, items, empty }: { className:
 }
 
 function ToolCard() {
-  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Your sports. Your research.</h2><span>MLB, NFL and NBA workspaces together in Ultimate.</span><div><Link href="/dugout">The Dugout · MLB</Link><Link href="/the-sideline">The Sideline · NFL</Link><Link href="/the-paint">The Paint · NBA</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
+  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Your sports. Your research.</h2><span>MLB, NFL and NBA workspaces together in Ultimate.</span><div><Link href="/dugout">The Dugout · MLB</Link><Link href="/the-sideline">The Sideline · NFL</Link><Link href="/the-paint">The Court · NBA</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
 }
 
 function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {

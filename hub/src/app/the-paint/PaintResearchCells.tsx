@@ -3,6 +3,7 @@ import { TeamLogo } from './PaintVisuals'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import Image from 'next/image'
 import type { PaintGame } from '@/lib/nbaPaint'
+import { nbaMmDescription } from '@/lib/nbaMarketMetrics'
 import polish from './research-polish.module.css'
 import { PaintHeatCell } from './PaintHeatCell'
 import dials from './research-dials.module.css'
@@ -18,7 +19,8 @@ export function PaintScoreCell({ score }: { score: number | null | undefined }) 
   return <MechanicsScoreRing score={score} label="SlipSurge Score" size="small" />
 }
 export function PaintMmCell({ mm }: { mm: number | null | undefined }) {
-  return <span className={polish.mm} data-direction={mm == null || mm === 0 ? 'flat' : mm > 0 ? 'positive' : 'negative'} aria-label={mm == null ? 'MM unavailable' : `MM ${mm > 0 ? 'plus ' : ''}${mm}`}>{mm == null ? '—' : `${mm > 0 ? '+' : ''}${mm}`}</span>
+  const description = mm == null ? nbaMmDescription() : mm === 0 ? 'Market and production rankings agree; no rank mismatch.' : mm > 0 ? 'Production ranks ahead of the market.' : 'The market ranks ahead of production.'
+  return <span className={polish.mm} title={description} data-direction={mm == null || mm === 0 ? 'flat' : mm > 0 ? 'positive' : 'negative'} aria-label={mm == null ? `MM unavailable. ${description}` : `MM ${mm > 0 ? 'plus ' : ''}${mm}. ${description}`}>{mm == null ? '—' : `${mm > 0 ? '+' : ''}${mm}`}</span>
 }
 export function PaintHitCell({ rate, wins, games, pushes }: { rate: number | null; wins: number; games: number; pushes: number }) {
   return <PaintHeatCell value={rate} heat={rate} tone="performance" label="Last 10 hit rate"><b>{rate == null ? '—' : `${Math.round(rate)}%`}</b><small>{wins}/{games - pushes}{pushes ? ` · ${pushes} push${pushes === 1 ? '' : 'es'}` : ''}</small></PaintHeatCell>

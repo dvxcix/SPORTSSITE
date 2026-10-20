@@ -35,7 +35,7 @@ export const primaryNavigation: ProductNavItem[] = [
 
 /** Public destinations; consumers offer an Ultimate upgrade without fetching gated data. */
 export const nbaResearchNavigation: ProductNavItem[] = [
-  { href: '/the-paint', label: 'ThePaint · NBA', shortLabel: 'ThePaint', icon: Layers3 },
+  { href: '/the-paint', label: 'The Court · NBA', shortLabel: 'The Court', icon: Layers3 },
   { href: '/the-paint?view=odds', label: 'NBA Odds', shortLabel: 'Odds', icon: ChartSpline },
   { href: '/the-paint?view=ladders', label: 'NBA Ladders', shortLabel: 'Ladders', icon: ListOrdered },
   { href: '/the-paint?view=movement', label: 'NBA Market Story', shortLabel: 'Market Story', icon: TrendingUp },

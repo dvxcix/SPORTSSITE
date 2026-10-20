@@ -61,7 +61,7 @@ test('lower-tier command search discovers NBA upgrades without requesting NBA id
   try {
     await ui.open()
     assert.ok(ui.result('Community Feed'))
-    assert.ok(ui.result('ThePaint · NBA'))
+    assert.ok(ui.result('The Court · NBA'))
     await ui.type('NBA')
     assert.equal(ui.host.querySelectorAll('[role="option"]').length,15)
     assert.ok([...ui.host.querySelectorAll('[role="option"]')].every(node=>node.textContent?.includes('Upgrade to Ultimate')))

@@ -5,13 +5,27 @@ export type PaintRanks = { marketRank: number; statRank: number; mm: number; per
 
 // Match the Sideline convention: sportsbook rank minus performance rank.
 // NBA performance uses observed regular-season production, not an untrained model.
-export function nbaMarketRanks(players: PaintPlayer[], market: PaintMarket, vendor = 'all', location: 'all' | 'home' | 'away' = 'all') {
+export function nbaMarketRanks(players: PaintPlayer[], market: PaintMarket, vendor = 'all', location: 'all' | 'home' | 'away' = 'all', boundary?: { gameId: number; beforeDate: string }) {
   const pool = players.flatMap(player => {
-    const reference = nbaReference(player.props, market, vendor)
-    const logs = nbaSample(nbaMarketLogs(player, market), 10, location)
+    // A repeated contract must not give one book extra consensus weight. Keep
+    // the newest observation and reject quotes belonging to another selection.
+    const contracts = new Map<string, PaintPlayer['props'][number]>()
+    for (const quote of player.props) {
+      if (quote.player_id !== player.id || boundary && quote.game_id !== boundary.gameId) continue
+      const key = `${quote.game_id}:${quote.vendor}:${quote.prop_type}:${quote.market.type}:${Number(quote.line_value)}`
+      const previous = contracts.get(key)
+      if (!previous || quote.updated_at > previous.updated_at) contracts.set(key, quote)
+    }
+    const props = [...contracts.values()]
+    const reference = nbaReference(props, market, vendor)
+    const logs = nbaSample(nbaMarketLogs(player, market).filter(log =>
+      log.player.id === player.id && nbaValue(log, market) != null &&
+      (!boundary || log.game.date.slice(0, 10) < boundary.beforeDate && log.game.id !== boundary.gameId) &&
+      log.game.postseason !== true && (log.game.status_state === 'final' || log.game.status === 'Final')
+    ), 10, location)
     const recent = nbaAverage(logs, market), season = nbaValue(player.average, market)
-    if (!reference || recent == null || season == null || logs.length < 5) return []
-    const sameLine = player.props.filter(p => p.prop_type === market && p.market.type === reference.market.type && Number(p.line_value) === Number(reference.line_value) && (vendor === 'all' || p.vendor === vendor))
+    if (!reference || recent == null || season == null || !Number.isFinite(season) || logs.length < 5) return []
+    const sameLine = props.filter(p => p.prop_type === market && p.market.type === reference.market.type && Number(p.line_value) === Number(reference.line_value) && (vendor === 'all' || p.vendor === vendor))
     const probabilities = sameLine.flatMap(p => { const over = impliedProbability(nbaPrice(p)), under = impliedProbability(nbaPrice(p, 'under')); return over != null && under != null ? [over / (over + under)] : p.market.type === 'milestone' && over != null ? [over] : [] })
     if (!probabilities.length) return []
     const line = Number(reference.line_value), probability = probabilities.reduce((a, b) => a + b, 0) / probabilities.length
@@ -26,6 +40,12 @@ export function nbaMarketRanks(players: PaintPlayer[], market: PaintMarket, vend
     output.set(item.id, { marketRank, statRank, mm: marketRank - statRank, performance: item.performance, expectation: item.expectation })
   }
   return output
+}
+
+export function nbaMmDescription(rank?: PaintRanks | null) {
+  return rank
+    ? `Book rank #${rank.marketRank} · Production rank #${rank.statRank}. ${rank.mm === 0 ? 'Rankings agree; no rank mismatch.' : rank.mm > 0 ? 'Production ranks ahead of the market.' : 'The market ranks ahead of production.'}`
+    : 'MM requires a current priced market, a valid production baseline and at least 5 completed games in a pool of 2 or more qualifying players.'
 }
 
 export function nbaFormGap(average: number | null, offer: import('./nbaPaint').PaintProp, side: 'over' | 'under') {

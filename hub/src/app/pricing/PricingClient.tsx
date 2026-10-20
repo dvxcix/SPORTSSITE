@@ -73,7 +73,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Full Slate Breakdown', minTier: 'advanced' },
   { label: 'The Dugout, our proprietary Game Matrix', minTier: 'ultimate' },
   { label: 'TheSideline · NFL research', minTier: 'ultimate' },
-  { label: 'ThePaint · NBA research, odds and ladders', minTier: 'ultimate' },
+  { label: 'The Court · NBA research, odds and ladders', minTier: 'ultimate' },
   { label: 'The Public', minTier: 'advanced' },
   { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
@@ -82,7 +82,7 @@ const FREE_ROWS = ['Browse the MLB, NFL & NBA community feed', 'View & manage yo
 const PLAN_GUIDE = [
   { href: '#plan-basic', label: 'Start with Basic', detail: 'Community, live scores, and core MLB research' },
   { href: '#plan-advanced', label: 'Choose Advanced', detail: 'Add full-slate analysis and public market context' },
-  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'TheDugout, TheSideline and ThePaint' },
+  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'TheDugout, TheSideline and The Court' },
 ]
 
 export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {

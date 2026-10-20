@@ -18,8 +18,8 @@ export default function AboutPage() {
       <Section title="The Sideline · NFL">
         Follow NFL matchups, compare player props and ladders, and research the slate in The Sideline.
       </Section>
-      <Section title="The Paint · NBA">
-        Compare NBA odds and alternate lines, explore player trends and defense by position, and build your research in The Paint.
+      <Section title="The Court · NBA">
+        Compare NBA odds and alternate lines, explore player trends and defense by position, and build your research in The Court.
       </Section>
       <Section title="Your sports, together">
         Follow MLB, NFL and NBA teams and players, share picks and stories, and open live scores, box scores and play-by-play from one community. Ultimate includes all three research workspaces.

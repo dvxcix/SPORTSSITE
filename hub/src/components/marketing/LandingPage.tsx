@@ -48,7 +48,7 @@ function TierPill({ tier }: { tier: TierKey }) {
 
 const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: TierKey; link: string }[] = [
   { icon: <Activity size={18}/>, title: 'The Sideline · NFL', description: 'Player props, ladders, matchup research and market movement.', tier: 'ultimate', link: '/the-sideline' },
-  { icon: <TrendingUp size={18}/>, title: 'The Paint · NBA', description: 'Odds comparisons, player trends, defense by position and alternate lines.', tier: 'ultimate', link: '/the-paint' },
+  { icon: <TrendingUp size={18}/>, title: 'The Court · NBA', description: 'Odds comparisons, player trends, defense by position and alternate lines.', tier: 'ultimate', link: '/the-paint' },
   { icon: <CloudSun size={18} />, title: 'Weather Lab', description: 'See wind, temperature, altitude, and game conditions in one focused view.', tier: 'basic', link: '/auth/register?utm_feature=weather' },
   { icon: <Activity size={18} />, title: 'Pitcher Report', description: 'See exactly what a starter has thrown lately and who in tonight\'s lineup has been hitting it hard.', tier: 'basic', link: '/auth/register?utm_feature=pitcher' },
   { icon: <Rows3 size={18} />, title: 'Slate Breakdown', description: 'Every pitcher and batter matchup on tonight\'s slate, laid out side by side before first pitch.', tier: 'advanced', link: '/auth/register?utm_feature=slate' },
@@ -218,7 +218,7 @@ export function LandingPage() {
         >
           Research tools built for bettors, not analysts
         </motion.h2>
-        <p className={styles.sectionCopy}>MLB in The Dugout. NFL in The Sideline. NBA in The Paint. Three research workspaces, together in Ultimate.</p>
+        <p className={styles.sectionCopy}>MLB in The Dugout. NFL in The Sideline. NBA in The Court. Three research workspaces, together in Ultimate.</p>
 
         <div className={styles.featureShowcase}>
           <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>

@@ -15,7 +15,7 @@ import styles from './paint.module.css'
 import heatmap from './heatmap.module.css'
 
 export const PAINT_TOOLS = [
-  {key:'research',label:'ThePaint',icon:Layers3},
+  {key:'research',label:'The Court',icon:Layers3},
   {key:'cheatsheets',label:'Cheatsheets',icon:ClipboardList},
   {key:'usage',label:'Player trends',icon:Activity},
   {key:'score',label:'SlipSurge Score',icon:Target},

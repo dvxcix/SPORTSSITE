@@ -35,7 +35,7 @@ export function PaintPlayerPanel({ player, board, market: initialMarket, side: i
   const displayedLogs=useMemo(()=>[...logs].sort((a,b)=>{const value=(log:typeof a)=>logSort==='date'?Date.parse(log.game.date):logSort==='minutes'?nbaMinutes(log.min):nbaValue(log,market);const av=value(a),bv=value(b);if(av==null||bv==null)return av===bv?0:av==null?1:-1;return(logAscending?1:-1)*(av-bv)||b.id-a.id}),[logs,logSort,logAscending,market])
   const sortLogs=(next:typeof logSort)=>{if(next===logSort)setLogAscending(value=>!value);else{setLogSort(next);setLogAscending(false)}}
   const average = nbaAverage(logs, market); const hits = line != null ? nbaHitRate(logs, market, line, side, reference?.market.type === 'milestone') : null
-  const rank = board.statsComplete && (!nbaPeriod(market) || board.periodStatsComplete !== false) ? nbaMarketRanks(board.players, market, book ?? 'all').get(player.id) : undefined
+  const rank = board.statsComplete && (!nbaPeriod(market) || board.periodStatsComplete !== false) ? nbaMarketRanks(board.players, market, book ?? 'all', 'all', { gameId: board.game.id, beforeDate: board.game.date }).get(player.id) : undefined
   const teamContext = nbaRosterHistory(player, board.game.date)
   const definition = PAINT_MARKETS.find(m => m.key === market)!
   const offers = player.props.filter(p => p.prop_type === market && (book == null || book === 'all' || p.vendor === book) && (alternate ? p.market.type === 'milestone' : p.market.type === 'over_under')).sort((a, b) => Number(a.line_value) - Number(b.line_value) || a.vendor.localeCompare(b.vendor))

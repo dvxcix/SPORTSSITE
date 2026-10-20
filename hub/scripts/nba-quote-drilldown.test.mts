@@ -31,7 +31,7 @@ const stubs: Record<string, string> = {
   './PaintEstimate': `export const PaintEstimate=()=>null`,
   './PaintShotChart': `export const PaintShotChart=()=>null`,
   './PaintMarketSupport': `export const PaintMarketSupport=()=>null`,
-  './PaintResearchTools': `export const PAINT_TOOLS=[{key:'research',label:'ThePaint',icon:()=>null},{key:'score',label:'SlipSurge Score',icon:()=>null}];export const PaintCheatsheets=()=>null;export const PaintUsage=()=>null;export const PaintAvailability=()=>null;export const PaintGameMarkets=()=>null;export const PaintMatchupLab=()=>null`,
+  './PaintResearchTools': `export const PAINT_TOOLS=[{key:'research',label:'The Court',icon:()=>null},{key:'score',label:'SlipSurge Score',icon:()=>null}];export const PaintCheatsheets=()=>null;export const PaintUsage=()=>null;export const PaintAvailability=()=>null;export const PaintGameMarkets=()=>null;export const PaintMatchupLab=()=>null`,
 }
 const bundled = await build({ stdin: { contents: `export {PaintBoardClient} from './src/app/the-paint/PaintBoardClient'`, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'quote.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'quote-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)

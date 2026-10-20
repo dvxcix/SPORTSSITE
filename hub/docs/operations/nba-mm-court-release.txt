@@ -1,0 +1,23 @@
+NBA MM and The Court — 2026-10-20
+
+Baseline: GitHub main and production both 77d957bd. Recovered NFL ancestry retained.
+Read-only live board replay: Boston–Detroit 21717855, capture 04:25 UTC.
+35 roster members, 14 with priced points contracts, 14 qualifying MM ranks.
+12 zero rank differences; Ausar Thompson -2, Daniss Jenkins +2.
+Zero means matching market/production ordering, not absent odds or zero production.
+Unpriced roster members cannot receive an MM. Preseason uses the explicitly
+labelled 2025–26 regular-season baseline; current quotes were dated Oct 20.
+
+MM now validates player/game identities, completed regular-season observations,
+pregame boundaries and five valid market samples. Latest duplicate book contracts
+count once. Slate quarter samples now respect the same pregame date boundary.
+Definition and weights are unchanged. Tooltips distinguish agreement from missing
+requirements. Live replay after changes retains 14 ranks and the same signed MM.
+
+Visible NBA branding is The Court across board/title/loading, sidebar/mobile,
+research picker, marketing, pricing, About, Explore, entities and pick errors.
+Existing route URLs remain compatible. No migrations or collector/job replays.
+
+Validation: TypeScript clean; NBA suite 210/210; production source suite 134/134.
+Regressions verify responses to current line/price/production changes, agreement,
+duplicate observations, future/nonfinal/wrong-player/wrong-game and partial data.

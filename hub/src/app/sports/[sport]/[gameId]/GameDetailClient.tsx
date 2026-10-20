@@ -820,7 +820,7 @@ export function GameDetailClient({
       {/* Scoreboard */}
       <Scoreboard summary={summary} game={game} gameStatus={gameStatus} isLive={isLive} sport={sport} />
       {sport === 'nba' && <NFLQuarterScore rows={basketballQuarters(summary)} />}
-      {nbaReference && <Link href={`/the-paint?date=${nbaReference.date}&game=${nbaReference.id}`} className={styles.back}>Open The Paint →</Link>}
+      {nbaReference && <Link href={`/the-paint?date=${nbaReference.date}&game=${nbaReference.id}`} className={styles.back}>Open The Court →</Link>}
       {nflDetails && <>
         <NFLQuarterScore rows={nflDetails.quarters} />
         <Link href={`/the-sideline?date=${nflDetails.date}&game=${encodeURIComponent(gameId)}`} className={styles.back}>Open The Sideline →</Link>

@@ -15,7 +15,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
     if (new Set(legs.map(l => l.book)).size !== 1 || legs.some(l => !l.book)) return 'All NBA parlay legs must use the same sportsbook.'
     const unique = new Set<string>()
     for (const leg of legs) {
-      if (!/^\d{1,10}$/.test(leg.game_pk ?? '') || !/^bdl:\d{1,10}$/.test(leg.player_id ?? '') || !PAINT_MARKETS.some(m => m.key === leg.prop_key) || leg.numeric_line == null || !Number.isFinite(leg.numeric_line) || leg.numeric_line < 0 || !['over', 'under', 'milestone'].includes(leg.market_side ?? '')) return 'Re-save the exact NBA market from ThePaint.'
+      if (!/^\d{1,10}$/.test(leg.game_pk ?? '') || !/^bdl:\d{1,10}$/.test(leg.player_id ?? '') || !PAINT_MARKETS.some(m => m.key === leg.prop_key) || leg.numeric_line == null || !Number.isFinite(leg.numeric_line) || leg.numeric_line < 0 || !['over', 'under', 'milestone'].includes(leg.market_side ?? '')) return 'Re-save the exact NBA market from The Court.'
       const key = `${leg.game_pk}:${leg.player_id}:${leg.prop_key}`
       if (unique.has(key)) return 'Choose one line and side per player/market in a parlay.'
       unique.add(key)
@@ -29,7 +29,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
       const data = games.get(leg.game_pk!)!
       const starts = Date.parse(data.game.datetime ?? data.game.status)
       if (!Number.isFinite(starts) || starts <= Date.now() || !['scheduled', undefined, 'unknown'].includes(data.game.status_state)) return `${leg.player_name}'s game has already started or is unavailable.`
-      if (!data.props.some(p => paintOfferMatches(p, leg))) return `${leg.player_name}'s selected NBA price changed. Remove the old saved selection and save the current price from ThePaint.`
+      if (!data.props.some(p => paintOfferMatches(p, leg))) return `${leg.player_name}'s selected NBA price changed. Remove the old saved selection and save the current price from The Court.`
       const identity = identities.get(Number(leg.player_id!.slice(4)))!
       if (![data.game.home_team.id, data.game.visitor_team.id].includes(identity.team.id)) return 'Player is no longer on this matchup roster. Refresh the board.'
       leg.player_name = `${identity.first_name} ${identity.last_name}`; leg.team = identity.team.abbreviation; leg.game_date = data.game.date; leg.line = String(leg.numeric_line)

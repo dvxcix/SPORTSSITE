@@ -36,7 +36,7 @@ test('validated NBA estimates require an earlier held-out report, adequate sampl
 })
 
 test('NBA slate MM uses the full slate, withholds ranks on partial coverage and preserves exact offer sides',()=>{
-  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
+  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1,player:{id:i+1},game:{...stat(pts).game,id:900+n}})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
   const game={id:123,date:'2026-10-20',season:2026,status:'Scheduled',datetime:'2026-10-20T23:00:00Z',period:0,home_team:players[0].team,visitor_team:{...players[0].team,id:9},home_team_score:0,visitor_team_score:0}
   const meta={sampleSeason:2025,historical:false,sampleEnd:'2026-04-13',statsComplete:true,fetchedAt:'2026-10-19T00:00:00Z',issues:[]}
   const boards=[{...meta,game,players:players.slice(0,2)},{...meta,game:{...game,id:456},players:players.slice(2).map(player=>({...player,props:player.props.map(offer=>({...offer,game_id:456}))}))}] satisfies import('../src/lib/nbaPaint.ts').PaintBoard[]
@@ -198,7 +198,7 @@ test('NBA shared cache coalesces cold readers across leases and retains source t
 })
 
 test('cross-market scans retain complete-pool MM, isolate books and sides, and use push-adjusted denominators',()=>{
-  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
+  const players=[30,20,10].map((pts,i)=>({id:i+1,first_name:'Test',last_name:String(i),position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},average:{pts},logs:Array.from({length:10},(_,n)=>({...stat(pts),id:n+1,player:{id:i+1},game:{...stat(pts).game,id:900+n}})),props:[{...offer,player_id:i+1,line_value:String([10,20,30][i])}],headshot:null,injury:null})) satisfies PaintPlayer[]
   const rows=nbaCheatsheet(players,'fanduel','over')
   assert.deepEqual(rows.map(r=>r.mm),[2,0,-2])
   assert.equal([...rows].sort((a,b)=>b.mm!-a.mm!)[0].player.id,1)
@@ -425,13 +425,39 @@ test('provider samples bound dates, exclude future results, and expose truncated
 })
 
 test('MM compares the same priced roster, preserves ties and signs, and excludes missing samples', () => {
-  const players = [30, 20, 10].map((pts, i) => ({ id: i + 1, first_name: 'Test', last_name: String(i), position: 'G', team: { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }, average: { pts }, logs: Array.from({ length: 5 }, (_, n) => ({ ...stat(pts), id: n + 1 })), props: [{ ...offer, player_id: i + 1, line_value: String([10, 20, 30][i]) }], headshot: null, injury: null })) satisfies PaintPlayer[]
+  const players = [30, 20, 10].map((pts, i) => ({ id: i + 1, first_name: 'Test', last_name: String(i), position: 'G', team: { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }, average: { pts }, logs: Array.from({ length: 5 }, (_, n) => ({ ...stat(pts), id: n + 1, player: { id: i + 1 }, game: { ...stat(pts).game, id: 900 + n } })), props: [{ ...offer, player_id: i + 1, line_value: String([10, 20, 30][i]) }], headshot: null, injury: null })) satisfies PaintPlayer[]
   const ranks = nbaMarketRanks(players, 'points')
   assert.equal(ranks.get(1)?.mm, 2); assert.equal(ranks.get(3)?.mm, -2)
   assert.equal(nbaMarketRanks(players, 'assists').size, 0)
   assert.equal(nbaMarketRanks(players.map(p => ({ ...p, logs: [] })), 'points').size, 0)
   const consensus = [{ ...offer, line_value: '15', vendor: 'fanduel' }, { ...offer, line_value: '20', vendor: 'fanduel' }, { ...offer, line_value: '20', vendor: 'draftkings' }]
   assert.equal(nbaReference(consensus, 'points', 'fanduel')?.line_value, '20')
+})
+
+test('MM responds to live lines, prices and production without converting agreement or missing inputs to invented edges', () => {
+  const players = [10, 10].map((pts, i) => ({ id: i + 1, first_name: 'Test', last_name: String(i), position: 'G', team: { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }, average: { pts }, logs: Array.from({ length: 5 }, (_, n) => ({ ...stat(pts), id: n + 1, player: { id: i + 1 }, game: { ...stat(pts).game, id: 900 + n } })), props: [{ ...offer, player_id: i + 1, line_value: '10.5' }], headshot: null, injury: null })) satisfies PaintPlayer[]
+  const rank = (rows = players) => nbaMarketRanks(rows, 'points', 'all', 'all', { gameId: 123, beforeDate: '2026-10-20' })
+  assert.deepEqual([...rank().values()].map(row => row.mm), [0, 0])
+  const priced = structuredClone(players)
+  priced[0].props[0].market = { type: 'over_under', over_odds: 150, under_odds: -180 }
+  assert.equal(rank(priced).get(1)?.mm, 1)
+  const moved = structuredClone(players); moved[0].props[0].line_value = '8.5'
+  assert.equal(rank(moved).get(1)?.mm, 1)
+  const production = structuredClone(players); production[0].average.pts = 20
+  assert.equal(rank(production).get(2)?.mm, -1)
+  const duplicated = structuredClone(priced)
+  duplicated[0].props.push(...Array.from({ length: 20 }, () => ({ ...offer, player_id: 1, line_value: '10.5', updated_at: '2026-10-17T12:00:00Z' })))
+  assert.deepEqual(rank(duplicated), rank(priced))
+  for (const kind of ['missing', 'foreign-player', 'future', 'partial', 'wrong-game', 'unfinished'] as const) {
+    const invalid = structuredClone(players)
+    if (kind === 'missing') invalid[0].props = []
+    if (kind === 'foreign-player') invalid[0].logs[0].player.id = 99
+    if (kind === 'future') invalid[0].logs[0].game.date = '2026-10-21'
+    if (kind === 'partial') invalid[0].logs[0].pts = null
+    if (kind === 'wrong-game') invalid[0].props[0].game_id = 999
+    if (kind === 'unfinished') invalid[0].logs[0].game = { ...invalid[0].logs[0].game, status: 'Live', status_state: 'in_progress' }
+    assert.equal(rank(invalid).size, 0, kind)
+  }
 })
 
 test('save → post API → My Picks → final settlement preserves exact NBA identities', async () => {

@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
   const sport = body?.sport === 'NBA' ? 'NBA' : body?.sport === 'NFL' ? 'NFL' : 'MLB'
   if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
-  if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in ThePaint.' }, { status: 403 })
+  if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in The Court.' }, { status: 403 })
   if (visibility === 'private' && (groupId || pageId)) return NextResponse.json({ error: 'Only-me picks belong in your personal picks.' }, { status: 400 })
 
   if (pageId) {

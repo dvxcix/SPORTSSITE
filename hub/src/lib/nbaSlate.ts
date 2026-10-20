@@ -6,7 +6,7 @@ import type { NbaMarketContext,NbaMarketSupportView } from './nbaMarketSignal'
 export type NbaPlayerIdentity = Pick<PaintPlayer, 'id' | 'first_name' | 'last_name' | 'position' | 'team' | 'headshot'>
 export type NbaSlateViewRow=Omit<ReturnType<typeof nbaSlateRows>[number],'baseScore'|'coverage'|'modelError'|'modelMetric'|'signalOffers'|'marketSupport'>&{marketSupport:NbaMarketSupportView;marketSignals:NbaMarketSupportView}
 export function nbaSlateRows(boards: PaintBoard[], market: PaintMarket, book: string, side: 'over' | 'under', complete: boolean, reports: NbaModelReport[] = [], defense: {gameId:number;profiles:NbaDvp[]}[] = [], markets: NbaMarketContext[] = []) {
-  const prepared = boards.map(board => ({ ...board, players: board.players.map(player => ({ ...player, props: player.props.filter(offer => offer.game_id === board.game.id && offer.player_id === player.id), logs: player.logs.filter(log => log.game.date.slice(0, 10) < board.game.date) })) }))
+  const prepared = boards.map(board => ({ ...board, players: board.players.map(player => ({ ...player, props: player.props.filter(offer => offer.game_id === board.game.id && offer.player_id === player.id), logs: player.logs.filter(log => log.game.date.slice(0, 10) < board.game.date), periodLogs: player.periodLogs?.filter(log => log.game.date.slice(0, 10) < board.game.date) })) }))
   const players = prepared.flatMap(board => board.players), ranks = nbaMarketRanks(players, market, book)
   return prepared.flatMap(board => board.players.flatMap(player => {
     const offer = nbaReference(player.props, market, book, side)

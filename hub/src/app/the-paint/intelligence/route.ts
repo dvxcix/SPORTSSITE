@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       new Promise<never>((_resolve,reject)=>{defenseTimer=setTimeout(()=>reject(new Error('Defense context unavailable')),18_000)}),
     ]).catch(()=>({ready:false,season:board.sampleSeason,before:board.game.date,teams:board.teams,profiles:[],games:0,rows:0,fetchedAt:null,stale:false})).finally(()=>{if(defenseTimer)clearTimeout(defenseTimer)})
     const [defense,marketContext]=await Promise.all([defenseLoad,getNbaMarketContext(board.game)])
-    const ranks=nbaMarketRanks(board.players,market as PaintMarket,book)
+    const ranks=nbaMarketRanks(board.players,market as PaintMarket,book,'all',{gameId:board.game.id,beforeDate:board.game.date})
     const scores=board.players.map(player=>{
       const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id
       const matchup=defense.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market)

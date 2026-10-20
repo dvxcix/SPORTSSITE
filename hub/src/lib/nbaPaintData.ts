@@ -123,7 +123,7 @@ export async function getPaintBoard(game: PaintGame): Promise<PaintBoard> {
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const issues: string[] = []
   const historical = (game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final' || game.status_state === 'in_progress' || game.period > 0 || !!game.datetime && Date.parse(game.datetime) <= Date.now())
-  async function optional<T>(label: string, promise: Promise<T>, fallback: T): Promise<T> { try { return await promise } catch (error) { console.error('[ThePaint]', label, { status: error instanceof PaintProviderError ? error.status : null }); issues.push(label); return fallback } }
+  async function optional<T>(label: string, promise: Promise<T>, fallback: T): Promise<T> { try { return await promise } catch (error) { console.error('[The Court]', label, { status: error instanceof PaintProviderError ? error.status : null }); issues.push(label); return fallback } }
   const teams = [game.visitor_team, game.home_team]
   const teamQuery = teams.map(t => `team_ids[]=${t.id}`).join('&')
   const [roster, props, injuries, images, gameOdds, directory, lineups, openings] = await Promise.all([
