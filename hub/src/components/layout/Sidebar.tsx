@@ -321,7 +321,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 padding: isCollapsed ? '10px 0 4px' : '10px 10px 4px',
               }}>
                 {item.logo
-                  ? <SafeImage src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                  ? <SafeImage src={item.logo} alt="" title={isCollapsed && !item.nbaOnly ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
                   : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
                 {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
               </div>
@@ -332,7 +332,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           const isActive = !locked && active(item.href)
           const idleBg = 'transparent'
           const link = (
-            <Link key={item.href} href={researchNavigationHref(item.href, path, searchParams, nbaAccess)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} title={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} style={{
+            <Link key={item.href} href={researchNavigationHref(item.href, path, searchParams, nbaAccess)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} title={!item.nbaOnly && isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
               minHeight: 44,
               justifyContent: isCollapsed ? 'center' : 'flex-start',

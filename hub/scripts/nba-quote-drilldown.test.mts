@@ -54,7 +54,7 @@ const board: PaintBoard = {
   players: [{ id: 434, first_name: 'Test', last_name: 'Player', position: 'G', team, headshot: null, injury: null, average: { pts: 22, min: 30 }, props: [main, alt, milestone, quarterMilestone, sameBookMilestone, tiedMilestone], logs: [21, 22, 23, 24, 20].map((pts, i) => ({ id: i + 10, pts, reb: 5, ast: 4, fg3m: 2, stl: 1, blk: 0, turnover: 1, fga: 14, fgm: 8, fg3a: 6, fta: 5, ftm: 3, min: '30:00', player: { id: 434 }, team, game: { id: i + 10, date: `2026-04-${String(i + 1).padStart(2, '0')}`, status: 'Final', season: 2025, home_team_id: 2, visitor_team_id: 9 } } satisfies PaintStat)) }],
 }
 const originalFetch = globalThis.fetch
-async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '') {
+async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '', initial = board) {
   state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error; state.navigations = []; state.requests = []
   window.history.replaceState(null, '', '/the-paint?' + state.search)
   globalThis.fetch = async input => {
@@ -64,11 +64,21 @@ async function harness(view: string, side = 'over', offer: PaintProp | null = nu
   }
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
-  await act(async () => root.render(createElement(compiled.exports.PaintBoardClient, { initial: board, games: [board.game], days: [board.game.date], date: board.game.date, initialMode: new URLSearchParams(state.search).get('mode')==='live'?'live':'pregame' })))
+  const render=(next:PaintBoard)=>{
+    const initialMode=new URLSearchParams(state.search).get('mode')==='live'?'live':'pregame'
+    root.render(createElement(compiled.exports.PaintBoardClient, { key:`${next.game.id}:${initialMode}`,initial:next,games:[next.game],days:[next.game.date],date:next.game.date,initialMode }))
+  }
+  await act(async () => render(initial))
+  const commitNavigation=async(next:PaintBoard)=>{
+    const href=state.navigations.at(-1);assert.ok(href)
+    window.history.pushState(null,'',href)
+    state.search=new URL(href,window.location.origin).search
+    await act(async()=>render(next))
+  }
   const click = async (element: Element | null | undefined) => { assert.ok(element); await act(async () => element.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))) }
   const byLabel = (label: string) => [...host.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === label)
   const close = async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
-  return { host, click, byLabel, close }
+  return { host, click, byLabel, close, commitNavigation }
 }
 function assertSelected(host: Element, quote: PaintProp, side: string) {
   const dialog = host.querySelector('[role="dialog"]')!
@@ -260,4 +270,45 @@ test('a live NBA deep link initializes Live and requests live scores without swi
     assert.ok(state.requests.every(href => new URL(href, 'https://www.slipsurge.com').searchParams.get('mode') === 'live'))
     assert.equal(new URL(window.location.href).searchParams.get('mode'), 'live')
   } finally { await ui.close() }
+})
+
+test('completed-game mode navigation owns the URL until its response commits and renders only the new prices',async()=>{
+  const completed={...board,game:{...board.game,status:'Final',status_state:'final',period:4}}
+  for(const [from,to] of [['pregame','live'],['live','pregame']] as const){
+    const ui=await harness('odds','over',null,false,'points',`&mode=${from}`,completed)
+    try{
+      const before=window.location.href
+      await ui.click([...ui.host.querySelectorAll('[aria-label="NBA odds mode"] button')].find(button=>button.textContent===(to==='live'?'Live':'Pregame')))
+      assert.equal(window.location.href,before,'filter synchronization must not preempt router.push with replaceState')
+      assert.match(ui.host.textContent??'',new RegExp(`Loading ${to} markets`))
+      assert.equal(ui.host.querySelector('[aria-label="NBA player research board"]'),null)
+      const next={...completed,oddsMode:to,players:completed.players.map(player=>({...player,props:[{...main,market:{...main.market,over_odds:777}}]}))}
+      await ui.commitNavigation(next)
+      assert.equal(new URL(window.location.href).searchParams.get('mode'),to)
+      assert.equal(ui.host.querySelector('[aria-label="NBA odds mode"] [aria-pressed="true"]')?.textContent,to==='live'?'Live':'Pregame')
+      assert.doesNotMatch(ui.host.textContent??'',/Loading (?:live|pregame) markets/)
+      assert.match(ui.byLabel('Analyze Test Player, O 20, fanduel')?.textContent??'',/\+777/)
+      assert.equal(ui.byLabel('Analyze Test Player, O 24.5, draftkings'),undefined)
+    }finally{await ui.close()}
+  }
+})
+
+test('rapid mode reversals dispatch the latest selection without native history writes or mismatched prices',async()=>{
+  const ui=await harness('odds')
+  try{
+    const before=window.location.href
+    for(const label of ['Live','Pregame','Live']){
+      await ui.click([...ui.host.querySelectorAll('[aria-label="NBA odds mode"] button')].find(button=>button.textContent===label))
+      const selected=label.toLowerCase()
+      assert.equal(new URL(state.navigations.at(-1)!,'https://www.slipsurge.com').searchParams.get('mode'),selected)
+      assert.equal(window.location.href,before)
+      assert.equal(ui.host.querySelector('[aria-label="NBA odds mode"] [aria-pressed="true"]')?.textContent,label)
+      if(selected==='live')assert.equal(ui.host.querySelector('[aria-label="NBA player research board"]'),null)
+    }
+    assert.equal(state.navigations.length,3,'returning to the authoritative mode still dispatches a cancelling navigation')
+    await ui.commitNavigation({...board,oddsMode:'live',players:[]})
+    assert.equal(new URL(window.location.href).searchParams.get('mode'),'live')
+    assert.doesNotMatch(ui.host.textContent??'',/Loading live markets/)
+    assert.equal(ui.byLabel('Analyze Test Player, O 20, fanduel'),undefined)
+  }finally{await ui.close()}
 })

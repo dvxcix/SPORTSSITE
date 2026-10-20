@@ -7,7 +7,7 @@ import { act, createElement, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 const require = createRequire(import.meta.url)
-const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true, view: 'public', mode: '' }
+const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true, view: 'public', mode: '', collapsed: false }
 ;(globalThis as typeof globalThis & { nbaNavFixture: typeof state }).nbaNavFixture = state
 const stubs: Record<string,string> = {
   'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view='+globalThis.nbaNavFixture.view+'&game=123&mode='+globalThis.nbaNavFixture.mode);export const useRouter=()=>({push(){},back(){}});`,
@@ -17,7 +17,7 @@ const stubs: Record<string,string> = {
   '@/components/social/MemberAvatar': `import React from 'react';export const MemberAvatar=()=> <span>Avatar</span>`,
   '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaNavFixture.role,tier:globalThis.nbaNavFixture.tier,admin_granted_tier:globalThis.nbaNavFixture.granted,beta_access_active:globalThis.nbaNavFixture.beta,username:'tester'},loading:false})`,
   '@/lib/useNflAccess': `export const useNflAccess=()=>({allowed:globalThis.nbaNavFixture.nfl})`,
-  '@/lib/useSidebarCollapsed': `export const useSidebarCollapsed=()=>({collapsed:false,toggle(){}})`,
+  '@/lib/useSidebarCollapsed': `export const useSidebarCollapsed=()=>({collapsed:globalThis.nbaNavFixture.collapsed,toggle(){}})`,
   '@/lib/featureFlags': `export const fetchFeatureFlagsClient=async()=>({})`,
 }
 const bundled = await build({ stdin: { contents: `export {Sidebar} from './src/components/layout/Sidebar';export {DesktopNavigation} from './src/components/desktop/DesktopNavigation';export {DesktopCommandBar} from './src/components/layout/DesktopCommandBar';export {MobileDock} from './src/components/layout/MobileDock';export {MobileResearchPicker} from './src/components/layout/MobileResearchPicker';export {ResearchSportSwitcher} from './src/components/layout/ResearchSportSwitcher';`, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'navigation.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react','react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'auth-fixture', setup(builder) { builder.onResolve({filter: /^(next\/|@\/)/}, args => args.path in stubs ? {path:args.path,namespace:'stub'} : undefined);builder.onLoad({filter:/.*/,namespace:'stub'}, args=>({contents:stubs[args.path],loader:'tsx',resolveDir:resolve('.')})) } }] })
@@ -76,6 +76,29 @@ test('unrelated beta override cannot unlock NBA navigation',()=>{
     assert.doesNotMatch(html,/href="\/the-paint/)
     assert.match(html,/Ultimate required/)
   }
+})
+
+test('NBA navigation keeps accessible labels without native or branded guide tooltip triggers',()=>{
+  const {JSDOM}=require('jsdom')
+  try{
+    for(const tier of ['free','ultimate'])for(const collapsed of [false,true]){
+      Object.assign(state,{role:'user',tier,granted:null,beta:false,path:'/the-paint',collapsed})
+      for(const name of ['Sidebar','DesktopNavigation','DesktopCommandBar']){
+        const dom=new JSDOM(render(name,{open:true,onClose:noop,onMenuClick:noop}))
+        try{
+          const links=[...dom.window.document.querySelectorAll('a[href^="/the-paint"],a[aria-label$="· Ultimate required"]')] as Element[]
+          assert.ok(links.length>0,name+' '+tier)
+          for(const link of links){
+            assert.equal(link.hasAttribute('title'),false,name+' '+link.textContent)
+            assert.equal(link.hasAttribute('data-ss-native-tooltip'),false)
+            assert.ok(link.getAttribute('aria-label')||link.textContent?.trim(),'link retains its accessible name')
+          }
+          const sport=dom.window.document.querySelector('button[aria-label^="NBA research"]')
+          if(sport)assert.equal(sport.hasAttribute('title'),false)
+        }finally{dom.window.close()}
+      }
+    }
+  }finally{state.collapsed=false}
 })
 
 test('mobile NBA tab changes the actual tool menu and dismissing restores focus and page scroll',async()=>{

@@ -65,13 +65,16 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
     setDetailQuote(quote??null);setDetailTab(panel);setDetail(id)
   }
   useEffect(()=>{
+    // Native history writes also update Next's router. Let an in-flight
+    // server navigation commit its mode before syncing local board filters.
+    if(switchingMode||navigating)return
     const query=new URLSearchParams(window.location.search)
-    for(const [key,value] of Object.entries({date,mode:requestedMode,market,view,side,book:vendor,sort,order:ascending?'asc':'desc'}))query.set(key,value)
+    for(const [key,value] of Object.entries({date,mode:oddsMode,market,view,side,book:vendor,sort,order:ascending?'asc':'desc'}))query.set(key,value)
     if(gameId)query.set('game',String(gameId))
     if(detail!=null){query.set('player',String(detail));query.set('panel',detailTab);if(detailTab==='tracking')query.set('metric',trackingMetric);else query.delete('metric');if(detailQuote){query.set('line',String(detailQuote.line));query.set('type',detailQuote.type)}else{query.delete('line');query.delete('type')}}else{query.delete('player');query.delete('panel');query.delete('metric');query.delete('line');query.delete('type')}
     query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));else query.delete('target');const search=`?${query}`
     if(window.location.search!==search)window.history.replaceState(null,'',`${window.location.pathname}${search}`)
-  },[date,requestedMode,market,view,side,vendor,sort,ascending,gameId,detail,detailTab,trackingMetric,detailQuote,contract,targetLine])
+  },[date,oddsMode,switchingMode,navigating,market,view,side,vendor,sort,ascending,gameId,detail,detailTab,trackingMetric,detailQuote,contract,targetLine])
   const refresh = useCallback(async () => {
     if (switchingMode || !gameId || refreshLock.current) return
     refreshLock.current = true; setRefreshing(true)

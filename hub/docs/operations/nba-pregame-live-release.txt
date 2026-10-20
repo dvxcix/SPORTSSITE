@@ -35,7 +35,7 @@ cutoff bounds, all three feeds, withdrawal empties, duplicate economics,
 invalid identity/time rejection, and denial to public roles.
 
 Validation before publication:
-  NBA suite: 293/293
+  NBA suite: 296/296 (including post-deployment navigation regressions)
   Production smoke: 134/134
   Cross-sport: 26/26
   TypeScript and all changed source ESLint: pass
@@ -46,3 +46,10 @@ there after the Git-backed production deployment becomes ready.
 Availability remains honest: a phase without a verified capture or posted
 price is empty. Synthetic boundary tests establish isolation; they are not a
 claim that every sportsbook has an active live market at every moment.
+
+Production browser verification found a URL synchronization race while changing
+mode. Local filter history writes now pause until server navigation commits,
+and use only the loaded mode. Regression tests cover both directions and rapid
+reversals. NBA navigation guide tooltips were removed while keeping aria names.
+The initial release's scheduled capture succeeded for 13 games across all three
+feeds, with no failures; capture/quote phase violation query returned zero.

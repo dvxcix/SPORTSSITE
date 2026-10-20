@@ -53,7 +53,7 @@ export function DesktopNavigation() {
             const Icon = item.icon
             const active = routeMatches(pathname, item)
             return (
-              <Link key={item.href} href={item.label === 'Research' ? researchNavigationHref(researchHome(selectedSport, nflAccess, nbaAccess), pathname, searchParams, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
+              <Link key={item.href} href={item.label === 'Research' ? researchNavigationHref(researchHome(selectedSport, nflAccess, nbaAccess), pathname, searchParams, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label === 'Research' && selectedSport === 'nba' ? undefined : item.label} aria-label={item.label}>
                 <Icon size={19} />
                 {item.badge && <i>{item.badge === 'LIVE' ? '' : item.badge}</i>}
               </Link>
@@ -87,7 +87,7 @@ export function DesktopNavigation() {
               const active = !locked && ((isNflToolHref(item.href) || nbaTool) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item))
               const label = nbaTool ? item.shortLabel ?? item.label : item.label
               return (
-                <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} className={navigationStyles.toolLink} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={locked ? `${label} · Ultimate required` : label}>
+                <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} className={navigationStyles.toolLink} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={nbaTool ? undefined : label}>
                   <Icon size={15} aria-hidden="true" />
                   <span>{label}</span>
                   {locked && !contextCollapsed && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}

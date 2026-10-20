@@ -57,7 +57,7 @@ export function DesktopCommandBar() {
           const active = !locked && ((isNflToolHref(item.href) || isNbaToolHref(item.href)) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item))
           const label = item.shortLabel ?? item.label
           return (
-            <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={locked ? `${label} · Ultimate required` : label}>
+            <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={isNbaToolHref(item.href) ? undefined : label}>
               {locked ? <LockKeyhole size={13} aria-hidden="true" /> : <Icon size={13} aria-hidden="true" />}
               <span>{label}</span>
             </Link>
