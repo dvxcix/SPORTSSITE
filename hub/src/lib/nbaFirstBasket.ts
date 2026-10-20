@@ -11,7 +11,7 @@ export function nbaOpeningSequence(plays: NbaPlay[], gameId: number) {
   const firstScore = prefix.find(p => p.scoring_play && (p.score_value ?? 0) > 0)
   const firstFieldGoal = fieldAttempts.find(p => p.scoring_play && [2,3].includes(p.score_value ?? 0))
   const tip = prefix.find(p => /jump.?ball/i.test(p.type) && p.clock === '12:00')
-  return { gameId, firstScore, firstFieldGoal, firstAttempt: fieldAttempts[0], tip, teamFieldGoals: [...new Map(fieldAttempts.filter(p => p.scoring_play && [2,3].includes(p.score_value ?? 0)).map(p => [p.team?.id, p] as const).reverse()).values()] }
+  return { gameId, firstScore, firstFieldGoal, firstAttempt: fieldAttempts[0], tip, teamScores:[...new Map(prefix.filter(p=>p.scoring_play&&(p.score_value??0)>0).map(p=>[p.team?.id,p] as const).reverse()).values()], teamFieldGoals: [...new Map(fieldAttempts.filter(p => p.scoring_play && [2,3].includes(p.score_value ?? 0)).map(p => [p.team?.id, p] as const).reverse()).values()] }
 }
 
 export function nbaFirstBasketResearch(board: PaintBoard, plays: NbaPlay[], gameIds: number[]) {

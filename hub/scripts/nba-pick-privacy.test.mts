@@ -1,3 +1,4 @@
+import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
@@ -10,7 +11,7 @@ async function compiled(file:string,imports:Record<string,unknown>){
   const source=await readFile(new URL(file,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
-  new Function('require','exports','module',outputText)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target.exports,target)
+  new Function('require','exports','module',outputText)((name:string)=>{if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(!(name in imports)&&(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData'))return {};assert.ok(name in imports,name);return imports[name]},target.exports,target)
   return target.exports
 }
 const quote:pure.PaintProp={id:22,player_id:434,game_id:123,vendor:'fanduel',prop_type:'points',line_value:'29.5',market:{type:'over_under',over_odds:350,under_odds:-480},updated_at:'2099-10-20T10:00:00Z'}
@@ -19,7 +20,7 @@ const item=(offer=quote,side:'over'|'under'='over')=>({id:'saved',user_id:'owner
 async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:number;user?:boolean;failed?:boolean}={}){
   const writes:CapturedPost[]=[], notices:string[]=[]
   let reads=0
-  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaPaintData':{
+  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[{offer:options.offer??quote}]})},'./nbaPaintData':{
     getPaintGame:async()=>{reads++;return{id:123,date:'2099-10-20',datetime:options.started?'2000-10-20T20:00:00Z':'2099-10-20T20:00:00Z',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}},
     getPaintProps:async()=>[options.offer??quote],getPaintIdentity:async()=>({id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}),
   }})
@@ -73,4 +74,13 @@ test('Existing public and followers posting continue their notification behavior
     const h=await harness();assert.equal((await h.post(request(item(),{visibility}))).status,200)
     assert.equal(h.writes[0].p_post.visibility,visibility);assert.deepEqual(h.notices,['mention','followers'])
   }
+})
+
+test('private first-basket and method picks revalidate the exact current contract before atomic posting',async()=>{
+ for(const prop_type of ['first_score','first_field_goal','first_score_dunk']){
+  const offer={...quote,prop_type,line_value:'0.5',market:{type:'over_under' as const,over_odds:700}},h=await harness({offer})
+  const result=await h.post(request(item(offer)));assert.equal(result.status,200)
+  const leg=h.writes[0].p_picks[0];assert.equal(leg.pick_type,prop_type);assert.equal(leg.numeric_line,.5);assert.equal(leg.odds,700);assert.equal(leg.market_side,'over');assert.deepEqual(h.notices,[])
+  const changed=await harness({offer:{...offer,market:{...offer.market,over_odds:650}}});assert.equal((await changed.post(request(item(offer)))).status,409);assert.equal(changed.writes.length,0)
+ }
 })

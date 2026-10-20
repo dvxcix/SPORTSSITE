@@ -1,6 +1,8 @@
 import 'server-only'
 import { getPaintGame, getPaintProps, getPaintIdentity } from './nbaPaintData'
 import { nbaBinary, PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
+import { nbaFirstMarket, nbaFirstLabel } from './nbaFirstBasketMarkets'
+import { getNbaFirstOdds } from './nbaFirstBasketOddsData'
 export type PaintPickLeg = { player_id?: string | null; player_name: string; team: string | null; game_pk: string | null; game_date: string | null; prop_key: string; prop_label: string; line?: string; numeric_line?: number | null; market_side?: 'over' | 'under' | 'milestone'; book: string | null; odds: number | null }
 export function paintOfferMatches(offer: PaintProp, leg: PaintPickLeg) {
   const player = Number(leg.player_id?.replace(/^bdl:/, ''))
@@ -15,14 +17,22 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
     if (new Set(legs.map(l => l.book)).size !== 1 || legs.some(l => !l.book)) return 'All NBA parlay legs must use the same sportsbook.'
     const unique = new Set<string>()
     for (const leg of legs) {
-      if (!/^\d{1,10}$/.test(leg.game_pk ?? '') || !/^bdl:\d{1,10}$/.test(leg.player_id ?? '') || !PAINT_MARKETS.some(m => m.key === leg.prop_key) || leg.numeric_line == null || !Number.isFinite(leg.numeric_line) || leg.numeric_line < 0 || !['over', 'under', 'milestone'].includes(leg.market_side ?? '')) return 'Re-save the exact NBA market from The Court.'
+      if (!/^\d{1,10}$/.test(leg.game_pk ?? '') || !/^bdl:\d{1,10}$/.test(leg.player_id ?? '') || !(PAINT_MARKETS.some(m => m.key === leg.prop_key) || nbaFirstMarket(leg.prop_key)) || leg.numeric_line == null || !Number.isFinite(leg.numeric_line) || leg.numeric_line < 0 || !['over', 'under', 'milestone'].includes(leg.market_side ?? '')) return 'Re-save the exact NBA market from The Court.'
+      if (nbaFirstMarket(leg.prop_key) && (leg.numeric_line !== .5 || !['over','under'].includes(leg.market_side??''))) return 'Re-save the exact first-basket selection.'
       const key = `${leg.game_pk}:${leg.player_id}:${leg.prop_key}`
       if (unique.has(key)) return 'Choose one line and side per player/market in a parlay.'
       unique.add(key)
     }
     const identities = new Map<number, Awaited<ReturnType<typeof getPaintIdentity>>>()
     await Promise.all([
-      ...[...new Set(legs.map(l => l.game_pk!))].map(async id => { const [game, props] = await Promise.all([getPaintGame(Number(id), true), getPaintProps(Number(id), true)]); games.set(id, { game, props }) }),
+      ...[...new Set(legs.map(l => l.game_pk!))].map(async id => {
+        const game = await getPaintGame(Number(id), true), gameLegs=legs.filter(l=>l.game_pk===id)
+        const [regular,first]=await Promise.all([
+          gameLegs.some(l=>!nbaFirstMarket(l.prop_key))?getPaintProps(Number(id),true):Promise.resolve([]),
+          gameLegs.some(l=>nbaFirstMarket(l.prop_key))?getNbaFirstOdds(game,true):Promise.resolve({rows:[]}),
+        ])
+        games.set(id,{game,props:[...regular,...first.rows.map(row=>row.offer)]})
+      }),
       ...[...new Set(legs.map(l => Number(l.player_id!.slice(4))))].map(async id => { identities.set(id, await getPaintIdentity(id)) }),
     ])
     for (const leg of legs) {
@@ -33,7 +43,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
       const identity = identities.get(Number(leg.player_id!.slice(4)))!
       if (![data.game.home_team.id, data.game.visitor_team.id].includes(identity.team.id)) return 'Player is no longer on this matchup roster. Refresh the board.'
       leg.player_name = `${identity.first_name} ${identity.last_name}`; leg.team = identity.team.abbreviation; leg.game_date = data.game.date; leg.line = String(leg.numeric_line)
-      const label = PAINT_MARKETS.find(m => m.key === leg.prop_key)!.label
+      const label = nbaFirstLabel(leg.prop_key) ?? PAINT_MARKETS.find(m => m.key === leg.prop_key)!.label
       leg.prop_label = `${nbaBinary(leg.prop_key) ? leg.market_side === 'under' ? 'No' : 'Yes' : leg.market_side === 'milestone' ? `${leg.numeric_line}+` : `${leg.market_side === 'under' ? 'Under' : 'Over'} ${leg.numeric_line}`} ${label}`
     }
     return null

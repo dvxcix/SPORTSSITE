@@ -1,5 +1,6 @@
 // Provider identities and descriptive statistics, shared without server credentials.
 import type { NbaOpening, NbaGameOpening } from './nbaOddsHistory'
+import { nbaFirstMarket } from './nbaFirstBasketMarkets'
 export type PaintTeam = { id: number; abbreviation: string; full_name: string; name: string; city?: string }
 export type PaintGame = { id: number; date: string; season: number; status: string; status_state?: string; datetime: string | null; period: number; home_team: PaintTeam; visitor_team: PaintTeam; home_team_score: number; visitor_team_score: number }
 export type PaintRoster = { id: number; first_name: string; last_name: string; position: string; jersey_number?: string; height?: string; draft_year?: number | null; draft_round?: number | null; draft_number?: number | null; college?: string; team: PaintTeam }
@@ -34,7 +35,7 @@ export function nbaCompactStat(row: PaintStat): PaintStat {
   return { id, ...(period == null ? {} : { period }), min, pts, reb, ast, fg3m, stl, blk, turnover, fga, fgm, fg3a, fta, ftm, player: { id: row.player.id, position: row.player.position }, team: { id: row.team.id }, game: { id: gameId, date, datetime, status, status_state, home_team_id, visitor_team_id, season, postseason } }
 }
 export const nbaPeriod = (market: string) => market.endsWith('_1q') ? 1 : 0
-export const nbaBinary = (market: string) => market === 'double_double' || market === 'triple_double'
+export const nbaBinary = (market: string) => market === 'double_double' || market === 'triple_double' || !!nbaFirstMarket(market)
 export const nbaMarketLogs = (player: PaintPlayer, market: string) => nbaPeriod(market) ? player.periodLogs ?? [] : player.logs
 export const nbaPrice = (offer: PaintProp, side: 'over' | 'under' = 'over') => offer.market.type === 'milestone' ? side === 'over' ? offer.market.odds : undefined : side === 'over' ? offer.market.over_odds : offer.market.under_odds
 export function nbaTarget(offer: PaintProp, side: 'over' | 'under' = 'over') { return nbaBinary(offer.prop_type) ? side === 'over' ? 'Yes' : 'No' : offer.market.type === 'milestone' ? `${Number(offer.line_value)}+` : `${side === 'over' ? 'O' : 'U'} ${Number(offer.line_value)}` }
@@ -48,6 +49,7 @@ export function nbaAppeared(row: Partial<PaintStat>) {
   return minutes > 0 || ['pts','reb','ast','fg3m','stl','blk','turnover','fga','fgm','fg3a','fta','ftm'].some(key => { const value = (row as Record<string, unknown>)[key]; return typeof value === 'number' && Number.isFinite(value) && value > 0 })
 }
 export function nbaValue(row: Partial<PaintStat> | Record<string, number | null>, market: string): number | null {
+  if (nbaFirstMarket(market)) return null // Opening-event markets require plays, never box-score totals.
   const definition = PAINT_MARKETS.find(m => m.key === market)
   if (!definition) return null
   if (nbaBinary(market)) {
@@ -97,7 +99,8 @@ export function nbaDate(value: string | null | undefined, fallback = nbaToday())
 export function nbaSelectionKey(playerId: number, offer: PaintProp, side: 'over' | 'under') { return `nba:${playerId}:${offer.prop_type}:${offer.market.type}:${Number(offer.line_value)}:${offer.market.type === 'milestone' ? 'milestone' : side}` }
 export function parseNbaSelection(key: string) {
   const [sport, player, market, type, line, side, extra] = key.split(':')
-  if (sport !== 'nba' || extra !== undefined || !/^\d+$/.test(player ?? '') || !PAINT_MARKETS.some(m => m.key === market) || !['over_under', 'milestone'].includes(type) || !line || !Number.isFinite(Number(line)) || Number(line) < 0 || (type === 'milestone' ? side !== 'milestone' : !['over', 'under'].includes(side))) return null
+  if (sport !== 'nba' || extra !== undefined || !/^\d+$/.test(player ?? '') || !(PAINT_MARKETS.some(m => m.key === market) || nbaFirstMarket(market)) || !['over_under', 'milestone'].includes(type) || !line || !Number.isFinite(Number(line)) || Number(line) < 0 || (type === 'milestone' ? side !== 'milestone' : !['over', 'under'].includes(side))) return null
+  if (nbaFirstMarket(market) && (type !== 'over_under' || Number(line) !== .5)) return null
   return { player_id: `bdl:${player}`, prop_key: market, numeric_line: Number(line), market_side: side as 'over' | 'under' | 'milestone', type }
 }
 export function gradeNbaValue(value: number | null, line: number, side: 'over' | 'under' | 'milestone') { return value == null || !Number.isFinite(value) || !Number.isFinite(line) ? null : side === 'milestone' ? value >= line ? 'win' : 'loss' : value === line ? 'push' : (side === 'over' ? value > line : value < line) ? 'win' : 'loss' }

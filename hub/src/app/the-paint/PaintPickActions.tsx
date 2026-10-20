@@ -4,13 +4,14 @@ import { Star, ArrowUpRight } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nbaPrice, nbaTarget, nbaOdds, nbaSelectionKey, PAINT_MARKETS, type PaintGame, type PaintPlayer, type PaintProp } from '@/lib/nbaPaint'
 import styles from './paint.module.css'
+import { nbaFirstLabel } from '@/lib/nbaFirstBasketMarkets'
 export function PaintPickActions({ player, offer, side, game }: { player: Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>; offer: PaintProp; side: 'over' | 'under'; game: PaintGame }) {
   const watchlist = useWatchlist(); const lock = useRef(false); const [busy, setBusy] = useState(false); const [error, setError] = useState('')
   const key = nbaSelectionKey(player.id, offer, side)
   const existing = watchlist.items.find(i => i.sport.toLowerCase() === 'nba' && i.game_pk === String(game.id) && i.prop_key === key && i.book === offer.vendor && i.status === 'pending')
   const odds = nbaPrice(offer, side)
   const starts = Date.parse(game.datetime ?? game.status); const closed = !Number.isFinite(starts) || !['scheduled', 'unknown', undefined].includes(game.status_state)
-  const label = `${nbaTarget(offer, side)} ${PAINT_MARKETS.find(m => m.key === offer.prop_type)?.label ?? offer.prop_type}`
+  const label = `${nbaTarget(offer, side)} ${nbaFirstLabel(offer.prop_type) ?? PAINT_MARKETS.find(m => m.key === offer.prop_type)?.label ?? offer.prop_type}`
   async function save() {
     if (lock.current || closed || odds == null) return
     // This clock read runs only in the click handler, immediately before saving.

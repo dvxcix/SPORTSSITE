@@ -1,4 +1,5 @@
 import * as milestoneSignals from '../src/lib/nbaMilestoneSignals.ts'
+import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import * as marketSelection from '../src/lib/nbaMarketSelection.ts'
 import { nbaOpeningSequence, nbaFirstBasketResearch } from '../src/lib/nbaFirstBasket.ts'
 import { nbaMilestoneMovements } from '../src/lib/nbaMovement.ts'
@@ -375,7 +376,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData')return {};assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {

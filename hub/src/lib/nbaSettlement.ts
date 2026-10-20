@@ -3,6 +3,8 @@ import type { createAdminClient } from './supabase/admin'
 import { getPaintGame, getPaintFinalStats } from './nbaPaintData'
 import { gradeNbaPick, type NbaPendingPick } from './nbaPickGrading'
 import { nbaPeriod } from './nbaPaint'
+import { nbaFirstMarket } from './nbaFirstBasketMarkets'
+import { getNbaFirstFacts } from './nbaFirstBasketFacts'
 
 export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>, deadline = Date.now() + 48_000) {
   const report = { claimed: 0, attempted: 0, checked: 0, graded: 0, skipped: 0, graded_ids: [] as string[], issues: [] as string[] }
@@ -29,14 +31,18 @@ export async function settleNbaPicks(admin: ReturnType<typeof createAdminClient>
       if (!/^\d{1,10}$/.test(id)) { picks.forEach(pick => attempted.add(pick.id)); report.skipped += picks.length; continue }
       const game = await getPaintGame(Number(id), true)
       if (game.status_state !== 'final' && game.status !== 'Final') { picks.forEach(pick => attempted.add(pick.id)); report.skipped += picks.length; continue }
-      const periods = [...new Set(picks.map(pick => nbaPeriod(pick.pick_type)))], results = await Promise.allSettled(periods.map(period => getPaintFinalStats(Number(id), period)))
+      const periods = [...new Set(picks.map(pick => nbaPeriod(pick.pick_type)))]
+      const [results,first]=await Promise.all([
+        Promise.allSettled(periods.map(period=>getPaintFinalStats(Number(id),period))),
+        picks.some(pick=>nbaFirstMarket(pick.pick_type))?getNbaFirstFacts(Number(id)).catch(()=>null):Promise.resolve(null),
+      ])
       const stats = results.flatMap((result, index) => { if (result.status === 'fulfilled' && result.value.complete) return result.value.rows; report.issues.push(`NBA period ${periods[index]} final stats incomplete`); return [] })
       factsReady = true
       for (const pick of picks) {
         if (rpcBudget() <= 0) { report.skipped++; report.issues.push('NBA time budget reached'); continue }
         attempted.add(pick.id)
         report.checked++
-        const result = gradeNbaPick(pick, stats)
+        const result = gradeNbaPick(pick, stats, first??undefined)
         if (!result) { report.skipped++; completed.add(pick.id); continue }
         try {
           const writeBudget = rpcBudget()

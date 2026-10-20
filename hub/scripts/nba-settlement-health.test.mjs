@@ -44,7 +44,7 @@ function settlementFixture(picks, options = {}) {
     },
   }
   const subject = load('lib/nbaSettlement.ts', {
-    'server-only': {}, './nbaPaint': { nbaPeriod: () => 0 }, './nbaPickGrading': { gradeNbaPick: p => options.noResultGame === p.game_pk ? null : 'win' },
+    'server-only': {}, './nbaFirstBasketMarkets':load('lib/nbaFirstBasketMarkets.ts',{}),'./nbaFirstBasketFacts':{}, './nbaPaint': { nbaPeriod: () => 0 }, './nbaPickGrading': { gradeNbaPick: p => options.noResultGame === p.game_pk ? null : 'win' },
     './nbaPaintData': {
       getPaintGame: async (id, fresh) => { assert.equal(fresh, true); games.push(id); now += options.gameMs ?? 0; if (options.providerFails) throw Error('private provider error'); return { status_state: options.live ? 'in_progress' : 'final' } },
       getPaintFinalStats: async () => { now += options.statsMs ?? 0; return { complete: true, rows: [] } },
