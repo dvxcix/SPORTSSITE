@@ -241,7 +241,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   assert.equal(fallbackScores[0].score,expiredRows[0].score,'defense errors preserve the same production base as Slate')
 })
 
-test('market cron game-only success writes no player-verification receipt; real player success binds economics',async()=>{
+test('market cron empty player feeds record withdrawals without verifying older prices; real player success binds economics',async()=>{
   const paint=await import('../src/lib/nbaPaint.ts'),movement=await import('../src/lib/nbaMovement.ts'),history=await import('../src/lib/nbaOddsHistory.ts')
   let props:PaintProp[]=[],receipt:unknown=null
   const rpcCalls:string[]=[]
@@ -250,12 +250,14 @@ test('market cron game-only success writes no player-verification receipt; real 
   // the real cron's 48-hour schedule boundary.
   game.datetime=new Date(Date.now()+3600000).toISOString()
   const admin={from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string)=>{rpcCalls.push(name);return{abortSignal:async()=>({data:true,error:null})}}}
-  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:(body:unknown,options?:{status?:number})=>({body,status:options?.status??200})}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]}),getPaintProps:async()=>props,getPaintGameOdds:async()=>[{id:1,game_id:123,vendor:'fanduel',spread_home_value:'-4.5',spread_away_value:'4.5',moneyline_home_odds:-150,moneyline_away_odds:130,total_value:'220.5',updated_at:current}]},'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,'@/lib/nbaPaint':paint,'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{assert.equal(key,'market-attempt:v3:123');receipt=await load();return{value:receipt}}}})
+  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:(body:unknown,options?:{status?:number})=>({body,status:options?.status??200})}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]}),getPaintProps:async()=>props,getPaintGameOdds:async()=>[{id:1,game_id:123,vendor:'fanduel',spread_home_value:'-4.5',spread_away_value:'4.5',moneyline_home_odds:-150,moneyline_away_odds:130,total_value:'220.5',updated_at:current}]},'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,'@/lib/nbaPaint':paint,'@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],eventMatched:false,unmatched:0})},'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(key==='first-basket-attempt:v1:123')return{value:await load()};assert.equal(key,'market-attempt:v3:123');receipt=await load();return{value:receipt}}}})
   const get=route.GET as (request:Request)=>Promise<{body:{captured:number};status:number}>
   const gameOnly=await get(new Request('https://example.test/api/cron/nba-market-capture'))
   assert.equal(gameOnly.status,200);assert.equal(gameOnly.body.captured,1)
-  assert.deepEqual(receipt,{status:'captured'})
-  assert.deepEqual(rpcCalls,['record_nba_game_market_capture'])
+  const emptyReceipt=receipt as {status:string;playerFingerprint:string;playerObservedAt:string}
+  assert.equal(emptyReceipt.status,'captured')
+  assert.equal(emptyReceipt.playerFingerprint,(await import('node:crypto')).createHash('sha256').update(JSON.stringify(movement.nbaEconomicSnapshot([]))).digest('hex'))
+  assert.deepEqual(rpcCalls,['record_nba_market_capture','record_nba_game_market_capture'])
   assert.equal(nbaSuccessfulMarketReceipt({key:'market-attempt:v3:123',payload:receipt,fetched_at:new Date().toISOString()},123,'old-prices'),null)
   props=[target,other];rpcCalls.length=0
   await get(new Request('https://example.test/api/cron/nba-market-capture'))

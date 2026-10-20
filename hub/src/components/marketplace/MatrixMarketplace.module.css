@@ -4,6 +4,23 @@
   padding: 22px 24px 120px;
   color: #f6f7f8;
 }
+.sportTabs { display: flex; gap: 8px; width: min(1460px, 100%); margin: 0 auto; padding: 20px 24px 0; }
+.sportTabs a { padding: 10px 22px; border: 1px solid #ffffff20; border-radius: 11px; color: #b5becb; font-weight: 800; text-decoration: none; }
+.sportTabs a[aria-current] { color: #b5ff72; background: #a6ff4b14; border-color: #a6ff4b70; }
+.sportControls { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.sportControls label { display: grid; gap: 6px; color: #a5afbd; font-size: 11px; font-weight: 700; }
+.sportControls input,.sportControls select { min-height: 42px; max-width: 100%; border: 1px solid #ffffff24; border-radius: 9px; padding: 8px 12px; background: #10141c; color: #f6f7f8; font: inherit; font-size: 13px; }
+.sportGrid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 18px; }
+.sportCard { min-width: 0; padding: 22px; border: 1px solid color-mix(in srgb,var(--matrix-color) 38%,transparent); border-radius: 18px; background: #0c1017; }
+.sportCard header { display: flex; align-items: center; gap: 12px; color: var(--matrix-color); }
+.sportCard h2 { margin: 0 0 5px; font-size: 18px; overflow-wrap: anywhere; }
+.sportCard small,.sportCard p { color: #a5afbd; }
+.sportCard ol { padding-left: 20px; color: #d5dde6; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.sportCard button { display: flex; align-items: center; gap: 8px; border: 1px solid #ffffff25; border-radius: 9px; padding: 10px 14px; background: #ffffff09; color: #f6f7f8; cursor: pointer; }
+.sportCard button:disabled { opacity: .65; cursor: default; }
+.sportStatus { padding: 36px 10px; color: #a5afbd; }
+.sportStatus button { margin-left: 10px; background: none; border: 0; color: #b5ff72; cursor: pointer; }
+@media(max-width:640px) { .sportTabs { padding: 16px 12px 0; } .sportControls label:first-child { flex-basis: 100%; } .sportControls input { width: 100%; } }
 .mobilePublishButton {
   display: none;
 }

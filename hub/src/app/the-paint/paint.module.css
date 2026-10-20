@@ -191,3 +191,42 @@
 .movementRows>article>small{grid-column:1/-1;color:#91a7be;font-size:11px}
 
 .firstBasketOdds th{text-align:left}.firstBasketOdds th small{display:block;margin-top:5px;font-size:11px;line-height:1.5;color:#91a7be;font-weight:400}
+
+/* A contained team-color frame at every avatar size, including narrow tables. */
+.avatar,.portrait{position:relative;overflow:hidden;border:1px solid #ffffff24;box-shadow:inset 0 1px #ffffff20;isolation:isolate}
+.avatarFrame{display:flex;align-items:flex-end;justify-content:center;width:100%;height:100%;max-width:100%;overflow:hidden;border-radius:inherit}
+.avatarFrame>img,.portrait .avatarFrame>img{display:block;flex:none;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom}
+.avatarTeam{right:1px;bottom:1px;display:grid;place-items:center;width:18px;height:18px;padding:1px;border:1px solid #ffffff26;z-index:1}
+.avatarMatrix{position:absolute;inset:0;z-index:2;border:2px solid;border-radius:inherit;pointer-events:none}
+.avatar .initials,.portrait .initials{color:#eef4f7}
+.portrait{flex:0 0 42%;max-width:180px;margin:0;border-radius:14px 14px 0 0}
+.playerHero{gap:12px}
+.playerHero>div{flex:1}
+.playerHero h2{overflow-wrap:anywhere}
+.firstBasketOdds .ladderTable th:first-child{min-width:230px;width:260px;max-width:290px}
+.firstBasketPlayer{display:flex;align-items:center;gap:10px;text-align:left}
+.firstBasketPlayer>span:last-child{min-width:0}
+.firstBasketPlayer strong{font-size:12px;line-height:1.4}
+.firstBasketOdds .firstBasketMarket{margin-top:9px;color:#c2d4df;white-space:normal}
+.firstBasketQuote{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-width:122px;padding:10px 0}
+.firstBasketQuote .bestPrice{position:static}
+.firstBasketQuote .pickActions>button{min-width:44px;min-height:44px}
+.firstBasketCaptured{color:#93a9bc;font-size:10px;white-space:nowrap}
+.firstBasketOdds .ladderTable thead th:not(:first-child){text-align:center}
+.firstBasketOdds .ladderTable thead th>img{margin-inline:auto}
+.firstBasketOdds .ladderTable td[data-best=true]{background:#b4ff4d08}
+.firstBasketOdds .ladderTable th:first-child{box-shadow:7px 0 12px -9px #000}
+@media(max-width:640px){
+  .portrait{height:138px}
+  .firstBasketOdds{padding-inline:0}
+  .firstBasketOdds .ladderTable th:first-child{min-width:166px;max-width:175px;width:175px}
+  .firstBasketPlayer{gap:7px}
+  .firstBasketPlayer .avatar{width:34px;height:38px}
+  .firstBasketPlayer strong{font-size:11px;white-space:normal}
+  .firstBasketOdds th small{font-size:10px;line-height:1.4}
+  .firstBasketQuote{min-width:112px}
+  .firstBasketOdds .movementTools{gap:8px}
+  .firstBasketOdds .movementTools>label{flex-basis:calc(50% - 4px)}
+  .firstBasketOdds .sectionHeading{align-items:flex-start}
+  .firstBasketOdds .sectionHeading .filterToggle{padding:8px;min-width:88px;white-space:normal}
+}

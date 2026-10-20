@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { requirePaintAccess } from '@/lib/paintAccess'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
+import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
+import { getNbaMarketContext } from '@/lib/nbaMarketSignalData'
+import { getNbaTracking } from '@/lib/nbaTrackingData'
+import { evaluateNbaMatrix, nbaMatrixCandidates, type NbaMatrix } from '@/lib/nbaMatrix'
+
+export const maxDuration = 120
+export async function GET(request: NextRequest) {
+  const gate = await requirePaintAccess(); if (gate.error) return gate.error
+  const gameId = request.nextUrl.searchParams.get('game')
+  if (!gameId || !/^\d{1,10}$/.test(gameId)) return NextResponse.json({ error: 'Choose an NBA game.' }, { status: 400 })
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin.from('nba_matrices').select('*').eq('user_id', gate.userId!).eq('enabled', true).order('priority').order('created_at')
+    if (error) throw error
+    const matrices = data as NbaMatrix[]
+    if (!matrices.length) return NextResponse.json({ gameId: Number(gameId), matrices: [], matches: [], unavailable: [], fetchedAt: new Date().toISOString() }, { headers: { 'Cache-Control': 'private, no-store' } })
+    const board = await getPaintBoard(await getPaintGame(Number(gameId)))
+    const factors = matrices.flatMap(m => m.definition.factors ?? m.definition.steps ?? [])
+    const needs = (category: string) => factors.some(f => f.category === category)
+    const unavailable: string[] = []
+    const [defense, market, tracking, picks] = await Promise.all([
+      needs('score') ? getNbaDefenseContext(board.sampleSeason, board.game.date).catch(() => { unavailable.push('Defense context'); return null }) : null,
+      needs('score') ? getNbaMarketContext(board.game).catch(() => { unavailable.push('Market signals'); return null }) : null,
+      needs('tracking') ? getNbaTracking(board).catch(() => { unavailable.push('Tracking'); return null }) : null,
+      needs('picks') ? admin.from('nba_public_captures').select('snapshot').eq('game_id', board.game.id).order('captured_at', { ascending: false }).limit(1).then(({ data, error }) => { if (error) unavailable.push('Public picks'); return data?.[0]?.snapshot?.rows ?? [] }) : [],
+    ])
+    const candidates = nbaMatrixCandidates(board, { defense: defense?.profiles, market, tracking: tracking?.rows, publicPicks: picks })
+    const matches = matrices.map(matrix => {
+      const ids = evaluateNbaMatrix(matrix, candidates)
+      const rows = matrix.definition.factors ?? matrix.definition.steps ?? []
+      return { id: matrix.id, name: matrix.name, color: matrix.color, playerIds: [...ids].map(Number),
+        readings: candidates.filter(c => ids.has(c.id)).map(c => ({ playerId: Number(c.id), values: rows.map(f => ({ id: f.id, value: c.values(f) })) })),
+        missing: candidates.reduce((total, c) => total + rows.filter(f => c.values(f) == null).length, 0) }
+    })
+    const matchedIds = new Set(matches.flatMap(m => m.playerIds))
+    const players = board.players.filter(p => matchedIds.has(p.id)).map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`, gameId: board.game.id, team: p.team.abbreviation }))
+    return NextResponse.json({ gameId: board.game.id, matrices, matches, players, unavailable, fetchedAt: board.fetchedAt }, { headers: { 'Cache-Control': 'private, no-store' } })
+  } catch { return NextResponse.json({ error: 'NBA Matrix results could not refresh.' }, { status: 503 }) }
+}

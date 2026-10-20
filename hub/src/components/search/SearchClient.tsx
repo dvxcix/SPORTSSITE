@@ -434,7 +434,7 @@ export function SearchClient() {
                 <TeamLogo logo={team.logo} name={team.name} size={40}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{team.name}</p><p className="text-xs text-zinc-400">Team profile</p></div><ArrowRight size={16} aria-hidden="true"/>
               </Link>)}
               {nbaPlayers.map(player => <Link key={`player-${player.id}`} href={`/nba/players/${player.id}`} className="ss-search-result flex items-center gap-3 p-3">
-                <PlayerAvatar headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={44}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{player.name}</p><p className="truncate text-xs text-zinc-400">{[player.position, player.teamName].filter(Boolean).join(' · ')}</p></div><ArrowRight size={16} aria-hidden="true"/>
+                <PlayerAvatar sport="nba" teamAbbr={player.teamAbbr} headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={44}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{player.name}</p><p className="truncate text-xs text-zinc-400">{[player.position, player.teamName].filter(Boolean).join(' · ')}</p></div><ArrowRight size={16} aria-hidden="true"/>
               </Link>)}
             </div>
           </section>}

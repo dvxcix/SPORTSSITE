@@ -166,7 +166,7 @@ export function WorkspaceMarketCard({ item, windowKey, onRemove }: { item: Works
   return <article className={styles.card}>
     <button className={styles.remove} type="button" onClick={onRemove} aria-label={`Remove ${item.player_name}`}><X size={14}/></button>
     <div className={styles.identity}>
-      <PlayerAvatar headshot={item.headshot_url} teamAbbr={item.team} name={item.player_name} size={46}/>
+      <PlayerAvatar sport={item.sport} headshot={item.headshot_url} teamAbbr={item.team} name={item.player_name} size={46}/>
       <span><strong>{item.player_name}</strong><small>{item.team ?? '—'} · {item.position ?? item.sport}</small><i>{item.prop_label}</i></span>
       {loading && <LoaderCircle className={styles.spin} size={14}/>}
     </div>

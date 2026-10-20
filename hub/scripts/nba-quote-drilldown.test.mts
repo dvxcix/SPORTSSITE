@@ -19,6 +19,8 @@ const stubs: Record<string, string> = {
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   '@/components/ui/ModalSurface': `import React from 'react';export const ModalSurface=({open,label,children})=>open?<div role="dialog" aria-label={label}>{children}</div>:null`,
   '@/context/WatchlistContext': `export const useWatchlist=()=>({items:[]})`,
+  '@/components/nba/NbaMatrixButton': `export const NbaMatrixButton=()=>null`,
+  '@/components/nba/NbaMatrixContext': `export const NbaMatrixProvider=({children})=>children;export const NbaMatrixResults=()=>null`,
   '@/lib/nbaRefresh': `export const watchNbaRefresh=()=>()=>{}`,
   './PaintPickActions': `import React from 'react';export const PaintPickActions=({offer,side})=><button data-testid="pick" data-book={offer.vendor} data-side={side} data-type={offer.market.type} data-line={offer.line_value}>Save</button>`,
   './PaintVisuals': `import React from 'react';export const CourtMark=()=>null;export const PlayerAvatar=()=>null;export const TeamLogo=()=>null;export const TrendBars=()=>null;export const ShotCourt=()=>null;export const number=(n)=>n==null?'—':n.toFixed(1);export const marketNumber=number`,

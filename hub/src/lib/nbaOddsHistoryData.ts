@@ -3,12 +3,12 @@ import { createAdminClient } from './supabase/admin'
 import { nbaSharedCache } from './nbaSharedCache'
 import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 import type { PaintFrame } from './nbaMovement'
-import type { PaintMarket } from './nbaPaint'
+import { nbaFirstMarket } from './nbaFirstBasketMarkets'
 
 /** The RPC retains the first capture and latest 95, including empty market frames. */
-export async function getNbaMarketFrames(gameId: number, market: PaintMarket, playerId: number | null = null): Promise<PaintFrame[]> {
+export async function getNbaMarketFrames(gameId: number, market: string, playerId: number | null = null): Promise<PaintFrame[]> {
   const cached = await nbaSharedCache(`market-history:v1:${gameId}:${market}:${playerId ?? 'all'}`, 60, 0, async () => {
-    const { data, error } = await createAdminClient().rpc('read_nba_market_captures', {
+    const { data, error } = await createAdminClient().rpc(nbaFirstMarket(market) ? 'read_nba_first_basket_captures' : 'read_nba_market_captures', {
       p_game_id: gameId, p_market: market, p_player: playerId,
     }).abortSignal(AbortSignal.timeout(12_000))
     if (error || !Array.isArray(data) || data.length > 96) throw new Error('NBA market history unavailable')

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import * as crypto from 'node:crypto'
 import ts from 'typescript'
 import type { PaintFrame } from '../src/lib/nbaMovement.ts'
+import { nbaFirstMarket } from '../src/lib/nbaFirstBasketMarkets.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, clock: { new(value?: string | number): Date; now(): number }): Promise<T> {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -37,7 +38,7 @@ async function harness() {
       }
     },
     rpc: (name: string, args: Args) => {
-      if (name === 'read_nba_market_captures') return { abortSignal: async (signal: AbortSignal) => {
+      if (name === 'read_nba_market_captures' || name === 'read_nba_first_basket_captures') return { abortSignal: async (signal: AbortSignal) => {
         assert.ok(signal instanceof AbortSignal); reads.push(args)
         await new Promise(resolve => setTimeout(resolve, 5))
         return { data: result ?? [{ captured_at: new Clock().toISOString(), props: [] }], error: failed ? { message: 'fixture outage' } : null }
@@ -56,7 +57,7 @@ async function harness() {
   }
   const instance = async () => {
     const cache = await compiled<typeof import('../src/lib/nbaSharedCache.ts')>('../src/lib/nbaSharedCache.ts', { 'server-only': {}, 'node:crypto': crypto, './supabase/admin': { createAdminClient: () => admin } }, Clock)
-    return compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts', { 'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': cache }, Clock)
+    return compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts', { 'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': cache, './nbaFirstBasketMarkets': { nbaFirstMarket } }, Clock)
   }
   return { instance, reads, entries, advance: (ms: number) => { now += ms }, fail: (value: boolean) => { failed = value }, setResult: (value: unknown) => { result = value } }
 }

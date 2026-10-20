@@ -48,7 +48,7 @@ async function mount(name: string, initial: Record<string, unknown>, data: unkno
   return { host, render, click, close: async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch } }
 }
 
-test('market signal cells explain loading, missing quotes, no match and unavailable sides instead of blank dashes', async () => {
+test('market signal cells show concise data status without tooltips', async () => {
   const ui = await mount('PaintMarketSupport', {})
   try {
     assert.match(ui.host.textContent ?? '', /Loading/)
@@ -59,7 +59,7 @@ test('market signal cells explain loading, missing quotes, no match and unavaila
     ]) {
       await ui.render({ support: { status, reason, signal: null } })
       assert.equal(ui.host.textContent, text)
-      assert.ok(ui.host.querySelector('[title]')?.getAttribute('title'))
+      assert.equal(ui.host.querySelector('[title], [role="tooltip"]'), null)
     }
   } finally { await ui.close() }
 })

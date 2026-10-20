@@ -43,6 +43,7 @@ const related: Record<PaintMarket, readonly PaintMarket[]> = {
   triple_double: ['points','rebounds','assists','double_double'],
   points_1q: ['rebounds_1q','assists_1q'], rebounds_1q: ['points_1q','assists_1q'], assists_1q: ['points_1q','rebounds_1q'],
   steals: [], blocks: [], turnovers: [],
+  points_first3min: [], rebounds_first3min: [], assists_first3min: [],
 }
 const identity = (offer: PaintProp) => JSON.stringify([offer.game_id,offer.player_id,offer.vendor,offer.prop_type,offer.market.type,Number(offer.line_value)])
 export function nbaEmptyMarketContext(gameId: number, asOf: string, tipAt: string | null, reason: string): NbaMarketContext {

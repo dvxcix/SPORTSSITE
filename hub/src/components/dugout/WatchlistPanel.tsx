@@ -41,7 +41,8 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
       <PlayerAvatar
         headshot={item.headshot_url}
         teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : item.sport.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)}
-        teamAbbr={item.sport.toLowerCase() === 'nba' ? undefined : item.team}
+        teamAbbr={item.team}
+        sport={item.sport}
         name={item.player_name}
         size={34}
         showTeam={item.sport.toLowerCase() === 'nba' ? !!nbaTeamLogo(item.team) : item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}

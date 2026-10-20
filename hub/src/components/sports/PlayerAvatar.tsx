@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { getTeamColor } from '@slipsurge/core/mlbTeamColors'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { nbaTeamGradient } from '@/lib/nbaTeamColors'
 
 interface PlayerAvatarProps {
   /** Player headshot URL */
@@ -12,6 +13,8 @@ interface PlayerAvatarProps {
   /** Team abbreviation — drives the background color behind the (usually
    *  transparent-background) headshot so players read as their team at a glance. */
   teamAbbr?: string | null
+  /** Explicit league identity prevents shared abbreviations from using MLB colors. */
+  sport?: string
   /** Player/team name for initials fallback */
   name?: string
   /** Avatar diameter in px */
@@ -31,6 +34,7 @@ export function PlayerAvatar({
   headshot,
   teamLogo,
   teamAbbr,
+  sport,
   name = '',
   size = 44,
   showTeam = true,
@@ -76,7 +80,7 @@ export function PlayerAvatar({
           height: size,
           borderRadius: '50%',
           overflow: 'hidden',
-          background: showHeadshot ? getTeamColor(teamAbbr) : 'var(--accent-dim)',
+          background: sport?.toLowerCase() === 'nba' ? nbaTeamGradient(teamAbbr) : showHeadshot ? getTeamColor(teamAbbr) : 'var(--accent-dim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

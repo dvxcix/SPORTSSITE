@@ -233,11 +233,11 @@ function WinProbBar({ summary, teamMap }: { summary: ESPNSummary | null; teamMap
 }
 
 // ─── Stat Leaders ─────────────────────────────────────────────────
-function Leaders({ summary }: { summary: ESPNSummary | null }) {
+function Leaders({ summary, sport }: { summary: ESPNSummary | null; sport: SportKey }) {
   const leaders = summary?.leaders
   if (!leaders || leaders.length === 0) return null
 
-  const rows: { headshot?: string; teamLogo?: string; name: string; stat: string; category: string }[] = []
+  const rows: { headshot?: string; teamLogo?: string; teamAbbr?: string; name: string; stat: string; category: string }[] = []
   for (const teamGroup of leaders) {
     const tLogo = teamGroup.team?.logo
     for (const cat of (teamGroup.leaders ?? []).slice(0, 2)) {
@@ -246,6 +246,7 @@ function Leaders({ summary }: { summary: ESPNSummary | null }) {
       rows.push({
         headshot: ldr.athlete?.headshot?.href,
         teamLogo: tLogo,
+        teamAbbr: teamGroup.team?.abbreviation,
         name: ldr.athlete?.shortName ?? ldr.athlete?.displayName ?? '',
         stat: ldr.displayValue,
         category: cat.displayName ?? cat.name,
@@ -262,7 +263,7 @@ function Leaders({ summary }: { summary: ESPNSummary | null }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
         {rows.map((r, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <PlayerAvatar headshot={r.headshot} teamLogo={r.teamLogo} name={r.name} size={46} />
+            <PlayerAvatar sport={sport} teamAbbr={r.teamAbbr} headshot={r.headshot} teamLogo={r.teamLogo} name={r.name} size={46} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</p>
               <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.category}</p>
@@ -276,7 +277,8 @@ function Leaders({ summary }: { summary: ESPNSummary | null }) {
 }
 
 // ─── Play row ─────────────────────────────────────────────────────
-function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
+function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sport }: {
+  sport: SportKey
   play: ESPNPlay
   teamMap: Record<string, TeamInfo>
   athleteMap: Record<string, { headshot?: string; teamLogo?: string; name: string }>
@@ -364,6 +366,8 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact }: 
         {/* Player headshot with team badge */}
         {primaryAthlete ? (
           <PlayerAvatar
+            sport={sport}
+            teamAbbr={Object.values(teamMap).find(team=>team.logo===primaryTeamLogo)?.abbr}
             headshot={primaryHeadshot}
             teamLogo={primaryTeamLogo}
             name={primaryAthlete.displayName}
@@ -474,7 +478,8 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact }: 
 }
 
 // ─── Play-by-play tab ─────────────────────────────────────────────
-function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
+function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact, sport }: {
+  sport: SportKey
   plays: ESPNPlay[]
   teamMap: Record<string, TeamInfo>
   athleteMap: Record<string, { headshot?: string; teamLogo?: string; name: string }>
@@ -513,6 +518,7 @@ function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact
       <div>
         {[...displayed].reverse().map(play => (
           <PlayRow
+            sport={sport}
             key={play.id}
             play={play}
             teamMap={teamMap}
@@ -528,7 +534,7 @@ function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact
 }
 
 // ─── Box Score tab ────────────────────────────────────────────────
-function BoxScore({ summary }: { summary: ESPNSummary | null }) {
+function BoxScore({ summary, sport }: { summary: ESPNSummary | null; sport: SportKey }) {
   const [teamIdx, setTeamIdx] = useState(0)
   const teams = summary?.boxscore?.teams
   const players = summary?.boxscore?.players
@@ -618,6 +624,8 @@ function BoxScore({ summary }: { summary: ESPNSummary | null }) {
                           <td style={{ padding: '8px 6px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                               <PlayerAvatar
+                                sport={sport}
+                                teamAbbr={players[teamIdx]?.team?.abbreviation}
                                 headshot={a.athlete.headshot?.href}
                                 teamLogo={teamLogoUrl}
                                 name={a.athlete.displayName}
@@ -837,7 +845,7 @@ export function GameDetailClient({
       {/* Leaders below scoreboard */}
       {(gameStatus.state === 'in' || gameStatus.state === 'post') && (
         <div style={{ marginTop: 8 }}>
-          <Leaders summary={summary} />
+          <Leaders summary={summary} sport={sport} />
         </div>
       )}
 
@@ -877,6 +885,7 @@ export function GameDetailClient({
         {tab === 'room' && <GameRoom sport={sport} gameId={gameId} phase={gameStatus.state as 'pre' | 'in' | 'post'} initialMessages={roomMessages} currentUserId={currentUserId} picks={communityPicks}/>}
         {tab === 'plays' && (
           <PlayByPlay
+            sport={sport}
             plays={plays}
             teamMap={teamMap}
             athleteMap={athleteMap}
@@ -885,7 +894,7 @@ export function GameDetailClient({
             onReact={handleReact}
           />
         )}
-        {tab === 'boxscore' && <BoxScore summary={summary} />}
+        {tab === 'boxscore' && <BoxScore summary={summary} sport={sport} />}
         {tab === 'picks' && (
           <CommunityPicksTab
             picks={communityPicks}

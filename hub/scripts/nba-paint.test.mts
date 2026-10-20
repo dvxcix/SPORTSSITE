@@ -24,6 +24,7 @@ import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 import {nbaTrackingRow,nbaTrackingSample,nbaTrackingField} from '../src/lib/nbaTracking.ts'
 import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
+const unpostedFirstBasket={getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],unmatched:0,eventMatched:false})}
 const emptyOpeningImports={'./nbaOddsHistory':{nbaAttachOpenings},'./nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>[]}}
 function gameQuote(gameId:number):import('../src/lib/nbaPaint.ts').PaintGameOdds{return{id:gameId+1000,game_id:gameId,vendor:'fanduel',moneyline_home_odds:-140,moneyline_away_odds:120,spread_home_value:'-3.5',spread_away_value:'3.5',total_value:'215.5',updated_at:'2099-10-20T12:00:00Z'}}
 
@@ -376,7 +377,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData')return {};assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets'||name==='@/lib/nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts')return {};if((name==='./nbaFirstBasketOddsData'||name==='@/lib/nbaFirstBasketOddsData')&&!(name in imports))return unpostedFirstBasket;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
@@ -586,7 +587,7 @@ test('NBA quote capture covers the third calendar date beyond sixteen games and 
   '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
  })
  const get=route.GET as(request:Request)=>Promise<Response>,response=await get(new Request('https://test/capture'))
- assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='record_nba_market_capture').length,17);assert.equal(writes.filter(row=>row.name==='record_nba_game_market_capture').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='record_nba_game_market_capture'));assert.equal(attempts.length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
+ assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='record_nba_market_capture').length,17);assert.equal(writes.filter(row=>row.name==='record_nba_game_market_capture').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='record_nba_game_market_capture'));assert.equal(attempts.filter(key=>key.startsWith('market-attempt:v3:')).length,18);assert.equal(attempts.filter(key=>key.startsWith('first-basket-attempt:v1:')).length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
  assert.equal((await response.json()).failed,1)
  hit=true;reads.length=0;gameReads.length=0;writes.length=0
  const repeated=await get(new Request('https://test/capture')),summary=await repeated.json()

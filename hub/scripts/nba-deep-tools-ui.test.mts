@@ -17,7 +17,7 @@ const stubs: Record<string, string> = {
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
   'next/link': 'import React from "react";export default function Link(props){return <a {...props}/>}',
 }
-const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup']
+const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds']
 const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
 const bundle = await build({ stdin: { contents: source, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'deep-tools.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'deep-tool-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
@@ -141,4 +141,44 @@ test('NBA profile tables expose named keyboard-focusable scroll regions', async 
       }
     } finally { await ui.close() }
   }
+})
+
+test('First Basket sorts signed movement and changes baseline without dropping the other books', async () => {
+  const row=(id:number,name:string,book:string,change:number|null,previousChange:number|null,market='first_score')=>({
+    game:{...board.game,datetime:'2026-10-20T23:00:00Z',status_state:'scheduled'},
+    player:{id,first_name:name,last_name:'Player',position:'G',team,headshot:null},
+    offer:{id,game_id:123,player_id:id,vendor:book,prop_type:market,line_value:'0.5',market:{type:'milestone',odds:900},updated_at:'2026-10-20T12:00:00Z',opening:change==null?undefined:{over:{odds:1100,at:'2026-10-20T10:00:00Z'}}},
+    movement:{change,previousChange,previousOdds:1000,previousAt:'2026-10-20T11:00:00Z',firstAt:'2026-10-20T10:00:00Z',latestAt:'2026-10-20T12:00:00Z',captures:3},
+  })
+  const rows=[row(1,'Alpha','fanduel',3,-1),row(1,'Alpha','draftkings',-5,-2),row(2,'Beta','fanduel',-4,2),row(3,'Gamma','fanduel',null,null)]
+  const ui=await harness('PaintFirstBasketOdds',{date:board.game.date},{requestedDate:board.game.date,date:board.game.date,games:1,loaded:1,failed:0,status:'ready',unmatched:0,rows,fetchedAt:'2026-10-20T12:00:00Z'})
+  const select=async(label:string,value:string)=>{
+    const node=ui.host.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement
+    assert.ok(node,label);await act(async()=>{node.value=value;node.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+  }
+  const names=()=>[...ui.host.querySelectorAll('tbody tr>th strong')].map(node=>node.textContent)
+  try {
+    ui.succeed();await ui.click('Retry')
+    assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
+    await select('Sort first-basket prices','lengthened')
+    assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
+    await select('First-basket sportsbook','fanduel')
+    assert.deepEqual(names(),['Beta Player','Alpha Player','Gamma Player'])
+    await select('Sort first-basket prices','shortened')
+    assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
+    await select('First-basket movement baseline','previous')
+    assert.deepEqual(names(),['Beta Player','Alpha Player','Gamma Player'])
+    assert.match(ui.host.textContent??'',/PREV/)
+    await select('First-basket sportsbook','all')
+    await select('First-basket movement direction','shortened')
+    assert.deepEqual(names(),['Beta Player'])
+    await select('First-basket movement baseline','opening')
+    assert.deepEqual(names(),['Alpha Player'])
+    assert.equal(ui.host.querySelectorAll('tbody tr td').length,2)
+    assert.equal(ui.host.querySelectorAll('tbody tr td span[aria-label^="Now "]').length,2)
+    await select('Minimum first-basket change','5')
+    assert.deepEqual(names(),[])
+    assert.equal(ui.host.querySelector('[title], [role="tooltip"]'),null)
+    assert.doesNotMatch(ui.host.textContent??'',/Compare the same|free throws count|rules|configured/i)
+  } finally {await ui.close()}
 })

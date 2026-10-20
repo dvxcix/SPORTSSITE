@@ -32,6 +32,10 @@ test('first-basket imports fail closed on ambiguous identities, unknown rules, s
   assert.equal(nbaNormalizeFirstOdds(event,game,[player,{...player,id:999}],now).rows.length,0)
   assert.equal(nbaNormalizeFirstOdds(event,game,[player],now+360000).rows.length,0)
   assert.equal(nbaNormalizeFirstOdds({...event,bookmakers:event.bookmakers!.map(b=>({...b,key:'unknown'}))},game,[player],now).rows.length,0)
+  for(const price of [99,100.5,1000001,NaN]){
+    const invalid={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:[{name:'Test Player',price}]}]}]}
+    assert.equal(nbaNormalizeFirstOdds(invalid,game,[player],now).rows.length,0)
+  }
 })
 const play=(order:number,patch:Partial<NbaPlay>={}):NbaPlay=>({game_id:123,order,type:'Jumpball',text:'Opening tip',period:1,clock:'12:00',scoring_play:false,shooting_play:false,score_value:null,team:{id:2},coordinate_x:null,coordinate_y:null,participants:[434],...patch})
 const plays=[play(1),play(2,{type:'Free Throw',text:'Test Player makes free throw',scoring_play:true,shooting_play:true,score_value:1}),play(3,{type:'Dunk',text:'Other Player makes dunk',scoring_play:true,shooting_play:true,score_value:2,participants:[222],team:{id:9}})]
@@ -76,6 +80,7 @@ test('first-basket normalization diagnostics remain admin-only',async()=>{
    '@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:'2026-10-20',games:[game]})},
    '@/lib/nbaPaint':{nbaDate:(value:string)=>value},
    '@/lib/nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[],unmatched:1,withheldMethods:['Unrecognized method']}),NbaFirstOddsUnavailable:class extends Error{}},
+   '@/lib/nbaFirstBasketHistoryData':{attachNbaFirstBasketHistory:async(_id:number,rows:unknown[])=>rows},
   }
   new Function('require','module','exports',output)((name:string)=>{assert.ok(name in mocks,name);return mocks[name]},compiled,compiled.exports)
   const response=await compiled.exports.GET({nextUrl:new URL('https://www.slipsurge.com/the-paint/first-basket/odds?date=2026-10-20')})

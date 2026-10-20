@@ -1,0 +1,60 @@
+NBA capture, matrix, and UI parity — 2026-10-20
+
+Authorization
+The owner explicitly authorized the NBA capture/movement, matrices/pipelines,
+avatar/team-color and explainer-removal work, including its production release
+and required database changes.
+
+Baseline
+Verified GitHub main and live production both at 26430cfc before editing.
+Required recovered NFL ancestor 6c3811b0882e1b1a6694a30849273f3e210cd69c retained.
+Unrelated local work preserved. No laptop collector or historical job replay.
+
+Database
+Applied individually to primary hkldweedwnxartkfhror only:
+- 20261020051813_nba_saved_matrices
+- 20261020051929_nba_first_basket_capture_parity
+The saved-matrix tables have RLS enabled and no anon/authenticated table grants.
+Authenticated routes enforce NBA access and ownership before service-role reads.
+The first-basket tape and capture/read RPCs are service-only.
+Verified 260 missing first-three-minute exact opening quotes recovered from
+existing captured observations. All 562 existing ordinary captures preserved.
+No synthetic First Basket history was created.
+
+Behavior
+The existing cloud NBA capture job now independently captures First Basket,
+first field goal, team-first and first-event method prices. Exact quote identity
+includes game, player, book, market, contract, threshold and side. Independent
+receipts prevent one feed's failure from making another feed appear fresh.
+Successful empty snapshots record withdrawals; missing events, rejected feeds
+and unmatched prices cannot erase a verified tape. Changed economic snapshots
+are retained; unchanged quotes are deduplicated.
+First Basket shows opening/previous/current prices, signed probability-point
+deltas, capture counts, book comparisons, and movement/team/player/market filters.
+The NBA-only capture runtime is 120 seconds with an 82-second batch-start budget.
+The existing NFL timeout hierarchy is unchanged.
+
+NBA matrices now support saved classic conditions and ordered filter/rank/group/
+unless pipelines. Inputs cover stat windows/splits, tracking, team context,
+SlipSurge Score/MM, public counts, exact milestone and first-event market prices,
+opening prices and movement. Missing inputs never match as zero. Matrix results
+and avatar indicators are available across Court tools, including full-slate
+First Basket and Slate Edge evaluation. Marketplace includes MLB/NFL/NBA
+discovery; NBA definitions remain separate from existing MLB and NFL definitions.
+
+NBA player images are clipped inside their frames at desktop/mobile sizes, with
+NBA team primary/secondary gradients across research, profiles, favorites,
+search, saved picks, feed and live game views. NBA explanatory paragraphs and
+native/SVG tooltips were removed. First Basket historical tables remain visible
+as accessible scroll regions on mobile.
+
+First-three-minute quotes are available in market controls/history and exact
+saved selections. Full-game or quarter statistics are never used as a proxy
+for unavailable opening-three-minute statistical facts.
+
+Validation
+Production source regression suite: 134/134 passed.
+Focused NBA UI/identity suite: 44/44 passed.
+Final NBA suite: 245/245 passed. TypeScript passed.
+Production build, live capture and browser evidence are recorded in the
+post-release verification entry after deployment.

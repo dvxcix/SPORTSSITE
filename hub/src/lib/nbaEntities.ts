@@ -3,7 +3,7 @@ import { nbaAppeared, nbaMinutes, nbaName, nbaTeamLogo, type PaintGame, type Pai
 export type NbaDirectoryTeam = PaintTeam & { conference: string; division?: string }
 export type NbaDirectoryPlayer = PaintRoster & { weight?: string; country?: string }
 export type NbaDirectory = { teams: NbaDirectoryTeam[]; players: NbaDirectoryPlayer[] }
-export type NbaSearchPlayer = { id: number; name: string; position: string; teamId: number; teamName: string; headshot: string | null; teamLogo: string | null }
+export type NbaSearchPlayer = { id: number; name: string; position: string; teamId: number; teamName: string; teamAbbr?: string; headshot: string | null; teamLogo: string | null }
 export type NbaSearchTeam = { id: number; name: string; abbr: string; logo: string | null }
 export type NbaSeasonSummary = { season: number; games: number; teamIds: number[]; pts: number | null; reb: number | null; ast: number | null; fg3m: number | null; stl: number | null; blk: number | null; min: number | null; fgPct: number | null; threePct: number | null }
 export const nbaEntityId = (value: string) => /^\d{1,10}$/.test(value) && Number(value) > 0 ? Number(value) : null

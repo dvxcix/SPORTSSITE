@@ -835,7 +835,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {post.pick_data.legs.map((leg: any, i: number) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <PlayerAvatar headshot={leg.headshot_url} teamLogo={(post.sport === 'NBA' ? nbaTeamLogo(leg.team) : getTeamLogoUrl(leg.team))} teamAbbr={leg.team} name={leg.player_name} size={30} />
+                          <PlayerAvatar sport={post.sport} headshot={leg.headshot_url} teamLogo={(post.sport === 'NBA' ? nbaTeamLogo(leg.team) : getTeamLogoUrl(leg.team))} teamAbbr={leg.team} name={leg.player_name} size={30} />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</p>
                             <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
@@ -865,6 +865,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   ) : (post.pick_data.mlb_id || post.pick_data.player_id) ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <PlayerAvatar
+                        sport={post.sport}
                         headshot={post.pick_data.headshot_url}
                         teamLogo={(post.sport === 'NBA' ? nbaTeamLogo(post.pick_data.team) : getTeamLogoUrl(post.pick_data.team))}
                         teamAbbr={post.pick_data.team}

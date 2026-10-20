@@ -25,8 +25,8 @@ export function PaintMarketPair({ signal, publicAt, onOpen, href }: { signal: Si
 export function PaintMarketSupport({ support, onOpen, href }: { support?: Support | null; onOpen?: OpenQuote; href?: QuoteHref }) {
   const [expanded, setExpanded] = useState(false)
   if (!support?.signal || support.status !== 'confirmed') {
-    const state = !support ? ['Loading…', 'Checking market signals.'] : support.status === 'stale' || support.status === 'quote_changed' ? ['Updating', 'Waiting for matching, verified prices.'] : support.status === 'under_unsupported' ? ['Over-side only', 'Public activity does not identify under-side interest.'] : support.status === 'none' ? ['No opposing moves', 'No qualifying pair at the available lines and sportsbooks.'] : support.reason === 'No market quote available' ? ['No market', 'No quote is available for this player and selection.'] : ['Awaiting data', 'Verified price and public activity observations are not yet available.']
-    return <span className={polish.signalEmpty} title={state[1]}>{state[0]}</span>
+    const state = !support ? 'Loading…' : support.status === 'stale' || support.status === 'quote_changed' ? 'Updating' : support.status === 'under_unsupported' ? 'Over-side only' : support.status === 'none' ? 'No opposing moves' : support.reason === 'No market quote available' ? 'No market' : 'Awaiting data'
+    return <span className={polish.signalEmpty}>{state}</span>
   }
   const quote = support.signal.target
   const target = nbaBinary(quote.market) ? 'Yes' : quote.type === 'milestone' ? `${quote.line}+` : `O ${quote.line}`

@@ -8,7 +8,7 @@ const clamp = (value: number, low = 0, high = 100) => Math.max(low, Math.min(hig
 const mean = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 const numeric = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const field = (logs: PaintStat[], key: keyof PaintStat) => mean(logs.map(log => log[key]).filter(numeric))
-const ceiling: Record<PaintMarket, number> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5, double_double: 1, triple_double: 1, points_1q: 35, rebounds_1q: 15, assists_1q: 12 }
+const ceiling: Partial<Record<PaintMarket, number>> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5, double_double: 1, triple_double: 1, points_1q: 35, rebounds_1q: 15, assists_1q: 12 }
 export type NbaScorePart = { key: string; label: string; value: number | null; weight: number }
 export type NbaDvp = { teamId: number; position: string; market: PaintMarket; games: number; minutes: number; per48: number | null; leaguePer48: number | null; allowance: number | null }
 export function nbaGamePace(board: PaintBoard) {
@@ -30,7 +30,7 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
   const per36 = production != null && minutes != null && minutes > 0 ? production / minutes * 36 : null
   const opportunity = binary ? production == null ? null : clamp(production * 100) : market === 'points' || market === 'points_1q' ? fga != null && fta != null ? clamp((fga + .44 * fta) / (quarter ? 9.333333 : 28) * 100) : null
     : market === 'threes' ? threes == null ? null : clamp(threes / 12 * 100)
-    : per36 == null ? null : clamp(per36 / ceiling[market] * 100)
+    : per36 == null || ceiling[market] == null ? null : clamp(per36 / ceiling[market]! * 100)
   const minutesValues = recent.map(log => nbaMinutes(log.min)).filter(numeric)
   const deviation = minutes == null ? null : Math.sqrt(minutesValues.reduce((sum, value) => sum + (value - minutes) ** 2, 0) / Math.max(1, minutesValues.length))
   const stability = minutes != null && deviation != null && minutes > 0 ? clamp(100 - deviation / minutes * 200) : null

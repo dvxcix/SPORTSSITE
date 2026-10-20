@@ -26,7 +26,6 @@ export function PaintMilestoneSignals({board,moves,onOverUnder,loading,error,ret
   }).sort((a,b)=>compareMilestoneMoves(a,b,sort,names))
   return <section className={styles.researchTool} aria-label="Milestone cross-market comparison">
     <header className={styles.toolHeading}><h3>Milestone cross-market</h3><div className={styles.segment}><button aria-pressed>Milestones · N+</button><button onClick={onOverUnder}>O/U references</button></div><button aria-label="Refresh cross-market signals" onClick={retry}>Refresh</button></header>
-    <p className={styles.finePrint}>Compare the exact same target and book across teammates, then inspect that player’s other milestones. Negative probability-point change means odds lengthened; positive means shortened. Peer ranks use the full team pool before filters.</p>
     <div className={styles.toolControls}>
       <label>Primary market <select aria-label="Cross-market primary market" value={market} onChange={e=>{setMarket(e.target.value as PaintMarket);setTarget('all')}}>{PAINT_MARKETS.filter(m=>!nbaBinary(m.key)).map(m=><option key={m.key} value={m.key}>{m.label}</option>)}</select></label>
       <label>Target <select aria-label="Cross-market primary milestone" value={target} onChange={e=>setTarget(e.target.value)}><option value="all">All N+ targets</option>{target!=='all'&&!targets.includes(Number(target))&&<option value={target}>{target}+ · not posted</option>}{targets.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>

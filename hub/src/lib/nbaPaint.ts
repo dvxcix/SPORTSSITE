@@ -26,6 +26,9 @@ export const PAINT_MARKETS = [
   { key: 'points_1q', label: 'First-quarter points', short: 'Q1 PTS', stats: ['pts'] },
   { key: 'rebounds_1q', label: 'First-quarter rebounds', short: 'Q1 REB', stats: ['reb'] },
   { key: 'assists_1q', label: 'First-quarter assists', short: 'Q1 AST', stats: ['ast'] },
+  { key: 'points_first3min', label: 'First 3 minutes · points', short: '3 MIN PTS', stats: [] },
+  { key: 'rebounds_first3min', label: 'First 3 minutes · rebounds', short: '3 MIN REB', stats: [] },
+  { key: 'assists_first3min', label: 'First 3 minutes · assists', short: '3 MIN AST', stats: [] },
 ] as const
 export type PaintMarket = typeof PAINT_MARKETS[number]['key']
 /** Keep complete raw facts in storage; send only research fields to each browser. */
@@ -36,7 +39,7 @@ export function nbaCompactStat(row: PaintStat): PaintStat {
 }
 export const nbaPeriod = (market: string) => market.endsWith('_1q') ? 1 : 0
 export const nbaBinary = (market: string) => market === 'double_double' || market === 'triple_double' || !!nbaFirstMarket(market)
-export const nbaMarketLogs = (player: PaintPlayer, market: string) => nbaPeriod(market) ? player.periodLogs ?? [] : player.logs
+export const nbaMarketLogs = (player: PaintPlayer, market: string) => market.endsWith('_first3min') ? [] : nbaPeriod(market) ? player.periodLogs ?? [] : player.logs
 export const nbaPrice = (offer: PaintProp, side: 'over' | 'under' = 'over') => offer.market.type === 'milestone' ? side === 'over' ? offer.market.odds : undefined : side === 'over' ? offer.market.over_odds : offer.market.under_odds
 export function nbaTarget(offer: PaintProp, side: 'over' | 'under' = 'over') { return nbaBinary(offer.prop_type) ? side === 'over' ? 'Yes' : 'No' : offer.market.type === 'milestone' ? `${Number(offer.line_value)}+` : `${side === 'over' ? 'O' : 'U'} ${Number(offer.line_value)}` }
 export const nbaName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g, '').replace(/[^a-z]/g, '')
@@ -50,6 +53,7 @@ export function nbaAppeared(row: Partial<PaintStat>) {
 }
 export function nbaValue(row: Partial<PaintStat> | Record<string, number | null>, market: string): number | null {
   if (nbaFirstMarket(market)) return null // Opening-event markets require plays, never box-score totals.
+  if (market.endsWith('_first3min')) return null // Full-game and quarter totals cannot establish opening-three-minute stats.
   const definition = PAINT_MARKETS.find(m => m.key === market)
   if (!definition) return null
   if (nbaBinary(market)) {

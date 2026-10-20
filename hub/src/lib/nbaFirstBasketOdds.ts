@@ -1,7 +1,9 @@
 import { nbaName, type PaintGame, type PaintPlayer, type PaintProp } from './nbaPaint'
+import type { NbaFirstMovement } from './nbaFirstBasketMovement'
+import { nbaValidOdds } from './nbaOddsHistory'
 
 export type FirstOddsEvent = {id:string;home_team:string;away_team:string;commence_time:string;bookmakers?:{key:string;last_update?:string;markets:{key:string;last_update?:string;outcomes:{name:string;description?:string;price:number}[]}[]}[]}
-export type FirstBasketRow = {game:PaintGame;player:Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>;offer:PaintProp}
+export type FirstBasketRow = {game:PaintGame;player:Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>;offer:PaintProp;movement?:NbaFirstMovement}
 const teamName=(name:string)=>nbaName(name).replace(/^losangeles/,'la')
 export function nbaFirstEvent(events:FirstOddsEvent[],game:PaintGame){
   const starts=Date.parse(game.datetime??game.status)
@@ -22,7 +24,7 @@ export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,player
     const rule=firstRules[book.key],at=market.last_update??book.last_update??'',time=Date.parse(at)
     if(!rule||!Number.isFinite(time)||time>asOf+30000||asOf-time>300000){unmatched+=market.outcomes.length;continue}
     for(const outcome of market.outcomes){
-      if(!Number.isFinite(outcome.price)||Math.abs(outcome.price)<100){unmatched++;continue}
+      if(!nbaValidOdds(outcome.price)){unmatched++;continue}
       const name=outcome.description??(!['yes','no'].includes(outcome.name.toLowerCase())?outcome.name:'')
       const matches=players.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id)&&nbaName(`${p.first_name} ${p.last_name}`)===nbaName(name))
       if(matches.length!==1){unmatched++;continue}

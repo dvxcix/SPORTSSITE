@@ -30,7 +30,7 @@ async function playerImages(abbreviation: string) {
 export async function hydrateNbaPlayers(players: NbaDirectoryPlayer[]): Promise<NbaSearchPlayer[]> {
   const teams = [...new Set(players.map(player => player.team.abbreviation))]
   const images = new Map(await Promise.all(teams.map(async team => [team, await playerImages(team)] as const)))
-  return players.map(player => ({ id: player.id, name: nbaPlayerName(player), position: player.position, teamId: player.team.id, teamName: player.team.full_name, headshot: images.get(player.team.abbreviation)?.[nbaName(nbaPlayerName(player))] ?? null, teamLogo: nbaTeamLogo(player.team.abbreviation) }))
+  return players.map(player => ({ id: player.id, name: nbaPlayerName(player), position: player.position, teamId: player.team.id, teamName: player.team.full_name, teamAbbr: player.team.abbreviation, headshot: images.get(player.team.abbreviation)?.[nbaName(nbaPlayerName(player))] ?? null, teamLogo: nbaTeamLogo(player.team.abbreviation) }))
 }
 
 export async function searchNbaDirectory(query: string) {
