@@ -213,7 +213,7 @@ export function ContextHandoff() {
       <span className="ss-context-handoff-icon"><History size={16} aria-hidden="true" /></span>
       <button type="button" className="ss-context-handoff-main" onClick={resume}>
         <small>Continue where you left off</small>
-        <strong>{remoteContext.page_title || 'Your last view'}</strong>
+        <strong>{/^\/the-paint(?:[/?#]|$)/.test(remoteContext.path) ? 'The Court • SlipSurge' : remoteContext.page_title || 'Your last view'}</strong>
       </button>
       <button type="button" className="ss-context-handoff-go" onClick={resume} aria-label="Continue your last session">
         <ArrowRight size={16} />
