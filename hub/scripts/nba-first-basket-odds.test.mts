@@ -61,3 +61,23 @@ test('numeric first-basket methods preserve 2-point versus 3-point identity',()=
  const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_method_of_first_basket',outcomes:[{name:'2-pointer',description:'Test Player',price:700},{name:'3-pointer',description:'Test Player',price:1200}]}]}]}
  assert.deepEqual(nbaNormalizeFirstOdds(sample,game,[player],now).rows.map(r=>r.offer.prop_type),['first_score_2pt','first_score_3pt'])
 })
+
+test('first-basket normalization diagnostics remain admin-only',async()=>{
+ const {readFile}=await import('node:fs/promises'),ts=(await import('typescript')).default
+ const source=await readFile(new URL('../src/app/the-paint/first-basket/odds/route.ts',import.meta.url),'utf8')
+ const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ for(const isAdmin of [false,true]){
+  const compiled={exports:{} as {GET:(r:unknown)=>Promise<Response>}}
+  const mocks:Record<string,unknown>={
+   'next/server':{NextResponse:{json:(body:unknown,options?:ResponseInit)=>Response.json(body,options)}},
+   '@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'member',isAdmin})},
+   '@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:'2026-10-20',games:[game]})},
+   '@/lib/nbaPaint':{nbaDate:(value:string)=>value},
+   '@/lib/nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[],unmatched:1,withheldMethods:['Unrecognized method']}),NbaFirstOddsUnavailable:class extends Error{}},
+  }
+  new Function('require','module','exports',output)((name:string)=>{assert.ok(name in mocks,name);return mocks[name]},compiled,compiled.exports)
+  const response=await compiled.exports.GET({nextUrl:new URL('https://www.slipsurge.com/the-paint/first-basket/odds?date=2026-10-20')})
+  const body=await response.json();assert.equal(response.status,200);assert.equal('diagnostics' in body,isAdmin)
+  if(isAdmin)assert.deepEqual(body.diagnostics.withheldMethods,['Unrecognized method'])
+ }
+})

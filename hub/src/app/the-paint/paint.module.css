@@ -189,3 +189,5 @@
 .toolControls>input,.movementTools>input{flex:1 1 160px;min-width:0;max-width:100%;min-height:44px;background:#131e2a;border:1px solid #344252;border-radius:7px;color:#d2e0ee;padding:9px 11px;font-size:12px}
 .toolControls>input:focus-visible,.movementTools>input:focus-visible{outline:2px solid #b4ff4d;outline-offset:2px}
 .movementRows>article>small{grid-column:1/-1;color:#91a7be;font-size:11px}
+
+.firstBasketOdds th{text-align:left}.firstBasketOdds th small{display:block;margin-top:5px;font-size:11px;line-height:1.5;color:#91a7be;font-weight:400}
