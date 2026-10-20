@@ -53,7 +53,7 @@ const board: PaintBoard = {
 }
 const originalFetch = globalThis.fetch
 async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '') {
-  state.search = `view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error
+  state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error
   window.history.replaceState(null, '', '/the-paint?' + state.search)
   globalThis.fetch = async input => {
     assert.ok(String(input).startsWith('/the-paint/intelligence?'), String(input))
@@ -81,7 +81,7 @@ function assertSelected(host: Element, quote: PaintProp, side: string) {
 
 test('sportsbook quote drilldown keeps exact main, alt, milestone and Under contracts across different books', async () => {
   for (const [quote, side, target] of [[main, 'over', 'O 20'], [alt, 'over', 'O 24.5'], [alt, 'under', 'U 24.5'], [quarterMilestone, 'over', '5+']] as const) {
-    const ui = await harness('odds', side, null, false, quote.prop_type)
+    const ui = await harness('odds', side, null, false, quote.prop_type, quote.market.type==='milestone'?'&contract=milestone':'')
     try {
       const button = ui.byLabel(`Analyze Test Player, ${target}, ${quote.vendor}`)
       assert.ok(button, `${quote.vendor} ${side} ${target}: ${[...ui.host.querySelectorAll('button[aria-label]')].map(button => button.getAttribute('aria-label')).join('; ')}`)
@@ -110,6 +110,22 @@ test('sportsbook headers keep real logos and accessible names without repeated t
     assert.equal(ladderHeader.querySelector('img')?.getAttribute('src'), '/sportsbooks/fanduel.ico')
     assert.ok(dialog.querySelectorAll('[data-testid="pick"]').length > 0)
   } finally { await ui.close() }
+})
+
+test('milestone targets filter the board and preserve exact N+ pick contracts and URL state', async () => {
+  const ui=await harness('research','over',null,false,'points','&contract=milestone&target=20')
+  try {
+    assert.ok(ui.byLabel('Analyze Test Player, 20+, fanduel'))
+    assert.ok(!ui.byLabel('Analyze Test Player, O 20, fanduel'))
+    assert.ok(ui.host.querySelector('[aria-label="NBA exact target"]'))
+    const target=ui.host.querySelector('select[aria-label="NBA exact target"]') as HTMLSelectElement
+    await act(async()=>{target.value='30';target.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+    assert.equal(new URL(window.location.href).searchParams.get('target'),'30')
+    assert.ok(ui.byLabel('Analyze Test Player, 30+, caesars'))
+    assert.ok(!ui.byLabel('Analyze Test Player, 20+, fanduel'))
+    await ui.click(ui.byLabel('Analyze Test Player, 30+, caesars'))
+    assertSelected(ui.host,milestone,'over')
+  }finally{await ui.close()}
 })
 
 test('ordinary player opens retain the general all-book ladder without a stale selected threshold', async () => {

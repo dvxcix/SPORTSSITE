@@ -63,7 +63,7 @@ test('lower-tier command search discovers NBA upgrades without requesting NBA id
     assert.ok(ui.result('Community Feed'))
     assert.ok(ui.result('The Court · NBA'))
     await ui.type('NBA')
-    assert.equal(ui.host.querySelectorAll('[role="option"]').length,15)
+    assert.equal(ui.host.querySelectorAll('[role="option"]').length,16)
     assert.ok([...ui.host.querySelectorAll('[role="option"]')].every(node=>node.textContent?.includes('Upgrade to Ultimate')))
     await ui.click(ui.result('NBA Ladders'))
     assert.deepEqual(state.pushed,['/pricing#plan-ultimate'])

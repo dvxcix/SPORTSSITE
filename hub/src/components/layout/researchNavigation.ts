@@ -39,7 +39,7 @@ export function researchToolHref(href: string, path: string, search: { get(key: 
   const target = href.split('?')[0]
   if (path !== target || !['/the-sideline', '/the-paint'].includes(target)) return href
   const params = new URLSearchParams(href.split('?')[1] ?? '')
-  const keys = target === '/the-paint' ? ['game', 'date', 'market', 'book', 'side'] : ['game', 'date', 'sample', 'at']
+  const keys = target === '/the-paint' ? ['game', 'date', 'market', 'book', 'side', 'contract', 'target'] : ['game', 'date', 'sample', 'at']
   for (const key of keys) {
     const value = search.get(key)
     if (value && !params.has(key)) params.set(key, value)

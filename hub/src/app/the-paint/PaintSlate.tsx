@@ -1,4 +1,5 @@
 'use client'
+import type { NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpRight, RefreshCw } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -19,16 +20,17 @@ import polish from './research-polish.module.css'
 import dials from './research-dials.module.css'
 
 type Slate = { date: string; games: number; loaded: number; complete: boolean; defenseUnavailable?: number; failed: number[]; rows: NbaSlateViewRow[]; fetchedAt: string; stale: boolean }
-export function PaintSlate({ date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange: (book: string) => void; books: string[] }) {
+export function PaintSlate({ selection, date, market, book, side, onMarketChange, onSideChange, onBookChange, books }: { selection?: NbaMarketSelection; date: string; market: PaintMarket; book: string; side: 'over' | 'under'; onMarketChange: (market: PaintMarket) => void; onSideChange: (side: 'over' | 'under') => void; onBookChange: (book: string) => void; books: string[] }) {
   const [state, setState] = useState<{ key: string; data: Slate } | null>(null), [errorKey, setErrorKey] = useState<string | null>(null), [retry, setRetry] = useState(0), [query, setQuery] = useState(''), [focus, setFocus] = useState('all'), [sort, setSort] = useState('score'), [ascending, setAscending] = useState(false), [limit, setLimit] = useState(50)
-  const key = `${date}:${market}:${book}:${side}`
+  const contract=selection?.type??'',target=selection?.line==null?'':String(selection.line)
+  const key = `${date}:${market}:${book}:${side}:${contract}:${target}`
   useEffect(() => {
     const controller = new AbortController(); let pending = false
     const update = async () => {
       if (pending) return
       pending = true
       try {
-        const response = await fetch(`/the-paint/slate?${new URLSearchParams({ date, market, book, side })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
+        const response = await fetch(`/the-paint/slate?${new URLSearchParams({ date, market, book, side, contract, target })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
         if (!response.ok) throw new Error('unavailable')
         const data = await response.json()
         if (!controller.signal.aborted) { setState({ key, data }); setErrorKey(null) }
@@ -37,7 +39,7 @@ export function PaintSlate({ date, market, book, side, onMarketChange, onSideCha
     }
     void update(); const stop = watchNbaRefresh(update)
     return () => { controller.abort(); stop() }
-  }, [date, market, book, side, key, retry])
+  }, [date, market, book, side, key, retry, contract, target])
   const slate = state?.key === key ? state.data : null
   const error = errorKey === key
   const refresh = () => { setErrorKey(null); setRetry(value => value + 1) }

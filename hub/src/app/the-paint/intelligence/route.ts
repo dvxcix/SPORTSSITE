@@ -1,3 +1,4 @@
+import { nbaReadSelection, nbaSelectedPlayers } from '@/lib/nbaMarketSelection'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
@@ -14,7 +15,8 @@ export async function GET(request: NextRequest) {
   const market=request.nextUrl.searchParams.get('market')??'points',book=request.nextUrl.searchParams.get('book')??'all',side=request.nextUrl.searchParams.get('side')??'over'
   if (!id || !/^\d{1,10}$/.test(id) || !PAINT_MARKETS.some(item=>item.key===market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over','under'].includes(side)) return NextResponse.json({ error: 'Invalid matchup' }, { status: 400 })
   try {
-    const board = await getPaintBoard(await getPaintGame(Number(id)))
+    const rawBoard = await getPaintBoard(await getPaintGame(Number(id)))
+    const board = {...rawBoard,players:nbaSelectedPlayers(rawBoard.players,market,nbaReadSelection(request.nextUrl.searchParams))}
     let defenseTimer:ReturnType<typeof setTimeout>|undefined
     const defenseLoad=Promise.race([
       getNbaDefenseContext(board.sampleSeason,board.game.date),

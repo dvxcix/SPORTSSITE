@@ -1,3 +1,6 @@
+import * as marketSelection from '../src/lib/nbaMarketSelection.ts'
+import { nbaOpeningSequence, nbaFirstBasketResearch } from '../src/lib/nbaFirstBasket.ts'
+import { nbaMilestoneMovements } from '../src/lib/nbaMovement.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { hasNbaAccess } from '../src/lib/nbaAccessPolicy.ts'
@@ -124,7 +127,7 @@ test('NBA position allowances use historical defensive opponent, valid minutes, 
 
 test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
   let reads=0
-  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaResearchIdentity':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
+  const imports={'next/server':{NextResponse:{json:Response.json}},'node:crypto':{},'@/lib/cron-auth':{requireCronAuth:()=>Response.json({},{status:401})},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>{reads++;throw new Error('Unexpected read')}},'@/lib/nbaIngestion':{},'@/lib/nbaResearchIdentity':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaMarketSelection':{},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},'@/lib/nbaSharedCache':{},'@/lib/nbaPaint':{}}
   for(const job of ['nba-research-sync','nba-model-validate','nba-research-snapshot']){
     const route=await compiled(`../src/app/api/cron/${job}/route.ts`,imports)
     assert.equal((await(route.GET as(r:Request)=>Promise<Response>)(new Request(`https://test/api/cron/${job}`))).status,401)
@@ -256,9 +259,9 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
 })
 
 test('NBA research APIs reject denied access and invalid games before loading providers',async()=>{
-  for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts']){
+  for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts','../src/app/the-paint/first-basket/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaFirstBasket':{},'@/lib/balldontlie':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
@@ -334,10 +337,11 @@ test('hit rates distinguish pushes, overs, unders and milestone equality', () =>
   assert.equal(nbaHitRate(logs, 'points', 20, 'over', true).wins, 2)
   assert.equal(nbaHitRate([stat(null)], 'points', 20, 'over').rate, null)
 })
-test('reference lines use main markets and the most widely quoted numeric line', () => {
+test('reference selections prefer posted milestones and retain O/U consensus when milestones are absent', () => {
   const ladder = { ...offer, line_value: '10', market: { type: 'milestone' as const, odds: 200 } }
   const more = { ...offer, vendor: 'draftkings', line_value: '20.5' }
-  assert.equal(nbaReference([ladder], 'points'), null)
+  assert.equal(nbaReference([ladder, offer], 'points'), ladder)
+  assert.equal(nbaReference([ladder], 'points', 'all', 'under'), null)
   assert.equal(nbaReference([offer, more, { ...more, vendor: 'caesars' }], 'points')?.line_value, '20.5')
   assert.equal(nbaReference([offer, more], 'points', 'fanduel')?.vendor, 'fanduel')
 })
@@ -370,7 +374,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMarketSelection')return marketSelection;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
@@ -458,6 +462,38 @@ test('MM responds to live lines, prices and production without converting agreem
     if (kind === 'unfinished') invalid[0].logs[0].game = { ...invalid[0].logs[0].game, status: 'Live', status_state: 'in_progress' }
     assert.equal(rank(invalid).size, 0, kind)
   }
+})
+
+test('milestone movement keeps each N+ threshold exact across captures and never substitutes O/U', () => {
+  const rung = (line: number, odds: number): PaintProp => ({...offer,line_value:String(line),market:{type:'milestone',odds}})
+  const frames=[{captured_at:'2026-10-19T10:00:00Z',props:[rung(10,-200),rung(20,200),offer]},{captured_at:'2026-10-19T11:00:00Z',props:[rung(10,-250),rung(20,150),{...offer,line_value:'24.5'}]}]
+  const rows=nbaMilestoneMovements(frames,434,'points','fanduel')
+  assert.deepEqual(rows.map(row=>row.offer.line_value),['10','20'])
+  assert.deepEqual(rows.map(row=>row.movement.priceFirstOdds),[-200,200])
+  assert.deepEqual(rows.map(row=>row.movement.priceLatestOdds),[-250,150])
+  assert.ok(rows.every(row=>row.movement.lineChange===0&&row.movement.priceChange!>0))
+  assert.equal(nbaMilestoneMovements(frames,434,'points','draftkings').length,0)
+  assert.equal(nbaMilestoneMovements(frames,434,'points','fanduel',[],20).length,1)
+  assert.equal(nbaMilestoneMovements(frames,434,'points','fanduel',[],15).length,0)
+  assert.deepEqual(marketSelection.nbaSelectedProps([rung(10,-200),rung(20,200),offer],'points',{type:'milestone',line:20}).map(p=>p.line_value),['20'])
+})
+
+test('first-basket research separates free throws, field goals and attempts and refuses incomplete openings', () => {
+  const play=(order:number,patch:Partial<NbaPlay>={}):NbaPlay=>({game_id:90,order,type:'Jump Shot',text:'Test Player makes jump shot',period:1,clock:'11:45',scoring_play:true,shooting_play:true,score_value:2,team:{id:2},coordinate_x:25,coordinate_y:5,participants:[434],...patch})
+  const plays=[play(1,{type:'Jumpball',clock:'12:00',shooting_play:false,scoring_play:false,score_value:null}),play(2,{type:'Free Throw',score_value:1}),play(3,{scoring_play:false,score_value:null}),play(4),play(5,{team:{id:9},participants:[99]})]
+  const opening=nbaOpeningSequence([...plays,play(1,{game_id:999})],90)
+  assert.equal(opening.tip?.team?.id,2)
+  assert.equal(opening.firstScore?.order,2)
+  assert.equal(opening.firstFieldGoal?.order,4)
+  assert.equal(opening.firstAttempt?.order,3)
+  assert.deepEqual(opening.teamFieldGoals.map(p=>p.order).sort(),[4,5])
+  assert.equal(nbaOpeningSequence(plays.slice(1),90).firstFieldGoal,undefined)
+  assert.equal(nbaOpeningSequence(plays.filter(p=>p.order!==2),90).firstFieldGoal,undefined)
+  const team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
+  const board={game:{id:123,date:'2026-10-20',home_team:team,visitor_team:{...team,id:9}},players:[{id:434,team,logs:[{...stat(22),game:{...stat(22).game,id:90}}]}]} as import('../src/lib/nbaPaint.ts').PaintBoard
+  const research=nbaFirstBasketResearch(board,plays,[90,91])
+  assert.equal(research.coveredGames,1);assert.equal(research.requestedGames,2)
+  assert.deepEqual(research.rows[0],{playerId:434,games:1,firstFieldGoals:1,firstScores:1,firstAttempts:1,teamFirstFieldGoals:1})
 })
 
 test('save → post API → My Picks → final settlement preserves exact NBA identities', async () => {

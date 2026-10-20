@@ -63,7 +63,7 @@ test('mobile sport picker and switcher show every NBA tool with explicit Ultimat
     const switcher=render('ResearchSportSwitcher',{sport:'nba',nflAccess:true,nbaAccess:allowed,onChange:noop})
     assert.match(html,/NBA tools/);assert.match(switcher,/>NBA<\/span>/)
     if (allowed) { assert.match(html,/href="\/the-paint\?view=ladders/);assert.doesNotMatch(html,/Ultimate required/) }
-    else { assert.doesNotMatch(html,/href="\/the-paint/);assert.equal((html.match(/href="\/pricing#plan-ultimate"/g)??[]).length,15);assert.match(switcher,/aria-label="NBA research · Ultimate required"/) }
+    else { assert.doesNotMatch(html,/href="\/the-paint/);assert.equal((html.match(/href="\/pricing#plan-ultimate"/g)??[]).length,16);assert.match(switcher,/aria-label="NBA research · Ultimate required"/) }
     assert.match(html,/NFL tools/)
     assert.match(html,/MLB tools/)
   }
@@ -101,7 +101,7 @@ test('mobile NBA tab changes the actual tool menu and dismissing restores focus 
     await act(async()=>tab.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
     assert.equal(tab.getAttribute('aria-pressed'),'true')
     const links=[...host.querySelectorAll('nav[aria-label="NBA quick tools"] a')]
-    assert.equal(links.length,14)
+    assert.equal(links.length,15)
     assert.ok(links.every(link=>link.getAttribute('href')==='/pricing#plan-ultimate'))
     await act(async()=>host.querySelector('dialog')!.dispatchEvent(new dom.window.Event('cancel',{bubbles:false,cancelable:true})))
     assert.equal(host.querySelector('dialog'),null)

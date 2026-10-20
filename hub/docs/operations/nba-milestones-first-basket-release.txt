@@ -1,0 +1,27 @@
+NBA milestones and first-basket research — 2026-10-20
+
+Baseline main/production: a1af8fad, retaining recovered NFL ancestry.
+Live audit of Boston–Detroit: points 340 milestone vs 41 O/U quotes;
+rebounds 316 vs 38; assists 183 vs 26; threes 145 vs 21.
+Previously NBA references preferred O/U, hiding most of this coverage.
+
+Milestones now lead reference selection and the board defaults to N+ format.
+Exact posted targets filter board, odds, MM, player details, Score and Slate.
+O/U remains an explicit selection. Contract/target survive research navigation,
+day/game navigation and saved URLs; slate cache includes exact selection.
+Ladders retain all rungs. Market Story defaults to fixed N+ contracts with
+individual opening/current prices and target filters. O/U movement is optional.
+
+First basket is a dedicated desktop/mobile research destination. It distinguishes
+game first field goal, first score including free throws, first field-goal attempt,
+team first field goal and opening-tip wins. Data uses completed pregame current-team
+appearances and verified contiguous opening sequences. Coverage is explicit.
+The route reads archived opening plays, then requests missing games on demand
+in bounded cloud batches. No collector replays, schema changes or historical
+database writes. Posted first-basket odds appear only if actually supplied;
+absent coverage does not become invented prices or win/loss outcomes.
+
+Validation: NBA suite 213/213; production suite 134/134; TypeScript clean.
+Tests exercise exact N+ target switching/drilldown, independent milestone price
+movement, first-score vs first-FG semantics, gaps and cross-game contamination,
+and existing Ultimate access/score freshness/privacy regressions.

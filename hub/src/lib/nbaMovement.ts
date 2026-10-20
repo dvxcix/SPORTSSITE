@@ -2,6 +2,15 @@ import { nbaBinary, nbaPrice, nbaReference, type PaintProp, type PaintMarket } f
 import { impliedProbability } from './nbaMarketMetrics'
 import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 export type PaintFrame = { captured_at: string; props: PaintProp[] }
+/** Track fixed N+ contracts, never a moving reference assembled from ladders. */
+export function nbaMilestoneMovements(frames: PaintFrame[], player: number, market: PaintMarket, vendor: string, openingRows: NbaQuoteOpeningRow[] = [], line?: number) {
+  const latest = [...frames].sort((a,b) => a.captured_at.localeCompare(b.captured_at)).at(-1)
+  const offers = latest?.props.filter(p => p.player_id === player && p.vendor === vendor && p.prop_type === market && p.market.type === 'milestone' && impliedProbability(nbaPrice(p)) != null && (line == null || Number(p.line_value) === line)) ?? []
+  return [...new Map(offers.map(offer => [`${offer.game_id}:${Number(offer.line_value)}`, offer])).values()].sort((a,b) => Number(a.line_value)-Number(b.line_value)).map(offer => ({
+    offer,
+    movement: nbaMovement(frames.map(frame => ({ ...frame, props: frame.props.filter(p => p.game_id === offer.game_id && p.market.type === 'milestone' && Number(p.line_value) === Number(offer.line_value)) })), player, market, vendor, 'over', openingRows),
+  }))
+}
 // A book's reference may move only when that book's own quotes move. Using
 // cross-book consensus here can manufacture line movement from unchanged quotes.
 export function nbaMovementReference(props: PaintProp[], market: PaintMarket, vendor: string, side: 'over'|'under') {

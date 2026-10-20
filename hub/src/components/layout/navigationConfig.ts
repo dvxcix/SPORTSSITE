@@ -39,6 +39,7 @@ export const nbaResearchNavigation: ProductNavItem[] = [
   { href: '/the-paint?view=odds', label: 'NBA Odds', shortLabel: 'Odds', icon: ChartSpline },
   { href: '/the-paint?view=ladders', label: 'NBA Ladders', shortLabel: 'Ladders', icon: ListOrdered },
   { href: '/the-paint?view=movement', label: 'NBA Market Story', shortLabel: 'Market Story', icon: TrendingUp },
+  { href: '/the-paint?view=first-basket', label: 'NBA First basket', shortLabel: 'First basket', icon: Crosshair },
   { href: '/the-paint?view=cheatsheets', label: 'NBA Cheatsheets', shortLabel: 'Cheatsheets', icon: Table2 },
   { href: '/the-paint?view=score', label: 'NBA SlipSurge Score', shortLabel: 'SlipSurge Score', icon: Crosshair },
   { href: '/the-paint?view=slate', label: 'NBA Slate Edge', shortLabel: 'Slate Edge', icon: Layers3 },

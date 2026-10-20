@@ -79,6 +79,10 @@ export function nbaHitRate(logs: PaintStat[], market: string, line: number, side
 export function nbaReference(props: PaintProp[], market: string, vendor = 'all', side: 'over' | 'under' = 'over') {
   const qualified = props.filter(p => p.prop_type === market && Number.isFinite(Number(p.line_value)) && nbaPrice(p, side) != null)
   if (nbaBinary(market)) return qualified.filter(p => (vendor === 'all' || p.vendor === vendor) && (p.market.type === 'milestone' ? [0.5,1].includes(Number(p.line_value)) : Number(p.line_value) === .5)).sort((a,b) => nbaPrice(b,side)! - nbaPrice(a,side)!)[0] ?? null
+  // Milestones are the primary NBA selection. A balanced posted target is a
+  // useful starting point; callers can restrict props to an exact N+ contract.
+  const milestones = qualified.filter(p => side === 'over' && p.market.type === 'milestone' && (vendor === 'all' || p.vendor === vendor) && Number(p.line_value) > 0 && Math.abs(nbaPrice(p) ?? 0) >= 100)
+  if (milestones.length) return milestones.sort((a,b) => Math.abs(Math.abs(nbaPrice(a)!) - 100) - Math.abs(Math.abs(nbaPrice(b)!) - 100) || Number(a.line_value) - Number(b.line_value) || nbaPrice(b)! - nbaPrice(a)!)[0]
   if (!qualified.some(p => p.market.type === 'over_under' && (vendor === 'all' || p.vendor === vendor))) return !nbaPeriod(market) ? null : qualified.filter(p => p.market.type === 'milestone' && (vendor === 'all' || p.vendor === vendor)).sort((a,b) => Math.abs(Math.abs(nbaPrice(a,side) ?? -100) - 100) - Math.abs(Math.abs(nbaPrice(b,side) ?? -100) - 100) || Number(a.line_value)-Number(b.line_value))[0] ?? null
   const offers = props.filter(p => p.prop_type === market && p.market.type === 'over_under' && Number.isFinite(Number(p.line_value)) && (side === 'over' ? p.market.over_odds : p.market.under_odds) != null)
   const counts = new Map<string, number>(); for (const p of offers) counts.set(String(Number(p.line_value)), (counts.get(String(Number(p.line_value))) ?? 0) + 1)
