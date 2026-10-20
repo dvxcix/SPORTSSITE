@@ -1,0 +1,10 @@
+NBA First Basket connection review — 2026-10-20
+Owner authorized resuming the deferred integration after configuring the production-only ODDS_API_KEY and publishing milestone tools.
+
+Adds a gated slate endpoint for real first-basket, first-team-basket and first-basket-method prices. Only uniquely matched game/player identities and supported book rules are published; invalid/stale/unknown prices are withheld. No provider URLs, API keys or source identities enter customer responses. Same winning-event contracts are compared by book. Save actions preserve exact player/game/market/method/book/price and validate the current quote again before posting.
+
+First score, first field goal and team-specific winning events remain distinct. Method grading uses the opening play sequence, not full-game totals. Missing starters, missing opening sequence, DNPs or nonfinal results stay pending for review. No database/schema changes or job replays.
+
+The slate UI includes game, market, book, player search and best-price/name/game-time sorting. Unverified quote counts and incomplete coverage remain visible.
+
+Validation: combined NBA suite 222/222; production regression 134/134; typecheck passed. Real production coverage and saved-selection browser verification pending deployment. Production metadata confirms ODDS_API_KEY exists with Production scope; value was not retrieved or printed.

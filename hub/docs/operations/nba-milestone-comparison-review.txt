@@ -1,6 +1,6 @@
 NBA exact milestone comparison and filtering review — 2026-10-20
 
-Status: implementation complete on codex/nba-milestone-comparison; production release awaits task-specific owner authorization.
+Status: owner authorized publication; released as 08375acf on GitHub main. Production dpl_Ch3dsjNBtqyauod3KvN2qSLimoo4 READY on this exact commit.
 Baseline: origin/main 68a08763efd1bd1b1ea9a1f049a815f199d3076d, production READY on the same commit. Required recovered NFL ancestry verified.
 
 Cross-market now defaults to exact N+ prices instead of O/U reference signals. Movement retains game, player, bookmaker, market, threshold and side identity. Valid immutable openings are preferred; otherwise the earliest captured price is labeled FIRST. Missing comparison history stays unavailable. Missing latest quotes are not resurrected.
@@ -9,4 +9,4 @@ Primary/related market and target, team, bookmaker, search, direction, minimum m
 
 Market Story now exposes signed lengthening/shortening sorting, movement minimums and exact milestone teammate ranks. Score and Slate expose explicit sort controls and team filters; Slate also filters by game. Cheatsheets expose contract format, market-specific exact target and sorting. Drilldown links retain exact target/book/game identity.
 
-Validation: typecheck passes; NBA suite 217/217; production source regression suite 134/134. UI behavior test exercises 15+ points lengthening with rebounds/assists shortening, sorting and searching while retaining full-team ranks. Browser production verification is pending release. No database mutations, collector replays, first-basket odds changes, secrets or subscription changes.
+Validation: typecheck passes; NBA suite 217/217; production source regression suite 134/134. UI behavior test exercises 15+ points lengthening with rebounds/assists shortening, sorting and searching while retaining full-team ranks. Browser production verification passed: Cross-market 15+ points shows 26 primary selections, exact opposing related targets, signed sorting and teammate ranks. Screenshot retained in local work/nba-milestone-live.png. Local optimized build compiled and typechecked; prerender requires production public configuration absent locally. Vercel production build passed. No database mutations, collector replays, first-basket odds changes, secrets or subscription changes.
