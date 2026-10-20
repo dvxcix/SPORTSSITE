@@ -56,5 +56,39 @@ Validation
 Production source regression suite: 134/134 passed.
 Focused NBA UI/identity suite: 44/44 passed.
 Final NBA suite: 245/245 passed. TypeScript passed.
-Production build, live capture and browser evidence are recorded in the
-post-release verification entry after deployment.
+Shared-sport regression suite: 26/26 passed.
+
+Post-release verification
+GitHub main and READY Vercel production matched 7761ed8a4aac0e565164c71a61a92a1e88eaf241.
+Deployment: dpl_DzXhpAPxFEBpsCu9eFHkG8ts6TWD.
+The normal 05:30 UTC cloud capture succeeded (HTTP 200, 2.93 seconds):
+14 First Basket game frames, 820 real quotes, zero failures/deferred games.
+Today's three games each had 110 quotes (330 total). Standard markets checked
+14 games, recorded four changed frames and deduplicated ten unchanged frames.
+No manual replay was used.
+
+Signed-in production browser verification:
+- Created a private two-step pipeline: rank exact FanDuel 15+ points movement
+  per team, then require exact 4+ rebounds movement availability.
+- Two player matches appeared on the Court, with avatar matrix indicators.
+  Reload preserved the saved definition and matches.
+- Editing to most-lengthened/in-game ranking persisted and returned one
+  matching player in each of the three slate games.
+- Editing the temporary definition to exact First Basket FanDuel current
+  price ranking returned three slate matches through the production API/UI.
+- First Basket player/market filters retained book comparisons and history
+  tables remained visible on mobile. No native or role-based tooltips were
+  present in the checked NBA views.
+- Mobile player portraits were visibly clipped within their team-gradient
+  frames; position labels remained clear. Desktop First Basket document width
+  matched its viewport (1270px).
+- Production runtime error/fatal log query for this deployment returned none
+  during the initial live verification window.
+
+Browser QA found two final mobile layout issues: movement rank controls were
+too narrow, and a saved-matrix count could push the header past the viewport.
+The follow-up makes the NBA rank row two columns, uses an accessible icon-only
+close button and permits the Court header actions to wrap. Shared NFL styles
+are unchanged. Focused matrix/UI checks pass 21/21; ESLint is clean.
+Screenshots and local verification output are in work/nba-*-live.png and
+work/nba-parity-*-tests.txt. Temporary QA definitions are removed after testing.

@@ -229,4 +229,6 @@
   .firstBasketOdds .movementTools>label{flex-basis:calc(50% - 4px)}
   .firstBasketOdds .sectionHeading{align-items:flex-start}
   .firstBasketOdds .sectionHeading .filterToggle{padding:8px;min-width:88px;white-space:normal}
+  .header{flex-wrap:wrap}
+  .headerActions{margin-left:auto;min-width:0;max-width:100%;flex-wrap:wrap}
 }
