@@ -2,9 +2,12 @@ import { isNbaToolHref } from '@/lib/nbaAccessPolicy'
 
 export type ResearchSport = 'mlb' | 'nfl' | 'nba'
 
-const mlbRoutes = ['/mlb', '/players', '/dugout', '/sports', '/weather-lab', '/pitcher-report', '/slate-breakdown', '/batter-cost', '/odds-terminal', '/synergy', '/daily-recap', '/spray-charts', '/the-public']
+const mlbRoutes = ['/mlb', '/players', '/dugout', '/weather-lab', '/pitcher-report', '/slate-breakdown', '/batter-cost', '/odds-terminal', '/synergy', '/daily-recap', '/spray-charts', '/the-public']
 
 export function researchSportForPath(path: string): ResearchSport | null {
+  if (path.startsWith('/sports/nba/')) return 'nba'
+  if (path.startsWith('/sports/nfl/')) return 'nfl'
+  if (path.startsWith('/sports/mlb/')) return 'mlb'
   if (isNbaToolHref(path)) return 'nba'
   if (['/the-sideline', '/nfl'].some(route => path === route || path.startsWith(route + '/'))) return 'nfl'
   return mlbRoutes.some(route => path === route || path.startsWith(route + '/')) ? 'mlb' : null

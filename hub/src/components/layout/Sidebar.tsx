@@ -57,7 +57,6 @@ const nav: NavItem[] = [
   // anymore) so these read as a distinct tool group, not just more generic
   // pages mixed in with Groups/Explore/etc.
   { section: 'MLB Research', logo: MLB_LOGO_URL },
-  { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
@@ -80,6 +79,7 @@ const nav: NavItem[] = [
   ...nbaResearchNavigation.map(item => ({ href: item.href, icon: item.icon, label: item.shortLabel ?? item.label, nbaOnly: true })),
   null,
   { section: 'Connect' },
+  { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
   { href: '/community',   icon: Users,         label: 'Community' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },

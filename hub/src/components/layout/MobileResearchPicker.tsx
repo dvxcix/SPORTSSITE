@@ -50,6 +50,7 @@ export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false
       <nav className={styles.tools} aria-label={selected.toUpperCase() + ' quick tools'}>
         {tools.map(item => <Link key={item.href} href={href(item.href)} prefetch={false} aria-current={!nbaLocked && researchToolActive(item.href, path, search) ? 'page' : undefined} aria-label={nbaLocked ? `${item.shortLabel ?? item.label} · Ultimate required` : undefined} onClick={onClose}><item.icon size={18} aria-hidden="true" /><span>{item.shortLabel ?? item.label.replace(/^(NFL|NBA) /, '')}</span>{nbaLocked && <LockKeyhole size={12} className={styles.lock} aria-hidden="true" />}</Link>)}
       </nav>
+      <Link className={styles.workspace} href="/sports" prefetch={false} onClick={onClose}><Layers3 size={18} aria-hidden="true" /><span>Live Scores · MLB, NFL & NBA</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
       <Link className={styles.workspace} href="/workspace" prefetch={false} onClick={onClose}><Layers3 size={18} aria-hidden="true" /><span>Research Workspace</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
     </div>
   </dialog>
