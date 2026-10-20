@@ -3,6 +3,7 @@ import { getPaintGame, getPaintProps, getPaintIdentity } from './nbaPaintData'
 import { nbaBinary, PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
 import { nbaFirstMarket, nbaFirstLabel } from './nbaFirstBasketMarkets'
 import { getNbaFirstOdds } from './nbaFirstBasketOddsData'
+import { nbaSharedCache } from './nbaSharedCache'
 export type PaintPickLeg = { player_id?: string | null; player_name: string; team: string | null; game_pk: string | null; game_date: string | null; prop_key: string; prop_label: string; line?: string; numeric_line?: number | null; market_side?: 'over' | 'under' | 'milestone'; book: string | null; odds: number | null }
 export function paintOfferMatches(offer: PaintProp, leg: PaintPickLeg) {
   const player = Number(leg.player_id?.replace(/^bdl:/, ''))
@@ -26,10 +27,12 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
     const identities = new Map<number, Awaited<ReturnType<typeof getPaintIdentity>>>()
     await Promise.all([
       ...[...new Set(legs.map(l => l.game_pk!))].map(async id => {
-        const game = await getPaintGame(Number(id), true), gameLegs=legs.filter(l=>l.game_pk===id)
+        // Share only short-lived public sports inputs. Every user's requested
+        // contract and price is still validated independently below.
+        const game = (await nbaSharedCache(`pick-game:v1:${id}`,15,0,()=>getPaintGame(Number(id),true),25)).value, gameLegs=legs.filter(l=>l.game_pk===id)
         const [regular,first]=await Promise.all([
-          gameLegs.some(l=>!nbaFirstMarket(l.prop_key))?getPaintProps(Number(id),true):Promise.resolve([]),
-          gameLegs.some(l=>nbaFirstMarket(l.prop_key))?getNbaFirstOdds(game,true):Promise.resolve({rows:[]}),
+          gameLegs.some(l=>!nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-props:v1:${id}`,15,0,()=>getPaintProps(Number(id),true),25).then(result=>result.value):Promise.resolve([]),
+          gameLegs.some(l=>nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-first:v1:${id}`,15,0,()=>getNbaFirstOdds(game,true),40).then(result=>result.value):Promise.resolve({rows:[]}),
         ])
         games.set(id,{game,props:[...regular,...first.rows.map(row=>row.offer)]})
       }),

@@ -11,7 +11,7 @@ async function compiled(file:string,imports:Record<string,unknown>){
   const source=await readFile(new URL(file,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
-  new Function('require','exports','module',outputText)((name:string)=>{if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(!(name in imports)&&(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData'))return {};assert.ok(name in imports,name);return imports[name]},target.exports,target)
+  new Function('require','exports','module',outputText)((name:string)=>{if(name==='./nbaSharedCache'&&!(name in imports))return {nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})};if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(!(name in imports)&&(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData'))return {};assert.ok(name in imports,name);return imports[name]},target.exports,target)
   return target.exports
 }
 const quote:pure.PaintProp={id:22,player_id:434,game_id:123,vendor:'fanduel',prop_type:'points',line_value:'29.5',market:{type:'over_under',over_odds:350,under_odds:-480},updated_at:'2099-10-20T10:00:00Z'}

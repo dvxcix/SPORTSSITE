@@ -8,7 +8,7 @@ import { nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSig
 import { nbaGamePace,nbaPosition,nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaReference,nbaPeriod,PAINT_MARKETS,type PaintMarket } from '@/lib/nbaPaint'
 import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
-export const maxDuration = 60
+export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
   const id = request.nextUrl.searchParams.get('game')

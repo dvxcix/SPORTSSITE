@@ -59,6 +59,7 @@ export function PlayerAvatar({
   const badgeSize = Math.round(size * 0.46)
   const showHeadshot = headshot && !headshotFailed
   const showBadge = showTeam && teamLogo && !logoFailed
+  const isNba = sport?.toLowerCase() === 'nba'
 
   return (
     <div
@@ -71,16 +72,15 @@ export function PlayerAvatar({
         ...style,
       }}
     >
-      {/* Main avatar — team-color backdrop behind the (usually transparent-bg)
-          headshot, with the image slightly inset and "contain"-fit so the
-          whole face/head shows instead of a tight, cropped-off zoom. */}
+      {/* NBA artwork has a wide transparent canvas. Fill the frame and crop
+          the lower jersey so the face stays readable at small sizes. */}
       <div
         style={{
           width: size,
           height: size,
           borderRadius: '50%',
           overflow: 'hidden',
-          background: sport?.toLowerCase() === 'nba' ? nbaTeamGradient(teamAbbr) : showHeadshot ? getTeamColor(teamAbbr) : 'var(--accent-dim)',
+          background: isNba ? nbaTeamGradient(teamAbbr) : showHeadshot ? getTeamColor(teamAbbr) : 'var(--accent-dim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -96,7 +96,15 @@ export function PlayerAvatar({
             src={headshot!}
             alt={name}
             onError={() => setHeadshotFailed(true)}
-            style={{ width: '112%', height: '112%', objectFit: 'contain', objectPosition: 'center 40%', filter: 'saturate(1.06) contrast(1.02)' }}
+            style={{
+              width: isNba ? '100%' : '112%',
+              height: isNba ? '100%' : '112%',
+              objectFit: isNba ? 'cover' : 'contain',
+              objectPosition: isNba ? 'center' : 'center 40%',
+              transform: isNba ? 'scale(1.2)' : undefined,
+              transformOrigin: isNba ? 'center 12%' : undefined,
+              filter: 'saturate(1.06) contrast(1.02)',
+            }}
           />
         ) : (
           initials || '?'

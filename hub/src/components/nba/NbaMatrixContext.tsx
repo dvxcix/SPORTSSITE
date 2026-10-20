@@ -1,9 +1,10 @@
 'use client'
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import type { PaintBoard } from '@/lib/nbaPaint'
 import styles from './nbaMatrix.module.css'
 import { useRouter } from 'next/navigation'
+import { loadNbaMatrixGames } from '@/lib/nbaMatrixGames'
 
 type Match = { id: string; name: string; color: string; playerIds: number[]; missing: number }
 type Player = { id: number; name: string; gameId: number; team: string }
@@ -14,30 +15,30 @@ export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBo
   const scopeKey = (gameIds?.length ? gameIds : board ? [board.game.id] : []).slice(0,16).join(',')
   const [state, setState] = useState<{ scopeKey: string; matches: Match[]; players: Player[] } | null>(null)
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [revision, setRevision] = useState(0)
+  const requestRef = useRef<AbortController | null>(null)
   const refresh = useCallback(() => setRevision(v => v + 1), [])
+  const refreshScheduled = useCallback(() => { if (!requestRef.current) refresh() }, [refresh])
+  const pollMilliseconds = state?.scopeKey === scopeKey && state.matches.length === 0 ? 300000 : 60000
   useEffect(() => {
-    const stop = watchNbaRefresh(refresh)
+    const stop = watchNbaRefresh(refreshScheduled, pollMilliseconds)
     window.addEventListener('ss:nba-matrices-updated', refresh)
     window.addEventListener('nba-matrices-changed', refresh)
     return () => { stop(); window.removeEventListener('ss:nba-matrices-updated', refresh); window.removeEventListener('nba-matrices-changed', refresh) }
-  }, [refresh])
+  }, [refresh, refreshScheduled, pollMilliseconds])
   useEffect(() => {
     if (!scopeKey) return
     const controller = new AbortController()
+    requestRef.current = controller
     const run = async () => {
       setLoading(true)
       try {
-        const ids = scopeKey.split(',').map(Number), results: { matches: Match[]; players?: Player[]; unavailable?: string[] }[] = []
-        let failed = 0
-        for (let offset=0; offset<ids.length; offset+=3) {
-          const batch = await Promise.allSettled(ids.slice(offset,offset+3).map(async gameId => {
+        const ids = scopeKey.split(',').map(Number)
+        const { results, failed } = await loadNbaMatrixGames<{ matrices?: unknown[]; matches: Match[]; players?: Player[]; unavailable?: string[] }>(ids, async gameId => {
             const response = await fetch(`/api/nba-matrices/evaluate?game=${gameId}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(110000)]) })
             const result = await response.json()
             if (!response.ok || result.gameId !== gameId) throw new Error()
             return result
-          }))
-          for (const result of batch) { if (result.status === 'fulfilled') results.push(result.value); else failed++ }
-        }
+        })
         if (!results.length) throw new Error()
         const combined = new Map<string, Match>()
         for (const match of results.flatMap(r => r.matches)) {
@@ -50,10 +51,13 @@ export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBo
           setError(failed ? `${failed} games unavailable` : unavailable.length ? `${unavailable.join(', ')} unavailable` : '')
         }
       } catch { if (!controller.signal.aborted) { setState(null); setError('Matrix results unavailable') } }
-      finally { if (!controller.signal.aborted) setLoading(false) }
+      finally {
+        if (requestRef.current === controller) requestRef.current = null
+        if (!controller.signal.aborted) setLoading(false)
+      }
     }
-    void run(); return () => controller.abort()
-  }, [scopeKey, board?.game.id, board?.fetchedAt, revision])
+    void run(); return () => { controller.abort(); if (requestRef.current === controller) requestRef.current = null }
+  }, [scopeKey, revision])
   const current = state?.scopeKey === scopeKey ? state : null
   return <Context.Provider value={{ matches: current?.matches ?? [], players: current?.players ?? [], error, loading, refresh }}>{children}</Context.Provider>
 }

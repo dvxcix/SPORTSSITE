@@ -6,7 +6,7 @@ import { nbaValidatedEstimate, type NbaModelReport } from '@/lib/nbaModel'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export const maxDuration = 60
+export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
   const game = request.nextUrl.searchParams.get('game'), player = request.nextUrl.searchParams.get('player'), market = request.nextUrl.searchParams.get('market')

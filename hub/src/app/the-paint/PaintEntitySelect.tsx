@@ -2,8 +2,9 @@
 
 import type { ReactNode } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronDown, Grid2X2, UsersRound } from 'lucide-react'
-import { BookLogo, bookName } from '@/components/BookLogo'
+import { Check, ChevronDown, UsersRound } from 'lucide-react'
+import { bookName } from '@/components/BookLogo'
+import { SportsbookMark } from '@/components/SportsbookMark'
 import { TeamLogo } from './PaintVisuals'
 import styles from './PaintEntitySelect.module.css'
 
@@ -21,7 +22,7 @@ function PaintEntitySelect({ value, onChange, label, options, className, kind }:
   const selected = options.find(option => option.value === value)
   return <DropdownMenu.Root modal={false}>
     <DropdownMenu.Trigger className={`${styles.trigger} ${className ?? ''}`} data-paint-entity-select={kind} data-value={value} aria-label={`${label}: ${selected?.label ?? value}`}>
-      <span className={styles.mark} aria-hidden="true">{selected?.icon ?? <Grid2X2 size={24}/>}</span>
+      <span className={styles.mark} aria-hidden="true">{selected?.icon ?? (kind === 'book' ? <SportsbookMark/> : <UsersRound size={25}/>)}</span>
       <ChevronDown className={styles.chevron} size={13} aria-hidden="true"/>
     </DropdownMenu.Trigger>
     <DropdownMenu.Portal>
@@ -42,16 +43,20 @@ function PaintEntitySelect({ value, onChange, label, options, className, kind }:
 export function PaintBookSelect({ value, onChange, books, label = 'Sportsbook', allowAll = true, className }: SelectProps & { books: readonly string[] }) {
   const available = [...new Set([...(value !== 'all' ? [value] : []), ...books])].filter(book => book !== 'all')
   const options: EntityOption[] = [
-    ...(allowAll ? [{ value: 'all', label: 'All sportsbooks', icon: <Grid2X2 size={25}/> }] : []),
-    ...available.map(book => ({ value: book, label: bookName(book), icon: <BookLogo vendor={book} size={28}/> })),
+    ...(allowAll ? [{ value: 'all', label: 'All sportsbooks', icon: <SportsbookMark books={available}/> }] : []),
+    ...available.map(book => ({ value: book, label: bookName(book), icon: <SportsbookMark vendor={book} size={28}/> })),
   ]
   return <PaintEntitySelect value={value} onChange={onChange} label={label} options={options} className={className} kind="book"/>
 }
 
 export function PaintTeamSelect({ value, onChange, teams, label = 'Team', allowAll = true, className }: SelectProps & { teams: readonly { id: number | string; abbreviation: string; full_name: string }[] }) {
+  const available = [...new Map(teams.map(team => [String(team.id), team])).values()]
+  const allTeamsIcon = available.length === 2
+    ? <span className={styles.teamStack} aria-hidden="true">{available.map(team => <span key={team.id}><TeamLogo abbr={team.abbreviation} size={20}/></span>)}</span>
+    : <UsersRound size={25}/>
   const options: EntityOption[] = [
-    ...(allowAll ? [{ value: 'all', label: 'All teams', icon: <UsersRound size={25}/> }] : []),
-    ...[...new Map(teams.map(team => [String(team.id), team])).values()].map(team => ({ value: String(team.id), label: team.full_name, icon: <TeamLogo abbr={team.abbreviation} size={30}/> })),
+    ...(allowAll ? [{ value: 'all', label: 'All teams', icon: allTeamsIcon }] : []),
+    ...available.map(team => ({ value: String(team.id), label: team.full_name, icon: <TeamLogo abbr={team.abbreviation} size={30}/> })),
   ]
   return <PaintEntitySelect value={value} onChange={onChange} label={label} options={options} className={className} kind="team"/>
 }

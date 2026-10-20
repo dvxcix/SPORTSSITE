@@ -6,6 +6,7 @@ import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
 import { getNbaMarketContext } from '@/lib/nbaMarketSignalData'
 import { getNbaTracking } from '@/lib/nbaTrackingData'
 import { evaluateNbaMatrix, nbaMatrixCandidates, type NbaMatrix } from '@/lib/nbaMatrix'
+import { getNbaPublicCaptures } from '@/lib/nbaPublicData'
 
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       needs('score') ? getNbaDefenseContext(board.sampleSeason, board.game.date).catch(() => { unavailable.push('Defense context'); return null }) : null,
       needs('score') ? getNbaMarketContext(board.game).catch(() => { unavailable.push('Market signals'); return null }) : null,
       needs('tracking') ? getNbaTracking(board).catch(() => { unavailable.push('Tracking'); return null }) : null,
-      needs('picks') ? admin.from('nba_public_captures').select('snapshot').eq('game_id', board.game.id).order('captured_at', { ascending: false }).limit(1).then(({ data, error }) => { if (error) unavailable.push('Public picks'); return data?.[0]?.snapshot?.rows ?? [] }) : [],
+      needs('picks') ? getNbaPublicCaptures(board.game.id).then(captures => captures[0]?.snapshot.rows ?? []).catch(() => { unavailable.push('Public picks'); return [] }) : [],
     ])
     const candidates = nbaMatrixCandidates(board, { defense: defense?.profiles, market, tracking: tracking?.rows, publicPicks: picks })
     const matches = matrices.map(matrix => {

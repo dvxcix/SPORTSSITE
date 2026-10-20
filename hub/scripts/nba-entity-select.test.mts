@@ -81,7 +81,8 @@ test('sportsbook menu preserves all-books selection and supports market-story si
     const trigger = ui.host.querySelector('button')!
     trigger.focus(); await press(trigger, 'ArrowDown'); await click(choice('All sportsbooks'))
     assert.deepEqual(changes, ['all']); assert.equal(trigger.getAttribute('data-value'), 'all')
-    assert.equal(trigger.querySelector('img'), null)
+    assert.deepEqual([...trigger.querySelectorAll('img')].map(image => image.getAttribute('src')), ['/sportsbooks/fanduel.ico', '/sportsbooks/draftkings.png', '/sportsbooks/ballybet.webp'])
+    assert.equal(trigger.querySelector('[data-sportsbook-mark="all"]')?.getAttribute('aria-hidden'), 'true')
     assert.equal(trigger.getAttribute('aria-label'), 'Player sportsbook: All sportsbooks')
   } finally { await ui.close() }
   const single = await render(h(PaintBookSelect, { value: 'betparx', books: [], allowAll: false, onChange: () => {} }))
@@ -103,6 +104,7 @@ test('team selector keeps numeric team IDs as string filter values with full nam
   try {
     const trigger = ui.host.querySelector('button')!
     assert.equal(trigger.textContent, '')
+    assert.equal(trigger.querySelectorAll('img').length, 2)
     trigger.focus(); await press(trigger, 'ArrowDown')
     assert.ok(choice('Boston Celtics').querySelector('img')?.getAttribute('src')?.endsWith('/bos.png'))
     await click(choice('Detroit Pistons'))

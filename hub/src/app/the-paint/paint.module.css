@@ -195,7 +195,7 @@
 /* A contained team-color frame at every avatar size, including narrow tables. */
 .avatar,.portrait{position:relative;overflow:hidden;border:1px solid #ffffff24;box-shadow:inset 0 1px #ffffff20;isolation:isolate}
 .avatarFrame{display:flex;align-items:flex-end;justify-content:center;width:100%;height:100%;max-width:100%;overflow:hidden;border-radius:inherit}
-.avatarFrame>img,.portrait .avatarFrame>img{display:block;flex:none;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom}
+.avatarFrame>img,.portrait .avatarFrame>img{display:block;flex:none;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center;transform:scale(1.2);transform-origin:center 12%}
 .avatarTeam{right:1px;bottom:1px;display:grid;place-items:center;width:18px;height:18px;padding:1px;border:1px solid #ffffff26;z-index:1}
 .avatarMatrix{position:absolute;inset:0;z-index:2;border:2px solid;border-radius:inherit;pointer-events:none}
 .avatar .initials,.portrait .initials{color:#eef4f7}

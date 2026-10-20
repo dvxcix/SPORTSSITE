@@ -90,6 +90,8 @@ test('NBA history expires at sixty seconds, rejects failed refreshes instead of 
   await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/)
   assert.equal(h.reads.length, 2)
   h.fail(false)
+  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/, 'failure cooldown prevents immediate retry storms')
+  h.advance(15001)
   const fresh = await getNbaMarketFrames(123, 'points')
   assert.notEqual(fresh[0].captured_at, first[0].captured_at); assert.equal(h.reads.length, 3)
 })

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const game = request.nextUrl.searchParams.get('game')
   if (!game || !/^\d{1,10}$/.test(game)) return NextResponse.json({ error: 'Invalid matchup' }, { status: 400 })
   try {
-    const cached = await nbaSharedCache(`divergence:v4:${game}`, 60, 300, async () => {
+    const cached = await nbaSharedCache(`divergence:v5:${game}`, 60, 0, async () => {
       const admin = createAdminClient()
       const [[first, last], openings] = await Promise.all([
         Promise.all([true, false].map(ascending => admin.from('nba_market_captures').select('captured_at,props').eq('game_id', Number(game)).order('captured_at', { ascending }).limit(1))),

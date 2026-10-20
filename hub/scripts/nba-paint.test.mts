@@ -1,6 +1,7 @@
 import * as milestoneSignals from '../src/lib/nbaMilestoneSignals.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import * as marketSelection from '../src/lib/nbaMarketSelection.ts'
+import * as crypto from 'node:crypto'
 import { nbaOpeningSequence, nbaFirstBasketResearch } from '../src/lib/nbaFirstBasket.ts'
 import { nbaMilestoneMovements } from '../src/lib/nbaMovement.ts'
 import assert from 'node:assert/strict'
@@ -264,7 +265,7 @@ test('NBA public counts isolate supported periods, reject fuzzy identities and a
 test('NBA research APIs reject denied access and invalid games before loading providers',async()=>{
   for(const file of ['../src/app/the-paint/tracking/route.ts','../src/app/the-paint/scouting/route.ts','../src/app/the-paint/public/route.ts','../src/app/the-paint/results/route.ts','../src/app/the-paint/intelligence/route.ts','../src/app/the-paint/shots/route.ts','../src/app/the-paint/slate/route.ts','../src/app/the-paint/divergence/route.ts','../src/app/the-paint/first-basket/route.ts']){
     let denied=true
-    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaFirstBasket':{},'@/lib/balldontlie':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
+    const route=await compiled(file,{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({}, {status:403})}:{userId:'admin'}},'@/lib/nbaPublicData':{},'@/lib/nbaPaintData':{},'@/lib/nbaTrackingData':{},'@/lib/nbaIntelligenceData':{},'@/lib/nbaMarketSignalData':{},'@/lib/nbaMarketSignal':{},'@/lib/nbaMarketMetrics':{},'@/lib/nbaIntelligence':{},'@/lib/nbaShotsData':{},'@/lib/nbaFirstBasket':{},'@/lib/balldontlie':{},'@/lib/nbaShots':{},'@/lib/nbaSharedCache':{},'@/lib/nbaSlate':{},'@/lib/nbaDivergence':{},'@/lib/nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>{throw new Error('Unexpected history read before access/parameter checks')}},'@/lib/supabase/admin':{},'@/lib/nbaPaint':{}})
     const get=route.GET as unknown as(r:unknown)=>Promise<Response>
     assert.equal((await get({nextUrl:new URL('https://test/the-paint/scouting?game=123')})).status,403)
     denied=false
@@ -377,7 +378,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets'||name==='@/lib/nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts')return {};if((name==='./nbaFirstBasketOddsData'||name==='@/lib/nbaFirstBasketOddsData')&&!(name in imports))return unpostedFirstBasket;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='node:crypto'&&!(name in imports))return crypto;if(name==='./nbaSharedCache'&&!(name in imports))return cachePassthrough;if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets'||name==='@/lib/nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts')return {};if((name==='./nbaFirstBasketOddsData'||name==='@/lib/nbaFirstBasketOddsData')&&!(name in imports))return unpostedFirstBasket;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
@@ -760,13 +761,25 @@ test('NBA conditional refresh authenticates first, preserves meaningful changes 
 })
 
 test('cold NBA cache followers wait through a slow healthy owner but respect shorter lease budgets',async()=>{
- let reads=0,waited=0,readyAfter=30,loads=0
+ let reads=0,waited=0,readyAfter=15000,loads=0
  const entry={payload:{points:25},fetched_at:new Date().toISOString(),expires_at:new Date(Date.now()+60000).toISOString()}
- const admin={from:()=>({select:()=>({eq:()=>({abortSignal:(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);return{maybeSingle:async()=>({data:++reads>readyAfter?entry:null,error:null})}}})})}),rpc:async()=>({data:false,error:null})}
+ const admin={
+   from:()=>({
+     select:()=>({
+       eq:()=>({
+         abortSignal:(signal:AbortSignal)=>{
+           assert.ok(signal instanceof AbortSignal)
+           return{maybeSingle:async()=>{reads++;return{data:waited>=readyAfter?entry:null,error:null}}}
+         },
+       }),
+     }),
+   }),
+   rpc:async()=>({data:false,error:null}),
+ }
  const cacheModule=await compiled('../src/lib/nbaSharedCache.ts',{'server-only':{},'node:crypto':await import('node:crypto'),'./supabase/admin':{createAdminClient:()=>admin}},fetch,{setTimeout:(callback:()=>void,ms:number)=>{waited+=ms;queueMicrotask(callback);return 0}})
  const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
  const result=await cache('slow-owner',60,300,async()=>{loads++;return{points:99}})
- assert.equal(result.value.points,25);assert.equal(loads,0);assert.ok(waited>12000&&waited<=45000)
+ assert.equal(result.value.points,25);assert.equal(loads,0);assert.ok(waited>=15000&&waited<=45000);assert.ok(reads<10,'backoff bounds reads while the owner is loading')
  reads=0;waited=0;readyAfter=Infinity
  await assert.rejects(()=>cache('short-owner',60,300,async()=>({points:99}),6),/warming/)
  assert.equal(waited,1000);assert.equal(reads,3)
@@ -806,7 +819,7 @@ test('NBA cache post-commit and follower reads bypass render-pass memoized initi
     const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
     const result=await cache(`memoized-${mode}`,60,300,async()=>{loads++;return{points:25}})
     assert.equal(result.value.points,25);assert.equal(result.stale,false);assert.equal(result.fetchedAt,ready.fetched_at)
-    assert.equal(loads,mode==='owner'?1:0);assert.equal(writes,mode==='owner'?1:0);assert.equal(reads,mode==='owner'?2:3)
+    assert.equal(loads,mode==='owner'?1:0);assert.equal(writes,mode==='owner'?1:0);assert.equal(reads,3)
     assert.equal(signals.length,reads);assert.equal(new Set(signals).size,reads)
     assert.ok(signals.every(signal=>signal instanceof AbortSignal&&!signal.aborted))
   }

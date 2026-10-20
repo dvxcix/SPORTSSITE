@@ -208,7 +208,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   const response={NextResponse:{json:(body:Record<string,unknown>,init?:{status?:number}):Reply=>({body,status:init?.status??200})}}
   const defense={ready:false,season:2025,profiles:[],games:0,fetchedAt:null,stale:false}
   let now=asOf,boardReads=0,contextReads=0,defenseFailed=false
-  const gameData={getPaintGame:async()=>board.game,getPaintBoard:async()=>{boardReads++;return board},getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true})}
+  const gameData={refreshPaintBoardPrices:async(value:unknown)=>value,getPaintGame:async()=>board.game,getPaintBoard:async()=>{boardReads++;return board},getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true})}
   const common={'@/lib/nbaMarketSelection':await import('../src/lib/nbaMarketSelection.ts'),'next/server':response,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:null})},'@/lib/nbaPaintData':gameData,'@/lib/nbaIntelligenceData':{getNbaDefenseContext:async()=>{if(defenseFailed)throw new Error('Defense unavailable');return defense}},'@/lib/nbaMarketSignalData':{getNbaMarketContext:async()=>{contextReads++;return {...nbaBuildMarketContext(input()),asOf:now}}},'@/lib/nbaMarketSignal':{nbaMarketSupportView,nbaPlayerMarketSignals},'@/lib/nbaIntelligence':intelligence,'@/lib/nbaPaint':paint,'@/lib/nbaMarketMetrics':metrics}
   const scoreRoute=await compiled('../src/app/the-paint/intelligence/route.ts',common)
   const cached=new Map<string,unknown>()

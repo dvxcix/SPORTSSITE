@@ -1,7 +1,7 @@
 'use client'
 import type { NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpRight, RefreshCw } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { nbaBinary, nbaPrice, nbaTarget, PAINT_MARKETS, type PaintMarket } from '@/lib/nbaPaint'
 import type { NbaSlateViewRow } from '@/lib/nbaSlate'
@@ -55,7 +55,7 @@ export function PaintSlate({ selection, date, market, book, side, onMarketChange
   const href = (row: NonNullable<typeof slate>['rows'][number], nextMarket = market) => `/the-paint?${new URLSearchParams({ date: row.game.date, game: String(row.game.id), player: String(row.player.id), market: nextMarket, book: row.offer.vendor, side, view: 'research' })}`
   const header = (label: string, column: string) => <PaintSortHeader key={column} label={label} column={column} active={sort} ascending={ascending} onSort={sortBy}/>
   return <section className={`${styles.researchTool} ${dials.surface}`}>
-    <header className={styles.toolHeading}><div><h3>Slate Edge</h3></div><button className={styles.iconButton} aria-label="Refresh NBA slate edge" onClick={refresh}><RefreshCw size={16}/></button></header>
+    <header className={styles.toolHeading}><div><h3>Slate Edge</h3></div></header>
     <div className={styles.toolControls}><PaintTeamSelect label="Slate edge team" value={team} onChange={setTeam} teams={[...new Map((slate?.rows??[]).map(row=>[row.player.team.id,row.player.team])).values()]}/><select aria-label="Slate edge game" value={gameFilter} onChange={e=>setGameFilter(e.target.value)}><option value="all">All games</option>{[...new Map((slate?.rows??[]).map(row=>[row.game.id,row.game])).values()].map(game=><option key={game.id} value={game.id}>{game.visitor_team.abbreviation} @ {game.home_team.abbreviation}</option>)}</select><select aria-label="Sort slate edge" value={sort+':'+(ascending?'asc':'desc')} onChange={e=>{const [column,direction]=e.target.value.split(':');setSort(column);setAscending(direction==='asc')}}>{[['score:desc','Highest score'],['score:asc','Lowest score'],['mm:desc','Highest MM'],['mm:asc','Lowest MM'],['odds:desc','Highest odds'],['odds:asc','Lowest odds'],['hit:desc','Highest hit rate'],['hit:asc','Lowest hit rate'],['gap:desc','Largest form gap'],['name:asc','Player A–Z'],['gap:asc','Lowest form gap'],['average:desc','Highest average'],['average:asc','Lowest average'],['estimate:desc','Highest estimate'],['estimate:asc','Lowest estimate'],['line:desc','Highest target'],['line:asc','Lowest target'],['market:desc','Highest market signal'],['market:asc','Lowest market signal'],['name:desc','Highest player name']].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>
       <PaintBookSelect label="Slate edge sportsbook" value={book} onChange={onBookChange} books={books}/>
       <select aria-label="Slate edge market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>

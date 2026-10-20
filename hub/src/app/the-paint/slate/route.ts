@@ -2,7 +2,7 @@ import { nbaReadSelection, nbaSelectedPlayers } from '@/lib/nbaMarketSelection'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
-import { getPaintBoard, getPaintSchedule } from '@/lib/nbaPaintData'
+import { getPaintBoard, getPaintSchedule, refreshPaintBoardPrices } from '@/lib/nbaPaintData'
 import { nbaPeriod, nbaDate, PAINT_MARKETS, type PaintBoard, type PaintMarket } from '@/lib/nbaPaint'
 import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   if (!date || nbaDate(date) !== date || !PAINT_MARKETS.some(item => item.key === market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over', 'under'].includes(side)) return NextResponse.json({ error: 'Invalid NBA slate filters' }, { status: 400 })
   const selection=nbaReadSelection(request.nextUrl.searchParams)
   try {
-    const cached = await nbaSharedCache(`slate:v8:${date}:${market}:${book}:${side}:${selection?.type??'auto'}:${selection?.line??'auto'}`, 120, 300, async () => {
+    const cached = await nbaSharedCache(`slate:v9:${date}:${market}:${book}:${side}:${selection?.type??'auto'}:${selection?.line??'auto'}`, 30, 0, async () => {
       const started = Date.now(), schedule = await getPaintSchedule(date), boards: PaintBoard[] = [], failed: number[] = []
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {
@@ -29,8 +29,11 @@ export async function GET(request: NextRequest) {
       const reports = await nbaSharedCache('validated-models:v1',300,300,async()=>{const {data,error}=await createAdminClient().from('nba_model_reports').select('report').eq('version','nba-rolling-v1').order('validation_season',{ascending:false}).limit(48);if(error)throw new Error('Model reports unavailable');return (data??[]).map(row=>row.report as NbaModelReport)})
       const contexts = await Promise.allSettled(boards.map(async board=>({gameId:board.game.id,...await getNbaDefenseContext(board.sampleSeason,board.game.date)})))
       const defense=contexts.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
+      // Early games may have waited on a cold later game. Attach quotes only
+      // after research is assembled: 30s source TTL + 30s result TTL, no stale fallback.
+      const pricedBoards = await Promise.all(boards.map(refreshPaintBoardPrices))
       const complete = schedule.complete && !failed.length && games.length === schedule.games.length && boards.every(board => board.statsComplete && (!nbaPeriod(market!) || board.periodStatsComplete !== false))
-      return { date: schedule.date, games: schedule.games.length, loaded: boards.length, complete, failed, defenseUnavailable:contexts.filter(result=>result.status==='rejected'||result.status==='fulfilled'&&!result.value.ready).length, rows: nbaSlateRows(boards.map(board=>({...board,players:nbaSelectedPlayers(board.players,market!,selection)})), market as PaintMarket, book, side as 'over' | 'under', complete, reports.value, defense) }
+      return { date: schedule.date, games: schedule.games.length, loaded: boards.length, complete, failed, defenseUnavailable:contexts.filter(result=>result.status==='rejected'||result.status==='fulfilled'&&!result.value.ready).length, rows: nbaSlateRows(pricedBoards.map(board=>({...board,players:nbaSelectedPlayers(board.players,market!,selection)})), market as PaintMarket, book, side as 'over' | 'under', complete, reports.value, defense) }
     }, 120)
     // Keep expensive production research cached, but re-check freshness and the
     // selected exact quote for every response. A warm slate cannot extend a boost.

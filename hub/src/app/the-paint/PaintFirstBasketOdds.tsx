@@ -9,6 +9,7 @@ import { BookLogo, bookName } from '@/components/BookLogo'
 import { PaintPickActions } from './PaintPickActions'
 import { PaintPriceValue } from './PaintPrice'
 import { PlayerAvatar } from './PaintVisuals'
+import { PaintBookSelect } from './PaintEntitySelect'
 import styles from './paint.module.css'
 
 type Slate = {date:string;requestedDate:string;games:number;loaded:number;failed:number;status:string;unmatched:number;rows:FirstBasketRow[];fetchedAt:string}
@@ -68,12 +69,12 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
   },[slate,game,team,market,book,query,basis,direction,minimum,sort])
   const vendors=book==='all'?catalog.books:[book]
   return <section aria-label="First-basket slate odds" className={`${styles.movement} ${styles.firstBasketOdds}`}>
-    <div className={styles.sectionHeading}><h3>First-basket odds · NBA slate</h3><button className={styles.filterToggle} onClick={()=>setRetry(n=>n+1)}>Refresh prices</button></div>
+    <div className={styles.sectionHeading}><h3>First-basket odds · NBA slate</h3></div>
     <div className={styles.movementTools}>
       <label>Game<select aria-label="First-basket game" value={game} onChange={event=>{setGame(event.target.value);setTeam('all')}}><option value="all">Full NBA slate</option>{catalog.games.map(value=><option key={value.id} value={value.id}>{value.visitor_team.abbreviation} @ {value.home_team.abbreviation}</option>)}</select></label>
       <label>Team<select aria-label="First-basket team" value={team} onChange={event=>setTeam(event.target.value)}><option value="all">All teams</option>{catalog.teams.map(value=><option key={value.id} value={value.id}>{value.full_name}</option>)}</select></label>
       <label>Market<select aria-label="First-basket market" value={market} onChange={event=>setMarket(event.target.value)}><option value="all">All first-basket markets</option>{NBA_FIRST_MARKETS.map(value=><option key={value.key} value={value.key}>{value.label}</option>)}</select></label>
-      <label>Book<select aria-label="First-basket sportsbook" value={book} onChange={event=>setBook(event.target.value)}><option value="all">All books</option>{catalog.books.map(value=><option key={value} value={value}>{bookName(value)}</option>)}</select></label>
+      <PaintBookSelect label="First-basket sportsbook" value={book} onChange={setBook} books={catalog.books}/>
       <label>Change from<select aria-label="First-basket movement baseline" value={basis} onChange={event=>setBasis(event.target.value)}><option value="opening">Opening capture</option><option value="previous">Previous capture</option></select></label>
       <label>Movement<select aria-label="First-basket movement direction" value={direction} onChange={event=>setDirection(event.target.value)}><option value="all">All movement</option><option value="shortened">Shortened</option><option value="lengthened">Lengthened</option><option value="unchanged">Unchanged</option><option value="untracked">Awaiting comparison</option></select></label>
       <label>Minimum Δ<select aria-label="Minimum first-basket change" value={minimum} onChange={event=>setMinimum(Number(event.target.value))}>{[0,.1,.25,.5,1,2,5].map(value=><option key={value} value={value}>{value===0?'Any change':`${value} pp`}</option>)}</select></label>

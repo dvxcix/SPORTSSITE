@@ -2,6 +2,7 @@
 .trigger:hover,.trigger[data-state=open]{background:#1a2734;border-color:#647c66}
 .trigger:focus-visible{outline:2px solid #b4ff4d;outline-offset:3px}
 .mark{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0}
+.teamStack{display:block;position:relative;width:30px;height:30px;isolation:isolate}.teamStack>span{position:absolute;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#14202d;border:1px solid #405163;box-sizing:border-box;overflow:hidden}.teamStack>span:first-child{left:0;bottom:0}.teamStack>span:last-child{right:0;top:0}
 .mark img,.optionMark img{display:block;max-width:100%;max-height:100%;object-fit:contain}
 .chevron{flex-shrink:0;color:#9caec2;transition:transform 140ms ease}
 .trigger[data-state=open] .chevron{transform:rotate(180deg)}

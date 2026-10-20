@@ -10,7 +10,7 @@ export function PaintEstimate({ player, market, game }: { player: PaintPlayer; m
   const [retry, setRetry] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`/the-paint/estimate?${new URLSearchParams({ game: String(game), player: String(player.id), market })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) })
+    fetch(`/the-paint/estimate?${new URLSearchParams({ game: String(game), player: String(player.id), market })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
       .then(async response => { if (!response.ok) throw new Error('unavailable'); return response.json() })
       .then(data => { if (!controller.signal.aborted) { setState({ key, estimate: data.estimate, games: data.games }); setFailure(null) } })
       .catch(() => { if (!controller.signal.aborted) setFailure(key) })

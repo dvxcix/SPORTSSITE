@@ -1,0 +1,61 @@
+NBA member research polish and shared loading — 2026-10-20
+
+Authorization and baseline
+The owner explicitly requested clearer NBA faces, recognizable sportsbook
+selectors, removal of member odds/picks refresh controls, shared caching for
+6,000+ members, and publication to main and production.
+GitHub main and READY production were verified at dd3c396f9bfbf330392821caee31abc79c0383d6.
+Required NFL ancestor 6c3811b0882e1b1a6694a30849273f3e210cd69c is retained.
+Unrelated local files are preserved. No schema migration, secret change,
+collector duplication, or manual job replay is part of this release.
+
+Member interface
+NBA headshots use a closer face crop inside the existing clipped team-gradient
+frames across Court research, player profiles and shared sports avatars.
+Position labels and matrix indicators remain outside the image crop.
+Sportsbook filters show a stack of actual available sportsbook logos; selecting
+one book shows its logo. First Basket uses the same accessible selector.
+Two-team selectors show both actual team logos.
+Normal member refresh controls are removed. Automatic updates remain;
+error-only Retry controls recover failed shared reads and cannot force an
+upstream refresh. No tooltips or explanatory panels were added.
+
+Shared loading and freshness
+Public sports inputs are cached through database leases across instances,
+with request coalescing and a bounded 32 MiB / 256-entry process cache.
+Failure cooldowns prevent repeated callers from retrying a failing source.
+Cold followers use bounded backoff. Exact-price validation uses short-lived
+shared public inputs while validating every submitted selection independently.
+Member identities, saved picks, ownership and matrix results are not shared.
+
+Regular odds use 30-second source caches; First Basket uses 60 seconds.
+Pick validation uses 15-second public inputs and still rejects changed prices,
+wrong contracts and games that have started. Research fallback cannot carry
+expired player or game prices into a new board. Quotes are attached after
+research resolves. Assembled Slate Edge results have a further 30-second cache;
+their price inputs are rechecked after the slate research has loaded.
+Public activity, artwork, player identity and historical opening-play research
+also share their public inputs. Partial First Basket research retries on the
+normal short cadence rather than remaining cached for an hour.
+
+Visible tools poll automatically with jitter and a full cadence between focus
+updates. Hidden views are quiet and pending requests are not duplicated.
+Accounts without enabled NBA matrices perform one check for the slate instead
+of one per game, then use a five-minute cadence. Matrix edits still trigger an
+immediate evaluation. Slow matrix evaluations can finish before the next poll.
+Member board routes allow up to 120 seconds for cold shared work; existing NFL
+timeouts and collectors are unchanged.
+
+Verification
+Focused behavioral coverage includes 6,000 simulated concurrent readers across
+12 isolated instances using one upstream refresh, bounded database reads, zero
+database reads on the warm follow-up, outage cooldown, memory bounds, strict
+freshness, and independent exact-price validation for concurrent pick requests.
+This is a controlled mocked concurrency test, not a production stress test.
+Additional regressions cover slow matrix loads, edits during evaluation,
+empty-matrix slate short-circuiting, sportsbook keyboard controls and automatic
+refresh failure recovery. Final NBA regression suite: 261/261 passed.
+Production source suite: 134/134 passed. Shared-sport suite: 26/26 passed.
+TypeScript and ESLint for changed source files passed.
+Test output and live evidence are recorded in the task's
+work/nba-member-polish-* verification files.

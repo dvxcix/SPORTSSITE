@@ -6,7 +6,7 @@ import { PaintBoardClient } from './PaintBoardClient'
 import styles from './paint.module.css'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 export const metadata: Metadata = { title: 'The Court • SlipSurge', robots: { index: false, follow: false, nocache: true } }
 export default async function PaintPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const gate = await requirePaintAccess()

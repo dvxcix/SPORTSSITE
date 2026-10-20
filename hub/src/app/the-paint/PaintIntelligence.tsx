@@ -1,7 +1,7 @@
 'use client'
 import type { NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpRight, RefreshCw } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { nbaPrice, nbaTarget, nbaSeason, PAINT_MARKETS, type PaintTeam, type PaintBoard, type PaintMarket, type PaintProp } from '@/lib/nbaPaint'
 import { nbaPosition } from '@/lib/nbaPosition'
 import type { NbaDvp } from '@/lib/nbaIntelligence'
@@ -37,7 +37,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
       if (pending) return
       pending = true
       try {
-        const response = await fetch(`/the-paint/intelligence?${new URLSearchParams({ game: String(board.game.id), market, book, side, contract, target })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55000)]) })
+        const response = await fetch(`/the-paint/intelligence?${new URLSearchParams({ game: String(board.game.id), market, book, side, contract, target })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
         if (!response.ok) throw new Error('unavailable')
         const result = await response.json()
         if (!controller.signal.aborted) { setContext({ key: contextKey, data: result }); setError('') }
@@ -80,7 +80,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
   })
   const header = (label: string, column: string, active = sort) => <PaintSortHeader key={column} label={label} column={column} active={active} ascending={ascending} onSort={sortBy}/>
   return <section className={`${styles.researchTool} ${dials.surface}`}>
-    <header className={styles.toolHeading}><div><h3>{mode === 'score' ? 'SlipSurge Score' : 'Defense × position'}</h3></div><button className={styles.iconButton} aria-label="Refresh NBA matchup context" onClick={() => setRetry(value => value + 1)}><RefreshCw size={16}/></button></header>
+    <header className={styles.toolHeading}><div><h3>{mode === 'score' ? 'SlipSurge Score' : 'Defense × position'}</h3></div></header>
     <div className={styles.toolControls}>{(mode==='score'||scope==='matchup')&&<><PaintTeamSelect label="Score team" value={team} onChange={setTeam} teams={[board.game.visitor_team,board.game.home_team]}/><select aria-label="Sort NBA score" value={sort+':'+(ascending?'asc':'desc')} onChange={e=>{const [column,direction]=e.target.value.split(':');setSort(column);setAscending(direction==='asc')}}>{[['score:desc','Highest score'],['score:asc','Lowest score'],['mm:desc','Highest MM'],['mm:asc','Lowest MM'],['odds:desc','Highest odds'],['odds:asc','Lowest odds'],['line:desc','Highest target'],['line:asc','Lowest target'],['production:desc','Highest production'],['minutes:desc','Most minutes'],['name:asc','Player A–Z'],['production:asc','Lowest production'],['minutes:asc','Lowest minutes'],['defense:desc','Highest defense per 48'],['defense:asc','Lowest defense per 48'],['allowance:desc','Highest defensive allowance'],['allowance:asc','Lowest defensive allowance'],['market:desc','Highest market signal'],['market:asc','Lowest market signal'],['name:desc','Highest player name']].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></>}
       <select aria-label="Score stat market" value={market} onChange={event => onMarketChange(event.target.value as PaintMarket)}>{PAINT_MARKETS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
       {(mode === 'score' || scope === 'matchup') && <><PaintBookSelect label="Score sportsbook" value={book} onChange={onBookChange} books={board.players.flatMap(player => player.props.map(offer => offer.vendor))}/>

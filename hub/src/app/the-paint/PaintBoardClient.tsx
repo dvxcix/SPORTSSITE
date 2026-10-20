@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Activity, ListOrdered, Table2, UsersRound, ArrowDown, ArrowUpRight, Check, CircleHelp, Columns3, RefreshCw, Search, SlidersHorizontal, Star, X } from 'lucide-react'
+import { Activity, ListOrdered, Table2, UsersRound, ArrowDown, ArrowUpRight, Check, CircleHelp, Columns3, Search, SlidersHorizontal, Star, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { BookLogo } from '@/components/BookLogo'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -70,7 +70,7 @@ export function PaintBoardClient({ initial, games, days, date }: { initial: Pain
     if (!gameId || refreshLock.current) return
     refreshLock.current = true; setRefreshing(true)
     const controller = new AbortController(); requestRef.current = controller
-    const timeout = setTimeout(() => controller.abort(), 55_000)
+    const timeout = setTimeout(() => controller.abort(), 115_000)
     try {
       const response = await fetch(`/the-paint/board?game=${gameId}`, { cache: 'no-store', signal: controller.signal,headers:revisionRef.current?{'If-None-Match':revisionRef.current}:{} })
       if(response.status===304){const fetchedAt=response.headers.get('X-NBA-Fetched-At');if(fetchedAt&&!controller.signal.aborted){setBoard(previous=>previous?{...previous,fetchedAt}:previous);setRefreshError('')}return}
@@ -99,7 +99,7 @@ export function PaintBoardClient({ initial, games, days, date }: { initial: Pain
   function toggleCompare(id: number) { setCompare(ids => ids.includes(id) ? ids.filter(i => i !== id) : ids.length < 3 ? [...ids, id] : ids) }
   function heat(player: PaintPlayer, count: number) { const offer = nbaReference(player.props, market, vendor, side); const result = offer ? nbaHitRate(nbaSample(nbaMarketLogs(player, market), count, location), market, Number(offer.line_value), side, offer.market.type === 'milestone') : null; return <span className={styles.heat} style={nbaHeatStyle(result?.rate)} data-heat={result?.rate == null ? 'none' : result.rate >= 70 ? 'hot' : result.rate >= 50 ? 'warm' : 'cold'} aria-label={result ? `${result.wins}/${result.games-result.pushes} hits · ${result.pushes} pushes` : 'No current reference line'}>{result?.rate == null ? '—' : `${Math.round(result.rate)}%`}<small>{result?.games ? `${result.wins}/${result.games-result.pushes}${result.pushes ? ` · ${result.pushes}P` : ''}` : '—'}</small></span> }
   return <NbaMatrixProvider board={board} gameIds={view==='slate'||view==='first-basket'?games.map(game=>game.id):undefined}><div className={styles.paint} aria-busy={navigating}>
-    <header className={styles.header}><div className={styles.identity}><span className={styles.mark}><CourtMark/></span><div><h1>The&nbsp;<span>Court</span><i>NBA</i></h1></div></div><div className={styles.headerActions}><NbaMatrixButton gameId={board?.game.id} initialOpen={params.get('matrix')==='1'}/><button className={styles.iconButton} onClick={() => void refresh()} disabled={refreshing || !board} aria-label="Refresh NBA data"><RefreshCw size={17} className={refreshing ? styles.spin : ''}/></button><button className={styles.iconButton} aria-label="Open saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={17}/></button></div></header>
+    <header className={styles.header}><div className={styles.identity}><span className={styles.mark}><CourtMark/></span><div><h1>The&nbsp;<span>Court</span><i>NBA</i></h1></div></div><div className={styles.headerActions}><NbaMatrixButton gameId={board?.game.id} initialOpen={params.get('matrix')==='1'}/><button className={styles.iconButton} aria-label="Open saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={17}/></button></div></header>
     <PaintSlateHeader date={date} days={days} games={games} gameId={board?.game.id} onChange={go}/>
     {!board ? <section className={styles.empty}><CourtMark/><h2>No NBA games on this slate</h2><p>Choose another date to explore the board.</p></section> : <>
       <div className={styles.context} data-compact={!coreView&&!trendView}><div><h2>{workspaceTitle}</h2></div><div className={styles.sampleBadge} aria-label={`Statistics season ${nbaSeason(board.sampleSeason)}`}><span>{nbaSeason(board.sampleSeason)}</span></div></div>

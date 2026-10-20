@@ -7,11 +7,18 @@ import { act, createElement, type ComponentType } from 'react'
 
 const require = createRequire(import.meta.url)
 const { JSDOM } = require('jsdom')
-const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://www.slipsurge.com' })
-Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true })
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://www.slipsurge.com', pretendToBeVisual: true })
+Object.assign(globalThis, {
+  window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement,
+  Element: dom.window.Element, Node: dom.window.Node, NodeFilter: dom.window.NodeFilter, Event: dom.window.Event,
+  CustomEvent: dom.window.CustomEvent, MutationObserver: dom.window.MutationObserver, getComputedStyle: dom.window.getComputedStyle,
+  requestAnimationFrame: dom.window.requestAnimationFrame.bind(dom.window), cancelAnimationFrame: dom.window.cancelAnimationFrame.bind(dom.window),
+  ResizeObserver: class { observe() {} unobserve() {} disconnect() {} }, IS_REACT_ACT_ENVIRONMENT: true,
+})
+dom.window.HTMLElement.prototype.scrollIntoView = () => {}
 const { createRoot } = await import('react-dom/client')
 const stubs: Record<string, string> = {
-  '@/lib/nbaRefresh': 'export const watchNbaRefresh=()=>()=>{}',
+  '@/lib/nbaRefresh': 'export const watchNbaRefresh=refresh=>{window.addEventListener("fixture:nba-refresh",refresh);return()=>window.removeEventListener("fixture:nba-refresh",refresh)}',
   '@/components/ui/ModalSurface': 'export const ModalSurface=({children})=>children',
   './PaintPickActions': 'export const PaintPickActions=()=>null',
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
@@ -42,7 +49,8 @@ async function harness(component: string, props: Record<string, unknown>, succes
     await act(async () => button.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })))
   }
   await render()
-  return { host, render, click, succeed: () => { failing = false }, fail: () => { failing = true }, requests: () => requests, close: async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch } }
+  const refresh = async () => { await act(async () => window.dispatchEvent(new dom.window.Event('fixture:nba-refresh'))) }
+  return { host, render, click, refresh, succeed: () => { failing = false }, fail: () => { failing = true }, requests: () => requests, close: async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch } }
 }
 
 const scenarios = [
@@ -60,7 +68,8 @@ for (const scenario of scenarios) {
       assert.equal(ui.requests(), 2)
       assert.equal(ui.host.textContent?.includes(scenario.unavailable), false)
       assert.equal(ui.host.textContent?.includes(scenario.loading), false)
-      ui.fail(); await ui.click(scenario.refresh)
+      assert.ok(!ui.host.querySelector(`button[aria-label="${scenario.refresh}"]`),`Manual refresh remains: ${scenario.refresh}`)
+      ui.fail(); await ui.refresh()
       assert.ok(ui.host.textContent?.includes(scenario.preserved))
       assert.equal(ui.host.textContent?.includes(scenario.loading), false)
     } finally { await ui.close() }
@@ -154,7 +163,15 @@ test('First Basket sorts signed movement and changes baseline without dropping t
   const ui=await harness('PaintFirstBasketOdds',{date:board.game.date},{requestedDate:board.game.date,date:board.game.date,games:1,loaded:1,failed:0,status:'ready',unmatched:0,rows,fetchedAt:'2026-10-20T12:00:00Z'})
   const select=async(label:string,value:string)=>{
     const node=ui.host.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement
-    assert.ok(node,label);await act(async()=>{node.value=value;node.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+    if(node){await act(async()=>{node.value=value;node.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});return}
+    const trigger=ui.host.querySelector(`button[aria-label^="${label}:"]`)
+    assert.ok(trigger,label)
+    await act(async()=>trigger.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})))
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,30))})
+    const expected=value==='all'?'All sportsbooks':value==='fanduel'?'FanDuel':value
+    const choice=[...document.querySelectorAll('[role="menuitemradio"]')].find(option=>option.textContent===expected)
+    assert.ok(choice,expected)
+    await act(async()=>choice.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
   }
   const names=()=>[...ui.host.querySelectorAll('tbody tr>th strong')].map(node=>node.textContent)
   try {
