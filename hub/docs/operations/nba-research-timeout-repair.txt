@@ -1,0 +1,41 @@
+NBA research-outcome refresh performance repair
+
+Problem
+The scheduled nba-research-snapshot job began failing at 2026-10-19 22:35 UTC.
+Postgres SQLSTATE 57014 matched its repeated 8-second timeout. The prior function
+scanned approximately 187k historical full-game/period facts and evaluated JSON
+appearance checks before matching 27,345 pending captures for 3 future games.
+
+Repair
+The reviewed function now materializes pending game/player/season/period keys,
+uses the existing exact-key indexes, computes each distinct market outcome once,
+and limits eligible final observations. Final-status, appearance, Q1 provenance,
+season/postseason, missing-value, pending-only update and security rules remain
+unchanged. No index, grant, access flag, pick data or collector schedule changed.
+
+Individual migration
+Source: 20261019231441_nba_research_grading_indexed_pending.sql
+Applied live: 20261020010828 / nba_research_grading_indexed_pending
+Project: hkldweedwnxartkfhror
+Prior definition md5: a4f3cd3fcc2bf662eea5af22de1aacbc
+New definition md5: ac584c113fe3cf83a233d69f22dc5c32
+A strict prior-definition guard prevents applying over unreviewed drift.
+Existing history divergence is preserved; never replay the migration tree.
+
+Evidence
+- Read-only production candidate EXPLAIN ANALYZE: 94.688ms; 161 exact keys,
+ 83 full-game and 78 Q1 index lookups, 0 eligible future outcomes.
+- Local PostgreSQL fixtures 4/4 pass: exact old/new eligible result equality,
+ binary/combined/Q1 markets, final source truth, missing/DNP/period/season cases,
+ eligible batch cap, future-row non-starvation, repeated-run safety, permissions,
+ drift rejection and 27,345 pending captures with 60k unrelated historical facts.
+- Focused ESLint and diff whitespace check pass.
+- Post-apply function remains SECURITY INVOKER; anon/authenticated execute false,
+ service_role execute true. No manual grading or collector replay performed.
+- Scope reviewed independently; no semantic or security blockers found.
+
+Canonical baseline was refreshed on GitHub and Vercel before repair:
+ccf6d6011839863194d4b01b4f566e293d29bc7a,
+dpl_AD6gdboiHURBXAvsgSz4Eg8vRs2M READY.
+NBA remains admin-only and the two owner-only test picks remain under monitoring.
+Final normal scheduled recovery is recorded in work/the-paint.
