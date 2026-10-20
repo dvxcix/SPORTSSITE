@@ -1,0 +1,38 @@
+NBA research archive: missing active-player identity recovery
+
+Verified failure
+Normal research captures at 02:00, 02:05 and 02:10 UTC on October 20, 2026
+failed for game 21717930 with P0001. The database's strict identity guard rejected
+player 1046672580 (Drew Timme), who was present in the current active roster and
+cached research board but absent from nba_players. The scheduled six-hour player
+directory refresh had completed successfully; it can lag active-roster changes.
+Other games, opening-night odds and grading continued normally.
+
+Scoped application repair
+Before archiving scored rows, the scheduled collector batches their player IDs
+against nba_players. Only missing identities cause a canonical active-roster
+read. Each missing player must have one unambiguous complete identity and match
+the exact game team before insertion. The full canonical provider payload is
+stored; compact board data is not persisted as identity. Concurrent inserts
+and existing catalog rows are preserved. Missing, incomplete or mismatched
+source data and database failures stop that game's archive and release its lease.
+
+No database migration, direct repair write, job replay, schedule change, scoring
+change or access-flag change is involved. The strict archive guard is unchanged.
+NBA stays admin-only and both existing owner-only test picks stay under monitoring.
+
+Validation
+- Full NBA suite: 193/193 passing.
+- Typecheck and scoped ESLint pass.
+- Dedicated fixtures cover canonical inserts, known/unscored no-ops, concurrent
+  inserts, mismatched/duplicate/missing identities, source/database failures and
+  the real scheduled route's identity-before-archive ordering and lease release.
+- Main and live Vercel were refreshed before release: source
+  6e090ff2fa906056066189d430bf2759f723f7ea,
+  deployment dpl_3vq81CeJb1d53KTERZ8okeQJAYQj, READY.
+
+Release verification
+Observe normal five-minute captures after deployment and cached failed-attempt
+expiry. Verify the canonical player row and this game's research snapshots,
+healthy archive/grading jobs, unchanged private pending picks and clean leases.
+The exact deployment and normal-run evidence are recorded in work/the-paint.

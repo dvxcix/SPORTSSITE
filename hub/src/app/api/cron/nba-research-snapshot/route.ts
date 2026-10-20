@@ -11,6 +11,7 @@ import { nbaGamePace, nbaPosition, nbaSlipSurgeScore } from '@/lib/nbaIntelligen
 import { nbaValidatedEstimate, type NbaModelReport } from '@/lib/nbaModel'
 import { nbaEconomicSnapshot } from '@/lib/nbaMovement'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
+import { ensureNbaResearchPlayers } from '@/lib/nbaResearchIdentity'
 import { nbaPeriod, nbaMarketLogs, nbaToday, nbaReference, PAINT_MARKETS } from '@/lib/nbaPaint'
 export const maxDuration = 180
 async function run(request: Request) {
@@ -57,6 +58,7 @@ async function run(request: Request) {
             const economicFeatures={...features,signal:{...signal,marketSupport:nbaMarketSupportIdentity(signal.marketSupport)}}
             return [{ game_id: game.id, player_id: player.id, team_id: player.team.id, market: market.key, version: signal.version, score: signal.score, sample_games: signal.games, sample_through: sampleThrough, features, fingerprint: createHash('sha256').update(JSON.stringify({features:economicFeatures,quote:quote?nbaEconomicSnapshot([quote])[0]:null})).digest('hex'), quote, estimate, model_key: estimate == null ? null : report!.modelKey }]
           }))
+          await ensureNbaResearchPlayers(game, rows)
           const { data, error } = await admin.rpc('record_nba_research_batch', { p_rows: rows })
           if (error) throw new Error(`NBA score archive write failed (${error.code})`)
           inserted = data as number
