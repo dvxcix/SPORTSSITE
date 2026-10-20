@@ -8,7 +8,7 @@ import { PaintPriceValue } from './PaintPrice'
 import polish from './research-polish.module.css'
 
 type Signal = Pick<NbaMarketSignal, 'playerId' | 'book' | 'target' | 'related' | 'targetPicks' | 'relatedPicks'>
-type Support = { status: string; signal: Signal | null; publicCapturedAt: string | null; marketCapturedAt: string | null }
+type Support = { status: string; reason?: string; signal: Signal | null; publicCapturedAt: string | null; marketCapturedAt: string | null }
 type OpenQuote = (market: PaintMarket, book: string, quote: NbaMarketSignal['target']) => void
 type QuoteHref = (market: PaintMarket, book: string, quote: NbaMarketSignal['target']) => string
 const label = (market: PaintMarket) => PAINT_MARKETS.find(item => item.key === market)?.label ?? market
@@ -24,6 +24,11 @@ export function PaintMarketPair({ signal, publicAt, onOpen, href }: { signal: Si
 }
 export function PaintMarketSupport({ support, onOpen, href }: { support?: Support | null; onOpen?: OpenQuote; href?: QuoteHref }) {
   const [expanded, setExpanded] = useState(false)
-  if (!support?.signal || support.status !== 'confirmed') return <span className={polish.signalEmpty}>{support?.status === 'stale' || support?.status === 'quote_changed' ? 'Updating' : '—'}</span>
-  return <div className={polish.signalCell}><button className={polish.signalButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}><ArrowUpRight size={14}/><span>Opposing moves</span><ChevronDown size={13} style={{ transform: expanded ? 'rotate(180deg)' : undefined }}/></button>{expanded && <PaintMarketPair signal={support.signal} publicAt={support.publicCapturedAt} onOpen={onOpen} href={href}/>}</div>
+  if (!support?.signal || support.status !== 'confirmed') {
+    const state = !support ? ['Loading…', 'Checking market signals.'] : support.status === 'stale' || support.status === 'quote_changed' ? ['Updating', 'Waiting for matching, verified prices.'] : support.status === 'under_unsupported' ? ['Over-side only', 'Public activity does not identify under-side interest.'] : support.status === 'none' ? ['No opposing moves', 'No qualifying pair at the available lines and sportsbooks.'] : support.reason === 'No market quote available' ? ['No market', 'No quote is available for this player and selection.'] : ['Awaiting data', 'Verified price and public activity observations are not yet available.']
+    return <span className={polish.signalEmpty} title={state[1]}>{state[0]}</span>
+  }
+  const quote = support.signal.target
+  const target = nbaBinary(quote.market) ? 'Yes' : quote.type === 'milestone' ? `${quote.line}+` : `O ${quote.line}`
+  return <div className={polish.signalCell}><button className={polish.signalButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}><BookLogo vendor={support.signal.book} size={16}/><ArrowUpRight size={14}/><span>Opposing moves<small className={polish.subtle}>{label(quote.market)} · {target}</small></span><ChevronDown size={13} style={{ transform: expanded ? 'rotate(180deg)' : undefined }}/></button>{expanded && <PaintMarketPair signal={support.signal} publicAt={support.publicCapturedAt} onOpen={onOpen} href={href}/>}</div>
 }

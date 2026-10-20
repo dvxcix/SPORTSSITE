@@ -3,7 +3,7 @@ import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
 import { getNbaDefenseContext } from '@/lib/nbaIntelligenceData'
 import { getNbaMarketContext } from '@/lib/nbaMarketSignalData'
-import { nbaMarketSupportView } from '@/lib/nbaMarketSignal'
+import { nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSignal'
 import { nbaGamePace,nbaPosition,nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaReference,nbaPeriod,PAINT_MARKETS,type PaintMarket } from '@/lib/nbaPaint'
 import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
       const offer=nbaReference(player.props,market,book,side as 'over'|'under')
       const score=nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined)
       const mm=board.statsComplete&&(!nbaPeriod(market)||board.periodStatsComplete!==false)?ranks.get(player.id)?.mm??null:null
-      return {playerId:player.id,score:score.score,offer:offer??null,mm,minutes:score.minutes,production:score.production,newTeam:score.newTeam,marketSupport:nbaMarketSupportView(score.marketSupport)}
+      const marketSignals=nbaPlayerMarketSignals({playerId:player.id,gameId:board.game.id,market:market as PaintMarket,book,side:side as 'over'|'under',props:player.props,context:marketContext})
+      return {playerId:player.id,score:score.score,offer:offer??null,mm,minutes:score.minutes,production:score.production,newTeam:score.newTeam,marketSupport:nbaMarketSupportView(score.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
     })
     return NextResponse.json({...defense,scores,market,book,side}, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Defense research could not load. Try again shortly.' }, { status: 503 }) }

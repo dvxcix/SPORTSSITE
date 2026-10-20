@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
-import { nbaBuildMarketContext,nbaMarketSupport,nbaMarketSupportView,nbaMarketSupportIdentity, type NbaMarketContext } from '../src/lib/nbaMarketSignal.ts'
+import { nbaBuildMarketContext,nbaMarketSupport,nbaMarketSupportView,nbaMarketSupportIdentity,nbaPlayerMarketSignals, type NbaMarketContext } from '../src/lib/nbaMarketSignal.ts'
 import { nbaSuccessfulMarketReceipt,nbaSuccessfulPublicReceipt } from '../src/lib/nbaMarketReceipts.ts'
 import { nbaSlipSurgeScore,nbaContextualScore } from '../src/lib/nbaIntelligence.ts'
 import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
@@ -17,6 +17,37 @@ const opening=(quote:PaintProp,odds:number):NbaQuoteOpeningRow=>({game_id:quote.
 const publicCapture:NbaPublicCapture={normalizationVersion:NBA_PUBLIC_VERSION,gameId:123,capturedAt:'2026-10-20T11:59:00Z',sourceUrl:'https://app.pikkit.com/event/test',rows:[{playerId:434,market:'points',picks:20},{playerId:434,market:'assists',picks:80}],unmatched:0,markets:['points','assists']}
 const input=()=>({gameId:123,asOf,tipAt,frame:{captured_at:current,props:[target,other]},openings:[opening(target,-120),opening(other,130)],publicCapture})
 const support=(context:NbaMarketContext,offer=target,side:'over'|'under'='over')=>nbaMarketSupport({offer,side,context})
+
+test('signal discovery finds another book and alternate line without changing exact-quote scoring support',()=>{
+  const context=nbaBuildMarketContext(input())
+  const best={...target,vendor:'draftkings',line_value:'21.5',market:{...target.market,over_odds:150}}
+  const request={playerId:target.player_id,gameId:target.game_id,market:'points' as const,book:'all',side:'over' as const,props:[best,target,other],context}
+  assert.equal(support(context,best).status,'none')
+  assert.equal(support(context,best).adjustment,0)
+  const found=nbaPlayerMarketSignals(request)
+  assert.equal(found.status,'confirmed')
+  assert.equal(found.signal?.book,'fanduel')
+  assert.equal(found.signal?.target.line,20.5)
+  assert.equal(nbaPlayerMarketSignals({...request,book:'draftkings'}).status,'none')
+  assert.equal(nbaPlayerMarketSignals({...request,market:'rebounds'}).reason,'No market quote available')
+  assert.equal(support(context,best).adjustment,0,'discovery never modifies the selected quote or score')
+})
+
+test('signal discovery verifies both exact quotes and retains side, game, identity and freshness guards',()=>{
+  const request={playerId:target.player_id,gameId:target.game_id,market:'points' as const,book:'all',side:'over' as const,props:[target,other],context:nbaBuildMarketContext(input())}
+  for(const props of [[target],[{...target,market:{...target.market,over_odds:140}},other],[target,{...other,market:{...other.market,over_odds:-160}}],[target,{...other,game_id:999}],[target,{...other,player_id:999}],[target,other,{...other,market:{...other.market,over_odds:-160}}]]){
+    const result=nbaPlayerMarketSignals({...request,props})
+    assert.equal(result.status,'quote_changed')
+    assert.equal(result.signal,null)
+    assert.equal(result.adjustment,0)
+  }
+  assert.equal(nbaPlayerMarketSignals({...request,side:'under'}).status,'under_unsupported')
+  assert.equal(nbaPlayerMarketSignals({...request,context:null}).status,'unavailable')
+  assert.equal(nbaPlayerMarketSignals({...request,gameId:999}).reason,'No market quote available')
+  assert.equal(nbaPlayerMarketSignals({...request,asOf:'2026-10-20T12:15:00.001Z'}).status,'stale')
+  const view=nbaMarketSupportView(nbaPlayerMarketSignals(request))
+  for(const field of ['adjustment','attenuation','supportingMarkets','opposingPicks'])assert.ok(!(field in view)&&!(field in view.signal!))
+})
 
 test('lengthening target plus shortening related same-book market adds bounded category-supported context',()=>{
   const context=nbaBuildMarketContext(input()),result=support(context)
@@ -178,7 +209,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   const defense={ready:false,season:2025,profiles:[],games:0,fetchedAt:null,stale:false}
   let now=asOf,boardReads=0,contextReads=0,defenseFailed=false
   const gameData={getPaintGame:async()=>board.game,getPaintBoard:async()=>{boardReads++;return board},getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true})}
-  const common={'next/server':response,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:null})},'@/lib/nbaPaintData':gameData,'@/lib/nbaIntelligenceData':{getNbaDefenseContext:async()=>{if(defenseFailed)throw new Error('Defense unavailable');return defense}},'@/lib/nbaMarketSignalData':{getNbaMarketContext:async()=>{contextReads++;return {...nbaBuildMarketContext(input()),asOf:now}}},'@/lib/nbaMarketSignal':{nbaMarketSupportView},'@/lib/nbaIntelligence':intelligence,'@/lib/nbaPaint':paint,'@/lib/nbaMarketMetrics':metrics}
+  const common={'next/server':response,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:null})},'@/lib/nbaPaintData':gameData,'@/lib/nbaIntelligenceData':{getNbaDefenseContext:async()=>{if(defenseFailed)throw new Error('Defense unavailable');return defense}},'@/lib/nbaMarketSignalData':{getNbaMarketContext:async()=>{contextReads++;return {...nbaBuildMarketContext(input()),asOf:now}}},'@/lib/nbaMarketSignal':{nbaMarketSupportView,nbaPlayerMarketSignals},'@/lib/nbaIntelligence':intelligence,'@/lib/nbaPaint':paint,'@/lib/nbaMarketMetrics':metrics}
   const scoreRoute=await compiled('../src/app/the-paint/intelligence/route.ts',common)
   const cached=new Map<string,unknown>()
   const reportsQuery={eq:()=>reportsQuery,order:()=>reportsQuery,limit:async()=>({data:[],error:null})}
@@ -192,7 +223,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   assert.equal(rows[0].score,scores[0].score)
   assert.deepEqual(rows[0].offer,scores[0].offer)
   assert.deepEqual(rows[0].marketSupport,scores[0].marketSupport)
-  for(const row of [scores[0],rows[0]])for(const field of ['baseScore','parts','version','weights','coverage','modelError','modelMetric'])assert.ok(!(field in row))
+  for(const row of [scores[0],rows[0]])for(const field of ['baseScore','parts','version','weights','coverage','modelError','modelMetric','signalOffers'])assert.ok(!(field in row))
   now='2026-10-20T12:15:00.001Z'
   const expired=await slateGet(slateRequest),expiredRows=expired.body.rows as typeof scores
   assert.equal(expiredRows[0].score,nbaSlipSurgeScore(player,'points',board.game.date).baseScore)

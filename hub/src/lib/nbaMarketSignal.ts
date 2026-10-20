@@ -123,3 +123,26 @@ export function nbaMarketSupport(input?: NbaMarketInput): NbaMarketSupport {
   if (!signal) return { ...neutral, status: matches.length ? 'quote_changed' : 'none', reason: matches.length ? 'The selected price changed; awaiting a matching capture' : 'No confirmed paired market signal' }
   return { ...neutral, status: 'confirmed', reason: 'Target price lengthened while a related market shortened with more category picks', adjustment: Math.max(0,Math.min(8,signal.adjustment)), signal }
 }
+
+/** Discovery spans the selected player's market, including other lines/books.
+ * It never changes the exact-quote support used by the score calculation. */
+export function nbaPlayerMarketSignals(input: { playerId: number; gameId: number; market: PaintMarket; book: string; side: 'over' | 'under'; props: PaintProp[]; context: NbaMarketContext | null; asOf?: string }): NbaMarketSupport {
+  const own = input.props.filter(offer => offer.game_id === input.gameId && offer.player_id === input.playerId)
+  const offers = own.filter(offer => offer.prop_type === input.market && (input.book === 'all' || offer.vendor === input.book) && nbaPrice(offer, input.side) != null)
+  if (!offers.length) return { ...nbaMarketSupport(), reason: 'No market quote available' }
+  const baseline = nbaMarketSupport({ offer: offers[0], side: input.side, context: input.context, asOf: input.asOf })
+  if (['unavailable', 'stale', 'under_unsupported'].includes(baseline.status)) return baseline
+  const candidates = input.context!.signals.filter(signal => signal.playerId === input.playerId && signal.target.market === input.market && (input.book === 'all' || signal.book === input.book))
+  const currentQuote = (signal: NbaMarketSignal, quote: NbaSignalQuote) => {
+    const matches = own.filter(offer => offer.vendor === signal.book && offer.prop_type === quote.market && offer.market.type === quote.type && Number(offer.line_value) === quote.line)
+    return matches.length && matches.every(offer => nbaPrice(offer, 'over') === quote.now) ? matches[0] : null
+  }
+  const confirmed = candidates.flatMap(signal => {
+    const target = currentQuote(signal, signal.target), related = currentQuote(signal, signal.related)
+    if (!target || !related) return []
+    const support = nbaMarketSupport({ offer: target, side: input.side, context: input.context, asOf: input.asOf })
+    return support.status === 'confirmed' ? [support] : []
+  }).sort((a,b) => b.adjustment - a.adjustment || b.signal!.relatedPicks - a.signal!.relatedPicks || a.signal!.book.localeCompare(b.signal!.book) || a.signal!.target.line - b.signal!.target.line)
+  if (confirmed.length) return confirmed[0]
+  return { ...baseline, adjustment: 0, signal: null, status: candidates.length ? 'quote_changed' : 'none', reason: candidates.length ? 'Prices changed; awaiting a matching capture' : 'No confirmed paired market signal' }
+}

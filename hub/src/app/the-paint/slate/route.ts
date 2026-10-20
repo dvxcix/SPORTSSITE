@@ -8,7 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { NbaModelReport } from '@/lib/nbaModel'
 import { nbaSlateRows } from '@/lib/nbaSlate'
 import { getNbaMarketContext } from '@/lib/nbaMarketSignalData'
-import { nbaMarketSupportView } from '@/lib/nbaMarketSignal'
+import { nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSignal'
 import { nbaContextualScore } from '@/lib/nbaIntelligence'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const date = request.nextUrl.searchParams.get('date'), market = request.nextUrl.searchParams.get('market'), book = request.nextUrl.searchParams.get('book') ?? 'all', side = request.nextUrl.searchParams.get('side') ?? 'over'
   if (!date || nbaDate(date) !== date || !PAINT_MARKETS.some(item => item.key === market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over', 'under'].includes(side)) return NextResponse.json({ error: 'Invalid NBA slate filters' }, { status: 400 })
   try {
-    const cached = await nbaSharedCache(`slate:v5:${date}:${market}:${book}:${side}`, 120, 300, async () => {
+    const cached = await nbaSharedCache(`slate:v6:${date}:${market}:${book}:${side}`, 120, 300, async () => {
       const started = Date.now(), schedule = await getPaintSchedule(date), boards: PaintBoard[] = [], failed: number[] = []
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
       const {player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,issues}=row
       const safe={player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,issues}
       const contextual=nbaContextualScore(row.baseScore,row.player.id,row.market,row.game.date,{offer:row.offer,side:side as 'over'|'under',context:marketContexts.find(context=>context.gameId===row.game.id)??null})
-      return {...safe,score:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport)}
+      const marketSignals=nbaPlayerMarketSignals({playerId:row.player.id,gameId:row.game.id,market:row.market,book,side:side as 'over'|'under',props:row.signalOffers,context:marketContexts.find(context=>context.gameId===row.game.id)??null})
+      return {...safe,score:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
     }).sort((a,b)=>(b.score??-1)-(a.score??-1)||(b.mm??0)-(a.mm??0))
     return NextResponse.json({ ...cached.value,rows, fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'NBA slate could not load. Try again shortly.' }, { status: 503 }) }
