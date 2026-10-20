@@ -11,7 +11,8 @@ export function nbaFirstEvent(events:FirstOddsEvent[],game:PaintGame){
 // These contracts have different winning events and must never share a best
 // price group. Unknown book semantics are withheld rather than guessed.
 const firstRules:Record<string,'first_score'|'first_field_goal'>={fanduel:'first_score',draftkings:'first_score',williamhill_us:'first_score',betmgm:'first_field_goal',fanatics:'first_field_goal'}
-const methodKeys:Record<string,string>={'2pointer':'2pt','2pointfieldgoal':'2pt','3pointer':'3pt','3pointfieldgoal':'3pt','threepointer':'3pt',freethrow:'free_throw',dunk:'dunk',layup:'layup',other:'other'}
+const methodName=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'')
+const methodKeys:Record<string,string>={'2pt':'2pt','3pt':'3pt','twopointer':'2pt','2pointer':'2pt','2pointfieldgoal':'2pt','3pointer':'3pt','3pointfieldgoal':'3pt','threepointer':'3pt',freethrow:'free_throw',dunk:'dunk',layup:'layup',other:'other'}
 const hash=(value:string)=>{let n=2166136261;for(const c of value)n=Math.imul(n^c.charCodeAt(0),16777619);return -((n>>>0)+1)}
 export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,players:PaintPlayer[],asOf=Date.now()):{rows:FirstBasketRow[];unmatched:number}{
   if(nbaFirstEvent([event],game)?.id!==event.id)return {rows:[],unmatched:1}
@@ -25,7 +26,7 @@ export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,player
       const name=outcome.description??(!['yes','no'].includes(outcome.name.toLowerCase())?outcome.name:'')
       const matches=players.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id)&&nbaName(`${p.first_name} ${p.last_name}`)===nbaName(name))
       if(matches.length!==1){unmatched++;continue}
-      const player=matches[0],method=market.key==='player_method_of_first_basket'?methodKeys[nbaName(outcome.name)]:undefined
+      const player=matches[0],method=market.key==='player_method_of_first_basket'?methodKeys[methodName(outcome.name)]:undefined
       if(market.key==='player_method_of_first_basket'&&(!method||rule!=='first_score')){unmatched++;continue}
       const prop=method?`first_score_${method}`:market.key==='player_first_team_basket'?rule==='first_score'?'team_first_score':'team_first_field_goal':rule
       const vendor=book.key==='williamhill_us'?'caesars':book.key,key=`${game.id}:${player.id}:${vendor}:${prop}`

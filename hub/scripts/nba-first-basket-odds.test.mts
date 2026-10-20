@@ -56,3 +56,8 @@ test('missing or nonfinal facts, DNPs, unverified starts and opening gaps never 
   assert.equal(gradeNbaPick(pick('first_score'),stats,{...facts,plays:plays.slice(1)}),null)
   assert.equal(gradeNbaPick(pick('first_score'),stats,{...facts,plays:plays.map(p=>({...p,game_id:999}))}),null)
 })
+
+test('numeric first-basket methods preserve 2-point versus 3-point identity',()=>{
+ const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_method_of_first_basket',outcomes:[{name:'2-pointer',description:'Test Player',price:700},{name:'3-pointer',description:'Test Player',price:1200}]}]}]}
+ assert.deepEqual(nbaNormalizeFirstOdds(sample,game,[player],now).rows.map(r=>r.offer.prop_type),['first_score_2pt','first_score_3pt'])
+})
