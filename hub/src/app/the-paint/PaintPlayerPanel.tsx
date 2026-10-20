@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { nbaSelectedProps, nbaSelectedPlayers, type NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -24,6 +26,7 @@ export type PaintPlayerTab = 'trends' | 'court' | 'markets' | 'ladder' | 'moveme
 
 type Profile = { shooting: Record<string, number | null> | null; advanced: Record<string, number | null> | null }
 export function PaintPlayerPanel({ selection, player, board, market: initialMarket, side: initialSide, initialTab = 'trends', trackingMetric = 'usage_percentage', book, quote, onClearQuote, onBookChange, onMarketChange, onSideChange, onTabChange, close, compare, compared, compareDisabled }: { selection?:NbaMarketSelection; player: PaintPlayer; board: PaintBoard; market: PaintMarket; side: 'over' | 'under'; initialTab?: PaintPlayerTab; trackingMetric?:string; book?:string;quote?:{line:number;type:'over_under'|'milestone'}|null;onClearQuote?:()=>void;onBookChange?:(book:string)=>void; onMarketChange?:(market:PaintMarket)=>void; onSideChange?:(side:'over'|'under')=>void; onTabChange?:(tab:PaintPlayerTab)=>void; close: () => void; compare: () => void; compared: boolean; compareDisabled: boolean }) {
+  const oddsMode = useNbaOddsMode()
   const [tab, setTab] = useState<PaintPlayerTab>(initialTab); const [market, setMarket] = useState(initialMarket); const [side, setSide] = useState(initialSide); const [window, setWindow] = useState(10); const [split, setSplit] = useState<'all' | 'home' | 'away' | 'h2h'>('all'); const [alternate, setAlternate] = useState(true); const [profile, setProfile] = useState<Profile | null>(null); const [profileError, setProfileError] = useState(false)
   const [ladderType,setLadderType]=useState<'milestone'|'over_under'>(quote?.type??'milestone')
   const changeMarket=(next:PaintMarket)=>{setMarket(next);onClearQuote?.();onMarketChange?.(next)}
@@ -43,11 +46,11 @@ export function PaintPlayerPanel({ selection, player, board, market: initialMark
   useEffect(() => {
     if (tab !== 'court' || board.historical) return
     const controller = new AbortController()
-    fetch(`/the-paint/profile?player=${player.id}&season=${board.sampleSeason}`, { signal: controller.signal }).then(async r => { if (!r.ok) throw new Error('profile'); return await r.json() as Profile }).then(value => { setProfile(value); setProfileError(false) }).catch(() => { if (!controller.signal.aborted) setProfileError(true) })
+    fetch(nbaModeHref(`/the-paint/profile?player=${player.id}&season=${board.sampleSeason}`, oddsMode), { signal: controller.signal }).then(async r => { if (!r.ok) throw new Error('profile'); return await r.json() as Profile }).then(value => { setProfile(value); setProfileError(false) }).catch(() => { if (!controller.signal.aborted) setProfileError(true) })
     return () => controller.abort()
-  }, [player.id, board.sampleSeason, tab, board.historical])
+  }, [oddsMode, player.id, board.sampleSeason, tab, board.historical])
   return <ModalSurface open onClose={close} label={`${player.first_name} ${player.last_name} research`} backdropClassName={styles.drawerBackdrop} backdropStyle={{ justifyContent: 'flex-end', alignItems: 'stretch' }} panelClassName={styles.drawer}>
-    <header className={styles.drawerTop}><span><Link href={`/nba/teams/${player.team.id}`} className="inline-flex items-center gap-2"><TeamLogo abbr={player.team.abbreviation} size={23}/>{player.team.full_name}</Link></span><Link className={styles.iconButton} href={`/nba/players/${player.id}`} aria-label={`Open ${player.first_name} ${player.last_name} full profile`}><ArrowUpRight size={19}/></Link><button className={styles.iconButton} onClick={close} aria-label="Close player details"><X size={20}/></button></header>
+    <header className={styles.drawerTop}><span><Link href={nbaModeHref(`/nba/teams/${player.team.id}`, oddsMode)} className="inline-flex items-center gap-2"><TeamLogo abbr={player.team.abbreviation} size={23}/>{player.team.full_name}</Link></span><Link className={styles.iconButton} href={nbaModeHref(`/nba/players/${player.id}`, oddsMode)} aria-label={`Open ${player.first_name} ${player.last_name} full profile`}><ArrowUpRight size={19}/></Link><button className={styles.iconButton} onClick={close} aria-label="Close player details"><X size={20}/></button></header>
     <div className={styles.playerHero}><div><span className={styles.playerPosition}>#{player.jersey_number || '—'} · {player.position} · {player.height || '—'}</span>{player.draft_year!=null&&<span className={styles.draftContext}>{player.draft_year} draft{player.draft_number!=null?' · #'+player.draft_number:''}</span>}<h2>{player.first_name}<strong>{player.last_name}</strong></h2><span className={styles.playerOpponent}><TeamLogo abbr={opponent.abbreviation} size={20}/>vs {opponent.name}</span></div><PlayerAvatar player={player} large/></div>
     {teamContext.newTeam && <div className={styles.teamContext}><strong>New team</strong>{teamContext.priorTeams.map(id=>{const team=board.teams?.find(team=>team.id===id);return team?<span key={id}><TeamLogo abbr={team.abbreviation} size={20}/>{team.full_name}</span>:null})}<span>→</span><span><TeamLogo abbr={player.team.abbreviation} size={20}/>{player.team.full_name}</span></div>}
     <div className={styles.playerStrip}>{[{ label: 'PTS', value: player.average.pts }, { label: 'REB', value: player.average.reb }, { label: 'AST', value: player.average.ast }, { label: 'MIN', value: player.average.min }].map(s => <span key={s.label}><b>{number(s.value)}</b><small>{s.label}</small></span>)}</div>

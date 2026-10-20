@@ -15,7 +15,7 @@ const stubs: Record<string, string> = {
   'next/navigation': 'export const useRouter=()=>({push:()=>{}})',
 }
 const bundle = await build({
-  stdin: { contents: 'export {NbaMatrixProvider,NbaMatrixResults} from "./src/components/nba/NbaMatrixContext"', resolveDir: resolve('.'), loader: 'tsx' },
+  stdin: { contents: 'export {NbaMatrixProvider,NbaMatrixResults} from "./src/components/nba/NbaMatrixContext";export {NbaOddsModeProvider} from "./src/components/nba/NbaOddsModeContext"', resolveDir: resolve('.'), loader: 'tsx' },
   bundle: true, write: false, outfile: 'nba-matrix-refresh.cjs', platform: 'node', format: 'cjs', jsx: 'automatic',
   external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' },
   plugins: [{ name: 'matrix-refresh-fixture', setup(builder) {
@@ -26,7 +26,7 @@ const bundle = await build({
 const fixture = { exports: {} as Record<string, ComponentType<Record<string, unknown> & { children?: ReactNode }>> }
 new Function('require', 'module', 'exports', bundle.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, fixture, fixture.exports)
 
-type Pending = { gameId: number; signal: AbortSignal; finish: () => void }
+type Pending = { gameId: number; mode: string; signal: AbortSignal; finish: () => void }
 async function harness(gameIds: number[]) {
   const originalFetch = globalThis.fetch, pending: Pending[] = []
   globalThis.fetch = (async (url, options) => {
@@ -36,7 +36,7 @@ async function harness(gameIds: number[]) {
       const abort = () => reject(new DOMException('Fixture aborted', 'AbortError'))
       if (signal.aborted) { abort(); return }
       signal.addEventListener('abort', abort, { once: true })
-      pending.push({ gameId, signal, finish: () => {
+      pending.push({ gameId, mode:new URL(String(url),'https://www.slipsurge.com').searchParams.get('mode')!, signal, finish: () => {
         signal.removeEventListener('abort', abort)
         resolve(Response.json({
           gameId, matrices: [{ id: 'matrix' }],
@@ -48,10 +48,11 @@ async function harness(gameIds: number[]) {
   }) as typeof fetch
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host), board = { game: { id: gameIds[0], date: '2026-10-20' } }
-  await act(async () => root.render(createElement(fixture.exports.NbaMatrixProvider, { board, gameIds },
-    createElement(fixture.exports.NbaMatrixResults, { board, open: () => {} }))))
+  const render = async (mode: string) => { await act(async () => root.render(createElement(fixture.exports.NbaOddsModeProvider, { mode },createElement(fixture.exports.NbaMatrixProvider, { board, gameIds },
+    createElement(fixture.exports.NbaMatrixResults, { board, open: () => {} }))))) }
+  await render('pregame')
   return {
-    host, pending,
+    host, pending, render,
     dispatch: async (name: string) => { await act(async () => window.dispatchEvent(new dom.window.Event(name))) },
     finish: async (...requests: Pending[]) => { await act(async () => { requests.forEach(request => request.finish()) }) },
     close: async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch },
@@ -95,5 +96,18 @@ test('an explicit matrix edit replaces in-flight results and remains protected f
     assert.ok(ui.host.textContent?.includes('1 matches'))
     await ui.dispatch('fixture:matrix-poll')
     assert.equal(ui.pending.length, 3)
+  } finally { await ui.close() }
+})
+
+
+test('NBA Matrix mode switches clear old matches and request only the selected odds phase', async () => {
+  const ui = await harness([1])
+  try {
+    assert.equal(ui.pending[0].mode,'pregame')
+    await ui.finish(ui.pending[0]);assert.ok(ui.host.textContent?.includes('Player 1'))
+    await ui.render('live')
+    assert.equal(ui.pending[1].mode,'live')
+    assert.equal(ui.host.textContent?.includes('Player 1'),false)
+    await ui.finish(ui.pending[1]);assert.ok(ui.host.textContent?.includes('Player 1'))
   } finally { await ui.close() }
 })

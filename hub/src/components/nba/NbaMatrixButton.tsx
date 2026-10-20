@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Clipboard, Copy, Grid3X3, Plus, Share2, SlidersHorizontal, Trash2, X } from 'lucide-react'
@@ -84,8 +86,9 @@ function FactorEditor({ factor, pipeline, onChange, onRemove, trackingFields }: 
 }
 
 function MatrixEditor({ initial, onClose, onSaved, gameId }: { initial: NbaMatrix | null; onClose: () => void; onSaved: () => void; gameId?: number }) {
+  const oddsMode = useNbaOddsMode()
   const [trackingFields, setTrackingFields] = useState<string[]>([])
-  useEffect(() => { if (!gameId) return; const abort = new AbortController(); void fetch('/the-paint/tracking?game='+gameId, {signal:abort.signal}).then(r=>r.ok?r.json():null).then(r=>{if(r?.fields)setTrackingFields(r.fields)}).catch(()=>{}); return()=>abort.abort() },[gameId])
+  useEffect(() => { if (!gameId) return; const abort = new AbortController(); void fetch(nbaModeHref('/the-paint/tracking?game='+gameId, oddsMode), {signal:abort.signal}).then(r=>r.ok?r.json():null).then(r=>{if(r?.fields)setTrackingFields(r.fields)}).catch(()=>{}); return()=>abort.abort() },[oddsMode, gameId])
   const [name, setName] = useState(initial?.name ?? '')
   const [color, setColor] = useState(initial?.color ?? COLORS[0])
   const [type, setType] = useState<'classic' | 'pipeline'>(initial?.matrix_type ?? 'classic')

@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, UsersRound } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -18,6 +20,7 @@ type Snapshot = { rows: ReturnType<typeof nbaDivergences>; milestones:NbaMilesto
 const label = (market: PaintMarket) => PAINT_MARKETS.find(item => item.key === market)?.label ?? market
 const delta = (value: number | null) => value == null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(1)}`
 export function PaintDivergence({ board, open,initialMarket,initialTarget,initialBook }: { initialMarket?:PaintMarket;initialTarget?:number;initialBook?:string;board: PaintBoard; open: (id: number, market?: PaintMarket) => void }) {
+  const oddsMode = useNbaOddsMode()
   const [mode,setMode]=useState<'milestone'|'over_under'>('milestone')
   const [state, setState] = useState<{ game: number; data: Snapshot } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0), [book, setBook] = useState('all'), [focus, setFocus] = useState(false), [query, setQuery] = useState(''), [sort, setSort] = useState('public')
   useEffect(() => {
@@ -26,7 +29,7 @@ export function PaintDivergence({ board, open,initialMarket,initialTarget,initia
       if (pending) return
       pending = true
       try {
-        const response = await fetch(`/the-paint/divergence?game=${board.game.id}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]) })
+        const response = await fetch(nbaModeHref(`/the-paint/divergence?game=${board.game.id}`, oddsMode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]) })
         if (!response.ok) throw new Error('unavailable')
         const data = await response.json()
         if (!controller.signal.aborted) { setState({ game: board.game.id, data }); setError('') }
@@ -35,7 +38,7 @@ export function PaintDivergence({ board, open,initialMarket,initialTarget,initia
     }
     void update(); const stop = watchNbaRefresh(update)
     return () => { controller.abort(); stop() }
-  }, [board.game.id, retry])
+  }, [oddsMode, board.game.id, retry])
   const snapshot = state?.game === board.game.id ? state.data : null
   const refresh = () => { setError(''); setRetry(value => value + 1) }
   const players = useMemo(() => new Map(board.players.map(player => [player.id, player])), [board.players])
@@ -62,7 +65,7 @@ export function PaintDivergence({ board, open,initialMarket,initialTarget,initia
             const change = row.kind === 'price' ? item.movement.priceChange : item.movement.lineChange
             const rising = row.kind === 'price' ? (change ?? 0) < 0 : (change ?? 0) > 0
             const quote = item.movement.latest
-            const href = `/the-paint?${new URLSearchParams({ date: board.game.date, game: String(board.game.id), player: String(player.id), market: item.market, book: row.book, side: 'over', view: 'research', panel: 'ladder', ...(quote ? { line: String(quote.line), type: quote.type } : {}) })}`
+            const href = nbaModeHref(`/the-paint?${new URLSearchParams({ date: board.game.date, game: String(board.game.id), player: String(player.id), market: item.market, book: row.book, side: 'over', view: 'research', panel: 'ladder', ...(quote ? { line: String(quote.line), type: quote.type } : {}) })}`, oddsMode)
             return <a className={polish.signalQuote} key={item.market} href={href}><strong>{label(item.market)}{row.kind === 'price' && quote ? ` · ${quote.type === 'milestone' ? `${quote.line}+` : `O ${quote.line}`}` : ''}</strong><span className={polish.signalDirection} data-direction={row.kind === 'price' ? rising ? 'longer' : 'shorter' : rising ? 'shorter' : 'longer'}>{rising ? <ArrowUpRight size={13}/> : <ArrowDownRight size={13}/>} {row.kind === 'price' ? rising ? 'Lengthening' : 'Shortening' : rising ? 'Line rising' : 'Line falling'}</span>{row.kind === 'price' ? <PaintPriceValue opening={item.movement.priceFirstOdds} current={item.movement.priceLatestOdds} at={item.movement.priceFirstAt ?? undefined} openingLabel={item.movement.priceOpeningKnown ? 'OPEN' : 'FIRST'} compact/> : <><strong>{item.movement.first?.line} → {item.movement.latest?.line}</strong><small>Δ {delta(item.movement.lineChange)}</small></>}<small>{item.picks == null ? 'Public count unavailable' : `${item.picks.toLocaleString()} category picks`}</small></a>
           })}</div>
           <footer><time dateTime={row.latestAt}>{new Date(row.latestAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET</time>{row.publicHeavierElsewhere && row.primaryPicks != null && row.otherPicks != null && <span className={polish.badge}><UsersRound size={12}/>{(row.otherPicks - row.primaryPicks).toLocaleString()} more related picks</span>}</footer>

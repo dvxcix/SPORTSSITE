@@ -1,3 +1,4 @@
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as milestoneSignals from '../src/lib/nbaMilestoneSignals.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import * as marketSelection from '../src/lib/nbaMarketSelection.ts'
@@ -25,9 +26,9 @@ import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 import {nbaTrackingRow,nbaTrackingSample,nbaTrackingField} from '../src/lib/nbaTracking.ts'
 import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
-const unpostedFirstBasket={getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],unmatched:0,eventMatched:false})}
+const unpostedFirstBasket={getNbaFirstOddsForMode:async()=>({rows:[],unmatched:0,eventMatched:false}),getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],unmatched:0,eventMatched:false})}
 const emptyOpeningImports={'./nbaOddsHistory':{nbaAttachOpenings},'./nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>[]}}
-function gameQuote(gameId:number):import('../src/lib/nbaPaint.ts').PaintGameOdds{return{id:gameId+1000,game_id:gameId,vendor:'fanduel',moneyline_home_odds:-140,moneyline_away_odds:120,spread_home_value:'-3.5',spread_away_value:'3.5',total_value:'215.5',updated_at:'2099-10-20T12:00:00Z'}}
+function gameQuote(gameId:number):import('../src/lib/nbaPaint.ts').PaintGameOdds{return{id:gameId+1000,game_id:gameId,vendor:'fanduel',moneyline_home_odds:-140,moneyline_away_odds:120,spread_home_value:'-3.5',spread_away_value:'3.5',total_value:'215.5',updated_at:new Date().toISOString()}}
 
 test('validated NBA estimates require an earlier held-out report, adequate samples and exact market observations',()=>{
   const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1}))
@@ -378,7 +379,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
-  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if(name==='node:crypto'&&!(name in imports))return crypto;if(name==='./nbaSharedCache'&&!(name in imports))return cachePassthrough;if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets'||name==='@/lib/nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts')return {};if((name==='./nbaFirstBasketOddsData'||name==='@/lib/nbaFirstBasketOddsData')&&!(name in imports))return unpostedFirstBasket;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
+  new Function('require', 'exports', 'module', 'fetch','process','setTimeout','clearTimeout', outputText)((name: string) => { if((name==='./nbaOddsClockData'||name==='@/lib/nbaOddsClockData')&&!(name in imports))return{getNbaOddsGame:async(game:unknown)=>game}; if(name==='@/lib/nbaOddsMode'||name==='./nbaOddsMode')return oddsMode; if(name==='./nbaOddsPhaseData'&&!(name in imports))return {getNbaPhaseSnapshot:async()=>({props:[],gameOdds:[],firstBasket:[],capturedAt:{props:null,gameOdds:null,firstBasket:null}})}; if(name==='node:crypto'&&!(name in imports))return crypto;if(name==='./nbaSharedCache'&&!(name in imports))return cachePassthrough;if(name==='@/lib/nbaMilestoneSignals')return milestoneSignals;if(name==='@/lib/nbaMarketSelection')return marketSelection;if(name==='./nbaFirstBasketMarkets'||name==='@/lib/nbaFirstBasketMarkets')return firstMarkets;if(name==='./nbaFirstBasketFacts')return {};if((name==='./nbaFirstBasketOddsData'||name==='@/lib/nbaFirstBasketOddsData')&&!(name in imports))return unpostedFirstBasket;assert.ok(name in imports, name); return imports[name] }, target.exports, target, fetcher,globals.process??process,globals.setTimeout??setTimeout,globals.clearTimeout??clearTimeout)
   return target.exports
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
@@ -561,34 +562,34 @@ test('NBA settlement never writes from partial, live, mismatched, missing or fai
   }
 })
 
-test('NBA collector requires cron authorization, deduplicates schedules and captures only pretipoff games', async()=>{
+test('NBA collector requires cron authorization, deduplicates schedules and captures the verified phase while excluding final games', async()=>{
   let reads=0,gameReads=0,denied=true
   const writes:string[]=[]
   const crypto=await import('node:crypto')
   const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
-    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaSharedCache':cachePassthrough,'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);assert.ok(['record_nba_market_capture','record_nba_game_market_capture'].includes(name));assert.equal(args.p_game_id,123);writes.push(name);return{data:true,error:null}}})})},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]},getPaintGameOdds:async(id:number)=>{gameReads++;return[gameQuote(id)]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
+    'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>denied?Response.json({error:'Unauthorized'},{status:401}):null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaSharedCache':cachePassthrough,'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);assert.equal(name,'record_nba_phase_capture');assert.equal(args.p_game_id,123);writes.push(String(args.p_feed));return{data:true,error:null}}})})},'@/lib/nbaPaintData':{getPaintGame:async(id:number)=>({id,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}),getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},{id:456,date:'2000-01-01',datetime:'2000-01-01T20:00:00Z',status_state:'final'}]}),getPaintProps:async()=>{reads++;return[offer]},getPaintGameOdds:async(id:number)=>{gameReads++;return[gameQuote(id)]}},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},
   })
   const get=route.GET as unknown as(request:Request)=>Promise<Response>
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,401)
   assert.equal(reads,0);assert.equal(gameReads,0);assert.equal(writes.length,0)
   denied=false
   assert.equal((await get(new Request('https://test/api/cron/nba-market-capture'))).status,200)
-  assert.equal(reads,1);assert.equal(gameReads,1);assert.deepEqual(writes.sort(),['record_nba_game_market_capture','record_nba_market_capture'])
+  assert.equal(reads,1);assert.equal(gameReads,1);assert.deepEqual(writes.sort(),['game','props'])
 })
 
 test('NBA quote capture covers the third calendar date beyond sixteen games and rotates stored attempts, including failures',async()=>{
  const calls:string[]=[],reads:number[]=[],gameReads:number[]=[],attempts:string[]=[],writes:{name:string;game:number}[]=[]
  const games=Array.from({length:18},(_,index)=>({id:index+1,date:'2099-10-22',datetime:new Date(Date.now()+45*3600000).toISOString(),status_state:'scheduled'}))
- const prior=games.slice(0,8).map(game=>({key:'market-attempt:v3:'+game.id,fetched_at:new Date().toISOString()}))
+ const prior=games.slice(0,8).map(game=>({key:'market-attempt:v4:pregame:'+game.id,fetched_at:new Date().toISOString()}))
  let hit=false
  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{
   'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},
   '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{attempts.push(key);return{value:hit?{status:'captured'}:await load()}}},
-  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:(name:string,args:{p_game_id:number})=>({abortSignal:async()=>{writes.push({name,game:args.p_game_id});return{data:true,error:null}}})})},
-  '@/lib/nbaPaintData':{getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:prior,error:null})})}),rpc:(name:string,args:{p_game_id:number;p_feed:string})=>({abortSignal:async()=>{assert.equal(name,'record_nba_phase_capture');writes.push({name:args.p_feed,game:args.p_game_id});return{data:true,error:null}}})})},
+  '@/lib/nbaPaintData':{getPaintGame:async(id:number)=>({...games.find(game=>game.id===id)!,status:'Scheduled',period:0}),getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintProps:async(id:number)=>{reads.push(id);if(id===9)throw new Error('source unavailable');return[{...offer,game_id:id}]},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
  })
  const get=route.GET as(request:Request)=>Promise<Response>,response=await get(new Request('https://test/capture'))
- assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='record_nba_market_capture').length,17);assert.equal(writes.filter(row=>row.name==='record_nba_game_market_capture').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='record_nba_game_market_capture'));assert.equal(attempts.filter(key=>key.startsWith('market-attempt:v3:')).length,18);assert.equal(attempts.filter(key=>key.startsWith('first-basket-attempt:v1:')).length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
+ assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-19','2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='props').length,17);assert.equal(writes.filter(row=>row.name==='game').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='game'));assert.equal(attempts.filter(key=>key.startsWith('market-attempt:v4:pregame:')).length,18);assert.equal(attempts.filter(key=>key.startsWith('first-basket-attempt:v2:pregame:')).length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
  assert.equal((await response.json()).failed,1)
  hit=true;reads.length=0;gameReads.length=0;writes.length=0
  const repeated=await get(new Request('https://test/capture')),summary=await repeated.json()
@@ -602,12 +603,13 @@ test('NBA game and player quote captures preserve the healthy archive when eithe
       'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/nbaPaint':{nbaToday:()=> '2099-10-20'},'@/lib/nbaMovement':{nbaEconomicSnapshot},'@/lib/nbaOddsHistory':{nbaGameEconomicSnapshot},'@/lib/nbaSharedCache':cachePassthrough,
       '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async(signal:AbortSignal)=>{
         assert.ok(signal instanceof AbortSignal);assert.equal(args.p_game_id,123);assert.match(String(args.p_fingerprint),/^[a-f0-9]{64}$/)
-        const kind=name==='record_nba_market_capture'?'props':'game'
-        assert.ok(['record_nba_market_capture','record_nba_game_market_capture'].includes(name));requested.push(kind)
+        const kind=String(args.p_feed)
+        assert.equal(name,'record_nba_phase_capture');requested.push(kind)
         if(failure===`${kind}-write`)return{data:null,error:{message:'fixture unavailable'}}
         stored.push(kind);return{data:true,error:null}
       }})})},
       '@/lib/nbaPaintData':{
+        getPaintGame:async(id:number)=>({id,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}),
         getPaintSchedule:async()=>({games:[{id:123,date:'2099-10-20',datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'}]}),
         getPaintProps:async(id:number,fresh:boolean)=>{assert.equal(id,123);assert.equal(fresh,true);if(failure==='props-source')throw new Error('fixture unavailable');return[offer]},
         getPaintGameOdds:async(id:number,fresh:boolean)=>{assert.equal(id,123);assert.equal(fresh,true);if(failure==='game-source')throw new Error('fixture unavailable');return[gameQuote(id)]},

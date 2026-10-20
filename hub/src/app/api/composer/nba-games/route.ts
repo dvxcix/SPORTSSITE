@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
-import { getPaintSchedule, getPaintRoster, getPaintProps } from '@/lib/nbaPaintData'
+import { getPaintSchedule, getPaintRoster, getPaintPrices } from '@/lib/nbaPaintData'
 import { nbaComposerGame } from '@/lib/nbaComposer'
 import { hydrateNbaPlayers } from '@/lib/nbaDirectory'
 
@@ -11,9 +11,9 @@ export async function GET(request: Request) {
   try {
     const { games, date } = await getPaintSchedule(new URL(request.url).searchParams.get('date') ?? undefined)
     const payload = await Promise.all(games.map(async game => {
-      const [roster, props] = await Promise.all([getPaintRoster(game), getPaintProps(game.id)])
+      const [roster, prices] = await Promise.all([getPaintRoster(game), getPaintPrices(game, 'pregame')])
       const portraits = new Map((await hydrateNbaPlayers(roster)).map(player => [`bdl:${player.id}`, player.headshot]))
-      const result = nbaComposerGame(game, roster, props)
+      const result = nbaComposerGame(game, roster, prices.props)
       return { ...result, players: result.players.map(player => ({ ...player, headshot_url: portraits.get(player.player_id) ?? null })) }
     }))
     return NextResponse.json({ date, games: payload }, { headers: { 'Cache-Control': 'private, no-store' } })

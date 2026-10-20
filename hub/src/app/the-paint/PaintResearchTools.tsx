@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
 import { Activity, ArrowDown, ArrowUpRight, ClipboardList, HeartPulse, Layers3, Shield, Target } from 'lucide-react'
 import { BookLogo, bookName } from '@/components/BookLogo'
@@ -55,8 +57,9 @@ export function PaintCheatsheets({board,players,vendor,side,location,open}:{boar
 }
 
 export function PaintUsage({board,players,open}:{board:PaintBoard;players:PaintPlayer[];open:(id:number)=>void}){
+  const oddsMode = useNbaOddsMode()
   const [window,setWindow]=useState(10),[sort,setSort]=useState('minutes'),[ascending,setAscending]=useState(false),[data,setData]=useState<PaintScouting|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0)
-  useEffect(()=>{const controller=new AbortController();fetch(`/the-paint/scouting?game=${board.game.id}`,{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw new Error('tracking');return await r.json() as PaintScouting}).then(d=>{setData(d);setError(false)}).catch(()=>{if(!controller.signal.aborted)setError(true)});return()=>controller.abort()},[board.game.id,retry])
+  useEffect(()=>{const controller=new AbortController();fetch(nbaModeHref(`/the-paint/scouting?game=${board.game.id}`, oddsMode),{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw new Error('tracking');return await r.json() as PaintScouting}).then(d=>{setData(d);setError(false)}).catch(()=>{if(!controller.signal.aborted)setError(true)});return()=>controller.abort()},[oddsMode, board.game.id,retry])
   const columns=[{key:'minutes',label:'Minutes'},{key:'minutesChange',label:'Δ Minutes'},{key:'fga',label:'FGA'},{key:'fg3a',label:'3PA'},{key:'fta',label:'FTA'},{key:'per36',label:'PTS / 36'},{key:'usage',label:'Usage %'},{key:'potential',label:'Potential AST'},{key:'chances',label:'REB chances'},{key:'drives',label:'Drives'}]
   const pool=useMemo(()=>board.players.map(player=>{const role=nbaRole(player,window),scout=data?.players.find(p=>p.id===player.id);return {player,values:{...role,per36:role.per36('points'),usage:scout?.advanced.usg_pct==null?null:scout.advanced.usg_pct*100,potential:scout?.passing.potential_ast??null,chances:scout?.rebounding.reb_chances??null,drives:scout?.drives.drives??null} as Record<string,number|null>}}),[board.players,window,data])
   const heatPools=useMemo(()=>{const values:Record<string,(number|null)[]>={};for(const row of pool)for(const [key,value]of Object.entries(row.values))(values[key]??=[]).push(value);return values},[pool])

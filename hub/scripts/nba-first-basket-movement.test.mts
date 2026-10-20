@@ -7,6 +7,7 @@ import { nbaFirstMovements } from '../src/lib/nbaFirstBasketMovement.ts'
 import { nbaEconomicSnapshot } from '../src/lib/nbaMovement.ts'
 import { nbaGameEconomicSnapshot, type NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 import type { FirstBasketRow } from '../src/lib/nbaFirstBasketOdds.ts'
+import * as modes from '../src/lib/nbaOddsMode.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 
 const at = '2026-10-20T12:00:00Z', priorAt = '2026-10-20T11:55:00Z', openingAt = '2026-10-20T10:00:00Z', now = Date.parse(at)
@@ -61,10 +62,11 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
     '@/lib/cron-auth': { requireCronAuth: () => null },
     '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
-    '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games: [game] }), getPaintProps: async () => { if (failProps) throw Error('fixture'); return empty ? [] : [regular] }, getPaintGameOdds: async () => [] },
+    '@/lib/nbaPaintData': { getPaintGame:async()=>game, getPaintSchedule: async () => ({ games: [game] }), getPaintProps: async () => { if (failProps) throw Error('fixture'); return empty ? [] : [regular] }, getPaintGameOdds: async () => [] },
     '@/lib/nbaMovement': { nbaEconomicSnapshot },
     '@/lib/nbaOddsHistory': { nbaGameEconomicSnapshot },
     '@/lib/nbaPaint': { nbaToday: () => game.date },
+    '@/lib/nbaOddsMode':{...modes,nbaPregameOpen:(g:PaintGame)=>modes.nbaPregameOpen(g,now),nbaLiveOpen:(g:PaintGame)=>modes.nbaLiveOpen(g,now),nbaQuoteInMode:(q:PaintProp,g:PaintGame,m:modes.NbaOddsMode)=>modes.nbaQuoteInMode(q,g,m,now)},
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
     '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async () => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [row], ...firstState } } },
   }
@@ -77,27 +79,27 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
 test('cloud capture persists First Basket separately without suppressing ordinary markets during a feed outage', async () => {
   const healthy = await runCapture()
   assert.equal(healthy.response.status, 200)
-  assert.deepEqual(new Set(healthy.calls.map(call => call.name)), new Set(['record_nba_market_capture', 'record_nba_game_market_capture', 'record_nba_first_basket_capture']))
+  assert.deepEqual(new Set(healthy.calls.map(call => call.args.p_feed)), new Set(['props','game','first']))
   assert.equal(healthy.body.firstBasket.captured, 1)
   const failed = await runCapture(true)
   assert.equal(failed.response.status, 503)
   assert.equal(failed.body.captured, 1)
   assert.equal(failed.body.firstBasket.failed, 1)
-  assert.equal(failed.calls.some(call => call.name === 'record_nba_first_basket_capture'), false)
+  assert.equal(failed.calls.some(call => call.args.p_feed === 'first'), false)
   const failedProps = await runCapture(false, true)
   assert.equal(failedProps.body.firstBasket.captured, 1)
-  assert.equal(failedProps.calls.some(call => call.name === 'record_nba_market_capture'), false)
+  assert.equal(failedProps.calls.some(call => call.args.p_feed === 'props'), false)
 })
 test('successful empty feeds record withdrawals; failed feeds cannot erase a tape', async () => {
   const empty = await runCapture(false, false, true)
   assert.equal(empty.response.status, 200)
-  for (const call of empty.calls) assert.deepEqual(call.args.p_props ?? call.args.p_odds, [])
+  for (const call of empty.calls) assert.deepEqual(call.args.p_quotes, [])
 })
 test('missing events and unmatched or stale first-basket quotes cannot create empty withdrawals', async () => {
   const missing = await runCapture(false, false, true, { eventMatched: false, unmatched: 0 })
   assert.equal(missing.body.firstBasket.deferred, 1)
-  assert.equal(missing.calls.some(call => call.name === 'record_nba_first_basket_capture'), false)
+  assert.equal(missing.calls.some(call => call.args.p_feed === 'first'), false)
   const stale = await runCapture(false, false, true, { eventMatched: true, unmatched: 10 })
   assert.equal(stale.body.firstBasket.failed, 1)
-  assert.equal(stale.calls.some(call => call.name === 'record_nba_first_basket_capture'), false)
+  assert.equal(stale.calls.some(call => call.args.p_feed === 'first'), false)
 })

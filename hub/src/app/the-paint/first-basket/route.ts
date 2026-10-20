@@ -1,3 +1,4 @@
+import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
@@ -9,12 +10,13 @@ import type { NbaPlay } from '@/lib/nbaShots'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
+  const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   const id = request.nextUrl.searchParams.get('game')
   if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({error:'Choose a valid NBA game'},{status:400})
   try {
-    const cached = await nbaSharedCache(`first-basket-research:v2:${id}`,60,86400,async()=>{
+    const cached = await nbaSharedCache(`first-basket-research:v3:${mode}:${id}`,60,86400,async()=>{
     const started=Date.now()
-    const board = await getPaintBoard(await getPaintGame(Number(id)))
+    const board = await getPaintBoard(await getPaintGame(Number(id)), mode)
     const gameIds = [...new Set([board.game.home_team.id,board.game.visitor_team.id].flatMap(teamId => {
       const games = board.players.flatMap(p => p.logs).filter(l => l.team.id === teamId && l.game.date.slice(0,10) < board.game.date && l.game.postseason !== true && (l.game.status_state === 'final' || l.game.status === 'Final'))
       return [...new Map(games.sort((a,b) => b.game.date.localeCompare(a.game.date)).map(l => [l.game.id,l])).keys()].slice(0,10)
@@ -36,6 +38,6 @@ export async function GET(request: NextRequest) {
     }
     return {...nbaFirstBasketResearch(board,plays,gameIds),failed}
     },120)
-    return NextResponse.json({...cached.value,fetchedAt:cached.fetchedAt,stale:cached.stale},{headers:{'Cache-Control':'private, no-store'}})
+    return NextResponse.json({...cached.value,mode,fetchedAt:cached.fetchedAt,stale:cached.stale},{headers:{'Cache-Control':'private, no-store'}})
   } catch { return NextResponse.json({error:'First-basket research could not load. Try again.'},{status:503}) }
 }

@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import {useEffect,useMemo,useState} from 'react'
 import {ArrowDown,ArrowUpRight} from 'lucide-react'
 import {nbaSeason,type PaintBoard,type PaintPlayer} from '@/lib/nbaPaint'
@@ -18,11 +20,12 @@ function TrackingTrend({values}:{values:(number|null)[]}){
  return <svg className={styles.trackingTrend} viewBox="0 0 140 38" role="img" aria-label={'Observed game values, oldest to newest: '+values.map(value=>value??'unknown').join(', ')}><path d={path} fill="none" stroke="#b4ff4d" strokeWidth="1.8"/>{values.map((value,index)=>value==null?null:<circle key={index} cx={5+index/Math.max(1,values.length-1)*130} cy={33-(value-low)/(high-low)*28} r="2" fill="#b4ff4d"></circle>)}</svg>
 }
 export function PaintTracking({board,players,initialMetric='usage_percentage',open}:{board:PaintBoard;players:PaintPlayer[];initialMetric?:string;open?:(id:number,metric:string)=>void}){
+  const oddsMode = useNbaOddsMode()
  const [data,setData]=useState<Result|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0),[metric,setMetric]=useState(initialMetric),[group,setGroup]=useState('All metrics'),[window,setWindow]=useState(10),[location,setLocation]=useState<'all'|'home'|'away'>('all'),[ascending,setAscending]=useState(false),[sort,setSort]=useState('average')
  const [logSort,setLogSort]=useState('date'),[logAscending,setLogAscending]=useState(false)
  const sortLog=(column:string)=>{setLogAscending(logSort===column?!logAscending:false);setLogSort(column)}
  const sortBy=(column:string)=>{setAscending(sort===column?!ascending:column==='name');setSort(column)}
- useEffect(()=>{const controller=new AbortController();let pending=false;const update=async()=>{if(pending)return;pending=true;try{const response=await fetch('/the-paint/tracking?game='+board.game.id,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])});if(!response.ok)throw new Error('unavailable');const next=await response.json() as Result;if(next.gameId!==board.game.id||!Array.isArray(next.rows))throw new Error('identity');if(!controller.signal.aborted){setData(next);setError('')}}catch{if(!controller.signal.aborted)setError('Game tracking could not refresh. Last loaded observations are preserved.')}finally{pending=false}};void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}},[board.game.id,retry])
+ useEffect(()=>{const controller=new AbortController();let pending=false;const update=async()=>{if(pending)return;pending=true;try{const response=await fetch(nbaModeHref('/the-paint/tracking?game='+board.game.id, oddsMode),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])});if(!response.ok)throw new Error('unavailable');const next=await response.json() as Result;if(next.gameId!==board.game.id||!Array.isArray(next.rows))throw new Error('identity');if(!controller.signal.aborted){setData(next);setError('')}}catch{if(!controller.signal.aborted)setError('Game tracking could not refresh. Last loaded observations are preserved.')}finally{pending=false}};void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}},[oddsMode, board.game.id,retry])
  const fields=useMemo(()=>[...new Set([initialMetric,...data?.fields??[]])].map(nbaTrackingField).sort((a,b)=>a.label.localeCompare(b.label)),[data,initialMetric])
  const definition=nbaTrackingField(metric),lowerIsBetter=metric==='defensive_rating'||metric==='estimated_defensive_rating'
  const pool=useMemo(()=>board.players.map(player=>{

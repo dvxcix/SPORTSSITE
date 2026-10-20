@@ -1,45 +1,48 @@
 import 'server-only'
 import { createAdminClient } from './supabase/admin'
 import { nbaSharedCache } from './nbaSharedCache'
-import { getNbaQuoteOpenings } from './nbaOddsHistoryData'
+import { getNbaAllMarketFrames, getNbaQuoteOpenings } from './nbaOddsHistoryData'
 import { NBA_PUBLIC_VERSION, type NbaPublicCapture } from './nbaPublic'
 import { nbaBuildMarketContext, nbaEmptyMarketContext, type NbaMarketContext } from './nbaMarketSignal'
-import type { PaintFrame } from './nbaMovement'
 import type { PaintGame } from './nbaPaint'
 import { nbaSuccessfulMarketReceipt, nbaSuccessfulPublicReceipt, type NbaSourceReceipt } from './nbaMarketReceipts'
+import { nbaGameStart, type NbaOddsMode } from './nbaOddsMode'
+import { getNbaOddsGame } from './nbaOddsClockData'
 
-/** One shared read per game, including all exact contracts; no source fetches or
- * per-player DB requests. A historical board freezes at the last pregame instant. */
-export async function getNbaMarketContext(game: Pick<PaintGame,'id'|'datetime'|'status'>, now = new Date().toISOString()): Promise<NbaMarketContext> {
-  const tip = Date.parse(game.datetime ?? game.status), requested = Date.parse(now)
-  const tipAt = Number.isFinite(tip) ? new Date(tip).toISOString() : null
-  const asOf = Number.isFinite(requested) && Number.isFinite(tip) ? new Date(Math.min(requested,tip-1)).toISOString() : now
-  if (!Number.isFinite(tip) || !Number.isFinite(requested)) return nbaEmptyMarketContext(game.id,asOf,tipAt,'A verified pregame cutoff is required')
+/** Each phase reads its own quotes and baselines. Pregame freezes at tipoff. */
+export async function getNbaMarketContext(game: Pick<PaintGame,'id'|'datetime'|'status'>, now = new Date().toISOString(), mode: NbaOddsMode = 'pregame'): Promise<NbaMarketContext> {
+  const canonical = await getNbaOddsGame(game).catch(() => null)
+  if (!canonical) return nbaEmptyMarketContext(game.id,now,null,'Game phase unavailable',mode)
+  const tip = nbaGameStart(canonical), requested = Date.parse(now)
+  const tipAt = tip != null ? new Date(tip).toISOString() : null
+  const asOf = Number.isFinite(requested) && tip != null && mode === 'pregame' ? new Date(Math.min(requested,tip-1)).toISOString() : now
+  const empty = (reason: string) => nbaEmptyMarketContext(game.id,asOf,tipAt,reason,mode)
+  if (tip == null || !Number.isFinite(requested) || mode === 'live' && requested < tip) return empty(`A verified ${mode} cutoff is required`)
   try {
-    const cached = await nbaSharedCache(`market-context:v1:${game.id}:${tipAt}:${requested>=tip?'pregame':'live'}`,60,0,async()=>{
-      const admin = createAdminClient(), marketKey = `market-attempt:v3:${game.id}`, publicKey = `public-success:${NBA_PUBLIC_VERSION}:${game.id}`
-      const [capture, openings, receipts] = await Promise.all([
-        admin.from('nba_market_captures').select('fingerprint,captured_at,props').eq('game_id',game.id).lte('captured_at',asOf).order('captured_at',{ascending:false}).order('id',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(12_000)),
-        getNbaQuoteOpenings(game.id),
-        admin.from('nba_source_cache').select('key,payload,fetched_at').in('key',[marketKey,publicKey]).abortSignal(AbortSignal.timeout(12_000)),
+    const cached = await nbaSharedCache(`market-context:v2:${mode}:${game.id}:${tipAt}:${requested>=tip?'closed':'open'}`,60,0,async()=>{
+      const admin = createAdminClient(), marketKey = `market-attempt:v4:${mode}:${game.id}`, legacyKey = `market-attempt:v3:${game.id}`, publicKey = `public-success:${NBA_PUBLIC_VERSION}:${game.id}`
+      const [frames, openings, receipts] = await Promise.all([
+        getNbaAllMarketFrames(game.id, mode),
+        getNbaQuoteOpenings(game.id, mode),
+        admin.from('nba_source_cache').select('key,payload,fetched_at').in('key',[marketKey,publicKey,...(mode === 'pregame' ? [legacyKey] : [])]).abortSignal(AbortSignal.timeout(12_000)),
       ])
-      if(capture.error||receipts.error)throw new Error('NBA market context sources unavailable')
-      const frame = (capture.data?.[0] ?? null) as (PaintFrame & {fingerprint:string}) | null
-      if (!frame) return nbaEmptyMarketContext(game.id,asOf,tipAt,'No matching pregame price capture')
+      if(receipts.error)throw new Error('NBA market context sources unavailable')
+      const frame = frames.filter(frame => Date.parse(frame.captured_at) <= Date.parse(asOf)).at(-1) ?? null
+      if (!frame) return empty(`No matching ${mode} price capture`)
       const checks = (receipts.data ?? []) as NbaSourceReceipt[]
-      const marketVerifiedAt = nbaSuccessfulMarketReceipt(checks.find(row=>row.key===marketKey),game.id,frame.fingerprint)
-      // Only successful exact-game receipts at or before this as-of cut can
-      // verify unchanged economics. Failed/deferred attempts never freshen them.
+      const fingerprint = (frame as typeof frame & {fingerprint?: string}).fingerprint
+      const marketVerifiedAt = nbaSuccessfulMarketReceipt(checks.find(row=>row.key===marketKey),game.id,fingerprint,mode)
+        ?? (mode === 'pregame' ? nbaSuccessfulMarketReceipt(checks.find(row=>row.key===legacyKey),game.id,fingerprint) : null)
       const verified = Date.parse(marketVerifiedAt ?? '')
       const marketCutoff = Number.isFinite(verified) && verified>=Date.parse(frame.captured_at) && verified<=Date.parse(asOf) ? marketVerifiedAt! : frame.captured_at
-      const capturePublic = await admin.from('nba_public_captures').select('snapshot,fingerprint').eq('game_id',game.id).lte('captured_at',marketCutoff).order('captured_at',{ascending:false}).order('id',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(12_000))
+      let publicQuery = admin.from('nba_public_captures').select('snapshot,fingerprint').eq('game_id',game.id).lte('captured_at',marketCutoff)
+      if (mode === 'live') publicQuery = publicQuery.gte('captured_at',tipAt!)
+      const capturePublic = await publicQuery.order('captured_at',{ascending:false}).order('id',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(12_000))
       if(capturePublic.error)throw new Error('NBA public context unavailable')
       const publicVerifiedAt = nbaSuccessfulPublicReceipt(checks.find(row=>row.key===publicKey),game.id,capturePublic.data?.[0]?.fingerprint)
-      return nbaBuildMarketContext({gameId:game.id,asOf,tipAt,frame,openings,publicCapture:(capturePublic.data?.[0]?.snapshot??null) as NbaPublicCapture|null,marketVerifiedAt,publicVerifiedAt})
+      return nbaBuildMarketContext({gameId:game.id,mode,asOf,tipAt,frame,openings,publicCapture:(capturePublic.data?.[0]?.snapshot??null) as NbaPublicCapture|null,marketVerifiedAt,publicVerifiedAt})
     },40)
-    // An explicitly requested earlier as-of must never receive a newer cached
-    // research context. Historical cache keys are frozen before tipoff.
-    if(Date.parse(cached.value.asOf)>Date.parse(asOf))return nbaEmptyMarketContext(game.id,asOf,tipAt,'No verified market context at this earlier cutoff')
+    if(Date.parse(cached.value.asOf)>Date.parse(asOf))return empty('No verified market context at this earlier cutoff')
     return {...cached.value,asOf}
-  } catch { return nbaEmptyMarketContext(game.id,asOf,tipAt,'Market context unavailable') }
+  } catch { return empty('Market context unavailable') }
 }

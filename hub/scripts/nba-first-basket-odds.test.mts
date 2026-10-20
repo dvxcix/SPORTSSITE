@@ -1,3 +1,4 @@
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { nbaFirstEvent,nbaNormalizeFirstOdds,type FirstOddsEvent } from '../src/lib/nbaFirstBasketOdds.ts'
@@ -75,11 +76,12 @@ test('first-basket normalization diagnostics remain admin-only',async()=>{
  for(const isAdmin of [false,true]){
   const compiled={exports:{} as {GET:(r:unknown)=>Promise<Response>}}
   const mocks:Record<string,unknown>={
+   '@/lib/nbaOddsMode':oddsMode,
    'next/server':{NextResponse:{json:(body:unknown,options?:ResponseInit)=>Response.json(body,options)}},
    '@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'member',isAdmin})},
    '@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:'2026-10-20',games:[game]})},
    '@/lib/nbaPaint':{nbaDate:(value:string)=>value},
-   '@/lib/nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[],unmatched:1,withheldMethods:['Unrecognized method']}),NbaFirstOddsUnavailable:class extends Error{}},
+   '@/lib/nbaFirstBasketOddsData':{getNbaFirstOddsForMode:async()=>({rows:[],unmatched:1,withheldMethods:['Unrecognized method']}),NbaFirstOddsUnavailable:class extends Error{}},
    '@/lib/nbaFirstBasketHistoryData':{attachNbaFirstBasketHistory:async(_id:number,rows:unknown[])=>rows},
   }
   new Function('require','module','exports',output)((name:string)=>{assert.ok(name in mocks,name);return mocks[name]},compiled,compiled.exports)

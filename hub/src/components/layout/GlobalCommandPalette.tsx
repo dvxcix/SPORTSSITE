@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { SafeImage } from '@/components/ui/SafeImage'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 import { areaNavigation, productAreaMeta, type ProductArea } from './navigationConfig'
-import { NBA_UPGRADE_HREF } from './researchNavigation'
+import { NBA_UPGRADE_HREF, researchNavigationHref } from './researchNavigation'
 import styles from './GlobalCommandPalette.module.css'
 
 type CommandItem = { id: string; label: string; detail: string; href: string; icon: typeof Search; image?: string | null; keywords?: string; locked?: boolean }
@@ -110,7 +110,7 @@ export function GlobalCommandPalette() {
     if (open) resultsRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
   }, [open, activeIndex, items])
   function close() { setOpen(false); setQuery(''); setSports({ query: '', items: [] }) }
-  function navigate(href: string) { close(); router.push(href) }
+  function navigate(href: string) { close(); router.push(researchNavigationHref(href, pathname, new URLSearchParams(window.location.search), nbaAccess)) }
   if (!open) return null
   return <Modal onClose={close} maxWidth={650} label="Search SlipSurge"><div className={styles.shell}>
     <div className={styles.header}><Search size={18}/><input autoFocus className={styles.input} value={query} onChange={event => { setQuery(event.target.value); setActive(0) }} onKeyDown={event => {

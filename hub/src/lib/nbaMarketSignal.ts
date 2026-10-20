@@ -3,13 +3,14 @@ import { nbaAttachOpenings, type NbaQuoteOpeningRow } from './nbaOddsHistory'
 import { nbaOddsDelta } from './nbaOddsDelta'
 import { nbaMovementReference, type PaintFrame } from './nbaMovement'
 import { NBA_PUBLIC_VERSION, type NbaPublicCapture } from './nbaPublic'
+import type { NbaOddsMode } from './nbaOddsMode'
 
-export const NBA_MARKET_CONTEXT_VERSION = 'nba-market-context-v1'
+export const NBA_MARKET_CONTEXT_VERSION = 'nba-market-context-v2'
 export const NBA_MARKET_MAX_AGE_MS = 15 * 60_000
 export const NBA_PUBLIC_MAX_AGE_MS = 90 * 60_000
 export type NbaSignalQuote = { market: PaintMarket; type: PaintProp['market']['type']; line: number; side: 'over'; open: number; now: number; changePp: number; openedAt: string }
 export type NbaMarketSignal = { playerId: number; book: string; target: NbaSignalQuote; related: NbaSignalQuote; targetPicks: number; relatedPicks: number; adjustment: number; opposingPicks: number; supportingMarkets: number; attenuation: number }
-export type NbaMarketContext = { version: string; gameId: number; asOf: string; tipAt: string | null; marketCapturedAt: string | null; publicCapturedAt: string | null; marketObservedAt: string | null; publicObservedAt: string | null; available: boolean; reason: string | null; signals: NbaMarketSignal[] }
+export type NbaMarketContext = { version: string; gameId: number; oddsMode?: NbaOddsMode; asOf: string; tipAt: string | null; marketCapturedAt: string | null; publicCapturedAt: string | null; marketObservedAt: string | null; publicObservedAt: string | null; available: boolean; reason: string | null; signals: NbaMarketSignal[] }
 export type NbaMarketSupport = { adjustment: number; status: 'confirmed' | 'none' | 'unavailable' | 'under_unsupported' | 'quote_changed' | 'stale'; reason: string; signal: NbaMarketSignal | null; marketCapturedAt: string | null; publicCapturedAt: string | null; marketObservedAt: string | null; publicObservedAt: string | null }
 export type NbaMarketInput = { offer: PaintProp; side: 'over' | 'under'; context: NbaMarketContext | null; asOf?: string }
 export type NbaMarketSignalView = Omit<NbaMarketSignal,'adjustment'|'opposingPicks'|'supportingMarkets'|'attenuation'>
@@ -46,8 +47,8 @@ const related: Record<PaintMarket, readonly PaintMarket[]> = {
   points_first3min: [], rebounds_first3min: [], assists_first3min: [],
 }
 const identity = (offer: PaintProp) => JSON.stringify([offer.game_id,offer.player_id,offer.vendor,offer.prop_type,offer.market.type,Number(offer.line_value)])
-export function nbaEmptyMarketContext(gameId: number, asOf: string, tipAt: string | null, reason: string): NbaMarketContext {
-  return { version: NBA_MARKET_CONTEXT_VERSION, gameId, asOf, tipAt, marketCapturedAt: null, publicCapturedAt: null, marketObservedAt: null, publicObservedAt: null, available: false, reason, signals: [] }
+export function nbaEmptyMarketContext(gameId: number, asOf: string, tipAt: string | null, reason: string, mode: NbaOddsMode = 'pregame'): NbaMarketContext {
+  return { version: NBA_MARKET_CONTEXT_VERSION, gameId, oddsMode: mode, asOf, tipAt, marketCapturedAt: null, publicCapturedAt: null, marketObservedAt: null, publicObservedAt: null, available: false, reason, signals: [] }
 }
 function observedAt(captured: string, receipt: string | null | undefined, cutoff: number) {
   const capturedTime = time(captured), verified = time(receipt)
@@ -56,16 +57,18 @@ function observedAt(captured: string, receipt: string | null | undefined, cutoff
 
 /** Deterministic as-of research context. Counts are whole-category observations,
  * not dollars, bettor intent, sportsbook-specific picks or over-side allocation. */
-export function nbaBuildMarketContext(input: { gameId: number; asOf: string; tipAt: string | null; frame: PaintFrame | null; openings: NbaQuoteOpeningRow[]; publicCapture: NbaPublicCapture | null; marketVerifiedAt?: string | null; publicVerifiedAt?: string | null }): NbaMarketContext {
+export function nbaBuildMarketContext(input: { gameId: number; mode?: NbaOddsMode; asOf: string; tipAt: string | null; frame: PaintFrame | null; openings: NbaQuoteOpeningRow[]; publicCapture: NbaPublicCapture | null; marketVerifiedAt?: string | null; publicVerifiedAt?: string | null }): NbaMarketContext {
   const { gameId, asOf, tipAt, frame, openings, publicCapture } = input
-  const empty = nbaEmptyMarketContext(gameId, asOf, tipAt, 'Market context unavailable')
+  const mode = input.mode ?? 'pregame'
+  const empty = nbaEmptyMarketContext(gameId, asOf, tipAt, 'Market context unavailable', mode)
   const cutoff = time(asOf), tip = time(tipAt)
-  if (!Number.isFinite(cutoff) || !Number.isFinite(tip) || cutoff >= tip) return { ...empty, reason: 'A verified pregame cutoff is required' }
-  if (!frame || !Number.isFinite(time(frame.captured_at)) || time(frame.captured_at) > cutoff || frame.props.some(quote => quote.game_id !== gameId)) return { ...empty, reason: 'No matching pregame price capture' }
+  const inPhase = (at: number) => Number.isFinite(at) && (mode === 'live' ? at >= tip : at < tip)
+  if (!Number.isFinite(cutoff) || !Number.isFinite(tip) || !inPhase(cutoff)) return { ...empty, reason: `A verified ${mode} cutoff is required` }
+  if (!frame || !inPhase(time(frame.captured_at)) || time(frame.captured_at) > cutoff || frame.props.some(quote => quote.game_id !== gameId)) return { ...empty, reason: `No matching ${mode} price capture` }
   const marketObservedAt = observedAt(frame.captured_at, input.marketVerifiedAt, cutoff)
   const marketBase = { ...empty, marketCapturedAt: frame.captured_at, marketObservedAt }
   if (cutoff - time(marketObservedAt) > NBA_MARKET_MAX_AGE_MS) return { ...marketBase, reason: 'Price observations are stale' }
-  if (!publicCapture || publicCapture.gameId !== gameId || publicCapture.normalizationVersion !== NBA_PUBLIC_VERSION || !Number.isFinite(time(publicCapture.capturedAt)) || time(publicCapture.capturedAt) > time(marketObservedAt)) return { ...marketBase, reason: 'No verified public snapshot at the price cutoff' }
+  if (!publicCapture || publicCapture.gameId !== gameId || publicCapture.normalizationVersion !== NBA_PUBLIC_VERSION || !inPhase(time(publicCapture.capturedAt)) || time(publicCapture.capturedAt) > time(marketObservedAt)) return { ...marketBase, reason: 'No verified public snapshot at the price cutoff' }
   const publicObservedAt = observedAt(publicCapture.capturedAt, input.publicVerifiedAt, time(marketObservedAt))
   const base = { ...marketBase, publicCapturedAt: publicCapture.capturedAt, publicObservedAt }
   if (cutoff - time(publicObservedAt) > NBA_PUBLIC_MAX_AGE_MS) return { ...base, reason: 'Public observations are stale' }
@@ -75,7 +78,7 @@ export function nbaBuildMarketContext(input: { gameId: number; asOf: string; tip
     const key = `${row.playerId}:${row.market}`
     counts.set(key, counts.has(key) && counts.get(key) !== row.picks ? null : row.picks)
   }
-  const candidates = nbaAttachOpenings(gameId, frame.props, [], openings).props
+  const candidates = nbaAttachOpenings(gameId, frame.props, [], openings.filter(opening => inPhase(time(opening.observed_at)))).props
   const unique = new Map<string, PaintProp | null>()
   for (const quote of candidates) {
     const key = identity(quote), prior = unique.get(key)
@@ -118,7 +121,10 @@ export function nbaMarketSupport(input?: NbaMarketInput): NbaMarketSupport {
   if (input?.side === 'under') return { ...neutral, status: 'under_unsupported', reason: 'Category counts do not identify under-side interest' }
   if (!input || !context?.available || context.version !== NBA_MARKET_CONTEXT_VERSION || context.gameId !== input.offer.game_id) return neutral
   const cutoff = time(input.asOf ?? context.asOf), tip = time(context.tipAt)
-  if (![cutoff,tip,time(context.asOf),time(context.marketObservedAt),time(context.publicObservedAt)].every(Number.isFinite) || cutoff < time(context.asOf) || cutoff >= tip || time(context.marketObservedAt) > cutoff || time(context.publicObservedAt) > time(context.marketObservedAt) || cutoff-time(context.marketObservedAt)>NBA_MARKET_MAX_AGE_MS || cutoff-time(context.publicObservedAt)>NBA_PUBLIC_MAX_AGE_MS) return { ...neutral, status: 'stale', reason: 'Market context is outside the verified pregame window' }
+  const mode = context.oddsMode ?? 'pregame'
+  const quotedAt = time(input.offer.updated_at)
+  if (!Number.isFinite(quotedAt) || (mode === 'live' ? quotedAt < tip : quotedAt >= tip)) return { ...neutral, status: 'quote_changed', reason: 'The selected quote belongs to a different game phase' }
+  if (![cutoff,tip,time(context.asOf),time(context.marketObservedAt),time(context.publicObservedAt)].every(Number.isFinite) || cutoff < time(context.asOf) || (mode === 'live' ? cutoff < tip || time(context.marketObservedAt) < tip || time(context.publicObservedAt) < tip : cutoff >= tip) || time(context.marketObservedAt) > cutoff || time(context.publicObservedAt) > time(context.marketObservedAt) || cutoff-time(context.marketObservedAt)>NBA_MARKET_MAX_AGE_MS || cutoff-time(context.publicObservedAt)>NBA_PUBLIC_MAX_AGE_MS) return { ...neutral, status: 'stale', reason: `Market context is outside the verified ${mode} window` }
   const matches = context.signals.filter(signal => signal.playerId === input.offer.player_id && signal.book === input.offer.vendor && signal.target.market === input.offer.prop_type && signal.target.type === input.offer.market.type && signal.target.line === Number(input.offer.line_value) && signal.target.side === input.side)
   const signal = matches.find(signal => signal.target.now === nbaPrice(input.offer,input.side))
   if (!signal) return { ...neutral, status: matches.length ? 'quote_changed' : 'none', reason: matches.length ? 'The selected price changed; awaiting a matching capture' : 'No confirmed paired market signal' }

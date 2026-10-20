@@ -53,7 +53,7 @@ export function DesktopNavigation() {
             const Icon = item.icon
             const active = routeMatches(pathname, item)
             return (
-              <Link key={item.href} href={item.label === 'Research' ? researchHome(selectedSport, nflAccess, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
+              <Link key={item.href} href={item.label === 'Research' ? researchNavigationHref(researchHome(selectedSport, nflAccess, nbaAccess), pathname, searchParams, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
                 <Icon size={19} />
                 {item.badge && <i>{item.badge === 'LIVE' ? '' : item.badge}</i>}
               </Link>

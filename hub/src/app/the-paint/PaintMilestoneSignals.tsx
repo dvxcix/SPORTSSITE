@@ -1,4 +1,5 @@
 'use client'
+import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { useMemo,useState } from 'react'
 import { PAINT_MARKETS,nbaBinary,type PaintBoard,type PaintMarket } from '@/lib/nbaPaint'
 import { compareMilestoneMoves,nbaMilestonePeerRanks,type NbaMilestoneMove,type NbaMoveSort } from '@/lib/nbaMilestoneSignals'
@@ -11,7 +12,7 @@ import polish from './research-polish.module.css'
 
 const marketName=(market:string)=>PAINT_MARKETS.find(m=>m.key===market)?.label??market
 const direction=(move:NbaMilestoneMove)=>move.change==null?'Awaiting history':move.change<0?'Lengthened':move.change>0?'Shortened':'Unchanged'
-const href=(board:PaintBoard,move:NbaMilestoneMove)=>`/the-paint?${new URLSearchParams({date:board.game.date,game:String(board.game.id),market:move.market,book:move.book,contract:'milestone',target:String(move.line),player:String(move.playerId),line:String(move.line),type:'milestone',side:'over',view:'research',panel:'ladder'})}`
+const href=(board:PaintBoard,move:NbaMilestoneMove)=>`/the-paint?${new URLSearchParams({mode:nbaOddsMode(board.oddsMode),date:board.game.date,game:String(board.game.id),market:move.market,book:move.book,contract:'milestone',target:String(move.line),player:String(move.playerId),line:String(move.line),type:'milestone',side:'over',view:'research',panel:'ladder'})}`
 export function PaintMilestoneSignals({board,moves,onOverUnder,loading,error,retry,stale,initialMarket,initialTarget,initialBook}:{board:PaintBoard;moves:NbaMilestoneMove[];onOverUnder:()=>void;loading:boolean;error:string;retry:()=>void;stale:boolean;initialMarket?:PaintMarket;initialTarget?:number;initialBook?:string}){
   const [market,setMarket]=useState<PaintMarket>(initialMarket??'points'),[target,setTarget]=useState(initialTarget!=null?String(initialTarget):initialMarket&&initialMarket!=='points'?'all':'15'),[relatedMarket,setRelatedMarket]=useState('all'),[relatedTarget,setRelatedTarget]=useState('all'),[book,setBook]=useState(initialBook??'all'),[team,setTeam]=useState('all'),[query,setQuery]=useState(''),[sort,setSort]=useState<NbaMoveSort>('lengthened'),[moveDirection,setDirection]=useState('all'),[opposed,setOpposed]=useState(true),[minimum,setMinimum]=useState('0.25'),[expanded,setExpanded]=useState<string|null>(null)
   const players=useMemo(()=>new Map(board.players.map(p=>[p.id,p])),[board.players])

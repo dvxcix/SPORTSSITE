@@ -1,3 +1,4 @@
+import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
@@ -9,11 +10,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
+  const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   const game = request.nextUrl.searchParams.get('game'), player = request.nextUrl.searchParams.get('player'), market = request.nextUrl.searchParams.get('market')
   if (!/^\d{1,10}$/.test(game ?? '') || !/^\d{1,10}$/.test(player ?? '') || !PAINT_MARKETS.some(item => item.key === market)) return NextResponse.json({ error: 'Choose a valid player and market' }, { status: 400 })
   try {
     const [board, reports] = await Promise.all([
-      getPaintGame(Number(game)).then(getPaintBoard),
+      getPaintGame(Number(game)).then(game => getPaintBoard(game, mode)),
       nbaSharedCache('validated-models:v1', 300, 300, async () => {
         const { data, error } = await createAdminClient().from('nba_model_reports').select('report').eq('version', 'nba-rolling-v1').order('validation_season', { ascending: false }).limit(48).abortSignal(AbortSignal.timeout(12_000))
         if (error) throw new Error('NBA projection unavailable')

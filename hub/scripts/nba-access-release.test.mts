@@ -1,3 +1,4 @@
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -11,6 +12,8 @@ async function compiled(file: string, imports: Record<string, unknown>, fallback
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } })
   const target = { exports: {} as Record<string, unknown> }
   new Function('require', 'exports', 'module', outputText)((name: string) => {
+    if (name === '@/lib/nbaOddsMode' || name === './nbaOddsMode') return oddsMode
+    if ((name === './nbaOddsClockData' || name === '@/lib/nbaOddsClockData') && !(name in imports)) return {getNbaOddsGame:async(game:unknown)=>game}
     if (name in imports) return imports[name]
     assert.ok(fallback, name); return fallback(name)
   }, target.exports, target)
@@ -116,8 +119,9 @@ test('NBA page gates render membership fallback before loading any research; gue
 
 test('NBA member public activity omits provider URLs and internal capture metadata', async () => {
   const snapshot = { gameId: 123, capturedAt: '2026-10-19T20:00:00Z', rows: [{ playerId: 1, market: 'points', picks: 42 }], markets: ['points'], sourceUrl: 'https://app.pikkit.com/event/private', rawPayload: 'private', unmatched: 9 }
-  const query: any = { select: () => query, eq: () => query, order: () => query, limit: () => query, abortSignal: async () => ({ data: [{ snapshot, captured_at: snapshot.capturedAt }], error: null }) }
+  const query: any = { select: () => query, eq: () => query, lte: () => query, gte: () => query, order: () => query, limit: () => query, abortSignal: async () => ({ data: [{ snapshot, captured_at: snapshot.capturedAt }], error: null }) }
   const data = await compiled('../src/lib/nbaPublicData.ts', {
+    './nbaPaintData': { getPaintGame: async () => ({id:123,datetime:'2026-10-20T23:00:00Z',status:'Scheduled'}) },
     'server-only': {}, './supabase/admin': { createAdminClient: () => ({ from: () => query }) },
     './nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
   })

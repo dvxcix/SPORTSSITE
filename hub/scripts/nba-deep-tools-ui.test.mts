@@ -25,7 +25,7 @@ const stubs: Record<string, string> = {
   'next/link': 'import React from "react";export default function Link(props){return <a {...props}/>}',
 }
 const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds']
-const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
+const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {NbaOddsModeProvider} from "./src/components/nba/NbaOddsModeContext"; export {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
 const bundle = await build({ stdin: { contents: source, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'deep-tools.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'deep-tool-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
   builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ contents: stubs[args.path], loader: 'tsx', resolveDir: resolve('.') }))
@@ -121,7 +121,7 @@ test('matchup starter portraits match confirmed IDs per team and preserve pendin
     const homePanel = ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
     assert.ok(awayPanel.textContent?.includes('1 confirmed starter'))
     const player = awayPanel.querySelector('a[aria-label="Jayson Tatum, confirmed starter"]')!
-    assert.equal(player.getAttribute('href'), '/nba/players/11')
+    assert.equal(player.getAttribute('href'), '/nba/players/11?mode=pregame')
     assert.equal(player.querySelector('img')?.getAttribute('src'), away.headshot)
     assert.equal(awayPanel.querySelectorAll('li').length, 1, 'unmatched provider IDs do not invent a player')
     assert.ok(homePanel.textContent?.includes('Starters pending'))
@@ -198,4 +198,29 @@ test('First Basket sorts signed movement and changes baseline without dropping t
     assert.equal(ui.host.querySelector('[title], [role="tooltip"]'),null)
     assert.doesNotMatch(ui.host.textContent??'',/Compare the same|free throws count|rules|configured/i)
   } finally {await ui.close()}
+})
+
+
+test('switching NBA history mode clears old captures and ignores a late response from the previous mode', async () => {
+  const originalFetch = globalThis.fetch
+  const pending: {mode:string;signal:AbortSignal;finish:(odds:number)=>void}[] = []
+  const player = {id:11,first_name:'Phase',last_name:'Player',position:'G',team,headshot:null,props:[],logs:[],average:{}}
+  const offer = {id:1,game_id:123,player_id:11,prop_type:'points',vendor:'fanduel',line_value:'15',market:{type:'milestone',odds:1000},updated_at:'2026-10-20T20:00:00Z'}
+  globalThis.fetch = (async (input, init) => new Promise<Response>(resolve => {
+    const mode = new URL(String(input), 'https://www.slipsurge.com').searchParams.get('mode')!
+    pending.push({mode,signal:init!.signal as AbortSignal,finish:odds=>resolve(Response.json({frames:[{captured_at:'2026-10-20T20:00:00Z',props:[{...offer,market:{type:'milestone',odds}}]}],openingRows:[]}))})
+  })) as typeof fetch
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  const render = async (mode:string) => { await act(async()=>root.render(createElement(fixtureModule.exports.NbaOddsModeProvider,{mode},createElement(fixtureModule.exports.PaintMovement,{board:{...board,players:[player]},market:'points',players:[player]})))) }
+  try {
+    await render('pregame'); assert.equal(pending[0].mode,'pregame')
+    await act(async()=>pending[0].finish(1000)); assert.ok(host.textContent?.includes('+1000'))
+    await act(async()=>window.dispatchEvent(new dom.window.Event('fixture:nba-refresh')))
+    assert.equal(pending[1].mode,'pregame')
+    await render('live')
+    assert.equal(pending[1].signal.aborted,true); assert.equal(pending[2].mode,'live')
+    assert.equal(host.textContent?.includes('+1000'),false); assert.ok(host.textContent?.includes('Loading market history'))
+    await act(async()=>pending[1].finish(2000)); assert.equal(host.textContent?.includes('+2000'),false)
+    await act(async()=>pending[2].finish(-600)); assert.ok(host.textContent?.includes('-600')); assert.equal(host.textContent?.includes('+1000'),false)
+  } finally { await act(async()=>root.unmount()); host.remove(); globalThis.fetch=originalFetch }
 })

@@ -6,6 +6,7 @@ import ts from 'typescript'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}): Promise<T> {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -156,7 +157,8 @@ test('a stale research board cannot carry stale player or game prices into a new
   const old = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -200 } } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
-    './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOdds: async () => { throw Error('fixture') } },
+    './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => { throw Error('fixture') } },
+    './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
     './nbaSharedCache': { nbaSharedCache: async (key: string) => {
       if (key.startsWith('board:')) return { value: { players: [{ id: 434, props: [old] }], gameOdds: [{ stale: true }], issues: [] }, fetchedAt: '2026-10-20T11:00:00Z', stale: true }
       throw Error('quotes unavailable')
@@ -172,10 +174,11 @@ test('cold board research finishes before current quote reads begin', async () =
   let now = Date.parse('2026-10-20T12:00:00Z'), researchFinished = false, priceReads = 0
   class Clock extends Date { static now() { return now } }
   const game = { id: 123, date: '2026-10-20', datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
-  const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 } } as paint.PaintProp
+  const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
-    './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOdds: async () => ({ rows: [] }) },
+    './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => ({ rows: [] }) },
+    './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
     './nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>, lease: number) => {
       if (key.startsWith('board:')) {
         assert.equal(lease, 120)

@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect,useState } from 'react'
 import { ArrowDownRight,ArrowUpRight,Minus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -12,7 +14,8 @@ import { PlayerAvatar } from './PaintVisuals'
 import { PaintPriceValue } from './PaintPrice'
 import styles from './paint.module.css'
 function useHistory(game:number,market:PaintMarket,player?:number) {
-  const key=`${game}:${market}:${player??'all'}`
+  const oddsMode = useNbaOddsMode()
+  const key=`${oddsMode}:${game}:${market}:${player??'all'}`
   const [retry,setRetry]=useState(0)
   const [state,setState]=useState<{key:string;attempt:number;frames:PaintFrame[];openingRows:NbaQuoteOpeningRow[];error:boolean}>({key:'',attempt:-1,frames:[],openingRows:[],error:false})
   useEffect(()=>{
@@ -21,7 +24,7 @@ function useHistory(game:number,market:PaintMarket,player?:number) {
       if(pending)return
       pending=true
       try{
-        const r=await fetch(`/the-paint/history?game=${game}&market=${market}${player?`&player=${player}`:''}`,{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(55000)]),cache:'no-store'})
+        const r=await fetch(nbaModeHref(`/the-paint/history?game=${game}&market=${market}${player?`&player=${player}`:''}`, oddsMode),{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(55000)]),cache:'no-store'})
         if(!r.ok)throw new Error('history')
         const json=await r.json() as {frames:PaintFrame[];openingRows?:NbaQuoteOpeningRow[]}
         if(!controller.signal.aborted)setState({key,attempt:retry,frames:json.frames,openingRows:json.openingRows??[],error:false})
@@ -30,7 +33,7 @@ function useHistory(game:number,market:PaintMarket,player?:number) {
     }
     void update();const stop=watchNbaRefresh(update)
     return()=>{stop();controller.abort()}
-  },[game,market,player,key,retry])
+  },[oddsMode, game,market,player,key,retry])
   return {frames:state.key===key?state.frames:[],openingRows:state.key===key?state.openingRows:[],error:state.key===key&&state.attempt===retry&&state.error,loading:state.key!==key||state.attempt!==retry,refresh:()=>setRetry(value=>value+1)}
 }
 const signed=(n:number|null,digits=1)=>n==null?'—':`${n>0?'+':''}${n.toFixed(digits)}`

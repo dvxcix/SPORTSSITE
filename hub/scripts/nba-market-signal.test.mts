@@ -1,3 +1,4 @@
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
@@ -173,7 +174,7 @@ async function compiled(path:string,imports:Record<string,unknown>,clock:DateCon
   const source=await readFile(new URL(path,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
-  new Function('require','exports','module','Date',outputText)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target.exports,target,clock)
+  new Function('require','exports','module','Date',outputText)((name: string) => { if(name==='@/lib/nbaOddsMode'||name==='./nbaOddsMode')return oddsMode;if((name==='./nbaOddsClockData'||name==='@/lib/nbaOddsClockData')&&!(name in imports))return {getNbaOddsGame:async(game:unknown)=>game};assert.ok(name in imports,name);return imports[name]},target.exports,target,clock)
   return target.exports
 }
 
@@ -186,7 +187,7 @@ test('warm game cache rechecks request time; historical boards freeze before tip
     const query={select:()=>query,eq:()=>query,in:()=>query,lte:(_key:string,value:string)=>{cutoffs.push(value);return query},order:()=>query,limit:()=>query,abortSignal:()=>Promise.resolve({data,error:null})}
     return query
   }}
-  const contextModule=await compiled('../src/lib/nbaMarketSignalData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<NbaMarketContext>)=>({value:saved??(saved=await load())})},'./nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>input().openings},'./nbaPublic':{NBA_PUBLIC_VERSION},'./nbaMarketSignal':{nbaBuildMarketContext,nbaEmptyMarketContext:(await import('../src/lib/nbaMarketSignal.ts')).nbaEmptyMarketContext},'./nbaMarketReceipts':{nbaSuccessfulMarketReceipt,nbaSuccessfulPublicReceipt}})
+  const contextModule=await compiled('../src/lib/nbaMarketSignalData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<NbaMarketContext>)=>({value:saved??(saved=await load())})},'./nbaOddsHistoryData':{getNbaAllMarketFrames:async()=>{reads++;return [{...input().frame,fingerprint:'prices'}]},getNbaQuoteOpenings:async()=>input().openings},'./nbaPublic':{NBA_PUBLIC_VERSION},'./nbaMarketSignal':{nbaBuildMarketContext,nbaEmptyMarketContext:(await import('../src/lib/nbaMarketSignal.ts')).nbaEmptyMarketContext},'./nbaMarketReceipts':{nbaSuccessfulMarketReceipt,nbaSuccessfulPublicReceipt}})
   const get=contextModule.getNbaMarketContext as typeof import('../src/lib/nbaMarketSignalData.ts').getNbaMarketContext
   assert.ok(support(await get(board.game,asOf)).adjustment>0)
   assert.equal(reads,3,'one capture batch, one receipt batch, one public batch per game')
@@ -198,7 +199,7 @@ test('warm game cache rechecks request time; historical boards freeze before tip
   saved=null
   const historical=await get(board.game,'2026-10-21T12:00:00Z')
   assert.equal(historical.asOf,'2026-10-20T12:59:59.999Z')
-  assert.ok(cutoffs.includes(historical.asOf))
+  assert.ok(cutoffs.every(value=>Date.parse(value)<Date.parse(tipAt)))
   assert.equal(support(historical).adjustment,0)
 })
 
@@ -249,23 +250,23 @@ test('market cron empty player feeds record withdrawals without verifying older 
   // A near-future game relative to the test's actual wall clock is required by
   // the real cron's 48-hour schedule boundary.
   game.datetime=new Date(Date.now()+3600000).toISOString()
-  const admin={from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string)=>{rpcCalls.push(name);return{abortSignal:async()=>({data:true,error:null})}}}
-  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:(body:unknown,options?:{status?:number})=>({body,status:options?.status??200})}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]}),getPaintProps:async()=>props,getPaintGameOdds:async()=>[{id:1,game_id:123,vendor:'fanduel',spread_home_value:'-4.5',spread_away_value:'4.5',moneyline_home_odds:-150,moneyline_away_odds:130,total_value:'220.5',updated_at:current}]},'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,'@/lib/nbaPaint':paint,'@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],eventMatched:false,unmatched:0})},'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(key==='first-basket-attempt:v1:123')return{value:await load()};assert.equal(key,'market-attempt:v3:123');receipt=await load();return{value:receipt}}}})
+  const admin={from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:{p_mode:string;p_feed:string})=>{assert.equal(args.p_mode,'pregame');rpcCalls.push(name+':'+args.p_feed);return{abortSignal:async()=>({data:true,error:null})}}}
+  const route=await compiled('../src/app/api/cron/nba-market-capture/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:(body:unknown,options?:{status?:number})=>({body,status:options?.status??200})}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/nbaPaintData':{getPaintGame:async()=>game,getPaintSchedule:async()=>({games:[game]}),getPaintProps:async()=>props,getPaintGameOdds:async()=>[{id:1,game_id:123,vendor:'fanduel',spread_home_value:'-4.5',spread_away_value:'4.5',moneyline_home_odds:-150,moneyline_away_odds:130,total_value:'220.5',updated_at:new Date(Date.now()-1000).toISOString()}]},'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,'@/lib/nbaPaint':paint,'@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],eventMatched:false,unmatched:0})},'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(key==='first-basket-attempt:v2:pregame:123')return{value:await load()};assert.equal(key,'market-attempt:v4:pregame:123');receipt=await load();return{value:receipt}}}})
   const get=route.GET as (request:Request)=>Promise<{body:{captured:number};status:number}>
   const gameOnly=await get(new Request('https://example.test/api/cron/nba-market-capture'))
   assert.equal(gameOnly.status,200);assert.equal(gameOnly.body.captured,1)
   const emptyReceipt=receipt as {status:string;playerFingerprint:string;playerObservedAt:string}
   assert.equal(emptyReceipt.status,'captured')
   assert.equal(emptyReceipt.playerFingerprint,(await import('node:crypto')).createHash('sha256').update(JSON.stringify(movement.nbaEconomicSnapshot([]))).digest('hex'))
-  assert.deepEqual(rpcCalls,['record_nba_market_capture','record_nba_game_market_capture'])
-  assert.equal(nbaSuccessfulMarketReceipt({key:'market-attempt:v3:123',payload:receipt,fetched_at:new Date().toISOString()},123,'old-prices'),null)
-  props=[target,other];rpcCalls.length=0
+  assert.deepEqual(rpcCalls,['record_nba_phase_capture:props','record_nba_phase_capture:game'])
+  assert.equal(nbaSuccessfulMarketReceipt({key:'market-attempt:v4:pregame:123',payload:receipt,fetched_at:new Date().toISOString()},123,'old-prices'),null)
+  props=[target,other].map(offer=>({...offer,updated_at:new Date(Date.now()-1000).toISOString()}));rpcCalls.length=0
   await get(new Request('https://example.test/api/cron/nba-market-capture'))
   const saved=receipt as {status:string;playerFingerprint:string;playerObservedAt:string}
   assert.equal(saved.status,'captured');assert.match(saved.playerFingerprint,/^[a-f0-9]{64}$/)
   assert.ok(Date.parse(saved.playerObservedAt)<=Date.now())
-  assert.equal(nbaSuccessfulMarketReceipt({key:'market-attempt:v3:123',payload:saved,fetched_at:new Date().toISOString()},123,saved.playerFingerprint),saved.playerObservedAt)
-  assert.deepEqual(rpcCalls,['record_nba_market_capture','record_nba_game_market_capture'])
+  assert.equal(nbaSuccessfulMarketReceipt({key:'market-attempt:v4:pregame:123',payload:saved,fetched_at:new Date().toISOString()},123,saved.playerFingerprint),saved.playerObservedAt)
+  assert.deepEqual(rpcCalls,['record_nba_phase_capture:props','record_nba_phase_capture:game'])
 })
 
 test('research snapshot stores verification provenance but deduplicates unchanged successful polls',async()=>{
@@ -288,4 +289,56 @@ test('research snapshot stores verification provenance but deduplicates unchange
   assert.equal(first.fingerprint,second.fingerprint)
   assert.equal(first.features.signal.marketSupport.marketObservedAt,current)
   assert.equal(second.features.signal.marketSupport.marketObservedAt,'2026-10-20T12:12:00Z')
+})
+
+test('Pregame and Live market signals never share captures, openings, public counts or receipts', () => {
+  const liveAt = '2026-10-20T13:10:00Z', liveOpen = '2026-10-20T13:01:00Z', livePublic = '2026-10-20T13:09:00Z'
+  const liveInput = { ...input(), mode: 'live' as const, asOf: '2026-10-20T13:12:00Z',
+    frame: { captured_at: liveAt, props: [target,other].map(offer => ({...offer,updated_at:liveAt})) },
+    openings: input().openings.map(row => ({...row,observed_at:liveOpen})), publicCapture: {...publicCapture,capturedAt:livePublic},
+  }
+  const live = nbaBuildMarketContext(liveInput)
+  assert.equal(live.oddsMode,'live'); assert.ok(support(live,liveInput.frame.props[0]).adjustment > 0)
+  assert.equal(support(live,target).adjustment,0,'a pregame selected quote cannot receive a live signal')
+  assert.equal(nbaBuildMarketContext({...liveInput,mode:'pregame'}).available,false)
+  assert.equal(nbaBuildMarketContext({...input(),mode:'live'}).available,false)
+  assert.equal(nbaBuildMarketContext({...liveInput,frame:input().frame}).available,false)
+  assert.equal(support(nbaBuildMarketContext({...liveInput,openings:input().openings})).adjustment,0)
+  assert.equal(nbaBuildMarketContext({...liveInput,publicCapture}).available,false)
+  assert.equal(nbaBuildMarketContext({...input(),frame:liveInput.frame}).available,false)
+  assert.equal(support(nbaBuildMarketContext({...input(),openings:liveInput.openings})).adjustment,0)
+  const receipt = {key:'market-attempt:v4:live:123',fetched_at:liveAt,payload:{status:'unchanged',playerFingerprint:'x',playerObservedAt:liveAt}}
+  assert.equal(nbaSuccessfulMarketReceipt(receipt,123,'x','live'),liveAt)
+  assert.equal(nbaSuccessfulMarketReceipt(receipt,123,'x','pregame'),null)
+  assert.equal(nbaSuccessfulMarketReceipt({...receipt,key:'market-attempt:v3:123'},123,'x','live'),null)
+})
+
+test('market context uses the recorded tipoff after the provider moves its scheduled time later', async () => {
+  const delayedGame = {...board.game,datetime:'2026-10-20T15:00:00Z'}
+  const preAt='2026-10-20T12:55:00Z',liveAt='2026-10-20T13:30:00Z',now='2026-10-20T13:35:00Z'
+  let selectedMode='pregame',clockReads=0
+  const cache=new Map<string,NbaMarketContext>()
+  const admin={from:(table:string)=>{
+    const query={select:()=>query,eq:()=>query,in:()=>query,lte:()=>query,gte:()=>query,order:()=>query,limit:()=>query,abortSignal:async()=>({data:table==='nba_public_captures'?[{snapshot:{...publicCapture,capturedAt:selectedMode==='live'?'2026-10-20T13:29:00Z':'2026-10-20T12:54:00Z'},fingerprint:'counts'}]:[],error:null})}
+    return query
+  }}
+  const api=await compiled('../src/lib/nbaMarketSignalData.ts',{
+    'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},
+    './nbaOddsClockData':{getNbaOddsGame:async(game:unknown)=>{clockReads++;return {...game as object,datetime:tipAt}}},
+    './nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<NbaMarketContext>)=>{if(!cache.has(key))cache.set(key,await load());return{value:cache.get(key)}}},
+    './nbaOddsHistoryData':{
+      getNbaAllMarketFrames:async(_id:number,mode:string)=>{selectedMode=mode;const at=mode==='live'?liveAt:preAt;return [{captured_at:at,props:[target,other].map(quote=>({...quote,updated_at:at})),fingerprint:'prices'}]},
+      getNbaQuoteOpenings:async(_id:number,mode:string)=>input().openings.map(row=>({...row,observed_at:mode==='live'?'2026-10-20T13:01:00Z':row.observed_at})),
+    },
+    './nbaPublic':{NBA_PUBLIC_VERSION},'./nbaMarketSignal':{nbaBuildMarketContext,nbaEmptyMarketContext:(await import('../src/lib/nbaMarketSignal.ts')).nbaEmptyMarketContext},
+    './nbaMarketReceipts':{nbaSuccessfulMarketReceipt,nbaSuccessfulPublicReceipt},
+  })
+  const get=api.getNbaMarketContext as typeof import('../src/lib/nbaMarketSignalData.ts').getNbaMarketContext
+  const pre=await get(delayedGame,now,'pregame'),live=await get(delayedGame,now,'live')
+  assert.equal(clockReads,2);assert.equal(Date.parse(pre.tipAt!),Date.parse(tipAt));assert.equal(Date.parse(live.tipAt!),Date.parse(tipAt))
+  assert.equal(pre.asOf,'2026-10-20T12:59:59.999Z');assert.equal(pre.marketCapturedAt,preAt)
+  assert.equal(live.marketCapturedAt,liveAt);assert.ok(live.available)
+  assert.equal(support(pre,{...target,updated_at:liveAt}).adjustment,0)
+  assert.ok(support(live,{...target,updated_at:liveAt}).adjustment>0)
+  assert.equal(delayedGame.datetime,'2026-10-20T15:00:00Z','canonicalization does not mutate a shared provider schedule')
 })

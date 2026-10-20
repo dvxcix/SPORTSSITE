@@ -1,0 +1,48 @@
+NBA Pregame / Live isolation — 2026-10-20
+
+Owner authorized implementation and production publication in this task.
+Source baseline: main 4965ca04cd69f3a6c5d2835db5ad7b06d317c2c2.
+Required recovered NFL ancestor is preserved.
+
+Pregame is the default global Court mode. The toggle is carried through tool,
+entity, desktop/mobile research, and command navigation. A switch clears old
+quotes, movement frames and Matrix matches before the new mode loads.
+
+Pregame prices use only pre-tipoff observations. After the persisted cutoff,
+the latest saved frame for each feed is authoritative, including an empty
+withdrawal. Live prices, openings, movement, public observations, signals and
+Matrix inputs use separate phase windows and cache keys. A later provider
+schedule correction cannot reopen a persisted cutoff. Unknown phases fail
+closed rather than borrowing prices or movement from another phase.
+
+The existing cloud NBA market-capture job records both phases for player props,
+game lines and First Basket, with separate receipts and independent feed
+failures. No laptop collector or duplicate scheduled job was introduced.
+Shared leases, bounded caches, failure cooldown and user access controls remain.
+Saved-pick posting retains the existing pregame-only validation policy.
+
+First Basket retains frozen prices for nonparticipants, resolves missing
+identities using cached canonical player data and historical team evidence,
+and retains shared slate event requests and player portraits.
+
+Database: applied only nba_odds_phase_isolation to hkldweedwnxartkfhror,
+recorded by production as 20261020220607. CLI-generated source migration:
+20261020220144_nba_odds_phase_isolation.sql. Existing tables/history untouched.
+New phase tables/RPCs are service-only. Transactional SQL fixtures passed and
+were rolled back; subsequent queries confirmed no fixture records remained.
+Fixtures verify +1000 pregame vs -600 live, exact separate openings, legacy
+cutoff bounds, all three feeds, withdrawal empties, duplicate economics,
+invalid identity/time rejection, and denial to public roles.
+
+Validation before publication:
+  NBA suite: 293/293
+  Production smoke: 134/134
+  Cross-sport: 26/26
+  TypeScript and all changed source ESLint: pass
+  Independent review: boundary and archived-identity findings resolved
+Evidence: enclosing work/nba-phase-*.txt; browser/deployment evidence is saved
+there after the Git-backed production deployment becomes ready.
+
+Availability remains honest: a phase without a verified capture or posted
+price is empty. Synthetic boundary tests establish isolation; they are not a
+claim that every sportsbook has an active live market at every moment.

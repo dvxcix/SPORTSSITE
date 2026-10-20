@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import * as crypto from 'node:crypto'
 import ts from 'typescript'
 import type { PaintFrame } from '../src/lib/nbaMovement.ts'
+import * as modes from '../src/lib/nbaOddsMode.ts'
 import { nbaFirstMarket } from '../src/lib/nbaFirstBasketMarkets.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, clock: { new(value?: string | number): Date; now(): number }): Promise<T> {
@@ -11,7 +12,7 @@ async function compiled<T>(file: string, imports: Record<string, unknown>, clock
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} }
   new Function('require', 'exports', 'module', 'Date', 'setTimeout', outputText)(
-    (name: string) => { assert.ok(name in imports, name); return imports[name] }, target.exports, target, clock,
+    (name: string) => { if(name==='./nbaOddsClockData'&&!(name in imports))return{getNbaOddsGame:async(game:unknown)=>game};assert.ok(name in imports, name); return imports[name] }, target.exports, target, clock,
     (callback: () => void) => setTimeout(callback, 1),
   )
   return target.exports as T
@@ -38,10 +39,10 @@ async function harness() {
       }
     },
     rpc: (name: string, args: Args) => {
-      if (name === 'read_nba_market_captures' || name === 'read_nba_first_basket_captures') return { abortSignal: async (signal: AbortSignal) => {
+      if (name === 'read_nba_phase_frames') return { abortSignal: async (signal: AbortSignal) => {
         assert.ok(signal instanceof AbortSignal); reads.push(args)
         await new Promise(resolve => setTimeout(resolve, 5))
-        return { data: result ?? [{ captured_at: new Clock().toISOString(), props: [] }], error: failed ? { message: 'fixture outage' } : null }
+        return { data: result ?? [{ captured_at: new Clock().toISOString(), quotes: [],fingerprint:'fixture' }], error: failed ? { message: 'fixture outage' } : null }
       } }
       const key = String(args.p_key), token = String(args.p_token)
       if (name === 'claim_nba_source') {
@@ -57,12 +58,13 @@ async function harness() {
   }
   const instance = async () => {
     const cache = await compiled<typeof import('../src/lib/nbaSharedCache.ts')>('../src/lib/nbaSharedCache.ts', { 'server-only': {}, 'node:crypto': crypto, './supabase/admin': { createAdminClient: () => admin } }, Clock)
-    return compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts', { 'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': cache, './nbaFirstBasketMarkets': { nbaFirstMarket } }, Clock)
+    const phase=await compiled<typeof import('../src/lib/nbaOddsPhaseData.ts')>('../src/lib/nbaOddsPhaseData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaSharedCache':cache,'./nbaOddsMode':modes},Clock)
+    return compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts', { 'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': cache, './nbaFirstBasketMarkets': { nbaFirstMarket },'./nbaOddsMode':modes,'./nbaOddsPhaseData':phase,'./nbaPaintData':{getPaintGame:async(id:number)=>({id,datetime:'2026-10-19T23:00:00Z',status:'Scheduled'})} }, Clock)
   }
   return { instance, reads, entries, advance: (ms: number) => { now += ms }, fail: (value: boolean) => { failed = value }, setResult: (value: unknown) => { result = value } }
 }
 
-test('NBA history coalesces concurrent viewers across instances without sharing different game/market/player frames', async () => {
+test('NBA history coalesces concurrent viewers across instances and filters market/player from a shared phase frame', async () => {
   const h = await harness(), instances = await Promise.all(Array.from({ length: 3 }, () => h.instance()))
   const results = await Promise.all(Array.from({ length: 12 }, (_, index) => instances[index % 3].getNbaMarketFrames(123, 'points', 434)))
   assert.equal(h.reads.length, 1); assert.ok(results.every(result => result.length === 1))
@@ -71,14 +73,8 @@ test('NBA history coalesces concurrent viewers across instances without sharing 
   for (const args of [[124, 'points', 434], [123, 'points_1q', 434], [123, 'points', 435], [123, 'points', null]] as const) {
     await instances[0].getNbaMarketFrames(args[0], args[1], args[2])
   }
-  assert.deepEqual(h.reads, [
-    { p_game_id: 123, p_market: 'points', p_player: 434 },
-    { p_game_id: 124, p_market: 'points', p_player: 434 },
-    { p_game_id: 123, p_market: 'points_1q', p_player: 434 },
-    { p_game_id: 123, p_market: 'points', p_player: 435 },
-    { p_game_id: 123, p_market: 'points', p_player: null },
-  ])
-  assert.equal(h.entries.size, 5)
+  assert.deepEqual(h.reads,[123,124].map(id=>({p_game_id:id,p_mode:'pregame',p_feed:'props',p_tipoff:'2026-10-19T23:00:00.000Z'})))
+  assert.equal(h.entries.size,2)
 })
 
 test('NBA history expires at sixty seconds, rejects failed refreshes instead of stale prices, and recovers', async () => {
@@ -87,10 +83,10 @@ test('NBA history expires at sixty seconds, rejects failed refreshes instead of 
   h.advance(59_999)
   assert.deepEqual(await getNbaMarketFrames(123, 'points'), first); assert.equal(h.reads.length, 1)
   h.advance(2); h.fail(true)
-  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/)
+  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /phase history unavailable/)
   assert.equal(h.reads.length, 2)
   h.fail(false)
-  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/, 'failure cooldown prevents immediate retry storms')
+  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /phase history unavailable/, 'failure cooldown prevents immediate retry storms')
   h.advance(15001)
   const fresh = await getNbaMarketFrames(123, 'points')
   assert.notEqual(fresh[0].captured_at, first[0].captured_at); assert.equal(h.reads.length, 3)
@@ -99,7 +95,7 @@ test('NBA history expires at sixty seconds, rejects failed refreshes instead of 
 test('NBA history preserves empty latest frames and caches a genuinely empty archive', async () => {
   const h = await harness(), { getNbaMarketFrames } = await h.instance()
   const frames: PaintFrame[] = [{ captured_at: '2026-10-19T14:20:00Z', props: [] }, { captured_at: '2026-10-19T14:25:00Z', props: [] }]
-  h.setResult(frames)
+  h.setResult(frames.map(frame=>({captured_at:frame.captured_at,quotes:frame.props,fingerprint:'fixture'})))
   assert.deepEqual(await getNbaMarketFrames(123, 'points'), frames)
   h.setResult([])
   assert.deepEqual(await getNbaMarketFrames(124, 'points'), [])
@@ -109,8 +105,8 @@ test('NBA history preserves empty latest frames and caches a genuinely empty arc
 test('NBA history rejects malformed or unexpectedly unbounded archive responses', async () => {
   const h = await harness(), { getNbaMarketFrames } = await h.instance()
   h.setResult({ frames: [] })
-  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/)
+  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /phase history unavailable/)
   h.setResult(Array.from({ length: 97 }, () => ({ captured_at: '2026-10-19T14:25:00Z', props: [] })))
-  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /market history unavailable/)
+  await assert.rejects(() => getNbaMarketFrames(123, 'points'), /phase history unavailable/)
   assert.equal(h.entries.size, 0)
 })

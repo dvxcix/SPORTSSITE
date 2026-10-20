@@ -1,3 +1,4 @@
+import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
@@ -5,10 +6,11 @@ import { createHash } from 'node:crypto'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
+  const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   const id = request.nextUrl.searchParams.get('game')
   if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
   try {
-    const board=await getPaintBoard(await getPaintGame(Number(id)))
+    const board=await getPaintBoard(await getPaintGame(Number(id)), mode)
     // Cosmetic fetch/provider timestamps must not resend unchanged historical
     // samples. Every economic quote, identity, stat and coverage flag is hashed.
     const etag='W/"'+createHash('sha256').update(JSON.stringify(board,(key,value)=>key==='fetchedAt'||key==='updated_at'?undefined:value)).digest('hex')+'"'

@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import type { PaintBoard } from '@/lib/nbaPaint'
@@ -12,7 +14,9 @@ type State = { matches: Match[]; players: Player[]; error: string; loading: bool
 const Context = createContext<State>({ matches: [], players: [], error: '', loading: false, refresh: () => {} })
 export function useNbaMatrixMatches(playerId: number) { return useContext(Context).matches.filter(match => match.playerIds.includes(playerId)) }
 export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBoard | null; gameIds?: number[]; children: ReactNode }) {
-  const scopeKey = (gameIds?.length ? gameIds : board ? [board.game.id] : []).slice(0,16).join(',')
+  const oddsMode = useNbaOddsMode()
+  const idsKey = (gameIds?.length ? gameIds : board ? [board.game.id] : []).slice(0,16).join(',')
+  const scopeKey = idsKey ? `${oddsMode}:${idsKey}` : ''
   const [state, setState] = useState<{ scopeKey: string; matches: Match[]; players: Player[] } | null>(null)
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [revision, setRevision] = useState(0)
   const requestRef = useRef<AbortController | null>(null)
@@ -32,9 +36,9 @@ export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBo
     const run = async () => {
       setLoading(true)
       try {
-        const ids = scopeKey.split(',').map(Number)
+        const ids = idsKey.split(',').map(Number)
         const { results, failed } = await loadNbaMatrixGames<{ matrices?: unknown[]; matches: Match[]; players?: Player[]; unavailable?: string[] }>(ids, async gameId => {
-            const response = await fetch(`/api/nba-matrices/evaluate?game=${gameId}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(110000)]) })
+            const response = await fetch(nbaModeHref(`/api/nba-matrices/evaluate?game=${gameId}`, oddsMode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(110000)]) })
             const result = await response.json()
             if (!response.ok || result.gameId !== gameId) throw new Error()
             return result
@@ -57,11 +61,12 @@ export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBo
       }
     }
     void run(); return () => { controller.abort(); if (requestRef.current === controller) requestRef.current = null }
-  }, [scopeKey, revision])
+  }, [scopeKey, idsKey, oddsMode, revision])
   const current = state?.scopeKey === scopeKey ? state : null
   return <Context.Provider value={{ matches: current?.matches ?? [], players: current?.players ?? [], error, loading, refresh }}>{children}</Context.Provider>
 }
 export function NbaMatrixResults({ board, open }: { board: PaintBoard; open: (playerId: number) => void }) {
+  const oddsMode = useNbaOddsMode()
   const router = useRouter()
   const { matches, players: pool, loading, error, refresh } = useContext(Context)
   const [selected, setSelected] = useState('all')
@@ -70,7 +75,7 @@ export function NbaMatrixResults({ board, open }: { board: PaintBoard; open: (pl
   if (!matches.length && !error) return null
   return <section className={styles.results} aria-label="NBA Matrix results" aria-busy={loading}>
     <div className={styles.resultsHead}><b>Matrices</b><select aria-label="NBA Matrix results" value={selected} onChange={e => setSelected(e.target.value)}><option value="all">All enabled matrices</option>{matches.map(m => <option key={m.id} value={m.id}>{m.name} · {m.playerIds.length}</option>)}</select><span>{loading ? 'Refreshing…' : `${players.length} matches`}</span><button type="button" onClick={() => window.dispatchEvent(new Event('ss:open-nba-matrices'))}>Manage</button></div>
-    <div className={styles.matches}>{players.map(player => <button type="button" key={`${player.gameId}:${player.id}`} onClick={() => player.gameId === board.game.id ? open(player.id) : router.push(`/the-paint?game=${player.gameId}&date=${board.game.date}&player=${player.id}`)} style={{ borderColor: active.find(m => m.playerIds.includes(player.id))?.color }}>{player.name} · {player.team}{active.filter(m => m.playerIds.includes(player.id)).map(m => <small key={m.id} style={{ color: m.color }}>{m.name}</small>)}</button>)}</div>
+    <div className={styles.matches}>{players.map(player => <button type="button" key={`${player.gameId}:${player.id}`} onClick={() => player.gameId === board.game.id ? open(player.id) : router.push(nbaModeHref(`/the-paint?game=${player.gameId}&date=${board.game.date}&player=${player.id}`, oddsMode))} style={{ borderColor: active.find(m => m.playerIds.includes(player.id))?.color }}>{player.name} · {player.team}{active.filter(m => m.playerIds.includes(player.id)).map(m => <small key={m.id} style={{ color: m.color }}>{m.name}</small>)}</button>)}</div>
     {error && <div role="status">{error}<button type="button" onClick={refresh}>Retry</button></div>}
   </section>
 }

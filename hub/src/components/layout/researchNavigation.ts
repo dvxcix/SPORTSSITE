@@ -37,6 +37,12 @@ export function researchNavigationHref(href: string, path: string, search: { get
 /** Keep a sport's shared research context; never leak a panel, selection, or unrelated query. */
 export function researchToolHref(href: string, path: string, search: { get(key: string): string | null }) {
   const target = href.split('?')[0]
+  const selectedMode = search.get('mode')
+  if (isNbaToolHref(href) && researchSportForPath(path) === 'nba' && (selectedMode === 'live' || selectedMode === 'pregame')) {
+    const selected = new URLSearchParams(href.split('?')[1] ?? '')
+    if (!selected.has('mode')) selected.set('mode', selectedMode)
+    href = target + '?' + selected.toString()
+  }
   if (path !== target || !['/the-sideline', '/the-paint'].includes(target)) return href
   const params = new URLSearchParams(href.split('?')[1] ?? '')
   const keys = target === '/the-paint' ? ['game', 'date', 'market', 'book', 'side', 'contract', 'target'] : ['game', 'date', 'sample', 'at']

@@ -12,10 +12,10 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement, IS_REACT_ACT_ENVIRONMENT: true })
 dom.window.HTMLElement.prototype.scrollIntoView = () => {}
 const { createRoot } = await import('react-dom/client')
-const state = { search: '', error: false, offer: null as PaintProp | null }
+const state = { search: '', error: false, offer: null as PaintProp | null, navigations: [] as string[], requests: [] as string[] }
 ;(globalThis as typeof globalThis & { nbaQuoteFixture: typeof state }).nbaQuoteFixture = state
 const stubs: Record<string, string> = {
-  'next/navigation': `export const useSearchParams=()=>new URLSearchParams(globalThis.nbaQuoteFixture.search);export const useRouter=()=>({push(){}})`,
+  'next/navigation': `export const useSearchParams=()=>new URLSearchParams(globalThis.nbaQuoteFixture.search);export const useRouter=()=>({push(href){globalThis.nbaQuoteFixture.navigations.push(href)}})`,
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   '@/components/ui/ModalSurface': `import React from 'react';export const ModalSurface=({open,label,children})=>open?<div role="dialog" aria-label={label}>{children}</div>:null`,
   '@/context/WatchlistContext': `export const useWatchlist=()=>({items:[]})`,
@@ -39,7 +39,7 @@ const bundled = await build({ stdin: { contents: `export {PaintBoardClient} from
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
   builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ contents: stubs[args.path], loader: 'tsx', resolveDir: resolve('.') }))
 } }] })
-const compiled = { exports: {} as { PaintBoardClient: ComponentType<{ initial: PaintBoard; games: PaintBoard['game'][]; days: string[]; date: string }> } }
+const compiled = { exports: {} as { PaintBoardClient: ComponentType<{ initial: PaintBoard; games: PaintBoard['game'][]; days: string[]; date: string; initialMode?: 'pregame'|'live' }> } }
 new Function('require', 'module', 'exports', bundled.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, compiled, compiled.exports)
 const team = { id: 2, abbreviation: 'BOS', name: 'Celtics', full_name: 'Boston Celtics' }
 const main: PaintProp = { id: 1, game_id: 123, player_id: 434, vendor: 'fanduel', prop_type: 'points', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -110 }, updated_at: '2026-10-19T14:00:00Z' }
@@ -55,15 +55,16 @@ const board: PaintBoard = {
 }
 const originalFetch = globalThis.fetch
 async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '') {
-  state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error
+  state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error; state.navigations = []; state.requests = []
   window.history.replaceState(null, '', '/the-paint?' + state.search)
   globalThis.fetch = async input => {
+    state.requests.push(String(input))
     assert.ok(String(input).startsWith('/the-paint/intelligence?'), String(input))
-    return state.error ? Response.json({}, { status: 503 }) : Response.json({ season: 2025, ready: true, profiles: [], games: 20, fetchedAt: board.fetchedAt, stale: false, scores: [{ playerId: 434, score: 70, mm: 1, offer: state.offer, minutes: 30, production: 22, newTeam: false, marketSupport: { status: 'unavailable', signal: null } }] })
+    return state.error ? Response.json({}, { status: 503 }) : Response.json({ season: 2025, ready: true, profiles: [], games: 20, fetchedAt: board.fetchedAt, stale: false, scores: [{ playerId: 434, score: 70, mm: 1, offer: state.offer, minutes: 30, production: 22, newTeam: false, marketSignals: { status: 'unavailable', signal: null } }] })
   }
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
-  await act(async () => root.render(createElement(compiled.exports.PaintBoardClient, { initial: board, games: [board.game], days: [board.game.date], date: board.game.date })))
+  await act(async () => root.render(createElement(compiled.exports.PaintBoardClient, { initial: board, games: [board.game], days: [board.game.date], date: board.game.date, initialMode: new URLSearchParams(state.search).get('mode')==='live'?'live':'pregame' })))
   const click = async (element: Element | null | undefined) => { assert.ok(element); await act(async () => element.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))) }
   const byLabel = (label: string) => [...host.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === label)
   const close = async () => { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
@@ -231,5 +232,32 @@ test('board and player hit labels use the same push-excluded denominator as thei
     await ui.click(ui.byLabel('Analyze Test Player, Boston Celtics'))
     const text = ui.host.querySelector('[role="dialog"]')?.textContent ?? ''
     assert.match(text, /100%4\/4 · 1 pushes/)
+  } finally { await ui.close() }
+})
+
+
+test('the global NBA mode switch removes old odds while the selected mode page is pending', async () => {
+  const ui = await harness('odds', 'over', null, false, 'points', '&target=24.5')
+  try {
+    const group = () => ui.host.querySelector('[aria-label="NBA odds mode"]')!
+    assert.equal(group().querySelector('[aria-pressed="true"]')?.textContent, 'Pregame')
+    assert.ok(ui.host.querySelector('[aria-label="NBA player research board"]'))
+    await ui.click([...group().querySelectorAll('button')].find(button => button.textContent === 'Live'))
+    assert.equal(group().querySelector('[aria-pressed="true"]')?.textContent, 'Live')
+    assert.equal(ui.host.querySelector('[aria-label="NBA player research board"]'), null)
+    assert.equal(ui.host.querySelector('[data-testid="pick"]'), null)
+    assert.ok(ui.host.textContent?.includes('Loading live markets'))
+    const query = new URL(state.navigations.at(-1)!, 'https://www.slipsurge.com').searchParams
+    assert.equal(query.get('mode'), 'live'); assert.equal(query.get('view'), 'odds'); assert.equal(query.get('target'), '24.5')
+  } finally { await ui.close() }
+})
+
+test('a live NBA deep link initializes Live and requests live scores without switching at tip', async () => {
+  const ui = await harness('score', 'over', milestone, false, 'points', '&mode=live')
+  try {
+    assert.equal(ui.host.querySelector('[aria-label="NBA odds mode"] [aria-pressed="true"]')?.textContent, 'Live')
+    assert.ok(state.requests.length > 0)
+    assert.ok(state.requests.every(href => new URL(href, 'https://www.slipsurge.com').searchParams.get('mode') === 'live'))
+    assert.equal(new URL(window.location.href).searchParams.get('mode'), 'live')
   } finally { await ui.close() }
 })

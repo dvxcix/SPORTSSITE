@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import type { NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
@@ -24,12 +26,13 @@ import dials from './research-dials.module.css'
 type ScoreView = { playerId: number; score: number | null; mm: number | null; offer: PaintProp | null; minutes: number | null; production: number | null; newTeam: boolean; marketSignals: NbaMarketSupportView }
 type Context = { teams?: PaintTeam[]; season: number; ready: boolean; profiles: NbaDvp[]; games: number; fetchedAt: string | null; stale: boolean; scores: ScoreView[] }
 export function PaintIntelligence({ selection, board, market, book, side, mode, open, onMarketChange, onBookChange, onSideChange }: { selection?: NbaMarketSelection; board: PaintBoard; market: PaintMarket; book: string; side: 'over' | 'under'; mode: 'score' | 'dvp'; open: (id: number, market?: PaintMarket, book?: string, panel?: 'trends' | 'ladder' | 'movement' | 'tracking' | 'court' | 'markets', quote?: { line: number; type: 'over_under' | 'milestone' }, side?: 'over' | 'under') => void; onMarketChange: (market: PaintMarket) => void; onBookChange: (book: string) => void; onSideChange: (side: 'over' | 'under') => void }) {
+  const oddsMode = useNbaOddsMode()
   const [contextState, setContext] = useState<{ key: string; data: Context } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
   const [query, setQuery] = useState(''), [position, setPosition] = useState('all'), [ascending, setAscending] = useState(false), [sort, setSort] = useState('score')
   const [team,setTeam]=useState('all')
   const [scope, setScope] = useState<'league' | 'matchup'>('league')
   const contract=selection?.type??'',target=selection?.line==null?'':String(selection.line)
-  const contextKey = `${board.game.id}:${market}:${book}:${side}:${contract}:${target}`
+  const contextKey = `${oddsMode}:${board.game.id}:${market}:${book}:${side}:${contract}:${target}`
   const context = contextState?.key === contextKey ? contextState.data : null
   useEffect(() => {
     const controller = new AbortController(); let pending = false
@@ -37,7 +40,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
       if (pending) return
       pending = true
       try {
-        const response = await fetch(`/the-paint/intelligence?${new URLSearchParams({ game: String(board.game.id), market, book, side, contract, target })}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
+        const response = await fetch(nbaModeHref(`/the-paint/intelligence?${new URLSearchParams({ game: String(board.game.id), market, book, side, contract, target })}`, oddsMode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(115000)]) })
         if (!response.ok) throw new Error('unavailable')
         const result = await response.json()
         if (!controller.signal.aborted) { setContext({ key: contextKey, data: result }); setError('') }
@@ -46,7 +49,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
     }
     void update(); const stop = watchNbaRefresh(update)
     return () => { controller.abort(); stop() }
-  }, [board.game.id, board.fetchedAt, market, book, side, contextKey, retry, contract, target])
+  }, [oddsMode, board.game.id, board.fetchedAt, market, book, side, contextKey, retry, contract, target])
   const sortBy = (column: string) => {
     const active = mode === 'dvp' && scope === 'league' && !['name', 'position', 'games', 'defense', 'league', 'allowance'].includes(sort) ? 'allowance' : sort
     setSort(column); setAscending(value => active === column ? !value : column === 'name')

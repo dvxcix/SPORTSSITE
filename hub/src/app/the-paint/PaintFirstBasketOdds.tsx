@@ -1,4 +1,6 @@
 'use client'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
 import type { FirstBasketRow } from '@/lib/nbaFirstBasketOdds'
 import { NBA_FIRST_MARKETS } from '@/lib/nbaFirstBasketMarkets'
@@ -20,6 +22,7 @@ const time = (at:string) => new Date(at).toLocaleTimeString('en-US',{timeZone:'A
 const bestProbability = (group:QuoteGroup) => Math.min(...group.quotes.map(row=>impliedProbability(nbaPrice(row.offer))??Infinity))
 
 export function PaintFirstBasketOdds({date}:{date:string}) {
+  const oddsMode = useNbaOddsMode()
   const [state,setState]=useState<Slate|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[market,setMarket]=useState('all'),[book,setBook]=useState('all'),[query,setQuery]=useState('')
   const [sort,setSort]=useState('movement'),[direction,setDirection]=useState('all'),[basis,setBasis]=useState('opening'),[minimum,setMinimum]=useState(0)
@@ -28,14 +31,14 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
     const update=async()=>{
       if(pending)return;pending=true
       try {
-        const response=await fetch(`/the-paint/first-basket/odds?date=${date}`,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
+        const response=await fetch(nbaModeHref(`/the-paint/first-basket/odds?date=${date}`, oddsMode),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
         if(!response.ok)throw new Error('unavailable')
         const data=await response.json() as Slate
         if(!controller.signal.aborted){setState(data);setError('')}
       } catch {if(!controller.signal.aborted)setError('First-basket prices could not refresh.')} finally {pending=false}
     }
     void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}
-  },[date,retry])
+  },[oddsMode, date,retry])
   const slate=state?.requestedDate===date?state:null
   const catalog=useMemo(()=>{
     const rows=slate?.rows??[]

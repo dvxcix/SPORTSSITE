@@ -7,10 +7,10 @@ import { act, createElement, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 const require = createRequire(import.meta.url)
-const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true, view: 'public' }
+const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true, view: 'public', mode: '' }
 ;(globalThis as typeof globalThis & { nbaNavFixture: typeof state }).nbaNavFixture = state
 const stubs: Record<string,string> = {
-  'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view='+globalThis.nbaNavFixture.view+'&game=123');export const useRouter=()=>({push(){},back(){}});`,
+  'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view='+globalThis.nbaNavFixture.view+'&game=123&mode='+globalThis.nbaNavFixture.mode);export const useRouter=()=>({push(){},back(){}});`,
   'next/link': `import React from 'react';export default function Link({prefetch,children,...props}){return <a {...props}>{children}</a>}`,
   'next/image': `import React from 'react';export default function Image({priority,...props}){return <img {...props}/>}`,
   '@/components/ui/SafeImage': `import React from 'react';export function SafeImage({fallback,...props}){return <img {...props}/>}`,
@@ -114,3 +114,19 @@ test('mobile NBA tab changes the actual tool menu and dismissing restores focus 
   state.view='first-basket';state.tier='ultimate';state.role='user';state.granted=null
   try {assert.match(render('Sidebar'),/href="\/the-paint\?view=first-basket[^"]*"[^>]*aria-current="page"/)}finally{state.view='public'}
  })
+
+
+test('desktop, sidebar and mobile NBA tool links preserve Live across Court and entity pages', () => {
+  Object.assign(state,{role:'user',tier:'ultimate',granted:null,beta:false,mode:'live'})
+  try {
+    for (const path of ['/the-paint','/nba/players/434']) {
+      state.path=path
+      for(const name of ['Sidebar','DesktopNavigation','DesktopCommandBar','MobileResearchPicker']) {
+        const html=render(name,{path,sport:'nba',nflAccess:true,nbaAccess:true,hasUltimate:true,onSport:noop,onClose:noop})
+        const links=[...html.matchAll(/href="(\/the-paint[^"]*)"/g)].map(match=>match[1].replaceAll('&amp;','&'))
+        assert.ok(links.length>0,name+' '+path)
+        assert.ok(links.every(href=>new URL(href,'https://www.slipsurge.com').searchParams.get('mode')==='live'),name+' '+JSON.stringify(links))
+      }
+    }
+  } finally { state.path='/the-paint';state.mode='' }
+})

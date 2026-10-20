@@ -1,5 +1,6 @@
 // Provider identities and descriptive statistics, shared without server credentials.
 import type { NbaOpening, NbaGameOpening } from './nbaOddsHistory'
+import type { NbaOddsMode } from './nbaOddsMode'
 import { nbaFirstMarket } from './nbaFirstBasketMarkets'
 export type PaintTeam = { id: number; abbreviation: string; full_name: string; name: string; city?: string }
 export type PaintGame = { id: number; date: string; season: number; status: string; status_state?: string; datetime: string | null; period: number; home_team: PaintTeam; visitor_team: PaintTeam; home_team_score: number; visitor_team_score: number }
@@ -8,7 +9,7 @@ export type PaintStat = { period?: number; id: number; player: { id: number; fir
 export type PaintProp = { id: number; game_id: number; player_id: number; vendor: string; prop_type: string; line_value: string; market: { type: 'over_under' | 'milestone'; over_odds?: number; under_odds?: number; odds?: number }; updated_at: string; opening?: NbaOpening }
 export type PaintPlayer = PaintRoster & { headshot: string | null; injury: { status: string; description: string; return_date?: string } | null; average: Record<string, number | null>; averageSeason?: number; logs: PaintStat[]; periodLogs?: PaintStat[]; props: PaintProp[] }
 export type PaintGameOdds = { id: number; game_id?: number; vendor: string; spread_home_value: string | null; spread_away_value: string | null; spread_home_odds?: number | null; spread_away_odds?: number | null; moneyline_home_odds: number | null; moneyline_away_odds: number | null; total_value: string | null; total_over_odds?: number | null; total_under_odds?: number | null; updated_at: string; opening?: NbaGameOpening }
-export type PaintBoard = { teams?: PaintTeam[]; game: PaintGame; players: PaintPlayer[]; sampleSeason: number; baselineSeasons?: number[]; historical: boolean; sampleEnd: string; fetchedAt: string; issues: string[]; statsComplete: boolean; periodStatsComplete?: boolean; teamStatsSeason?: number; teamStats?: { team: PaintTeam; stats: Record<string, number | null> }[]; gameOdds?: PaintGameOdds[]; starters?: number[] }
+export type PaintBoard = { oddsMode?: NbaOddsMode; teams?: PaintTeam[]; game: PaintGame; players: PaintPlayer[]; sampleSeason: number; baselineSeasons?: number[]; historical: boolean; sampleEnd: string; fetchedAt: string; issues: string[]; statsComplete: boolean; periodStatsComplete?: boolean; teamStatsSeason?: number; teamStats?: { team: PaintTeam; stats: Record<string, number | null> }[]; gameOdds?: PaintGameOdds[]; starters?: number[] }
 export const PAINT_MARKETS = [
   { key: 'points', label: 'Points', short: 'PTS', stats: ['pts'] },
   { key: 'rebounds', label: 'Rebounds', short: 'REB', stats: ['reb'] },
