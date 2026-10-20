@@ -7,10 +7,10 @@ import { act, createElement, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 const require = createRequire(import.meta.url)
-const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true }
+const state = { role: 'user', tier: 'free', granted: null as string | null, beta: false, path: '/the-paint', nfl: true, view: 'public' }
 ;(globalThis as typeof globalThis & { nbaNavFixture: typeof state }).nbaNavFixture = state
 const stubs: Record<string,string> = {
-  'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view=public&game=123');export const useRouter=()=>({push(){},back(){}});`,
+  'next/navigation': `export const usePathname=()=>globalThis.nbaNavFixture.path;export const useSearchParams=()=>new URLSearchParams('view='+globalThis.nbaNavFixture.view+'&game=123');export const useRouter=()=>({push(){},back(){}});`,
   'next/link': `import React from 'react';export default function Link({prefetch,children,...props}){return <a {...props}>{children}</a>}`,
   'next/image': `import React from 'react';export default function Image({priority,...props}){return <img {...props}/>}`,
   '@/components/ui/SafeImage': `import React from 'react';export function SafeImage({fallback,...props}){return <img {...props}/>}`,
@@ -49,7 +49,7 @@ test('Ultimate, granted Ultimate and admin shells expose each NBA tool once and 
       assert.match(html,/leagues\/500\/nba\.png/,name)
       assert.equal((html.match(/aria-current="page"/g)??[]).length,1,name)
       assert.match(html,/view=public[^\"]*"[^>]*aria-current="page"/,name)
-      for (const view of ['odds','ladders','movement','cheatsheets','score','slate','public','divergence','dvp','usage','tracking','matchup','availability','game-markets']) assert.equal((html.match(new RegExp(`href="/the-paint\\?view=${view}&`,'g'))??[]).length,1,name+' '+view)
+      for (const view of ['odds','ladders','movement','first-basket','cheatsheets','score','slate','public','divergence','dvp','usage','tracking','matchup','availability','game-markets']) assert.equal((html.match(new RegExp(`href="/the-paint\\?view=${view}&`,'g'))??[]).length,1,name+' '+view)
       assert.doesNotMatch(html,/>NBA (Odds|Ladders|SlipSurge Score)</)
       assert.doesNotMatch(html,/Ultimate required/)
       assert.doesNotMatch(html,/>ULTIMATE</)
@@ -109,3 +109,8 @@ test('mobile NBA tab changes the actual tool menu and dismissing restores focus 
     assert.equal(document.activeElement,opener)
   }finally{await act(async()=>root.unmount());host.remove();dom.window.close()}
 })
+
+ test('first-basket navigation marks its own destination active',()=>{
+  state.view='first-basket';state.tier='ultimate';state.role='user';state.granted=null
+  try {assert.match(render('Sidebar'),/href="\/the-paint\?view=first-basket[^"]*"[^>]*aria-current="page"/)}finally{state.view='public'}
+ })

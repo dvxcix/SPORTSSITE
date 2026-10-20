@@ -21,7 +21,14 @@ in bounded cloud batches. No collector replays, schema changes or historical
 database writes. Posted first-basket odds appear only if actually supplied;
 absent coverage does not become invented prices or win/loss outcomes.
 
-Validation: NBA suite 213/213; production suite 134/134; TypeScript clean.
+Validation: NBA suite 214/214; production suite 134/134; TypeScript clean.
 Tests exercise exact N+ target switching/drilldown, independent milestone price
 movement, first-score vs first-FG semantics, gaps and cross-game contamination,
 and existing Ultimate access/score freshness/privacy regressions.
+
+Production browser/API verification: selected 20+ Score rows all retain milestone
+type and exact line 20; Market Story displays fixed N+ price history and its 20+
+filter works. First-basket Boston–Detroit coverage is 20/20 requested games,
+zero failed loads, 23 players with observed current-team appearances. Boston
+opening-tip sample 7/10, Detroit 5/10. No first-basket odds in this matchup feed.
+Browser inspection caught and corrected the new destination's active-nav state.
