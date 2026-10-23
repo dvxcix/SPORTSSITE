@@ -52,6 +52,7 @@ async function capture(scenario) {
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async game => game },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) }, '@/lib/browserbase': { openPikkitSession: async () => browser },
     '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario === 'low-budget' && finds === 2) extraTime = 60_000; const found = scenario === 'recovered' && reloads === 1; if (found) { eventOpened = true; const request = { url: () => eventUrl }; requestListener?.(request); responseListener?.({ url: () => eventUrl, status: () => 200, request: () => request, json: async () => event }) }; return found } },
+    '@/lib/scrapers/pikkitLeagueDate': { observePikkitLeagueDates: () => ({ selectDate: async date => { assert.equal(date, game.date); return true }, dispose() {} }) },
     '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async () => { captures++; return { markets: 9 } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2', nbaPublicEventMatches: () => true },
     '@/lib/nbaPublicEventIdentity': { nbaPublicResponseKind: () => 'event', nbaPublicEventIdentities: () => [event], nbaVerifiedPublicEvent: (_game, events) => events[0] ?? null, nbaPublicEventUrl: () => eventUrl, nbaPublicEventPageMatches: () => true },

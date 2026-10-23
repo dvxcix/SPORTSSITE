@@ -1,0 +1,47 @@
+Source capture and saved-login repair — 2026-10-23
+
+Owner request: determine recurrent source sign-in failures, restore captures,
+and verify the saved login survives cloud browser shutdown/reopening.
+Baseline main/live: 618e2782cfc24b6ee5c77ea9f444d5fa6d7372a9.
+Required recovered NFL ancestry is preserved. No secrets or contexts replaced.
+
+Evidence before repair:
+- Latest six NBA runs reached /login and imported no fresh captures.
+- Cloud recording 5015d556-f41c-4893-aea7-123849a38240 used the configured
+  October 21 context and COMPLETED normally. Initial league navigation had
+  login/validate 200, betslip 200 and league/events 200. A later full event
+  document navigation skipped validation, returned pro/interaction 401,
+  and displayed login. Calling this permanent login expiry was unsupported.
+- The observed public source bundle main.617cdff2.js uses client-side event
+  card navigation. Its authentication provider reads session_id; the cookie
+  setter specifies expiry but no explicit path. Cookie-path metadata must be
+  checked live before treating path scope as the established cause.
+
+Repair:
+- NBA follows the actual event card rather than hard-reloading its document.
+  Exact fresh event ID, full teams, date, canonical tip, URL and pregame
+  capture checks remain mandatory.
+- The requested slate date is selected through observed source filters and
+  actual controls; future games no longer use only today's listing.
+- Game matching refuses authentication links/buttons and their containers.
+- Saved contexts cannot silently fall back to fresh incognito contexts.
+- Pending/running sessions block reuse of that same context. Close requires
+  confirmed remote COMPLETED status; uncertain startup/shutdown retains the
+  safety lease. The existing eight-second synchronization gap is preserved.
+- Manual setup retains the configured identity rather than replacing it
+  because an old setup session fell outside a twelve-hour search window.
+- Auth health enters the normal league route and requires observed validation
+  success plus the authenticated shell. Unknown failures cannot send false
+  expiry alerts. Reconnect guidance preserves the existing configured context.
+- Existing admin diagnostics expose cookie metadata only, never token values.
+  Cookie-admin access requires a verified admin and same-origin/none top-level
+  navigation; responses are private, no-store. Slow cleanup has 120 seconds.
+
+Local validation: 49 persistence/navigation/date/auth/lease tests; 309 NBA
+tests; 134 production source checks; TypeScript and scoped ESLint passed.
+Independent code review confirmed no weakened event/pregame guards or token
+exposure. The separate operations-readiness suite has one pre-existing NFL
+dispatcher source assertion expecting a URL without its current stream=1.
+
+Deployment and real close/reopen capture verification are performed after
+publishing this source; do not infer successful live recovery from unit tests.

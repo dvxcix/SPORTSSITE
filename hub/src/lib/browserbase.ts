@@ -1,5 +1,6 @@
 import Browserbase from '@browserbasehq/sdk'
 import { chromium, type Browser, type Page } from 'playwright-core'
+import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
 
 // Thin wrapper around the Browserbase SDK + Playwright's CDP connection —
 // every scraper (FanDuel/BetMGM/Pikkit) goes through this so session
@@ -27,6 +28,7 @@ const BROWSERBASE_REGION = 'us-east-1' as const
 const AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 * 60
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
+const RELEASE_REQUEST_TIMEOUT_MS = 4000
 export const FANDUEL_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$'
 export const BETMGM_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*betmgm\\.com$'
 export const PIKKIT_PROXY_DOMAIN_PATTERN = '^([a-zA-Z0-9-]+\\.)*(pikkit\\.com|pikkit\\.app|cloudflare\\.com)$'
@@ -57,6 +59,54 @@ export type BBSession = {
   page: Page
   sessionId: string
   close: () => Promise<void>
+}
+
+type CloudSession = Awaited<ReturnType<Browserbase['sessions']['list']>>[number]
+
+async function activeContextSessions(bb: Browserbase, contextId: string): Promise<CloudSession[]> {
+  const lists = await Promise.all([
+    bb.sessions.list({ status: 'RUNNING' }),
+    bb.sessions.list({ status: 'PENDING' }),
+  ])
+  return lists.flat().filter(session => session.contextId === contextId)
+}
+
+async function boundedClose(browser: Browser): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      browser.close(),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Browser disconnect timed out')), RELEASE_REQUEST_TIMEOUT_MS) }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+// A CDP disconnect alone is not proof that the remote session ended. Confirm
+// completion before callers release the shared context lease and its sync gap.
+// Keep failures generic: SDK errors can include credential-bearing URLs.
+async function releasePersistentSession(bb: Browserbase, sessionId: string, projectId: string | undefined, browser?: Browser): Promise<void> {
+  const [disconnect, release] = await Promise.allSettled([
+    browser ? boundedClose(browser) : Promise.resolve(),
+    bb.sessions.update(sessionId, { status: 'REQUEST_RELEASE', ...(projectId ? { projectId } : {}) }, { timeout: RELEASE_REQUEST_TIMEOUT_MS, maxRetries: 0 }),
+  ])
+  let status = release.status === 'fulfilled' ? release.value.status : undefined
+  // Release may race the normal disconnect. A read can confirm completion
+  // even if the release endpoint returned an already-ended session error.
+  for (let attempt = 0; status !== 'COMPLETED' && attempt < 3; attempt++) {
+    if (status === 'ERROR' || status === 'TIMED_OUT') break
+    if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 750))
+    try {
+      status = (await bb.sessions.retrieve(sessionId, { timeout: 2000, maxRetries: 0 })).status
+    } catch {
+      throw new Error('Persisted browser release could not be verified; retain the shared context lease')
+    }
+  }
+  if (status !== 'COMPLETED') throw new Error('Persisted browser release could not be verified; retain the shared context lease')
+  if (disconnect.status === 'rejected' || release.status === 'rejected') {
+    console.warn('[browserbase] teardown request failed, but remote completion was verified')
+  }
 }
 
 // Opens a fresh Browserbase-hosted browser and connects Playwright to it.
@@ -95,11 +145,16 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
     throw new Error('Automated browser timeout must be between 60 and 450 seconds')
   }
-  const bb = client(opts.requestTimeoutMs)
+  // A retried session-create POST can leave two writers on one profile when
+  // the first response was lost. Persisted launches use one bounded attempt.
+  const bb = client(opts.requestTimeoutMs ?? (opts.contextId ? 10000 : undefined))
   const configuredProjectId = optionalProjectId()
   // Spend thresholds are admin alerts, never capture gates. Usage lookup also
   // stays out of this path so a billing API outage cannot stop data ingestion.
   const pid = await resolveProjectId(bb, configuredProjectId)
+  if (opts.contextId && (await activeContextSessions(bb, opts.contextId)).length) {
+    throw new Error('The persisted browser context is already in use; wait for its active session to finish')
+  }
   const proxied = {
     type: 'browserbase' as const,
     ...(opts.geoState ? { geolocation: { country: 'US' as const, state: opts.geoState } } : {}),
@@ -128,23 +183,30 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     },
     userMetadata,
   })
-  let browser: Browser
+  let browser: Browser | undefined
+  let page: Page
   try {
     browser = opts.requestTimeoutMs ? await chromium.connectOverCDP(session.connectUrl, { timeout: opts.requestTimeoutMs }) : await chromium.connectOverCDP(session.connectUrl)
+    const existingContext = browser.contexts()[0]
+    if (!existingContext && opts.contextId) throw new Error('The persisted browser context was not restored')
+    const context = existingContext ?? await browser.newContext()
+    page = context.pages()[0] ?? await context.newPage()
   } catch (failure) {
-    await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
+    if (opts.contextId) await releasePersistentSession(bb, session.id, pid, browser)
+    else {
+      await browser?.close().catch(() => {})
+      await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
+    }
     throw failure
   }
-  const context = browser.contexts()[0] ?? await browser.newContext()
-  const page = context.pages()[0] ?? await context.newPage()
-  let closed = false
+  const connectedBrowser = browser
+  let closing: Promise<void> | undefined
   return {
     page,
     sessionId: session.id,
-    close: async () => {
-      if (closed) return
-      closed = true
-      await browser.close().catch(() => {})
+    close: () => closing ??= (async () => {
+      if (opts.contextId) return releasePersistentSession(bb, session.id, pid, connectedBrowser)
+      await connectedBrowser.close().catch(() => {})
       // Browserbase documents REQUEST_RELEASE as the way to stop billing
       // before timeout. Disconnect normally completes a non-keepAlive session,
       // but an explicit release protects us when CDP teardown is interrupted.
@@ -152,7 +214,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
         status: 'REQUEST_RELEASE',
         ...(pid ? { projectId: pid } : {}),
       }).catch(() => {})
-    },
+    })(),
   }
 }
 
@@ -165,16 +227,6 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // state is important; otherwise both setup and reuse use Browserbase's
 // managed proxy in us-east-1.
 export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}, options: { requestTimeoutMs?: number } = {}): Promise<BBSession> {
-  const bb = client(options.requestTimeoutMs)
-  const running = await bb.sessions.list({ status: 'RUNNING' })
-  const manualLoginActive = running.some(session => (
-    session.contextId === contextId
-      && session.userMetadata?.book === 'pikkit'
-      && session.userMetadata?.mode === 'manual-auth'
-  ))
-  if (manualLoginActive) {
-    throw new Error('Pikkit manual authentication is still running; release it before automated reuse')
-  }
   return openSession({
     contextId,
     requestTimeoutMs: options.requestTimeoutMs,
@@ -192,7 +244,7 @@ export async function openPikkitSession(contextId: string, metadata: Record<stri
 // Browserbase persists that session's cookies against contextId afterward,
 // so every future openSession({ contextId }) call for Pikkit starts already
 // logged in. No password is ever read, stored, or typed by this codebase —
-// you do the actual sign-in by hand, once, in the Live View.
+// you do the actual sign-in by hand in Live View whenever the site requires it.
 export type PersistentContextSetup = {
   contextId: string
   sessionId: string
@@ -229,10 +281,26 @@ async function findPikkitManualAuthIdentity(bb: Browserbase): Promise<{
   running?: Awaited<ReturnType<typeof bb.sessions.list>>[number]
   contextId?: string
 }> {
+  const configuredContext = process.env.PIKKIT_CONTEXT_ID?.trim()
+  if (configuredContext) {
+    // The configured context is the production identity, regardless of how
+    // long ago its last manual login occurred. Never silently replace it.
+    await bb.contexts.retrieve(configuredContext)
+    const active = await activeContextSessions(bb, configuredContext)
+    if (active.length > 1 || active.some(session => !isPikkitManualAuthSession(session))) {
+      throw new Error('The configured context is in use by automation; retry manual setup after it finishes')
+    }
+    if (active[0]?.status === 'PENDING') throw new Error('Manual authentication is still starting; retry shortly')
+    return { contextId: configuredContext, running: active[0] }
+  }
   const running = newestFirst(
     (await bb.sessions.list({ status: 'RUNNING' })).filter(isPikkitManualAuthSession),
   )[0]
-  if (running?.contextId) return { running, contextId: running.contextId }
+  if (running?.contextId) {
+    const active = await activeContextSessions(bb, running.contextId)
+    if (active.length !== 1) throw new Error('The manual browser context is already in use')
+    return { running, contextId: running.contextId }
+  }
 
   const cutoff = Date.now() - PIKKIT_CONTEXT_REUSE_MS
   const recent = newestFirst(
@@ -241,6 +309,9 @@ async function findPikkitManualAuthIdentity(bb: Browserbase): Promise<{
         && Date.parse(session.updatedAt) >= cutoff
     )),
   )[0]
+  if (recent?.contextId && (await activeContextSessions(bb, recent.contextId)).length) {
+    throw new Error('The manual browser context is already in use')
+  }
   return recent?.contextId ? { contextId: recent.contextId } : {}
 }
 
@@ -248,69 +319,95 @@ export async function createPersistentContext(
   navigateUrl = 'https://app.pikkit.com/leagues/mlb',
   options: { fresh?: boolean } = {},
 ): Promise<PersistentContextSetup> {
-  const bb = client()
-  const pid = optionalProjectId()
-  const geoState = pikkitGeoState()
-  const proxies = [
-    {
-      type: 'browserbase' as const,
-      domainPattern: PIKKIT_PROXY_DOMAIN_PATTERN,
-      ...(geoState ? { geolocation: { country: 'US' as const, state: geoState } } : {}),
-    },
-    { type: 'none' as const },
-  ]
-  const existing = options.fresh ? {} : await findPikkitManualAuthIdentity(bb)
-  if (existing.running?.contextId) {
-    const live = await bb.sessions.debug(existing.running.id)
-    return {
-      contextId: existing.running.contextId,
-      sessionId: existing.running.id,
-      liveViewUrl: live.debuggerFullscreenUrl,
-      region: BROWSERBASE_REGION,
-      proxyMode: geoState ? 'geolocated' : 'managed',
-      expiresAt: existing.running.expiresAt,
-      continuity: 'running-session',
+  const lease = await acquirePikkitBrowserLease()
+  if (!lease) throw new Error('Shared browser setup is busy; retry after the current session finishes')
+  let safeToReleaseLease = true
+  try {
+    const bb = client(10000)
+    const pid = optionalProjectId()
+    const geoState = pikkitGeoState()
+    const proxies = [
+      {
+        type: 'browserbase' as const,
+        domainPattern: PIKKIT_PROXY_DOMAIN_PATTERN,
+        ...(geoState ? { geolocation: { country: 'US' as const, state: geoState } } : {}),
+      },
+      { type: 'none' as const },
+    ]
+    const existing = options.fresh ? {} : await findPikkitManualAuthIdentity(bb)
+    const configuredContext = process.env.PIKKIT_CONTEXT_ID?.trim()
+    if (options.fresh && configuredContext && (await activeContextSessions(bb, configuredContext)).length) {
+      throw new Error('The configured context is in use; wait before starting a fresh manual login')
     }
-  }
+    if (existing.running?.contextId) {
+      const live = await bb.sessions.debug(existing.running.id)
+      return {
+        contextId: existing.running.contextId,
+        sessionId: existing.running.id,
+        liveViewUrl: live.debuggerFullscreenUrl,
+        region: BROWSERBASE_REGION,
+        proxyMode: geoState ? 'geolocated' : 'managed',
+        expiresAt: existing.running.expiresAt,
+        continuity: 'running-session',
+      }
+    }
 
-  const contextId = existing.contextId
-    ?? (await bb.contexts.create(pid ? { projectId: pid } : {})).id
-  const session = await bb.sessions.create({
-    ...(pid ? { projectId: pid } : {}),
-    region: BROWSERBASE_REGION,
-    proxies,
-    keepAlive: true,
-    timeout: PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS,
-    browserSettings: {
-      blockAds: true,
-      context: { id: contextId, persist: true },
-      // This session is deliberately handed to a human in Live View. Do not
-      // let Browserbase's automatic CAPTCHA interaction compete with the
-      // admin while Cloudflare is asking for an ordinary manual verification.
-      solveCaptchas: false,
-    },
-    userMetadata: { book: 'pikkit', sport: 'auth', mode: 'manual-auth', proxyMode: 'domain-routed', region: BROWSERBASE_REGION },
-  })
-  // The Live View has no address bar — it's just a viewport onto whatever
-  // page the remote browser is already on. Without navigating it first, the
-  // admin opens Live View to a dead-end about:blank tab with no way to reach
-  // Pikkit's login screen. Navigate here, then hand off the Live View URL.
-  // Deliberately not closing this Playwright/CDP connection afterward —
-  // doing so would tear down the remote session before the admin gets a
-  // chance to log in. The connection just drops when this function returns;
-  // the Browserbase-hosted browser (keepAlive: true) keeps running on its own.
-  const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
-  const bctx = browser.contexts()[0] ?? await browser.newContext()
-  const page = bctx.pages()[0] ?? await bctx.newPage()
-  await page.goto(navigateUrl, { waitUntil: 'domcontentloaded' }).catch(() => {})
-  const live = await bb.sessions.debug(session.id)
-  return {
-    contextId,
-    sessionId: session.id,
-    liveViewUrl: live.debuggerFullscreenUrl,
-    region: BROWSERBASE_REGION,
-    proxyMode: geoState ? 'geolocated' : 'managed',
-    expiresAt: session.expiresAt,
-    continuity: existing.contextId ? 'persisted-context' : 'new-context',
+    const contextId = existing.contextId
+      ?? (await bb.contexts.create(pid ? { projectId: pid } : {})).id
+    // An uncertain creation result can still leave a cloud browser running.
+    // Retain the lease on that path instead of immediately permitting reuse.
+    safeToReleaseLease = false
+    const session = await bb.sessions.create({
+      ...(pid ? { projectId: pid } : {}),
+      region: BROWSERBASE_REGION,
+      proxies,
+      keepAlive: true,
+      timeout: PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS,
+      browserSettings: {
+        blockAds: true,
+        context: { id: contextId, persist: true },
+        // This session is deliberately handed to a human in Live View. Do not
+        // let Browserbase's automatic CAPTCHA interaction compete with the
+        // admin while Cloudflare is asking for an ordinary manual verification.
+        solveCaptchas: false,
+      },
+      userMetadata: { book: 'pikkit', sport: 'auth', mode: 'manual-auth', proxyMode: 'domain-routed', region: BROWSERBASE_REGION },
+    })
+    // The Live View has no address bar — it's just a viewport onto whatever
+    // page the remote browser is already on. Without navigating it first, the
+    // admin opens Live View to a dead-end about:blank tab with no way to reach
+    // Pikkit's login screen. Navigate here, then hand off the Live View URL.
+    // Disconnect CDP after preparing Live View. keepAlive explicitly preserves
+    // the remote session for the human; a local JS reference is not its lifetime.
+    let browser: Browser | undefined
+    try {
+      browser = await chromium.connectOverCDP(session.connectUrl, { timeout: 10000 })
+      const bctx = browser.contexts()[0]
+      if (!bctx) throw new Error('The persisted browser context was not restored')
+      const page = bctx.pages()[0] ?? await bctx.newPage()
+      await page.goto(navigateUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+      const live = await bb.sessions.debug(session.id)
+      await boundedClose(browser)
+      const ready = await bb.sessions.retrieve(session.id)
+      if (ready.status !== 'RUNNING' || ready.contextId !== contextId) throw new Error('Manual authentication browser is not available')
+      safeToReleaseLease = true
+      return {
+        contextId,
+        sessionId: session.id,
+        liveViewUrl: live.debuggerFullscreenUrl,
+        region: BROWSERBASE_REGION,
+        proxyMode: geoState ? 'geolocated' : 'managed',
+        expiresAt: session.expiresAt,
+        continuity: existing.contextId ? 'persisted-context' : 'new-context',
+      }
+    } catch (failure) {
+      await releasePersistentSession(bb, session.id, pid, browser)
+      safeToReleaseLease = true
+      throw failure
+    }
+  } finally {
+    if (safeToReleaseLease && !await lease.release()) {
+      console.warn('[browserbase] manual setup lease release could not be confirmed; safety expiry remains enabled')
+    }
   }
 }

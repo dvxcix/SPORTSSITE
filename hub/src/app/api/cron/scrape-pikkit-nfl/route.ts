@@ -6,7 +6,7 @@ import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nfl
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
-import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
+import { acquirePikkitBrowserLease, type PikkitBrowserLifecycle } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -98,7 +98,7 @@ async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
   }
 }
 
-async function run(req: Request) {
+async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
   const contextId = process.env.PIKKIT_CONTEXT_ID
@@ -111,6 +111,7 @@ async function run(req: Request) {
   const games = upcoming.filter(game => requested.has(game.gameId))
   if (!games.length) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
 
+  lifecycle.started = true
   const bb = await openPikkitSession(contextId, {
     sport: 'nfl', mode: games.length > 1 ? 'batch' : 'single-game',
     gameCount: games.length, gameIds: games.map(game => game.gameId).join(','),
@@ -134,6 +135,7 @@ async function run(req: Request) {
     return NextResponse.json({ games: games.length, browserSessions: 1, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   } finally {
     await bb.close()
+    lifecycle.closed = true
   }
 }
 
@@ -144,9 +146,12 @@ export async function GET(req: Request) {
   if (!lease) {
     return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })
   }
+  const lifecycle = { started: false, closed: false }
   try {
-    return await run(req)
+    return await run(req, lifecycle)
+  } catch {
+    return NextResponse.json({ error: 'Pikkit browser capture or release could not be confirmed' }, { status: 502 })
   } finally {
-    await lease.release()
+    await lease.release(!lifecycle.started || lifecycle.closed)
   }
 }

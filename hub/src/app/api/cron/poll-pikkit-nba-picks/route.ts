@@ -8,6 +8,7 @@ import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
 import {openPikkitSession} from '@/lib/browserbase'
 import {findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
+import {observePikkitLeagueDates} from '@/lib/scrapers/pikkitLeagueDate'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
 import {NBA_PUBLIC_VERSION} from '@/lib/nbaPublic'
@@ -18,7 +19,7 @@ export const maxDuration=300
 class NbaCaptureDeadline extends Error {}
 class NbaPikkitAuthenticationRequired extends Error {}
 function requirePikkitPageSession(url:string){
- if(/\/(?:login|signin|sign-in|join|auth|verify)(?:\/|$)/i.test(new URL(url).pathname))throw new NbaPikkitAuthenticationRequired('Pikkit sign-in expired; reconnect the shared Pikkit session')
+ if(/\/(?:login|signin|sign-in|join|auth|verify)(?:\/|$)/i.test(new URL(url).pathname))throw new NbaPikkitAuthenticationRequired('Pikkit authentication is unavailable on the current page')
 }
 function diagnosticPath(url:string):string|null{
  try{
@@ -119,6 +120,7 @@ async function run(request:Request){
           pending.add(read)
         }
         browser.page.on('request',observeRequest);browser.page.on('response',observe)
+        const calendar=observePikkitLeagueDates(browser.page)
         const pendingMetadata=()=>bounded(Promise.all([...pending]),4000,'NBA event metadata read deadline')
         try{
           await bounded((async()=>{
@@ -127,13 +129,20 @@ async function run(request:Request){
           // misreport it as an unlisted event or spend the rest of the batch
           // repeating the same unauthenticated navigation.
           requirePikkitPageSession(browser.page.url())
+          const dateAvailable=await calendar.selectDate(game.date)
+          requirePikkitPageSession(browser.page.url())
+          if(!dateAvailable)throw new Error('NBA event is not listed')
           await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
           requirePikkitPageSession(browser.page.url())
           const navigate=async()=>{
             await pendingMetadata()
-            const listed=nbaVerifiedPublicEvent(game,identities)
+            nbaVerifiedPublicEvent(game,identities)
             beginEventNavigation()
-            if(listed){await browser.page.goto(nbaPublicEventUrl(listed),{waitUntil:'domcontentloaded',timeout:20000});return true}
+            // The source's event cards use client-side routing. A hard event
+            // reload can lose the source's in-memory authenticated state even
+            // after the saved login validated on the league page. Follow the
+            // real card; the fresh event response below still binds exact ID,
+            // teams, date and tipoff before anything can be imported.
             return findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
           }
           let found=await navigate()
@@ -150,6 +159,7 @@ async function run(request:Request){
               emptyShellReloaded=true
               await browser.page.reload({waitUntil:'domcontentloaded',timeout:20000})
               requirePikkitPageSession(browser.page.url())
+              if(!await calendar.selectDate(game.date))throw new Error('NBA event is not listed')
               await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
               requirePikkitPageSession(browser.page.url())
               found=await navigate()
@@ -209,7 +219,7 @@ async function run(request:Request){
           if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
-          observing=false;browser.page.off('request',observeRequest);browser.page.off('response',observe)
+          observing=false;calendar.dispose();browser.page.off('request',observeRequest);browser.page.off('response',observe)
           await bounded(nbaSharedCache(attemptKey(game.id),30,0,async()=>({game:game.id,ok:results.some(result=>result.game===game.id&&result.ok)}),10),5000,'NBA attempt receipt deadline').catch(()=>cleanupIssues.push('NBA public attempt progress could not save'))
         }
       }

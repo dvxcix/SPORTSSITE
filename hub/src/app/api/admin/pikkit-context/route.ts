@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createPersistentContext } from '@/lib/browserbase'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     ...setup,
     verification: 'manual',
     instructions: 'Open liveViewUrl and complete Pikkit sign-in and SMS verification yourself. Keep using this same setup URL if you need to reopen Live View; it now preserves the active browser identity instead of starting over.',
-    afterLogin: 'After the signed-in Pikkit page is visible, release sessionId from the Browserbase Sessions dashboard, wait a few seconds for the context to persist, then save contextId as PIKKIT_CONTEXT_ID and redeploy.',
+    afterLogin: 'After the signed-in page is visible, release sessionId from the Browserbase Sessions dashboard and wait for the context to persist. Keep the configured PIKKIT_CONTEXT_ID when resuming it; only a deliberately new context needs a configuration update.',
     cloudflareNote: 'Complete Cloudflare manually in Live View. Do not open fresh=1 or create another Browserbase session during the same login attempt; changing identity can invalidate the verification.',
     freshSessionUrl: `${request.nextUrl.origin}${request.nextUrl.pathname}?fresh=1`,
   })

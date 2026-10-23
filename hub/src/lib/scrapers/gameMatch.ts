@@ -1,4 +1,29 @@
-import type { Page } from 'playwright-core'
+import type { Locator, Page } from 'playwright-core'
+
+// Runs in the page. A game-shaped container can include a sign-in/paywall
+// action; clicking that is not evidence that the persisted session expired.
+export function isPikkitAuthenticationControl(element: HTMLElement): boolean {
+  const selector = 'a[href], button, [role="link"], [role="button"]'
+  const ancestor = element.closest<HTMLElement>(selector)
+  const controls = [element, ...element.querySelectorAll<HTMLElement>(selector), ...(ancestor && ancestor !== element ? [ancestor] : [])]
+  return controls.some(control => {
+    const label = `${control.getAttribute('aria-label') || ''} ${control.innerText || control.textContent || ''}`
+    if (/\b(?:sign\s*in|sign\s*up|log\s*in|register|create\s+(?:an?\s+)?account|subscribe|start\s+(?:a\s+)?free\s+trial|verify\s+(?:your\s+)?(?:account|phone|identity))\b/i.test(label)) return true
+    const href = control.getAttribute('href')
+    if (!href) return false
+    try {
+      const url = new URL(href, element.ownerDocument.baseURI)
+      return /^\/(?:login|signin|sign-in|signup|sign-up|join|register|auth|verify|pro)(?:\/|$)/i.test(url.pathname)
+        || /^#\/?(?:login|signin|sign-in|signup|sign-up|join|register|auth|verify|pro)(?:\/|$)/i.test(url.hash)
+    } catch { return true }
+  })
+}
+
+async function clickPikkitGameControl(control: Locator): Promise<boolean> {
+  if (await control.evaluate(isPikkitAuthenticationControl).catch(() => true)) return false
+  await control.click({ timeout: 8000 })
+  return true
+}
 
 export function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 
@@ -56,8 +81,7 @@ export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeT
     .filter({ hasText: new RegExp(escapeRe(home), 'i') })
   const pairedCount = await pairedControls.count()
   if (pairedCount > legIndex) {
-    await pairedControls.nth(legIndex).click({ timeout: 8000 })
-    return true
+    if (await clickPikkitGameControl(pairedControls.nth(legIndex))) return true
   }
 
   const links = page.locator('a, button, [role="link"], [role="button"]').filter({ hasText: /more wagers/i })
@@ -128,8 +152,9 @@ export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeT
     // single unambiguous descendant control). This intentionally rejects
     // broad slate wrappers and containers containing several navigation
     // controls, which would otherwise make a wrong-game import possible.
-    const clickedCard = await page.evaluate(({ away, home, legIndex }) => {
-      const candidates = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+    const cardIndex = await page.evaluate(({ away, home, legIndex }) => {
+      const elements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+      const candidates = elements
         .flatMap((element, index) => {
           const text = (element.innerText || '').trim().toLowerCase()
           if (!text.includes(away) || !text.includes(home) || text.length > 1800) return []
@@ -144,15 +169,15 @@ export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeT
         })
         .sort((a, b) => a.textLength - b.textLength || a.index - b.index)
       const candidate = candidates[legIndex]
-      if (!candidate) return false
+      if (!candidate) return null
       const target = candidate.controls.length === 1 ? candidate.controls[0] : candidate.element
-      target.click()
-      return true
-    }, { away, home, legIndex }).catch(() => false)
-    return clickedCard
+      return elements.indexOf(target)
+    }, { away, home, legIndex }).catch(() => null)
+    return cardIndex != null && cardIndex >= 0
+      ? clickPikkitGameControl(page.locator('body *').nth(cardIndex))
+      : false
   }
-  await links.nth(target.index).click({ timeout: 8000 })
-  return true
+  return clickPikkitGameControl(links.nth(target.index))
 }
 
 // Tracks how many times each team-pair has already been clicked during one

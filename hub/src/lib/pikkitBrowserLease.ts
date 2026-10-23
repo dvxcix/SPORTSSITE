@@ -7,8 +7,9 @@ const CONTEXT_SYNC_COOLDOWN_SECONDS = 8
 
 export type PikkitBrowserLease = {
   ownerId: string
-  release: () => Promise<boolean>
+  release: (confirmedIdle?: boolean) => Promise<boolean>
 }
+export type PikkitBrowserLifecycle = { started: boolean; closed: boolean }
 
 // Browserbase explicitly warns against opening simultaneous sessions with
 // one persisted Context: sites can treat that as concurrent logins and
@@ -28,14 +29,16 @@ export async function acquirePikkitBrowserLease(): Promise<PikkitBrowserLease | 
   let releaseResult: Promise<boolean> | undefined
   return {
     ownerId,
-    release: () => releaseResult ??= (async () => {
-      const { error: releaseError } = await admin.rpc('release_browser_automation_lease', {
+    // A startup or shutdown failure can leave a persisted browser alive. Keep
+    // its full safety lease instead of reopening the context after eight seconds.
+    release: (confirmedIdle = true) => !confirmedIdle ? Promise.resolve(false) : releaseResult ??= (async () => {
+      const { data: released, error: releaseError } = await admin.rpc('release_browser_automation_lease', {
         p_lease_key: LEASE_KEY,
         p_owner_id: ownerId,
         p_cooldown_seconds: CONTEXT_SYNC_COOLDOWN_SECONDS,
       })
       if (releaseError) console.error('[pikkit-browser-lease] release failed', { message: releaseError.message })
-      return !releaseError
+      return !releaseError && released === true
     })(),
   }
 }

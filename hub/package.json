@@ -18,6 +18,7 @@
     "test:cross-sport": "node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts",
     "test:context-handoff": "node --test scripts/context-handoff.test.mjs",
     "test:operations-readiness": "node --test scripts/operations-readiness.test.mjs",
+    "test:pikkit-persistence": "node --import tsx --test scripts/browserbase-persistence.test.mjs scripts/pikkit-session-lease.test.mts scripts/pikkit-game-navigation.test.mts scripts/pikkit-league-date.test.mts scripts/nba-public-event-identity.test.mts scripts/nba-pikkit-recovery.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:production": "node scripts/browser-smoke.mjs --production",
     "test:responsive": "node scripts/browser-smoke.mjs",

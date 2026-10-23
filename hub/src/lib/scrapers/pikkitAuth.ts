@@ -3,6 +3,7 @@ import { openPikkitSession } from '@/lib/browserbase'
 import { brandedEmailHtml, sendEmail } from '@/lib/email'
 import { postAlert } from '@/lib/discord'
 import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
+import type { Response as BrowserResponse } from 'playwright-core'
 
 // scrape-pikkit's per-game "game link not found ... check the persisted
 // context is still signed in" error is a GUESS, not a confirmed diagnosis —
@@ -34,10 +35,8 @@ async function getAdminRecipients() {
   }
 }
 
-// Directly inspects the persisted context's session instead of inferring
-// login state from a scraper's inability to find a game — the dashboard
-// sidebar always renders "Your Bets" once actually signed in; a signed-out
-// session bounces to a sign-in screen that never shows it.
+// Verify the normal league entry's authentication response as well as its
+// rendered shell. A missing validation response is inconclusive, not expiry.
 async function isPikkitSignedIn(contextId: string): Promise<boolean> {
   // A scraper may have just closed a persisted Context. Browserbase asks
   // callers to wait a few seconds for Context synchronization before reuse.
@@ -49,24 +48,33 @@ async function isPikkitSignedIn(contextId: string): Promise<boolean> {
   }
   if (!lease) throw new Error('Pikkit context is busy')
   let bb: Awaited<ReturnType<typeof openPikkitSession>> | null = null
+  let browserStarted = false, browserClosed = false
+  let loginValidateStatus: number | null = null
+  const observeResponse = (response: BrowserResponse) => {
+    try {
+      const url = new URL(response.url())
+      if (url.origin === 'https://prod-website.pikkit.app' && url.pathname === '/login/validate') loginValidateStatus = response.status()
+    } catch { /* Only the known authentication endpoint can establish state. */ }
+  }
   try {
+    browserStarted = true
     bb = await openPikkitSession(contextId, { mode: 'auth-check' })
-    // The league page briefly paints the authenticated shell (including
-    // "Your Bets") before Pikkit finishes redirecting an expired session to
-    // /login or /pro. That made the old 2.5s body-text check report a false
-    // positive while every real scrape failed. /events is an authenticated
-    // route exposed by Pikkit's own sidebar; wait for redirects to settle and
-    // require both the shell and a non-auth destination.
-    await bb.page.goto('https://app.pikkit.com/events', { waitUntil: 'domcontentloaded' })
+    bb.page.on('response', observeResponse)
+    await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(7000)
     const settledUrl = bb.page.url()
     const bodyText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
     const pathname = (() => { try { return new URL(settledUrl).pathname } catch { return '' } })()
     const authDestination = !/^\/(?:login|join|pro)(?:\/|$)/i.test(pathname)
-    return authDestination && bodyText.includes('Your Bets')
+    if (loginValidateStatus === 401 || loginValidateStatus === 403) return false
+    if (loginValidateStatus !== 200) throw new Error('Source authentication validation was not available')
+    if (!authDestination) return false
+    if (!bodyText.includes('Your Bets')) throw new Error('Source authentication shell was not confirmed')
+    return true
   } finally {
-    if (bb) await bb.close()
-    await lease.release()
+    bb?.page.off('response', observeResponse)
+    try { if (bb) { await bb.close(); browserClosed = true } }
+    finally { await lease.release(!browserStarted || browserClosed) }
   }
 }
 
@@ -77,7 +85,7 @@ async function sendAuthAlert(): Promise<void> {
   }
 
   const text = 'Pikkit has signed out of the persisted Browserbase context — scrape-pikkit will keep failing until it\'s manually re-authenticated.'
-  const instructions = 'Sign in again from /admin (call GET /api/admin/pikkit-context while signed in as admin), open the returned Live View URL, log into Pikkit by hand, then update PIKKIT_CONTEXT_ID in Vercel to the new context id and redeploy.'
+  const instructions = 'Open GET /api/admin/pikkit-context while signed in as admin. It reuses the configured context. Complete sign-in in Live View if requested, then release that browser session and allow its saved state to synchronize. Keep the existing PIKKIT_CONTEXT_ID; changing it is only needed when deliberately creating a new context.'
 
   const [sent] = await Promise.all([
     recipients.length ? sendEmail({
@@ -88,7 +96,7 @@ async function sendAuthAlert(): Promise<void> {
         eyebrow: 'Importer alert',
         heading: 'Pikkit needs to be reconnected',
         preheader: 'The persisted Pikkit session has signed out.',
-        bodyHtml: '<p style="margin:0 0 14px;">The persisted Browserbase session is signed out, so Pikkit imports will remain paused until an admin reconnects it.</p><div style="padding:14px 16px;border:1px solid #2B3940;border-radius:12px;background:#0C1519;color:#C9F9FF;text-align:left;">Create a fresh context from the admin panel, sign in through Live View, then replace <strong>PIKKIT_CONTEXT_ID</strong> in Vercel and redeploy.</div>',
+        bodyHtml: '<p style="margin:0 0 14px;">The saved source login requires authentication.</p><div style="padding:14px 16px;border:1px solid #2B3940;border-radius:12px;background:#0C1519;color:#C9F9FF;text-align:left;">Reopen the configured context from the admin panel, complete sign-in through Live View if requested, then release the browser and allow its state to synchronize. Keep the existing context configuration.</div>',
         ctaLabel: 'Open admin panel',
         ctaUrl: 'https://www.slipsurge.com/admin',
       }),

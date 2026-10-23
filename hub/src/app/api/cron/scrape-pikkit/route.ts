@@ -7,7 +7,7 @@ import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distingu
 import { PLATFORM_URL } from '@/lib/platform'
 import { PIKKIT_SIGNED_OUT_ERROR } from '@/lib/scrapers/pikkitAuth'
 import { summarizePikkitPayload } from '@/lib/pikkitCoverage'
-import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
+import { acquirePikkitBrowserLease, type PikkitBrowserLifecycle } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -33,7 +33,8 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, shared?: BBSession) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, lifecycle: PikkitBrowserLifecycle, shared?: BBSession) {
+  if (!shared) lifecycle.started = true
   const bb = shared ?? await openPikkitSession(contextId, { sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) })
   try {
     // Confirmed live: this click can land on the WRONG game's event page -
@@ -156,11 +157,12 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     })
     return { gameKey: g.gameKey, error: error instanceof Error ? `scrape failed: ${error.message.slice(0, 300)}` : 'scrape failed' }
   } finally {
-    if (!shared) await bb.close()
+    if (!shared) { await bb.close(); lifecycle.closed = true }
   }
 }
 
-async function scrapeBatch(games: TodayGame[], date: string, contextId: string, dryRun: boolean) {
+async function scrapeBatch(games: TodayGame[], date: string, contextId: string, dryRun: boolean, lifecycle: PikkitBrowserLifecycle) {
+  lifecycle.started = true
   const bb = await openPikkitSession(contextId, {
     sport: 'mlb',
     mode: 'batch',
@@ -184,6 +186,7 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
         legIndexFor(game),
         contextId,
         dryRun,
+        lifecycle,
         { ...bb, page: pages[gameIndex] },
       ))))
       await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
@@ -191,10 +194,11 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
     return results
   } finally {
     await bb.close()
+    lifecycle.closed = true
   }
 }
 
-async function run(req: Request) {
+async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
@@ -215,7 +219,7 @@ async function run(req: Request) {
     const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 40))
     const selected = games.filter(game => requested.has(game.gamePk))
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
-    const results = await scrapeBatch(selected, date, contextId, dryRun)
+    const results = await scrapeBatch(selected, date, contextId, dryRun, lifecycle)
     const failed = results.filter(result => 'error' in result)
     return NextResponse.json({ date, games: selected.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   }
@@ -223,7 +227,7 @@ async function run(req: Request) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun)
+    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun, lifecycle)
     const failed = ('error' in result && !('skipped' in result && result.skipped))
       || ('imported' in result && result.imported?.ok === false)
     return NextResponse.json({ date, gamePk, result }, { status: failed ? 502 : 200 })
@@ -233,7 +237,7 @@ async function run(req: Request) {
   // sessions. scrapeBatch already bounds work to four concurrent pages
   // inside ONE browser; opening one session per four-game chunk here caused
   // Pikkit to see several concurrent logins and invalidate the account.
-  const results = await scrapeBatch(games, date, contextId, dryRun)
+  const results = await scrapeBatch(games, date, contextId, dryRun, lifecycle)
 
   const failed = results.filter(result => ('error' in result && !('skipped' in result && result.skipped)) || ('imported' in result && result.imported?.ok === false))
   return NextResponse.json({ date, games: games.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
@@ -246,9 +250,12 @@ export async function GET(req: Request) {
   if (!lease) {
     return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })
   }
+  const lifecycle = { started: false, closed: false }
   try {
-    return await run(req)
+    return await run(req, lifecycle)
+  } catch {
+    return NextResponse.json({ error: 'Pikkit browser capture or release could not be confirmed' }, { status: 502 })
   } finally {
-    await lease.release()
+    await lease.release(!lifecycle.started || lifecycle.closed)
   }
 }

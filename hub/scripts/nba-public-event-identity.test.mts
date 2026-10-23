@@ -87,6 +87,7 @@ async function capture(scenario: string) {
     setDefaultTimeout() {}, setDefaultNavigationTimeout() {},
     on(name: string, fn: typeof listener) { if (name === 'request') { assert.equal(requestListener, undefined); requestListener = fn } else { assert.equal(listener, undefined); listener = fn } }, off(name: string) { listenersRemoved++; if (name === 'request') requestListener = undefined; else listener = undefined },
     goto: async (url: string) => {
+      assert.equal(url, 'https://app.pikkit.com/leagues/nba', 'event navigation must use the authenticated source card, never reload its document')
       current = url; navigation++
       if (scenario === 'auth-league') { current = 'https://app.pikkit.com/login'; return }
       if (url === activeUrl) openEvent()
@@ -121,6 +122,7 @@ async function capture(scenario: string) {
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async (value: paint.PaintGame) => { clockReads++; return scenario === 'canonical-tip-changed' && clockReads > 1 ? { ...value, datetime: '2026-10-21T22:00:00Z' } : value } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) },
     '@/lib/browserbase': { openPikkitSession: async () => browser }, '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario !== 'league-only') openEvent(); return true } },
+    '@/lib/scrapers/pikkitLeagueDate': { observePikkitLeagueDates: () => ({ selectDate: async (date: string) => { assert.equal(date, game.date); return true }, dispose() {} }) },
     '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async (value: paint.PaintGame) => { captured++; capturedIds.push(value.id); return { markets: 1 } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2' }, '@/lib/nbaPublicEventIdentity': actualIdentity,
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
@@ -133,8 +135,8 @@ test('scheduled NBA collector imports time-only header through exact listing, fr
   for (const scenario of ['healthy', 'unrelated-first', 'positive-skew', 'negative-skew']) {
     const result = await capture(scenario)
     assert.equal(result.status, 200, scenario); assert.equal(result.captured, 1, scenario)
-    assert.equal(result.finds, 0, 'exact structured event navigation avoids false-positive league card clicks')
-    assert.equal(result.navigation, 2); assert.equal(result.closed, 1); assert.equal(result.released, 1); assert.equal(result.listener, undefined); assert.equal(result.requestListener, undefined)
+    assert.equal(result.finds, 1, 'source card navigation preserves authenticated application state')
+    assert.equal(result.navigation, 1); assert.equal(result.closed, 1); assert.equal(result.released, 1); assert.equal(result.listener, undefined); assert.equal(result.requestListener, undefined)
   }
 })
 
@@ -163,7 +165,7 @@ test('missing event metadata fails only that game and the next verified game sti
 test('sign-in redirects during league/event navigation, hydration, metadata wait or scrape stop the batch with authentication status', async () => {
   for (const scenario of ['auth-league', 'auth-event-immediate', 'auth-event-settle', 'auth-event-metadata', 'auth-during-scrape']) {
     const result = await capture(scenario)
-    assert.equal(result.status, 503, scenario); assert.match(result.body.reason, /sign-in expired/, scenario)
+    assert.equal(result.status, 503, scenario); assert.match(result.body.reason, /authentication is unavailable/, scenario)
     assert.equal(result.body.results.length, 1, 'authentication failure must not repeat on the second game')
     assert.equal(result.body.results[0].diagnostic.authenticationRequired, true, scenario)
     assert.equal(result.body.results[0].diagnostic.path, '/login', scenario)
