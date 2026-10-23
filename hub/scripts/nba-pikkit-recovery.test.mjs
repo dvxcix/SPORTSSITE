@@ -7,15 +7,18 @@ const ts = require('typescript')
 
 async function capture(scenario) {
   let reloads = 0, finds = 0, captures = 0, closed = 0, released = 0, extraTime = 0, probes = 0
+  let eventOpened = false, responseListener, requestListener
   const navigationTimeout = scenario.startsWith('navigation-timeout')
   const start = Date.now()
   class Clock extends Date { static now() { return start + extraTime } }
   const upcoming = new Date(start + 6 * 3600000)
   const game = { id: 123, date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(upcoming), datetime: upcoming.toISOString(), status_state: 'scheduled', visitor_team: { full_name: 'Boston Celtics' }, home_team: { full_name: 'Detroit Pistons' } }
+  const event = { id: 'fixture-event', away: { full: 'Boston Celtics' }, home: { full: 'Detroit Pistons' } }, eventUrl = 'https://app.pikkit.com/event/fixture-event'
   const scrape = () => {}, locator = { filter: () => locator, first: () => locator, click: async () => {}, waitFor: async () => {} }
-  const path = () => scenario === 'navigation-timeout-auth' ? '/auth/callback/private-path-token' : scenario === 'navigation-timeout-event' ? '/event/private-event-id' : scenario === 'login-redirect' || scenario === 'reload-login' && reloads ? '/login' : scenario === 'other-path' ? '/leagues/mlb' : '/leagues/nba'
+  const path = () => eventOpened ? '/event/fixture-event' : scenario === 'navigation-timeout-auth' ? '/auth/callback/private-path-token' : scenario === 'navigation-timeout-event' ? '/event/private-event-id' : scenario === 'login-redirect' || scenario === 'reload-login' && reloads ? '/login' : scenario === 'other-path' ? '/leagues/mlb' : '/leagues/nba'
   const browser = { page: {
     setDefaultTimeout() {}, setDefaultNavigationTimeout() {},
+    on(name, listener) { if (name === 'request') requestListener = listener; else responseListener = listener }, off(name) { if (name === 'request') requestListener = undefined; else responseListener = undefined },
     goto: async (_url, options) => {
       assert.deepEqual(options, { waitUntil: 'domcontentloaded', timeout: 20000 })
       if (navigationTimeout) { const error = new Error('page.goto: Timeout 20000ms exceeded'); error.name = 'TimeoutError'; throw error }
@@ -24,7 +27,7 @@ async function capture(scenario) {
     waitForTimeout: async () => {}, waitForFunction: async () => {}, getByText: () => locator,
     reload: async options => { assert.deepEqual(options, { waitUntil: 'domcontentloaded', timeout: 20000 }); reloads++; if (scenario === 'reload-timeout') return new Promise(() => {}) },
     evaluate: async (fn, arg) => {
-      if (fn === scrape) return { complete: true, props: {} }
+      if (fn === scrape) return { complete: true, props: {}, url: eventUrl, capturedAt: new Date(Clock.now()).toISOString() }
       if (arg !== undefined) {
         probes++
         if (scenario === 'navigation-timeout-stalled') return new Promise(() => {})
@@ -46,10 +49,12 @@ async function capture(scenario) {
   const mocks = {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null }, '@/lib/pipelineHealth': { withPipelineHealth: (_name, run) => run },
     '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games: [game] }) }, '@/lib/nbaPaint': { nbaToday: () => game.date }, '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) },
+    '@/lib/nbaOddsClockData': { getNbaOddsGame: async game => game },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) }, '@/lib/browserbase': { openPikkitSession: async () => browser },
-    '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario === 'low-budget' && finds === 2) extraTime = 60_000; return scenario === 'recovered' && reloads === 1 } },
+    '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario === 'low-budget' && finds === 2) extraTime = 60_000; const found = scenario === 'recovered' && reloads === 1; if (found) { eventOpened = true; const request = { url: () => eventUrl }; requestListener?.(request); responseListener?.({ url: () => eventUrl, status: () => 200, request: () => request, json: async () => event }) }; return found } },
     '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async () => { captures++; return { markets: 9 } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2', nbaPublicEventMatches: () => true },
+    '@/lib/nbaPublicEventIdentity': { nbaPublicResponseKind: () => 'event', nbaPublicEventIdentities: () => [event], nbaVerifiedPublicEvent: (_game, events) => events[0] ?? null, nbaPublicEventUrl: () => eventUrl, nbaPublicEventPageMatches: () => true },
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key, _ttl, _stale, load) => ({ value: await load() }) },
   }
   const source = fs.readFileSync(new URL('../src/app/api/cron/poll-pikkit-nba-picks/route.ts', import.meta.url), 'utf8')

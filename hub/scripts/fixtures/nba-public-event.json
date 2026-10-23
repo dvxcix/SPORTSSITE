@@ -1,0 +1,16 @@
+{
+  "evidence": "Sanitized identity fields and time-only heading from the retained October 21 cloud inspection.",
+  "url": "https://app.pikkit.com/event/6a7e30b5278fc982e0cce96a",
+  "text": "Atlanta Hawks vs. Orlando Magic\nAtlanta Hawks\nOrlando Magic\n6:00 PM\nOdds\nPlayer Props",
+  "response": {
+    "event": {
+      "_id": "6a7e30b5278fc982e0cce96a",
+      "start_time": "2026-10-21T23:00:00.000Z",
+      "event_info": {
+        "league": { "short": "NBA" },
+        "away": { "short": "ATL", "full": "Atlanta Hawks" },
+        "home": { "short": "ORL", "full": "Orlando Magic" }
+      }
+    }
+  }
+}

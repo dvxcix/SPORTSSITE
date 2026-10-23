@@ -2,6 +2,7 @@ import {NextResponse} from 'next/server'
 import {requireBrowserbaseCronAuth} from '@/lib/cron-auth'
 import {withPipelineHealth} from '@/lib/pipelineHealth'
 import {getPaintSchedule} from '@/lib/nbaPaintData'
+import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -9,8 +10,10 @@ import {openPikkitSession} from '@/lib/browserbase'
 import {findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
-import {NBA_PUBLIC_VERSION,nbaPublicEventMatches} from '@/lib/nbaPublic'
+import {NBA_PUBLIC_VERSION} from '@/lib/nbaPublic'
+import {nbaPublicResponseKind,nbaPublicEventIdentities,nbaVerifiedPublicEvent,nbaPublicEventUrl,nbaPublicEventPageMatches,type NbaPublicEventIdentity} from '@/lib/nbaPublicEventIdentity'
 import {nbaSharedCache} from '@/lib/nbaSharedCache'
+import type {Response as BrowserResponse,Request as BrowserRequest} from 'playwright-core'
 export const maxDuration=300
 class NbaCaptureDeadline extends Error {}
 class NbaPikkitAuthenticationRequired extends Error {}
@@ -45,7 +48,7 @@ async function run(request:Request){
   const started=Date.now(),today=nbaToday()
   const dates=[0,1,2].map(offset=>{const date=new Date(today+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+offset);return date.toISOString().slice(0,10)})
   const schedules=await Promise.all(dates.map(date=>getPaintSchedule(date)))
-  const schedule={games:[...new Map(schedules.flatMap(slate=>slate.games).map(game=>[game.id,game])).values()]}
+  const schedule={games:await Promise.all([...new Map(schedules.flatMap(slate=>slate.games).map(game=>[game.id,game])).values()].map(game=>getNbaOddsGame(game)))}
   const requested=new URL(request.url).searchParams.get('game')
   if(requested&&!/^\d{1,10}$/.test(requested))return NextResponse.json({error:'Invalid game'},{status:400})
   // Daily coverage starts within 48h of tip. Prioritize missing/old captures;
@@ -81,6 +84,42 @@ async function run(request:Request){
         if(remaining()<35000)break
         let captureExpired=false,emptyShellReloaded=false
         const gameStarted=Date.now(),gameBudget=Math.min(110000,remaining()-25000)
+        const identities:NbaPublicEventIdentity[]=[],eventIdentities:NbaPublicEventIdentity[]=[],pending=new Set<Promise<void>>()
+        const requests=new Set<BrowserRequest>(),eventRequests=new Set<BrowserRequest>()
+        let observing=true,eventNavigation=0,eventResponseReceived=()=>{}
+        let eventResponseReady=new Promise<void>(()=>{})
+        const beginEventNavigation=()=>{
+          eventNavigation++;eventRequests.clear();eventIdentities.length=0
+          eventResponseReady=new Promise<void>(resolve=>{eventResponseReceived=resolve})
+        }
+        const observeRequest=(request:BrowserRequest)=>{
+          const kind=nbaPublicResponseKind(request.url())
+          if(!observing||!kind)return
+          requests.add(request)
+          if(kind==='event'&&eventNavigation>0)eventRequests.add(request)
+        }
+        const observe=(response:BrowserResponse)=>{
+          const kind=nbaPublicResponseKind(response.url())
+          if(!observing||!kind||response.status()!==200)return
+          const request=response.request(),navigation=eventNavigation
+          // Track request objects emitted after this game/navigation began:
+          // late prior-page responses and browser/server clock skew cannot pass.
+          if(!(kind==='event'?eventRequests:requests).has(request))return
+          const read=response.json().then(payload=>{
+            if(!observing||kind==='event'&&navigation!==eventNavigation)return
+            const events=nbaPublicEventIdentities(response.url(),payload)
+            identities.push(...events)
+            if(kind==='event'){
+              eventIdentities.push(...events)
+              // Unrelated prefetches do not finish the wait. A conflict wakes
+              // validation so it rejects, while a matching response can proceed.
+              try{if(nbaVerifiedPublicEvent(game,eventIdentities))eventResponseReceived()}catch{eventResponseReceived()}
+            }
+          }).catch(()=>undefined).finally(()=>pending.delete(read))
+          pending.add(read)
+        }
+        browser.page.on('request',observeRequest);browser.page.on('response',observe)
+        const pendingMetadata=()=>bounded(Promise.all([...pending]),4000,'NBA event metadata read deadline')
         try{
           await bounded((async()=>{
           await browser.page.goto('https://app.pikkit.com/leagues/nba',{waitUntil:'domcontentloaded',timeout:20000})
@@ -90,8 +129,15 @@ async function run(request:Request){
           requirePikkitPageSession(browser.page.url())
           await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
           requirePikkitPageSession(browser.page.url())
-          let found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
-          if(!found){await browser.page.waitForTimeout(3000);found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)}
+          const navigate=async()=>{
+            await pendingMetadata()
+            const listed=nbaVerifiedPublicEvent(game,identities)
+            beginEventNavigation()
+            if(listed){await browser.page.goto(nbaPublicEventUrl(listed),{waitUntil:'domcontentloaded',timeout:20000});return true}
+            return findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
+          }
+          let found=await navigate()
+          if(!found){await browser.page.waitForTimeout(3000);found=await navigate()}
           // An intermittently empty league shell is different from a populated
           // schedule without this event. Reload it once, only with enough time
           // left inside the existing game/run deadlines and no sign-in state.
@@ -106,17 +152,21 @@ async function run(request:Request){
               requirePikkitPageSession(browser.page.url())
               await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
               requirePikkitPageSession(browser.page.url())
-              found=await findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
+              found=await navigate()
             }
           }
           if(!found)throw new Error('NBA event is not listed')
           await browser.page.waitForTimeout(2200)
-          // Event routes hydrate asynchronously after navigation. Wait for the
-          // exact matchup/date content before verifying it; an empty shell is
-          // not evidence of the wrong event and must never be imported.
-          await browser.page.waitForFunction(({names,date})=>{const text=document.body.innerText,normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');return names.every(name=>normalize(text).includes(normalize(name)))&&text.includes(date)},{names:[game.visitor_team.full_name,game.home_team.full_name],date:game.date.split('-').slice(1).map(Number).join('/')},{timeout:15000}).catch(()=>undefined)
+          // Event headers now show only a local time. Bind the full dated
+          // timestamp from this navigation's event response, never a prior page.
+          await bounded(eventResponseReady,15000,'NBA event metadata deadline')
+          await pendingMetadata()
+          nbaVerifiedPublicEvent(game,identities) // Reject conflicting listing/event identities.
+          const identity=nbaVerifiedPublicEvent(game,eventIdentities)
+          if(!identity)throw new Error('NBA event teams and start could not be verified')
+          await browser.page.waitForFunction(({names})=>{const text=document.body.innerText,normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');return names.every(name=>normalize(text).includes(normalize(name)))},{names:[identity.away.full,identity.home.full]},{timeout:15000}).catch(()=>undefined)
           const text=await browser.page.evaluate(()=>document.body.innerText)
-          if(!nbaPublicEventMatches(game,text))throw new Error('NBA event teams and date could not be verified')
+          if(!nbaPublicEventPageMatches(game,identity,browser.page.url(),text))throw new Error('NBA event page could not be verified')
           await browser.page.getByText('Odds',{exact:true}).filter({visible:true}).first().click({timeout:15000})
           // Responsive event navigation contains repeated tab labels. The
           // shared helper chooses the first match and swallows click errors;
@@ -128,8 +178,16 @@ async function run(request:Request){
           const payload=await browser.page.evaluate(runNbaPikkitScrape)
           if(!payload.complete){console.info('[nba-public] incomplete-controls',{game:game.id,diagnostic:payload.diagnostic??null});throw new Error('NBA public market capture was incomplete')}
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
-          if(Date.parse(game.datetime??game.status)<=Date.now())throw new Error('Game started during capture')
-          const imported=await nbaSharedCache(successKey(game.id),1800,0,()=>importNbaPublic(game,payload),25)
+          const canonicalGame=await getNbaOddsGame(game)
+          await pendingMetadata()
+          const currentIdentity=nbaVerifiedPublicEvent(canonicalGame,identities)
+          const finalText=await browser.page.evaluate(()=>document.body.innerText)
+          if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
+          const capturedAt=Date.parse(payload.capturedAt)
+          // Browser and server clocks may differ slightly. Keep the existing
+          // 60-second tolerance, but a capture timestamp may never cross tipoff.
+          if(!currentIdentity||currentIdentity.id!==identity.id||payload.url!==nbaPublicEventUrl(identity)||!Number.isFinite(capturedAt)||capturedAt<gameStarted-60000||capturedAt>Date.now()+60000||capturedAt>=Date.parse(canonicalGame.datetime??canonicalGame.status)||!nbaPublicEventPageMatches(canonicalGame,identity,browser.page.url(),finalText))throw new Error('NBA event changed or started during capture')
+          const imported=await nbaSharedCache(successKey(game.id),1800,0,()=>importNbaPublic(canonicalGame,payload),25)
           if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.value.markets,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           })(),gameBudget,'NBA game capture deadline')
         }catch(error){
@@ -142,6 +200,7 @@ async function run(request:Request){
           if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
+          observing=false;browser.page.off('request',observeRequest);browser.page.off('response',observe)
           await bounded(nbaSharedCache(attemptKey(game.id),30,0,async()=>({game:game.id,ok:results.some(result=>result.game===game.id&&result.ok)}),10),5000,'NBA attempt receipt deadline').catch(()=>cleanupIssues.push('NBA public attempt progress could not save'))
         }
       }

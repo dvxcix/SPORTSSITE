@@ -87,3 +87,36 @@ current-season readiness, unavailable prior-season coverage, and source errors.
 The focused shared-cache suite passes 15/15; production suite remains 134/134.
 The full NBA suite passes 302/302; TypeScript and scoped ESLint pass.
 No job replay, collector duplication, secret change or new database mutation.
+
+Final cache deployment39e6ba92 is READY at
+dpl_CXw32H9vSQubN63gxdpFXeYSkDtA with production aliases verified.
+Signed-in Feed reload and defense-by-position navigation pass. The latter renders
+90 team/position rows with its explicit prior-season label. Shared v6 cache holds
+current-season ready:false and prior-season ready:true (309 games/6,459 rows),
+both without a failure lease. Browser warnings/errors were empty.
+Normal21:40 market capture and model validation succeeded on39e6ba92. An in-flight
+snapshot on54759bae also succeeded, including all previously failing games.
+All936 auth responses with status in21:27:48-21:39:11 were HTTP200.
+The21:39:34 handoff denial was confirmed anon401; all23 authenticated handoff
+requests in that minute were HTTP200. Owner-only permissions were preserved.
+
+Separate NBA public-count collection defect discovered during pipeline review:
+event headers now show only time. The existing literal M/D guard rejected valid
+events despite correct authentication, causing sustained missed captures. Retained
+Oct21 cloud evidence establishes exact NBA event metadata (league, oriented teams,
+source event ID, full UTC tip timestamp) while the visible header has no date.
+The existing authorized Oct21 recovery used that metadata successfully; its source
+guard repair was not released then. The incident follow-up applies equivalent
+strict metadata binding to the scheduled NBA collector. NFL/MLB collectors and
+shared browser deadlines/lease cleanup remain unchanged.
+Per-navigation request-object tracking rejects late prior-page responses without
+depending on synchronized browser/server clocks. Exact event URL is rechecked
+after scraping; fresh canonical timing and capture timestamps must remain pretip.
+The normal21:45 cycle on39e6ba92 passed: research20games/zero failures in1843ms,
+market capture zero failures in9267ms, model validation261ms.
+Collector independent review passed; focusedNBA68/68 and NFL/shared collector
+12/12 checks passed with existing lifecycle assertions retained.
+Full standardNBA suite307/307, production134/134, TypeScript and targeted ESLint
+pass. The new retained-evidence identity suite is included in test:paint.
+Capture timestamps allow the existing bounded60-second clock tolerance but are
+strictly rejected at or after canonical tipoff. Source metadata limits fail closed.
