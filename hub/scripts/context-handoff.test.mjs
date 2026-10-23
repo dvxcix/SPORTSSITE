@@ -13,7 +13,8 @@ const sourcePath = process.env.HANDOFF_SOURCE || new URL('../src/components/layo
 const cloud = new Map()
 const writes = []
 let nextError = null
-let state = { path: '/search', user: { id: 'member-a' }, loading: false }
+let nextLoadError = null, pendingLoad = null, reads = 0
+let state = { path: '/search', user: { id: 'member-a' }, loading: false, authUnavailable: false }
 let pushed = null
 const client = {
   from(table) {
@@ -21,7 +22,12 @@ const client = {
     let userId
     return {
       select() { return this }, eq(_, id) { userId = id; return this },
-      maybeSingle() { return Promise.resolve({ data: cloud.get(userId) || null, error: null }) },
+      maybeSingle() {
+        reads++
+        if (pendingLoad) return pendingLoad
+        const error = nextLoadError; nextLoadError = null
+        return Promise.resolve({ data: error ? null : cloud.get(userId) || null, error })
+      },
       upsert(row, options) {
         assert.equal(options.onConflict, 'user_id')
         // Faithful to PostgREST: merely constructing this object sends nothing.
@@ -66,7 +72,7 @@ async function tick(ms) {
 }
 async function mount(path = '/search', userId = 'member-a') {
   timers.clear(); now = 0; pushed = null
-  state = { path, user: userId ? { id: userId } : null, loading: false }
+  state = { path, user: userId ? { id: userId } : null, loading: false, authUnavailable: false }
   const dom = new JSDOM('<title>Research | SlipSurge</title><div id="app"></div>', { url: 'https://fixture.slipsurge.test' + path })
   window = dom.window
   Object.assign(globalThis, { window, document: window.document, localStorage: window.localStorage, sessionStorage: window.sessionStorage, IS_REACT_ACT_ENVIRONMENT: true })
@@ -101,6 +107,65 @@ test('starts real lazy save, retries failures, captures later scrolling, reconne
   Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
   await act(async () => window.dispatchEvent(new window.Event('online')))
   assert.equal(cloud.get('member-a').scroll_y, 750)
+  await unmount()
+})
+
+test('retained identity during auth outage keeps local position without anonymous remote retries', async () => {
+  cloud.clear(); writes.length = 0
+  cloud.set('member-a', { path: '/feed', page_title: 'Feed', scroll_y: 1200 })
+  await mount('/search')
+  assert.ok(document.querySelector('aside'))
+  const beforeReads = reads
+  state.authUnavailable = true
+  await render()
+  window.scrollY = 750
+  await act(async () => {
+    for (const name of ['focus', 'pageshow', 'online']) window.dispatchEvent(new window.Event(name))
+    document.dispatchEvent(new window.Event('visibilitychange'))
+    window.dispatchEvent(new window.Event('scroll'))
+  })
+  await tick(60_000)
+  assert.equal(reads, beforeReads)
+  assert.equal(writes.length, 0)
+  assert.equal(JSON.parse(localStorage.getItem('ss:last-context:v1:member-a')).scroll_y, 750)
+  assert.ok(document.querySelector('aside'), 'existing restore offer survives verification outage')
+  state.authUnavailable = false
+  await render(); await tick(30_000)
+  assert.equal(reads, beforeReads + 1)
+  assert.equal(cloud.get('member-a').scroll_y, 750)
+  await unmount()
+})
+
+test('remote query errors preserve a known context but a verified missing entry clears it', async () => {
+  cloud.set('member-a', { path: '/feed', page_title: 'Feed', scroll_y: 1200 })
+  await mount('/search')
+  assert.ok(document.querySelector('aside'))
+  nextLoadError = { code: '42501' }
+  await act(async () => window.dispatchEvent(new window.Event('focus')))
+  assert.ok(document.querySelector('aside'), 'denied/network reads are not empty archives')
+  cloud.delete('member-a')
+  await act(async () => window.dispatchEvent(new window.Event('focus')))
+  assert.equal(document.querySelector('aside'), null)
+  await unmount()
+})
+
+test('simultaneous return-to-tab events share one remote read and stale responses cannot change accounts', async () => {
+  let resolve
+  pendingLoad = new Promise(done => { resolve = done })
+  const beforeReads = reads
+  await mount('/search')
+  await act(async () => {
+    window.dispatchEvent(new window.Event('focus'))
+    window.dispatchEvent(new window.Event('pageshow'))
+    document.dispatchEvent(new window.Event('visibilitychange'))
+  })
+  assert.equal(reads, beforeReads + 1)
+  pendingLoad = null
+  state.user = { id: 'member-b' }
+  cloud.delete('member-b')
+  await render()
+  await act(async () => resolve({ data: { path: '/feed', page_title: 'Private A context', scroll_y: 700 }, error: null }))
+  assert.equal(document.querySelector('aside'), null)
   await unmount()
 })
 

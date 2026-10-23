@@ -50,7 +50,7 @@ function cleanTitle() {
 }
 
 export function ContextHandoff() {
-  const { user, loading } = useAuth()
+  const { user, loading, authUnavailable } = useAuth()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -113,18 +113,21 @@ export function ContextHandoff() {
   }, [currentPath, userId])
 
   useEffect(() => {
-    if (loading || !userId || !isSafeProductPath(currentPath)) return
+    if (!userId || !isSafeProductPath(currentPath)) return
     let cancelled = false
     let lastSynced = ''
+    let remoteRequest: Promise<void> | null = null
     const localKey = `${LOCAL_KEY}:${userId}`
     const loadRemote = () => {
-      void Promise.resolve(supabase
+      if (cancelled || loading || authUnavailable || !navigator.onLine || remoteRequest) return
+      remoteRequest = Promise.resolve(supabase
         .from('member_context_handoff')
         .select('path,page_title,scroll_y,updated_at')
         .eq('user_id', userId)
         .maybeSingle())
-        .then(({ data }) => {
-          if (cancelled) return
+        .then(({ data, error }) => {
+          // A failed read says nothing about the member's saved destination.
+          if (cancelled || error) return
           if (!data || typeof data.path !== 'string' || !isSafeProductPath(data.path) || data.path === currentPath) {
             setRemoteResult(null)
             return
@@ -133,6 +136,7 @@ export function ContextHandoff() {
           setRemoteResult({ userId, sourcePath: currentPath, context: data as SavedContext })
         })
         .catch(() => { if (!cancelled) console.warn('[context-handoff] load failed') })
+        .finally(() => { remoteRequest = null })
     }
     loadRemote()
 
@@ -154,10 +158,10 @@ export function ContextHandoff() {
     }
     window.addEventListener('scroll', onScroll, { passive: true, capture: true })
     const sync = async (leaving = false) => {
-      if (restoringRef.current || (!leaving && document.visibilityState === 'hidden')) return
+      if (cancelled || restoringRef.current || (!leaving && document.visibilityState === 'hidden')) return
       saveLocal()
       const context = latestRef.current
-      if (!context || !navigator.onLine) return
+      if (!context || loading || authUnavailable || !navigator.onLine) return
       const signature = JSON.stringify([context.path, context.page_title, context.scroll_y])
       if (signature === lastSynced) return
       try {
@@ -196,7 +200,7 @@ export function ContextHandoff() {
       document.removeEventListener('visibilitychange', onVisibility)
       // Do not recapture scroll/title here: Next may already show the next route.
     }
-  }, [currentPath, loading, supabase, userId])
+  }, [currentPath, loading, authUnavailable, supabase, userId])
 
   function resume() {
     if (!userId || !remoteContext || !isSafeProductPath(remoteContext.path)) return

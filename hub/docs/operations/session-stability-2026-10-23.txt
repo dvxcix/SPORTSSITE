@@ -43,3 +43,29 @@ Pre-release checks: TypeScript/scoped ESLint pass; NBA 298/298; production
 The old date-dependent sample fixture now fixes its intended Oct19 clock.
 Evidence and subsequent deployment/browser checks: work/session-stability-*.
 These checks are not a claim of long-term infrastructure stability.
+
+Follow-up within the same incident:
+  Initial Git-backed release 9d0f2cbf is live at deployment
+  dpl_4zysKCTEV5Ptg9xysxvyGo7jFDfQ, READY on www.slipsurge.com.
+  Signed-in desktop feed and NBA navigation passed. Mobile reload, exact
+  15+ player ladder and 96-frame Market Story loaded with preserved session
+  and no observed browser console errors. Pregame remained selected/frozen.
+  Scheduled model validation changed from invalid-request failure to success
+  at 21:25 UTC (261 ms); no manual job invocation was used.
+  Resume handoff errors were anonymous HTTP401 reads: all 74 authenticated
+  reads/saves in the checked window succeeded. Grants/RLS were correct.
+  Handoff now pauses remote I/O during auth unavailability, retains local
+  position and known restore offers, and coalesces return-to-tab reads.
+  Handoff behavior suite expanded to16/16; production134/134/types pass.
+
+Remaining grading pressure: the previous function materialized roughly72,000
+pending records before its output LIMIT. Applied only the independently reviewed
+nba_bounded_research_grading repair (live20261023212748; CLI source20261023212459).
+A partial pending(game_starts_at,id) index and private transactional cursor
+bound candidate inspection before fact lookup/JSON. Missing/nonfinal/DNP records
+remain pending, the cursor advances, then wraps to revisit them. An advisory
+transaction lock prevents concurrent batch advancement. Outcome semantics and
+service-only access remain unchanged. Migration does not grade or replay rows.
+TEMP-table fixtures passed and rolled back: strict limits, zero-eligible advance,
+wrap/revisit, quarter/combined markets, appearance, wrong season/postseason,
+future exclusion, rejected limits and private access. No live outcome replay.
