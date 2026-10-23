@@ -11,11 +11,11 @@ import { nbaGameStart,type NbaOddsMode } from './nbaOddsMode'
 
 /** Phase-specific first/latest frames retain successful empty withdrawals. */
 export async function getNbaMarketFrames(gameId:number,market:string,playerId:number|null=null,mode:NbaOddsMode='pregame'):Promise<PaintFrame[]> {
-  const frames=await getNbaPhaseFrames(await getPaintGame(gameId),mode,nbaFirstMarket(market)?'first':'props')
+  const frames=await getNbaPhaseFrames(await getPaintGame(gameId),mode,nbaFirstMarket(market)?'first':'props',{market,playerId})
   return frames.map(frame=>({captured_at:frame.captured_at,props:frame.quotes.filter((quote):quote is import('./nbaPaint').PaintProp=>'prop_type' in quote && quote.prop_type===market && (playerId==null || quote.player_id===playerId))}))
 }
-export async function getNbaAllMarketFrames(gameId:number,mode:NbaOddsMode='pregame'):Promise<(PaintFrame&{fingerprint:string})[]> {
-  return (await getNbaPhaseFrames(await getPaintGame(gameId),mode,'props')).map(frame=>({captured_at:frame.captured_at,props:frame.quotes as import('./nbaPaint').PaintProp[],fingerprint:frame.fingerprint}))
+export async function getNbaAllMarketFrames(gameId:number,mode:NbaOddsMode='pregame',selection:'edges'|'latest'='edges',asOf?:string):Promise<(PaintFrame&{fingerprint:string})[]> {
+  return (await getNbaPhaseFrames(await getPaintGame(gameId),mode,'props',{selection,asOf})).map(frame=>({captured_at:frame.captured_at,props:frame.quotes as import('./nbaPaint').PaintProp[],fingerprint:frame.fingerprint}))
 }
 /** Shared sports inputs only. A verified game start bounds both phases. */
 export async function getNbaQuoteOpenings(gameId:number,mode:NbaOddsMode='pregame'):Promise<NbaQuoteOpeningRow[]> {

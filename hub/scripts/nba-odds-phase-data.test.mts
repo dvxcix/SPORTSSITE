@@ -53,6 +53,24 @@ test('crossing tipoff partitions cached pregame reads and history preserves exac
  const data=await compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>h.admin},'./nbaSharedCache':h.cache,'./nbaFirstBasketMarkets':firstMarkets,'./nbaOddsPhaseData':h.phase,'./nbaOddsMode':h.modes,'./nbaPaintData':{getPaintGame:async()=>game}},h.Clock)
  h.set([{captured_at:new Date(tip-1000).toISOString(),quotes:[quote(tip-2000,100),{...quote(tip-2000,200),player_id:435},quote(tip-2000,300,'rebounds')],fingerprint:'pre'}])
  const frames=await data.getNbaMarketFrames(123,'points',434);assert.equal(frames.length,1);assert.equal(frames[0].props.length,1);assert.equal(frames[0].props[0].player_id,434)
+ assert.deepEqual(h.calls.at(-1)?.args,{p_game_id:123,p_mode:'pregame',p_feed:'props',p_tipoff:new Date(tip).toISOString(),p_selection:'history',p_market:'points',p_player_id:434,p_as_of:null})
+})
+
+test('latest context reads one exact as-of frame without persisting timestamp-specific caches',async()=>{
+ const h=await fixture(),asOf=new Date(tip-1000).toISOString()
+ const frame={captured_at:new Date(tip-2000).toISOString(),quotes:[quote(tip-3000,120)],fingerprint:'latest'}
+ h.set([frame]);assert.deepEqual(await h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'latest',asOf}),[frame])
+ assert.equal(h.calls[0].args.p_selection,'latest');assert.equal(h.calls[0].args.p_as_of,asOf);assert.equal(h.keys.length,0)
+ h.set([{...frame,captured_at:new Date(tip-500).toISOString()}])
+ await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'latest',asOf}),/history cutoff/)
+ h.set([frame,frame]);await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'latest',asOf}),/history unavailable/)
+})
+
+test('cross-market reads only opening/latest frames and keeps a withdrawn empty latest capture',async()=>{
+ const h=await fixture(),first={captured_at:new Date(tip-3000).toISOString(),quotes:[quote(tip-4000,120)],fingerprint:'first'},last={captured_at:new Date(tip-1000).toISOString(),quotes:[],fingerprint:'withdrawn'}
+ h.set([first,last]);assert.deepEqual(await h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'edges'}),[first,last])
+ assert.equal(h.calls[0].args.p_selection,'edges');assert.match(h.keys[0],/:edges:all:all$/)
+ h.set([first,first,last]);await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'edges'}),/history unavailable/)
 })
 test('opening history cannot use a pregame first observation as the live baseline',async()=>{
  const h=await fixture();const data=await compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>h.admin},'./nbaSharedCache':h.cache,'./nbaFirstBasketMarkets':firstMarkets,'./nbaOddsPhaseData':h.phase,'./nbaOddsMode':h.modes,'./nbaPaintData':{getPaintGame:async()=>game}},h.Clock)
@@ -98,7 +116,7 @@ test('a later provider schedule cannot reopen a stored cutoff or discard valid l
    if(name==='nba_phase_cutoff')return{data:new Date(tip).toISOString(),error:null}
    assert.equal(args.p_tipoff,new Date(tip).toISOString())
    if(name==='read_nba_phase_snapshot')return{data:[{feed:'props',captured_at:new Date(args.p_mode==='live'?tip+2000:tip-500).toISOString(),quotes:[args.p_mode==='live'?live:pre],fingerprint:'frame'}],error:null}
-   if(name==='read_nba_phase_frames')return{data:[{captured_at:new Date(tip+2000).toISOString(),quotes:[live],fingerprint:'live'}],error:null}
+   if(name==='read_nba_phase_frames_scoped')return{data:[{captured_at:new Date(tip+2000).toISOString(),quotes:[live],fingerprint:'live'}],error:null}
    if(name==='read_nba_phase_openings')return{data:[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'milestone',line:15,side:'over',odds:-600,observed_at:new Date(tip+1000).toISOString()}],error:null}
    assert.equal(name,'read_nba_phase_first_state')
    return{data:{captures:1,frames:[{captured_at:new Date(tip+2000).toISOString(),props:[first]}]},error:null}

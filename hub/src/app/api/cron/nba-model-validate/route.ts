@@ -18,7 +18,9 @@ async function run(request: Request) {
     if (states?.length !== 3 || states.some(state => !state.complete)) return NextResponse.json({ stage: 'waiting-for-history', season: validationSeason })
     const { data: reports, error: reportError } = await admin.from('nba_model_reports').select('market').eq('validation_season', validationSeason).eq('version', 'nba-rolling-v1')
     if (reportError) throw new Error('NBA validation reports unavailable')
-    const pending = PAINT_MARKETS.filter(market => !reports?.some(report => report.market === market.key)), results: { market: string; ready: boolean }[] = []
+    // Opening-three-minute markets require play-by-play validation. The box-score
+    // fitter cannot validate them; sending them here permanently retries an invalid RPC.
+    const pending = PAINT_MARKETS.filter(market => !market.key.endsWith('_first3min') && !reports?.some(report => report.market === market.key)), results: { market: string; ready: boolean }[] = []
     for (const market of pending) {
       if (Date.now() - started > 75000) break
       const { data, error } = await admin.rpc('fit_nba_production_baseline', { p_market: market.key, p_validation_season: validationSeason }).abortSignal(AbortSignal.timeout(40000))

@@ -6,11 +6,12 @@ import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 
 // Uncached database grants: revocation must not wait for JWT/profile refresh.
 export async function requireNflAccess() {
-  const { supabase, userId } = await resolveAuthedClient()
+  const { supabase, userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }
   const { data: profile, error: profileError } = await supabase.from('users')
     .select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', userId).maybeSingle()
-  if (profileError || !profile) return { error: NextResponse.json({ error: 'Access unavailable' }, { status: 403 }) }
+  if (profileError || !profile) return { error: NextResponse.json({ error: 'Access unavailable' }, { status: 503 }) }
   const isAdmin = profile.account_type === 'admin'
   const tier = effectiveTier((profile.tier as Tier) ?? 'free', profile.discord_advanced_claimed, profile.admin_granted_tier as Tier | null)
   if (hasNflAccess(profile.account_type, false, tier)) return { userId, isAdmin }

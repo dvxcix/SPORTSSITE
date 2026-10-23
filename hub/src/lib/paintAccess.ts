@@ -5,7 +5,8 @@ import { hasNbaAccess, NBA_ACCESS_COLUMNS } from '@/lib/nbaAccessPolicy'
 
 // Re-read trusted account fields for each request, including membership revocation.
 export async function requirePaintAccess() {
-  const { supabase, userId } = await resolveAuthedClient()
+  const { supabase, userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }
   const { data, error } = await supabase.from('users').select(NBA_ACCESS_COLUMNS).eq('id', userId).maybeSingle()
   if (error || !data) return { error: NextResponse.json({ error: 'NBA access unavailable' }, { status: 503 }) }

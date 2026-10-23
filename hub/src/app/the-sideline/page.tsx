@@ -3,6 +3,7 @@ import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
 import { defaultNflSample, parseNflSample, nflSampleReference } from '@/lib/nflSample'
 import { requireNflAccess } from '@/lib/nflAccess'
+import { AuthTemporarilyUnavailableError } from '@/lib/supabase/authErrors'
 import { SidelineBoardClient } from './SidelineBoardClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
@@ -29,6 +30,7 @@ export default async function SidelinePage({ searchParams }: {
   searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[] }>
 }) {
   const gate = await requireNflAccess()
+  if (gate.error?.status === 503) throw new AuthTemporarilyUnavailableError()
   if (gate.error) notFound()
 
   const params = await searchParams

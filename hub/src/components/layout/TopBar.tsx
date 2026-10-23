@@ -126,16 +126,26 @@ function TopbarNotificationEntry({
 }
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, authUnavailable, retrySession, signOut: signOutSession } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [signOutError, setSignOutError] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifFilter, setNotifFilter] = useState<NotificationFilter>('all')
   const [notifLoading, setNotifLoading] = useState(false)
   const [notifError, setNotifError] = useState('')
   const [unread, setUnread] = useState(0)
   const [notifications, setNotifications] = useState<NotifRow[]>([])
+  const userId = user?.id
+  const notificationEpoch = useRef(0)
+  const [notificationOwner, setNotificationOwner] = useState(userId)
+  const visibleUnread = notificationOwner === userId ? unread : 0
+  if (notificationOwner !== userId) {
+    setNotificationOwner(userId)
+    setNotifications([]); setUnread(0); setNotifOpen(false); setNotifLoading(false); setNotifError('')
+    setMenuOpen(false); setSignOutError('')
+  }
   const customEmojis = useCustomEmojis()
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -232,10 +242,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
   const visibleNotifications = useMemo(() => {
+    if (notificationOwner !== userId) return []
     if (notifFilter === 'unread') return notifications.filter(notification => !notification.read)
     if (notifFilter === 'mentions') return notifications.filter(notification => notification.type === 'mention')
     return notifications
-  }, [notifFilter, notifications])
+  }, [notifFilter, notifications, notificationOwner, userId])
 
   // Same effectiveTier() fold used everywhere else tier is checked or shown
   // (TierGate, requireTier, /pricing, /settings/membership) — the profile
@@ -265,33 +276,39 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   useEffect(() => {
-    if (!user) return
-    getBlockedEitherWayIds(supabase, user.id).then(ids => {
+    const epoch = ++notificationEpoch.current
+    let cancelled = false
+    blockedIdsRef.current = []
+    if (!userId) return
+    getBlockedEitherWayIds(supabase, userId).then(ids => {
+      if (cancelled) return
       blockedIdsRef.current = ids
       let countQuery = supabase.from('notifications').select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id).eq('read', false)
+        .eq('user_id', userId).eq('read', false)
       if (ids.length) countQuery = countQuery.not('actor_id', 'in', `(${ids.join(',')})`)
-      countQuery.then(({ count }) => setUnread(count ?? 0))
-    })
+      return countQuery.then(({ count }) => { if (!cancelled) setUnread(count ?? 0) })
+    }).catch(() => { /* Keep the current notification state during a temporary outage. */ })
 
     // Live badge — bump the count the instant a new notification lands,
     // without the user needing to reload anything. A blocked actor's
     // notification will still insert (blocking doesn't stop the underlying
     // action, e.g. a like), so it's filtered against the same ref here too.
     const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      .channel(`notifications:${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         (payload: any) => {
+          if (cancelled) return
           if (blockedIdsRef.current.includes(payload.new?.actor_id)) return
           const incoming = { ...payload.new, actor: null } as NotifRow
           setUnread(count => count + 1)
           setNotifications(current => current.some(item => item.id === incoming.id) ? current : [incoming, ...current].slice(0, 20))
         })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [user, supabase])
+    return () => { cancelled = true; notificationEpoch.current = epoch + 1; supabase.removeChannel(channel) }
+  }, [userId, supabase])
 
   async function openNotifications() {
+    const epoch = notificationEpoch.current
     const opening = !notifOpen
     setNotifOpen(opening)
     setMenuOpen(false)
@@ -310,6 +327,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20)
+      if (notificationEpoch.current !== epoch) return
       setNotifLoading(false)
       if (error) {
         setNotifError('Could not refresh activity.')
@@ -322,11 +340,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   async function markAllNotificationsRead() {
     if (!user || unread === 0) return
+    const epoch = notificationEpoch.current
     const previous = notifications
     const previousUnread = unread
     setUnread(0)
     setNotifications(current => current.map(notification => ({ ...notification, read: true })))
     const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+    if (notificationEpoch.current !== epoch) return
     if (error) {
       setNotifications(previous)
       setUnread(previousUnread)
@@ -337,12 +357,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   function markNotificationsRead(rows: NotifRow[]) {
     setNotifOpen(false)
     if (!user) return
+    const epoch = notificationEpoch.current
     const unreadIds = rows.filter(row => !row.read).map(row => row.id)
     if (!unreadIds.length) return
     const idSet = new Set(unreadIds)
     setNotifications(current => current.map(item => idSet.has(item.id) ? { ...item, read: true } : item))
     setUnread(count => Math.max(0, count - unreadIds.length))
     void supabase.from('notifications').update({ read: true }).in('id', unreadIds).eq('user_id', user.id).then(({ error }) => {
+      if (notificationEpoch.current !== epoch) return
       if (!error) return
       setNotifications(current => current.map(item => idSet.has(item.id) ? { ...item, read: false } : item))
       setUnread(count => count + unreadIds.length)
@@ -350,16 +372,22 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   async function deleteNotif(ids: string | string[]) {
+    if (!user) return
+    const epoch = notificationEpoch.current
     const idList = Array.isArray(ids) ? ids : [ids]
     const prev = notifications
     setNotifications(p => p.filter(n => !idList.includes(n.id)))
-    const { error } = await supabase.from('notifications').delete().in('id', idList).eq('user_id', user!.id)
+    const { error } = await supabase.from('notifications').delete().in('id', idList).eq('user_id', user.id)
+    if (notificationEpoch.current !== epoch) return
     if (error) setNotifications(prev) // restore — it's still in the DB
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+    setSignOutError('')
+    try {
+      await signOutSession()
+      router.push('/auth/login')
+    } catch { setSignOutError('Sign out could not finish. Try again.') }
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -538,7 +566,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 color: 'var(--text-2)', cursor: 'pointer', transition: 'all 130ms',
               }}>
                 <Bell size={15} />
-                {unread > 0 && (
+                {visibleUnread > 0 && (
                   <span style={{
                     position: 'absolute', top: -4, right: -4,
                     background: 'var(--red)', color: '#fff',
@@ -546,7 +574,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     padding: '1px 4px', minWidth: 16, textAlign: 'center',
                     border: '2px solid var(--surface)',
                   }}>
-                    {unread > 9 ? '9+' : unread}
+                    {visibleUnread > 9 ? '9+' : visibleUnread}
                   </span>
                 )}
               </button>
@@ -566,10 +594,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <div className="ss-topbar-notification-heading">
                     <div>
                       <span className="ss-topbar-panel-icon"><Bell size={15} /></span>
-                      <span><strong>Activity</strong><small>{unread ? `${unread} unread` : 'All caught up'}</small></span>
+                      <span><strong>Activity</strong><small>{visibleUnread ? `${visibleUnread} unread` : 'All caught up'}</small></span>
                     </div>
                     <div className="ss-topbar-heading-actions">
-                      <button type="button" onClick={markAllNotificationsRead} disabled={!unread} aria-label="Mark all notifications as read" title="Mark all read"><CheckCheck size={15} /></button>
+                      <button type="button" onClick={markAllNotificationsRead} disabled={!visibleUnread} aria-label="Mark all notifications as read" title="Mark all read"><CheckCheck size={15} /></button>
                       <Link href="/settings/notifications" onClick={() => setNotifOpen(false)} aria-label="Notification settings" title="Notification settings"><Settings size={15} /></Link>
                       <button type="button" className="ss-topbar-mobile-close" onClick={() => setNotifOpen(false)} aria-label="Close notifications"><X size={16} /></button>
                     </div>
@@ -578,7 +606,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     {(['all', 'unread', 'mentions'] as NotificationFilter[]).map(filter => (
                       <button type="button" role="tab" aria-selected={notifFilter === filter} data-active={notifFilter === filter ? 'true' : 'false'} key={filter} onClick={() => setNotifFilter(filter)}>
                         {filter === 'all' ? 'All' : filter === 'unread' ? 'Unread' : 'Mentions'}
-                        {filter === 'unread' && unread ? <span>{unread > 99 ? '99+' : unread}</span> : null}
+                        {filter === 'unread' && visibleUnread ? <span>{visibleUnread > 99 ? '99+' : visibleUnread}</span> : null}
                       </button>
                     ))}
                   </div>
@@ -690,10 +718,16 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <button type="button" className="ss-dropdown-item danger" onClick={signOut}>
                     <LogOut size={15} /><span>Sign out</span>
                   </button>
+                  {signOutError && <p role="status">{signOutError}</p>}
                 </div>
               </FloatingSurface>
             </div>
           </>
+        ) : loading || authUnavailable ? (
+          <div role="status" className="ss-topbar-guest-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)' }}>
+            <span>{loading ? 'Checking account…' : 'Account connection unavailable'}</span>
+            {!loading && <button type="button" onClick={() => void retrySession()} style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', color: 'var(--text-1)' }}>Retry</button>}
+          </div>
         ) : (
           <div className="ss-topbar-guest-actions" style={{ display: 'flex', gap: 8 }}>
             <Link href="/auth/login" style={{

@@ -1,0 +1,45 @@
+Member session and database-load incident repair — 2026-10-23
+
+User reported members being booted offline and authorized investigation/fixes.
+Main and production preflight matched 5a8b28d94974990c4e30c76132137af2cd2caa66.
+Required recovered NFL ancestry is retained. Unrelated local work preserved.
+
+Evidence in the initial 24-hour window:
+  33 interrupted database restarts, followed by another at 21:17:24 UTC.
+  637 read_nba_phase_frames statement timeouts; 345 nba_source_cache timeouts.
+  Auth user/token requests also timed out or returned 5xx during interruptions.
+  Largest compressed phase-frame cache payload was 6,080,334 bytes.
+  This establishes database instability and excessive history reads; the exact
+  infrastructure reason for each restart (for example OOM) is not proven.
+
+Repairs:
+  Auth reads distinguish temporary failures from confirmed signed-out sessions.
+  Failed parallel refreshes cannot delete a successful sibling refresh cookie.
+  Successful refreshed cookies survive redirects and access-denied responses.
+  Profile/tier lookup outages return temporary unavailability, not free-tier
+  downgrades or login redirects. Existing authorization checks remain enforced.
+  Client hydration recovers on reconnect/resume, coalesces retries and ignores
+  stale profile/notification results after account changes. Normal logout is
+  scoped to the current session, preserving other devices.
+  NBA history selects bounded indexed metadata before expanding JSON. Score
+  context reads one frame, cross-market reads two, charts filter market/player
+  within PostgreSQL. Stored captures/openings and all phase boundaries remain.
+  Cache maintenance now runs even when research grading fails.
+  Box-score model validation excludes unsupported first-three-minute markets;
+  the scheduler no longer retries invalid requests every five minutes.
+
+Database: only nba_scoped_history_reads applied to hkldweedwnxartkfhror,
+recorded as 20261023211907. CLI source migration 20261023211753.
+Legacy reader delegates to the bounded reader for compatibility. New RPC is
+service-only and security-invoker. No historic migration replay or data purge.
+Live transactional fixtures passed and rolled back: 96-frame history bound,
+exact as-of, phase/source ties, per-player/market scope, withdrawals, all feeds,
+canonical cutoff and public-role denial. Independent 6,000 selection simulations
+matched old semantics. Largest cached game 21717861: latest read 247.752 ms,
+scoped 96-frame player chart 708.435 ms; neither used temporary blocks.
+
+Pre-release checks: TypeScript/scoped ESLint pass; NBA 298/298; production
+134/134; cross-sport 26/26; context-handoff 13/13; incident regressions 24/24.
+The old date-dependent sample fixture now fixes its intended Oct19 clock.
+Evidence and subsequent deployment/browser checks: work/session-stability-*.
+These checks are not a claim of long-term infrastructure stability.

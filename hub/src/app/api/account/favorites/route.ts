@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store, max-age=0' }
 
 async function account() {
-  const { userId } = await resolveAuthedClient()
+  const { userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in to save favorites.' }, { status: 401, headers }) }
   const admin = createAdminClient()
   const { data: profile, error } = await admin.from('users').select('id,account_type,tier,discord_advanced_claimed,admin_granted_tier,favorite_teams,favorite_players,favorite_sports').eq('id', userId).maybeSingle()

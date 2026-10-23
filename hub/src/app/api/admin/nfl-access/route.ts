@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic'
 const noStore = { 'Cache-Control': 'private, no-store' }
 
 async function requireAdmin() {
-  const { supabase, userId } = await resolveAuthedClient()
+  const { supabase, userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }
   const { data: profile } = await supabase.from('users').select('account_type').eq('id', userId).maybeSingle()
   if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }

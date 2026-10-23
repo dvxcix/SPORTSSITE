@@ -423,7 +423,7 @@ test('provider samples bound dates, exclude future results, and expose truncated
     if (url.includes('/stats?')) return Response.json({ data: [stat(22), stat(100, '2026-10-19')], meta: { next_cursor: 1 } })
     return Response.json({ data, meta: { next_cursor: null } })
   }
-  const adapter = await compiled('../src/lib/nbaPaintData.ts', { ...emptyOpeningImports, 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': pure, './nbaSharedCache':cachePassthrough }, fetcher)
+  const adapter = await compiled('../src/lib/nbaPaintData.ts', { ...emptyOpeningImports, 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': { ...pure, nbaToday: () => '2026-10-19' }, './nbaSharedCache':cachePassthrough }, fetcher)
   const board = await (adapter.getPaintBoard as unknown as (game: unknown) => Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({ id: 123, date: '2026-10-20', season: 2026, status: '2026-10-20T23:00:00Z', datetime: '2026-10-20T23:00:00Z', home_team: team, visitor_team: { ...team, id: 9, abbreviation: 'DET' } })
   assert.equal(board.sampleSeason, 2025)
   assert.equal(board.statsComplete, false)

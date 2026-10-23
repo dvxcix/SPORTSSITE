@@ -20,6 +20,7 @@ async function run(request: Request) {
   const { data: claimed, error: leaseError } = await admin.rpc('claim_nba_source', { p_key: key, p_token: token, p_seconds: 175 })
   if (leaseError) return NextResponse.json({ reason: 'NBA research ledger unavailable' }, { status: 503 })
   if (!claimed) return NextResponse.json({ reason: 'NBA research capture already running' }, { status: 425 })
+  let pruneAttempted = false
   try {
     const { data: graded, error: gradeError } = await admin.rpc('grade_nba_research_snapshots', { p_limit: 5000 })
     if (gradeError) throw new Error('NBA research outcomes could not update')
@@ -68,11 +69,21 @@ async function run(request: Request) {
         results.push({ game: game.id, inserted, ...('reason' in attempt.value?{reason:attempt.value.reason}:{}) })
       } catch (failure) { results.push({ game: game.id, reason: failure instanceof Error ? failure.message : 'NBA score capture failed' }) }
     }
+    pruneAttempted = true
     const { error: pruneError } = await admin.rpc('prune_nba_source_cache', { p_limit: 500 })
     if (pruneError) throw new Error('NBA ephemeral cache maintenance failed')
     const failed = results.filter(result => result.reason).length
     return NextResponse.json({ graded, games: games.length, results, deferred: games.length - results.length, failed }, { status: failed ? 503 : 200 })
   } catch (failure) { return NextResponse.json({ reason: failure instanceof Error ? failure.message : 'NBA research capture failed' }, { status: 503 }) }
-  finally { await admin.from('nba_source_cache').update({ lease_token: null, lease_until: null }).eq('key', key).eq('lease_token', token) }
+  finally {
+    // A failed grader must not indefinitely disable ephemeral-cache retention.
+    if (!pruneAttempted) {
+      try {
+        const { error } = await admin.rpc('prune_nba_source_cache', { p_limit: 500 })
+        if (error) console.error('[NBA research] cache maintenance unavailable')
+      } catch { console.error('[NBA research] cache maintenance unavailable') }
+    }
+    await admin.from('nba_source_cache').update({ lease_token: null, lease_until: null }).eq('key', key).eq('lease_token', token)
+  }
 }
 export const GET = withPipelineHealth('nba-research-snapshot', run)

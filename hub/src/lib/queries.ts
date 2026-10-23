@@ -2,6 +2,7 @@ import { createClient } from './supabase/server'
 import { createAdminClient } from './supabase/admin'
 import { PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
 import type { Post, Channel, Message, Notification, User } from './supabase/types'
+import { AuthTemporarilyUnavailableError } from './supabase/authErrors'
 
 // No post query anywhere checked whether the CURRENT viewer already reacted
 // or reposted — every post always came back with user_reacted/user_reposted
@@ -48,7 +49,8 @@ export async function getCurrentUser(): Promise<User | null> {
   const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) return null
   const admin = createAdminClient()
-  const { data } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', authUser.id).single()
+  const { data, error } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', authUser.id).single()
+  if (error) throw new AuthTemporarilyUnavailableError()
   return data as unknown as User | null
 }
 

@@ -105,13 +105,16 @@ test('missing, changed-team, duplicate and incomplete canonical identities fail 
 
 test('normal scheduled research capture establishes missing identity before strict archive write; failure remains honest and releases lease', async () => {
   class Clock extends Date { static now() { return Date.parse('2026-10-20T02:15:00Z') } }
-  for (const failed of [false, true]) {
-    const h = await harness({ writeFail: failed }), events = h.events
+  for (const failure of ['none', 'identity', 'grade']) {
+    const failed = failure !== 'none'
+    const h = await harness({ writeFail: failure === 'identity' }), events = h.events
     let archived = 0
     const query = { eq: () => query, order: () => query, limit: async () => ({ data: [], error: null }), in: async () => ({ data: [], error: null }) }
     const admin = {
       from: (table: string) => ({ select: () => query, update: () => { assert.equal(table, 'nba_source_cache'); events.push('release'); return query } }),
       rpc: async (name: string, args?: { p_rows: { player_id: number; team_id: number }[] }) => {
+        if (name === 'grade_nba_research_snapshots' && failure === 'grade') return { data: null, error: { message: 'fixture timeout' } }
+        if (name === 'prune_nba_source_cache') events.push('prune')
         if (name === 'record_nba_research_batch') {
           assert.ok(h.stored.has(player.id), 'strict database identity must exist before archival')
           assert.equal(args?.p_rows.length, 1); archived++; events.push('archive')
@@ -135,9 +138,12 @@ test('normal scheduled research capture establishes missing identity before stri
     const response = await (route.GET as (request: Request) => Promise<Response>)(new Request('https://test/api/cron/nba-research-snapshot'))
     assert.equal(response.status, failed ? 503 : 200)
     assert.equal(archived, failed ? 0 : 1)
-    assert.deepEqual(events, failed ? ['read', 'roster', 'insert', 'release'] : ['read', 'roster', 'insert', 'archive', 'release'])
+    assert.deepEqual(events, failure === 'grade' ? ['prune', 'release'] : failure === 'identity' ? ['read', 'roster', 'insert', 'prune', 'release'] : ['read', 'roster', 'insert', 'archive', 'prune', 'release'])
     const body = await response.json()
-    assert.equal(body.failed, failed ? 1 : 0)
-    if (failed) assert.match(body.results[0].reason, /identities could not save/)
+    if (failure === 'grade') assert.match(body.reason, /outcomes could not update/)
+    else {
+      assert.equal(body.failed, failed ? 1 : 0)
+      if (failed) assert.match(body.results[0].reason, /identities could not save/)
+    }
   }
 })

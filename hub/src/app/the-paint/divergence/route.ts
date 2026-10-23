@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
   try {
     const match = await getPaintGame(Number(game)), tip = nbaGameStart(match)
     const phaseKey = tip == null ? 'unverified' : `${tip}:${Date.now() >= tip ? 'closed' : 'open'}`
-    const cached = await nbaSharedCache(`divergence:v6:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
+    const cached = await nbaSharedCache(`divergence:v7:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
       const admin = createAdminClient()
       const [allFrames, openings] = await Promise.all([
-        getNbaAllMarketFrames(Number(game), mode),
+        getNbaAllMarketFrames(Number(game), mode, 'edges'),
         getNbaQuoteOpenings(Number(game), mode),
       ])
       const frames = allFrames.length > 1 ? [allFrames[0], allFrames[allFrames.length - 1]] : allFrames

@@ -1,31 +1,27 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './authErrors'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
-
-function markRefreshRetry(response: NextResponse) {
-  response.cookies.set(AUTH_REFRESH_RETRY_COOKIE, '1', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 20,
-  })
-}
 
 function clearRefreshRetry(response: NextResponse) {
   response.cookies.set(AUTH_REFRESH_RETRY_COOKIE, '', { path: '/', maxAge: 0 })
 }
 
-function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
-  for (const cookie of request.cookies.getAll()) {
-    if (cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')) {
-      response.cookies.set(cookie.name, '', { path: '/', maxAge: 0 })
-    }
+function authUnavailable(request: NextRequest, code = 'AUTH_TEMPORARILY_UNAVAILABLE') {
+  if (request.headers.get('accept')?.includes('text/html')) {
+    return new NextResponse('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SlipSurge</title><body style="background:#09090b;color:#fafafa;font-family:system-ui;padding:32px"><h1>Connection interrupted</h1><p>Please try loading this page again.</p><p><a style="color:#b4ff4d" href="">Try again</a></p><p><a style="color:#a1a1aa" href="/auth/login">Sign in</a></p></body></html>', {
+      status: 503, headers: { ...AUTH_UNAVAILABLE_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+    })
   }
+  return NextResponse.json({ error: 'Account verification temporarily unavailable', code }, { status: 503, headers: AUTH_UNAVAILABLE_HEADERS })
 }
 
 export async function updateSession(request: NextRequest) {
+  const isAuthRoute = request.nextUrl.pathname === '/auth' || request.nextUrl.pathname.startsWith('/auth/')
+  // Login and token-exchange handlers authenticate themselves. A stale cookie
+  // must not trigger a second proxy refresh or delete a newer browser session.
+  if (isAuthRoute) return NextResponse.next({ request })
   // Public liveness/readiness endpoint for external uptime monitoring. Its
   // response contains no user or infrastructure details.
   if (request.nextUrl.pathname === '/api/health') {
@@ -167,11 +163,18 @@ export async function updateSession(request: NextRequest) {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          const previousCookies = supabaseResponse.cookies.getAll()
+          const previousHeaders = new Headers(supabaseResponse.headers)
           supabaseResponse = NextResponse.next({ request })
+          previousCookies.forEach(cookie => supabaseResponse.cookies.set(cookie))
+          for (const name of ['cache-control', 'expires', 'pragma']) {
+            const value = previousHeaders.get(name)
+            if (value) supabaseResponse.headers.set(name, value)
+          }
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
-          Object.entries(headers).forEach(([name, value]) =>
+          Object.entries(headers ?? {}).forEach(([name, value]) =>
             supabaseResponse.headers.set(name, value)
           )
         },
@@ -179,89 +182,56 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
+  function finish(response: NextResponse) {
+    // A redirect/403 must carry the refresh which preceded that decision.
+    // Never forward middleware request-control headers onto a redirect.
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+    for (const name of ['cache-control', 'expires', 'pragma']) {
+      const value = supabaseResponse.headers.get(name)
+      if (value) response.headers.set(name, value)
+    }
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+    return response
+  }
+
   // getClaims validates the access-token signature locally against the
   // project's published signing keys and only reaches Auth when a refresh is
   // actually needed. getUser made every page and parallel API request hit the
   // Auth service, multiplying refresh-token rotation races during a normal
   // page load. This is Supabase's current SSR proxy contract.
-  const { data: authData, error: authError } = await supabase.auth.getClaims()
-  const userId = typeof authData?.claims?.sub === 'string' ? authData.claims.sub : null
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-
-  // Real incident (confirmed via Vercel logs: ~44 users/week hitting this):
-  // @supabase/ssr rotates the refresh token on every use, so when a page
-  // load fires several concurrent requests through this middleware (common
-  // — a page and its parallel API calls all carry the same stale access
-  // token), each one tries to refresh with the SAME cookie-borne refresh
-  // token. The first to land wins and gets a new one; every other
-  // concurrent request's refresh attempt fails with "already used" or "not
-  // found" against a token that's already been rotated out from under it —
-  // even though the user's session is perfectly valid. Before this check,
-  // that failure left `user` null, which the block below (correctly, for a
-  // truly logged-out visitor) treated as a hard redirect to /auth/login —
-  // bouncing a real active session for what's actually a same-session race
-  // with a sibling request, not an expired login. Passing this one request
-  // A request with a failed refresh must never be allowed through a protected
-  // route as if authentication succeeded. A sibling request that won the
-  // rotation will repair the next request; a genuinely dead session stays
-  // signed out. Do not clear cookies here because a losing concurrent
-  // response could overwrite the valid cookies issued by the winner.
-  if (authError && (authError.code === 'refresh_token_already_used' || authError.code === 'refresh_token_not_found')) {
-    // Login/callback routes must remain reachable even when a dead auth
-    // cookie is present. Clear only Supabase's auth-cookie family here so a
-    // stale token cannot bounce the browser between login and middleware.
-    if (isAuthRoute) {
-      const response = NextResponse.next({ request })
-      clearStaleSupabaseAuthCookies(request, response)
-      clearRefreshRetry(response)
-      return response
-    }
-
-    const alreadyRetried = request.cookies.get(AUTH_REFRESH_RETRY_COOKIE)?.value === '1'
-    if (request.nextUrl.pathname.startsWith('/api/')) {
-      const response = NextResponse.json({
-        error: 'Authentication required',
-        code: alreadyRetried ? 'SESSION_EXPIRED' : 'SESSION_REFRESH_RETRY',
-      }, { status: 401 })
-      if (alreadyRetried) {
-        // A sibling refresh winner repairs the cookie before the next request.
-        // Seeing either rotation error again after the bounded retry therefore
-        // means this browser still owns an unusable token family. Clear it so
-        // the client cannot remain permanently wedged on protected API calls.
-        clearStaleSupabaseAuthCookies(request, response)
-        clearRefreshRetry(response)
-      } else {
-        markRefreshRetry(response)
-      }
-      return response
-    }
-    if (!alreadyRetried) {
-      const retryUrl = request.nextUrl.clone()
-      const response = NextResponse.redirect(retryUrl)
-      markRefreshRetry(response)
-      return response
-    }
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/auth/login'
-    loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
-    const response = NextResponse.redirect(loginUrl)
-    clearStaleSupabaseAuthCookies(request, response)
-    clearRefreshRetry(response)
-    return response
+  let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>
+  try {
+    authResult = await supabase.auth.getClaims()
+  } catch {
+    // Do not include any SDK cookie changes from a failed verification.
+    return authUnavailable(request)
   }
-
+  const { data: authData, error: authError } = authResult
+  const userId = !authError && typeof authData?.claims?.sub === 'string' ? authData.claims.sub : null
+  if (isRetryableAuthError(authError)) {
+    const race = authError?.code === 'refresh_token_already_used' || authError?.code === 'refresh_token_not_found'
+    // A retry marker shared by concurrent requests cannot prove expiry. The
+    // browser owns recovery; this request stays blocked without deleting cookies.
+    return authUnavailable(request, race ? 'SESSION_REFRESH_RETRY' : 'AUTH_TEMPORARILY_UNAVAILABLE')
+  }
+  if (authError) supabaseResponse = NextResponse.next({ request })
   if (userId && request.cookies.has(AUTH_REFRESH_RETRY_COOKIE)) clearRefreshRetry(supabaseResponse)
 
   if (userId && request.nextUrl.pathname.startsWith('/api/admin/')) {
-    const [{ data: profile }, { data: assurance }] = await Promise.all([
+    try {
+    const [{ data: profile, error: profileError }, { data: assurance, error: assuranceError }] = await Promise.all([
       supabase.from('users').select('account_type').eq('id', userId).maybeSingle(),
       supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
     ])
+    if (profileError || assuranceError) return finish(authUnavailable(request))
     if (profile?.account_type !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return finish(NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
     }
     if (assurance?.nextLevel === 'aal2' && assurance.currentLevel !== 'aal2') {
-      return NextResponse.json({ error: 'Two-factor verification required', code: 'MFA_REQUIRED' }, { status: 403 })
+      return finish(NextResponse.json({ error: 'Two-factor verification required', code: 'MFA_REQUIRED' }, { status: 403 }))
+    }
+    } catch {
+      return finish(authUnavailable(request))
     }
   }
 
@@ -292,13 +262,13 @@ export async function updateSession(request: NextRequest) {
 
   if (!userId && !isAuthRoute && !isPublicRoute) {
     if (pathname.startsWith('/api/') || /^\/the-sideline\/(market|results|touchdown-replay)$/.test(pathname)) {
-      return NextResponse.json({ error: 'Sign in required' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } })
+      return finish(NextResponse.json({ error: 'Sign in required' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } }))
     }
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.search = ''
     url.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
-    return NextResponse.redirect(url)
+    return finish(NextResponse.redirect(url))
   }
 
   // Onboarding-completion gate — an authenticated account with
@@ -318,18 +288,24 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/api/') &&
     request.nextUrl.pathname !== '/onboarding'
   ) {
-    const { data: profile } = await supabase
+    try {
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('onboarding_completed_at')
       .eq('id', userId)
       .maybeSingle()
+    if (profileError) return finish(authUnavailable(request))
     if (!profile?.onboarding_completed_at) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       url.search = ''
-      return NextResponse.redirect(url)
+      return finish(NextResponse.redirect(url))
+    }
+    } catch {
+      return finish(authUnavailable(request))
     }
   }
 
+  if (userId) supabaseResponse.headers.set('Cache-Control', 'private, no-store, max-age=0')
   return supabaseResponse
 }

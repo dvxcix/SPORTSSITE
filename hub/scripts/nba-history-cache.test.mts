@@ -39,7 +39,7 @@ async function harness() {
       }
     },
     rpc: (name: string, args: Args) => {
-      if (name === 'read_nba_phase_frames') return { abortSignal: async (signal: AbortSignal) => {
+      if (name === 'read_nba_phase_frames_scoped') return { abortSignal: async (signal: AbortSignal) => {
         assert.ok(signal instanceof AbortSignal); reads.push(args)
         await new Promise(resolve => setTimeout(resolve, 5))
         return { data: result ?? [{ captured_at: new Clock().toISOString(), quotes: [],fingerprint:'fixture' }], error: failed ? { message: 'fixture outage' } : null }
@@ -64,7 +64,7 @@ async function harness() {
   return { instance, reads, entries, advance: (ms: number) => { now += ms }, fail: (value: boolean) => { failed = value }, setResult: (value: unknown) => { result = value } }
 }
 
-test('NBA history coalesces concurrent viewers across instances and filters market/player from a shared phase frame', async () => {
+test('NBA history coalesces the same scoped market across instances without loading unrelated quotes', async () => {
   const h = await harness(), instances = await Promise.all(Array.from({ length: 3 }, () => h.instance()))
   const results = await Promise.all(Array.from({ length: 12 }, (_, index) => instances[index % 3].getNbaMarketFrames(123, 'points', 434)))
   assert.equal(h.reads.length, 1); assert.ok(results.every(result => result.length === 1))
@@ -73,8 +73,8 @@ test('NBA history coalesces concurrent viewers across instances and filters mark
   for (const args of [[124, 'points', 434], [123, 'points_1q', 434], [123, 'points', 435], [123, 'points', null]] as const) {
     await instances[0].getNbaMarketFrames(args[0], args[1], args[2])
   }
-  assert.deepEqual(h.reads,[123,124].map(id=>({p_game_id:id,p_mode:'pregame',p_feed:'props',p_tipoff:'2026-10-19T23:00:00.000Z'})))
-  assert.equal(h.entries.size,2)
+  assert.deepEqual(h.reads,[[123,'points',434],[124,'points',434],[123,'points_1q',434],[123,'points',435],[123,'points',null]].map(([id,market,player])=>({p_game_id:id,p_mode:'pregame',p_feed:'props',p_tipoff:'2026-10-19T23:00:00.000Z',p_selection:'history',p_market:market,p_player_id:player,p_as_of:null})))
+  assert.equal(h.entries.size,5)
 })
 
 test('NBA history expires at sixty seconds, rejects failed refreshes instead of stale prices, and recovers', async () => {

@@ -19,10 +19,10 @@ export async function getNbaMarketContext(game: Pick<PaintGame,'id'|'datetime'|'
   const empty = (reason: string) => nbaEmptyMarketContext(game.id,asOf,tipAt,reason,mode)
   if (tip == null || !Number.isFinite(requested) || mode === 'live' && requested < tip) return empty(`A verified ${mode} cutoff is required`)
   try {
-    const cached = await nbaSharedCache(`market-context:v2:${mode}:${game.id}:${tipAt}:${requested>=tip?'closed':'open'}`,60,0,async()=>{
+    const cached = await nbaSharedCache(`market-context:v3:${mode}:${game.id}:${tipAt}:${requested>=tip?'closed':'open'}`,60,0,async()=>{
       const admin = createAdminClient(), marketKey = `market-attempt:v4:${mode}:${game.id}`, legacyKey = `market-attempt:v3:${game.id}`, publicKey = `public-success:${NBA_PUBLIC_VERSION}:${game.id}`
       const [frames, openings, receipts] = await Promise.all([
-        getNbaAllMarketFrames(game.id, mode),
+        getNbaAllMarketFrames(game.id, mode, 'latest', asOf),
         getNbaQuoteOpenings(game.id, mode),
         admin.from('nba_source_cache').select('key,payload,fetched_at').in('key',[marketKey,publicKey,...(mode === 'pregame' ? [legacyKey] : [])]).abortSignal(AbortSignal.timeout(12_000)),
       ])

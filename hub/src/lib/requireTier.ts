@@ -4,6 +4,11 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './supabase/authErrors'
+
+function unavailable() {
+  return NextResponse.json({ error: 'Account verification temporarily unavailable', code: 'AUTH_TEMPORARILY_UNAVAILABLE' }, { status: 503, headers: AUTH_UNAVAILABLE_HEADERS })
+}
 
 // Every API route's auth used to assume a browser cookie session
 // (@supabase/ssr) — the mobile app has no cookies at all, just an
@@ -17,7 +22,7 @@ import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '
 // every downstream `.from(...)` query on the returned client is evaluated
 // under RLS as that real user, not the anon role — identical behavior to
 // the cookie-session path, just a different transport for the same JWT.
-export async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient; userId: string | null }> {
+export async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient; userId: string | null; error?: NextResponse }> {
   const bearer = (await headers()).get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
   if (bearer) {
     const supabase = createSupabaseClient(
@@ -25,22 +30,33 @@ export async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient;
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { global: { headers: { Authorization: `Bearer ${bearer}` } } }
     )
-    const { data: { user } } = await supabase.auth.getUser(bearer)
-    return { supabase, userId: user?.id ?? null }
+    return verify(supabase, bearer)
   }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return { supabase, userId: user?.id ?? null }
+  return verify(supabase)
+}
+
+async function verify(supabase: SupabaseClient, bearer?: string) {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(bearer)
+    if (isRetryableAuthError(error)) return { supabase, userId: null, error: unavailable() }
+    return { supabase, userId: error ? null : user?.id ?? null }
+  } catch (error) {
+    if (isRetryableAuthError(error)) return { supabase, userId: null, error: unavailable() }
+    throw error
+  }
 }
 
 // Same { error?: NextResponse } return shape used by requireAdmin() across
 // hub/src/app/api/admin/*/route.ts — call site pattern:
 //   const gate = await requireTier('basic'); if (gate.error) return gate.error
 export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse; userId?: string }> {
-  const { userId } = await resolveAuthedClient()
+  const { userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
-  const { data } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  const { data, error } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  if (error || !data) return { error: unavailable() }
   const userTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
 
   if (hasFullAccessOverride(data?.account_type, data?.beta_access_active) || hasTierAccess(userTier, minTier)) {
@@ -57,10 +73,12 @@ export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse
 // subset that tier is actually entitled to. A full-access override
 // (admin/beta) always resolves to 'ultimate' — same as requireTier.
 export async function getEffectiveTier(): Promise<{ error?: NextResponse; userId?: string; tier?: Tier }> {
-  const { userId } = await resolveAuthedClient()
+  const { userId, error: authError } = await resolveAuthedClient()
+  if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
-  const { data } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  const { data, error } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  if (error || !data) return { error: unavailable() }
   const tier: Tier = hasFullAccessOverride(data?.account_type, data?.beta_access_active)
     ? 'ultimate'
     : effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)

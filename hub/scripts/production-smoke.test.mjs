@@ -179,7 +179,7 @@ test('activity and account menus preserve explicit unread state and complete nav
   assert.ok(topbar.includes("'Checking access…'"), 'profile hydration needs an explicit pending-access state')
   assert.ok(desktopNavigation.includes('`${profileTier.charAt(0).toUpperCase()}${profileTier.slice(1)} workspace`'))
   assert.ok(!desktopNavigation.includes("profile?.tier || 'free'"), 'desktop identity must render effective access, not raw billing tier')
-  assert.ok(authContext.includes('await fetchProfile(session.user.id)'), 'initial auth loading must include profile hydration')
+  assert.ok(authContext.includes('fetchProfile(next.user.id).finally'), 'initial auth loading must settle with profile hydration')
   assert.ok(authContext.includes('supabase.auth.refreshSession()'), 'an expired account request must get one bounded session refresh')
   assert.ok(!activityPage.includes(".update({ read: true })"), 'opening the activity page must not silently mark every item read')
   assert.ok(activityList.includes('markAllRead'))
@@ -540,15 +540,14 @@ test('external notification and media fallbacks remain resilient', async () => {
   assert.ok(emailSend.includes("safeInternalPath(notification.link, '/notifications')"))
 })
 
-test('expired refresh tokens cannot pass protected requests through middleware', async () => {
+test('failed refresh verification blocks protected requests without deleting a concurrent session', async () => {
   const middleware = await read('src/lib/supabase/middleware.ts')
   assert.ok(middleware.includes("pathname.startsWith('/api/')"))
-  assert.ok(middleware.includes("alreadyRetried ? 'SESSION_EXPIRED' : 'SESSION_REFRESH_RETRY'"))
   assert.ok(middleware.includes("'SESSION_REFRESH_RETRY'"))
-  assert.ok(middleware.includes('if (alreadyRetried)'))
-  assert.ok(middleware.includes("loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)"))
-  assert.ok(middleware.includes('AUTH_REFRESH_RETRY_COOKIE'))
-  assert.ok(middleware.includes('clearStaleSupabaseAuthCookies'))
+  assert.ok(middleware.includes('return authUnavailable(request, race'))
+  assert.ok(middleware.includes('isRetryableAuthError(authError)'))
+  assert.ok(!middleware.includes('clearStaleSupabaseAuthCookies'))
+  assert.ok(!middleware.includes('alreadyRetried'))
   assert.ok(!middleware.includes('return supabaseResponse // Allow request to proceed'))
 })
 
