@@ -3,6 +3,60 @@ import test from 'node:test'
 import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, resolveNflPikkitEntry, type NflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 import { runPikkitScrape } from '../src/lib/scrapers/pikkitScraper.ts'
+import { readFile } from 'node:fs/promises'
+import ts from 'typescript'
+
+test('NFL capture keeps league-to-event navigation inside the app and never reopens a stored source URL', async () => {
+  const source = await readFile(new URL('../src/app/api/cron/scrape-pikkit-nfl/route.ts', import.meta.url), 'utf8')
+  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  for (const cardFound of [false, true]) {
+    const navigations: string[] = [], idle: boolean[] = []
+    let cardAttempts = 0, storedReads = 0, imports = 0, closes = 0
+    const scrape = () => ({ props: { passing: { 'Test Player Pass Yards': 123 } } })
+    const page = {
+      goto: async (url: string) => { navigations.push(url) },
+      waitForTimeout: async () => {},
+      evaluate: async (fn: unknown) => fn === scrape ? scrape() : 'Away Team Home Team',
+      locator: () => ({ evaluateAll: async () => true }),
+    }
+    const mocks: Record<string, unknown> = {
+      'next/server': { NextResponse: { json: Response.json } },
+      '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null },
+      '@/lib/browserbase': { openPikkitSession: async () => ({ page, close: async () => { closes++ } }) },
+      '@/lib/platform': { PLATFORM_URL: 'https://fixture.test' },
+      '@/lib/nflPikkitSchedule': { getUpcomingNflPikkitGames: async () => [{ gameId: 'fixture', awayName: 'Away Team', homeName: 'Home Team' }] },
+      '@/lib/scrapers/pikkitScraper': { runPikkitScrape: scrape },
+      '@/lib/scrapers/gameMatch': {
+        findAndClickPikkitGame: async () => { cardAttempts++; return cardFound },
+        clickTabByText: async () => true, distinguishingSuffix: (team: string) => team, escapeRe: (team: string) => team,
+      },
+      '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async (confirmed: boolean) => { idle.push(confirmed); return true } }) },
+      // If a stored-event fallback is reintroduced, this previously verified
+      // URL must still never be opened outside the league app's click path.
+      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => {
+        storedReads++
+        return { data: { snapshot: { sourceUrl: 'https://app.pikkit.com/event/stored-fixture' } } }
+      } }) }) }) }) },
+    }
+    const target = { exports: {} as { GET: (request: Request) => Promise<Response> } }
+    new Function('require', 'module', 'exports', 'process', 'fetch', output)(
+      (name: string) => { assert.ok(name in mocks, name); return mocks[name] }, target, target.exports,
+      { env: { PIKKIT_CONTEXT_ID: 'fixture', CRON_SECRET: 'fixture' } },
+      async () => { imports++; return Response.json({ changed: true }) },
+    )
+    const response = await target.exports.GET(new Request('https://fixture.test/capture?gameId=fixture'))
+    const body = await response.json()
+    assert.deepEqual(navigations, ['https://app.pikkit.com/leagues/nfl'])
+    assert.equal(storedReads, 0)
+    assert.equal(cardAttempts, cardFound ? 1 : 2)
+    assert.equal(imports, cardFound ? 1 : 0)
+    assert.equal(response.status, 200)
+    if (!cardFound) { assert.equal(body.skipped, true); assert.match(body.error, /game link not found/) }
+    else assert.equal(body.marketCount, 1)
+    assert.equal(closes, 1)
+    assert.deepEqual(idle, [true])
+  }
+})
 
 test('off-game picks identity follows a unique GSIS-confirmed game player without changing counts', () => {
   const player = { id: 33939855, name: 'DeVonta Smith', team: 'PHI', position: 'WR', gsisId: '00-0036912', markets: [] }

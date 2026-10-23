@@ -14,8 +14,14 @@ Evidence before repair:
   and displayed login. Calling this permanent login expiry was unsupported.
 - The observed public source bundle main.617cdff2.js uses client-side event
   card navigation. Its authentication provider reads session_id; the cookie
-  setter specifies expiry but no explicit path. Cookie-path metadata must be
-  checked live before treating path scope as the established cause.
+  setter specifies expiry but no explicit path.
+- Live metadata from fresh diagnostic session with prefix 70bd5cb6 confirmed the
+  session_id cookie is present on app.pikkit.com with path /leagues and expiry
+  2027-11-25T22:15:13Z. That session returned login/validate 200 and an
+  authenticated shell without asking the owner to log in again. The stored
+  login was valid; its path excludes /event. A hard event reload discards the
+  source's in-memory authentication and cannot read that league-scoped cookie.
+  This establishes the navigation/cookie-path cause of these apparent logouts.
 
 Repair:
 - NBA follows the actual event card rather than hard-reloading its document.
@@ -43,5 +49,46 @@ Independent code review confirmed no weakened event/pregame guards or token
 exposure. The separate operations-readiness suite has one pre-existing NFL
 dispatcher source assertion expecting a URL without its current stream=1.
 
-Deployment and real close/reopen capture verification are performed after
-publishing this source; do not infer successful live recovery from unit tests.
+Additional reviewed NFL repair removes the stored event-URL hard reload and
+uses normal source navigation, preserving the same authentication continuity.
+Its local validation passed 11/11 dedicated tests, 6/6 lease tests, TypeScript
+and scoped ESLint. The follow-up release containing this note includes the
+NFL change. Live capture observations below refer to the original 77003487
+repair; no additional NFL production scrape was manually launched.
+
+Production verification:
+- Release 77003487, deployment dpl_BmeEa2A6dXbAqwRmXiSB4yLa24Le, reached
+  READY at 2026-10-23T23:43:49Z.
+- Recovery run 23:45:44Z used cloud session with prefix 9a5c301f, received
+  event GET 200 and an October 24 league-date response, and completed at
+  23:49:27Z. It saved three captures containing 258 total rows and 11 markets
+  per game, beginning at 23:47:03Z. No authentication failure or cleanup issue
+  occurred. No new login was requested, and no token, cookie path, configured
+  context or secret was replaced to obtain these results.
+- The normal 23:51 scheduled run opened another browser session,
+  0fdc6bdc-d3d6-431c-8cf7-93f5bfb9815c, and received login/validate 200.
+  It saved 94 additional rows for game 21717863 at 23:52:06Z and another
+  77 rows at 23:53:31Z. Across the two runs, five games now have 429 fresh
+  rows. This independently confirms reuse of the saved login after the first
+  browser closed. The second run completed at 23:54:54Z with no authentication
+  failure or cleanup issues. It truthfully returned partial coverage (502):
+  two captures, eight unavailable-count games, two unlisted games, and one
+  game deadline. Remaining coverage continues through the existing rotation.
+- All five new captures were before their canonical tipoff. Existing history
+  and pregame/live separation were preserved.
+- The live The Public view for MEM/GSW on October 23 displayed a 7:47 PM
+  capture timestamp and Curry's points count of 1,435 with 32.2% share.
+  Browser evidence: work/pikkit-persistence-live-proof.jpg.
+
+Coverage limitation:
+- The first recovery run truthfully returned partial coverage (HTTP 502):
+  three successful games, eight future games with no verified player counts,
+  one unlisted game, and eight not reached within the run budget. Empty or
+  unavailable future counts are not saved as fresh zero-count captures.
+- The count error alone cannot distinguish an empty source board from a
+  parsing/player-matching gap. Future coverage remains unavailable until a
+  verified capture succeeds; these results do not certify the whole slate.
+- All attempted games received updated attempt receipts. Older unattempted
+  games rotate ahead of the just-attempted future boards, while successful
+  captures are skipped for 30 minutes. Ordering is verified; completion of
+  every queued game still depends on source availability and the run budget.

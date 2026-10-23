@@ -3,7 +3,6 @@ import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { PLATFORM_URL } from '@/lib/platform'
 import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nflPikkitSchedule'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
 import { acquirePikkitBrowserLease, type PikkitBrowserLifecycle } from '@/lib/pikkitBrowserLease'
@@ -36,17 +35,8 @@ async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
       clicked = await findAndClickPikkitGame(session.page, game.awayName, game.homeName)
     }
     if (!clicked) {
-      // A previously verified event can remain accessible while the league
-      // listing is still loading or has reordered. Never invent event URLs.
-      const { data } = await createAdminClient().from('nfl_pikkit_picks_current')
-        .select('snapshot').eq('game_id', gameId).maybeSingle()
-      const priorUrl = data?.snapshot?.sourceUrl
-      if (typeof priorUrl === 'string' && /^https:\/\/app\.pikkit\.com\/event\/[a-z0-9-]+$/i.test(priorUrl)) {
-        await session.page.goto(priorUrl, { waitUntil: 'domcontentloaded' })
-        clicked = true
-      }
-    }
-    if (!clicked) {
+      // The saved login cookie is scoped to /leagues. Event navigation must
+      // stay inside the loaded app; reopening a stored URL loses that state.
       console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'listing', reason: 'game-link-not-found' })
       return { gameId, skipped: true, error: 'NFL game link not found on Pikkit' }
     }
