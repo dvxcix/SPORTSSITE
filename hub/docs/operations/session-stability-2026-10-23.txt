@@ -120,3 +120,18 @@ Full standardNBA suite307/307, production134/134, TypeScript and targeted ESLint
 pass. The new retained-evidence identity suite is included in test:paint.
 Capture timestamps allow the existing bounded60-second clock tolerance but are
 strictly rejected at or after canonical tipoff. Source metadata limits fail closed.
+
+Live collector verification at22:01UTC ran15721846 on the normal schedule. It
+reached a source /login redirect after three unlisted events; no new public counts
+were saved. Browser/lease cleanup succeeded. This is an outstanding shared-source
+authentication blocker, separate from member login. Owner reauthorization is
+required; do not claim public-count collection restored or replay old captures.
+No manual session, credentials, job replay or context/secret change was performed.
+
+Final handling: an unavailable event's passive metadata wait fails only that game,
+so a second verified game can still capture. True game/run/browser deadlines
+remain terminal. Sign-in redirects during navigation, hydration, metadata wait
+or scrape return an explicit authentication503 and stop the slate promptly.
+Behavior tests verify both multi-game continuation and auth-stop cleanup.
+Focused collector/lifecycle70/70, standardNBA309/309, production134/134,
+TypeScript and targeted ESLint pass.

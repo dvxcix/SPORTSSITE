@@ -61,58 +61,72 @@ async function compiled<T>(file: string, imports: Record<string, unknown>, globa
 
 async function capture(scenario: string) {
   let current = '', captured = 0, closed = 0, released = 0, clockReads = 0, clock = now, finds = 0, navigation = 0
+  let gameIndex = -1, listenersRemoved = 0
+  const capturedIds: number[] = []
+  const games = scenario === 'missing-then-valid' || scenario.startsWith('auth-') ? [game, { ...game, id: 456, visitor_team: { ...game.visitor_team, abbreviation: 'BOS', full_name: 'Boston Celtics' }, home_team: { ...game.home_team, abbreviation: 'DET', full_name: 'Detroit Pistons' } }] : [game]
   let listener: ((response: unknown) => void) | undefined, requestListener: ((request: unknown) => void) | undefined
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const actualIdentity = await compiled<typeof identity>('../src/lib/nbaPublicEventIdentity.ts', { './nbaPaint': paint, './nbaOddsMode': mode }, { Date: Clock })
   const scrape = () => {}, locator = { filter: () => locator, first: () => locator, click: async () => {}, waitFor: async () => {} }
   const event = structuredClone(fixture.response.event)
   if (scenario === 'wrong-start') event.start_time = '2026-10-22T23:00:00Z'
+  let activeEvent = event, activeUrl = fixture.url, activeText = fixture.text
   const emit = (url: string, payload: unknown, priorRequest = false) => {
     const request = { url: () => url }
     if (!priorRequest) requestListener?.(request)
     listener?.({ url: () => url, status: () => 200, request: () => request, json: async () => payload })
   }
   const openEvent = () => {
-    current = fixture.url
+    current = activeUrl
+    if (scenario === 'auth-event-immediate') { current = 'https://app.pikkit.com/login'; return }
     if (scenario === 'unrelated-first') emit(responseUrl.replace(event._id, 'unrelated'), { event: { ...event, _id: 'unrelated', start_time: '2026-10-22T23:00:00Z' } })
     if (scenario === 'prior-request') emit(responseUrl, { event }, true)
-    else if (scenario !== 'missing-event-response') emit(responseUrl, { event })
+    else if (!['missing-event-response', 'auth-event-metadata'].includes(scenario) && !(scenario === 'missing-then-valid' && gameIndex === 0)) emit(activeUrl.replace('app.pikkit.com', 'prod-website.pikkit.app'), { event: activeEvent })
   }
   const browser = { page: {
     setDefaultTimeout() {}, setDefaultNavigationTimeout() {},
-    on(name: string, fn: typeof listener) { if (name === 'request') requestListener = fn; else listener = fn }, off(name: string) { if (name === 'request') requestListener = undefined; else listener = undefined },
+    on(name: string, fn: typeof listener) { if (name === 'request') { assert.equal(requestListener, undefined); requestListener = fn } else { assert.equal(listener, undefined); listener = fn } }, off(name: string) { listenersRemoved++; if (name === 'request') requestListener = undefined; else listener = undefined },
     goto: async (url: string) => {
       current = url; navigation++
-      if (url === fixture.url) openEvent()
-      else if (!['wrong-start', 'missing-event-response', 'league-only'].includes(scenario)) emit('https://prod-website.pikkit.app/league/events?league=NBA', { events: scenario === 'ambiguous' ? [event, { ...event, _id: 'second-event' }] : [event] })
+      if (scenario === 'auth-league') { current = 'https://app.pikkit.com/login'; return }
+      if (url === activeUrl) openEvent()
+      else {
+        gameIndex++
+        if (scenario === 'missing-then-valid' && gameIndex === 1) {
+          activeEvent = { ...event, _id: 'second-event', event_info: { ...event.event_info, away: { short: 'BOS', full: 'Boston Celtics' }, home: { short: 'DET', full: 'Detroit Pistons' } } }
+          activeUrl = 'https://app.pikkit.com/event/second-event'; activeText = 'Boston Celtics vs. Detroit Pistons 7:00 PM'
+        }
+        if (!['wrong-start', 'missing-event-response', 'league-only'].includes(scenario)) emit('https://prod-website.pikkit.app/league/events?league=NBA', { events: scenario === 'ambiguous' ? [event, { ...event, _id: 'second-event' }] : [activeEvent] })
+      }
     },
-    url: () => current, waitForFunction: async () => {}, waitForTimeout: async () => {}, getByText: () => locator,
+    url: () => current, waitForFunction: async () => {}, waitForTimeout: async (ms: number) => { if (scenario === 'auth-event-settle' && ms === 2200) current = 'https://app.pikkit.com/login' }, getByText: () => locator,
     evaluate: async (fn: unknown, diagnosticArg?: unknown) => {
       if (fn === scrape) {
+        if (scenario === 'auth-during-scrape') current = 'https://app.pikkit.com/login'
         if (scenario === 'post-tip') clock = Date.parse(game.datetime!)
         if (scenario === 'changed-url') current = 'https://app.pikkit.com/event/other-event'
         if (scenario === 'changed-metadata') emit(responseUrl, { event: { ...event, start_time: '2026-10-22T23:00:00Z' } })
         const skew = scenario === 'positive-skew' ? 30000 : scenario === 'negative-skew' ? -30000 : scenario === 'stale-payload' ? -60001 : scenario === 'future-payload' ? 60001 : 0
         const capturedAt = scenario === 'timestamp-at-tip' ? game.datetime : scenario === 'invalid-timestamp' ? 'invalid' : new Clock(clock + skew).toISOString()
-        return { complete: true, url: scenario === 'payload-url' ? 'https://app.pikkit.com/event/other-event' : fixture.url, capturedAt, props: { Points: { 'Paolo Banchero': 10 } } }
+        return { complete: true, url: scenario === 'payload-url' ? 'https://app.pikkit.com/event/other-event' : activeUrl, capturedAt, props: { Points: { 'Paolo Banchero': 10 } } }
       }
       if (diagnosticArg) return { bodyLength: fixture.text.length, signIn: false, awayTeamMentioned: true, selectCount: 1, eventCount: 0 }
-      return fixture.text
+      return activeText
     },
   }, close: async () => { closed++ } }
   const query = { select: () => query, in: () => query, limit: async () => ({ data: [], error: null }) }
   const route = await compiled<{ GET: (request: Request) => Promise<Response> }>('../src/app/api/cron/poll-pikkit-nba-picks/route.ts', {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null }, '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
-    '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games: [game] }) }, '@/lib/nbaPaint': { nbaToday: () => game.date },
+    '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games }) }, '@/lib/nbaPaint': { nbaToday: () => game.date },
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async (value: paint.PaintGame) => { clockReads++; return scenario === 'canonical-tip-changed' && clockReads > 1 ? { ...value, datetime: '2026-10-21T22:00:00Z' } : value } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) },
     '@/lib/browserbase': { openPikkitSession: async () => browser }, '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario !== 'league-only') openEvent(); return true } },
-    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async () => { captured++; return { markets: 1 } } },
+    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async (value: paint.PaintGame) => { captured++; capturedIds.push(value.id); return { markets: 1 } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2' }, '@/lib/nbaPublicEventIdentity': actualIdentity,
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
-  }, { Date: Clock, process: { env: { PIKKIT_CONTEXT_ID: 'fixture-only' } }, setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms === 15000 ? 5 : 100), clearTimeout })
+  }, { Date: Clock, process: { env: { PIKKIT_CONTEXT_ID: 'fixture-only' } }, setTimeout: (fn: () => void, ms: number) => setTimeout(() => { if (scenario === 'auth-event-metadata' && ms === 15000) current = 'https://app.pikkit.com/login'; fn() }, ms === 15000 ? 5 : 100), clearTimeout })
   const response = await route.GET(new Request('https://fixture.test/capture'))
-  return { status: response.status, body: await response.json(), captured, closed, released, finds, navigation, listener, requestListener }
+  return { status: response.status, body: await response.json(), captured, capturedIds, closed, released, finds, navigation, listener, requestListener, listenersRemoved }
 }
 
 test('scheduled NBA collector imports time-only header through exact listing, fresh event response and canonical tip', async () => {
@@ -129,5 +143,31 @@ test('scheduled collector rejects unverified, ambiguous, changed and post-tip ev
     const result = await capture(scenario)
     assert.equal(result.status, 502, scenario); assert.equal(result.captured, 0, scenario)
     assert.equal(result.closed, 1, scenario); assert.equal(result.released, 1, scenario); assert.equal(result.listener, undefined, scenario); assert.equal(result.requestListener, undefined, scenario)
+  }
+})
+
+test('missing event metadata fails only that game and the next verified game still captures with isolated listeners', async () => {
+  const result = await capture('missing-then-valid')
+  assert.equal(result.status, 502)
+  assert.equal(result.body.failed, 1); assert.equal(result.body.deferred, 0)
+  assert.equal(result.body.results.length, 2)
+  assert.equal(result.body.results[0].game, 123); assert.equal(result.body.results[0].ok, false)
+  assert.match(result.body.results[0].reason, /metadata could not be verified/)
+  assert.equal(result.body.results[0].diagnostic.deadline, undefined)
+  assert.equal(result.body.results[1].game, 456); assert.equal(result.body.results[1].ok, true)
+  assert.deepEqual(result.capturedIds, [456]); assert.equal(result.captured, 1)
+  assert.equal(result.closed, 1); assert.equal(result.released, 1); assert.equal(result.listenersRemoved, 4)
+  assert.equal(result.listener, undefined); assert.equal(result.requestListener, undefined)
+})
+
+test('sign-in redirects during league/event navigation, hydration, metadata wait or scrape stop the batch with authentication status', async () => {
+  for (const scenario of ['auth-league', 'auth-event-immediate', 'auth-event-settle', 'auth-event-metadata', 'auth-during-scrape']) {
+    const result = await capture(scenario)
+    assert.equal(result.status, 503, scenario); assert.match(result.body.reason, /sign-in expired/, scenario)
+    assert.equal(result.body.results.length, 1, 'authentication failure must not repeat on the second game')
+    assert.equal(result.body.results[0].diagnostic.authenticationRequired, true, scenario)
+    assert.equal(result.body.results[0].diagnostic.path, '/login', scenario)
+    assert.equal(result.captured, 0, scenario); assert.equal(result.closed, 1, scenario); assert.equal(result.released, 1, scenario)
+    assert.equal(result.listenersRemoved, 2, scenario); assert.equal(result.listener, undefined, scenario); assert.equal(result.requestListener, undefined, scenario)
   }
 })

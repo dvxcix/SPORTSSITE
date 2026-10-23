@@ -156,11 +156,19 @@ async function run(request:Request){
             }
           }
           if(!found)throw new Error('NBA event is not listed')
+          requirePikkitPageSession(browser.page.url())
           await browser.page.waitForTimeout(2200)
+          requirePikkitPageSession(browser.page.url())
           // Event headers now show only a local time. Bind the full dated
           // timestamp from this navigation's event response, never a prior page.
-          await bounded(eventResponseReady,15000,'NBA event metadata deadline')
+          await bounded(eventResponseReady,15000,'NBA event metadata deadline').catch(()=>{
+            // This passive wait has no browser work to cancel. Missing evidence
+            // rejects this game; the enclosing game/run deadlines still stop work.
+            requirePikkitPageSession(browser.page.url())
+            throw new Error('NBA event metadata could not be verified')
+          })
           await pendingMetadata()
+          requirePikkitPageSession(browser.page.url())
           nbaVerifiedPublicEvent(game,identities) // Reject conflicting listing/event identities.
           const identity=nbaVerifiedPublicEvent(game,eventIdentities)
           if(!identity)throw new Error('NBA event teams and start could not be verified')
@@ -180,6 +188,7 @@ async function run(request:Request){
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
           const canonicalGame=await getNbaOddsGame(game)
           await pendingMetadata()
+          requirePikkitPageSession(browser.page.url())
           const currentIdentity=nbaVerifiedPublicEvent(canonicalGame,identities)
           const finalText=await browser.page.evaluate(()=>document.body.innerText)
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
