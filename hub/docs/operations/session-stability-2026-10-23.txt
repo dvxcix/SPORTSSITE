@@ -69,3 +69,21 @@ service-only access remain unchanged. Migration does not grade or replay rows.
 TEMP-table fixtures passed and rolled back: strict limits, zero-eligible advance,
 wrap/revisit, quarter/combined markets, appearance, wrong season/postseason,
 future exclusion, rejected limits and private access. No live outcome replay.
+
+Follow-up release 54759bae is READY at dpl_F3DcXMzEFuqeRWjkRZXUjRApg6Q9.
+The normal 21:30 scheduled grader scanned exactly 5,000 candidates and advanced
+its cursor. Model validation and market capture succeeded again at 21:35.
+No PostgreSQL ERROR/FATAL/PANIC or Auth 5xx appeared from 21:27:48 through the
+21:36 check; no Vercel error/fatal logs appeared through 21:38 on this release.
+
+The remaining intermittent snapshot failures were independently traced to an
+expected early-season defense-coverage exception inside the shared cache. Its
+owner recognized the exception and fell back; other server instances received
+a generic cooldown and could not select that fallback. Cache v6 stores expected
+insufficient coverage as ready:false, so every instance applies the same prior-
+season fallback after the shared read. Real database failures still propagate.
+Regression checks cover 120 requests across 12 instances, serialized cache hits,
+current-season readiness, unavailable prior-season coverage, and source errors.
+The focused shared-cache suite passes 15/15; production suite remains 134/134.
+The full NBA suite passes 302/302; TypeScript and scoped ESLint pass.
+No job replay, collector duplication, secret change or new database mutation.

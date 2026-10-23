@@ -48,6 +48,87 @@ async function cacheHarness() {
   return { instance, entries, Clock, onClaim: (hook: () => Promise<void>) => { beforeClaim = hook }, advance: (milliseconds: number) => { now += milliseconds }, metrics: () => ({ reads, claims, writes }) }
 }
 
+async function defenseHarness(gamesPerTeam: Record<number, number> = { 2026: 1, 2025: 5 }, failureTable?: string) {
+  const cache = await cacheHarness(), gameReads = new Map<number, number>()
+  const admin = { from(table: string) {
+    const filters = new Map<string, unknown>()
+    const result = (data: unknown) => ({ data, error: table === failureTable ? { message: 'fixture database outage' } : null })
+    const query = {
+      select() { return query },
+      eq(key: string, value: unknown) { filters.set(key, value); return query },
+      lt() { return query }, order() { return query }, in() { return query },
+      async maybeSingle() { return result({ complete: true, rows_seen: 0, updated_at: '2026-10-20T11:00:00Z' }) },
+      async limit() {
+        assert.equal(table, 'nba_games')
+        const season = Number(filters.get('season'))
+        gameReads.set(season, (gameReads.get(season) ?? 0) + 1)
+        return result(Array.from({ length: (gamesPerTeam[season] ?? 0) * 15 }, (_, index) => ({ payload: {
+          id: season * 1000 + index, status: 'Final', season,
+          home_team: { id: index % 15 * 2 + 1 }, visitor_team: { id: index % 15 * 2 + 2 },
+        } })))
+      },
+      async range() { assert.ok(['nba_player_game_stats', 'nba_player_period_stats'].includes(table)); return result([]) },
+    }
+    return query
+  } }
+  const instance = async () => compiled<typeof import('../src/lib/nbaIntelligenceData.ts')>('../src/lib/nbaIntelligenceData.ts', {
+    'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': await cache.instance(),
+    './nbaIntelligence': { nbaDefenseProfiles: () => [] }, './nbaPaint': paint,
+  })
+  return { ...cache, gameReads, instance }
+}
+
+test('early-season defense coverage falls back across independent cache instances and serialized cache hits', async () => {
+  const h = await defenseHarness(), instances = await Promise.all(Array.from({ length: 12 }, h.instance))
+  const before = '2026-10-20'
+  h.entries.set(`dvp:v5:2026:${before}:true`, { lease_token: null, lease_until: new h.Clock(h.Clock.now() + 15000).toISOString() })
+  const results = await Promise.all(Array.from({ length: 120 }, (_, index) => instances[index % 12].getNbaDefenseContext(2026, before)))
+  assert.ok(results.every(result => result.ready && result.season === 2025 && result.before === before && !result.stale))
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
+  assert.equal(h.metrics().writes, 2)
+  const entry = h.entries.get(`dvp:v6:2026:${before}:true`)!
+  assert.equal((entry.payload as { ready: boolean }).ready, false)
+  assert.equal(entry.lease_until, null, 'inadequate coverage is not a source failure cooldown')
+  // A new server sees only the serialized payload, with no Error subclass or local memory.
+  for (const [key, value] of h.entries) h.entries.set(key, JSON.parse(JSON.stringify(value)))
+  const fresh = await h.instance(), result = await fresh.getNbaDefenseContext(2026, before)
+  assert.deepEqual(result, results[0])
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
+})
+
+test('complete current-season defense coverage is retained without loading a previous season', async () => {
+  const h = await defenseHarness({ 2026: 5 }), owner = await h.instance()
+  const result = await owner.getNbaDefenseContext(2026, '2026-10-20')
+  assert.equal(result.ready, true); assert.equal(result.season, 2026); assert.equal(result.games, 75)
+  assert.equal(h.gameReads.get(2025), undefined)
+  const follower = await h.instance()
+  assert.deepEqual(await follower.getNbaDefenseContext(2026, '2026-10-20'), result)
+  assert.equal(h.gameReads.get(2026), 1)
+})
+
+test('unavailable prior-season defense remains unavailable and never recurses into another season', async () => {
+  const h = await defenseHarness({ 2026: 1, 2025: 4 }), owner = await h.instance()
+  const result = await owner.getNbaDefenseContext(2026, '2026-10-20')
+  assert.equal(result.ready, false); assert.equal(result.season, 2025); assert.deepEqual(result.profiles, [])
+  assert.deepEqual([...h.gameReads.keys()], [2026, 2025])
+  const follower = await h.instance()
+  assert.deepEqual(await follower.getNbaDefenseContext(2026, '2026-10-20'), result)
+  const direct = await follower.getNbaDefenseContext(2026, '2026-10-20', false)
+  assert.equal(direct.ready, false); assert.equal(direct.season, 2026)
+  assert.equal(h.metrics().writes, 2)
+})
+
+test('actual defense database failures still reject instead of becoming expected coverage or a prior-season fallback', async () => {
+  for (const table of ['nba_ingestion_state', 'nba_games', 'nba_player_game_stats', 'nba_player_period_stats']) {
+    const h = await defenseHarness({ 2026: 5, 2025: 5 }, table), owner = await h.instance()
+    await assert.rejects(() => owner.getNbaDefenseContext(2026, '2026-10-20'), /unavailable/)
+    const follower = await h.instance()
+    await assert.rejects(() => follower.getNbaDefenseContext(2026, '2026-10-20'), /unavailable/)
+    assert.equal(h.gameReads.get(2025), undefined, table)
+    assert.equal(h.metrics().writes, 0, table)
+  }
+})
+
 test('6,000 simultaneous NBA readers across twelve instances use one upstream refresh and bounded database reads', async () => {
   const h = await cacheHarness(), instances = await Promise.all(Array.from({ length: 12 }, h.instance))
   let loads = 0
