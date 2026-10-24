@@ -11,10 +11,14 @@ import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCov
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
-type CaptureStage = 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture'
+type CaptureStage = 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
 type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
+export type NbaBookCaptureCallbacks = {
+  onFirst?: (game: NbaFirstBookGame) => Promise<void>
+  onRegular?: (gameId: number, frames: NbaBookPropCapture[], coverage: NbaBookPropCoverage[], observedAt: string) => Promise<void>
+}
 const remaining = (deadline: number, cap = 15_000) => Math.max(1, Math.min(cap, deadline - Date.now()))
 async function preparePage(page: Page) {
   page.setDefaultTimeout(10_000)
@@ -64,6 +68,17 @@ async function atStage<T>(stage: CaptureStage, operation: () => Promise<T>): Pro
 }
 function captureFailure(error: unknown, gameId?: number): Failure {
   return { ...(gameId == null ? {} : { gameId }), code: safeFailure(error), ...(error instanceof CaptureFailure ? { stage: error.stage, reason: error.reason } : {}) }
+}
+async function deliverObservation(callback: () => Promise<void>, deadline: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await atStage('observation-save', async () => {
+      if (Date.now() >= deadline) throw new Error('deadline')
+      await Promise.race([callback(), new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error('deadline'), { name: 'TimeoutError' })), remaining(deadline, Number.MAX_SAFE_INTEGER))
+      })])
+    })
+  } finally { if (timer) clearTimeout(timer) }
 }
 async function dkBoards(page: Page, deadline: number) {
   await openPage(page, DK_LEAGUE, deadline)
@@ -148,7 +163,7 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise
 
 /** Cloud scheduled capture only. It owns one fresh, nonpersistent session and
  * releases it on every path. No collector is created from a member page read. */
-export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstBookInput[], deadlineAt?: number): Promise<NbaFirstBookCapture> {
+export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstBookInput[], deadlineAt?: number, callbacks: NbaBookCaptureCallbacks = {}): Promise<NbaFirstBookCapture> {
   if (inputs.length > 30 || new Set(inputs.map(input => input.game.id)).size !== inputs.length
     || new Set(inputs.map(({ game }) => `${game.date}:${game.visitor_team.id}:${game.home_team.id}`)).size !== inputs.length) throw new Error('Invalid NBA capture slate')
   const result: NbaFirstBookCapture = { book, observedAt: new Date().toISOString(), complete: false, games: [], errors: [] }
@@ -157,6 +172,11 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
   if (!active.length) return result
   let session: Awaited<ReturnType<typeof openSession>> | undefined
   const deadline = Math.min(Date.now() + 240_000, Number.isFinite(deadlineAt) ? deadlineAt! : Infinity)
+  const publishFirst = async (item: NbaFirstBookGame) => {
+    if (!callbacks.onFirst) return
+    try { await deliverObservation(() => callbacks.onFirst!(item), deadline) }
+    catch (error) { result.errors.push(captureFailure(error, item.gameId)) }
+  }
   if (deadline - Date.now() < 20_000) return { ...result, games: [...result.games, ...active.map(input => nbaFirstBookMissing(input.game.id, 'deadline'))], errors: [{ code: 'deadline' }] }
   try {
     session = await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, geoState: 'NC',
@@ -165,11 +185,14 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
     await preparePage(page)
     if (book === 'draftkings') {
       const boards = await dkBoards(page, deadline)
+      const observed: NbaFirstBookGame[] = []
       for (const input of active) {
         const matching = boards.filter(board => nbaFirstBookTeam(board.away, input.game.visitor_team) && nbaFirstBookTeam(board.home, input.game.home_team))
         const evaluated = matching.map(board => nbaNormalizeFirstBook(book, input, board)), valid = evaluated.filter(item => item.status !== 'identity-mismatch')
-        result.games.push(valid.length === 1 ? valid[0] : nbaFirstBookMissing(input.game.id, matching.length ? 'identity-mismatch' : 'unlisted'))
+        const item = valid.length === 1 ? valid[0] : nbaFirstBookMissing(input.game.id, matching.length ? 'identity-mismatch' : 'unlisted')
+        result.games.push(item); observed.push(item)
       }
+      for (let offset = 0; offset < observed.length; offset += 4) await Promise.all(observed.slice(offset, offset + 4).map(publishFirst))
     } else {
       await openPage(page, MGM_LEAGUE, deadline)
       const events = page.getByRole('tab', { name: /^Events$/i })
@@ -207,6 +230,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
             currentUrls.set(worker, url)
             const first = board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')
             result.games.push(first)
+            await publishFirst(first)
             if (first.status !== 'closed' && first.status !== 'identity-mismatch') regularTasks.push({ input, url })
             else if (first.status !== 'closed') result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
           } catch (error) {
@@ -219,16 +243,23 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       }))
       // All First Basket boards get a turn before a deep regular-price ladder
       // can consume the session. Each regular game receives a bounded share.
-      next = 0
       const regularBudget = Math.max(0, Math.floor((deadline - Date.now()) / Math.max(1, Math.ceil(regularTasks.length / pages.length))) - 1000)
+      const regularQueue = [...regularTasks]
       await Promise.all(pages.map(async worker => {
-        while (next < regularTasks.length && !challenged) {
-          const { input, url } = regularTasks[next++], gameDeadline = Math.min(deadline, Date.now() + regularBudget)
+        while (regularQueue.length && !challenged) {
+          // Reuse each worker's final First Basket event before navigating
+          // again. Selecting/removing is synchronous, so no game can be taken twice.
+          const loaded = regularQueue.findIndex(task => task.url === currentUrls.get(worker))
+          const { input, url } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0], gameDeadline = Math.min(deadline, Date.now() + regularBudget)
           try {
             if (gameDeadline - Date.now() < 1000) throw new Error('deadline')
             if (currentUrls.get(worker) !== url) await atStage('regular-navigation', () => mgmEvent(worker, url, gameDeadline))
             const regular = await atStage('regular-capture', () => collectMgmProps(worker, input, gameDeadline))
             result.regular!.push(...regular.frames); result.regularCoverage!.push(...regular.coverage)
+            if (callbacks.onRegular) {
+              try { await deliverObservation(() => callbacks.onRegular!(input.game.id, regular.frames, regular.coverage, new Date().toISOString()), deadline) }
+              catch (error) { result.errors.push(captureFailure(error, input.game.id)) }
+            }
           } catch (error) {
             result.errors.push(captureFailure(error, input.game.id))
             result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
@@ -236,7 +267,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           }
         }
       }))
-      for (const { input } of regularTasks.slice(next)) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
+      for (const { input } of regularQueue) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
     }
   } catch (error) { result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' }) }
   finally { await session?.close() }

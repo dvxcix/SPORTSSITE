@@ -106,3 +106,26 @@ Live concurrency correction:
 - Evidence: work/nba-cloud-mgm-parallel-diagnostic-2026-10-24.txt and
   nba-cloud-mgm-two-tab-diagnostic-2026-10-24.txt. Subsequent natural capture
   verification is required before claiming the regular board gaps repaired.
+
+Further natural-run verification and timing correction:
+- Natural 11:57 run on 35077668 restored all five posted MGM First FG boards
+  (50 quotes, no navigation failures). Regular work reached only early points
+  thresholds: 43 frames, 112 quotes, 37 failures. This remained incomplete.
+- First observations at 11:57:55-11:59:01 were not persisted until 12:00:48,
+  missing the 12:00 archive and expiring before 12:05. Existing openings were
+  preserved; the run must not be described as complete coverage.
+- Completed normalized First observations now save immediately; regular
+  observations save after each game. An attempt journal prevents callback
+  timeout/finalization from replaying uncertain writes or restamping quotes.
+- The same book lease owns at most two balanced MGM sessions, each with at
+  most two tabs. All requested games remain accounted for exactly once.
+  Each session reuses its loaded event pages before navigating to other games.
+- Browser work is bounded to 240 seconds, saves to 260, route/session to 300.
+  Per-game budgets remain bounded, known partial panels hold full archives,
+  and bounded private status counts distinguish timeouts from missing markets.
+- This is fixed scheduled work, independent of member traffic. No new cron,
+  schema change, forced replay, local collector or automatic CAPTCHA solving.
+- Final validation: full NBA 445/445 before the final 20-second browser budget
+  adjustment; final route 26/26 includes the changed deadline boundaries.
+  Independent focused review 61/61 before that final extra boundary test;
+  TypeScript and scoped ESLint pass on the final source.

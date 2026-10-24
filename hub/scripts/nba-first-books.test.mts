@@ -201,7 +201,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
 test('one MGM session finishes every First Basket board before bounded regular ladders, even if a ladder fails', async () => {
   const slate = 'ABCDEFGH'.split('').map((letter, index) => ({ game: { ...game, id: 100 + index, home_team: { ...game.home_team, id: 50 + index, name: `Home ${letter}`, full_name: `Denver ${letter}` } }, roster: [player] }))
   const links = slate.map(value => `https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-${value.game.home_team.full_name.at(-1)!.toLowerCase()}-${value.game.id}`)
-  const first: number[] = [], regular: number[] = [], budgets: number[] = []
+  const first: number[] = [], regular: number[] = [], budgets: number[] = [], savedFirst: number[] = [], savedRegular: number[] = [], revisited: string[] = []
   let opened = 0, closed = 0, pages = 0
   const locator = () => ({ first() { return this }, waitFor: async () => {}, count: async () => 1, click: async () => {}, evaluateAll: async () => links })
   const makePage = () => {
@@ -212,6 +212,7 @@ test('one MGM session finishes every First Basket board before bounded regular l
     'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input, deadline: number) => {
       assert.equal(first.length, slate.length, 'a deep ladder must never run ahead of an unvisited First Basket game')
+      assert.equal(savedFirst.length, slate.length, 'verified First observations must reach persistence before deep ladders begin')
       regular.push(value.game.id); budgets.push(deadline - now)
       if (regular.length === 1) throw new Error('slow ladder fixture')
       return { frames: [], coverage: [] }
@@ -225,14 +226,37 @@ test('one MGM session finishes every First Basket board before bounded regular l
     await Promise.resolve()
     return board({ away: game.visitor_team.full_name, home: slate[index].game.home_team.full_name, market: 'First field goal scorer', timeLabel: '4:59 PM', rows: [{ name: 'Alpha Diallo', odds: '+900' }] })
   }
-  new Function('require', 'module', 'exports', 'Date', 'fakeBoard', `${code}\nmgmBoard = fakeBoard; mgmEvent = async () => ({}); openPage = async () => {};`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, fakeBoard)
+  new Function('require', 'module', 'exports', 'Date', 'fakeBoard', 'fakeEvent', `${code}\nmgmBoard = fakeBoard; mgmEvent = fakeEvent; openPage = async () => {};`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, fakeBoard, async (_page: unknown, url: string) => { revisited.push(url); return {} })
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')
-  const result = await collector.collectNbaFirstBooks('betmgm', slate, now + 220_000)
+  const result = await collector.collectNbaFirstBooks('betmgm', slate, now + 220_000, {
+    onFirst: async item => { assert.equal(closed, 0); assert.equal(item.props[0].updated_at, board().observedAt); savedFirst.push(item.gameId) },
+    onRegular: async (gameId, frames, coverage, observedAt) => { assert.equal(closed, 0); assert.deepEqual(frames, []); assert.deepEqual(coverage, []); assert.equal(observedAt, board().observedAt); savedRegular.push(gameId) },
+  })
   assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(pages, 2)
   assert.equal(result.games.length, 8); assert.ok(result.games.every(value => value.complete)); assert.equal(result.complete, true)
   assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 54_000))
+  assert.deepEqual(new Set(regular.slice(0, 2)), new Set(first.slice(-2)), 'regular inspection must reuse both already-loaded final event pages first')
+  assert.equal(revisited.length, 6)
+  assert.equal(savedFirst.length, 8); assert.equal(savedRegular.length, 7)
+  assert.equal(new Set(savedFirst).size, 8); assert.equal(new Set(savedRegular).size, 7)
   assert.equal(result.regularCoverage!.length, Object.keys(propQuotes.MGM_MILESTONE_PANELS).length)
   assert.ok(result.regularCoverage!.every(value => !value.complete))
+})
+
+test('observation callbacks cannot extend the collector deadline or expose persistence error details', async () => {
+  const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const target = { exports: {} }
+  const functions = new Function('require', 'module', 'exports', `${code}\nreturn {deliverObservation, captureFailure}`)((name: string) => imports[name], target, target.exports) as { deliverObservation: (callback: () => Promise<void>, deadline: number) => Promise<void>; captureFailure: (error: unknown, gameId: number) => {code:string;stage?:string;reason?:string} }
+  let called = false
+  await assert.rejects(functions.deliverObservation(async () => { called = true }, Date.now() - 1))
+  assert.equal(called, false)
+  await assert.rejects(functions.deliverObservation(() => new Promise<void>(() => {}), Date.now() + 20), (error: unknown) => {
+    assert.deepEqual(functions.captureFailure(error, 1), {gameId:1,code:'deadline',stage:'observation-save',reason:'timeout'}); return true
+  })
+  await assert.rejects(functions.deliverObservation(async () => { throw new Error('private persistence URL token=must-not-leak') }, Date.now() + 1000), (error: unknown) => {
+    assert.equal(functions.captureFailure(error,1).stage, 'observation-save'); assert.equal(String(error).includes('must-not-leak'), false); return true
+  })
 })
 
 test('MGM failures identify the bounded navigation stage without exposing raw errors or URLs', async () => {
