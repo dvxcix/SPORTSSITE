@@ -48,8 +48,8 @@ test('First Basket slate uses selected-phase prices and the same phase for every
 test('Public snapshots retain the recorded tipoff when a provider later reschedules the game', async () => {
   const tip = Date.parse('2020-10-20T13:00:00Z'), cache = new Map<string, unknown>(), keys: string[] = []
   const snapshots = [
-    {captured_at:new Date(tip-1000).toISOString(),snapshot:{gameId:123,capturedAt:new Date(tip-1000).toISOString(),rows:[{playerId:1,picks:20}],markets:['points'],sourceUrl:'private'}},
-    {captured_at:new Date(tip+1000).toISOString(),snapshot:{gameId:123,capturedAt:new Date(tip+1000).toISOString(),rows:[{playerId:1,picks:50}],markets:['points'],sourceUrl:'private'}},
+    {captured_at:new Date(tip-1000).toISOString(),snapshot:{gameId:123,capturedAt:new Date(tip-1000).toISOString(),rows:[{playerId:1,market:'points',picks:20}],markets:['points'],sourceUrl:'private'}},
+    {captured_at:new Date(tip+1000).toISOString(),snapshot:{gameId:123,capturedAt:new Date(tip+1000).toISOString(),rows:[{playerId:1,market:'points',picks:50}],markets:['points'],sourceUrl:'private'}},
   ]
   const admin = {from:()=>{
     let lower = -Infinity, upper = Infinity
@@ -58,6 +58,7 @@ test('Public snapshots retain the recorded tipoff when a provider later reschedu
   }}
   const movedGame = {id:123,datetime:new Date(Date.now()+3600000).toISOString(),status:'Scheduled'}
   const data = await route('../src/lib/nbaPublicData.ts', {
+    './nbaPublicHistory': await import('../src/lib/nbaPublicHistory.ts'),
     './nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>({...game as object,datetime:new Date(tip).toISOString()})},
     './supabase/admin': {createAdminClient:()=>admin},
     './nbaPaintData': {getPaintGame:async()=>({id:123,datetime:new Date(tip).toISOString(),status:'Final'})},

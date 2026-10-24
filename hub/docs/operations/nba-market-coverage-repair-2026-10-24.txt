@@ -1,0 +1,44 @@
+NBA public market coverage repair — 2026-10-24
+
+Scope: repair missing tomorrow boards, preserve every verified category and its
+own movement baseline; existing scheduled cloud collectors only.
+
+Confirmed causes from retained production session c4d0227b-2968-4dcc-a3e3-14a6db0d8157
+and the source UI component: genuine zero header counts render as blank; the old
+explicit "N Picks" parser discarded them. Expanded outcome content could also
+contaminate header parsing. Combos and First Basket existed in the category
+selector but were omitted by the old allowlist. LA Clippers failed an exact
+match against the displayed Los Angeles Clippers name. Partial category failures
+discarded verified sibling rows, and global-frame baselines lost sparse markets.
+
+Repair: exact observed header controls/count nodes; stable category transitions;
+visit all actual selector options inside existing game/run deadlines. Canonical
+team/date/tipoff/event checks retained, with a narrow LAC full-name alias. Raw
+category coverage stays private. Zero is valid; missing evidence is not zero.
+Partial observations save without a 30-minute success receipt. Truly unavailable
+boards defer; unresolved available rows remain failed and retry normally.
+
+Continuity writer appends verified observations and materializes per-row current,
+previous, capturedAt and previousAt. Absent rows retain their actual provenance;
+new identities have no invented baseline. Existing sparse history bootstraps at
+most64 indexed frames once, then reads one composite. Pregame cutoff is rechecked
+after locks. Public responses allowlist safe fields; no source/raw metadata leaks.
+The Public renders each row's capture time; signal consumers enforce row age.
+Shared caches and the existing scheduled cadence remain; no member-triggered
+collection or new laptop collector is introduced.
+
+Database: primary hkldweedwnxartkfhror only. Individually reviewed migration
+20261024081357_nba_public_market_continuity.sql applied as live version
+20261024082313_nba_public_market_continuity. Do not replay. Old writer hash
+3e6ffa75ebc4e793a80b4205d1707e4a verified immediately before apply. Temporary
+rollback fixtures passed before and after; zero fixture rows in production.
+SECURITY INVOKER; service_role execute true, anon/authenticated execute false.
+Security advisor reported existing unrelated notices only; no new writer warning.
+Existing pg_net extension placement notice:
+https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public
+
+Validation: NBA suite335/335; production134/134; persistence96/96; final additional
+deferred-status recovery/extractor18/18; typecheck and scoped implementation lint
+pass. Independent extractor, cron, identity, history and SQL reviews passed.
+Natural production capture and browser evidence will be recorded after release
+in work/nba-market-coverage-release-2026-10-24.txt.

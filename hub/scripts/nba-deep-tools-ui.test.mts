@@ -24,7 +24,7 @@ const stubs: Record<string, string> = {
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
   'next/link': 'import React from "react";export default function Link(props){return <a {...props}/>}',
 }
-const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds']
+const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds', 'PaintPublic']
 const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {NbaOddsModeProvider} from "./src/components/nba/NbaOddsModeContext"; export {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
 const bundle = await build({ stdin: { contents: source, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'deep-tools.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'deep-tool-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
@@ -58,6 +58,26 @@ const scenarios = [
   { component: 'PaintDivergence', props: { board, open: noop }, data: { rows: [], captures: 2, publicCapturedAt: null, latestAt: null, stale: false }, loading: 'Loading market signals', unavailable: 'Market signals could not load.', refresh: 'Refresh cross-market signals', preserved: 'Last available moves' },
   { component: 'PaintTracking', props: { board, players: [], open: noop }, data: { gameId: 123, rows: [], seasons: [2025], fields: ['usage_percentage'], complete: true, fetchedAt: '2026-10-20T12:00:00Z', stale: false }, loading: 'Loading game tracking', unavailable: 'Game tracking could not load.', refresh: 'Refresh NBA game tracking', preserved: 'Last loaded observations' },
 ]
+test('ThePublic renders exact carried deltas, captured time, zero and First Basket labels',async()=>{
+  const players=[{id:1,first_name:'Chet',last_name:'Holmgren',position:'C',team,headshot:null,props:[],logs:[],average:{}},{id:2,first_name:'Wendell',last_name:'Carter Jr.',position:'C',team,headshot:null,props:[],logs:[],average:{}}]
+  const capturedAt='2026-10-24T11:00:00Z',priorAt='2026-10-24T10:00:00Z'
+  const ui=await harness('PaintPublic',{board:{...board,players},open:noop},{captures:[{captured_at:capturedAt,snapshot:{gameId:123,capturedAt,markets:['points','first_basket_including_ft'],rows:[
+    {playerId:1,market:'points',picks:0,previous:12,previousAt:priorAt,capturedAt:priorAt},
+    {playerId:2,market:'first_basket_including_ft',picks:380,previous:null,previousAt:null,capturedAt},
+  ]}}]})
+  try{
+    ui.succeed();await ui.click('Retry')
+    const rows=[...ui.host.querySelectorAll('tbody tr')]
+    const first=rows.find(row=>row.textContent?.includes('Wendell'))!,zero=rows.find(row=>row.textContent?.includes('Chet'))!
+    assert.ok(first.textContent?.includes('First basket · Incl. FT'))
+    assert.equal(first.querySelectorAll('td')[2]?.textContent,'—')
+    assert.equal(zero.querySelectorAll('td')[0]?.textContent,'0')
+    assert.equal(zero.querySelectorAll('td')[2]?.textContent,'-12')
+    assert.equal(zero.querySelector('time')?.getAttribute('datetime'),priorAt)
+    assert.equal(first.querySelector('time')?.getAttribute('datetime'),capturedAt)
+    assert.equal(ui.host.querySelectorAll('[title]').length,0)
+  }finally{await ui.close()}
+})
 for (const scenario of scenarios) {
   test(`${scenario.component} settles initial failure, retries, and preserves prior data on refresh failure`, async () => {
     const ui = await harness(scenario.component, scenario.props, scenario.data)

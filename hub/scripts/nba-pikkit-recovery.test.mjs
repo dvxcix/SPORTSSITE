@@ -6,7 +6,7 @@ const require = createRequire(new URL('../package.json', import.meta.url))
 const ts = require('typescript')
 
 async function capture(scenario) {
-  let reloads = 0, finds = 0, captures = 0, closed = 0, released = 0, extraTime = 0, probes = 0
+  let reloads = 0, finds = 0, captures = 0, closed = 0, released = 0, extraTime = 0, probes = 0, successReceipts = 0
   let eventOpened = false, responseListener, requestListener
   const navigationTimeout = scenario.startsWith('navigation-timeout')
   const start = Date.now()
@@ -27,7 +27,10 @@ async function capture(scenario) {
     waitForTimeout: async () => {}, waitForFunction: async () => {}, getByText: () => locator,
     reload: async options => { assert.deepEqual(options, { waitUntil: 'domcontentloaded', timeout: 20000 }); reloads++; if (scenario === 'reload-timeout') return new Promise(() => {}) },
     evaluate: async (fn, arg) => {
-      if (fn === scrape) return { complete: true, props: {}, url: eventUrl, capturedAt: new Date(Clock.now()).toISOString() }
+      if (fn === scrape) {
+        assert.ok(arg.maxDurationMs >= 0 && arg.maxDurationMs <= 80000)
+        return { complete: !['partial-capture','unavailable-markets'].includes(scenario), marketStates: scenario === 'empty-controls' ? [] : [{ label:'Points',value:'points',status:scenario==='unavailable-markets'?'unavailable':'captured',rows:scenario==='unavailable-markets'?0:1,observedAt:new Date(Clock.now()).toISOString() }], props: scenario==='unavailable-markets'?{}:{Points:{'Fixture Player':scenario === 'all-zero' ? 0 : 5}}, url: eventUrl, capturedAt: new Date(Clock.now()).toISOString() }
+      }
       if (arg !== undefined) {
         probes++
         if (scenario === 'navigation-timeout-stalled') return new Promise(() => {})
@@ -51,20 +54,46 @@ async function capture(scenario) {
     '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games: [game] }) }, '@/lib/nbaPaint': { nbaToday: () => game.date }, '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) },
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async game => game },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) }, '@/lib/browserbase': { openPikkitSession: async () => browser },
-    '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario === 'low-budget' && finds === 2) extraTime = 60_000; const found = scenario === 'recovered' && reloads === 1; if (found) { eventOpened = true; const request = { url: () => eventUrl }; requestListener?.(request); responseListener?.({ url: () => eventUrl, status: () => 200, request: () => request, json: async () => event }) }; return found } },
+    '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario === 'low-budget' && finds === 2) extraTime = 60_000; const found = ['recovered','partial-capture','empty-controls','all-zero','unavailable-markets'].includes(scenario) && reloads === 1; if (found) { eventOpened = true; const request = { url: () => eventUrl }; requestListener?.(request); responseListener?.({ url: () => eventUrl, status: () => 200, request: () => request, json: async () => event }) }; return found } },
     '@/lib/scrapers/pikkitLeagueDate': { observePikkitLeagueDates: () => ({ selectDate: async date => { assert.equal(date, game.date); return true }, dispose() {} }) },
-    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async () => { captures++; return { markets: 9 } } },
+    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async () => { captures++; const unavailable=scenario==='unavailable-markets';return { markets: unavailable?0:1,rows:unavailable?0:1,available:!unavailable,complete:!unavailable&&scenario !== 'partial-capture',coverage:{observed:2,captured:unavailable?0:1,unavailable:unavailable?2:scenario==='partial-capture'?1:0} } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2', nbaPublicEventMatches: () => true },
-    '@/lib/nbaPublicEventIdentity': { nbaPublicResponseKind: () => 'event', nbaPublicEventIdentities: () => [event], nbaVerifiedPublicEvent: (_game, events) => events[0] ?? null, nbaPublicEventUrl: () => eventUrl, nbaPublicEventPageMatches: () => true },
-    '@/lib/nbaSharedCache': { nbaSharedCache: async (_key, _ttl, _stale, load) => ({ value: await load() }) },
+    '@/lib/nbaPublicEventIdentity': { nbaPublicTeamLabel:team=>team.full_name,nbaPublicResponseKind: () => 'event', nbaPublicEventIdentities: () => [event], nbaVerifiedPublicEvent: (_game, events) => events[0] ?? null, nbaPublicEventUrl: () => eventUrl, nbaPublicEventPageMatches: () => true },
+    '@/lib/nbaSharedCache': { nbaSharedCache: async (key, _ttl, _stale, load) => {if(key.startsWith('public-success:'))successReceipts++;return { value: await load() }} },
   }
   const source = fs.readFileSync(new URL('../src/app/api/cron/poll-pikkit-nba-picks/route.ts', import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const fixtureModule = { exports: {} }
   new Function('require', 'module', 'exports', 'process', 'Date', 'setTimeout', 'clearTimeout', code)(id => { assert.ok(id in mocks, id); return mocks[id] }, fixtureModule, fixtureModule.exports, { env: { PIKKIT_CONTEXT_ID: 'fixture' } }, Clock, callback => setTimeout(callback, 15), clearTimeout)
   const response = await fixtureModule.exports.GET(new Request('https://fixture.test/api/cron/poll-pikkit-nba-picks'))
-  return { status: response.status, body: await response.json(), reloads, finds, captures, closed, released, probes }
+  return { status: response.status, body: await response.json(), reloads, finds, captures, closed, released, probes,successReceipts }
 }
+
+test('verified partial markets save without suppressing the next coverage retry', async () => {
+  const result = await capture('partial-capture')
+  assert.equal(result.status,502);assert.equal(result.captures,1);assert.equal(result.successReceipts,0)
+  assert.equal(result.body.results[0].saved,true);assert.equal(result.body.results[0].rows,1)
+  assert.equal(result.body.results[0].coverage.unavailable,1)
+  assert.equal(result.body.failed,1);assert.equal(result.body.unavailable,0);assert.equal(result.body.deferred,0)
+  assert.equal(result.closed,1);assert.equal(result.released,1)
+})
+
+test('verified event with no available public rows is deferred without a success receipt', async () => {
+  const result = await capture('unavailable-markets')
+  assert.equal(result.status,425);assert.equal(result.captures,1);assert.equal(result.successReceipts,0)
+  assert.equal(result.body.results[0].saved,false);assert.equal(result.body.results[0].rows,0)
+  assert.equal(result.body.results[0].reason,'NBA public markets are not available yet')
+  assert.equal(result.body.failed,0);assert.equal(result.body.unavailable,1);assert.equal(result.body.deferred,1)
+  assert.equal(result.closed,1);assert.equal(result.released,1)
+})
+
+test('real zero-count rows are captured while missing controls never create a baseline', async () => {
+  const zero = await capture('all-zero')
+  assert.equal(zero.status,200);assert.equal(zero.captures,1);assert.equal(zero.successReceipts,1)
+  const missing = await capture('empty-controls')
+  assert.equal(missing.status,502);assert.equal(missing.captures,0);assert.equal(missing.successReceipts,0)
+  assert.equal(missing.closed,1);assert.equal(missing.released,1)
+})
 
 test('empty NBA league shell recovers with one bounded reload and one capture', async () => {
   const result = await capture('recovered')

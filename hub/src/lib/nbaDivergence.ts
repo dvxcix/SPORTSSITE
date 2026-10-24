@@ -1,5 +1,5 @@
 import { nbaMovement, type PaintFrame } from './nbaMovement'
-import type { NbaPublicCapture } from './nbaPublic'
+import { nbaPublicRowAt, type NbaPublicCapture } from './nbaPublic'
 import type { PaintMarket } from './nbaPaint'
 import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 const markets: PaintMarket[] = ['points', 'threes', 'rebounds', 'assists']
@@ -18,12 +18,21 @@ export function nbaDivergences(frames: PaintFrame[], publicCaptures: NbaPublicCa
       if (!priceOpposed && !lineOpposed) return []
       const primary = priceOpposed ? a.value.priceChange! < 0 ? a : b : a.value.lineChange! > 0 ? a : b
       const other = primary === a ? b : a
-      const count = (market: PaintMarket) => publicSample?.rows.find(row => row.playerId === candidate.playerId && row.market === market)?.picks ?? null
-      const primaryPicks = count(primary.market), otherPicks = count(other.market)
+      const count = (market: PaintMarket) => {
+        const row=publicSample?.rows.find(row=>row.playerId===candidate.playerId&&row.market===market)
+        if(!row||!publicSample)return null
+        const capturedAt=nbaPublicRowAt(row,publicSample),at=Date.parse(capturedAt)
+        if(!Number.isFinite(at)||at<Date.parse(earliest.captured_at)||at>Date.parse(latest.captured_at))return null
+        return {picks:row.picks,capturedAt}
+      }
+      const primaryCount=count(primary.market),otherCount=count(other.market)
+      const primaryPicks=primaryCount?.picks??null,otherPicks=otherCount?.picks??null
+      const publicTimes=[primaryCount?.capturedAt,otherCount?.capturedAt].filter((at):at is string=>!!at).sort((a,b)=>Date.parse(a)-Date.parse(b))
       return [{ ...candidate, kind: priceOpposed ? 'price' as const : 'line' as const, primary: primary.market, other: other.market,
         primaryMovement: primary.value, otherMovement: other.value, primaryPicks, otherPicks,
         publicHeavierElsewhere: primaryPicks != null && otherPicks != null ? otherPicks > primaryPicks : null,
-        publicCapturedAt: publicSample?.capturedAt ?? null, firstAt: earliest.captured_at, latestAt: latest.captured_at }]
+        primaryPublicCapturedAt:primaryCount?.capturedAt??null,otherPublicCapturedAt:otherCount?.capturedAt??null,
+        publicCapturedAt: publicTimes[0]??null, firstAt: earliest.captured_at, latestAt: latest.captured_at }]
     }))
   }).sort((a, b) => Number(b.publicHeavierElsewhere) - Number(a.publicHeavierElsewhere) || Math.abs(b.primaryMovement.priceChange ?? b.primaryMovement.lineChange ?? 0) - Math.abs(a.primaryMovement.priceChange ?? a.primaryMovement.lineChange ?? 0))
 }

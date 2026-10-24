@@ -51,6 +51,27 @@ test('duplicate observations are safe; ambiguous or conflicting event identities
   assert.throws(() => identity.nbaVerifiedPublicEvent(game, [original, { ...original, start: '2026-10-22T23:00:00Z' }], now), /conflicting/)
 })
 
+test('observed Clippers spelling is equivalent only for LAC with all game guards retained',()=>{
+  const clippers={...game,visitor_team:{...game.visitor_team,abbreviation:'LAC',full_name:'LA Clippers'}}
+  const original=identity.nbaPublicEventIdentities(responseUrl,fixture.response)[0]
+  const event={...original,away:{short:'LAC',full:'Los Angeles Clippers'}}
+  assert.equal(identity.nbaPublicTeamLabel(clippers.visitor_team),'Los Angeles Clippers')
+  assert.equal(identity.nbaPublicTeamLabel({abbreviation:'BOS',full_name:'LA Clippers'}),'LA Clippers')
+  assert.equal(identity.nbaVerifiedPublicEvent(clippers,[event],now)?.id,event.id)
+  assert.equal(identity.nbaPublicEventPageMatches(clippers,event,fixture.url,'Los Angeles Clippers vs. Orlando Magic 6:00 PM',now),true)
+  for(const changed of [
+    {...event,away:{short:'LAL',full:'Los Angeles Clippers'}},
+    {...event,away:{short:'LAC',full:'Los Angeles Lakers'}},
+    {...event,away:{short:'LAC',full:'Clippers'}},
+    {...event,away:event.home,home:event.away},
+    {...event,start:'2026-10-22T23:00:00Z'},
+    {...event,start:'2026-10-21T23:30:00Z'},
+  ])assert.equal(identity.nbaVerifiedPublicEvent(clippers,[changed],now),null)
+  assert.equal(identity.nbaPublicEventPageMatches(clippers,event,'https://app.pikkit.com/event/wrong-event','Los Angeles Clippers vs. Orlando Magic',now),false)
+  assert.equal(identity.nbaVerifiedPublicEvent({...clippers,date:'2026-10-22'},[event],now),null)
+  assert.equal(identity.nbaVerifiedPublicEvent(clippers,[event],Date.parse(game.datetime!)),null)
+})
+
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}): Promise<T> {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -109,7 +130,7 @@ async function capture(scenario: string) {
         if (scenario === 'changed-metadata') emit(responseUrl, { event: { ...event, start_time: '2026-10-22T23:00:00Z' } })
         const skew = scenario === 'positive-skew' ? 30000 : scenario === 'negative-skew' ? -30000 : scenario === 'stale-payload' ? -60001 : scenario === 'future-payload' ? 60001 : 0
         const capturedAt = scenario === 'timestamp-at-tip' ? game.datetime : scenario === 'invalid-timestamp' ? 'invalid' : new Clock(clock + skew).toISOString()
-        return { complete: true, url: scenario === 'payload-url' ? 'https://app.pikkit.com/event/other-event' : activeUrl, capturedAt, props: { Points: { 'Paolo Banchero': 10 } } }
+        return { complete: true, marketStates: [{label:'Points',value:'points',status:'captured',rows:1,observedAt:capturedAt}], url: scenario === 'payload-url' ? 'https://app.pikkit.com/event/other-event' : activeUrl, capturedAt, props: { Points: { 'Paolo Banchero': 10 } } }
       }
       if (diagnosticArg) return { bodyLength: fixture.text.length, signIn: false, awayTeamMentioned: true, selectCount: 1, eventCount: 0 }
       return activeText
@@ -123,7 +144,7 @@ async function capture(scenario: string) {
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) },
     '@/lib/browserbase': { openPikkitSession: async () => browser }, '@/lib/scrapers/gameMatch': { findAndClickPikkitGame: async () => { finds++; if (scenario !== 'league-only') openEvent(); return true } },
     '@/lib/scrapers/pikkitLeagueDate': { observePikkitLeagueDates: () => ({ selectDate: async (date: string) => { assert.equal(date, game.date); return true }, dispose() {} }) },
-    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async (value: paint.PaintGame) => { captured++; capturedIds.push(value.id); return { markets: 1 } } },
+    '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async (value: paint.PaintGame) => { captured++; capturedIds.push(value.id); return { markets: 1, rows:1, available:true, complete:true, coverage:{observed:1,captured:1} } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2' }, '@/lib/nbaPublicEventIdentity': actualIdentity,
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
   }, { Date: Clock, process: { env: { PIKKIT_CONTEXT_ID: 'fixture-only' } }, setTimeout: (fn: () => void, ms: number) => setTimeout(() => { if (scenario === 'auth-event-metadata' && ms === 15000) current = 'https://app.pikkit.com/login'; fn() }, ms === 15000 ? 5 : 100), clearTimeout })

@@ -2,10 +2,10 @@ import { nbaPeriod, nbaPrice, PAINT_MARKETS, type PaintMarket, type PaintProp } 
 import { nbaAttachOpenings, type NbaQuoteOpeningRow } from './nbaOddsHistory'
 import { nbaOddsDelta } from './nbaOddsDelta'
 import { nbaMovementReference, type PaintFrame } from './nbaMovement'
-import { NBA_PUBLIC_VERSION, type NbaPublicCapture } from './nbaPublic'
+import { nbaPublicRowAt, nbaPublicVerifiedVersion, type NbaPublicCapture } from './nbaPublic'
 import type { NbaOddsMode } from './nbaOddsMode'
 
-export const NBA_MARKET_CONTEXT_VERSION = 'nba-market-context-v2'
+export const NBA_MARKET_CONTEXT_VERSION = 'nba-market-context-v3'
 export const NBA_MARKET_MAX_AGE_MS = 15 * 60_000
 export const NBA_PUBLIC_MAX_AGE_MS = 90 * 60_000
 export type NbaSignalQuote = { market: PaintMarket; type: PaintProp['market']['type']; line: number; side: 'over'; open: number; now: number; changePp: number; openedAt: string }
@@ -68,16 +68,26 @@ export function nbaBuildMarketContext(input: { gameId: number; mode?: NbaOddsMod
   const marketObservedAt = observedAt(frame.captured_at, input.marketVerifiedAt, cutoff)
   const marketBase = { ...empty, marketCapturedAt: frame.captured_at, marketObservedAt }
   if (cutoff - time(marketObservedAt) > NBA_MARKET_MAX_AGE_MS) return { ...marketBase, reason: 'Price observations are stale' }
-  if (!publicCapture || publicCapture.gameId !== gameId || publicCapture.normalizationVersion !== NBA_PUBLIC_VERSION || !inPhase(time(publicCapture.capturedAt)) || time(publicCapture.capturedAt) > time(marketObservedAt)) return { ...marketBase, reason: 'No verified public snapshot at the price cutoff' }
+  if (!publicCapture || publicCapture.gameId !== gameId || !nbaPublicVerifiedVersion(publicCapture.normalizationVersion) || !inPhase(time(publicCapture.capturedAt)) || time(publicCapture.capturedAt) > time(marketObservedAt)) return { ...marketBase, reason: 'No verified public snapshot at the price cutoff' }
   const publicObservedAt = observedAt(publicCapture.capturedAt, input.publicVerifiedAt, time(marketObservedAt))
   const base = { ...marketBase, publicCapturedAt: publicCapture.capturedAt, publicObservedAt }
   if (cutoff - time(publicObservedAt) > NBA_PUBLIC_MAX_AGE_MS) return { ...base, reason: 'Public observations are stale' }
   const counts = new Map<string, number | null>()
+  const observations:string[]=[],captureTimes:string[]=[]
   for (const row of publicCapture.rows) {
     if (!Number.isSafeInteger(row.picks) || row.picks < 0 || row.picks > 10_000_000) continue
+    const captured=nbaPublicRowAt(row,publicCapture)
+    // A successful sibling category cannot refresh a carried market observation.
+    const observed=observedAt(captured,row.capturedAt?undefined:input.publicVerifiedAt,time(marketObservedAt))
+    if(!nbaPublicVerifiedVersion(row.normalizationVersion??publicCapture.normalizationVersion)||!inPhase(time(captured))||time(captured)>time(marketObservedAt)||cutoff-time(observed)>NBA_PUBLIC_MAX_AGE_MS)continue
     const key = `${row.playerId}:${row.market}`
     counts.set(key, counts.has(key) && counts.get(key) !== row.picks ? null : row.picks)
+    observations.push(observed)
+    captureTimes.push(captured)
   }
+  if(!observations.length)return {...base,reason:'No verified public markets at the price cutoff'}
+  base.publicObservedAt=observations.reduce((oldest,value)=>time(value)<time(oldest)?value:oldest)
+  base.publicCapturedAt=captureTimes.reduce((oldest,value)=>time(value)<time(oldest)?value:oldest)
   const candidates = nbaAttachOpenings(gameId, frame.props, [], openings.filter(opening => inPhase(time(opening.observed_at)))).props
   const unique = new Map<string, PaintProp | null>()
   for (const quote of candidates) {

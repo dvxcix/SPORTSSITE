@@ -118,9 +118,10 @@ test('NBA page gates render membership fallback before loading any research; gue
 })
 
 test('NBA member public activity omits provider URLs and internal capture metadata', async () => {
-  const snapshot = { gameId: 123, capturedAt: '2026-10-19T20:00:00Z', rows: [{ playerId: 1, market: 'points', picks: 42 }], markets: ['points'], sourceUrl: 'https://app.pikkit.com/event/private', rawPayload: 'private', unmatched: 9 }
+  const snapshot = { gameId: 123, capturedAt: '2026-10-19T20:00:00Z', rows: [{ playerId: 1, market: 'points', picks: 42 }], markets: ['points'], sourceUrl: 'https://app.pikkit.com/event/private', rawPayload: 'private', unmatched: 9, rawCategories: [{ label: 'private source label' }], coverage: { observed: 1, unmatched: 9, unsupported: 1 } }
   const query: any = { select: () => query, eq: () => query, lte: () => query, gte: () => query, order: () => query, limit: () => query, abortSignal: async () => ({ data: [{ snapshot, captured_at: snapshot.capturedAt }], error: null }) }
   const data = await compiled('../src/lib/nbaPublicData.ts', {
+    './nbaPublicHistory': await import('../src/lib/nbaPublicHistory.ts'),
     './nbaPaintData': { getPaintGame: async () => ({id:123,datetime:'2026-10-20T23:00:00Z',status:'Scheduled'}) },
     'server-only': {}, './supabase/admin': { createAdminClient: () => ({ from: () => query }) },
     './nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
@@ -133,6 +134,7 @@ test('NBA member public activity omits provider URLs and internal capture metada
   const response = await (api.GET as (request: unknown) => Promise<Response>)({ nextUrl: new URL('https://test?game=123') })
   const body = await response.json()
   assert.equal(response.status, 200)
-  assert.deepEqual(body.captures[0].snapshot.rows, snapshot.rows)
-  assert.doesNotMatch(JSON.stringify(body), /pikkit|sourceUrl|rawPayload|unmatched/i)
+  assert.deepEqual(body.captures[0].snapshot.rows, [{ ...snapshot.rows[0], capturedAt: '2026-10-19T20:00:00.000Z', previous: null, previousAt: null }])
+  assert.deepEqual(body.captures[0].snapshot.coverage, { observed: 1 })
+  assert.doesNotMatch(JSON.stringify(body), /pikkit|sourceUrl|rawPayload|rawCategories|private source label|unmatched|unsupported/i)
 })

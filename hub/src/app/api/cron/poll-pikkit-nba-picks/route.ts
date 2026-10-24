@@ -12,7 +12,7 @@ import {observePikkitLeagueDates} from '@/lib/scrapers/pikkitLeagueDate'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
 import {NBA_PUBLIC_VERSION} from '@/lib/nbaPublic'
-import {nbaPublicResponseKind,nbaPublicEventIdentities,nbaVerifiedPublicEvent,nbaPublicEventUrl,nbaPublicEventPageMatches,type NbaPublicEventIdentity} from '@/lib/nbaPublicEventIdentity'
+import {nbaPublicResponseKind,nbaPublicEventIdentities,nbaVerifiedPublicEvent,nbaPublicEventUrl,nbaPublicEventPageMatches,nbaPublicTeamLabel,type NbaPublicEventIdentity} from '@/lib/nbaPublicEventIdentity'
 import {nbaSharedCache} from '@/lib/nbaSharedCache'
 import type {Response as BrowserResponse,Request as BrowserRequest} from 'playwright-core'
 export const maxDuration=300
@@ -71,7 +71,7 @@ async function run(request:Request){
   if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
   const lease=await acquirePikkitBrowserLease()
   if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length},{status:425})
-  const results:{game:number;ok:boolean;reason?:string;markets?:number;diagnostic?:unknown;emptyShellReloaded?:boolean}[]=[]
+  const results:{game:number;ok:boolean;reason?:string;markets?:number;rows?:number;saved?:boolean;coverage?:Record<string,number>;diagnostic?:unknown;emptyShellReloaded?:boolean}[]=[]
   let timedOut=false,browserOpened=false,browserReleased=false,runError:string|null=null
   const cleanupIssues:string[]=[],remaining=()=>250000-(Date.now()-started)
   try{
@@ -83,6 +83,7 @@ async function run(request:Request){
     try{
       for(const game of due){
         if(remaining()<35000)break
+        const awaySourceName=nbaPublicTeamLabel(game.visitor_team),homeSourceName=nbaPublicTeamLabel(game.home_team)
         let captureExpired=false,emptyShellReloaded=false
         const gameStarted=Date.now(),gameBudget=Math.min(110000,remaining()-25000)
         const identities:NbaPublicEventIdentity[]=[],eventIdentities:NbaPublicEventIdentity[]=[],pending=new Set<Promise<void>>()
@@ -132,7 +133,7 @@ async function run(request:Request){
           const dateAvailable=await calendar.selectDate(game.date)
           requirePikkitPageSession(browser.page.url())
           if(!dateAvailable)throw new Error('NBA event is not listed')
-          await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
+          await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),awaySourceName,{timeout:15000}).catch(()=>undefined)
           requirePikkitPageSession(browser.page.url())
           const navigate=async()=>{
             await pendingMetadata()
@@ -143,7 +144,7 @@ async function run(request:Request){
             // after the saved login validated on the league page. Follow the
             // real card; the fresh event response below still binds exact ID,
             // teams, date and tipoff before anything can be imported.
-            return findAndClickPikkitGame(browser.page,game.visitor_team.full_name,game.home_team.full_name)
+            return findAndClickPikkitGame(browser.page,awaySourceName,homeSourceName)
           }
           let found=await navigate()
           if(!found){await browser.page.waitForTimeout(3000);found=await navigate()}
@@ -160,7 +161,7 @@ async function run(request:Request){
               await browser.page.reload({waitUntil:'domcontentloaded',timeout:20000})
               requirePikkitPageSession(browser.page.url())
               if(!await calendar.selectDate(game.date))throw new Error('NBA event is not listed')
-              await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),game.visitor_team.full_name,{timeout:15000}).catch(()=>undefined)
+              await browser.page.waitForFunction((team)=>document.body.innerText.includes(team),awaySourceName,{timeout:15000}).catch(()=>undefined)
               requirePikkitPageSession(browser.page.url())
               found=await navigate()
             }
@@ -193,8 +194,12 @@ async function run(request:Request){
           await propsTab.waitFor({state:'visible',timeout:15000}).catch(()=>{throw new Error('NBA Player Props tab is unavailable')})
           await propsTab.click({timeout:10000})
           await browser.page.waitForFunction(()=>Array.from(document.querySelectorAll('select')).some(s=>Array.from(s.options).filter(o=>/points?|rebounds?|assists?|three|steals?|blocks?/i.test(o.textContent??'')).length>=2),{},{timeout:10000}).catch(()=>undefined)
-          const payload=await browser.page.evaluate(runNbaPikkitScrape)
-          if(!payload.complete){console.info('[nba-public] incomplete-controls',{game:game.id,diagnostic:payload.diagnostic??null});throw new Error('NBA public market capture was incomplete')}
+          const extractionBudget=Math.max(0,Math.min(80000,gameBudget-(Date.now()-gameStarted)-15000))
+          const payload=await browser.page.evaluate(runNbaPikkitScrape,{maxDurationMs:extractionBudget})
+          // A failed category must not discard independently verified siblings.
+          // Every category and its observation time is retained by the importer;
+          // incomplete coverage never earns the 30-minute success receipt.
+          if(!payload.marketStates.length)throw new Error('NBA public market controls could not be verified')
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
           const canonicalGame=await getNbaOddsGame(game)
           await pendingMetadata()
@@ -206,15 +211,18 @@ async function run(request:Request){
           // Browser and server clocks may differ slightly. Keep the existing
           // 60-second tolerance, but a capture timestamp may never cross tipoff.
           if(!currentIdentity||currentIdentity.id!==identity.id||payload.url!==nbaPublicEventUrl(identity)||!Number.isFinite(capturedAt)||capturedAt<gameStarted-60000||capturedAt>Date.now()+60000||capturedAt>=Date.parse(canonicalGame.datetime??canonicalGame.status)||!nbaPublicEventPageMatches(canonicalGame,identity,browser.page.url(),finalText))throw new Error('NBA event changed or started during capture')
-          const imported=await nbaSharedCache(successKey(game.id),1800,0,()=>importNbaPublic(canonicalGame,payload),25)
-          if(!captureExpired)results.push({game:game.id,ok:true,markets:imported.value.markets,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
+          const imported=await importNbaPublic(canonicalGame,payload)
+          if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
+          const complete=imported.complete===true&&imported.available===true
+          if(complete)await nbaSharedCache(successKey(game.id),1800,0,async()=>({game:game.id,markets:imported.markets,rows:imported.rows,observedAt:imported.observedAt,coverage:imported.coverage}),25)
+          if(!captureExpired)results.push({game:game.id,ok:complete,saved:imported.available,rows:imported.rows,markets:imported.markets,coverage:imported.coverage,...(!complete?{reason:imported.available===false?'NBA public markets are not available yet':'NBA public market observations are unresolved'}:{}),...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           })(),gameBudget,'NBA game capture deadline')
         }catch(error){
           // page.url() is local Playwright state: retain a safe path even when
           // navigation leaves the remote page unable to answer a DOM probe.
           const path=(()=>{try{return diagnosticPath(browser.page.url())}catch{return null}})()
           const base={path,...(path&&/^\/(?:login|signin|sign-in|join|auth|verify)$/.test(path)?{authenticationRequired:true}:{})}
-          const diagnostic=error instanceof NbaCaptureDeadline?{...base,deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{...base,authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body?.innerText??'';return {bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),awayTeamMentioned:text.toLowerCase().includes(away.toLowerCase()),selectCount:document.querySelectorAll('select').length,eventCount:document.querySelectorAll('a[href*="/event/"]').length}},game.visitor_team.full_name),4000,'NBA capture diagnostic deadline').then(counts=>({...base,...counts})).catch(probeError=>({...base,diagnosticError:diagnosticError(probeError)}))
+          const diagnostic=error instanceof NbaCaptureDeadline?{...base,deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{...base,authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body?.innerText??'';return {bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),awayTeamMentioned:text.toLowerCase().includes(away.toLowerCase()),selectCount:document.querySelectorAll('select').length,eventCount:document.querySelectorAll('a[href*="/event/"]').length}},awaySourceName),4000,'NBA capture diagnostic deadline').then(counts=>({...base,...counts})).catch(probeError=>({...base,diagnosticError:diagnosticError(probeError)}))
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
@@ -228,8 +236,9 @@ async function run(request:Request){
     if(!browserOpened||!browserReleased)cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
     else await bounded(lease.release(),10000,'NBA browser lease release deadline').then(released=>{if(released===false)cleanupIssues.push('Shared browser lease release could not be confirmed; automatic lease expiry remains enabled')}).catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
   }
-  const unavailable=results.filter(result=>!result.ok&&result.reason==='NBA event is not listed').length
-  const failed=results.filter(result=>!result.ok&&result.reason!=='NBA event is not listed').length,deferred=due.length-results.length+unavailable
+  const unavailableReasons=new Set(['NBA event is not listed','NBA public markets are not available yet'])
+  const unavailable=results.filter(result=>!result.ok&&unavailableReasons.has(result.reason??'')).length
+  const failed=results.filter(result=>!result.ok&&!unavailableReasons.has(result.reason??'')).length,deferred=due.length-results.length+unavailable
   return NextResponse.json({games:upcoming.length,due:due.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
 }
 export const GET=withPipelineHealth('poll-pikkit-nba-picks',run,{allowSecondarySecret:true})

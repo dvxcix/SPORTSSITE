@@ -1,10 +1,18 @@
-import { nbaName, type PaintGame } from './nbaPaint'
+import { nbaName, type PaintGame, type PaintTeam } from './nbaPaint'
 import { nbaGameStart, nbaPregameOpen } from './nbaOddsMode'
 
 export type NbaPublicEventIdentity = { id: string; start: string; away: { full: string; short: string }; home: { full: string; short: string } }
 type Game = Pick<PaintGame, 'datetime' | 'status' | 'status_state' | 'period' | 'date' | 'visitor_team' | 'home_team'>
 const object = (value: unknown): Record<string, unknown> | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 const eventId = /^[a-z0-9-]{1,80}$/
+
+/** Observed source spelling for this one NBA team; all other identities stay exact. */
+export function nbaPublicTeamLabel(team:Pick<PaintTeam,'abbreviation'|'full_name'>){
+  return team.abbreviation==='LAC'&&['laclippers','losangelesclippers'].includes(nbaName(team.full_name))?'Los Angeles Clippers':team.full_name
+}
+function teamMatches(team:Pick<PaintTeam,'abbreviation'|'full_name'>,observed:{full:string;short:string}){
+  return observed.short===team.abbreviation&&nbaName(nbaPublicTeamLabel(team))===nbaName(nbaPublicTeamLabel({abbreviation:observed.short,full_name:observed.full}))
+}
 
 /** Only the observed NBA listing/event response origins can supply identity. */
 export function nbaPublicResponseKind(value: string): 'listing' | 'event' | null {
@@ -43,8 +51,7 @@ function matches(game: Game, event: NbaPublicEventIdentity, now: number) {
   const start = nbaGameStart(game)
   return start !== null && nbaPregameOpen(game, now) && Date.parse(event.start) === start
     && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(start)) === game.date
-    && event.away.short === game.visitor_team.abbreviation && event.home.short === game.home_team.abbreviation
-    && nbaName(event.away.full) === nbaName(game.visitor_team.full_name) && nbaName(event.home.full) === nbaName(game.home_team.full_name)
+    && teamMatches(game.visitor_team,event.away)&&teamMatches(game.home_team,event.home)
 }
 
 export function nbaVerifiedPublicEvent(game: Game, events: NbaPublicEventIdentity[], now = Date.now()): NbaPublicEventIdentity | null {

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const match = await getPaintGame(Number(game)), tip = nbaGameStart(match)
     const phaseKey = tip == null ? 'unverified' : `${tip}:${Date.now() >= tip ? 'closed' : 'open'}`
-    const cached = await nbaSharedCache(`divergence:v7:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
+    const cached = await nbaSharedCache(`divergence:v8:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
       const admin = createAdminClient()
       const [allFrames, openings] = await Promise.all([
         getNbaAllMarketFrames(Number(game), mode, 'edges'),
@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
       const { data, error } = await publicQuery.order('captured_at', { ascending: false }).limit(1)
       // Public-count availability must not suppress independently verified prices.
       const snapshots = (error ? [] : data ?? []).map(row => row.snapshot as NbaPublicCapture)
-      return { rows: nbaDivergences(frames, snapshots, openings),milestones:nbaMilestoneSignals(frames,openings,Number(game)), captures: frames.length, publicCapturedAt: snapshots[0]?.capturedAt ?? null, latestAt }
+      const rows=nbaDivergences(frames,snapshots,openings)
+      const publicTimes=rows.flatMap(row=>row.publicCapturedAt?[row.publicCapturedAt]:[]).sort((a,b)=>Date.parse(a)-Date.parse(b))
+      return { rows,milestones:nbaMilestoneSignals(frames,openings,Number(game)), captures: frames.length, publicCapturedAt: publicTimes[0]??null, latestAt }
     })
     return NextResponse.json({ ...cached.value, mode, fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Cross-market research could not refresh' }, { status: 503 }) }
