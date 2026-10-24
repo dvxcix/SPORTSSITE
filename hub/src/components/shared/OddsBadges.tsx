@@ -1,19 +1,20 @@
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { BookLogo } from '@/components/BookLogo'
+import { publicCountDeltaText, publicCountText, type MlbPublicMovement } from '@/lib/mlbPublicMovement'
 
 export const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 
 // Small gold "📊 N picks" tag for a community Pikkit pick count — shared by
 // Batter Cost and The Public so both stay in sync on how a pick count reads,
 // rather than two copies drifting apart over time.
-export function PickBadge({ picks, label }: { picks: number | null; label: string }) {
+export function PickBadge({ picks, label, movement, compact = false }: { picks: number | null; label: string; movement?: MlbPublicMovement | null; compact?: boolean }) {
   if (picks == null) return null
+  const delta = movement?.delta ?? null
   return (
-    <Tooltip content={`${picks.toLocaleString()} community ${label} picks`}>
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 2, fontSize: 10, fontWeight: 800, color: 'var(--gold, #eab308)', cursor: 'help', lineHeight: 1 }}>
-        📊{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
-      </div>
-    </Tooltip>
+    <div aria-label={`${picks.toLocaleString('en-US')} community ${label} picks; ${delta == null ? 'change unavailable' : `${delta > 0 ? '+' : ''}${delta} since previous capture`}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginTop: 2, fontSize: compact ? 8 : 10, fontWeight: 800, color: 'var(--gold, #eab308)', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>
+      <span>{compact ? 'P ' : '📊'}{publicCountText(picks)}</span>
+      <span style={{ color: delta == null || delta === 0 ? 'var(--text-3)' : delta > 0 ? 'var(--accent)' : '#f87171', whiteSpace: 'nowrap', fontFamily: compact ? 'ui-monospace, SFMono-Regular, Consolas, monospace' : undefined }}>{publicCountDeltaText(delta, compact)}</span>
+    </div>
   )
 }
 

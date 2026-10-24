@@ -33,6 +33,8 @@ import {
 } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import { fetchPikkitPublicPicks } from '@/lib/mlbPartyServer'
+import { getMlbPublicMovement } from '@/lib/mlbPublicCapture'
+import { attachMlbPublicMovement } from '@/lib/mlbPublicMovement'
 import { HR_MECHANICS_MODEL_VERSION, MECHANICS_WINDOWS, type GameMechanicsResult } from '@/lib/hrMechanics'
 import type { CompactMechanicsWindows } from '@/lib/hrMechanicsCache'
 
@@ -779,7 +781,10 @@ export async function GET(req: Request) {
     // strict shared reader never converts a database/auth failure into an
     // empty array, because zero picks is materially different from missing
     // picks and silently changes every downstream rank.
-    timed(reqId, 'pikkit', fetchPikkitPublicPicks(date, 300)),
+    timed(reqId, 'pikkit', Promise.all([
+      fetchPikkitPublicPicks(date, 300),
+      (isUltimate || featuredGameKey) ? getMlbPublicMovement(date).catch(() => ({ rows: [] })) : Promise.resolve({ rows: [] }),
+    ]).then(([rows, history]) => attachMlbPublicMovement(rows, history.rows, ultimateForGame))),
     // Below-Ultimate: still fetched whenever there's a featured game today
     // (near-always) so that one game's players get real data — the below-
     // Ultimate response gets POST-FILTERED down to just that game's players

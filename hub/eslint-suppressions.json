@@ -887,11 +887,6 @@
       "count": 4
     }
   },
-  "src/lib/scrapers/fanduelScraper.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
   "src/lib/scrapers/fanout.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1

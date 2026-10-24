@@ -54,7 +54,11 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
       body: JSON.stringify({ json: batch, gameDate, homeTeam, awayTeam, gameKey, isOpening: true }),
       signal: AbortSignal.timeout(45_000),
     })
-    return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+    const body = await res.json().catch(() => null)
+    const archived = body?.ok === true && Number.isSafeInteger(body.rawTabsArchived) && body.rawTabsArchived === batch.length
+      && Number.isSafeInteger(body.rawOutcomesArchived) && body.rawOutcomesArchived > 0
+    return { ok: res.ok && archived, status: res.ok && !archived ? 502 : res.status, body,
+      error: res.ok && !archived ? 'FanDuel archive confirmation missing' : undefined }
   }))
 
   const marketSummary: Record<string, number> = {}
@@ -74,7 +78,7 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
       rowsImported: results.reduce((sum, result) => sum + (result.body?.rowsImported ?? 0), 0),
       rawTabsArchived: results.reduce((sum, result) => sum + (result.body?.rawTabsArchived ?? 0), 0),
       rawOutcomesArchived: results.reduce((sum, result) => sum + (result.body?.rawOutcomesArchived ?? 0), 0),
-      errors: results.filter(result => !result.ok).map(result => result.body?.error ?? `HTTP ${result.status}`),
+      errors: results.filter(result => !result.ok).map(result => result.error ?? result.body?.error ?? `HTTP ${result.status}`),
     },
   }
 }
@@ -86,7 +90,7 @@ async function installExtractionRouting(bb: BBSession) {
   })
 }
 
-async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean, shared?: BBSession) {
+async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean, extractionDeadline: number, shared?: BBSession) {
   const bb = shared ?? await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, metadata: { book: 'fanduel', sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     if (!shared) await installExtractionRouting(bb)
@@ -107,8 +111,11 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on FD listing page' }
     await bb.page.waitForTimeout(2500)
 
-    const scrapes = await bb.page.evaluate(runFanduelScrape)
+    if (Date.now() >= extractionDeadline) return { gameKey: g.gameKey, error: 'FanDuel extraction deadline reached' }
+    const scrapes = await bb.page.evaluate(runFanduelScrape, { verifyTabs: true, maxDurationMs: extractionDeadline - Date.now() })
     if (!scrapes.length) return { gameKey: g.gameKey, error: 'no tabs scraped' }
+    const complete = scrapes.filter(scrape => scrape.tab_status === 'captured' && !scrape.incomplete && scrape.outcome_count > 0)
+    const incompleteTabs = scrapes.filter(scrape => !complete.includes(scrape)).map(scrape => ({ label: scrape.active_tab?.label, status: scrape.tab_status ?? 'unverified' }))
 
     // Labels only, no prices or member data. This makes a sportsbook copy or
     // tab-placement change diagnosable from production logs instead of
@@ -121,13 +128,16 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
     console.info('[scrape-fanduel] market discovery', {
       gameKey: g.gameKey,
       tabs: scrapes.map(scrape => scrape.active_tab?.label).filter(Boolean),
+      incompleteTabs,
       labels: discoveryLabels.slice(0, 100),
     })
 
-    if (dryRun) return { gameKey: g.gameKey, tabsScraped: scrapes.length, dryRun: true, scrapes }
+    const incomplete = incompleteTabs.length ? { error: 'FanDuel tab capture incomplete', incompleteTabs } : {}
+    if (dryRun) return { gameKey: g.gameKey, tabsScraped: complete.length, dryRun: true, scrapes, ...incomplete }
+    if (!complete.length) return { gameKey: g.gameKey, tabsScraped: 0, ...incomplete, error: 'No verified FanDuel tabs captured' }
 
-    const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
-    return { gameKey: g.gameKey, tabsScraped: scrapes.length, imported }
+    const imported = await postImport(complete, date, g.homeTeam, g.awayTeam, g.gameKey)
+    return { gameKey: g.gameKey, tabsScraped: complete.length, imported, ...incomplete, ...(!imported.ok ? { error: 'FanDuel import incomplete' } : {}) }
   } catch {
     return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
@@ -150,14 +160,14 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 // immediate second pass was the direct cause of the 300-second hard timeouts.
 // dispatch-scrapes already owns the bounded delayed retry for lineup-triggered
 // captures, while scheduled sweeps naturally retry on their next pass.
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean, shared?: BBSession) {
-  const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun, shared)
-  if (dryRun || 'error' in first) return first
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean, extractionDeadline: number, shared?: BBSession) {
+  const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun, extractionDeadline, shared)
+  if (dryRun || 'error' in first || !('imported' in first)) return first
   const missing = missingCoreMarkets(first.imported?.body?.marketSummary ?? {})
   return missing.length ? { ...first, stillMissing: missing } : first
 }
 
-async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean) {
+async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean, extractionDeadline: number) {
   const bb = await openSession({
     proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN,
     metadata: { book: 'fanduel', sport: 'mlb', mode: 'batch', gameCount: games.length, gamePks: games.map(game => game.gamePk).join(',') },
@@ -165,7 +175,7 @@ async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean) {
   try {
     const pages = await Promise.all(games.map((_, index) => index === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()))
     await Promise.all(pages.map(page => installExtractionRouting({ ...bb, page })))
-    const results = await Promise.all(games.map((game, index) => scrapeOneGame(game, date, legIndexFor(game), dryRun, { ...bb, page: pages[index] })))
+    const results = await Promise.all(games.map((game, index) => scrapeOneGame(game, date, legIndexFor(game), dryRun, extractionDeadline, { ...bb, page: pages[index] })))
     await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
     return results
   } finally {
@@ -174,6 +184,9 @@ async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean) {
 }
 
 async function run(req: Request) {
+  // The existing 300s route/browser limit includes navigation, extraction,
+  // the 45s import request, and explicit browser release.
+  const extractionDeadline = Date.now() + 240_000
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
@@ -241,7 +254,8 @@ async function run(req: Request) {
     const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 2))
     const selected = effectiveGames.filter(game => requested.has(game.gamePk))
     if (!selected.length) return NextResponse.json({ error: 'No requested pregame games found' }, { status: 404 })
-    return NextResponse.json({ date, games: selected.length, results: await scrapeBatch(selected, date, dryRun) })
+    const results = await scrapeBatch(selected, date, dryRun, extractionDeadline)
+    return NextResponse.json({ date, games: selected.length, results }, { status: results.some(result => 'error' in result) ? 502 : 200 })
   }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
@@ -253,13 +267,13 @@ async function run(req: Request) {
     if (!effectiveGames.includes(g)) {
       return NextResponse.json({ date, gamePk, skipped: 'ambiguous team pair also plays today — see route.ts comment' })
     }
-    const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
-    return NextResponse.json({ date, gamePk, result })
+    const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun, extractionDeadline)
+    return NextResponse.json({ date, gamePk, result }, { status: 'error' in result ? 502 : 200 })
   }
 
   if (!effectiveGames.length) return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results: [] })
   const batches: TodayGame[][] = []
   for (let index = 0; index < effectiveGames.length; index += 2) batches.push(effectiveGames.slice(index, index + 2))
-  const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, dryRun)))).flat()
-  return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results })
+  const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, dryRun, extractionDeadline)))).flat()
+  return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results }, { status: results.some(result => 'error' in result) ? 502 : 200 })
 }

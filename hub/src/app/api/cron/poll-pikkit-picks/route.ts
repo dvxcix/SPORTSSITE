@@ -10,40 +10,13 @@ import {
 } from '@/lib/scrapers/pikkitAuth'
 import { pikkitCaptureDecision } from '@/lib/pikkitCaptureSchedule'
 import { summarizePikkitRows, type PikkitCoverage } from '@/lib/pikkitCoverage'
+import { getMlbPublicReceipts } from '@/lib/mlbPublicCapture'
 
 export const revalidate = 0
 export const maxDuration = 280
 
 const SCRAPE_TIMEOUT_MS = 260_000
-const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
-
 type CaptureState = PikkitCoverage & { capturedAt: number | null }
-
-async function latestCapture(gameKey: string, date: string): Promise<CaptureState> {
-  const key = process.env.MLB_PARTY_SERVICE_ROLE_KEY
-  if (!key) throw new Error('MLB_PARTY_SERVICE_ROLE_KEY is not configured')
-  const query = new URLSearchParams({
-    select: 'updated_at,prop_type,player_name', game_date: `eq.${date}`, game_key: `eq.${gameKey}`,
-    order: 'updated_at.desc', limit: '1000',
-  })
-  const response = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?${query}`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
-  })
-  // A freshness-read outage must not look like an empty history; that would
-  // launch a paid browser on every cron tick until first pitch.
-  if (!response.ok) throw new Error(`Pikkit freshness lookup failed (${response.status})`)
-  const rows = await response.json().catch(() => [])
-  const captured = rows?.[0]?.updated_at ? Date.parse(rows[0].updated_at) : NaN
-  if (!Number.isFinite(captured)) return { capturedAt: null, ...summarizePikkitRows([]) }
-  // Every row in one import is timestamped within milliseconds. Evaluate
-  // only the newest batch: stale markets from an older, fuller capture must
-  // not make today's latest partial scrape look complete.
-  const newestBatch = rows.filter((row: { updated_at?: string }) => {
-    const timestamp = row.updated_at ? Date.parse(row.updated_at) : NaN
-    return Number.isFinite(timestamp) && captured - timestamp <= 30_000
-  })
-  return { capturedAt: captured, ...summarizePikkitRows(newestBatch) }
-}
 async function scrapeBatch(gamePks: number[]) {
   try {
     const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${gamePks.join(',')}`, {
@@ -88,10 +61,17 @@ async function run(req: Request) {
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const games = await getTodaysMatchups(date)
   const pregame = games.filter(g => isPregame(g.status))
-  if (!pregame.length) return NextResponse.json({ date, games: games.length, pregame: 0, results: [] })
+  if (!pregame.length) return NextResponse.json({
+    ok: true, date, games: games.length, pregame: 0, due: 0, browserSessions: 0,
+    succeeded: 0, skipped: 0, failed: 0, rowsImported: 0,
+    reason: 'no-pregame-games', decisions: [], results: [],
+  })
 
   const force = new URL(req.url).searchParams.get('force') === '1'
-  const captured = await Promise.all(pregame.map(game => latestCapture(game.gameKey, date)))
+  // One primary read for the slate. A legacy current-row write without its
+  // archive commit must never mark the capture fresh or suppress a retry.
+  const receipts = await getMlbPublicReceipts(date)
+  const captured: CaptureState[] = pregame.map(game => receipts.get(game.gameKey) ?? { capturedAt: null, ...summarizePikkitRows([]) })
   const decisions = pregame.map((game, index) => {
     const lineupsConfirmed = game.homeLineupConfirmed && game.awayLineupConfirmed
     const capture = captured[index]
@@ -111,6 +91,7 @@ async function run(req: Request) {
     return NextResponse.json({
       ok: true, date, games: games.length, pregame: pregame.length, due: 0,
       browserSessions: 0,
+      succeeded: 0, skipped: 0, failed: 0, rowsImported: 0, reason: 'no-captures-due',
       decisions: decisions.map(({ game, decision, capture }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision, capture })),
       results: [],
     })

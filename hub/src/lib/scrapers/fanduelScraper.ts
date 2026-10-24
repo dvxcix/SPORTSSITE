@@ -1,13 +1,22 @@
 // Faithful port of the user's own FDALLSCRAPE.txt bookmarklet, run via
 // Playwright's page.evaluate() instead of pasted into DevTools by hand.
-// Every selector/timing constant is unchanged from the original — this was
-// reverse-engineered by hand against FanDuel's real DOM, so don't "clean up"
-// the logic here without testing against a live page first. Dropped only
-// the on-page debug overlay and the auto-download-a-.json-file side effect,
-// neither of which make sense running headless.
-export async function runFanduelScrape(options: { maxDurationMs?: number } | void = undefined): Promise<any[]> {
+// Preserve the original market parsing and section expansion. MLB additionally
+// verifies tab navigation: the SPA can replace tab nodes after each selection.
+export type FanduelTabCapture = {
+  sportsbook: string
+  scraped_at: string
+  event: { title: string; slug: string | null; event_id: string | null; url: string }
+  active_tab: { label: string }
+  section_count: number
+  outcome_count: number
+  sections: Record<string, { selection: string | null; market_hint: string | null; parts: string[]; odds: string; format: string; aria_label: string }[]>
+  tab_status?: string
+  incomplete?: boolean
+  available_tabs?: string[]
+}
+export async function runFanduelScrape(options: { maxDurationMs?: number; verifyTabs?: boolean } | void = undefined): Promise<FanduelTabCapture[]> {
   const deadline = options?.maxDurationMs ? Date.now() + options.maxDurationMs : Infinity
-  const SLEEP = (ms: number) => new Promise(r => setTimeout(r, ms))
+  const SLEEP = (ms: number) => new Promise(r => setTimeout(r, options?.verifyTabs ? Math.max(0, Math.min(ms, deadline - Date.now())) : ms))
   const QSA = (sel: string, root: ParentNode = document) => [...root.querySelectorAll(sel)]
 
   const WAIT_AFTER_EXPAND = 200
@@ -48,6 +57,7 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
     const tabs: { el: Element; index: number; total: number; label: string }[] = []
     for (const el of QSA('div[aria-label], [role="tab"][aria-label], [role="button"][aria-label]')) {
       if (el.tagName === 'A') continue
+      if (options?.verifyTabs && !visible(el)) continue
       const lab = el.getAttribute('aria-label') || ''
       const m = lab.match(/^Tab (\d+) of (\d+):\s*(.+)/)
       if (!m || seen.has(m[3])) continue
@@ -57,11 +67,40 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
     return tabs.sort((a, b) => a.index - b.index)
   }
 
+  function visible(el: Element) {
+    if (el.closest('[hidden], [aria-hidden="true"]')) return false
+    let current: Element | null = el
+    while (current) {
+      const style = getComputedStyle(current)
+      if (style.display === 'none' || style.visibility === 'hidden') return false
+      current = current.parentElement
+    }
+    return true
+  }
+
+  function contentRoot(label: string): ParentNode | null {
+    if (!options?.verifyTabs) return document
+    const tab = getAllTabDivs().find(item => item.label === label && item.el.getAttribute('aria-selected') === 'true')?.el
+    if (!tab) return null
+    const panelId = tab.getAttribute('aria-controls')
+    if (panelId) {
+      const panel = document.getElementById(panelId)
+      return panel && visible(panel) ? panel : null
+    }
+    const panels = QSA('[role="tabpanel"]').filter(visible)
+    if (panels.length) return panels.length === 1 ? panels[0] : null
+    // The observed MLB event layout has selected role=button tabs without
+    // aria-controls/tabpanel; its event content is inside the sole MAIN.
+    const mains = QSA('main').filter(visible)
+    return mains.length === 1 ? mains[0] : null
+  }
+
   // The archive is intentionally market-agnostic. Visit every event tab,
   // including Plate Appearance, Player Combos, and Pitcher Props, so a new
   // ratio can be built later without changing and rerunning the scraper.
-  function getCollapsedSections() {
-    return QSA('[role="button"][aria-expanded="false"]').filter(el => {
+  function getCollapsedSections(root: ParentNode = document) {
+    return QSA('[role="button"][aria-expanded="false"]', root).filter(el => {
+      if (options?.verifyTabs && !visible(el)) return false
       const lab = el.getAttribute('aria-label')
       if (!lab || parseAriaLabel(lab)) return false
       if (/^Tab \d+ of \d+:/.test(lab)) return false
@@ -69,10 +108,12 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
       return true
     })
   }
-  async function expandAllSections() {
+  async function expandAllSections(label: string) {
     for (let pass = 0; pass < MAX_EXPAND_PASSES; pass++) {
       if (Date.now() >= deadline) break
-      const collapsed = getCollapsedSections()
+      const root = contentRoot(label)
+      if (!root) break
+      const collapsed = getCollapsedSections(root)
       if (!collapsed.length) break
       for (const el of collapsed) {
         if (Date.now() >= deadline) break
@@ -84,10 +125,13 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
       }
     }
   }
-  async function clickAllShowMore() {
+  async function clickAllShowMore(label: string) {
     for (let round = 0; round < MAX_SHOW_MORE_ROUNDS; round++) {
       if (Date.now() >= deadline) break
-      const btns = QSA('button,[role="button"]').filter(b => {
+      const root = contentRoot(label)
+      if (!root) break
+      const btns = QSA('button,[role="button"]', root).filter(b => {
+        if (options?.verifyTabs && !visible(b)) return false
         const t = (b.textContent || '').trim().toLowerCase()
         return t === 'show more' || t === 'see more' || t === 'see all' || t === 'show all'
           || t.startsWith('show more') || t.startsWith('see more')
@@ -104,10 +148,11 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
     }
   }
 
-  function collectBetButtons() {
+  function collectBetButtons(root: ParentNode = document) {
     const seen = new Set<string>()
     const out: { aria_label: string; odds: string; parts: string[]; format: string; section: string | null }[] = []
-    for (const el of QSA('[role="button"][aria-selected]')) {
+    for (const el of QSA('[role="button"][aria-selected]', root)) {
+      if (options?.verifyTabs && !visible(el)) continue
       const lab = el.getAttribute('aria-label')
       if (!lab || seen.has(lab)) continue
       const parsed = parseAriaLabel(lab)
@@ -138,12 +183,17 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
   }
 
   async function scrapeCurrentTab(label: string) {
-    await expandAllSections()
-    await clickAllShowMore()
-    await expandAllSections()
+    await expandAllSections(label)
+    await clickAllShowMore(label)
+    await expandAllSections(label)
     await SLEEP(300)
-    const outcomes = collectBetButtons()
-    const bySection: Record<string, any[]> = {}
+    return snapshotCurrentTab(label)
+  }
+
+  function snapshotCurrentTab(label: string) {
+    const root = contentRoot(label)
+    const outcomes = root ? collectBetButtons(root) : []
+    const bySection: FanduelTabCapture['sections'] = {}
     for (const o of outcomes) {
       const k = o.section || '(ungrouped)'
       const selectionParts = o.parts.slice(1)
@@ -164,7 +214,85 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
     }
   }
 
-  const allScrapes: any[] = []
+  function selectedTab(label: string) {
+    const selected = getAllTabDivs().filter(tab => tab.el.getAttribute('aria-selected') === 'true')
+    return selected.length === 1 && selected[0].label === label
+  }
+
+  function contentFingerprint(root: ParentNode) {
+    return JSON.stringify([collectBetButtons(root).map(row => row.aria_label), getCollapsedSections(root).map(el => el.getAttribute('aria-label'))])
+  }
+
+  // Check readiness twice with the selected tab still mounted. A spinner or
+  // a blank container is not evidence that a market has been withdrawn.
+  async function waitForTabContent(label: string, until: number, priorTabContent?: string) {
+    let prior = ''
+    while (Date.now() < Math.min(until, deadline)) {
+      if (!selectedTab(label)) return false
+      const root = contentRoot(label)
+      if (!root) return false
+      const busy = QSA('[aria-busy="true"], [role="progressbar"]', root).some(visible)
+        || (root as Element).getAttribute?.('aria-busy') === 'true'
+      const outcomes = collectBetButtons(root), sections = getCollapsedSections(root)
+      const fingerprint = contentFingerprint(root)
+      const hasContent = (outcomes.length > 0 || sections.length > 0) && fingerprint !== priorTabContent
+      if (!busy && hasContent && fingerprint === prior) return true
+      prior = !busy && hasContent ? fingerprint : ''
+      await SLEEP(250)
+    }
+    return false
+  }
+
+  if (options?.verifyTabs) {
+    const labels = getAllTabDivs().map(tab => tab.label)
+    const initial = getAllTabDivs().find(tab => tab.el.getAttribute('aria-selected') === 'true')?.label
+    const ordered = initial ? [initial, ...labels.filter(label => label !== initial)] : labels
+    const results: FanduelTabCapture[] = []
+    for (const label of ordered) {
+      let status = 'selection-unverified'
+      let captured: Awaited<ReturnType<typeof scrapeCurrentTab>> | null = null
+      let priorTabContent: string | undefined
+      // Retry at most once, reacquiring the element even when the first click
+      // detached it. Never reuse the original event's tab Element references.
+      for (let attempt = 0; attempt < 2 && Date.now() < deadline; attempt++) {
+        if (!selectedTab(label) || attempt > 0) {
+          const current = getAllTabDivs().find(tab => tab.label === label)?.el
+          if (!current) break
+          if (!selectedTab(label) && !current.getAttribute('aria-controls')) {
+            const previous = getAllTabDivs().find(tab => tab.el.getAttribute('aria-selected') === 'true')
+            const previousRoot = previous && contentRoot(previous.label)
+            if (previousRoot) priorTabContent = contentFingerprint(previousRoot)
+          }
+          try {
+            ;(current as HTMLElement).scrollIntoView({ block: 'center' })
+            ;(current as HTMLElement).click()
+          } catch { continue }
+          await SLEEP(WAIT_AFTER_TAB_CLICK)
+        }
+        if (!selectedTab(label)) continue
+        status = 'content-unavailable'
+        if (!await waitForTabContent(label, Date.now() + 4000, priorTabContent)) continue
+        const scrape = await scrapeCurrentTab(label)
+        if (Date.now() >= deadline) break
+        if (!selectedTab(label)) { status = 'selection-unverified'; continue }
+        if (scrape.outcome_count && await waitForTabContent(label, Date.now() + 2000, priorTabContent)) {
+          // Capture again after the final readiness check, so delayed content
+          // updates are not mislabeled with the prior tab's observations.
+          captured = snapshotCurrentTab(label)
+          if (Date.now() < deadline && selectedTab(label) && captured.outcome_count) { status = 'captured'; break }
+          captured = null
+        }
+      }
+      if (Date.now() >= deadline) { status = 'deadline'; captured = null }
+      results.push({
+        ...(captured ?? { sportsbook: 'FanDuel', scraped_at: new Date().toISOString(), event: eventHeader(), active_tab: { label }, section_count: 0, outcome_count: 0, sections: {} }),
+        tab_status: status, incomplete: status !== 'captured', available_tabs: labels,
+      })
+    }
+    return results
+  }
+
+  const allScrapes: FanduelTabCapture[] = []
   const allTabs = getAllTabDivs()
   const wanted = allTabs
 

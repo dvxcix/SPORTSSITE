@@ -12,6 +12,7 @@ import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 import { PageState } from '@/components/layout/PageState'
+import type { MlbPublicMovement } from '@/lib/mlbPublicMovement'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
@@ -82,7 +83,7 @@ type FlatBatter = {
   // are ever populated) — same source/matching Dugout's own pk*/pick-count
   // badges use, just flattened across every game instead of scoped to one
   // active game tab.
-  picks: Record<string, number | null>
+  picks: Record<string, { picks: number | null; movement: MlbPublicMovement | null }>
   // "⚡PWR" — Dugout's own "Power Vehicle" gate (ported from mlb-party
   // Signals), duplicated here rather than imported so this page can never
   // affect Dugout's behavior. See rawRatio/is_pwr below for the math.
@@ -307,13 +308,13 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
     return m
   }, [data?.communityPicks])
 
-  const picksFor = useCallback((nameNorm: string, gameKey: string): Record<string, number | null> => {
+  const picksFor = useCallback((nameNorm: string, gameKey: string): FlatBatter['picks'] => {
     const entry = resolveNameEntry(communityPicksMap, nameNorm)
-    const out: Record<string, number | null> = {}
+    const out: FlatBatter['picks'] = {}
     for (const [mktKey, prop] of Object.entries(MARKET_TO_COMMUNITY_PROP)) {
       const byGame = entry?.[prop]
       const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
-      out[mktKey] = row?.picks ?? null
+      out[mktKey] = { picks: row?.picks ?? null, movement: row?.movement ?? null }
     }
     return out
   }, [communityPicksMap])
@@ -587,7 +588,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
                         </Tooltip>
                       )}
                       <BookBadges prices={b.rawProps?.[m.key]} books={booksFor(m.key)} />
-                      <PickBadge picks={b.picks[m.key]} label={m.label} />
+                      <PickBadge picks={b.picks[m.key]?.picks ?? null} movement={b.picks[m.key]?.movement} label={m.label} />
                     </td>
                   )
                 })}

@@ -1,4 +1,6 @@
 'use client'
+import { PickBadge } from '@/components/shared/OddsBadges'
+import type { MlbPublicMovement } from '@/lib/mlbPublicMovement'
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
@@ -1425,7 +1427,7 @@ function PlayerDrillDown({
 
 // ─── watchlist-able odds cell ─────────────────────────────────────────────────
 function OddsCell({
-  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount, dataColKey, dataColGroup,
+  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount, pickMovement, dataColKey, dataColGroup,
 }: {
   row: BatterRow
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
@@ -1454,6 +1456,7 @@ function OddsCell({
   // rendered as a small corner tag so a pick count only ever shows up next
   // to the specific stat it's actually for.
   pickCount?: number | null
+  pickMovement?: MlbPublicMovement | null
 }) {
   const wl = useWatchlist()
   const [busy, setBusy] = useState(false)
@@ -1468,11 +1471,7 @@ function OddsCell({
     return (
       <td style={style} data-col-key={dataColKey} data-col-group={dataColGroup}>
         —
-        <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
-            <span aria-hidden="true">P</span>{pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
-          </div>
-        </Tooltip>
+        <PickBadge picks={pickCount} movement={pickMovement} label={meta?.label ?? propKey} compact />
       </td>
     )
   }
@@ -1574,11 +1573,7 @@ function OddsCell({
         </small>
       )}
       {pickCount != null && (
-        <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
-            <span aria-hidden="true">P</span>{pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
-          </div>
-        </Tooltip>
+        <PickBadge picks={pickCount} movement={pickMovement} label={meta?.label ?? propKey} compact />
       )}
     </div>
   )
@@ -1962,9 +1957,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       {/* pk */}
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
         {row.pk?.picks != null ? (
-          <Tooltip content={`${row.pk.picks.toLocaleString()} community HR picks`} containerClassName="w-full h-full flex items-center justify-center">
-            <span style={{ cursor: 'help' }}>{row.pk.picks >= 1000 ? `${(row.pk.picks / 1000).toFixed(1)}k` : row.pk.picks}</span>
-          </Tooltip>
+          <PickBadge picks={row.pk.picks} movement={row.pk.movement} label="HR" compact />
         ) : '—'}
       </td>
 
@@ -2002,12 +1995,12 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="rbi" book="fanduel" odds={row.rbi_fd} openOdds={row.rbiFd_open} display={relatedDisplay(row.sa_div_rbi)}
         style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi', 'rbi_fd') }}
-        pickCount={row.pkRbi?.picks ?? null}
+        pickCount={row.pkRbi?.picks ?? null} pickMovement={row.pkRbi?.movement ?? null}
       />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={relatedDisplay(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi2', 'rbi2_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={relatedDisplay(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi3', 'rbi3_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hrr3" book="fanduel" odds={row.hrr_fd} openOdds={row.hrrFd_open} display={relatedDisplay(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_hrr', 'hrr_fd') }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} openOdds={row.tbFd_open} display={relatedDisplay(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb', 'tb_fd') }} pickCount={row.pkTb?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} openOdds={row.tbFd_open} display={relatedDisplay(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb', 'tb_fd') }} pickCount={row.pkTb?.picks ?? null} pickMovement={row.pkTb?.movement ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb3" book="fanduel" odds={row.tb3_fd} openOdds={row.tb3Fd_open} display={relatedDisplay(row.sa_div_tb3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb3', 'tb3_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={relatedDisplay(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb4', 'tb4_fd') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb5" book="fanduel" odds={row.tb5_fd} openOdds={row.tb5Fd_open} display={relatedDisplay(row.sa_div_tb5)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb5', 'tb5_fd') }} />
@@ -2025,7 +2018,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderLeft: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
         badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power markets align.' } : undefined}
-        pickCount={row.pkSingles?.picks ?? null}
+        pickCount={row.pkSingles?.picks ?? null} pickMovement={row.pkSingles?.movement ?? null}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="doubles" book="fanduel" odds={row.dbl_fd} openOdds={row.dblFd_open}
@@ -2033,7 +2026,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.dbl_fd, g('dbl_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b' } : {}),
         }}
-        pickCount={row.pkDoubles?.picks ?? null}
+        pickCount={row.pkDoubles?.picks ?? null} pickMovement={row.pkDoubles?.movement ?? null}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="triples" book="fanduel" odds={row.tri_fd} openOdds={row.triFd_open}
@@ -2041,14 +2034,14 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.tri_fd, g('tri_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderRight: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
-        pickCount={row.pkTriples?.picks ?? null}
+        pickCount={row.pkTriples?.picks ?? null} pickMovement={row.pkTriples?.movement ?? null}
       />
       {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
           ratios) with real BDL-sourced markets that were already flowing
           through buildPropMap but never shown. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} openOdds={row.sb_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} pickCount={row.pkStolenBases?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} openOdds={row.sb_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} pickCount={row.pkStolenBases?.picks ?? null} pickMovement={row.pkStolenBases?.movement ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases2" book="fanduel" odds={row.sb2_fd} openOdds={row.sb2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb2_fd, g('sb2_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} pickMovement={row.pkHits?.movement ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
       <td
         aria-label={`Hit read: ${row.hit_status === 'NO_READ' ? 'no read' : row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
@@ -2075,7 +2068,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           </span>
         </span>
       </td>
-      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} openOdds={row.runs_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} openOdds={row.runs_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} pickMovement={row.pkRuns?.movement ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="runs2" book="fanduel" odds={row.runs2_fd} openOdds={row.runs2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs2_fd, g('runs2_fd')) }} />
 
       <td style={SDIV_D} />

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeApiError } from '@/lib/safeApiError'
 import { isValidPikkitGameMetadata } from '@/lib/pikkitImportValidation'
+import { beginMlbPublicCapture } from '@/lib/mlbPublicCapture'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 // Was hardcoded here (and in api/dugout/data/route.ts) — a live service_role
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid game metadata' }, { status: 400 })
   }
 
-  let parsed: { url?: string; game?: string; props: Record<string, Record<string, number>> }
+  let parsed: { url?: string; game?: string; capturedAt?: string; props: Record<string, Record<string, number>> }
   try {
     parsed = typeof json === 'string' ? JSON.parse(json) : json
   } catch {
@@ -103,6 +104,9 @@ export async function POST(req: Request) {
   }
   if (!parsed?.props || typeof parsed.props !== 'object') {
     return NextResponse.json({ error: 'No "props" object found in the pasted JSON' }, { status: 400 })
+  }
+  if (typeof parsed.capturedAt !== 'string' || !Number.isFinite(Date.parse(parsed.capturedAt))) {
+    return NextResponse.json({ error: 'Capture timestamp missing or invalid' }, { status: 400 })
   }
 
   // pikkit_public_picks' primary key now includes game_key (widened via a
@@ -142,25 +146,50 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Parsed the JSON but found zero player picks inside it' }, { status: 400 })
   }
 
-  const res = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?on_conflict=player_name,game_date,market,game_key`, {
-    method: 'POST',
-    headers: mpH,
-    body: JSON.stringify(rows),
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) {
-    console.error('[admin-pikkit-import] database upsert failed', {
-      status: res.status,
-      gameKey: gameKey ?? null,
-      rows: rows.length,
-    })
-    return safeApiError('admin-pikkit-import', { status: res.status }, 'Import failed', 502)
+  // Reserve the exact official pregame before touching current totals. The
+  // primary receipt advances only after both the current write and history
+  // commit succeed; a failed archive therefore remains due for a real retry.
+  let capture: Awaited<ReturnType<typeof beginMlbPublicCapture>>
+  try {
+    capture = await beginMlbPublicCapture({ gameDate, gameKey, homeTeam, awayTeam, capturedAt: parsed.capturedAt ?? '' }, rows.map(row => ({ playerName: row.player_name, market: row.market, picks: row.picks })))
+  } catch {
+    return safeApiError('admin-pikkit-import', {}, 'Pregame capture could not be verified or reserved', 503)
   }
 
-  console.info('[admin-pikkit-import] imported picks', {
-    gameKey: gameKey ?? null,
-    rows: rows.length,
-    markets: Object.keys(marketSummary).length,
-  })
-  return NextResponse.json({ ok: true, rowsImported: rows.length, marketSummary, gameKey: gameKey ?? null })
+  let reservationSafeToRelease = true
+  try {
+    capture.assertWritable()
+    reservationSafeToRelease = false
+    const res = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?on_conflict=player_name,game_date,market,game_key`, {
+      method: 'POST',
+      headers: mpH,
+      body: JSON.stringify(rows),
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (!res.ok) {
+      reservationSafeToRelease = true
+      console.error('[admin-pikkit-import] database upsert failed', {
+        status: res.status,
+        gameKey: gameKey ?? null,
+        rows: rows.length,
+      })
+      return safeApiError('admin-pikkit-import', { status: res.status }, 'Import failed', 502)
+    }
+
+    const history = await capture.finish()
+    reservationSafeToRelease = true
+
+    console.info('[admin-pikkit-import] imported picks', {
+      gameKey: gameKey ?? null,
+      rows: rows.length,
+      markets: Object.keys(marketSummary).length,
+    })
+    return NextResponse.json({ ok: true, rowsImported: rows.length, marketSummary, gameKey: gameKey ?? null, history: { changed: history.changed, observedAt: history.observedAt } })
+  } catch {
+    return safeApiError('admin-pikkit-import', {}, 'Capture could not be saved completely', 502)
+  } finally {
+    // An aborted current-write or history request may still commit remotely.
+    // Keep its 120s safety lease until completion is confirmed or it expires.
+    if (reservationSafeToRelease) await capture.cancel().catch(() => console.error('[admin-pikkit-import] reservation cleanup failed'))
+  }
 }

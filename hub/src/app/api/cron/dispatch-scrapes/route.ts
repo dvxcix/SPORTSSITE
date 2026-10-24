@@ -8,7 +8,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
-export const maxDuration = 280
+export const maxDuration = 360
 export const GET = withPipelineHealth('dispatch-scrapes', run)
 
 // Runs every ~2 minutes (see vercel.json). Watches scrape_dispatch_queue —
@@ -40,12 +40,8 @@ export const GET = withPipelineHealth('dispatch-scrapes', run)
 // genuinely never gets an FHR market (or one already past its window)
 // doesn't loop forever.
 //
-// Some FanDuel tabs can silently miss even when the rest of the event is
-// healthy. scrape-fanduel performs one immediate retry only for core markets
-// that should exist on every complete event. This dispatcher adds a single
-// delayed retry for those core markets plus FHR, which may simply not have
-// been posted at the first lineup-triggered capture. Optional or discontinued
-// markets never trigger a full-event retry. See lib/scrapers/retryMarkets.ts.
+// A failed/partial capture or missing opening markets earns one delayed
+// sportsbook retry. It never repeats a completed public-count checkpoint.
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
@@ -79,46 +75,67 @@ async function run(req: Request) {
     ? fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${pikkitRows.map(row => row.game_pk).join(',')}`, {
         headers,
         signal: AbortSignal.timeout(260_000),
-      }).then(async response => ({ status: response.status, ok: response.ok, body: await response.json().catch(() => null) }))
+      }).then(async response => {
+        const body = await response.json().catch(() => null)
+        const captured = response.ok && body?.failed === 0 && Array.isArray(body.results) && body.results.length === pikkitRows.length
+          && body.results.every((result: { error?: string; partial?: boolean; imported?: { ok?: boolean } }) => !result.error && !result.partial && result.imported?.ok === true)
+        return { status: response.status, ok: captured, body }
+      })
       .catch(() => ({ status: 502, ok: false, body: null }))
     : Promise.resolve({ status: 200, ok: true, body: null })
 
-  const [results, pikkit] = await Promise.all([Promise.allSettled(
+  const [results, pikkit] = await Promise.all([Promise.all(
     toScrape.map(async row => {
-      const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
-        headers,
-        signal: AbortSignal.timeout(55_000),
-      })
-      const body = await res.json().catch(() => null)
-      // The same-request retry only checks markets that must exist on every
-      // healthy event. The delayed opening retry has one additional concern:
-      // FHR may not have been posted yet. Always derive this queue's decision
-      // from the FINAL capture so a surviving core-market miss cannot mask a
-      // simultaneously absent FHR market.
-      const stillMissing = missingOpeningMarkets(body?.result?.imported?.body?.marketSummary ?? {})
-      return { gamePk: row.game_pk, status: res.status, stillMissing, retryCount: row.retry_count }
+      try {
+        const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
+          headers,
+          // Outlive the existing 300s child route, while leaving time for
+          // queue updates and a response within this dispatcher's 360s cap.
+          signal: AbortSignal.timeout(330_000),
+        })
+        const body = await res.json().catch(() => null)
+        const skipped = res.ok && typeof body?.skipped === 'string'
+        const capture = body?.result
+        const ok = skipped || (res.ok && !capture?.error && capture?.imported?.ok === true)
+        const stillMissing = skipped ? [] : missingOpeningMarkets(capture?.imported?.body?.marketSummary ?? {})
+        return { gamePk: row.game_pk, status: res.status, ok, skipped, stillMissing, retryCount: row.retry_count,
+          ...(!ok ? { error: 'FanDuel capture failed or incomplete' } : {}) }
+      } catch {
+        return { gamePk: row.game_pk, status: 502, ok: false, skipped: false, stillMissing: [] as string[], retryCount: row.retry_count, error: 'FanDuel capture response unavailable' }
+      }
     })
   ), pikkitPromise])
 
-  const fulfilled = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : [])
-
-  const needsRetry = fulfilled.filter(r => r.status === 200 && r.retryCount < 1 && r.stillMissing.length > 0)
-  if (needsRetry.length) {
+  const retryCandidates = results.filter(r => !r.skipped && r.retryCount < 1 && (!r.ok || r.stillMissing.length > 0))
+  const retryQueued: { gamePk: number; missing: string[] }[] = []
+  const retryFailed: number[] = []
+  if (retryCandidates.length) {
+    // Extraction may take several minutes. Recheck eligibility before
+    // enqueueing; the next dispatch also checks again before any capture.
+    const latest = await getTodaysMatchups(date)
+    const pregameIds = new Set(latest.filter(game => isPregame(game.status)).map(game => game.gamePk))
     const retryReadyAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-    await Promise.all(needsRetry.map(r =>
-      admin.from('scrape_dispatch_queue')
+    await Promise.all(retryCandidates.filter(r => pregameIds.has(r.gamePk)).map(async r => {
+      const queued = await admin.from('scrape_dispatch_queue')
         .update({ dispatched_at: null, ready_at: retryReadyAt, retry_count: r.retryCount + 1 })
         .eq('game_pk', r.gamePk)
-    ))
+        .eq('retry_count', r.retryCount)
+        .eq('dispatched_at', nowIso)
+        .select('game_pk')
+      if (queued.error) retryFailed.push(r.gamePk)
+      else if (queued.data?.length) retryQueued.push({ gamePk: r.gamePk, missing: r.stillMissing })
+    }))
   }
 
+  const ok = pikkit.ok && results.every(result => result.ok && !result.stillMissing.length) && !retryFailed.length
   return NextResponse.json({
-    ok: true,
+    ok,
     dispatched: toScrape.length,
     skippedAlreadyLive: live.map(r => r.game_pk),
     gamePks: toScrape.map(r => r.game_pk),
-    retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: r.stillMissing })),
+    retryQueued,
+    retryFailed,
     pikkit: { ok: pikkit.ok, status: pikkit.status, games: pikkitRows.length },
-    results: results.map(r => r.status === 'fulfilled' ? r.value : { error: 'dispatch failed' }),
-  })
+    results,
+  }, { status: ok ? 200 : 502 })
 }

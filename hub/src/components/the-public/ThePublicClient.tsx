@@ -11,6 +11,7 @@ import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PageState } from '@/components/layout/PageState'
 import controls from '@/components/product/ResearchControls.module.css'
+import { compareMlbPublicRows, type MlbPublicMovement, type MlbPublicSort } from '@/lib/mlbPublicMovement'
 
 // Every book we actually store odds under (see BookLogo.tsx) — every
 // category shows whichever of these actually have a real price for that
@@ -157,7 +158,7 @@ type GameOption = { gameKey: string; awayAbbr: string; homeAbbr: string; gameDat
 type PublicRow = {
   mlb_id: number; name: string; team: string; position: string | null; bats: string | null
   gameKey: string; gamePk: string | null; gameDate: string | null
-  picks: number; prices: any; gameStatus: string; isVoid: boolean; outcome: any | null; hitLines: HitLine[]
+  picks: number; movement: MlbPublicMovement | null; prices: any; gameStatus: string; isVoid: boolean; outcome: any | null; hitLines: HitLine[]
 }
 
 // One cleared threshold's real odds — "2+ +150", "4+ +500", etc. Multiple
@@ -268,11 +269,16 @@ export function ThePublicClient({ date }: { date: string }) {
     return (CATEGORIES.some(c => c.key === v) ? v : 'hr') as CategoryKey
   })
   const [activeGame, setActiveGameState] = useState<string>(() => searchParams.get('game') ?? 'all')
+  const [sort, setSort] = useState<MlbPublicSort>(() => {
+    const value = searchParams.get('sort')
+    return value === 'increase' || value === 'decrease' ? value : 'picks'
+  })
 
-  const updateParams = useCallback((next: { cat?: CategoryKey; game?: string }) => {
+  const updateParams = useCallback((next: { cat?: CategoryKey; game?: string; sort?: MlbPublicSort }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (next.cat !== undefined) { if (next.cat === 'hr') params.delete('cat'); else params.set('cat', next.cat) }
     if (next.game !== undefined) { if (next.game === 'all') params.delete('game'); else params.set('game', next.game) }
+    if (next.sort !== undefined) { if (next.sort === 'picks') params.delete('sort'); else params.set('sort', next.sort) }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [pathname, router, searchParams])
 
@@ -356,12 +362,12 @@ export function ThePublicClient({ date }: { date: string }) {
           const byGame = entry?.[cat.communityProp]
           const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
           const picks: number | null = row?.picks ?? null
-          if (picks == null || picks <= 0) continue
+          if (picks == null || (picks <= 0 && !(row?.movement?.previous > 0))) continue
           const graded = (gameStatus === 'Live' || gameStatus === 'Final') && !isVoid
           const hitLines = graded ? computeHitLines(cat, p.props, outcome) : []
           out[cat.key].push({
             mlb_id: p.mlb_id, name: p.name, team: p.team, position: p.position ?? null, bats: p.bats ?? null,
-            gameKey, gamePk, gameDate, picks, prices: p.props?.[cat.propsKey], gameStatus, isVoid, outcome, hitLines,
+            gameKey, gamePk, gameDate, picks, movement: row?.movement ?? null, prices: p.props?.[cat.propsKey], gameStatus, isVoid, outcome, hitLines,
           })
         }
       }
@@ -377,7 +383,7 @@ export function ThePublicClient({ date }: { date: string }) {
   }, [data, communityPicksMap])
 
   const activeCat = CATEGORIES.find(c => c.key === activeCategory)!
-  const rows = (rowsByCategory[activeCategory] ?? []).filter(r => activeGame === 'all' || r.gameKey === activeGame)
+  const rows = (rowsByCategory[activeCategory] ?? []).filter(r => activeGame === 'all' || r.gameKey === activeGame).sort((a, b) => compareMlbPublicRows(a, b, sort))
 
   if (error) return <PageState kind="error" title="Public board unavailable" message={error} />
   if (!data) return <PageState kind="loading" title="Loading public board" message="Matching community activity to today's markets." />
@@ -400,6 +406,12 @@ export function ThePublicClient({ date }: { date: string }) {
           >
             {c.label}
           </button>
+        ))}
+      </div>
+
+      <div className={controls.scrollRail} style={{ marginBottom: 12 }} aria-label="Sort public picks">
+        {([['picks', 'Most picks'], ['increase', 'Biggest increase'], ['decrease', 'Biggest decrease']] as const).map(([value, label]) => (
+          <button key={value} type="button" className={`${controls.pill} ${sort === value ? controls.pillActive : ''}`} aria-pressed={sort === value} onClick={() => { setSort(value); updateParams({ sort: value }) }}>{label}</button>
         ))}
       </div>
 
@@ -440,7 +452,7 @@ export function ThePublicClient({ date }: { date: string }) {
                 </div>
               )}
               <div style={{ flexShrink: 0 }}>
-                <PickBadge picks={r.picks} label={activeCat.short} />
+                <PickBadge picks={r.picks} movement={r.movement} label={activeCat.short} />
               </div>
               <div style={{ flexShrink: 0 }}>
                 <WatchlistStarButton

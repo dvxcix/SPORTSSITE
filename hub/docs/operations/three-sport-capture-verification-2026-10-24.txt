@@ -1,0 +1,153 @@
+Three-sport capture and movement verification — October 24, 2026
+
+Owner request: verify MLB, NFL and NBA capture continuity and ensure subsequent
+captures preserve and display actual changes. This follows the saved-session
+repair documented in pikkit-session-persistence-2026-10-23.txt.
+
+Baseline main and production: df93c8a52e1ba6b55480c7a0ad72d8982f721107,
+deployment dpl_FVAYKtJTyH2buYLvq2bagxZkF8cw. Required recovered NFL ancestry is
+preserved. Primary database is hkldweedwnxartkfhror. Direct legacy MLB database
+access, historical backfills, unrelated job replays and external messages were
+not performed. Existing cloud collectors and their schedules remain in use.
+
+Observed overnight evidence (audit approximately 07:30 UTC / 03:30 Eastern):
+
+NBA
+- 29 distinct public-count snapshots across 12 games since the login repair;
+  all verified snapshots preceded their canonical tipoff.
+- 47 scheduled public-count jobs had no authentication failure or cleanup issue.
+  Their aggregate responses remain partial coverage, not a fully green slate.
+- Seven of eight October 24 games have captures. SAS–DAL (21717951) did not yet
+  have one. October 25 boards were also incomplete. A no-verified-counts error
+  alone cannot distinguish an empty source board from parsing/player matching.
+- MEM–GSW (21717943): Stephen Curry points 2,038 at 01:12:08.852 UTC became
+  2,263 at 01:51:48.160 UTC (+225); threes 555 became 652 (+97). Tip was 02:00.
+  Both deltas were independently verified in the member-facing ThePublic view:
+  /the-paint?date=2026-10-23&game=21717943&view=public&mode=pregame.
+  Screenshot: work/three-sport-nba-deltas-2026-10-24.jpg.
+- HOU–ATL: Jalen Johnson points 6→12 and Amen Thompson assists 40→46 between
+  06:21:38 and 07:01:31 UTC demonstrate continued movement on today's slate.
+- NBA market capture had 93/93 successful jobs. Stored frames included 178
+  first-basket pregame, 197 prop pregame, 783 game pregame, 294 prop live and
+  295 game live frames; no incorrect phase timestamps were found in this audit.
+- BKN–CLE: Fanatics Egor Demin first-field-goal over 0.5 shortened +1400→+1300
+  between 06:30:16 and 06:35:15 UTC (0.4762 implied-probability percentage points).
+  Evan Mobley double-double +160→+155 and Julius Randle double-double +285→+310
+  provide additional exact-market shortening and lengthening examples.
+
+NFL
+- Scheduled 06:37:41 UTC KC–SEA capture saved 21 normalized public markets at
+  06:38:01.102 UTC on df93c8a5. Earlier DEN–ARI, LA–LV and GB–DET captures saved.
+- All 12 Sunday games had one new public history frame; Monday DAL–PHI was
+  not yet due. A second Sunday frame is needed before claiming a new count delta.
+- Historical NE–CHI public history independently preserves AJ Brown receiving
+  7,708→12,198 and Caleb Williams passing 7,698→11,005 on October 22.
+- KC–SEA AJ Barner First TD DraftKings +1200→+1100 between 06:00:44.418 and
+  06:54:43.798 UTC; original +1700 remains intact. The live comparison panel
+  independently showed current +1100 and OPEN +1700.
+- Emanuel Wilson longest rush 15+ +145→+142 and 20+ +294→+287 also saved.
+- NFL Market Story includes public-count capture timestamps and as-of joins.
+  The main NFL board itself does not currently have a numeric count-delta column.
+
+MLB
+- Existing application routes, not direct legacy database queries, showed today's
+  TB–MIL game 849802, gameKey TB@MIL, scheduled 2026-10-25T00:00:00Z (8 PM ET).
+  Both lineups were unconfirmed and communityPicks was empty before the first
+  scheduled checkpoint. Baseline: work/three-sport-mlb-public-baseline-2026-10-24.json.
+- Real consecutive FanDuel prices for Brice Turang, 07:06:01→07:29:01 UTC:
+  home run +980→+920, 2+ hits +350→+360, 3+ total bases +390→+380.
+  The live Dugout independently showed HR +920 with OPEN +820 and 2+ hits +360
+  with OPEN +340. Consecutive changes and changes from opener are distinct.
+- October 23 game 849805 retained 132 BDL changes, then froze after first pitch.
+  Ben Williamson first HR +3500→+4000 and anytime HR +2000→+1800 were preserved.
+- A real gap was found: the tracked MLB public importer only upserted current
+  counts, and its current consumers had no previous-count/delta reader. Odds
+  movement working did not imply MLB public-count movement was implemented.
+- The last inspected October 23 FanDuel browser archive had 1,009 SGP outcomes
+  but zero special-category tabs. An earlier capture had real specialty prices.
+  Read-only inspection of the live sportsbook confirmed visible Lasers prices,
+  selected-tab aria state and a MAIN fallback without linked tab panels. This
+  does not retrospectively establish every historical failure's cause.
+
+Repair scope
+- MLB capture health now requires consistent numeric outcome counts and actual
+  imported rows before reporting captures-imported. Idle runs explicitly record
+  no-captures-due/no-pregame-games with zero browser sessions and imported rows.
+  Missing or contradictory successful responses report failure. Metadata is
+  bounded and allowlisted; raw provider payloads and credentials are excluded.
+- MLB public-count history now has primary-only append-only changed snapshots,
+  verified observation receipts, per-game import reservations and strict canonical
+  pregame cutoffs. The scheduler uses one batched primary freshness read, so a
+  legacy current-row write without its archive commit cannot suppress a retry.
+  Uncertain remote completion retains its 120-second reservation. Untimestamped
+  manual payloads fail with HTTP 400 instead of inventing an observation time.
+- Member data receives exact game/player/market movement only when the latest
+  archived count matches the current total. Missing baselines remain null.
+  Current counts retain existing access; movement uses the existing Ultimate/
+  featured-game gate. Reads share a 30-second cross-instance cache. No browser
+  collector is launched by a member request.
+- Dugout, The Public and Batter Cost use shared count/change badges without new
+  tooltips. The Public adds increase/decrease sorting. Compact badges were
+  rendered at 390px viewport width and checked for overflow in 34px columns.
+  Local fixture evidence: work/mlb-public-badges-mobile-fixture.png (synthetic
+  visual test, not production data).
+- MLB FanDuel collection reacquires tab elements after SPA updates, verifies
+  the selected tab and waits for visible content to change. Hidden prior panels,
+  retained prior MAIN content and late stale renders cannot satisfy readiness.
+  Unverified or empty tabs are explicit partial failures; healthy siblings still
+  archive. Import confirmation requires positive archived tab/outcome counts.
+- MLB dispatcher now waits 330 seconds for its existing 300-second child route,
+  within a 360-second dispatcher route. The former 55-second wait could expire
+  before a legitimate capture finished. One guarded delayed sportsbook retry is
+  retained, rechecks pregame state and never repeats a public checkpoint. NFL's
+  existing timing hierarchy and non-verifying scraper path remain unchanged.
+
+Database application and verification
+- Applied only mlb_public_capture_history to hkldweedwnxartkfhror. Recorded live
+  version: 20261024074236. Canonical CLI-generated source file:
+  supabase/migrations/20261024073804_mlb_public_capture_history.sql.
+  These refer to the same reviewed SQL; do not replay it or the historical tree.
+- Two new service-only RLS tables and four SECURITY INVOKER RPCs are isolated
+  from anon/authenticated roles. The archive service grant permits SELECT/INSERT,
+  not UPDATE/DELETE. The state service grant additionally permits UPDATE.
+- Transactional tests verified baseline, unchanged freshness without fabricated
+  change, A-to-B-to-A movement, bounded latest-two reads, doubleheader separation,
+  reservation collision/wrong token, backwards observations, invalid/empty rows,
+  passed cutoff, grants and RLS. A separate service_role invocation also passed.
+  Both transactions rolled back; all fixture rows remaining counts were zero.
+- New objects have no performance advisory. Security advisor emits the expected
+  RLS-without-public-policies informational finding for these deliberately
+  service-only tables; no public read policy was added to silence that finding.
+  Existing unrelated project advisories are outside this capture repair.
+
+Next natural checkpoints (Eastern, October 24 unless stated)
+- MLB TB–MIL first baseline: approximately 10:15 AM (T-10h hourly checkpoint).
+- NFL PIT–NO second public capture: approximately 1:37 PM (T-20h checkpoint).
+- MLB TB–MIL next baseline: approximately 4:15 PM (T-4h), followed by the existing
+  confirmed-lineup final capture.
+- Most Sunday 1 PM NFL games: approximately 5:07 PM.
+- NFL KC–SEA next public capture: October 25 approximately 12:37 AM.
+  Check scheduler receipts AND saved exact-identity history; an unchanged count
+  is valid and must not be fabricated into movement.
+
+Native follow-up automation verify-all-three-sports-captures is ACTIVE on this
+thread, scheduled at 10:45 AM, 1:45 PM, 4:45 PM, 5:45 PM and 12:45 AM Eastern,
+ending October 25 at 02:00 AM Eastern. It checks existing scheduled jobs, does
+not create additional cloud collectors, and must report remaining coverage gaps.
+
+Validation
+- Public/session persistence and movement suite: 72/72 passing.
+- Production source suite: 134/134 passing.
+- FanDuel archive regression plus 16 collector/dispatcher behavior tests pass.
+- TypeScript, scoped ESLint, market regression and cost policy (4/4) pass.
+- Two independent agents reviewed the history importer and final collector.
+- Existing Dugout lint debt (79 no-explicit-any findings) is unchanged. Existing
+  test:dugout-ui has extensionless-import execution trouble; running with tsx
+  yields 25/27, with two unchanged source-contract assertions. This is not full
+  UI certification. New movement behavior/render/access tests pass independently.
+- Main and production were refreshed immediately before the scoped release.
+  Exact release SHA, alias and post-release checks are recorded in the workspace
+  work/three-sport-capture-release-2026-10-24.txt after deployment completes.
+- Future checkpoint results remain pending. The new MLB archive starts with
+  the next real capture; no history was invented or backfilled. The first count
+  baseline has no prior delta. NBA public coverage gaps remain under follow-up.
