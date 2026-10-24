@@ -22,12 +22,30 @@ test('Combos resolves exact combined-stat suffixes and rejects bare or unrelated
   assert.equal(result.unmatched,2)
 })
 
-test('First Basket preserves the observed settlement label without inventing First FG identity',()=>{
-  const result=normalizeNbaPublic({'First Basket':{'Wendell Carter Jr. · First Basket (Incl. FT)':380,'Chet Holmgren First Basket':4,'Chet Holmgren First Field Goal':77}},roster)
-  assert.deepEqual(result.rows,[{playerId:1,market:'first_basket',picks:4},{playerId:2,market:'first_basket_including_ft',picks:380}])
+test('live captured combo abbreviations resolve all five exact markets, retaining a zero SB count',()=>{
+  const result=normalizeNbaPublic({Combos:{
+    'Chet Holmgren PRA (Points + Rebounds + Assists)':41,
+    'Chet Holmgren PR (Points + Rebounds)':31,
+    'Chet Holmgren PA (Points + Assists)':21,
+    'Chet Holmgren RA (Rebounds + Assists)':11,
+    'Chet Holmgren SB (Steals + Blocks)':0,
+    'Chet Holmgren PA (Points + Rebounds)':999,
+  }},roster)
+  assert.deepEqual(result.rows.map(row=>[row.market,row.picks]),[['points_assists',21],['points_rebounds',31],['points_rebounds_assists',41],['rebounds_assists',11],['steals_blocks',0]])
+  assert.equal(result.unmatched,1,'mismatched abbreviation must not be guessed')
+  assert.equal(nbaPublicPaintMarket('steals_blocks'),undefined)
+  assert.equal(nbaPublicMarket('Steals + Blocks'),'steals_blocks')
+  assert.equal(NBA_PUBLIC_MARKETS.find(row=>row.key==='steals_blocks')?.label,'Steals + Blocks')
+})
+
+test('First Basket identities stay distinct and bare group totals never become player counts',()=>{
+  const result=normalizeNbaPublic({'First Basket':{'Wendell Carter Jr. · First Basket (Incl. FT)':380,'Chet Holmgren First Basket':4,'Chet Holmgren First Field Goal':77,'First Field Goal':1000,'First Basket (Incl. FT)':2000}},roster)
+  assert.deepEqual(result.rows,[{playerId:1,market:'first_basket',picks:4},{playerId:1,market:'first_field_goal',picks:77},{playerId:2,market:'first_basket_including_ft',picks:380}])
+  assert.equal(result.unmatched,2,'group totals without a player never become player counts')
   assert.equal(nbaPublicMarket('First Basket (Incl. FT)'),'first_basket_including_ft')
-  assert.equal(nbaPublicMarket('First Field Goal'),null)
+  assert.equal(nbaPublicMarket('First Field Goal'),'first_field_goal')
   assert.equal(nbaPublicPaintMarket('first_basket'),undefined)
+  assert.equal(nbaPublicPaintMarket('first_field_goal'),undefined)
   assert.equal(NBA_PUBLIC_MARKETS.find(row=>row.key==='first_basket_including_ft')?.label,'First basket · Incl. FT')
 })
 

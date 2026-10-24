@@ -11,9 +11,11 @@ const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '
 
 // Mirrors the retained gle/yle source component: the name and count are in
 // the row header; expanded Yes/odds content is a separate sibling body.
-function fixture({ categories = catalog, delay = 0, initial = 0, zeros = false, blank = [], malformed = [], ignored = [], hidden = false, title = 'Player Props', initialDelay = 0, holdPrior = false, unknown = false } = {}) {
+function fixture({ categories = catalog, delay = 0, initial = 0, zeros = false, blank = [], malformed = [], ignored = [], hidden = false, title = 'Player Props', initialDelay = 0, holdPrior = false, unknown = false, firstBasketGroups = null, groupDelay = 0, ignoreGroups = [] } = {}) {
   const dom = new JSDOM('<body></body>', { url: 'https://app.pikkit.com/event/verified-nba-event' })
-  const document = dom.window.document, calls = []
+  const document = dom.window.document, calls = [], groupClicks = []
+  const expandedGroups = new Set([Object.keys(firstBasketGroups ?? {})[0] ?? 'First Field Goal'])
+  let groupReadyAt = Infinity, pendingGroup = null
   let now = 1800000000000, active = categories[initial][0], displayed = active, readyAt = now + initialDelay, loading = initialDelay > 0
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])) } static now() { return now } }
   function row(name, count, expanded = false) {
@@ -21,7 +23,12 @@ function fixture({ categories = catalog, delay = 0, initial = 0, zeros = false, 
   }
   function render() {
     const label = categories.find(([value]) => value === displayed)[1]
-    const rows = (loading && !holdPrior) || blank.includes(displayed) ? '' : row(`Player One ${label}`, zeros ? '' : '1,234 Picks', true) + row(`Player Two ${label}`, zeros ? '' : '1 Pick') + (malformed.includes(displayed) ? row(`Player Three ${label}`, 'not a count') : '')
+    let rows = (loading && !holdPrior) || blank.includes(displayed) ? '' : row(`Player One ${label}`, zeros ? '' : '1,234 Picks', true) + row(`Player Two ${label}`, zeros ? '' : '1 Pick') + (malformed.includes(displayed) ? row(`Player Three ${label}`, 'not a count') : '')
+    if (displayed === 'first_basket' && firstBasketGroups && (!loading || holdPrior)) rows = Object.entries(firstBasketGroups).map(([name, outcomes]) => {
+      const expanded = expandedGroups.has(name)
+      const body = outcomes === 'empty' ? '<p>Odds for this market are not available yet</p><div><p>Receive alert when market opens</p><div><input type="checkbox"></div></div>' : outcomes === 'missing' ? '' : outcomes.map(([player, count]) => `<div><div><p>${escape(player)}</p><p>${escape(count)}</p></div><div><button>+1000</button><span>Unrelated odds detail</span></div></div>`).join('')
+      return `<div><div><p>${name}</p><div><p>9,999 Picks</p><button aria-label="${expanded ? 'collapse' : 'expand'}-button"></button></div></div>${expanded ? `<div>${body}</div>` : ''}</div>`
+    }).join('')
     const panel = `<section><div><p>${escape(title)}</p><div><select>${categories.map(([value, name]) => `<option value="${value}" ${active === value ? 'selected' : ''}>${escape(name)}</option>`).join('')}</select></div></div><div>${rows}</div></section>`
     document.body.innerHTML = `<main><div>Unrelated Player Points</div><div>99,999 Picks</div>${panel}${hidden ? `<div hidden>${panel.replaceAll('Player One', 'Hidden Player')}</div>` : ''}${unknown ? row('Wrong Outside Player', '8,888 Picks') : ''}</main>`
   }
@@ -33,14 +40,26 @@ function fixture({ categories = catalog, delay = 0, initial = 0, zeros = false, 
     if (!loading) displayed = active
     render() // React may replace both the selector and its row nodes.
   })
+  document.addEventListener('click', event => {
+    const button = event.target.closest('button[aria-label="expand-button"],button[aria-label="collapse-button"]')
+    if (!button) return
+    const name = button.parentElement.parentElement.firstElementChild.textContent
+    groupClicks.push(name)
+    if (ignoreGroups.includes(name)) return
+    if (button.getAttribute('aria-label') === 'collapse-button') expandedGroups.delete(name)
+    else if (groupDelay) { pendingGroup = name; groupReadyAt = now + groupDelay }
+    else expandedGroups.add(name)
+    render()
+  })
   render()
   const loaded = { exports: {} }
   new Function('module', 'exports', 'document', 'location', 'getComputedStyle', 'Event', 'Date', 'setTimeout', compiled)(loaded, loaded.exports, document, dom.window.location, dom.window.getComputedStyle.bind(dom.window), dom.window.Event, Clock, (callback, ms) => {
     now += ms
     if (loading && now >= readyAt) { loading = false; displayed = active; render() }
+    if (pendingGroup && now >= groupReadyAt) { expandedGroups.add(pendingGroup); pendingGroup = null; render() }
     callback()
   })
-  return { run: loaded.exports.runNbaPikkitScrape, calls, elapsed: () => now - 1800000000000, close: () => dom.window.close() }
+  return { run: loaded.exports.runNbaPikkitScrape, calls, groupClicks, elapsed: () => now - 1800000000000, close: () => dom.window.close() }
 }
 
 test('visits every real category including Combos and First Basket, reading collapsed headers only', async () => {
@@ -126,4 +145,106 @@ test('a For You selector or unrelated pick text cannot masquerade as Player Prop
     assert.equal(result.diagnostic.reason, 'player-props-control-unavailable')
     assert.equal(browser.elapsed(), 1000)
   } finally { browser.close() }
+})
+
+test('First Basket expands only the collapsed group and captures exact nested player contracts, never totals', async () => {
+  const browser = fixture({ firstBasketGroups: {
+    'First Field Goal': [['Player One', '7 Picks'], ['Player Two', '']],
+    'First Basket (Incl. FT)': [['Player One', '11 Picks'], ['Player Three', '1 Pick']],
+  }, groupDelay: 2000 })
+  try {
+    const result = await browser.run()
+    assert.equal(result.complete, true)
+    assert.deepEqual(browser.groupClicks, ['First Basket (Incl. FT)'])
+    assert.deepEqual(result.props['First Basket'], {
+      'Player One First Basket (Incl. FT)': 11,
+      'Player One First Field Goal': 7,
+      'Player Three First Basket (Incl. FT)': 1,
+      'Player Two First Field Goal': 0,
+    })
+    assert.equal(result.marketStates.find(state => state.label === 'First Basket').rows, 4)
+    assert.equal(Object.values(result.props['First Basket']).includes(9999), false)
+  } finally { browser.close() }
+})
+
+test('both explicitly unavailable First Basket group bodies prove an empty category without player zeros', async () => {
+  const browser = fixture({ firstBasketGroups: { 'First Field Goal': 'empty', 'First Basket (Incl. FT)': 'empty' } })
+  try {
+    const result = await browser.run()
+    assert.equal(result.complete, true)
+    const state = result.marketStates.find(state => state.label === 'First Basket')
+    assert.equal(state.status, 'empty'); assert.equal(state.rows, 0)
+    assert.deepEqual(result.props['First Basket'], {})
+    assert.deepEqual(browser.groupClicks, ['First Basket (Incl. FT)'])
+  } finally { browser.close() }
+})
+
+test('the recorded including-free-throws-first order expands First Field Goal without collapsing existing outcomes', async () => {
+  const browser = fixture({ firstBasketGroups: {
+    'First Basket (Incl. FT)': [['Bam Adebayo', '1 Pick'], ['Giannis Antetokounmpo', '']],
+    'First Field Goal': [['Bam Adebayo', ''], ['Giannis Antetokounmpo', '2 Picks']],
+  } })
+  try {
+    const result = await browser.run()
+    assert.equal(result.complete, true)
+    assert.deepEqual(browser.groupClicks, ['First Field Goal'])
+    assert.deepEqual(result.props['First Basket'], {
+      'Bam Adebayo First Basket (Incl. FT)': 1,
+      'Bam Adebayo First Field Goal': 0,
+      'Giannis Antetokounmpo First Basket (Incl. FT)': 0,
+      'Giannis Antetokounmpo First Field Goal': 2,
+    })
+  } finally { browser.close() }
+})
+
+test('an explicitly empty sibling First Basket group does not discard available nested counts', async () => {
+  const browser = fixture({ firstBasketGroups: { 'First Field Goal': [['Player One', '3 Picks']], 'First Basket (Incl. FT)': 'empty' } })
+  try {
+    const result = await browser.run()
+    assert.equal(result.complete, true)
+    assert.deepEqual(result.props['First Basket'], { 'Player One First Field Goal': 3 })
+    assert.equal(result.marketStates.find(state => state.label === 'First Basket').status, 'captured')
+  } finally { browser.close() }
+})
+
+test('missing or unexpanded First Basket outcomes remain unresolved while verified sibling counts survive', async () => {
+  for (const ignoreGroups of [[], ['First Basket (Incl. FT)']]) {
+    const browser = fixture({ firstBasketGroups: { 'First Field Goal': [['Player One', '3 Picks']], 'First Basket (Incl. FT)': 'missing' }, ignoreGroups })
+    try {
+      const result = await browser.run()
+      assert.equal(result.complete, false)
+      assert.deepEqual(result.props['First Basket'], { 'Player One First Field Goal': 3 })
+      const state = result.marketStates.find(state => state.label === 'First Basket')
+      assert.equal(state.status, 'unavailable'); assert.equal(state.rows, 1)
+      assert.deepEqual(browser.groupClicks, ['First Basket (Incl. FT)'])
+    } finally { browser.close() }
+  }
+})
+
+test('an absent entire First Basket sibling group cannot produce complete coverage', async () => {
+  const browser = fixture({ firstBasketGroups: { 'First Field Goal': [['Player One', '3 Picks']] } })
+  try {
+    const result = await browser.run()
+    assert.equal(result.complete, false)
+    assert.deepEqual(result.props['First Basket'], { 'Player One First Field Goal': 3 })
+    const state = result.marketStates.find(state => state.label === 'First Basket')
+    assert.equal(state.status, 'unavailable'); assert.equal(state.rows, 1)
+  } finally { browser.close() }
+})
+
+test('a single empty group does not prove whole-category absence and malformed nested counts are not zero', async () => {
+  const single = fixture({ firstBasketGroups: { 'First Field Goal': 'empty' } })
+  try {
+    const result = await single.run()
+    assert.equal(result.complete, false)
+    assert.equal(result.props['First Basket'], undefined)
+    assert.equal(result.marketStates.find(state => state.label === 'First Basket').status, 'unavailable')
+  } finally { single.close() }
+  const malformed = fixture({ firstBasketGroups: { 'First Field Goal': [['Player One', '3 Picks'], ['Player Two', 'Loading']], 'First Basket (Incl. FT)': 'empty' } })
+  try {
+    const result = await malformed.run()
+    assert.equal(result.complete, false)
+    assert.deepEqual(result.props['First Basket'], { 'Player One First Field Goal': 3 })
+    assert.equal(result.marketStates.find(state => state.label === 'First Basket').status, 'unavailable')
+  } finally { malformed.close() }
 })

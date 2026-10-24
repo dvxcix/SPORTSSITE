@@ -64,17 +64,23 @@ test('ThePublic renders exact carried deltas, captured time, zero and First Bask
   const ui=await harness('PaintPublic',{board:{...board,players},open:noop},{captures:[{captured_at:capturedAt,snapshot:{gameId:123,capturedAt,markets:['points','first_basket_including_ft'],rows:[
     {playerId:1,market:'points',picks:0,previous:12,previousAt:priorAt,capturedAt:priorAt},
     {playerId:2,market:'first_basket_including_ft',picks:380,previous:null,previousAt:null,capturedAt},
+    {playerId:1,market:'first_field_goal',picks:77,previous:12,previousAt:priorAt,capturedAt},
+    {playerId:2,market:'steals_blocks',picks:9,previous:0,previousAt:priorAt,capturedAt},
   ]}}]})
   try{
     ui.succeed();await ui.click('Retry')
     const rows=[...ui.host.querySelectorAll('tbody tr')]
-    const first=rows.find(row=>row.textContent?.includes('Wendell'))!,zero=rows.find(row=>row.textContent?.includes('Chet'))!
+    const first=rows.find(row=>row.textContent?.includes('First basket · Incl. FT'))!,zero=rows.find(row=>row.textContent?.includes('Points'))!
     assert.ok(first.textContent?.includes('First basket · Incl. FT'))
     assert.equal(first.querySelectorAll('td')[2]?.textContent,'—')
     assert.equal(zero.querySelectorAll('td')[0]?.textContent,'0')
     assert.equal(zero.querySelectorAll('td')[2]?.textContent,'-12')
     assert.equal(zero.querySelector('time')?.getAttribute('datetime'),priorAt)
     assert.equal(first.querySelector('time')?.getAttribute('datetime'),capturedAt)
+    assert.equal(rows.find(row=>row.textContent?.includes('First field goal'))?.querySelectorAll('td')[2]?.textContent,'+65')
+    assert.equal(rows.find(row=>row.textContent?.includes('Steals + Blocks'))?.querySelectorAll('td')[2]?.textContent,'+9')
+    assert.ok(ui.host.querySelector('option[value="first_field_goal"]'))
+    assert.ok(ui.host.querySelector('option[value="steals_blocks"]'))
     assert.equal(ui.host.querySelectorAll('[title]').length,0)
   }finally{await ui.close()}
 })

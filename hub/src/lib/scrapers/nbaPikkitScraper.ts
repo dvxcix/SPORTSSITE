@@ -10,6 +10,7 @@ export async function runNbaPikkitScrape(options: { maxDurationMs?: number } | v
   const text = (node: Element | null) => node?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
   const marketWords = /points?|rebounds?|assists?|threes?|steals?|blocks?|turnovers?|3.?point|double|triple/i
   const rowButtons = 'button[aria-label="expand-button"],button[aria-label="collapse-button"]'
+  const firstGroups = new Set(['First Field Goal', 'First Basket (Incl. FT)'])
   function visible(element: Element) {
     if (element.closest('[hidden],[aria-hidden="true"]')) return false
     for (let node: Element | null = element; node; node = node.parentElement) {
@@ -35,7 +36,15 @@ export async function runNbaPikkitScrape(options: { maxDurationMs?: number } | v
   }
   function read(panel: Element) {
     const counts = new Map<string, number>()
+    const conflicts = new Set<string>(), emptyGroups = new Set<string>(), observedGroups = new Set<string>()
     let invalid = 0, headers = 0
+    function add(name: string, renderedCount: string) {
+      const matched = renderedCount.match(/^(\d{1,3}(?:,\d{3})*|\d+) Picks?$/i)
+      const count = renderedCount === '' ? 0 : matched ? Number(matched[1].replace(/,/g, '')) : NaN
+      if (name.length < 3 || name.length > 160 || !Number.isSafeInteger(count) || count < 0 || count > 10000000 || conflicts.has(name)) { invalid++; return }
+      if (counts.has(name) && counts.get(name) !== count) { counts.delete(name); conflicts.add(name); invalid++; return }
+      counts.set(name, count)
+    }
     for (const button of panel.querySelectorAll(rowButtons)) {
       if (!visible(button)) continue
       headers++
@@ -45,15 +54,46 @@ export async function runNbaPikkitScrape(options: { maxDurationMs?: number } | v
       // Its expanded body also contains Yes/counts; those are not row totals.
       if (!header || header.children.length !== 2 || header.lastElementChild !== right || right?.children.length !== 2 || right.lastElementChild !== button || !nameNode || !countNode || nameNode === right || countNode === button || !visible(nameNode) || !visible(countNode)) { invalid++; continue }
       const name = text(nameNode), renderedCount = text(countNode)
-      const matched = renderedCount.match(/^(\d{1,3}(?:,\d{3})*|\d+) Picks?$/i)
+      if (firstGroups.has(name)) {
+        observedGroups.add(name)
+        // These two headers are whole-market totals, not player counts. The
+        // observed mle/rle components place each player's short_display_name
+        // and num_picks in the first column of a direct outcome row.
+        const row = header.parentElement, body = row?.children[1]
+        if (button.getAttribute('aria-label') !== 'collapse-button' || !row || row.firstElementChild !== header || row.children.length !== 2 || !body || !visible(body)) { invalid++; continue }
+        const outcomes = Array.from(body.children).filter(visible)
+        if (outcomes.length && text(outcomes[0]) === 'Odds for this market are not available yet') { emptyGroups.add(name); continue }
+        if (!outcomes.length) { invalid++; continue }
+        for (const outcome of outcomes) {
+          const left = outcome.firstElementChild, outcomeName = left?.firstElementChild, outcomeCount = left?.lastElementChild
+          if (outcome.children.length !== 2 || !left || left.children.length !== 2 || !outcomeName || !outcomeCount || outcomeName === outcomeCount || outcomeName.children.length || outcomeCount.children.length || !visible(outcomeName) || !visible(outcomeCount)) { invalid++; continue }
+          add(`${text(outcomeName)} ${name}`, text(outcomeCount))
+        }
+        continue
+      }
       // The source formatter is v(0) === ''. Only a verified count node in a
       // real player header can establish zero; absent content cannot.
-      const count = renderedCount === '' ? 0 : matched ? Number(matched[1].replace(/,/g, '')) : NaN
-      if (name.length < 3 || name.length > 160 || !Number.isSafeInteger(count) || count < 0 || count > 10000000 || (counts.has(name) && counts.get(name) !== count)) { invalid++; continue }
-      counts.set(name, count)
+      add(name, renderedCount)
     }
+    if (observedGroups.size > 0 && observedGroups.size !== firstGroups.size) invalid++
     const entries = [...counts].sort(([a], [b]) => a.localeCompare(b))
-    return { counts: Object.fromEntries(entries), rows: entries.length, invalid, headers, fingerprint: JSON.stringify([entries, invalid, headers]) }
+    // Only both observed first-basket groups with an explicit empty body prove
+    // an empty category. No missing player name or blank page becomes a zero.
+    const empty = entries.length === 0 && invalid === 0 && headers === 2 && observedGroups.size === 2 && emptyGroups.size === 2
+    return { counts: Object.fromEntries(entries), rows: entries.length, invalid, headers, empty, fingerprint: JSON.stringify([entries, invalid, headers, [...emptyGroups].sort()]) }
+  }
+  function expandFirstGroup(panel: Element, attempted: Set<string>) {
+    for (const button of panel.querySelectorAll(rowButtons)) {
+      if (button.getAttribute('aria-label') !== 'expand-button' || !visible(button)) continue
+      const right = button.parentElement, header = right?.parentElement, nameNode = header?.firstElementChild
+      const name = text(nameNode ?? null)
+      if (!firstGroups.has(name) || attempted.has(name) || header?.children.length !== 2 || header.lastElementChild !== right || right?.children.length !== 2 || right.lastElementChild !== button) continue
+      attempted.add(name)
+      ;(button as HTMLButtonElement).click()
+      // React may replace the remaining nodes. Reacquire on the next poll;
+      // never click odds, alerts, or an already expanded group.
+      return
+    }
   }
   let initial = findPanel()
   const discoveryDeadline = Math.min(deadline, started + 8000)
@@ -77,15 +117,17 @@ export async function runNbaPikkitScrape(options: { maxDurationMs?: number } | v
     const before = read(current.panel), changed = current.select.value !== option.value
     if (changed) { current.select.value = option.value; current.select.dispatchEvent(new Event('change', { bubbles: true })) }
     const categoryDeadline = Math.min(deadline, Date.now() + 6000)
+    const expandedGroups = new Set<string>()
     let previousFingerprint = '', stableSince = Date.now(), verified: ReturnType<typeof read> | null = null
     while (Date.now() < categoryDeadline) {
       current = findPanel()
       const selected = current && current.select.value === option.value && text(current.select.selectedOptions[0] ?? null) === option.label
+      if (selected && current) expandFirstGroup(current.panel, expandedGroups)
       const snapshot = selected && current ? read(current.panel) : null
       // Setting select.value is not evidence React rendered its new category.
       // Unchanged prior headers are never relabelled as the requested market.
       const transitioned = snapshot && (!changed || before.headers === 0 || snapshot.fingerprint !== before.fingerprint)
-      if (snapshot && transitioned && snapshot.rows > 0) {
+      if (snapshot && transitioned && (snapshot.rows > 0 || snapshot.empty)) {
         if (snapshot.fingerprint !== previousFingerprint) { previousFingerprint = snapshot.fingerprint; stableSince = Date.now(); verified = null }
         else if (Date.now() - stableSince >= 500) {
           verified = snapshot
@@ -100,7 +142,7 @@ export async function runNbaPikkitScrape(options: { maxDurationMs?: number } | v
     const finalPanel = findPanel()
     if (verified && (!finalPanel || finalPanel.select.value !== option.value || text(finalPanel.select.selectedOptions[0] ?? null) !== option.label || read(finalPanel.panel).fingerprint !== verified.fingerprint)) verified = null
     if (verified) props[option.label] = verified.counts
-    marketStates.push({ ...option, status: verified && verified.invalid === 0 ? 'captured' : Date.now() >= deadline ? 'deadline' : 'unavailable', rows: verified?.rows ?? 0, observedAt: new Date().toISOString() })
+    marketStates.push({ ...option, status: verified && verified.invalid === 0 ? verified.empty ? 'empty' : 'captured' : Date.now() >= deadline ? 'deadline' : 'unavailable', rows: verified?.rows ?? 0, observedAt: new Date().toISOString() })
   }
   return { url: location.href, capturedAt: new Date().toISOString(), props, complete: marketStates.length > 0 && marketStates.every(state => state.status === 'captured' || state.status === 'empty'), marketStates }
 }

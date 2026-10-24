@@ -42,3 +42,19 @@ deferred-status recovery/extractor18/18; typecheck and scoped implementation lin
 pass. Independent extractor, cron, identity, history and SQL reviews passed.
 Natural production capture and browser evidence will be recorded after release
 in work/nba-market-coverage-release-2026-10-24.txt.
+
+First live run08:31UTC, release1fd83ed6: all15 today/tomorrow games saved all11
+raw categories, including all7 tomorrow games and the previously unlisted LAC.
+No deadline/auth/cleanup failure. Honest coverage remained partial: exact Combo
+suffixes were PRA/PR/PA/RA/SB with parenthesized full statistic names, and First
+Basket used two expandable group totals rather than player-header rows.
+
+Follow-up normalizationv4 supports those exact combo labels and public-only
+steals_blocks. Nested First Basket extraction now reads actual player counters
+inside First Field Goal and First Basket (Incl. FT), keeping them separate.
+Retained session9b5a77ef-4ee7-4500-b300-4dee93d871f9 at00:16 confirms full names,
+count labels, blank-zero fields and separate odds controls. Both group orders
+work. Both explicit empty groups can prove empty coverage; missing/malformed
+siblings keep coverage partial while verified player rows persist. Group totals
+never become player counts. This follow-up needs no migration or historical
+replay. Extractor14/14, typecheck, scoped lint and independent review pass.
