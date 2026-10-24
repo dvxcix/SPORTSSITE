@@ -71,7 +71,7 @@ export function readMgmPropPanel(request:PanelRequest|SettledPanelRequest):MgmPr
   if (binaryGroups.length) {
     if (binaryGroups.length !== 1 || targets.length) return empty
     const group = binaryGroups[0], headings = [...group.querySelectorAll('.option-group-header > span')].map(node => node.textContent?.trim() ?? '').filter(Boolean)
-    if (!['Yes', 'Yes,No'].includes(headings.join(','))) return empty
+    if (!['Yes', 'Yes,No', 'No,Yes'].includes(headings.join(','))) return empty
     const selectionIds: string[] = []
     const playerRows = [...group.querySelectorAll('.yes-no-option-row-container')].filter(visible)
     const rows = playerRows.slice(0, 100).flatMap(row => {

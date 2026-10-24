@@ -106,6 +106,39 @@ test('binary DOM uses observed Yes/No columns, including the real empty offline 
   } finally { f.dom.window.close() }
 })
 
+test('reversed No/Yes headings preserve actual column sides and a locked No never becomes a price', () => {
+  const locked = '<div class="option option-pick empty-option"><div class="offline option-indicator"><span class="lock option-group-lock-icon"></span></div></div>'
+  for (const no of [locked, option('No', '-550', 'no')]) {
+    const f = fixture(`<div id="binary" aria-hidden="false"><div class="yes-no-container"><div class="option-group-header"><span></span><span>No</span><span>Yes</span></div><div class="yes-no-option-row-container"><div class="attribute-key"><span class="attribute-key-ellipsis">Michael Porter Jr.</span></div>${no}${option('Yes', '+415', 'yes')}</div></div></div>`)
+    try {
+      const value = f.readers.readMgmPropPanel('binary')
+      assert.deepEqual(value.targets, ['0.5']); assert.equal(value.selectedTarget, '0.5')
+      assert.deepEqual(value.rows, [no === locked ? row(undefined, '', '', true) : row(undefined, '-550', 'No'), row(undefined, '+415', 'Yes')])
+      for (const title of ['Player double-double', 'Player triple-double']) {
+        const result: quotes.NbaBookPropCapture = quotes.nbaNormalizeBookProp(input, board({ title, target: '0.5', selectedTarget: value.selectedTarget, expanded: value.expanded, rows: value.rows }), now)!
+        assert.equal(result.complete, true); assert.equal(result.unmatched, 0)
+        assert.deepEqual(result.props[0].market, { type: 'over_under', ...(no === locked ? {} : { under_odds: -550 }), over_odds: 415 })
+        assert.equal(result.props[0].updated_at, board().observedAt)
+      }
+    } finally { f.dom.window.close() }
+  }
+})
+
+test('binary heading order support still rejects duplicate, unknown or mismatched columns', () => {
+  const html = (headings: string[], outcomes: string) => `<div id="binary" aria-hidden="false"><div class="yes-no-container"><div class="option-group-header"><span></span>${headings.map(heading => `<span>${heading}</span>`).join('')}</div><div class="yes-no-option-row-container"><div class="attribute-key"><span class="attribute-key-ellipsis">Michael Porter Jr.</span></div>${outcomes}</div></div></div>`
+  for (const headings of [['Yes', 'Yes'], ['No', 'No'], ['No', 'Yes', 'Yes'], ['Over', 'Under'], ['No']]) {
+    const f = fixture(html(headings, option('No', '-550') + option('Yes', '+415')))
+    try { assert.deepEqual(f.readers.readMgmPropPanel('binary').targets, [], headings.join(',')) }
+    finally { f.dom.window.close() }
+  }
+  const f = fixture(html(['No', 'Yes'], option('Yes', '+415') + option('No', '-550')))
+  try {
+    const value = f.readers.readMgmPropPanel('binary')
+    const result = quotes.nbaNormalizeBookProp(input, board({ title: 'Player double-double', target: '0.5', selectedTarget: value.selectedTarget, expanded: value.expanded, rows: value.rows }), now)!
+    assert.equal(result.complete, false); assert.equal(result.unmatched, 2); assert.deepEqual(result.props, [])
+  } finally { f.dom.window.close() }
+})
+
 test('ordinary O/U accepts an explicitly locked known line, while blank prices or unknown locked lines remain incomplete', () => {
   const html = `<div id="blocks" aria-hidden="false"><ms-player-milestone-over-under-option-group><div class="option-group-header"><span>Over</span><span>Under</span></div>${ordinary('Peyton Watson','0.5','-190','')}</ms-player-milestone-over-under-option-group></div>`
   const f = fixture(html)

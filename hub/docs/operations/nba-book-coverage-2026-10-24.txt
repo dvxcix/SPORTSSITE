@@ -341,3 +341,44 @@ Bounded target retry and remaining investigation:
   coverage flag remained incomplete despite 69 complete target observations;
   seven other games completed all eleven families. This flag is retained as
   a failure, not hidden. Tomorrow's seven games remained unlisted on both books.
+
+Loading-reliability production release:
+- Source 2884264fbca88f8fa2815c4604696a368996b215 is on canonical GitHub main
+  with required recovered NFL ancestry. Git-based deployment
+  dpl_5s6EVQn1c5XbYVLKijmQkvr9tv3H reached READY 13:14:58.973 UTC and owns
+  www.slipsurge.com. Full final NBA tests 496/496, production 134/134.
+- The 13:17 scheduled book run is the first qualifying natural run on this
+  source. Its complete coverage/tape proof remains to be recorded below.
+
+13:17 natural verification on 2884264f:
+- Run 884452 finished 13:19:36.246 UTC in 141.3 seconds. All four MGM
+  partitions worked; no source errors, target errors, deadlines, partial target
+  frames or unmatched players occurred. Saved 476 complete regular panels /
+  2,265 prices, DK First Basket 79 and MGM First Basket 70. Price availability
+  changed naturally: DK SAS now has nine selections; MGM added twenty prices.
+- Seven games completed all eleven families. NOP completed 68/68 emitted
+  panels but double_double remained incomplete before any target extraction.
+  No old or invented NOP double-double scope exists. This exact remaining
+  section is being inspected; the receipt correctly remains failed/503.
+- Durable verification found 491 newly observed exact scopes, no older quoted
+  scopes and only one older empty withdrawal. All identity, phase, quote-time
+  and future-time checks passed. Regular repeated sides: 46 shortened,
+  261 lengthened, 1,840 unchanged. DK First: nine shortened, fifteen lengthened,
+  fifty-five unchanged. MGM First: fifty unchanged comparisons plus twenty
+  newly observed prices. Every checked original opening remained unchanged.
+- Examples: Jalen Johnson 10+ rebounds MGM -115 to +100; Nickeil
+  Alexander-Walker 3+ threes MGM -125 to -140; Diallo DK First Score +1060
+  to +1080. These compare exact contracts and actual observation timestamps.
+
+Final NOP binary-column correction:
+- The 13:22 scheduled run 884506 completed in 138.1 seconds with 475 complete
+  emitted panels, one verified retirement, 2,266 regular prices and 80/70
+  DK/MGM First Basket prices. Only NOP double_double remained incomplete.
+- The retained 13:17 NOP recording (dd85c707-8661-4c49-bc9b-fda7e44533a0,
+  tab 1) visibly showed the expanded double-double table ordered No then Yes.
+  The reader previously accepted only Yes or Yes then No, explaining why it
+  emitted no target. Private screenshot: work/nba-nop-double-double-recording-2026-10-24.png.
+- The reader now accepts the exact reversed pair and still maps each cell to
+  its actual matching heading. Locked No cells never become prices; duplicate,
+  unknown and mismatched labels remain incomplete. Focused tests 28/28 and
+  independent review pass. No deadline, storage, schedule or UI copy changes.
