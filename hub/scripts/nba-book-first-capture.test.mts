@@ -6,6 +6,7 @@ import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
 import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
+import * as bookPropQuotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
 import type {NbaBookPropFrame,NbaBookPropObservation,NbaBookPropCoverage} from '../src/lib/nbaBookPropsData.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaFirstBookCapture } from '../src/lib/scrapers/nbaFirstBooks.ts'
@@ -52,6 +53,7 @@ async function fixture(options:Options={}){
       active.set(frame.book,(active.get(frame.book)??0)+1);maxWrites=Math.max(maxWrites,active.get(frame.book)!);await options.firstSave?.(frame,at=>{clock=at});await new Promise(resolve=>setTimeout(resolve,1));saves.push(frame);active.set(frame.book,active.get(frame.book)!-1)
     }},
     '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
+    '@/lib/scrapers/nbaBookPropQuotes':bookPropQuotes,
     '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame}[],deadline:number,callbacks:Callbacks)=>{
       collects++;deadlines.push(deadline)
       collectorCalls.push({book,gameIds:inputs.map(input=>input.game.id),deadline})
@@ -163,6 +165,12 @@ test('private error telemetry contains only bounded known codes, stages, reasons
   assert.deepEqual(result.body.books[0].errors[2],{code:'challenge',gameId:123})
 })
 
+test('private telemetry retains only known league discovery stages without source URLs or arbitrary error text',async()=>{
+  const h=await fixture({capture:()=>({errors:['league-navigation','league-events','league-links'].map(stage=>({code:'navigation-failed' as const,stage:stage as 'league-links',reason:'timeout' as const,message:'private-source-url'}))})}),result=await h.run()
+  assert.equal(result.response.status,503);assert.equal(JSON.stringify(result.body).includes('private-source-url'),false)
+  assert.deepEqual(result.body.books[0].errors.map((item:{stage:string})=>item.stage),['league-navigation','league-events','league-links'])
+})
+
 test('a listed regular menu with missing or incomplete inspection fails even without any prior direct prices',async()=>{
   for(const incomplete of [false,true]){
     const h=await fixture({capture:(book,inputs)=>book==='betmgm'?{regular:[],regularCoverage:incomplete?inputs.map(input=>({gameId:input.id,market:'points',complete:false,observedAt:new Date(now).toISOString(),contracts:[]})):[]}:{} }),result=await h.run()
@@ -171,6 +179,14 @@ test('a listed regular menu with missing or incomplete inspection fails even wit
   }
   const unlisted=await fixture({capture:(book,inputs)=>book==='betmgm'?{games:inputs.map(input=>({...observation(book,input.id),props:[],complete:false,status:'unlisted'})),regularCoverage:[]}:{} }),result=await unlisted.run()
   assert.equal(result.response.status,200);assert.equal(result.body.deferred,2)
+})
+
+test('private incomplete-market diagnostics contain only deduplicated known market keys and never raw source labels',async()=>{
+  const known=Object.values(bookPropQuotes.MGM_MILESTONE_PANELS)
+  const h=await fixture({count:1,capture:(book,inputs)=>book==='betmgm'?{regularCoverage:[...known,...known,'private-source-url','Private market label'].map(market=>({gameId:inputs[0].id,market,complete:market==='points',observedAt:new Date(now).toISOString(),contracts:[]}))}:{} }),result=await h.run()
+  const receipt=result.body.books.find((book:{book:string})=>book.book==='betmgm')
+  assert.equal(result.response.status,503);assert.deepEqual(receipt.regularGames[0].incompleteMarkets,known.filter(market=>market!=='points'))
+  assert.ok(receipt.regularGames[0].incompleteMarkets.length<=11);assert.equal(JSON.stringify(result.body).includes('private-source-url'),false);assert.equal(JSON.stringify(result.body).includes('Private market label'),false)
 })
 
 test('verified selected All with no player markets defers only when no exact prior contract exists',async()=>{

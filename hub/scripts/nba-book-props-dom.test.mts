@@ -127,10 +127,11 @@ test('ordinary O/U accepts an explicitly locked known line, while blank prices o
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean } = {}) {
+async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
   const prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
-  let evaluations=0,remoteWaits=0
+  let evaluations=0,remoteWaits=0,uiErrors=0,identityDelayed=false
+  const normalized:{target:string;observedAt:string}[]=[]
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const pending: { at: number; apply: () => void }[] = [], clicked: string[] = []
   const render = () => {
@@ -157,6 +158,13 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
       if (kind === 'more') { expanded = true; pending.push({ at: clock + 500, apply: () => { expandedRows = true } }) }
       else if (name === 'All') { all = true; pending.push({ at: clock + 500, apply: () => { allRows = true } }) }
       else if (kind === 'tab') {
+        if(name==='15+'&&options.retryFailure&&(uiErrors===0||options.retryFailure==='repeat')){
+          uiErrors++
+          if(options.retryFailure==='stale-selected'){selected=name;render()}
+          if(options.retryFailure==='global-deadline')advance(60_000)
+          if(options.retryFailure==='target-deadline')advance(6501)
+          throw new Error('private transient browser operation')
+        }
         selected = name
         if(options.failedClick&&name==='15+'){displayed=name;render();throw new Error('Navigation command failed after rendering target')}
         if (name === '30+' && (options.stalled || options.flash)) {
@@ -167,6 +175,8 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
     },
   })
   const identityReader = () => {
+    if(!identityDelayed&&(options.slowIdentity==='retry'&&uiErrors>0||options.slowIdentity==='final'&&selected==='15+'&&displayed==='15+')){identityDelayed=true;advance(6501)}
+    if(options.retryFailure==='identity'&&uiErrors>0)return{...metadata,away:'Different team'}
     if(options.liveChange&&displayed==='15+'){prices['15+']='-600';render()}
     return metadata
   }
@@ -180,13 +190,17 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
   const imports: Record<string, unknown> = {
     './nbaFirstBookDom': { readMgmFirstIdentity: identityReader }, './nbaBookPropDom': f.readers,
     './nbaFirstBookQuotes': { nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
-    './nbaBookPropQuotes': { ...quotes, nbaNormalizeBookProp: (...args: Parameters<typeof quotes.nbaNormalizeBookProp>) => quotes.nbaNormalizeBookProp(args[0], args[1], clock) },
+    './nbaBookPropQuotes': { ...quotes, nbaNormalizeBookProp: (...args: Parameters<typeof quotes.nbaNormalizeBookProp>) => {
+      normalized.push({target:args[1].target,observedAt:args[1].observedAt})
+      if(options.normalizationThrow&&args[1].target==='15+')throw new Error('private normalization failure')
+      return quotes.nbaNormalizeBookProp(args[0], args[1], clock)
+    } },
   }
   const target = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', compile('../src/lib/scrapers/nbaMgmProps.ts'))((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock)
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaMgmProps.ts')
   const deadline = options.adaptive ? () => clock >= now + 3000 ? now + 60_000 : now + 3500 : now + (options.hardBudget ?? 60_000)
-  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked,evaluations,remoteWaits,elapsed:clock-now } } finally { f.dom.window.close() }
+  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked,evaluations,remoteWaits,elapsed:clock-now,uiErrors,normalized } } finally { f.dom.window.close() }
 }
 
 test('all seven posted thresholds wait for delayed actual rows, scoped All and Show More before saving', async () => {
@@ -206,13 +220,70 @@ test('a selected tab with old rows, including empty-loading then old rows, never
   }
 })
 
-test('a command failure after a rendered transition invalidates the baseline before the next target',async()=>{
+test('a command failure after a rendered transition can recover verified rows without relabeling the next target',async()=>{
   const result=await navigation({failedClick:true})
   const failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
-  assert.equal(failed.status,'error');assert.deepEqual(failed.props,[])
+  assert.equal(failed.complete,true);assert.equal(failed.props.find(prop=>prop.player_id===375)!.market.odds,-550)
+  assert.equal(result.clicked.filter(target=>target==='15+').length,1,'a settled matching target need not be clicked again')
   const next=result.frames.find(frame=>frame.contractKey==='points:milestone:20')!
   assert.equal(next.complete,true);assert.equal(next.props.find(prop=>prop.player_id===375)!.market.odds,-175)
   assert.notEqual(next.props.find(prop=>prop.player_id===375)!.market.odds,-550,'the previously rendered15+ price cannot be relabeled20+')
+})
+
+test('one thrown target operation retries with fresh identity and baseline without restamping previously observed prices',async()=>{
+  const baseline=await navigation(),result=await navigation({retryFailure:'once'})
+  const recovered=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+  assert.equal(result.uiErrors,1);assert.equal(result.clicked.filter(target=>target==='15+').length,2)
+  assert.equal(recovered.complete,true);assert.equal(recovered.props.find(prop=>prop.player_id===375)!.market.odds,-550)
+  assert.equal(result.frames[0].observedAt,baseline.frames[0].observedAt)
+  assert.ok(result.frames.filter(frame=>frame.complete).every(frame=>frame.props.every(prop=>prop.updated_at===frame.observedAt)))
+  assert.equal(result.normalized.filter(frame=>frame.target==='15+').length,1)
+})
+
+test('a repeated target error stops after one retry and leaves its valid siblings unchanged',async()=>{
+  const result=await navigation({retryFailure:'repeat'}),failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+  assert.equal(result.uiErrors,2);assert.equal(result.clicked.filter(target=>target==='15+').length,2)
+  assert.equal(failed.status,'error');assert.deepEqual(failed.props,[])
+  assert.equal(result.normalized.filter(frame=>frame.target==='15+').length,0)
+  assert.equal(result.frames.find(frame=>frame.contractKey==='points:milestone:20')!.props.find(prop=>prop.player_id===375)!.market.odds,-175)
+  assert.equal(JSON.stringify(result).includes('private'),false)
+})
+
+test('a click throwing after selection cannot make its still-old rows valid on retry',async()=>{
+  const result=await navigation({retryFailure:'stale-selected'}),failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+  assert.equal(failed.complete,false);assert.equal(failed.status,'partial');assert.deepEqual(failed.props,[])
+  assert.equal(result.clicked.filter(target=>target==='15+').length,1)
+  assert.equal(result.frames.find(frame=>frame.contractKey==='points:milestone:20')!.props.find(prop=>prop.player_id===375)!.market.odds,-175)
+})
+
+test('exhausted global or shared target deadline prevents another extraction attempt',async()=>{
+  for(const retryFailure of ['global-deadline','target-deadline'] as const){
+    const result=await navigation({retryFailure}),failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+    assert.equal(result.uiErrors,1);assert.equal(result.clicked.filter(target=>target==='15+').length,1)
+    assert.equal(failed.status,retryFailure==='global-deadline'?'deadline':'error');assert.deepEqual(failed.props,[])
+    assert.equal(result.normalized.filter(frame=>frame.target==='15+').length,0)
+  }
+})
+
+test('retry refuses a changed event identity and never retries a normalization failure or partial result',async()=>{
+  const identity=await navigation({retryFailure:'identity'})
+  assert.equal(identity.clicked.filter(target=>target==='15+').length,1)
+  assert.ok(identity.frames.every(frame=>!frame.complete&&frame.props.length===0))
+  const malformed=await navigation({normalizationThrow:true})
+  assert.equal(malformed.normalized.filter(frame=>frame.target==='15+').length,1)
+  assert.equal(malformed.frames.find(frame=>frame.contractKey==='points:milestone:15')!.status,'error')
+  const partial=await navigation({stalled:true})
+  assert.equal(partial.clicked.filter(target=>target==='30+').length,1)
+  assert.equal(partial.normalized.filter(frame=>frame.target==='30+').length,1)
+})
+
+test('a slow retry or final identity read cannot accept a price after the shared target cutoff',async()=>{
+  for(const options of [{retryFailure:'once' as const,slowIdentity:'retry' as const},{slowIdentity:'final' as const}]){
+    const result=await navigation(options),failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+    assert.equal(failed.complete,false);assert.equal(failed.status,'error');assert.deepEqual(failed.props,[])
+    assert.equal(result.clicked.filter(target=>target==='15+').length,1)
+    assert.equal(result.normalized.filter(frame=>frame.target==='15+').length,0)
+  }
 })
 
 test('a live update after the prior target capture cannot masquerade as the next target response',async()=>{
@@ -269,4 +340,79 @@ test('only a stable selected All menu with actual event markets can classify pla
     const incomplete = await navigation(options)
     assert.ok(incomplete.coverage.every(scope => !scope.complete && scope.status === undefined))
   }
+})
+
+async function familyRerender(mode: 'rotate' | 'delayed' | 'removed' | 'duplicate' | 'loading' | 'unselected' | 'identity', budget = 60_000) {
+  let clock = now, changed = false, changedAt = now
+  class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
+  const f = fixture('', { clock: Clock as typeof Date, timer: (callback, ms) => { clock += ms; queueMicrotask(callback) } })
+  const render = () => {
+    const header = (title: string, id: string) => `<button aria-controls="${id}" aria-expanded="true"><span slot="title">${title}</span></button>`
+    const content = (id: string, target: string, price: string) => `<div id="${id}" aria-hidden="false"><button role="tab" aria-selected="true">${target}</button><button role="tab" aria-selected="true">All</button><div class="player-milestone-container">${milestone('Michael Porter Jr.', price, id)}</div></div>`
+    const redrawing = changed && mode === 'delayed' && clock < changedAt + 375
+    const reboundId = changed && ['rotate', 'delayed'].includes(mode) ? 'rebounds-current' : 'rebounds-initial'
+    f.dom.window.document.body.innerHTML = `<button data-menu-item-id="-1" class="ds-pill-current ${changed && mode === 'unselected' ? '' : 'ds-pill-selected'}">All</button>${redrawing || changed && mode === 'loading' ? '<div role="progressbar"></div>' : ''}`
+      + header('Player points', 'points') + content('points', '30+', '+400')
+      + (redrawing || changed && mode === 'removed' ? '' : header('Player rebounds', reboundId) + content(reboundId, '10+', '+700'))
+      + (changed && mode === 'duplicate' ? header('Player rebounds', 'rebounds-duplicate') + content('rebounds-duplicate', '10+', '+900') : '')
+  }
+  render()
+  const seenSelectors: string[] = []
+  const locator = (selector: string) => ({
+    count: async () => f.dom.window.document.querySelectorAll(selector).length,
+    getAttribute: async (name: string) => f.dom.window.document.querySelector(selector)?.getAttribute(name) ?? null,
+    waitFor: async () => { assert.ok(f.dom.window.document.querySelector(selector), selector) },
+    getByRole: () => ({ click: async () => { assert.fail('already selected target must not be clicked') } }),
+    getByText: () => ({ first: () => ({ count: async () => 0, isVisible: async () => false }) }),
+    click: async () => { assert.fail('already expanded family must not be clicked') },
+  })
+  const page = {
+    evaluate: async (fn: (arg?: unknown) => unknown, arg?: unknown) => fn(arg),
+    locator: (selector: string) => { seenSelectors.push(selector); return locator(selector) },
+    waitForTimeout: async (ms: number) => { clock += ms; render() },
+  }
+  const imports: Record<string, unknown> = {
+    './nbaFirstBookDom': { readMgmFirstIdentity: () => changed && mode === 'identity' ? { ...metadata, away: 'Different team' } : metadata },
+    './nbaBookPropDom': f.readers,
+    './nbaFirstBookQuotes': { nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
+    './nbaBookPropQuotes': { ...quotes, nbaNormalizeBookProp: (...args: Parameters<typeof quotes.nbaNormalizeBookProp>) => {
+      const frame = quotes.nbaNormalizeBookProp(args[0], args[1], clock)
+      if (args[1].title === 'Player points') { changed = true; changedAt = clock; render() }
+      return frame
+    } },
+  }
+  const target = { exports: {} }
+  new Function('require', 'module', 'exports', 'Date', compile('../src/lib/scrapers/nbaMgmProps.ts'))((name: string) => imports[name], target, target.exports, Clock)
+  const collector = target.exports as typeof import('../src/lib/scrapers/nbaMgmProps.ts')
+  try { return { ...await collector.collectMgmProps(page as never, input, now + budget), seenSelectors, elapsed: clock - now } }
+  finally { f.dom.window.close() }
+}
+
+test('each known family reacquires its exact current header when earlier panels replace later panel IDs', async () => {
+  for (const mode of ['rotate', 'delayed'] as const) {
+    const result = await familyRerender(mode)
+    assert.deepEqual(result.frames.map(frame => frame.contractKey), ['points:milestone:30', 'rebounds:milestone:10'])
+    assert.ok(result.frames.every(frame => frame.complete))
+    assert.equal(result.frames[1].props[0].market.odds, 700)
+    assert.ok(result.seenSelectors.includes('button[aria-controls="rebounds-current"]'))
+    assert.equal(result.seenSelectors.includes('button[aria-controls="rebounds-initial"]'), false)
+    assert.equal(result.coverage.find(scope => scope.market === 'rebounds')!.complete, true)
+    assert.ok(result.elapsed < 5000, 'readiness stays within its existing bounded capture window')
+  }
+})
+
+test('a disappeared, duplicate or unsafe current family cannot become a complete empty withdrawal', async () => {
+  for (const mode of ['removed', 'duplicate', 'loading', 'unselected', 'identity'] as const) {
+    const result = await familyRerender(mode)
+    assert.equal(result.frames.some(frame => frame.market === 'rebounds'), false, mode)
+    const coverage = result.coverage.find(scope => scope.market === 'rebounds')!
+    assert.equal(coverage.complete, false, mode); assert.deepEqual(coverage.contracts, [], mode)
+    if (mode === 'identity') assert.ok(result.frames.every(frame => !frame.complete && !frame.props.length))
+    else assert.equal(result.frames[0].complete, true, 'a verified earlier family stays valid')
+    assert.ok(result.elapsed <= 3000, 'an unresolved family cannot extend its 1.5-second readiness cap')
+  }
+  const bounded = await familyRerender('removed', 2300)
+  assert.equal(bounded.coverage.find(scope => scope.market === 'rebounds')!.status, 'deadline')
+  assert.equal(bounded.frames.some(frame => frame.market === 'rebounds'), false)
+  assert.ok(bounded.elapsed <= 2300, 'the original absolute deadline is never extended')
 })

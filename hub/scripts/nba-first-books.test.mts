@@ -388,3 +388,55 @@ test('MGM failures identify the bounded navigation stage without exposing raw er
   await assert.rejects(functions.mgmEvent(boundedPage, 'https://www.nc.betmgm.com/en/sports/events/observed', Date.now() + 500))
   assert.ok(waitBudget > 0 && waitBudget <= 500, 'readiness must still obey the remaining absolute deadline')
 })
+
+async function leagueScenario(mode: 'late' | 'network' | 'events-network' | 'repeat' | 'challenge' | 'late-challenge' | 'layout' | 'evaluation', budget=90_000) {
+  const code=ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+  let clock=now,attempt=0,linksReads=0,challenge=mode==='challenge'
+  const navigations:{url:string;at:number;timeout:number}[]=[]
+  class Clock extends Date { constructor(value:string|number=clock){super(value)} static now(){return clock} }
+  const imports:Record<string,unknown>={'server-only':{},'../browserbase':{openSession:()=>{assert.fail('discovery retry must not open another session')}},'../nbaPaint':paint,'../nbaOddsMode':modes,'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes}
+  const target={exports:{}}
+  const functions=new Function('require','module','exports','Date',`${code}\nreturn {mgmLeagueLinks,captureFailure}`)((name:string)=>imports[name],target,target.exports,Clock) as {mgmLeagueLinks:(page:unknown,deadline:number)=>Promise<string[]>;captureFailure:(error:unknown)=>{code:string;stage?:string;reason?:string}}
+  const timeout=()=>Object.assign(new Error('private timeout URL token=must-not-leak'),{name:'TimeoutError'})
+  const links=['https://www.nc.betmgm.com/en/sports/events/verified-current-link']
+  const page={
+    goto:async(url:string,options:{timeout:number})=>{attempt++;navigations.push({url,at:clock,timeout:options.timeout});assert.ok(options.timeout<=now+budget-clock);clock+=100;if(mode==='network'&&attempt===1)throw new Error('net::ERR_CONNECTION_RESET private-token')},
+    waitForTimeout:async(ms:number)=>{clock+=ms},evaluate:async()=>challenge,
+    context:()=>{assert.fail('same existing page must be reused')},
+    getByRole:()=>({first(){return this},waitFor:async(options:{timeout:number})=>{if(attempt===1&&['late','repeat'].includes(mode)){clock+=options.timeout;throw timeout()}},count:async()=>attempt===1&&['late','repeat'].includes(mode)?0:1,click:async()=>{if(mode==='events-network'&&attempt===1)throw new Error('network connection reset private-token')}}),
+    locator:()=>({first(){return this},waitFor:async(options:{timeout:number})=>{
+      assert.ok(options.timeout<=now+budget-clock)
+      if(mode==='evaluation')throw new TypeError('private selector failure')
+      if(mode==='repeat'||attempt===1&&['late','late-challenge'].includes(mode)){clock+=options.timeout;if(mode==='late-challenge')challenge=true;throw timeout()}
+    },evaluateAll:async()=>{linksReads++;return mode==='layout'?[]:links}}),
+  }
+  try{return{links:await functions.mgmLeagueLinks(page,now+budget),navigations,linksReads,error:null}}
+  catch(error){const safe=functions.captureFailure(error);assert.equal(JSON.stringify(safe).includes('private'),false);return{links:[],navigations,linksReads,error:safe}}
+}
+
+test('MGM league discovery retries a late loading shell or network failure once in the same page and deadline',async()=>{
+  for(const mode of ['late','network','events-network'] as const){
+    const value=await leagueScenario(mode)
+    assert.equal(value.error,null);assert.equal(value.navigations.length,2);assert.equal(value.linksReads,1)
+    assert.equal(new Set(value.navigations.map(item=>item.url)).size,1)
+    assert.deepEqual(value.links,['https://www.nc.betmgm.com/en/sports/events/verified-current-link'])
+    assert.ok(value.navigations.every(item=>item.at+item.timeout<=now+90_000))
+  }
+})
+
+test('MGM repeated league timeout remains stage-specific failed coverage and never opens a third attempt',async()=>{
+  const value=await leagueScenario('repeat')
+  assert.equal(value.navigations.length,2);assert.equal(value.linksReads,0)
+  assert.deepEqual(value.error,{code:'navigation-failed',stage:'league-links',reason:'timeout'})
+})
+
+test('MGM league retry stops for visible or late challenges, unverified layout, evaluation errors and insufficient time',async()=>{
+  for(const mode of ['challenge','late-challenge','layout','evaluation'] as const){
+    const value=await leagueScenario(mode)
+    assert.equal(value.navigations.length,1);assert.deepEqual(value.links,[])
+    assert.equal(value.error?.code,mode.includes('challenge')?'challenge':mode==='layout'?'layout-unavailable':'navigation-failed')
+    assert.equal(value.error?.stage,mode==='challenge'?'league-navigation':'league-links')
+  }
+  const expired=await leagueScenario('late',30_000)
+  assert.equal(expired.navigations.length,1);assert.equal(expired.linksReads,0);assert.equal(expired.error?.reason,'timeout')
+})

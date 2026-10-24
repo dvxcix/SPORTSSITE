@@ -264,3 +264,80 @@ Bounded scan and navigation follow-up:
   timestamps. Waiting work checks the existing save deadline after admission.
   Independent route 29/29 and collector 19/19 checks pass, including sixteen
   queued callbacks crossing the deadline with no late or repeated storage.
+- Final adaptive source tests: NBA 483/483, production 134/134, TypeScript
+  and scoped lint pass. Source 5fde675b37f9e5dd6a1f4b17f4c16a74a35cef37
+  reached production READY at 12:56:35.237 UTC through GitHub main, deployment
+  dpl_25d9g1rBQcVcttmiDp74bZkT2zGn; www.slipsurge.com alias verified.
+- Actual production browser verification passed: internal First Basket then
+  global sidebar Ladders switches to the correct tool without reloading.
+  Porter points shows 20+ -165 / opening -175, 25+ +165 / opening +155,
+  and 30+ +400 / opening +400. Browser warning/error log is empty.
+  Screenshot: work/nba-final-live-ladders-2026-10-24.png. The 12:57 scheduled
+  collector started on this exact source; its final receipt is still pending.
+
+12:57 natural production verification:
+- Scheduled run 884215 completed at 12:59:22.723 UTC in 127.8 seconds on
+  5fde675b. All four MGM partitions and one DK session ran without session
+  errors or deadline misses. DK saved 80 First Basket prices and MGM 50.
+  Both books still reported the seven October 25 games as unlisted.
+- Seven of eight listed MGM games completed every known prop panel and all
+  eleven families. WAS points 10+ recovered. NOP PRA 20+ alone threw a target
+  error: 68 of 69 target observations succeeded, with two failure counters
+  (the incomplete family plus its failed target). This is still not complete
+  coverage. Its six prior prices kept their true 12:48:59 timestamp and aged
+  out of current display; neither fresh prices nor history were fabricated.
+- The durable reader retained 476 regular scopes / 2,127 latest quotes and
+  130 First Basket quotes with zero identity, timestamp or phase violations.
+  Of 2,069 matching repeated regular sides, 133 shortened, four lengthened
+  and 1,932 remained unchanged. DK First had five shortened/three lengthened;
+  MGM First had one shortened. All previously verified openings stayed intact.
+- Example actual movement: Jokic points+rebounds 40+ MGM -125 at 12:49:17.248
+  became -135 at 12:58:54.132; PRA 55+ moved +180 to +170. Porter 30+ retained
+  its original +400 opening. The subsequent 13:00 aggregate preserved the
+  actual 12:58:14.416 quote time. Three bounded reader requests took 268ms.
+- NFL's 12:42 scheduled run saved LA-LV and GB-DET archives at 12:45/12:46
+  with zero failures; there are no NFL games today and fourteen upcoming.
+  New-release NFL API runs and MLB dispatcher succeeded. MLB's next due
+  public capture remains pending; no primary October 23-25 receipt exists yet.
+
+Bounded target retry and remaining investigation:
+- One thrown target UI operation can retry once within the same 6.5-second
+  click/readiness window and existing global deadline. Retry revalidates game
+  identity and reads a fresh baseline; an unconfirmed transition survives a
+  click throwing after selection, so stale rows cannot gain a new label.
+  Late final identity reads are rejected. Partial/invalid normalization and
+  database writes are not retried. Repeated errors remain explicit failures.
+- Independent target regression tests pass 24/24, including transient recovery,
+  repeated failure, stale selected rows, identity changes and both deadlines.
+  TypeScript and scoped lint pass.
+- The 13:02 natural run on 5fde675b finished in 122.9 seconds but lost one
+  whole MGM partition before game observations (MIL/NOP and two future games),
+  and MIA inspected only four of eleven families. This separate discovery
+  failure remains under investigation; the target retry does not fix it.
+  The receipt retained old observations honestly and reported HTTP 503.
+- The retained 13:02 cloud recording e0d5ef26-bdcc-4a3d-a0fa-89f21b2ee447
+  lasted 27 seconds, visited only the MGM NBA league page, and ended with a
+  loading shell/spinner. No game page or visible CAPTCHA appeared. League
+  discovery now retries once on timeout/network in the same page/session and
+  original budget; late challenges, invalid layouts and unreadable pages fail
+  closed. Exact private league stage diagnostics are allowlisted. Independent
+  route/collector tests pass 52/52; TypeScript and scoped lint pass.
+- MIA's retained recording 75d47e40-5cfe-4c95-93ba-675e9a5c0f50 reached the
+  correct game and All tab. Its seven missing families have no target errors.
+  Source review found a concrete silent stale-ID path: later families reuse
+  the initial menu's aria-controls IDs, and missing replacements are skipped.
+  Recording alone does not prove the IDs changed; fresh exact-title header
+  lookup and rerender/ambiguity regressions are being prepared.
+- Fresh family lookup is now implemented with a 1.5-second redraw readiness
+  cap under the unchanged global deadline. The rotating panel-ID fixture
+  failed before this correction and passes after it. Missing or duplicate
+  known titles remain incomplete and preserve prior observations. Combined
+  route/collector/DOM checks pass 79/79; independent review, TypeScript and
+  scoped lint pass. Private receipts now name incomplete normalized markets
+  with a known-key-only list bounded to eleven; public responses are unchanged.
+- The subsequent 13:07 run on 5fde675b saved 473 actually complete target
+  observations / 2,127 quotes with no target errors, partials, deadlines or
+  unmatched players. First Basket saved DK 80 / MGM 50 again. One NOP family
+  coverage flag remained incomplete despite 69 complete target observations;
+  seven other games completed all eleven families. This flag is retained as
+  a failure, not hidden. Tomorrow's seven games remained unlisted on both books.

@@ -11,7 +11,7 @@ import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCov
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
-type CaptureStage = 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save'
+type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
 type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
@@ -107,6 +107,42 @@ async function dkBoards(page: Page, deadline: number) {
   return boards.map(board => ({ ...board, expanded: false }))
 }
 
+async function mgmLeagueLinks(page: Page, deadline: number): Promise<string[]> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await atStage('league-navigation', () => openPage(page, MGM_LEAGUE, deadline))
+      await atStage('league-events', async () => {
+        const events = page.getByRole('tab', { name: /^Events$/i })
+        // The league can already be showing events without this optional tab.
+        await events.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(error => {
+          const failure = new CaptureFailure('league-events', error)
+          if (failure.reason !== 'timeout') throw failure
+        })
+        if (await events.count()) await events.first().click({ timeout: remaining(deadline, 3000) })
+      })
+      return await atStage('league-links', async () => {
+        const events = page.locator('a[href*="/en/sports/events/"]')
+        await events.first().waitFor({ state: 'attached', timeout: remaining(deadline) })
+        const links = await events.evaluateAll(anchors => [...new Set(anchors.map(anchor => (anchor as HTMLAnchorElement).href))])
+        if (Date.now() >= deadline) throw new Error('deadline')
+        if (!links.length) throw new Error('layout-unavailable')
+        return links
+      })
+    } catch (error) {
+      if (attempt > 0 || !(error instanceof CaptureFailure) || error.code !== 'navigation-failed'
+        || !['timeout', 'network'].includes(error.reason) || deadline - Date.now() < 20_000) throw error
+      // A late challenge may have replaced the loading shell after the failed
+      // wait. Never reload it; an unreadable page also fails closed.
+      let challenge: boolean
+      try { challenge = await blocked(page) } catch { throw error }
+      if (challenge) throw new CaptureFailure(error.stage, new Error('challenge'))
+      if (deadline - Date.now() < 20_000) throw error
+      // Exactly one fresh navigation, in this existing session and page.
+    }
+  }
+  throw new CaptureFailure('league-links', new Error('layout-unavailable'))
+}
+
 async function mgmEvent(page: Page, eventUrl: string, deadline: number) {
   await atStage('event-navigation', () => openPage(page, eventUrl, deadline))
   await atStage('event-scoreboard', () => page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline, 35_000) }))
@@ -194,12 +230,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       }
       for (let offset = 0; offset < observed.length; offset += 4) await Promise.all(observed.slice(offset, offset + 4).map(publishFirst))
     } else {
-      await openPage(page, MGM_LEAGUE, deadline)
-      const events = page.getByRole('tab', { name: /^Events$/i })
-      await events.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(() => {})
-      if (await events.count()) await events.first().click({ timeout: remaining(deadline, 3000) })
-      await page.locator('a[href*="/en/sports/events/"]').first().waitFor({ state: 'attached', timeout: remaining(deadline) })
-      const links = await page.locator('a[href*="/en/sports/events/"]').evaluateAll(anchors => [...new Set(anchors.map(anchor => (anchor as HTMLAnchorElement).href))])
+      const links = await mgmLeagueLinks(page, deadline)
       const tasks: { input: NbaFirstBookInput; url: string }[] = []
       for (const input of active) {
         if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.errors.push({ gameId: input.game.id, code: 'deadline' }); continue }

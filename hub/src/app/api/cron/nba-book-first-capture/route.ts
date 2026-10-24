@@ -8,10 +8,12 @@ import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { NBA_FIRST_BOOKS, saveNbaBookFirstFrame } from '@/lib/nbaBookFirstData'
 import { collectNbaFirstBooks, type NbaFirstBookCapture } from '@/lib/scrapers/nbaFirstBooks'
 import type { NbaFirstBookGame } from '@/lib/scrapers/nbaFirstBookQuotes'
+import { MGM_MILESTONE_PANELS } from '@/lib/scrapers/nbaBookPropQuotes'
 import { getNbaBookPropEntries, nbaReconcileBookPropFrames, saveNbaBookPropFrames, type NbaBookPropObservation, type NbaBookPropCoverage } from '@/lib/nbaBookPropsData'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
+const bookMarkets=new Set(Object.values(MGM_MILESTONE_PANELS))
 
 async function beforeDeadline<T>(work: Promise<T>, deadline: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -56,7 +58,7 @@ async function run(request: Request) {
           let saved = 0, failed = 0, deferred = 0
           let regularSaved=0,regularQuotes=0,regularDeferred=0
           const reports=new Map<number,{gameId:number;status:string;quotes:number;unmatched:number;clockMismatch:boolean}>()
-          const regularReports=new Map<number,{gameId:number;status:string;contracts:number;quotes:number;unmatched:number;coverageComplete:number;coverageIncomplete:number;saved:number;states:Record<string,number>}>()
+          const regularReports=new Map<number,{gameId:number;status:string;contracts:number;quotes:number;unmatched:number;coverageComplete:number;coverageIncomplete:number;incompleteMarkets:string[];saved:number;states:Record<string,number>}>()
           const expected=new Map(inputs.map(input=>[input.game.id,input]))
           const firstRaw=new Map<number,NbaFirstBookGame>()
           type Attempt={signature:string;settled:Promise<void>}
@@ -100,7 +102,7 @@ async function run(request: Request) {
             const input=expected.get(gameId)
             if(book!=='betmgm'||!input||observations.some(frame=>frame.gameId!==gameId)||coverage.some(scope=>scope.gameId!==gameId)){failed++;return Promise.resolve()}
             return once(regularAttempts,gameId,JSON.stringify([observations,coverage]),async()=>{
-              const report={gameId,status:'incomplete',contracts:observations.length,quotes:observations.reduce((sum,frame)=>sum+frame.props.length,0),unmatched:Math.min(10_000,observations.reduce((sum,frame)=>sum+(Number.isSafeInteger(frame.unmatched)&&frame.unmatched>0?frame.unmatched:0),0)),coverageComplete:coverage.filter(scope=>scope.complete).length,coverageIncomplete:coverage.filter(scope=>!scope.complete).length,saved:0,states:Object.fromEntries(['captured','partial','unavailable','unlisted','closed','deadline','error','identity-mismatch'].map(status=>[status,observations.filter(frame=>frame.status===status).length]))}
+              const report={gameId,status:'incomplete',contracts:observations.length,quotes:observations.reduce((sum,frame)=>sum+frame.props.length,0),unmatched:Math.min(10_000,observations.reduce((sum,frame)=>sum+(Number.isSafeInteger(frame.unmatched)&&frame.unmatched>0?frame.unmatched:0),0)),coverageComplete:coverage.filter(scope=>scope.complete).length,coverageIncomplete:coverage.filter(scope=>!scope.complete).length,incompleteMarkets:[...new Set(coverage.filter(scope=>!scope.complete&&bookMarkets.has(scope.market)).map(scope=>scope.market))].slice(0,11),saved:0,states:Object.fromEntries(['captured','partial','unavailable','unlisted','closed','deadline','error','identity-mismatch'].map(status=>[status,observations.filter(frame=>frame.status===status).length]))}
               regularReports.set(gameId,report)
               if(!nbaPregameOpen(input.game)){report.status='closed';return}
               if(Date.now()>=saveDeadline-12_000){failed++;report.status='deadline';return}
@@ -151,7 +153,7 @@ async function run(request: Request) {
           failed+=capture.errors.length
           const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline'].includes(error.code)).slice(0,64).map(error=>({
             code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{}),
-            ...(['event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save'].includes(error.stage??'')?{stage:error.stage}:{}),
+            ...(['league-navigation','league-events','league-links','event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save'].includes(error.stage??'')?{stage:error.stage}:{}),
             ...(['timeout','target-closed','navigation-interrupted','network','evaluation','unknown'].includes(error.reason??'')?{reason:error.reason}:{}),
           }))
           failed+=capture.games.filter(item=>!expected.has(item.gameId)).length

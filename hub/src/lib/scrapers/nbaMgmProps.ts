@@ -23,14 +23,30 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
   if (!menu.headers.some(item => item.title.startsWith('Player '))) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt).map(scope => ({ ...scope, status: 'unavailable' as const })) }
   if (!menu.headers.some(item => MGM_MILESTONE_PANELS[item.title])) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt) }
   for (const [title, market] of Object.entries(MGM_MILESTONE_PANELS)) {
-    const matches = menu.headers.filter(item => item.title === title)
+    const initiallyPresent = menu.headers.some(item => item.title === title)
     const scope: NbaBookPropCoverage = { gameId: input.game.id, market, complete: false, observedAt: new Date().toISOString(), contracts: [] }
     coverage.push(scope)
-    if (!matches.length) { scope.complete = true; continue }
+    if (!initiallyPresent) { scope.complete = true; continue }
     if(cutoff(deadline)-Date.now()<1000){scope.status='deadline';continue}
-    if (matches.length !== 1) continue
-    const panelId = matches[0].id, panel = page.locator(`#${panelId}`)
     try {
+      // Opening an earlier accordion can replace later headers and panel IDs.
+      // Resolve this known family again; its disappearance is not a withdrawal.
+      const currentIdentity = await page.evaluate(readMgmFirstIdentity)
+      if (JSON.stringify(currentIdentity) !== JSON.stringify(identity)
+        || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt: new Date().toISOString() }).status)) continue
+      const familyDeadline = Math.min(cutoff(deadline), Date.now() + 1500)
+      let currentMenu = await page.evaluate(readMgmPropMenu)
+      while ((!currentMenu.allSelected || currentMenu.loading || currentMenu.headers.filter(item => item.title === title).length !== 1)
+        && Date.now() < Math.min(cutoff(deadline), familyDeadline)) {
+        await page.waitForTimeout(Math.max(1, Math.min(125, Math.min(cutoff(deadline), familyDeadline) - Date.now())))
+        currentMenu = await page.evaluate(readMgmPropMenu)
+      }
+      if (Date.now() >= cutoff(deadline)) { scope.status = 'deadline'; continue }
+      if (Date.now() >= familyDeadline) continue
+      if (!currentMenu.allSelected || currentMenu.loading) continue
+      const matches = currentMenu.headers.filter(item => item.title === title)
+      if (matches.length !== 1) continue
+      const panelId = matches[0].id, panel = page.locator(`#${panelId}`)
       const header = page.locator(`button[aria-controls="${panelId}"]`)
       if (await header.count() !== 1) continue
       if (await header.getAttribute('aria-expanded') !== 'true') await header.click({ timeout: remaining(deadline) })
@@ -47,51 +63,76 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
       if (!validTargets) { if(Date.now()>=cutoff(deadline))scope.status='deadline';continue }
       for (const target of targets) {
         if (cutoff(deadline) - Date.now() < 500) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'deadline')!); continue }
-        try {
-          // A previously captured panel is not a transition baseline: live
-          // odds may have changed since it was verified. Read just before click.
-          const before:MgmPropPanel = await page.evaluate(readMgmPropPanel,panelId)
-          const tab = panel.getByRole('tab', { name: target, exact: true })
-          const binary = nbaBookPropContract(title, target)?.type === 'over_under'
-          const requiresChange = !binary && before.selectedTarget !== target
-          // Locator.click is strict: absent or duplicate exact tabs fail.
-          if (requiresChange && !binary) await tab.click({ timeout: remaining(deadline, 2000) })
-          let row:MgmPropPanel = before
-          let responseRequired = requiresChange, moreClicks = 0, transitionBaseline = before.signature
-          const targetDeadline = Date.now() + 4500
-          for (let action = 0; action < 8 && Date.now() < Math.min(cutoff(deadline), targetDeadline); action++) {
-            const until = Math.min(cutoff(deadline), targetDeadline)
-            row = await page.evaluate(readMgmPropPanel, { panelId, target, settle:{timeoutMs:Math.max(0,until-Date.now()),...(responseRequired?{transitionFrom:transitionBaseline}:{})} })
-            const changed = !responseRequired || row.signature !== transitionBaseline
-            if (row.selectedTarget === target && changed) {
-              const all = panel.getByRole('tab', { name: 'All', exact: true })
-              if (!row.allSelected) { transitionBaseline = row.signature; responseRequired = true; await all.click({ timeout: remaining(until, 1500) }); continue }
-              const more = panel.getByText('Show More', { exact: true }).first()
-              if (!row.expanded && moreClicks < 5 && await more.count() && await more.isVisible()) {
-                transitionBaseline = row.signature; responseRequired = true; await more.click({ timeout: remaining(until, 1500) }); moreClicks++; continue
+        // One retry shares the original maximum click + readiness window.
+        // Keep an unfinished transition across a click that throws after the
+        // selection changes, so old rows cannot become a new target's prices.
+        const targetDeadline = Date.now() + 6500
+        let pendingTransition: string | null = null
+        for (let attempt = 0; attempt < 2; attempt++) {
+          let extracting = true
+          try {
+            if (attempt > 0) {
+              const retryIdentity = await page.evaluate(readMgmFirstIdentity)
+              if (JSON.stringify(retryIdentity) !== JSON.stringify(identity)
+                || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt: new Date().toISOString() }).status)) {
+                frames.push(nbaBookPropMissing(input.game.id, title, target, 'identity-mismatch')!); break
               }
             }
-            // Another worker can finish while this bounded in-page wait runs.
-            // Reclaim that newly available budget without restarting a tab.
-            if(!row.settled&&Date.now()>=until&&Math.min(cutoff(deadline),targetDeadline)>until)continue
+            // A previously captured panel is not a transition baseline: live
+            // odds may have changed since it was verified. Read just before click.
+            const before:MgmPropPanel = await page.evaluate(readMgmPropPanel,panelId)
+            const tab = panel.getByRole('tab', { name: target, exact: true })
+            const binary = nbaBookPropContract(title, target)?.type === 'over_under'
+            const requiresChange = !binary && before.selectedTarget !== target
+            if (Date.now() >= Math.min(cutoff(deadline), targetDeadline)) throw new Error('deadline')
+            // Locator.click is strict: absent or duplicate exact tabs fail.
+            if (requiresChange && !binary) {
+              pendingTransition = before.signature
+              await tab.click({ timeout: remaining(Math.min(cutoff(deadline), targetDeadline), 2000) })
+            }
+            let row:MgmPropPanel = before
+            let responseRequired = pendingTransition !== null, moreClicks = 0
+            let transitionBaseline: string = pendingTransition ?? before.signature
+            for (let action = 0; action < 8 && Date.now() < Math.min(cutoff(deadline), targetDeadline); action++) {
+              const until = Math.min(cutoff(deadline), targetDeadline)
+              row = await page.evaluate(readMgmPropPanel, { panelId, target, settle:{timeoutMs:Math.max(0,until-Date.now()),...(responseRequired?{transitionFrom:transitionBaseline}:{})} })
+              const changed = !responseRequired || row.signature !== transitionBaseline
+              if (row.selectedTarget === target && changed) {
+                const all = panel.getByRole('tab', { name: 'All', exact: true })
+                if (!row.allSelected) { transitionBaseline = row.signature; pendingTransition = transitionBaseline; responseRequired = true; await all.click({ timeout: remaining(until, 1500) }); continue }
+                const more = panel.getByText('Show More', { exact: true }).first()
+                if (!row.expanded && moreClicks < 5 && await more.count() && await more.isVisible()) {
+                  transitionBaseline = row.signature; pendingTransition = transitionBaseline; responseRequired = true; await more.click({ timeout: remaining(until, 1500) }); moreClicks++; continue
+                }
+              }
+              // Another worker can finish while this bounded in-page wait runs.
+              // Reclaim that newly available budget without restarting a tab.
+              if(!row.settled&&Date.now()>=until&&Math.min(cutoff(deadline),targetDeadline)>until)continue
+              break
+            }
+            const current = await page.evaluate(readMgmFirstIdentity)
+            if (Date.now() >= cutoff(deadline) || Date.now() >= targetDeadline) {
+              frames.push(nbaBookPropMissing(input.game.id, title, target, Date.now() >= cutoff(deadline) ? 'deadline' : row.settled ? 'error' : 'partial')!); break
+            }
+            if ('lineTable' in row) {
+              const discovered = [...new Set([...targets, ...row.targets])]
+              const valid = discovered.length <= 20 && discovered.every(value => nbaBookPropContract(title, value))
+              scope.complete = Boolean(valid && row.targetsComplete && row.expanded && row.allSelected && row.settled && targets.every(value => row.targets.includes(value)))
+              if (valid) {
+                for (const value of discovered) if (!targets.includes(value)) targets.push(value)
+                scope.contracts = targets.map(value => nbaBookPropContract(title, value)!.key)
+              }
+            }
+            extracting = false
+            const frame = nbaNormalizeBookProp(input, { ...identity, title, target, selectedTarget: row.selectedTarget, observedAt: new Date().toISOString(),
+              expanded: row.expanded && row.allSelected && row.settled===true, transitioned: (!responseRequired || row.signature !== transitionBaseline) && JSON.stringify(current) === JSON.stringify(identity), rows: row.rows })
+            if (frame) frames.push(frame)
+            break
+          } catch {
+            if (extracting && attempt === 0 && Math.min(cutoff(deadline), targetDeadline) - Date.now() >= 500) continue
+            frames.push(nbaBookPropMissing(input.game.id, title, target, Date.now() >= cutoff(deadline) ? 'deadline' : 'error')!)
             break
           }
-          const current = await page.evaluate(readMgmFirstIdentity)
-          if (Date.now() >= cutoff(deadline)) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'deadline')!); continue }
-          if ('lineTable' in row) {
-            const discovered = [...new Set([...targets, ...row.targets])]
-            const valid = discovered.length <= 20 && discovered.every(value => nbaBookPropContract(title, value))
-            scope.complete = Boolean(valid && row.targetsComplete && row.expanded && row.allSelected && row.settled && targets.every(value => row.targets.includes(value)))
-            if (valid) {
-              for (const value of discovered) if (!targets.includes(value)) targets.push(value)
-              scope.contracts = targets.map(value => nbaBookPropContract(title, value)!.key)
-            }
-          }
-          const frame = nbaNormalizeBookProp(input, { ...identity, title, target, selectedTarget: row.selectedTarget, observedAt: new Date().toISOString(),
-            expanded: row.expanded && row.allSelected && row.settled===true, transitioned: (!responseRequired || row.signature !== transitionBaseline) && JSON.stringify(current) === JSON.stringify(identity), rows: row.rows })
-          if (frame) frames.push(frame)
-        } catch {
-          frames.push(nbaBookPropMissing(input.game.id, title, target, Date.now() >= cutoff(deadline) ? 'deadline' : 'error')!)
         }
       }
     } catch { scope.complete = false;if(Date.now()>=cutoff(deadline))scope.status='deadline' }
