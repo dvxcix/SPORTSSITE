@@ -1,4 +1,5 @@
 import { nbaName, PAINT_MARKETS, type PaintGame, type PaintMarket, type PaintRoster } from './nbaPaint'
+import { nbaPlayerIdentities } from './nbaPlayerIdentity'
 export const NBA_PUBLIC_VERSION='nba-public-v5'
 export function nbaPublicEventMatches(game:Pick<PaintGame,'date'|'visitor_team'|'home_team'>,text:string){
   const normalized=nbaName(text),[,month,day]=game.date.split('-')
@@ -58,22 +59,9 @@ export function nbaPublicVerifiedVersion(version:string|undefined){return versio
 export function nbaPublicPrevious(row:NbaPublicRow,previous?:Pick<NbaPublicCapture,'rows'>){
   return Object.hasOwn(row,'previous')?row.previous??null:previous?.rows.find(prior=>prior.playerId===row.playerId&&prior.market===row.market)?.picks??null
 }
-// Verified display aliases are pinned to both the provider ID and canonical
-// roster identity. This never enables general nickname or first-name matching.
-const playerAliases=[
-  {id:38017716,canonical:'Ousmane Dieng',alias:'Ousmane',firstOnly:true},
-  {id:1028028405,canonical:'Alexandre Sarr',alias:'Alex Sarr',firstOnly:false},
-  {id:1057260888,canonical:'Airious Bailey',alias:'Ace Bailey',firstOnly:false},
-  {id:56677830,canonical:'GG Jackson',alias:'Gregory Jackson',firstOnly:false},
-] as const
 export function normalizeNbaPublic(props:Record<string,Record<string,number>>,roster:PaintRoster[]){
   const found=new Map<string,NbaPublicRow>();let unmatched=0
-  const identities=roster.map(player=>{
-    const canonical=nbaName(`${player.first_name} ${player.last_name}`)
-    const aliases=playerAliases.filter(alias=>alias.id===player.id&&nbaName(alias.canonical)===canonical
-      &&(!alias.firstOnly||roster.filter(other=>nbaName(other.first_name)===nbaName(alias.alias)).length===1)).map(alias=>nbaName(alias.alias))
-    return {player,names:[canonical,...aliases]}
-  })
+  const identities=nbaPlayerIdentities(roster)
   for(const [label,entries] of Object.entries(props)){
     const categoryMarket=nbaPublicMarket(label),combos=/^(?:player )?combos$/i.test(label.trim())
     if((!categoryMarket&&!combos)||!entries||typeof entries!=='object'||Array.isArray(entries))continue

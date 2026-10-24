@@ -1,6 +1,7 @@
 import { nbaName, type PaintGame, type PaintPlayer, type PaintProp } from './nbaPaint'
 import type { NbaFirstMovement } from './nbaFirstBasketMovement'
 import { nbaValidOdds } from './nbaOddsHistory'
+import { nbaPlayerIdentities } from './nbaPlayerIdentity'
 
 export type FirstOddsEvent = {id:string;home_team:string;away_team:string;commence_time:string;bookmakers?:{key:string;last_update?:string;markets:{key:string;last_update?:string;outcomes:{name:string;description?:string;price:number}[]}[]}[]}
 export type FirstBasketRow = {game:PaintGame;player:Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>;offer:PaintProp;movement?:NbaFirstMovement}
@@ -19,6 +20,7 @@ const hash=(value:string)=>{let n=2166136261;for(const c of value)n=Math.imul(n^
 export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,players:PaintPlayer[],asOf=Date.now()):{rows:FirstBasketRow[];unmatched:number;withheldMethods?:string[]}{
   if(nbaFirstEvent([event],game)?.id!==event.id)return {rows:[],unmatched:1}
   const offers=new Map<string,FirstBasketRow>(),withheldMethods=new Set<string>();let unmatched=0
+  const identities=nbaPlayerIdentities(players.filter(player=>[game.home_team.id,game.visitor_team.id].includes(player.team.id)))
   for(const book of event.bookmakers??[])for(const market of book.markets){
     if(!['player_first_basket','player_first_team_basket','player_method_of_first_basket'].includes(market.key))continue
     const rule=firstRules[book.key],at=market.last_update??book.last_update??'',time=Date.parse(at)
@@ -26,9 +28,9 @@ export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,player
     for(const outcome of market.outcomes){
       if(!nbaValidOdds(outcome.price)){unmatched++;continue}
       const name=outcome.description??(!['yes','no'].includes(outcome.name.toLowerCase())?outcome.name:'')
-      const matches=players.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id)&&nbaName(`${p.first_name} ${p.last_name}`)===nbaName(name))
+      const matches=identities.filter(identity=>identity.names.includes(nbaName(name)))
       if(matches.length!==1){unmatched++;continue}
-      const player=matches[0],method=market.key==='player_method_of_first_basket'?methodKeys[methodName(outcome.name)]:undefined
+      const player=matches[0].player,method=market.key==='player_method_of_first_basket'?methodKeys[methodName(outcome.name)]:undefined
       if(market.key==='player_method_of_first_basket'&&(!method||rule!=='first_score')){if(!method&&withheldMethods.size<32)withheldMethods.add(outcome.name.slice(0,80));unmatched++;continue}
       const prop=method?`first_score_${method}`:market.key==='player_first_team_basket'?rule==='first_score'?'team_first_score':'team_first_field_goal':rule
       const vendor=book.key==='williamhill_us'?'caesars':book.key,key=`${game.id}:${player.id}:${vendor}:${prop}`

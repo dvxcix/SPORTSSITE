@@ -95,7 +95,7 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  const response=await route.GET(new Request('https://test/capture'));return{calls,keys,response,body:await response.json()}
 }
 test('the normal NBA collector writes pregame and live into separate tapes and attempt keys',async()=>{
- for(const mode of ['pregame','live'] as const){const run=await captureFixture(mode);assert.equal(run.response.status,200);assert.equal(run.calls.length,3);assert.ok(run.calls.every(call=>call.name==='record_nba_phase_capture'&&call.args.p_mode===mode));assert.deepEqual(new Set(run.calls.map(call=>call.args.p_feed)),new Set(['props','game','first']));assert.ok(run.keys.includes('market-attempt:v4:'+mode+':123'));assert.ok(run.keys.includes('first-basket-attempt:v2:'+mode+':123'))}
+ for(const mode of ['pregame','live'] as const){const run=await captureFixture(mode);assert.equal(run.response.status,200);assert.equal(run.calls.length,3);assert.ok(run.calls.every(call=>call.name==='record_nba_phase_capture'&&call.args.p_mode===mode));assert.deepEqual(new Set(run.calls.map(call=>call.args.p_feed)),new Set(['props','game','first']));assert.ok(run.keys.includes('market-attempt:v4:'+mode+':123'));assert.ok(run.keys.includes('first-basket-attempt:v3:'+mode+':123'))}
 })
 test('live stale-only feeds cannot become empty withdrawals while successful empty feeds remain captures',async()=>{
  const stale=await captureFixture('live',{stale:true});assert.deepEqual(stale.calls.map(call=>call.args.p_feed),['game']);assert.equal(stale.body.firstBasket.deferred,1)

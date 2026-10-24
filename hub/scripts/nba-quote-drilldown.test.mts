@@ -5,6 +5,9 @@ import { resolve } from 'node:path'
 import { build } from 'esbuild'
 import { act, createElement, type ComponentType } from 'react'
 import type { PaintBoard, PaintProp, PaintStat } from '../src/lib/nbaPaint.ts'
+import { nbaReference, nbaSelectionKey, parseNbaSelection } from '../src/lib/nbaPaint.ts'
+import { nbaSelectedProps } from '../src/lib/nbaMarketSelection.ts'
+import { NBA_FIRST_MARKETS } from '../src/lib/nbaFirstBasketMarkets.ts'
 
 const require = createRequire(import.meta.url)
 const { JSDOM } = require('jsdom')
@@ -139,6 +142,46 @@ test('milestone targets filter the board and preserve exact N+ pick contracts an
     await ui.click(ui.byLabel('Analyze Test Player, 30+, caesars'))
     assertSelected(ui.host,milestone,'over')
   }finally{await ui.close()}
+})
+
+test('milestone preference retains exact binary O/U 0.5 quotes without admitting ordinary totals',()=>{
+  for(const market of ['double_double','triple_double',...NBA_FIRST_MARKETS.map(item=>item.key)]){
+    const binary:PaintProp={...main,prop_type:market,line_value:'0.5',market:{type:'over_under',over_odds:700,under_odds:-1000}}
+    const selected=nbaSelectedProps([binary,{...binary,id:99,line_value:'1.5'}],market,{type:'milestone'})
+    assert.deepEqual(selected,[binary])
+    for(const side of ['over','under'] as const){
+      assert.equal(nbaReference(selected,market,'all',side),binary)
+      assert.deepEqual(parseNbaSelection(nbaSelectionKey(binary.player_id,binary,side)),{player_id:'bdl:434',prop_key:market,numeric_line:.5,market_side:side,type:'over_under'})
+    }
+    assert.deepEqual(nbaSelectedProps([binary],market,{type:'milestone',line:1}),[],'an explicit different target never becomes 0.5')
+  }
+  assert.deepEqual(nbaSelectedProps([main,alt,milestone],'points',{type:'milestone'}),[milestone])
+})
+
+test('default milestone board shows DD/TD Yes and No prices with exact binary save and drilldown contracts',async()=>{
+  for(const market of ['double_double','triple_double']){
+    const binary:PaintProp={...main,prop_type:market,line_value:'0.5',market:{type:'over_under',over_odds:700,under_odds:-1000}}
+    const initial={...board,players:board.players.map(player=>({...player,props:[...player.props,binary]}))}
+    const ui=await harness('research','over',null,false,market,'&contract=milestone&target=20',initial)
+    try{
+      assert.ok(ui.byLabel('Analyze Test Player, Yes, fanduel'))
+      assert.equal(ui.host.querySelector('[aria-label="NBA market format"]'),null)
+      assert.equal(ui.host.querySelector('[aria-label="NBA exact target"]'),null)
+      assert.equal(new URL(window.location.href).searchParams.has('target'),false)
+      const outcome=ui.host.querySelector('select[aria-label="NBA binary outcome"]') as HTMLSelectElement
+      assert.ok(outcome)
+      assert.deepEqual([...outcome.options].map(option=>option.textContent),['Yes','No'])
+      await ui.click([...ui.host.querySelectorAll('button')].find(button=>button.textContent==='Filters'))
+      const hitSide=ui.host.querySelector('select[aria-label="Hit-rate side"]') as HTMLSelectElement
+      assert.deepEqual([...hitSide.options].map(option=>option.textContent),['Yes','No'])
+      await act(async()=>{outcome.value='under';outcome.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+      assert.match(ui.host.textContent??'',/Hit rate · No/)
+      const pick=ui.host.querySelector('[data-testid="pick"]')!
+      assert.equal(pick.getAttribute('data-type'),'over_under');assert.equal(pick.getAttribute('data-line'),'0.5');assert.equal(pick.getAttribute('data-side'),'under')
+      await ui.click(ui.byLabel('Analyze Test Player, No, fanduel'))
+      assertSelected(ui.host,binary,'under')
+    }finally{await ui.close()}
+  }
 })
 
 test('ordinary player opens retain the general all-book ladder without a stale selected threshold', async () => {

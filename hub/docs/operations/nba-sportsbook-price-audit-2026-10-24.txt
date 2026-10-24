@@ -1,0 +1,46 @@
+NBA sportsbook price audit and repair — 2026-10-24
+
+Scope: owner requested direct sportsbook verification of tomorrow's missing
+props/First Basket prices and repairs to capture, display and movement history.
+Baseline main/live1d141707, required recovered ancestry preserved. Existing
+cloud collectors only; no laptop collector, extra job replay or DB migration.
+
+Availability evidence,10:15–10:22UTC:
+- All7 Oct25 games have successful current raw player-prop responses[]. The
+  request uses game_id only; no vendor/market/date filter or pagination loss.
+  Canonical dates and tipoffs match. The secondary First Basket event list
+  contains today's8 and Christmas5, but no tomorrow events; no date filter.
+- Direct FanDuel NBA Games board lists today's8, no tomorrow games. Expanded
+  league15+Points board links the same8 current events. Tomorrow public panels
+  independently display explicit unavailable odds for both FirstBasket groups.
+- DraftKings returns Access Denied; BetMGM only an access shell. Fanatics public
+  page is promotional rather than an odds board. Do not infer absent prices
+  from those access limits or claim every sportsbook was verified unavailable.
+- Actual missed contract: FanDuel WAS–CHI36224423 lists Alex Sarr First Basket
+  +700. SlipSurge's latest10:20 frame has44 quotes and zero Sarr; its normalized
+  cache has5 unmatched outcomes. Direct sportsbook DOM evidence saved in work.
+  All5 rejections cannot be attributed until the next repaired natural capture.
+- Bam Adebayo MIA–CHA FanDuel15+Points -210 matches the direct sportsbook board;
+  exact milestone line15 is stored (not O/U14.5), opening-194 at05:35UTC and
+  current-210 at10:20UTC, shortening approximately1.756 probability points.
+
+Repairs:
+- Share verified ID+canonical-name aliases between public counts and First
+  Basket odds. Exact game roster and collision guards remain. Sarr, Ousmane,
+  Ace Bailey and Gregory Jackson variants cannot match unrelated identities.
+- First Basket partial feeds save valid quotes but return incomplete status;
+  cached partial failures stay failures. Private v3 receipts include accepted,
+  unmatched and saved counts plus capture outcome, bounded to64 game entries.
+  No source labels, credentials or raw rejected payloads reach the public UI.
+- Bump only affected normalized price/attempt cache versions. Shared leases,
+  polling cadence and exact book/market/line/side/phase identities unchanged.
+- Default milestone filtering previously hid binary DD/TD O/U0.5 offers.
+  Preserve these exact Yes/No contracts and use Yes/No controls/labels. Regular
+  O/U point/rebound/etc. totals remain excluded from milestone-only selection.
+  No tooltip or explainer added.
+
+Validation:353/353 NBA tests,134/134 production source checks, TypeScript and
+scoped ESLint pass. Independent identity/cron review approved; exact contract
+movement evidence verified in primaryDB. No historical rewriting or replay.
+Post-release scheduled-capture/UI evidence is recorded separately in
+work/nba-sportsbook-price-release-2026-10-24.txt.

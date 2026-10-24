@@ -48,33 +48,35 @@ test('first-basket economics preserve every event/method change and ignore provi
   assert.notDeepEqual(nbaEconomicSnapshot([offer]), nbaEconomicSnapshot([]))
 })
 
-async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }) {
+async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }, options: { cache?: Map<string, unknown>; changed?: boolean; failArchive?: boolean; games?: number } = {}) {
   const source = await readFile(new URL('../src/app/api/cron/nba-market-capture/route.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: { name: string; args: Record<string, unknown> }[] = []
+  const receipts = options.cache ?? new Map<string, unknown>()
+  const games = Array.from({ length: options.games ?? 1 }, (_, index) => ({ ...game, id: game.id + index }))
   const regular = { ...offer, id: 1, prop_type: 'points', line_value: '15', market: { type: 'milestone', odds: -110 } }
   const admin = {
     from: () => ({ select: () => ({ in: async () => ({ data: [], error: null }) }) }),
-    rpc: (name: string, args: Record<string, unknown>) => { calls.push({ name, args }); return { abortSignal: async () => ({ data: true, error: null }) } },
+    rpc: (name: string, args: Record<string, unknown>) => { calls.push({ name, args }); return { abortSignal: async () => ({ data: options.changed ?? true, error: options.failArchive && args.p_feed === 'first' ? { message: 'fixture archive failure' } : null }) } },
   }
   const mocks: Record<string, unknown> = {
     'node:crypto': crypto, 'next/server': { NextResponse: { json: (body: unknown, options: ResponseInit) => Response.json(body, options) } },
     '@/lib/cron-auth': { requireCronAuth: () => null },
     '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
-    '@/lib/nbaPaintData': { getPaintGame:async()=>game, getPaintSchedule: async () => ({ games: [game] }), getPaintProps: async () => { if (failProps) throw Error('fixture'); return empty ? [] : [regular] }, getPaintGameOdds: async () => [] },
+    '@/lib/nbaPaintData': { getPaintGame:async(id: number)=>games.find(game=>game.id===id), getPaintSchedule: async () => ({ games }), getPaintProps: async (id: number) => { if (failProps) throw Error('fixture'); return empty ? [] : [{ ...regular, game_id: id }] }, getPaintGameOdds: async () => [] },
     '@/lib/nbaMovement': { nbaEconomicSnapshot },
     '@/lib/nbaOddsHistory': { nbaGameEconomicSnapshot },
     '@/lib/nbaPaint': { nbaToday: () => game.date },
     '@/lib/nbaOddsMode':{...modes,nbaPregameOpen:(g:PaintGame)=>modes.nbaPregameOpen(g,now),nbaLiveOpen:(g:PaintGame)=>modes.nbaLiveOpen(g,now),nbaQuoteInMode:(q:PaintProp,g:PaintGame,m:modes.NbaOddsMode)=>modes.nbaQuoteInMode(q,g,m,now)},
-    '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
-    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async () => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [row], ...firstState } } },
+    '@/lib/nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => { if (!receipts.has(key)) receipts.set(key, await load()); return { value: receipts.get(key) } } },
+    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async (game: PaintGame) => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [{ ...row, game, offer: { ...offer, game_id: game.id } }], ...firstState, withheldMethods: ['private provider label'] } } },
   }
   const compiled = { exports: {} as { GET: (request: Request) => Promise<Response> } }
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   new Function('require', 'module', 'exports', 'Date', output)((name: string) => { assert.ok(name in mocks, name); return mocks[name] }, compiled, compiled.exports, Clock)
   const response = await compiled.exports.GET(new Request('https://www.slipsurge.com/api/cron/nba-market-capture'))
-  return { calls, response, body: await response.json() }
+  return { calls, response, body: await response.json(), receipts }
 }
 test('cloud capture persists First Basket separately without suppressing ordinary markets during a feed outage', async () => {
   const healthy = await runCapture()
@@ -101,5 +103,56 @@ test('missing events and unmatched or stale first-basket quotes cannot create em
   assert.equal(missing.calls.some(call => call.args.p_feed === 'first'), false)
   const stale = await runCapture(false, false, true, { eventMatched: true, unmatched: 10 })
   assert.equal(stale.body.firstBasket.failed, 1)
+  assert.equal(stale.body.firstBasket.accepted, 0)
+  assert.equal(stale.body.firstBasket.unmatched, 10)
   assert.equal(stale.calls.some(call => call.args.p_feed === 'first'), false)
+})
+
+test('partial First Basket identities preserve verified prices but fail coverage with private counts', async () => {
+  for (const changed of [true, false]) {
+    const result = await runCapture(false, false, false, { eventMatched: true, unmatched: 3 }, { changed })
+    assert.equal(result.response.status, 503)
+    assert.equal(result.body.firstBasket.failed, 1)
+    assert.equal(result.body.firstBasket.captured, 0)
+    assert.equal(result.body.firstBasket.unchanged, 0)
+    assert.equal(result.body.firstBasket.quotes, 1)
+    assert.equal(result.body.firstBasket.accepted, 1)
+    assert.equal(result.body.firstBasket.unmatched, 3)
+    assert.deepEqual(result.calls.find(call => call.args.p_feed === 'first')?.args.p_quotes, [offer])
+    assert.equal(result.calls.filter(call => call.args.p_feed !== 'first').length, 2)
+    const receipt = { status: 'failed', accepted: 1, unmatched: 3, quotes: 1, capture: changed ? 'captured' : 'unchanged' }
+    assert.deepEqual(result.receipts.get('first-basket-attempt:v3:pregame:123'), receipt)
+    assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, ...receipt }])
+    assert.equal(JSON.stringify(result.body).includes('private provider label'), false)
+  }
+})
+
+test('cached incomplete First Basket receipts remain failed without replaying captures', async () => {
+  const initial = await runCapture(false, false, false, { eventMatched: true, unmatched: 2 })
+  const cached = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { cache: initial.receipts })
+  assert.equal(cached.response.status, 503)
+  assert.equal(cached.calls.length, 0)
+  assert.equal(cached.body.firstBasket.failed, 1)
+  assert.equal(cached.body.firstBasket.deferred, 0)
+  assert.deepEqual(cached.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: true, status: 'failed', accepted: 1, unmatched: 2, quotes: 1, capture: 'captured' }])
+})
+
+test('failed First Basket storage reports accepted rows without claiming saved quotes', async () => {
+  const result = await runCapture(false, false, false, { eventMatched: true, unmatched: 2 }, { failArchive: true })
+  assert.equal(result.response.status, 503)
+  assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, status: 'failed', accepted: 1, unmatched: 2, quotes: 0 }])
+})
+
+test('complete unchanged First Basket captures remain successful and diagnostics stay bounded', async () => {
+  const unchanged = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { changed: false })
+  assert.equal(unchanged.response.status, 200)
+  assert.equal(unchanged.body.firstBasket.unchanged, 1)
+  assert.equal(unchanged.body.firstBasket.unmatched, 0)
+  const large = await runCapture(false, false, false, { eventMatched: true, unmatched: 1 }, { games: 68 })
+  assert.equal(large.response.status, 503)
+  assert.equal(large.body.firstBasket.games.length, 64)
+  assert.equal(large.body.firstBasket.checked, 68)
+  assert.equal(large.body.firstBasket.failed, 68)
+  assert.equal(large.body.firstBasket.accepted, 68)
+  assert.equal(large.body.firstBasket.unmatched, 68)
 })

@@ -27,7 +27,7 @@ export async function getNbaFirstEvents(fresh=false){
   return fresh?load():(await nbaSharedCache('first-basket-events:v1',60,0,load,25)).value
 }
 export async function getNbaFirstOdds(game:PaintGame,fresh=false,slateEvents?:FirstOddsEvent[]){
-  if(!fresh)return (await nbaSharedCache(`first-basket-prices:v2:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value
+  if(!fresh)return (await nbaSharedCache(`first-basket-prices:v3:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value
   return loadNbaFirstOdds(game,true,slateEvents)
 }
 export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='pregame') {
@@ -49,7 +49,7 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
   }
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
   if(mode==='live'&&!nbaLiveOpen(game))return nbaGameFinal(game)?frozen():empty()
-  const cached=await nbaSharedCache(`first-basket-phase-prices:v1:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
+  const cached=await nbaSharedCache(`first-basket-phase-prices:v2:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
     const result=await loadNbaFirstOdds(game,false)
     return {...result,rows:result.rows.filter(row=>nbaQuoteInMode(row.offer,game,mode))}
   },60)

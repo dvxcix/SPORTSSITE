@@ -38,6 +38,44 @@ test('first-basket imports fail closed on ambiguous identities, unknown rules, s
     assert.equal(nbaNormalizeFirstOdds(invalid,game,[player],now).rows.length,0)
   }
 })
+
+test('verified roster aliases retain exact first-basket prices and market identities',()=>{
+  const identities=[
+    {id:38017716,first_name:'Ousmane',last_name:'Dieng',alias:'Ousmane'},
+    {id:1028028405,first_name:'Alexandre',last_name:'Sarr',alias:'Alex Sarr'},
+    {id:1057260888,first_name:'Airious',last_name:'Bailey',alias:'Ace Bailey'},
+    {id:56677830,first_name:'GG',last_name:'Jackson',alias:'Gregory Jackson'},
+  ]
+  const roster=identities.map(identity=>({...player,...identity}))
+  const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:identities.map((identity,index)=>({name:identity.alias,price:500+index*100}))}]}]}
+  const result=nbaNormalizeFirstOdds(sample,game,roster,now)
+  assert.equal(result.unmatched,0)
+  assert.deepEqual(result.rows.map(row=>[row.player.id,row.offer.player_id,row.offer.prop_type,row.offer.market.over_odds]),identities.map((identity,index)=>[identity.id,identity.id,'first_score',500+index*100]))
+  for(const invalid of [roster.map(p=>({...p,id:p.id+1})),roster.map(p=>({...p,first_name:'Different'})),roster.map(p=>({...p,team:{...team,id:999}}))]){
+    const rejected=nbaNormalizeFirstOdds(sample,game,invalid,now)
+    assert.equal(rejected.rows.length,0);assert.equal(rejected.unmatched,4)
+  }
+  const named=(name:string)=>({...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:[{name,price:700}]}]}]})
+  for(const [name,collision] of [['Ousmane',{...player,id:999,first_name:'Ousmane',last_name:'Other'}],['Alex Sarr',{...player,id:999,first_name:'Alex',last_name:'Sarr'}]] as const){
+    const rejected=nbaNormalizeFirstOdds(named(name),game,[...roster,collision],now)
+    assert.equal(rejected.rows.length,0);assert.equal(rejected.unmatched,1)
+  }
+  assert.equal(nbaNormalizeFirstOdds(named('Greg Jackson'),game,roster,now).unmatched,1)
+})
+
+test('Alex Sarr aliases resolve across first basket, team first basket and each distinct method',()=>{
+  const sarr={...player,id:1028028405,first_name:'Alexandre',last_name:'Sarr'}
+  const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[
+    {key:'player_first_basket',outcomes:[{name:'Yes',description:'Alex Sarr',price:850}]},
+    {key:'player_first_team_basket',outcomes:[{name:'Alex Sarr',price:400}]},
+    {key:'player_method_of_first_basket',outcomes:[{name:'2-pointer',description:'Alex Sarr',price:950},{name:'3-pointer',description:'Alex Sarr',price:2500},{name:'Dunk',description:'Alex Sarr',price:1800}]},
+  ]}]}
+  const result=nbaNormalizeFirstOdds(sample,game,[sarr],now)
+  assert.equal(result.unmatched,0)
+  assert.deepEqual(result.rows.map(row=>[row.offer.player_id,row.offer.prop_type,row.offer.market.over_odds]),[
+    [sarr.id,'first_score',850],[sarr.id,'team_first_score',400],[sarr.id,'first_score_2pt',950],[sarr.id,'first_score_3pt',2500],[sarr.id,'first_score_dunk',1800],
+  ])
+})
 const play=(order:number,patch:Partial<NbaPlay>={}):NbaPlay=>({game_id:123,order,type:'Jumpball',text:'Opening tip',period:1,clock:'12:00',scoring_play:false,shooting_play:false,score_value:null,team:{id:2},coordinate_x:null,coordinate_y:null,participants:[434],...patch})
 const plays=[play(1),play(2,{type:'Free Throw',text:'Test Player makes free throw',scoring_play:true,shooting_play:true,score_value:1}),play(3,{type:'Dunk',text:'Other Player makes dunk',scoring_play:true,shooting_play:true,score_value:2,participants:[222],team:{id:9}})]
 const stats=[434,222].map(id=>({id,player:{id},team:{id:id===434?2:9},game:{id:123,date:'2026-10-20',status:'Final',status_state:'final',home_team_id:2,visitor_team_id:9},min:'30:00',pts:20}) as PaintStat)
