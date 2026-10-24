@@ -228,9 +228,9 @@ test('one MGM session finishes every First Basket board before bounded regular l
   new Function('require', 'module', 'exports', 'Date', 'fakeBoard', `${code}\nmgmBoard = fakeBoard; mgmEvent = async () => ({}); openPage = async () => {};`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, fakeBoard)
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')
   const result = await collector.collectNbaFirstBooks('betmgm', slate, now + 220_000)
-  assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(pages, 4)
+  assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(pages, 2)
   assert.equal(result.games.length, 8); assert.ok(result.games.every(value => value.complete)); assert.equal(result.complete, true)
-  assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 109_000))
+  assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 54_000))
   assert.equal(result.regularCoverage!.length, Object.keys(propQuotes.MGM_MILESTONE_PANELS).length)
   assert.ok(result.regularCoverage!.every(value => !value.complete))
 })
@@ -249,17 +249,23 @@ test('MGM failures identify the bounded navigation stage without exposing raw er
     { stage: 'event-identity', reason: 'evaluation', fail: 'identity', error: new ReferenceError(`unknown binding ${secret}`) },
   ]) {
     const locator = (kind: string) => ({ first() { return this }, filter() { return this }, count: async () => 1,
-      waitFor: async () => { if (scenario.fail === kind) throw scenario.error }, click: async () => {},
+      waitFor: async (options: { timeout: number }) => { if (kind === 'scoreboard') assert.equal(options.timeout, 35_000); if (scenario.fail === kind) throw scenario.error }, click: async () => {},
     })
     const page = { goto: async () => { if (scenario.fail === 'goto') throw scenario.error }, waitForTimeout: async () => {},
       locator: (selector: string) => locator(selector.includes('scoreboard') ? 'scoreboard' : 'menu'), getByRole: () => locator('all'),
       evaluate: async (fn: unknown) => { if (fn === readers.readMgmFirstIdentity) { if (scenario.fail === 'identity') throw scenario.error; return identity } return false },
     }
-    try { await functions.mgmEvent(page, 'https://www.nc.betmgm.com/en/sports/events/observed', Date.now() + 30_000); assert.fail('expected stage failure') }
+    try { await functions.mgmEvent(page, 'https://www.nc.betmgm.com/en/sports/events/observed', Date.now() + 60_000); assert.fail('expected stage failure') }
     catch (error) {
       const failure = functions.captureFailure(error, game.id)
       assert.deepEqual(failure, { gameId: game.id, code: 'navigation-failed', stage: scenario.stage, reason: scenario.reason })
       assert.equal(JSON.stringify(failure).includes(secret), false); assert.equal(String(error).includes(secret), false)
     }
   }
+  let waitBudget = 0
+  const boundedPage = { goto: async () => {}, waitForTimeout: async () => {}, evaluate: async () => false,
+    locator: () => ({ first() { return this }, waitFor: async (options: { timeout: number }) => { waitBudget = options.timeout; throw new Error('bounded fixture') } }),
+  }
+  await assert.rejects(functions.mgmEvent(boundedPage, 'https://www.nc.betmgm.com/en/sports/events/observed', Date.now() + 500))
+  assert.ok(waitBudget > 0 && waitBudget <= 500, 'readiness must still obey the remaining absolute deadline')
 })

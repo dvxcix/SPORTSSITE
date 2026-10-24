@@ -94,7 +94,7 @@ async function dkBoards(page: Page, deadline: number) {
 
 async function mgmEvent(page: Page, eventUrl: string, deadline: number) {
   await atStage('event-navigation', () => openPage(page, eventUrl, deadline))
-  await atStage('event-scoreboard', () => page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline) }))
+  await atStage('event-scoreboard', () => page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline, 35_000) }))
   const identity = await atStage('event-identity', async () => {
     const value = await page.evaluate(readMgmFirstIdentity)
     if (!value) throw new Error('layout-unavailable')
@@ -188,7 +188,9 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         tasks.push({ input, url: candidates[0] })
       }
       const pages = [page]
-      while (pages.length < Math.min(4, tasks.length) && deadline - Date.now() > 20_000) {
+      // Four concurrent event shells failed to load their scoreboards in the
+      // cloud; the verified two-tab flow leaves capacity for event rendering.
+      while (pages.length < Math.min(2, tasks.length) && deadline - Date.now() > 20_000) {
         const extra = await extraPage(page, deadline)
         if (!extra) break
         await preparePage(extra); pages.push(extra)

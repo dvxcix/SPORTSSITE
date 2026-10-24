@@ -91,3 +91,18 @@ Follow-up release validation:
 - Empty selected-All menus are deferred only without prior direct contracts;
   known contracts still fail safely. No failed inspection becomes withdrawal.
 - Preflight main/live: 544c326102a2fbecad2178710b78c48ee26e53ed.
+
+Live concurrency correction:
+- The 11:42 and 11:47 four-tab MGM runs failed before game scoreboards loaded;
+  DK remained successful. No missing regular prices/openings were fabricated.
+- A read-only cloud reproduction confirmed four visible event tabs stalled
+  at the site shell. A two-tab comparison with a 35-second scoreboard bound
+  loaded MIA/CHA and BKN/CLE successfully with correct team and market menus.
+- Production MGM concurrency is reduced to two tabs in the same session;
+  scoreboard readiness uses that verified 35-second bound. The absolute
+  session/job limits, phase checks and explicit release remain unchanged.
+- Private fixed stage/reason diagnostics were released in 2b2985fb. No raw
+  error messages, browser connection URLs or secrets enter public responses.
+- Evidence: work/nba-cloud-mgm-parallel-diagnostic-2026-10-24.txt and
+  nba-cloud-mgm-two-tab-diagnostic-2026-10-24.txt. Subsequent natural capture
+  verification is required before claiming the regular board gaps repaired.
