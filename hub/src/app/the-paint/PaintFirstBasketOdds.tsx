@@ -99,7 +99,7 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
           return <td key={vendor} data-best={isBest}><div className={styles.firstBasketQuote}>
             {isBest&&<span className={styles.bestPrice}>Best price</span>}
             <PaintPriceValue current={nbaPrice(quote.offer)} opening={opening} at={at??undefined} openingLabel={basis==='previous'?'PREV':'OPEN'}/>
-            <small className={styles.firstBasketCaptured}>{time(quote.offer.updated_at)} ET{quote.movement?.captures?` · ${quote.movement.captures} captures`:''}</small>
+            <small className={styles.firstBasketCaptured}>{time(quote.offer.updated_at)} ET</small>
             <PaintPickActions player={quote.player} game={quote.game} offer={quote.offer} side="over"/>
           </div></td>
         })}</tr>

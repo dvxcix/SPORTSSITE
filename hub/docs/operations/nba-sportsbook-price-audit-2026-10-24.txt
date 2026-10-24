@@ -44,3 +44,13 @@ scoped ESLint pass. Independent identity/cron review approved; exact contract
 movement evidence verified in primaryDB. No historical rewriting or replay.
 Post-release scheduled-capture/UI evidence is recorded separately in
 work/nba-sportsbook-price-release-2026-10-24.txt.
+
+Live follow-up10:26UTC: corrected WAS cache49quotes/0unmatched, all5 Sarr
+prices visible: FD FirstBasket+700/teamFirst+360, DK FirstBasket+700,
+BetMGM FirstFG+650, Fanatics FirstFG+700. The next normal10:30 job will save
+the recovered contracts' first openings. DD/TD Yes/No prices verified live.
+Browser verification also exposed an inherited game-wide "32 captures" total
+on each newly recovered quote. Removed that per-price total and changed
+latestAt to the exact matching quote observation (null if never archived).
+Bounded two-frame history and immutable openings are unchanged; no new scan
+or database repair. Focused movement/phase/UI41/41, tsc and scoped lint pass.

@@ -7,8 +7,9 @@ import type { PaintFrame } from './nbaMovement'
 export type NbaFirstMovement = {
   change: number | null; previousChange: number | null
   previousOdds: number | null; previousAt: string | null
-  firstAt: string | null; latestAt: string | null; captures: number
+  firstAt: string | null; latestAt: string | null
 }
+/** RPC game/phase aggregate; never a count for any individual quote. */
 export type NbaFirstState = { frames: PaintFrame[]; captures: number }
 const identity = (offer: PaintProp) => JSON.stringify([offer.game_id, offer.player_id, offer.vendor, offer.prop_type, offer.market.type, Number(offer.line_value)])
 
@@ -33,7 +34,7 @@ export function nbaFirstMovements(rows: FirstBasketRow[], openings: NbaQuoteOpen
     return { ...row, offer, movement: {
       change, previousChange: current != null && prior ? (current - impliedProbability(prior.odds)!) * 100 : null,
       previousOdds: prior?.odds ?? null, previousAt: prior?.at ?? null, firstAt,
-      latestAt: latest?.captured_at ?? null, captures: state.captures,
+      latestAt: last?.at ?? null,
     } }
   })
 }

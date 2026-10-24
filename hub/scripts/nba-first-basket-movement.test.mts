@@ -24,7 +24,7 @@ test('first basket movement compares exact first observations and previous captu
   assert.ok(Math.abs(result.movement!.change! - (100 / 600 - 100 / 800) * 100) < 1e-10)
   assert.ok(result.movement!.previousChange! > 0)
   assert.equal(result.movement!.previousOdds, 600)
-  assert.equal(result.movement!.captures, 7)
+  assert.equal(Object.hasOwn(result.movement!,'captures'),false,'game capture totals are not quote counts')
   const longer = nbaFirstMovements([{ ...row, offer: { ...offer, market: { type: 'over_under', over_odds: 900 } } }], [opening], { captures: 2, frames: [frame(500, priorAt)] }, now)[0]
   assert.ok(longer.movement!.change! < 0)
   assert.ok(longer.movement!.previousChange! < 0)
@@ -39,6 +39,23 @@ test('first basket movement never crosses book, game, player, method, side or fu
   assert.equal(absent.movement?.previousOdds, null)
   assert.equal(absent.movement?.change, null)
   assert.equal(nbaFirstMovements([], [opening], { captures: 1, frames: [frame(600, at)] }, now).length, 0)
+})
+
+test('a newly introduced First Basket quote never inherits another quote’s capture count or timestamp',()=>{
+  const different=[
+    {...offer,game_id:124},{...offer,player_id:435},{...offer,vendor:'draftkings'},
+    {...offer,prop_type:'first_field_goal'},{...offer,prop_type:'first_score_dunk'},
+    {...offer,line_value:'1'},{...offer,market:{type:'milestone' as const,odds:500}},
+    {...offer,market:{type:'over_under' as const,under_odds:-750}},
+  ]
+  const frames=[{captured_at:priorAt,props:different},{captured_at:at,props:different},frame(500,'2026-10-20T13:00:00Z')]
+  const result=nbaFirstMovements([row],[],{captures:32,frames},now+1000)[0]
+  assert.equal(result.offer.opening,undefined)
+  assert.deepEqual(result.movement,{change:null,previousChange:null,previousOdds:null,previousAt:null,firstAt:null,latestAt:null})
+  const observed=nbaFirstMovements([row],[opening],{captures:32,frames:[frame(600,priorAt),{captured_at:at,props:different}]},now+1000)[0]
+  assert.equal(observed.movement?.latestAt,priorAt,'only the exact quote supplies its observation time')
+  assert.equal(observed.movement?.previousOdds,null,'a later withdrawal still breaks previous-capture continuity')
+  assert.equal(observed.offer.opening?.over?.at,openingAt,'exact opening history is preserved')
 })
 
 test('first-basket economics preserve every event/method change and ignore provider metadata', () => {

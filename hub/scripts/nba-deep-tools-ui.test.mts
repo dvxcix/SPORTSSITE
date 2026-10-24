@@ -183,7 +183,7 @@ test('First Basket sorts signed movement and changes baseline without dropping t
     game:{...board.game,datetime:'2026-10-20T23:00:00Z',status_state:'scheduled'},
     player:{id,first_name:name,last_name:'Player',position:'G',team,headshot:null},
     offer:{id,game_id:123,player_id:id,vendor:book,prop_type:market,line_value:'0.5',market:{type:'milestone',odds:900},updated_at:'2026-10-20T12:00:00Z',opening:change==null?undefined:{over:{odds:1100,at:'2026-10-20T10:00:00Z'}}},
-    movement:{change,previousChange,previousOdds:1000,previousAt:'2026-10-20T11:00:00Z',firstAt:'2026-10-20T10:00:00Z',latestAt:'2026-10-20T12:00:00Z',captures:3},
+    movement:{change,previousChange,previousOdds:1000,previousAt:'2026-10-20T11:00:00Z',firstAt:'2026-10-20T10:00:00Z',latestAt:'2026-10-20T12:00:00Z',captures:32},
   })
   const rows=[row(1,'Alpha','fanduel',3,-1),row(1,'Alpha','draftkings',-5,-2),row(2,'Beta','fanduel',-4,2),row(3,'Gamma','fanduel',null,null)]
   const ui=await harness('PaintFirstBasketOdds',{date:board.game.date},{requestedDate:board.game.date,date:board.game.date,games:1,loaded:1,failed:0,status:'ready',unmatched:0,rows,fetchedAt:'2026-10-20T12:00:00Z'})
@@ -203,6 +203,7 @@ test('First Basket sorts signed movement and changes baseline without dropping t
   try {
     ui.succeed();await ui.click('Retry')
     assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
+    assert.doesNotMatch(ui.host.textContent??'',/32 captures/,'legacy game totals never appear as per-price observation counts')
     await select('Sort first-basket prices','lengthened')
     assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
     await select('First-basket sportsbook','fanduel')
