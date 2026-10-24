@@ -382,3 +382,59 @@ Final NOP binary-column correction:
   its actual matching heading. Locked No cells never become prices; duplicate,
   unknown and mismatched labels remain incomplete. Focused tests 28/28 and
   independent review pass. No deadline, storage, schedule or UI copy changes.
+- Final NBA suite passes 498/498; TypeScript and scoped lint pass. Source
+  fc7d04c11df5f7f9b0158a9ee99e3ddb759311af is on main. Git production
+  dpl_4LCfVsVaDgRDh613mpSTnE6njhLF reached READY 13:26:59.736 UTC with the
+  www.slipsurge.com alias. The 13:27 dispatch still recorded the prior source,
+  so it does not qualify as verification of this repair; 13:32 is pending.
+- The earlier BKN page warning was inspected independently. At 13:29:43 its
+  shared cache had no issues, complete supplemental coverage and 59 complete
+  direct scopes. The only old scope was an empty withdrawal. Retry reads the
+  shared board route and cannot launch a browser collector; the page updates
+  from shared caches on its existing cadence. No additional UI defect found.
+
+13:32 natural run and binary-market proof:
+- Run 884621 used fc7d04c1, finished 13:34:34.353 UTC in 140.1 seconds.
+  NOP now completed 69/69 panels, 326 prices and all eleven families, with
+  zero unmatched players. The binary-column defect is verified fixed.
+- First NOP double-double observation is 13:34:32.603 UTC, received
+  13:34:33.490732: seven players, eight valid sides. All opening timestamps
+  match that first real observation. Gordon Yes +475, Braun Yes +1300 and
+  Dejounte Murray Yes +450; locked No sides absent. Jokic only No +600,
+  Jamal Murray Yes +320 / No -500 prove side mapping in both directions.
+- Live app verification shows those actual prices, first-captured openings,
+  zero initial movement and exact Yes/No saved-pick labels. No pick submitted.
+  Screenshot: work/nba-final-double-double-verified-2026-10-24.png.
+- Whole-slate run remains incomplete: MGM partition 0 (MIA/SAS and two future
+  games) encountered a challenge at league-links; partition 1 (BKN/HOU and two
+  future games) timed out at league-links. Four healthy games completed all
+  eleven families, saving 231 fresh panels / 1,030 prices. The 476 cache writes
+  include 245 carried incomplete frames and must not be called fresh captures.
+  DK saved 80 First Basket prices; MGM saved 30 across three posted boards.
+- All 493 durable scopes passed identity, timestamp and phase checks, but
+  249 older quoted scopes remain from those failed partitions. No false
+  freshness or withdrawal was written. No challenge bypass or replay occurred.
+  The next 13:37 normal scan remains to verify current whole-slate freshness.
+
+Final 13:37 natural verification -- passed:
+- Run 884675 used fc7d04c1 and completed 13:37:14.230-13:39:15.773 UTC
+  in 121.5 seconds. All eight posted games completed all eleven families.
+  Saved 476 genuinely fresh complete panels / 2,273 regular quotes, plus
+  DK First Basket 80 across eight boards and MGM 70 across seven posted boards.
+  GSW First Basket was not available on MGM. All four MGM partitions recovered
+  normally: zero source errors, partials, deadlines, unmatched rows or incomplete
+  markets. Tomorrow's seven games remain unlisted on both inspected books.
+- The 13:40 durable audit found all 491 nonempty current scopes fresh after
+  13:37, zero older quoted scopes and two older empty withdrawals. All 493
+  scopes passed identity, timestamp, future-observation and phase checks.
+- NOP double-double second observation 13:39:12.591 preserved all eight sides
+  and their original 13:34:32.603 openings. The actual latest change was zero.
+  All 2,299 repeated regular sides were also unchanged in this specific run;
+  earlier actual movements remain preserved in the durable tape. DK First had
+  four shortened, four lengthened and 72 unchanged sides; MGM 70 unchanged.
+  Original Porter, Smart and Diallo openings remained immutable.
+- Evidence: work/nba-natural-books-2026-10-24-1337-final.json and
+  work/nba-book-final-verified-2026-10-24-1340.json. This is verification of
+  current inspected boards, not a guarantee that external boards never block.
+  The existing bounded follow-up retains tomorrow's publication checks and
+  still-pending MLB/NFL future checkpoints; no extra collector was scheduled.
