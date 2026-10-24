@@ -71,9 +71,9 @@ test('ambiguous players, conflicting prices, reversed teams and a crossed tip ca
 })
 
 const compile = (path: string) => ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-function fixture(html: string) {
+function fixture(html: string,runtime?:{clock:typeof Date;timer:(callback:()=>void,ms:number)=>unknown}) {
   const dom = new JSDOM(html), target = { exports: {} }
-  new Function('module', 'exports', 'document', 'getComputedStyle', compile('../src/lib/scrapers/nbaBookPropDom.ts'))(target, target.exports, dom.window.document, dom.window.getComputedStyle.bind(dom.window))
+  new Function('module', 'exports', 'document', 'getComputedStyle','Date','setTimeout', compile('../src/lib/scrapers/nbaBookPropDom.ts'))(target, target.exports, dom.window.document, dom.window.getComputedStyle.bind(dom.window),runtime?.clock??Date,runtime?.timer??setTimeout)
   return { dom, readers: target.exports as typeof import('../src/lib/scrapers/nbaBookPropDom.ts') }
 }
 const option = (name: string, price: string, id = 'selection', locked = false) => locked ? '<ms-option><div class="option-indicator offline"><span class="lock option-group-lock-icon"></span></div></ms-option>' : `<ms-option><div data-test-option-id="${id}"><div class="name">${name}</div><div class="option-value"><ms-font-resizer>${price}</ms-font-resizer></div></div></ms-option>`
@@ -127,9 +127,11 @@ test('ordinary O/U accepts an explicitly locked known line, while blank prices o
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number } = {}) {
-  const f = fixture(''), prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
+async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean } = {}) {
+  const prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
+  let evaluations=0,remoteWaits=0
+  class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const pending: { at: number; apply: () => void }[] = [], clicked: string[] = []
   const render = () => {
     const tabs = Object.keys(prices).map(value => `<button role="tab" aria-selected="${value === selected}">${value}</button>`).join('')
@@ -138,17 +140,25 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
     const content = options.blocks ? `<ms-player-milestone-over-under-option-group><div class="player-milestone-container"><div class="option-group-header"><span>Over</span><span>Under</span></div>${ordinary('Peyton Watson','0.5','-190','+140')}${expandedRows ? ordinary('Jarrett Allen','1.5','+250','-350') : ''}</div></ms-player-milestone-over-under-option-group>` : `${tabs}<button role="tab" aria-selected="${all}">All</button><div class="player-milestone-container">${rows}</div>`
     f.dom.window.document.body.innerHTML = `<button data-menu-item-id="-1" class="ds-pill-current ${options.unselected ? '' : 'ds-pill-selected'}" aria-disabled="false">All</button>${options.loading ? '<div role="progressbar"></div>' : ''}${header}<div id="points" aria-hidden="false">${content}<div class="show-more-less-button">${expanded ? 'Show Less' : 'Show More'}</div></div>`
   }
+  const advance=(ms:number)=>{
+    clock+=ms
+    for(let index=0;index<pending.length;){if(pending[index].at<=clock)pending.splice(index,1)[0].apply();else index++}
+    render()
+  }
+  const f=fixture('',{clock:Clock as typeof Date,timer:(callback,ms)=>{advance(ms);queueMicrotask(callback)}})
   render()
   const locator = (kind: string, name = '') => ({
     first() { return this }, count: async () => 1, waitFor: async () => {}, isVisible: async () => !expanded,
     getAttribute: async () => 'true',
     getByRole: (_role: string, value: { name: string }) => locator('tab', value.name), getByText: () => locator('more'),
     click: async () => {
+      advance(options.roundTrip??0)
       clicked.push(kind === 'more' ? 'more' : name)
       if (kind === 'more') { expanded = true; pending.push({ at: clock + 500, apply: () => { expandedRows = true } }) }
       else if (name === 'All') { all = true; pending.push({ at: clock + 500, apply: () => { allRows = true } }) }
       else if (kind === 'tab') {
         selected = name
+        if(options.failedClick&&name==='15+'){displayed=name;render();throw new Error('Navigation command failed after rendering target')}
         if (name === '30+' && (options.stalled || options.flash)) {
           if (options.flash) { pending.push({ at: clock + 125, apply: () => { empty = true } }, { at: clock + 250, apply: () => { empty = false } }) }
         } else pending.push({ at: clock + 500, apply: () => { displayed = name } })
@@ -156,17 +166,17 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
       render()
     },
   })
-  const identityReader = () => metadata
+  const identityReader = () => {
+    if(options.liveChange&&displayed==='15+'){prices['15+']='-600';render()}
+    return metadata
+  }
   const page = {
-    evaluate: async (fn: (arg?: string) => unknown, arg?: string) => fn(arg),
+    evaluate: async (fn: (arg?: unknown) => unknown, arg?: unknown) => {evaluations++;advance(options.roundTrip??0);return fn(arg)},
     locator: () => locator('panel'),
     waitForTimeout: async (ms: number) => {
-      clock += ms
-      for (let index = 0; index < pending.length;) { if (pending[index].at <= clock) { pending.splice(index, 1)[0].apply() } else index++ }
-      render()
+      remoteWaits++;advance(ms+(options.roundTrip??0))
     },
   }
-  class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const imports: Record<string, unknown> = {
     './nbaFirstBookDom': { readMgmFirstIdentity: identityReader }, './nbaBookPropDom': f.readers,
     './nbaFirstBookQuotes': { nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
@@ -176,7 +186,7 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
   new Function('require', 'module', 'exports', 'Date', compile('../src/lib/scrapers/nbaMgmProps.ts'))((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock)
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaMgmProps.ts')
   const deadline = options.adaptive ? () => clock >= now + 3000 ? now + 60_000 : now + 3500 : now + (options.hardBudget ?? 60_000)
-  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked } } finally { f.dom.window.close() }
+  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked,evaluations,remoteWaits,elapsed:clock-now } } finally { f.dom.window.close() }
 }
 
 test('all seven posted thresholds wait for delayed actual rows, scoped All and Show More before saving', async () => {
@@ -194,6 +204,22 @@ test('a selected tab with old rows, including empty-loading then old rows, never
     assert.equal(thirty.complete, false); assert.deepEqual(thirty.props, []); assert.equal(thirty.status, 'partial')
     assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:35')!.props.find(prop => prop.player_id === 375)!.market.odds, 950)
   }
+})
+
+test('a command failure after a rendered transition invalidates the baseline before the next target',async()=>{
+  const result=await navigation({failedClick:true})
+  const failed=result.frames.find(frame=>frame.contractKey==='points:milestone:15')!
+  assert.equal(failed.status,'error');assert.deepEqual(failed.props,[])
+  const next=result.frames.find(frame=>frame.contractKey==='points:milestone:20')!
+  assert.equal(next.complete,true);assert.equal(next.props.find(prop=>prop.player_id===375)!.market.odds,-175)
+  assert.notEqual(next.props.find(prop=>prop.player_id===375)!.market.odds,-550,'the previously rendered15+ price cannot be relabeled20+')
+})
+
+test('a live update after the prior target capture cannot masquerade as the next target response',async()=>{
+  const result=await navigation({liveChange:true})
+  const next=result.frames.find(frame=>frame.contractKey==='points:milestone:20')!
+  assert.equal(next.complete,true);assert.equal(next.props.find(prop=>prop.player_id===375)!.market.odds,-175)
+  assert.notEqual(next.props.find(prop=>prop.player_id===375)!.market.odds,-600)
 })
 
 test('an active scan can reclaim its extended budget while a true global cutoff still emits honest deadlines', async () => {
@@ -218,6 +244,21 @@ test('a first-ever failed menu read reports unresolved coverage instead of an em
   const result = await navigation({ failedMenu: true })
   assert.deepEqual(result.frames, []); assert.equal(result.coverage.length, Object.keys(quotes.MGM_MILESTONE_PANELS).length)
   assert.ok(result.coverage.every(scope => !scope.complete && scope.contracts.length === 0))
+})
+
+test('cloud readiness polls stay within one bounded browser call while retaining actual250ms stable rows',async()=>{
+  const result=await navigation({roundTrip:150})
+  assert.equal(result.frames.length,7);assert.ok(result.frames.every(frame=>frame.complete&&frame.props.length===3))
+  assert.ok(result.evaluations<=33,`remote evaluations=${result.evaluations}`)
+  assert.ok(result.remoteWaits<=4,`remote waits=${result.remoteWaits}`)
+  assert.ok(result.elapsed<13_000,`cloud-simulated elapsed=${result.elapsed}`)
+  assert.equal(result.frames.find(frame=>frame.contractKey==='points:milestone:30')!.props.find(prop=>prop.player_id===375)!.market.odds,400)
+})
+
+test('a present supported panel skipped at the absolute deadline is explicitly unresolved',async()=>{
+  const result=await navigation({hardBudget:1200})
+  const points=result.coverage.find(scope=>scope.market==='points')!
+  assert.equal(points.complete,false);assert.equal(points.status,'deadline');assert.deepEqual(result.frames,[])
 })
 
 test('only a stable selected All menu with actual event markets can classify player markets as not posted', async () => {

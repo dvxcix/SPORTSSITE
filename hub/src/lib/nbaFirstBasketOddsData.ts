@@ -28,7 +28,7 @@ export async function getNbaFirstEvents(fresh=false){
   return fresh?load():(await nbaSharedCache('first-basket-events:v1',60,0,load,25)).value
 }
 export async function getNbaFirstOdds(game:PaintGame,fresh=false,slateEvents?:FirstOddsEvent[]){
-  if(!fresh)return freshBookRows((await nbaSharedCache(`first-basket-prices:v4:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value)
+  if(!fresh)return freshBookRows((await nbaSharedCache(`first-basket-prices:v5:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value)
   return freshBookRows(await loadNbaFirstOdds(game,true,slateEvents))
 }
 /** Recheck observations at every aggregate-cache return. Frozen phase history is
@@ -58,7 +58,7 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
   }
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
   if(mode==='live'&&!nbaLiveOpen(game))return nbaGameFinal(game)?frozen():empty()
-  const cached=await nbaSharedCache(`first-basket-phase-prices:v3:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
+  const cached=await nbaSharedCache(`first-basket-phase-prices:v4:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
     const result=await loadNbaFirstOdds(game,false)
     return {...result,rows:result.rows.filter(row=>nbaQuoteInMode(row.offer,game,mode))}
   },60)
@@ -113,9 +113,10 @@ async function loadNbaFirstOdds(game:PaintGame,fresh:boolean,slateEvents?:FirstO
   const players=roster.map(p=>({...p,headshot:images[teams.findIndex(team=>team.id===p.team.id)]?.headshots.get(nbaName(`${p.first_name} ${p.last_name}`))??null,average:{},logs:[],props:[],injury:null})) as PaintPlayer[]
   const result = event?nbaNormalizeFirstOdds(event,game,players):{rows:[],unmatched:0}
   const supplement = await getNbaBookFirstSupplement(game,result.rows.map(row=>row.offer),fresh)
+  const retained = supplement.retainedPrimary ? new Set(supplement.retainedPrimary) : null
   const added = supplement.props.flatMap(offer=>{
     const player=players.find(player=>player.id===offer.player_id)
     return player?[{game,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:player.headshot},offer}]:[]
   })
-  return {...result,rows:[...result.rows,...added],captureComplete:supplement.complete&&added.length===supplement.props.length,eventMatched:!!match||added.length>0,observedAt:new Date().toISOString()}
+  return {...result,rows:[...result.rows.filter(row=>!retained||retained.has(row.offer)),...added],captureComplete:supplement.complete&&added.length===supplement.props.length,eventMatched:!!match||added.length>0,observedAt:new Date().toISOString()}
 }

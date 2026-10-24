@@ -19,7 +19,15 @@ export function readMgmPropMenu() {
   return { headers, allSelected, loading }
 }
 
-export function readMgmPropPanel(request: string | { panelId: string; target?: string }) {
+export type MgmPropPanel = { targets:string[];selectedTarget:string;expanded:boolean;allSelected:boolean;signature:string;rows:{name:string;side:string;odds:string;unavailable:boolean}[];lineTable?:boolean;targetsComplete?:boolean;settled?:boolean }
+type PanelRequest = string | {panelId:string;target?:string}
+type SettledPanelRequest = {panelId:string;target:string;settle:{timeoutMs:number;transitionFrom?:string}}
+export function readMgmPropPanel(request:PanelRequest):MgmPropPanel
+export function readMgmPropPanel(request:SettledPanelRequest):Promise<MgmPropPanel>
+export function readMgmPropPanel(request:PanelRequest|SettledPanelRequest):MgmPropPanel|Promise<MgmPropPanel> {
+  // Poll in the cloud page, not through a separate CDP round trip every125ms.
+  // The same scoped reader and250ms stability/transition checks apply.
+  const read = ():MgmPropPanel => {
   const panelId = typeof request === 'string' ? request : request.panelId
   const empty = { targets: [] as string[], selectedTarget: '', expanded: false, allSelected: false, signature: '', rows: [] as { name: string; side: string; odds: string; unavailable: boolean }[] }
   const panel = document.getElementById(panelId)
@@ -92,4 +100,24 @@ export function readMgmPropPanel(request: string | { panelId: string; target?: s
   const more = [...panel.querySelectorAll('.show-more-less-button')].some(node => visible(node) && /^Show More/.test(node.textContent?.trim() ?? ''))
   return { targets, selectedTarget: selected.length === 1 ? selected[0].textContent!.trim() : '', allSelected: all.length === 0 || all.length === 1 && all[0].getAttribute('aria-selected') === 'true',
     expanded: !more && rows.length < 100, signature: JSON.stringify([selectionIds, rows]), rows }
+  }
+  if(typeof request==='string'||!('settle' in request))return read()
+  return (async()=>{
+    const deadline=Date.now()+Math.max(0,Math.min(4500,request.settle.timeoutMs))
+    let row=read(),signature='',stableAt=Date.now()
+    while(Date.now()<deadline){
+      row=read()
+      const transitioned=request.settle.transitionFrom===undefined||row.signature!==request.settle.transitionFrom
+      if(row.selectedTarget===request.target&&transitioned){
+        // Return promptly for the caller's scoped All/Show More action. No
+        // outcome or price control is clicked by this read-only DOM waiter.
+        if(!row.allSelected||!row.expanded)return{...row,settled:false}
+        const next=JSON.stringify(row)
+        if(next!==signature){signature=next;stableAt=Date.now()}
+        else if(Date.now()-stableAt>=250&&row.rows.length)return{...row,settled:true}
+      }else{signature='';stableAt=Date.now()}
+      await new Promise<void>(resolve=>setTimeout(resolve,Math.min(125,Math.max(0,deadline-Date.now()))))
+    }
+    return{...row,settled:false}
+  })()
 }

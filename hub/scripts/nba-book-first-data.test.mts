@@ -6,6 +6,7 @@ import * as mode from '../src/lib/nbaOddsMode.ts'
 import { nbaValidOdds } from '../src/lib/nbaOddsHistory.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as firstOdds from '../src/lib/nbaFirstBasketOdds.ts'
+import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaBookFirstFrame, NbaFirstBook } from '../src/lib/nbaBookFirstData.ts'
 
@@ -37,6 +38,7 @@ async function harness() {
   } }
   const imports: Record<string, unknown> = {
     'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaOddsHistory': { nbaValidOdds },
+    './nbaBookCurrent': bookCurrent,
     './nbaOddsMode': { ...mode, nbaPregameOpen: (value: PaintGame, at = clock) => mode.nbaPregameOpen(value, at) },
     './nbaSharedCache': { nbaSharedCache: async (key: string, ttl: number, stale: number, load: () => Promise<unknown>, lease: number) => { cacheCalls.push({ key, ttl, stale, lease }); if (!cached.has(key)) cached.set(key, await load()); return { value: cached.get(key) } } },
   }
@@ -70,14 +72,14 @@ test('invalid prices, duplicate identities and different line, side, game or obs
   assert.equal(api.nbaValidBookFirstFrame({ ...frame(), props: [original, { ...original, id: -999 }] }, game, 'draftkings'), false)
 })
 
-test('direct supplementation fills only missing exact contracts and never replaces a primary price', async () => {
+test('equal-time primary prices stay intact and different contracts remain independent', async () => {
   const { api } = await harness()
   const entries = ['draftkings', 'betmgm'].map(book => ({ key: api.nbaBookFirstKey(game, book as NbaFirstBook), payload: frame(book as NbaFirstBook) }))
   const primary = { ...offer(), market: { type: 'over_under' as const, over_odds: 1100 } }
   const supplemented = api.nbaBookFirstSupplement(game, [primary], entries, now)
   assert.equal(supplemented.complete, true)
   assert.deepEqual(supplemented.props, [offer(434, 'betmgm')])
-  assert.equal(primary.market.over_odds, 1100, 'primary exact prices are never overwritten')
+  assert.equal(primary.market.over_odds, 1100, 'equal observation times preserve the primary selection')
   for (const different of [{ ...primary, player_id: 435 }, { ...primary, game_id: 999 }, { ...primary, vendor: 'fanduel' }, { ...primary, prop_type: 'team_first_score' }, { ...primary, line_value: '1.5' }, { ...primary, market: { type: 'over_under' as const, under_odds: 1100 } }]) {
     assert.equal(api.nbaBookFirstSupplement(game, [different], entries.slice(0, 1), now).props.length, 1, 'a different or missing side cannot suppress the exact direct outcome')
   }
@@ -153,17 +155,18 @@ test('source-cache read failures never become verified empty availability', asyn
   assert.equal(h.metrics().writes, 0)
 })
 
-test('aggregate First Basket caches cannot keep an expired direct-only price visible or capture-complete', async () => {
-  for (const phaseWrapper of [false, true]) {
+test('aggregate First Basket deduplicates newer direct prices, applies exact withdrawals and rechecks expiry', async () => {
+  for (const phaseWrapper of [false, true]) for (const scenario of ['missing','older-api','withdrawn']) {
+    const hasOlderApi=scenario!=='missing',withdrawn=scenario==='withdrawn'
     const h = await harness(), key = h.api.nbaBookFirstKey(game, 'draftkings')
-    h.entries.set(key, { key, payload: frame('draftkings', now - 299000) })
+    h.entries.set(key, { key, payload: frame('draftkings', now - 299000,withdrawn?[]:[434]) })
     const home = { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }, away = { id: 9, abbreviation: 'DET', full_name: 'Detroit Pistons', name: 'Pistons' }
     const match = { ...game, home_team: home, visitor_team: away }
-    const event = { id: 'verified-event', commence_time: game.datetime, home_team: home.full_name, away_team: away.full_name, bookmakers: [] }
+    const event = { id: 'verified-event', commence_time: game.datetime!, home_team: home.full_name, away_team: away.full_name, bookmakers: hasOlderApi?[{key:'draftkings',markets:[{key:'player_first_basket',last_update:new Date(now-300000).toISOString(),outcomes:[{name:'Real Player',price:1100}]}]}]:[] }
     const cached = new Map<string, unknown>()
     let providerReads = 0
     const imports: Record<string, unknown> = {
-      'server-only': {}, './nbaPaint': paint, './nbaFirstBasketOdds': firstOdds, './nbaBookFirstData': h.api,
+      'server-only': {}, './nbaPaint': paint, './nbaFirstBasketOdds': {...firstOdds,nbaNormalizeFirstOdds:(event:firstOdds.FirstOddsEvent,game:PaintGame,players:paint.PaintPlayer[])=>firstOdds.nbaNormalizeFirstOdds(event,game,players,h.now())}, './nbaBookFirstData': h.api,
       './nbaOddsClockData': { getNbaOddsGame: async (value: PaintGame) => value },
       './nbaOddsMode': { ...mode, nbaPregameOpen: (value: PaintGame) => mode.nbaPregameOpen(value, h.now()), nbaLiveOpen: (value: PaintGame) => mode.nbaLiveOpen(value, h.now()) },
       './nbaOddsPhaseData': { getNbaPhaseSnapshot: async () => { throw Error('No archived result is needed before tip') } }, './supabase/admin': {},
@@ -177,11 +180,13 @@ test('aggregate First Basket caches cannot keep an expired direct-only price vis
       async (url: URL) => { providerReads++; return Response.json(url.pathname.endsWith('/events') ? [event] : event) }, { env: { ODDS_API_KEY: 'fixture-only' } })
     const api = target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts')
     const load = () => phaseWrapper ? api.getNbaFirstOddsForMode(match) : api.getNbaFirstOdds(match)
-    assert.equal((await load()).rows.length, 1)
+    const initial=await load()
+    assert.equal(initial.rows.length, withdrawn?0:1,'an older API quote cannot survive its replacement or verified withdrawal')
+    if(!withdrawn){assert.equal(initial.rows[0].offer.market.over_odds,900);assert.equal(initial.rows[0].offer.updated_at,new Date(now-299000).toISOString())}
     h.time(now + 2000)
     const expired = await load()
     assert.deepEqual(expired.rows, [], 'each aggregate cache return must recheck the direct observation age')
-    assert.equal('captureComplete' in expired ? expired.captureComplete : undefined, false, 'expiration is not a verified sportsbook withdrawal')
+    assert.equal('captureComplete' in expired ? expired.captureComplete : undefined, withdrawn, 'expiration of a formerly present price is not a verified sportsbook withdrawal')
     assert.equal(providerReads, 2, 'expiry must not create an extra member-triggered sportsbook request')
   }
 })

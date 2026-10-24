@@ -17,7 +17,7 @@ export type NbaBookPropCapture = {
   status: 'captured' | 'partial' | 'unavailable' | 'unlisted' | 'closed' | 'deadline' | 'error' | 'identity-mismatch'
   props: PaintProp[]; unmatched: number
 }
-export type NbaBookPropCoverage = { gameId: number; market: string; complete: boolean; observedAt: string; contracts: string[]; status?: 'unavailable' }
+export type NbaBookPropCoverage = { gameId: number; market: string; complete: boolean; observedAt: string; contracts: string[]; status?: 'unavailable'|'deadline' }
 export function nbaUnresolvedBookCoverage(gameId: number, observedAt = new Date().toISOString()): NbaBookPropCoverage[] {
   return [...new Set(Object.values(MGM_MILESTONE_PANELS))].map(market => ({ gameId, market, complete: false, observedAt, contracts: [] }))
 }

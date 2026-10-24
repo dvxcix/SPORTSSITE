@@ -4,11 +4,12 @@ import { nbaSharedCache } from './nbaSharedCache'
 import { nbaGameStart, nbaPregameOpen, nbaQuoteInMode } from './nbaOddsMode'
 import { nbaValidOdds } from './nbaOddsHistory'
 import { PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
+import { nbaCurrentBookQuotes, type NbaCurrentBookResult } from './nbaBookCurrent'
 
 export type NbaBookPropContract = { market: string; type: 'milestone' | 'over_under'; line: number }
 export type NbaBookPropFrame = { gameId: number; book: 'betmgm'; tipoff: string; contract: NbaBookPropContract; observedAt: string; props: PaintProp[]; complete: boolean }
 export type NbaBookPropObservation={gameId:number;contractKey:string;market:string;complete:boolean;status:string;observedAt:string|null;props:PaintProp[];unmatched:number}
-export type NbaBookPropCoverage={gameId:number;market:string;complete:boolean;observedAt:string;contracts:string[];status?:'unavailable'}
+export type NbaBookPropCoverage={gameId:number;market:string;complete:boolean;observedAt:string;contracts:string[];status?:'unavailable'|'deadline'}
 const MAX_FRAMES=160
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value)
 const prefix=(game:PaintGame)=>`book-props:v1:${game.id}:${nbaGameStart(game)}:betmgm:`
@@ -36,7 +37,7 @@ export function nbaValidBookPropFrame(value:unknown,game:PaintGame):value is Nba
   return value.props.every((raw:unknown)=>{
     if(!object(raw)||!Number.isSafeInteger(raw.id)||Number(raw.id)>-5_000_000_000_000||!Number.isSafeInteger(raw.player_id)||Number(raw.player_id)<=0||Number(raw.player_id)>9_999_999_999_999||raw.game_id!==game.id||raw.vendor!=='betmgm'
       ||raw.prop_type!==contract.market||raw.line_value!==String(contract.line)||!object(raw.market)||raw.market.type!==contract.type
-      ||typeof raw.updated_at!=='string'||!nbaQuoteInMode(raw as PaintProp,game,'pregame',Date.parse(value.observedAt as string)))return false
+      ||typeof raw.updated_at!=='string'||value.complete&&raw.updated_at!==value.observedAt||!nbaQuoteInMode(raw as PaintProp,game,'pregame',Date.parse(value.observedAt as string)))return false
     const quote=raw as PaintProp,fields=sides(quote)
     if(quote.market.type==='milestone'&&(quote.market.over_odds!=null||quote.market.under_odds!=null)||quote.market.type==='over_under'&&quote.market.odds!=null)return false
     if(!fields.some(field=>nbaValidOdds(quote.market[field]))||fields.some(field=>quote.market[field]!=null&&!nbaValidOdds(quote.market[field])))return false
@@ -116,26 +117,18 @@ export function nbaReconcileBookPropFrames(game:PaintGame,observations:NbaBookPr
   return{frames:[...frames.values()],failed}
 }
 
-export function nbaBookPropsSupplement(game:PaintGame,primary:PaintProp[],entries:{key:string;payload:unknown}[],now=Date.now()){
+export function nbaBookPropsSupplement(game:PaintGame,primary:PaintProp[],entries:{key:string;payload:unknown}[],now=Date.now()):NbaCurrentBookResult{
   if(!nbaPregameOpen(game,now))return{props:[] as PaintProp[],complete:true}
-  const present=new Set(primary.filter(quote=>nbaQuoteInMode(quote,game,'pregame',now)).flatMap(quote=>sides(quote).filter(field=>nbaValidOdds(quote.market[field])).map(field=>identity(quote,field))))
-  const props:PaintProp[]=[]
+  const frames:NbaBookPropFrame[]=[]
   let complete=true
   const seen=new Set<string>()
   for(const entry of entries){
     if(!entry.key.startsWith(prefix(game))||!nbaValidBookPropFrame(entry.payload,game)||entry.key!==nbaBookPropKey(game,entry.payload.contract)||seen.has(entry.key)){complete=false;continue}
     seen.add(entry.key)
-    const frame=entry.payload
-    if(!frame.complete)complete=false
-    for(const quote of frame.props){
-      const missing=sides(quote).filter(field=>nbaValidOdds(quote.market[field])&&!present.has(identity(quote,field)))
-      if(!missing.length)continue
-      const age=now-Date.parse(quote.updated_at)
-      if(age<0||age>300_000){complete=false;continue}
-      props.push({...quote,market:{type:quote.market.type,...Object.fromEntries(missing.map(field=>[field,quote.market[field]]))}})
-    }
+    frames.push(entry.payload)
   }
-  return{props,complete}
+  const result=nbaCurrentBookQuotes(game,primary,frames,now)
+  return{...result,complete:complete&&result.complete}
 }
 
 export async function getNbaBookPropEntries(game:PaintGame,fresh=false):Promise<{key:string;payload:unknown}[]>{

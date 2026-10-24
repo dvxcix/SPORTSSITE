@@ -177,3 +177,26 @@ Durable book observations repair (24 October, 12:30 UTC):
   history 180ms, recent First Basket 23ms before the first durable book run.
 - Next natural capture after this source release must verify actual writes,
   original First Basket openings, successive observations and member UI.
+
+Natural 12:37 durable capture and final scan/current-price correction:
+- 21756254 became production READY at 12:32:26 UTC. By 12:38:33 its next
+  scheduled run had atomically stored 13 First Basket scopes / 130 quotes,
+  with zero quote-time, identity, future or phase violations. Smart's +980
+  and Diallo's DK +1060 / MGM +900 original openings were unchanged. The new
+  observed prices were Smart +940, Diallo DK +1080 and MGM +950.
+- Regular scans still lost panels to per-game deadlines. Readiness polling
+  now executes in the cloud page, avoiding repeated remote read/sleep calls.
+  Fresh pre-click baselines, exact event identity, 250ms stable content,
+  All/Show More exhaustion, per-target limits and global limits remain.
+  Delayed and failed transitions cannot relabel the previous target's price.
+  No extra sessions, tabs or cron frequency were introduced.
+- Current tables previously preferred an existing API identity even when a
+  direct observation was newer. Current props and First Basket now choose
+  by the exact quote's observation time, matching history. A complete fresh
+  direct scope can withdraw older missing sides; partial or expired scopes
+  cannot. Separately observed O/U sides retain their own timestamps.
+- Independent collector and current-price reviews approved. Full final NBA
+  suite 476/476, production 134/134, TypeScript and scoped lint pass. First Basket live UI loaded
+  724 prices across eight games with actual book comparisons and movements.
+- Full post-release regular capture and successive tape verification remain
+  required; earlier partial runs are retained above as incomplete evidence.

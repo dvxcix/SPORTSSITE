@@ -4,6 +4,7 @@ import { nbaSharedCache } from './nbaSharedCache'
 import { nbaGameStart, nbaPregameOpen, nbaQuoteInMode } from './nbaOddsMode'
 import { nbaValidOdds } from './nbaOddsHistory'
 import type { PaintGame, PaintProp } from './nbaPaint'
+import { nbaCurrentBookQuotes, type NbaCurrentBookFrame, type NbaCurrentBookResult } from './nbaBookCurrent'
 
 export const NBA_FIRST_BOOKS = ['draftkings', 'betmgm'] as const
 export type NbaFirstBook = typeof NBA_FIRST_BOOKS[number]
@@ -45,26 +46,18 @@ export async function saveNbaBookFirstFrame(game: PaintGame, frame: NbaBookFirst
     || Number(data.captured) < 0 || Number(data.unchanged) < 0 || Number(data.captured) + Number(data.unchanged) !== 1) throw new Error('NBA book observation could not be saved')
 }
 
-export function nbaBookFirstSupplement(game: PaintGame, primary: PaintProp[], entries: { key: string; payload: unknown }[], now = Date.now()) {
+export function nbaBookFirstSupplement(game: PaintGame, primary: PaintProp[], entries: { key: string; payload: unknown }[], now = Date.now()): NbaCurrentBookResult {
   if (!nbaPregameOpen(game, now)) return { props: [] as PaintProp[], complete: true }
-  const present = new Set(primary.filter(prop => prop.market.type === 'over_under' && nbaValidOdds(prop.market.over_odds)
-    && nbaQuoteInMode(prop, game, 'pregame', now)).map(identity))
-  const props: PaintProp[] = []
+  const frames: NbaCurrentBookFrame[] = []
   let complete = true
   for (const book of NBA_FIRST_BOOKS) {
     const row = entries.find(entry => entry.key === nbaBookFirstKey(game, book))
     if (!row) continue // The book has not yet produced a verified cloud frame.
     if (!nbaValidBookFirstFrame(row.payload, game, book)) { complete = false; continue }
-    const missing = row.payload.props.filter(prop => !present.has(identity(prop)))
-    const age = now - Date.parse(row.payload.observedAt)
-    if (age < 0 || age > 300_000) {
-      // An expired cloud-only price is not proof the sportsbook withdrew it.
-      if (missing.length) complete = false
-      continue
-    }
-    props.push(...missing)
+    frames.push({ ...row.payload, contract: { market: book === 'draftkings' ? 'first_score' : 'first_field_goal', type: 'over_under', line: .5 } })
   }
-  return { props, complete }
+  const result = nbaCurrentBookQuotes(game, primary, frames, now)
+  return { ...result, complete: complete && result.complete }
 }
 
 export async function getNbaBookFirstSupplement(game: PaintGame, primary: PaintProp[], fresh = false) {

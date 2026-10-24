@@ -5,6 +5,7 @@ import ts from 'typescript'
 import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
+import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import type {NbaBookPropFrame,NbaBookPropObservation} from '../src/lib/nbaBookPropsData.ts'
 
 const now=Date.parse('2026-10-24T12:00:00Z'),game={id:123,date:'2026-10-24',datetime:'2026-10-24T23:00:00Z',status:'Scheduled',status_state:'scheduled',period:0} as paint.PaintGame
@@ -29,6 +30,7 @@ async function harness(){
     }}
   }}
   const imports:Record<string,unknown>={'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaPaint':paint,'./nbaOddsMode':{...modes,nbaPregameOpen:(g:paint.PaintGame,at=clock)=>modes.nbaPregameOpen(g,at)},'./nbaOddsHistory':{nbaValidOdds},'./nbaSharedCache':{nbaSharedCache:async(key:string,ttl:number,stale:number,load:()=>Promise<unknown>)=>{calls.push({key,ttl,stale});if(!cache.has(key))cache.set(key,load());return{value:await cache.get(key)}}}}
+  imports['./nbaBookCurrent']=bookCurrent
   const source=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,target={exports:{}}
   new Function('require','module','exports','Date','fetch',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock,()=>{throw new Error('No member source requests')})
   return{api:target.exports as typeof import('../src/lib/nbaBookPropsData.ts'),entries,calls,time:(at:number)=>{clock=at},errors:(r:boolean,w=false)=>{readError=r;writeError=w},receipt:(value:unknown)=>{receipt=value},counts:()=>({reads,writes})}

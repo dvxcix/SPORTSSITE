@@ -5,6 +5,7 @@ import ts from 'typescript'
 import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
+import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import type {NbaBookPropFrame,NbaBookPropObservation,NbaBookPropCoverage} from '../src/lib/nbaBookPropsData.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaFirstBookCapture } from '../src/lib/scrapers/nbaFirstBooks.ts'
@@ -28,7 +29,7 @@ async function fixture(options:Options={}){
   const source=await readFile(new URL('../src/app/api/cron/nba-book-first-capture/route.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const bookSource=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),bookOutput=ts.transpileModule(bookSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,bookModule={exports:{} as typeof import('../src/lib/nbaBookPropsData.ts')}
-  const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint}
+  const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint,'./nbaBookCurrent':bookCurrent}
   new Function('require','module','exports','Date',bookOutput)((name:string)=>{assert.ok(name in bookImports,name);return bookImports[name]},bookModule,bookModule.exports,Clock)
   const imports:Record<string,unknown>={
     'next/server':{NextResponse:{json:(body:unknown,init?:ResponseInit)=>Response.json(body,init)}},
