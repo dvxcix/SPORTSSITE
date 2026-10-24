@@ -4,13 +4,15 @@ import { nbaBookObservation, type NbaFirstBookInput } from './nbaFirstBookQuotes
 import { MGM_MILESTONE_PANELS, nbaBookPropContract, nbaBookPropMissing, nbaNormalizeBookProp, nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 import { readMgmPropMenu, readMgmPropPanel } from './nbaBookPropDom'
 
-const remaining = (deadline: number, cap = 3000) => Math.max(1, Math.min(cap, deadline - Date.now()))
-export async function collectMgmProps(page: Page, input: NbaFirstBookInput, deadline: number) {
+type CaptureDeadline = number | (() => number)
+const cutoff = (deadline: CaptureDeadline) => typeof deadline === 'function' ? deadline() : deadline
+const remaining = (deadline: CaptureDeadline, cap = 3000) => Math.max(1, Math.min(cap, cutoff(deadline) - Date.now()))
+export async function collectMgmProps(page: Page, input: NbaFirstBookInput, deadline: CaptureDeadline) {
   const frames: NbaBookPropCapture[] = [], coverage: NbaBookPropCoverage[] = []
   const identity = await page.evaluate(readMgmFirstIdentity), observedAt = new Date().toISOString()
   if (!identity || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt }).status)) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt) }
   let menu = await page.evaluate(readMgmPropMenu), stable = false, menuStableAt = Date.now()
-  for (let poll = 0; poll < 16 && Date.now() < deadline; poll++) {
+  for (let poll = 0; poll < 16 && Date.now() < cutoff(deadline); poll++) {
     await page.waitForTimeout(250)
     const next = await page.evaluate(readMgmPropMenu)
     if (JSON.stringify(next) !== JSON.stringify(menu)) menuStableAt = Date.now()
@@ -25,7 +27,7 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
     const scope: NbaBookPropCoverage = { gameId: input.game.id, market, complete: false, observedAt: new Date().toISOString(), contracts: [] }
     coverage.push(scope)
     if (!matches.length) { scope.complete = true; continue }
-    if (matches.length !== 1 || deadline - Date.now() < 1000) continue
+    if (matches.length !== 1 || cutoff(deadline) - Date.now() < 1000) continue
     const panelId = matches[0].id, panel = page.locator(`#${panelId}`)
     try {
       const header = page.locator(`button[aria-controls="${panelId}"]`)
@@ -33,26 +35,28 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
       if (await header.getAttribute('aria-expanded') !== 'true') await header.click({ timeout: remaining(deadline) })
       await panel.waitFor({ state: 'visible', timeout: remaining(deadline) })
       let initial = await page.evaluate(readMgmPropPanel, panelId)
-      for (let poll = 0; !initial.targets.length && poll < 12 && Date.now() < deadline; poll++) {
+      for (let poll = 0; !initial.targets.length && poll < 12 && Date.now() < cutoff(deadline); poll++) {
         await page.waitForTimeout(125); initial = await page.evaluate(readMgmPropPanel, panelId)
       }
       const targets = [...new Set(initial.targets)], contracts = targets.map(target => nbaBookPropContract(title, target))
       scope.contracts = contracts.flatMap(contract => contract ? [contract.key] : [])
-      scope.complete = targets.length > 0 && targets.length <= 20 && targets.length === initial.targets.length && contracts.every(Boolean)
+      const validTargets = targets.length > 0 && targets.length <= 20 && targets.length === initial.targets.length && contracts.every(Boolean)
+      scope.complete = validTargets && (!('lineTable' in initial) || initial.expanded && initial.targetsComplete)
       scope.observedAt = new Date().toISOString()
-      if (!scope.complete) continue
+      if (!validTargets) continue
       for (const target of targets) {
-        if (deadline - Date.now() < 500) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'deadline')!); continue }
+        if (cutoff(deadline) - Date.now() < 500) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'deadline')!); continue }
         try {
           const before = await page.evaluate(readMgmPropPanel, panelId), tab = panel.getByRole('tab', { name: target, exact: true })
           const binary = nbaBookPropContract(title, target)?.type === 'over_under'
           if (!binary && await tab.count() !== 1) throw new Error('layout')
-          const requiresChange = before.selectedTarget !== target
+          const requiresChange = !binary && before.selectedTarget !== target
           if (requiresChange && !binary) await tab.click({ timeout: remaining(deadline, 2000) })
           let row = before, signature = '', stableAt = Date.now(), responseRequired = requiresChange, moreClicks = 0, transitionBaseline = before.signature
-          const until = Math.min(deadline, Date.now() + 4500)
-          for (let poll = 0; poll < 35 && Date.now() < until; poll++) {
-            row = await page.evaluate(readMgmPropPanel, panelId)
+          const targetDeadline = Date.now() + 4500
+          for (let poll = 0; poll < 35 && Date.now() < Math.min(cutoff(deadline), targetDeadline); poll++) {
+            const until = Math.min(cutoff(deadline), targetDeadline)
+            row = await page.evaluate(readMgmPropPanel, { panelId, target })
             const changed = !responseRequired || row.signature !== transitionBaseline
             if (row.selectedTarget === target && changed) {
               const all = panel.getByRole('tab', { name: 'All', exact: true })
@@ -68,10 +72,20 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
             await page.waitForTimeout(125)
           }
           const current = await page.evaluate(readMgmFirstIdentity)
+          if (Date.now() >= cutoff(deadline)) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'deadline')!); continue }
+          if ('lineTable' in row) {
+            const discovered = [...new Set([...targets, ...row.targets])]
+            const valid = discovered.length <= 20 && discovered.every(value => nbaBookPropContract(title, value))
+            scope.complete = Boolean(valid && row.targetsComplete && row.expanded && row.allSelected && Date.now() - stableAt >= 250 && targets.every(value => row.targets.includes(value)))
+            if (valid) {
+              for (const value of discovered) if (!targets.includes(value)) targets.push(value)
+              scope.contracts = targets.map(value => nbaBookPropContract(title, value)!.key)
+            }
+          }
           const frame = nbaNormalizeBookProp(input, { ...identity, title, target, selectedTarget: row.selectedTarget, observedAt: new Date().toISOString(),
             expanded: row.expanded && row.allSelected && Date.now() - stableAt >= 250, transitioned: (!responseRequired || row.signature !== transitionBaseline) && JSON.stringify(current) === JSON.stringify(identity), rows: row.rows })
           if (frame) frames.push(frame)
-        } catch { frames.push(nbaBookPropMissing(input.game.id, title, target, Date.now() >= deadline ? 'deadline' : 'error')!) }
+        } catch { frames.push(nbaBookPropMissing(input.game.id, title, target, Date.now() >= cutoff(deadline) ? 'deadline' : 'error')!) }
       }
     } catch { scope.complete = false }
   }

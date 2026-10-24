@@ -14,7 +14,8 @@ const game: PaintGame = { id: 21717947, date: '2026-10-24', datetime: '2026-10-2
 const porter: PaintRoster = { id: 375, first_name: 'Michael', last_name: 'Porter Jr.', team: game.visitor_team, position: 'F' }
 const sharpe: PaintRoster = { id: 17896038, first_name: 'Day\u2019Ron', last_name: 'Sharpe', team: game.visitor_team, position: 'C' }
 const allen: PaintRoster = { id: 9, first_name: 'Jarrett', last_name: 'Allen', team: game.home_team, position: 'C' }
-const input = { game, roster: [porter, sharpe, allen] }
+const watson: PaintRoster = { id: 38017721, first_name: 'Peyton', last_name: 'Watson', team: game.home_team, position: 'F' }
+const input = { game, roster: [porter, sharpe, allen, watson] }
 const metadata = { away: 'Nets', home: 'Cavaliers', dateLabel: 'Today', timeLabel: '4:30 PM', timeZone: 'America/Los_Angeles' }
 const row = (name = 'Michael Porter Jr.', odds = '+400', side = 'Yes', unavailable = false) => ({ name, side, odds, unavailable })
 const board = (changes: Partial<quotes.NbaBookPropBoard> = {}): quotes.NbaBookPropBoard => ({ ...metadata, title: 'Player points', target: '30+', selectedTarget: '30+', observedAt: new Date(now).toISOString(), expanded: true, transitioned: true, rows: [row()], ...changes })
@@ -37,6 +38,16 @@ test('binary Yes/No contracts preserve their actual 0.5 sides and never invent a
     const locked = quotes.nbaNormalizeBookProp(input, board({ title, target: '0.5', selectedTarget: '0.5', rows: [row(undefined, '+875'), row(undefined, '', '', true)] }), now)!
     assert.equal(locked.complete, true); assert.deepEqual(locked.props[0].market, { type: 'over_under', over_odds: 875 })
   }
+})
+
+test('observed blocks O 0.5/U 0.5 remains an ordinary exact line with both actual prices', () => {
+  const result = quotes.nbaNormalizeBookProp(input, board({ title:'Player blocks',target:'O/U 0.5',selectedTarget:'O/U 0.5',rows:[row('Peyton Watson','-190','Over'),row('Peyton Watson','+140','Under')] }), now)!
+  assert.equal(result.complete,true); assert.equal(result.contractKey,'blocks:over_under:0.5')
+  assert.equal(result.props[0].line_value,'0.5'); assert.equal(result.props[0].player_id,watson.id)
+  assert.deepEqual(result.props[0].market,{type:'over_under',over_odds:-190,under_odds:140})
+  assert.equal(quotes.nbaBookPropContract('Player points','O/U 0.5'),null)
+  assert.equal(quotes.nbaBookPropContract('Player blocks','O/U 1'),null)
+  assert.equal(quotes.nbaBookPropContract('Player blocks','O/U -0.5'),null)
 })
 
 test('only explicit locked observed rows can produce a complete empty threshold', () => {
@@ -67,6 +78,7 @@ function fixture(html: string) {
 }
 const option = (name: string, price: string, id = 'selection', locked = false) => locked ? '<ms-option><div class="option-indicator offline"><span class="lock option-group-lock-icon"></span></div></ms-option>' : `<ms-option><div data-test-option-id="${id}"><div class="name">${name}</div><div class="option-value"><ms-font-resizer>${price}</ms-font-resizer></div></div></ms-option>`
 const milestone = (name: string, price: string, id = 'selection', locked = false) => `<div class="attribute-key player-statistics"><div class="group-title"><span class="title">${name}</span></div></div>${option('Yes', price, id, locked)}`
+const ordinary = (name: string, line: string, over: string, under: string) => `<div class="attribute-key player-statistics"><div class="group-title"><span class="title">${name}</span></div></div>${option(`O ${line}`,over,`${name}-over-${line}`)}${option(`U ${line}`,under,`${name}-under-${line}`)}`
 const panel = (rows: string, tail = '') => `<div id="points" aria-hidden="false"><button role="tab" aria-selected="true">30+</button><button role="tab" aria-selected="true">All</button><div class="player-milestone-container">${rows}</div>${tail}</div>`
 
 test('milestone DOM pairs immediate siblings, recognizes explicit lock and scopes selected target/All/Show More', () => {
@@ -94,15 +106,37 @@ test('binary DOM uses observed Yes/No columns, including the real empty offline 
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean } = {}) {
+test('ordinary O/U accepts an explicitly locked known line, while blank prices or unknown locked lines remain incomplete', () => {
+  const html = `<div id="blocks" aria-hidden="false"><ms-player-milestone-over-under-option-group><div class="option-group-header"><span>Over</span><span>Under</span></div>${ordinary('Peyton Watson','0.5','-190','')}</ms-player-milestone-over-under-option-group></div>`
+  const f = fixture(html)
+  try {
+    const normalize = () => {
+      const value = f.readers.readMgmPropPanel('blocks')
+      return quotes.nbaNormalizeBookProp(input, board({title:'Player blocks',target:'O/U 0.5',selectedTarget:value.selectedTarget,expanded:value.expanded,rows:value.rows}),now)!
+    }
+    assert.equal(normalize().complete,false)
+    const under = f.dom.window.document.querySelectorAll('ms-option')[1]
+    under.insertAdjacentHTML('beforeend','<div class="option-indicator offline"><span class="lock option-group-lock-icon"></span></div>')
+    const known = normalize()
+    assert.equal(known.complete,true); assert.equal(known.unmatched,0)
+    assert.deepEqual(known.props[0].market,{type:'over_under',over_odds:-190})
+    under.querySelector('.name')!.textContent=''
+    assert.equal(normalize().complete,false)
+    const unknown = f.readers.readMgmPropPanel('blocks')
+    assert.equal('targetsComplete' in unknown && unknown.targetsComplete,false)
+  } finally { f.dom.window.close() }
+})
+
+async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number } = {}) {
   const f = fixture(''), prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
   const pending: { at: number; apply: () => void }[] = [], clicked: string[] = []
   const render = () => {
     const tabs = Object.keys(prices).map(value => `<button role="tab" aria-selected="${value === selected}">${value}</button>`).join('')
     const rows = empty ? '' : milestone('Michael Porter Jr.', prices[displayed], `porter-${displayed}`) + (allRows ? milestone('Day\u2019Ron Sharpe', '+5000', `sharpe-${displayed}`) : '') + (expandedRows ? milestone('Jarrett Allen', '+8000', `allen-${displayed}`) : '')
-    const header = options.failedMenu ? '' : `<button aria-controls="points" aria-expanded="true"><span slot="title">${options.unposted ? 'First field goal scorer' : 'Player points'}</span></button>`
-    f.dom.window.document.body.innerHTML = `<button data-menu-item-id="-1" class="ds-pill-current ${options.unselected ? '' : 'ds-pill-selected'}" aria-disabled="false">All</button>${options.loading ? '<div role="progressbar"></div>' : ''}${header}<div id="points" aria-hidden="false">${tabs}<button role="tab" aria-selected="${all}">All</button><div class="player-milestone-container">${rows}</div><div class="show-more-less-button">${expanded ? 'Show Less' : 'Show More'}</div></div>`
+    const header = options.failedMenu ? '' : `<button aria-controls="points" aria-expanded="true"><span slot="title">${options.unposted ? 'First field goal scorer' : options.blocks ? 'Player blocks' : 'Player points'}</span></button>`
+    const content = options.blocks ? `<ms-player-milestone-over-under-option-group><div class="player-milestone-container"><div class="option-group-header"><span>Over</span><span>Under</span></div>${ordinary('Peyton Watson','0.5','-190','+140')}${expandedRows ? ordinary('Jarrett Allen','1.5','+250','-350') : ''}</div></ms-player-milestone-over-under-option-group>` : `${tabs}<button role="tab" aria-selected="${all}">All</button><div class="player-milestone-container">${rows}</div>`
+    f.dom.window.document.body.innerHTML = `<button data-menu-item-id="-1" class="ds-pill-current ${options.unselected ? '' : 'ds-pill-selected'}" aria-disabled="false">All</button>${options.loading ? '<div role="progressbar"></div>' : ''}${header}<div id="points" aria-hidden="false">${content}<div class="show-more-less-button">${expanded ? 'Show Less' : 'Show More'}</div></div>`
   }
   render()
   const locator = (kind: string, name = '') => ({
@@ -141,7 +175,8 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
   const target = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', compile('../src/lib/scrapers/nbaMgmProps.ts'))((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock)
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaMgmProps.ts')
-  try { return { ...(await collector.collectMgmProps(page as never, input, now + 60_000)), clicked } } finally { f.dom.window.close() }
+  const deadline = options.adaptive ? () => clock >= now + 3000 ? now + 60_000 : now + 3500 : now + (options.hardBudget ?? 60_000)
+  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked } } finally { f.dom.window.close() }
 }
 
 test('all seven posted thresholds wait for delayed actual rows, scoped All and Show More before saving', async () => {
@@ -159,6 +194,24 @@ test('a selected tab with old rows, including empty-loading then old rows, never
     assert.equal(thirty.complete, false); assert.deepEqual(thirty.props, []); assert.equal(thirty.status, 'partial')
     assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:35')!.props.find(prop => prop.player_id === 375)!.market.odds, 950)
   }
+})
+
+test('an active scan can reclaim its extended budget while a true global cutoff still emits honest deadlines', async () => {
+  const adaptive = await navigation({adaptive:true})
+  assert.equal(adaptive.frames.length,7); assert.ok(adaptive.frames.every(frame=>frame.complete))
+  const bounded = await navigation({hardBudget:3500})
+  assert.ok(bounded.frames.some(frame=>frame.status==='deadline'))
+  assert.ok(bounded.frames.filter(frame=>frame.complete).every(frame=>Date.parse(frame.observedAt!) < now+3500))
+})
+
+test('blocks O/U DOM discovers additional exact lines after Show More without clicking or inventing milestone tabs', async () => {
+  const result = await navigation({blocks:true})
+  assert.deepEqual(result.frames.map(frame=>frame.contractKey),['blocks:over_under:0.5','blocks:over_under:1.5'])
+  assert.ok(result.frames.every(frame=>frame.complete))
+  assert.deepEqual(result.frames[0].props[0].market,{type:'over_under',over_odds:-190,under_odds:140})
+  assert.deepEqual(result.frames[1].props[0].market,{type:'over_under',over_odds:250,under_odds:-350})
+  assert.deepEqual(result.clicked,['more'])
+  assert.deepEqual(result.coverage.find(scope=>scope.market==='blocks')!.contracts,['blocks:over_under:0.5','blocks:over_under:1.5'])
 })
 
 test('a first-ever failed menu read reports unresolved coverage instead of an empty green result', async () => {

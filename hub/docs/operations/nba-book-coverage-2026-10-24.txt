@@ -129,3 +129,26 @@ Further natural-run verification and timing correction:
   adjustment; final route 26/26 includes the changed deadline boundaries.
   Independent focused review 61/61 before that final extra boundary test;
   TypeScript and scoped ESLint pass on the final source.
+
+Natural 12:12 run and remaining corrections:
+- On 2b98eba0 the cloud job saved 347 regular panels / 1,830 quotes with zero
+  unmatched players, but reported 13 unresolved failures. HOU/MIL completed
+  all 11 families; MIA/NOP exhausted fixed game budgets while other work ran.
+- Active scans now reclaim slack once the remaining games fit available
+  workers. The absolute browser deadline and session/tab counts are unchanged.
+- BKN/WAS exposed a different Player blocks layout: ordinary O 0.5 / U 0.5,
+  not milestone tabs. The verified BKN panel was Watson -190 / +140. Exact
+  ordinary lines, Show More, stable identity, and explicit locks are handled;
+  no ordinary O/U price is relabeled as a milestone.
+- First Basket 12:15 archived 434 valid quotes; 12:20 retained original
+  openings while Smart DK moved +980 to +940 and Diallo DK +1060 to +1080.
+- Porter 30+ +400 was captured at 12:14:57.772, but expired before the 12:20
+  full-feed archive. Durable exact-contract history remains a separate pending
+  repair; do not describe cache persistence alone as archived opening proof.
+- Private fixed reason counts now distinguish stale First Basket provider
+  quotes from identity/method failures. Bounded missing-player diagnostics are
+  restricted to the authenticated cron receipt; member UI is unchanged.
+- Validation: full NBA suite 451/451; focused collector/DOM 30/30, focused
+  First Basket 23/23, TypeScript/scoped lint and independent collector review.
+- Evidence: nba-cloud-mgm-blocks-dom-2026-10-24.txt and the 12:20 live SQL files
+  in work/. Natural post-release coverage verification is still required.

@@ -242,25 +242,34 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         }
       }))
       // All First Basket boards get a turn before a deep regular-price ladder
-      // can consume the session. Each regular game receives a bounded share.
-      const regularBudget = Math.max(0, Math.floor((deadline - Date.now()) / Math.max(1, Math.ceil(regularTasks.length / pages.length))) - 1000)
+      // can consume the session. Reserve a fair share while games are queued;
+      // once all remaining games fit the available workers, reclaim the slack.
       const regularQueue = [...regularTasks]
+      let inspectingGames = 0
       await Promise.all(pages.map(async worker => {
         while (regularQueue.length && !challenged) {
           // Reuse each worker's final First Basket event before navigating
           // again. Selecting/removing is synchronous, so no game can be taken twice.
           const loaded = regularQueue.findIndex(task => task.url === currentUrls.get(worker))
-          const { input, url } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0], gameDeadline = Math.min(deadline, Date.now() + regularBudget)
+          const { input, url } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0]
+          inspectingGames++
+          const waves = Math.max(1, Math.ceil((regularQueue.length + inspectingGames) / pages.length))
+          const fairDeadline = Math.min(deadline, Date.now() + Math.max(0, Math.floor((deadline - Date.now()) / waves) - 1000))
+          const gameDeadline = () => regularQueue.length + inspectingGames <= pages.length ? deadline : fairDeadline
+          let inspecting = true
+          const finishInspection = () => { if (inspecting) { inspectingGames--; inspecting = false } }
           try {
-            if (gameDeadline - Date.now() < 1000) throw new Error('deadline')
-            if (currentUrls.get(worker) !== url) await atStage('regular-navigation', () => mgmEvent(worker, url, gameDeadline))
+            if (gameDeadline() - Date.now() < 1000) throw new Error('deadline')
+            if (currentUrls.get(worker) !== url) await atStage('regular-navigation', () => mgmEvent(worker, url, gameDeadline()))
             const regular = await atStage('regular-capture', () => collectMgmProps(worker, input, gameDeadline))
+            finishInspection()
             result.regular!.push(...regular.frames); result.regularCoverage!.push(...regular.coverage)
             if (callbacks.onRegular) {
               try { await deliverObservation(() => callbacks.onRegular!(input.game.id, regular.frames, regular.coverage, new Date().toISOString()), deadline) }
               catch (error) { result.errors.push(captureFailure(error, input.game.id)) }
             }
           } catch (error) {
+            finishInspection()
             result.errors.push(captureFailure(error, input.game.id))
             result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
             if (safeFailure(error) === 'challenge') challenged = true

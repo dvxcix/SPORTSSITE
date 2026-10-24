@@ -202,6 +202,9 @@ test('one MGM session finishes every First Basket board before bounded regular l
   const slate = 'ABCDEFGH'.split('').map((letter, index) => ({ game: { ...game, id: 100 + index, home_team: { ...game.home_team, id: 50 + index, name: `Home ${letter}`, full_name: `Denver ${letter}` } }, roster: [player] }))
   const links = slate.map(value => `https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-${value.game.home_team.full_name.at(-1)!.toLowerCase()}-${value.game.id}`)
   const first: number[] = [], regular: number[] = [], budgets: number[] = [], savedFirst: number[] = [], savedRegular: number[] = [], revisited: string[] = []
+  let releaseSlow!: () => void
+  const slowInspection = new Promise<void>(resolve => { releaseSlow = resolve })
+  let reclaimedDeadline = 0
   let opened = 0, closed = 0, pages = 0
   const locator = () => ({ first() { return this }, waitFor: async () => {}, count: async () => 1, click: async () => {}, evaluateAll: async () => links })
   const makePage = () => {
@@ -210,11 +213,16 @@ test('one MGM session finishes every First Basket board before bounded regular l
   }
   const imports: Record<string, unknown> = {
     'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
-    './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input, deadline: number) => {
+    './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input, deadline: number | (() => number)) => {
       assert.equal(first.length, slate.length, 'a deep ladder must never run ahead of an unvisited First Basket game')
       assert.equal(savedFirst.length, slate.length, 'verified First observations must reach persistence before deep ladders begin')
-      regular.push(value.game.id); budgets.push(deadline - now)
-      if (regular.length === 1) throw new Error('slow ladder fixture')
+      regular.push(value.game.id); budgets.push((typeof deadline === 'function' ? deadline() : deadline) - now)
+      if (regular.length === slate.length) releaseSlow()
+      if (regular.length === 1) {
+        await slowInspection
+        reclaimedDeadline = (typeof deadline === 'function' ? deadline() : deadline) - now
+        throw new Error('slow ladder fixture')
+      }
       return { frames: [], coverage: [] }
     } },
     '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => { opened++; return { page: makePage(), close: async () => { closed++ } } } },
@@ -234,7 +242,8 @@ test('one MGM session finishes every First Basket board before bounded regular l
   })
   assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(pages, 2)
   assert.equal(result.games.length, 8); assert.ok(result.games.every(value => value.complete)); assert.equal(result.complete, true)
-  assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 54_000))
+  assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 220_000)); assert.ok(budgets[0] <= 54_000)
+  assert.equal(reclaimedDeadline, 220_000, 'an active scan must inherit unused global time once no game is waiting for a worker')
   assert.deepEqual(new Set(regular.slice(0, 2)), new Set(first.slice(-2)), 'regular inspection must reuse both already-loaded final event pages first')
   assert.equal(revisited.length, 6)
   assert.equal(savedFirst.length, 8); assert.equal(savedRegular.length, 7)

@@ -11,12 +11,14 @@ import { nbaGameStart, nbaGameFinal, nbaPregameOpen, nbaLiveOpen, nbaQuoteInMode
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import type { NbaMarketReceipt } from '@/lib/nbaMarketReceipts'
 import { getNbaFirstEvents, getNbaFirstOdds } from '@/lib/nbaFirstBasketOddsData'
+import type { NbaFirstDiagnostics } from '@/lib/nbaFirstBasketOdds'
 export const maxDuration = 120
 type FirstBasketReceipt = NbaMarketReceipt & {
   accepted: number
   unmatched: number
   quotes: number
   capture?: 'captured' | 'unchanged'
+  diagnostics?: NbaFirstDiagnostics
 }
 type FirstBasketGameReport = FirstBasketReceipt & { gameId: number; mode: 'pregame' | 'live'; cached: boolean }
 type MarketReceipt = NbaMarketReceipt & { coverage?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['coverage'] }
@@ -49,11 +51,12 @@ async function run(request: Request) {
           let performed = false
           const attempt = await nbaSharedCache<FirstBasketReceipt>(`first-basket-attempt:v3:${mode}:${game.id}`, 240, 0, async () => {
             performed = true
-            const counts = { accepted: 0, unmatched: 0, quotes: 0 }
+            const counts: {accepted:number;unmatched:number;quotes:number;diagnostics?:NbaFirstDiagnostics} = { accepted: 0, unmatched: 0, quotes: 0 }
             try {
               if (!firstEvents) return { status: 'failed', ...counts }
               const result = await getNbaFirstOdds(game, true, firstEvents)
               counts.unmatched = result.unmatched
+              if('diagnostics' in result)counts.diagnostics=result.diagnostics
               if (!result.eventMatched) return { status: 'deferred', ...counts }
               if (!phaseOpen()) return { status: 'deferred', ...counts }
               const raw = result.rows.map(row => row.offer)
@@ -84,7 +87,7 @@ async function run(request: Request) {
           report.firstBasket.quotes += receipt.quotes
           report.firstBasket.accepted += receipt.accepted
           report.firstBasket.unmatched += receipt.unmatched
-          if (report.firstBasket.games.length < 64) report.firstBasket.games.push({ gameId: game.id, mode, cached: !performed, status: receipt.status, accepted: receipt.accepted, unmatched: receipt.unmatched, quotes: receipt.quotes, ...(receipt.capture ? { capture: receipt.capture } : {}) })
+          if (report.firstBasket.games.length < 64) report.firstBasket.games.push({ gameId: game.id, mode, cached: !performed, status: receipt.status, accepted: receipt.accepted, unmatched: receipt.unmatched, quotes: receipt.quotes, ...(receipt.capture ? { capture: receipt.capture } : {}), ...(receipt.diagnostics?{diagnostics:receipt.diagnostics}:{}) })
         } catch { report.firstBasket.failed++ }
       })()
       report.checked++

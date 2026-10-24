@@ -17,21 +17,25 @@ const firstRules:Record<string,'first_score'|'first_field_goal'>={fanduel:'first
 const methodName=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'')
 const methodKeys:Record<string,string>={'2pt':'2pt','3pt':'3pt','twopointer':'2pt','2pointer':'2pt','2pointfieldgoal':'2pt','3pointer':'3pt','3pointfieldgoal':'3pt','threepointer':'3pt','threepointfieldgoal':'3pt','twopointfieldgoal':'2pt',freethrow:'free_throw',dunk:'dunk',layup:'layup',other:'other'}
 const hash=(value:string)=>{let n=2166136261;for(const c of value)n=Math.imul(n^c.charCodeAt(0),16777619);return -((n>>>0)+1)}
-export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,players:PaintPlayer[],asOf=Date.now()):{rows:FirstBasketRow[];unmatched:number;withheldMethods?:string[]}{
-  if(nbaFirstEvent([event],game)?.id!==event.id)return {rows:[],unmatched:1}
+type FirstRejectReason='event'|'book'|'timestamp'|'future'|'stale'|'price'|'player'|'method'
+export type NbaFirstDiagnostics={reasons:Partial<Record<FirstRejectReason,number>>;players:{name:string;market:string}[]}
+export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,players:PaintPlayer[],asOf=Date.now()):{rows:FirstBasketRow[];unmatched:number;withheldMethods?:string[];diagnostics:NbaFirstDiagnostics}{
+  const diagnostics:NbaFirstDiagnostics={reasons:{},players:[]}
+  const reject=(reason:FirstRejectReason,count=1)=>{diagnostics.reasons[reason]=(diagnostics.reasons[reason]??0)+count}
+  if(nbaFirstEvent([event],game)?.id!==event.id)return {rows:[],unmatched:1,diagnostics:{reasons:{event:1},players:[]}}
   const offers=new Map<string,FirstBasketRow>(),withheldMethods=new Set<string>();let unmatched=0
   const identities=nbaPlayerIdentities(players.filter(player=>[game.home_team.id,game.visitor_team.id].includes(player.team.id)))
   for(const book of event.bookmakers??[])for(const market of book.markets){
     if(!['player_first_basket','player_first_team_basket','player_method_of_first_basket'].includes(market.key))continue
     const rule=firstRules[book.key],at=market.last_update??book.last_update??'',time=Date.parse(at)
-    if(!rule||!Number.isFinite(time)||time>asOf+30000||asOf-time>300000){unmatched+=market.outcomes.length;continue}
+    if(!rule||!Number.isFinite(time)||time>asOf+30000||asOf-time>300000){unmatched+=market.outcomes.length;reject(!rule?'book':!Number.isFinite(time)?'timestamp':time>asOf+30000?'future':'stale',market.outcomes.length);continue}
     for(const outcome of market.outcomes){
-      if(!nbaValidOdds(outcome.price)){unmatched++;continue}
+      if(!nbaValidOdds(outcome.price)){unmatched++;reject('price');continue}
       const name=outcome.description??(!['yes','no'].includes(outcome.name.toLowerCase())?outcome.name:'')
       const matches=identities.filter(identity=>identity.names.includes(nbaName(name)))
-      if(matches.length!==1){unmatched++;continue}
+      if(matches.length!==1){unmatched++;reject('player');const label=name.slice(0,80);if(diagnostics.players.length<12&&!diagnostics.players.some(row=>row.name===label&&row.market===market.key))diagnostics.players.push({name:label,market:market.key});continue}
       const player=matches[0].player,method=market.key==='player_method_of_first_basket'?methodKeys[methodName(outcome.name)]:undefined
-      if(market.key==='player_method_of_first_basket'&&(!method||rule!=='first_score')){if(!method&&withheldMethods.size<32)withheldMethods.add(outcome.name.slice(0,80));unmatched++;continue}
+      if(market.key==='player_method_of_first_basket'&&(!method||rule!=='first_score')){if(!method&&withheldMethods.size<32)withheldMethods.add(outcome.name.slice(0,80));unmatched++;reject('method');continue}
       const prop=method?`first_score_${method}`:market.key==='player_first_team_basket'?rule==='first_score'?'team_first_score':'team_first_field_goal':rule
       const vendor=book.key==='williamhill_us'?'caesars':book.key,key=`${game.id}:${player.id}:${vendor}:${prop}`
       const existing=offers.get(key),side=outcome.name.toLowerCase()==='no'?'under':'over'
@@ -40,5 +44,5 @@ export function nbaNormalizeFirstOdds(event:FirstOddsEvent,game:PaintGame,player
       offers.set(key,{game,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:player.headshot},offer})
     }
   }
-  return {rows:[...offers.values()].filter(row=>row.offer.market.over_odds!=null),unmatched,withheldMethods:[...withheldMethods]}
+  return {rows:[...offers.values()].filter(row=>row.offer.market.over_odds!=null),unmatched,withheldMethods:[...withheldMethods],diagnostics}
 }

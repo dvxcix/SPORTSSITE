@@ -28,6 +28,10 @@ export type NbaBookPropBoard = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLa
 export function nbaBookPropContract(title: string, target: string) {
   const market = MGM_MILESTONE_PANELS[title]
   if (['double_double', 'triple_double'].includes(market) && target === '0.5') return { market, type: 'over_under' as const, line: .5, key: `${market}:over_under:0.5` }
+  // The observed Player blocks accordion is an O/U table with explicit
+  // O 0.5 / U 0.5 selections, despite sharing the milestone menu naming.
+  const ordinary = market === 'blocks' ? target.match(/^O\/U (\d+\.5)$/) : null
+  if (ordinary && Number(ordinary[1]) < 200) return { market, type: 'over_under' as const, line: Number(ordinary[1]), key: `${market}:over_under:${Number(ordinary[1])}` }
   const value = target.match(/^([1-9]\d{0,2})\+$/), line = value ? Number(value[1]) : NaN
   if (['double_double', 'triple_double'].includes(market)) return null
   return market && Number.isSafeInteger(line) && line <= 200 ? { market, type: 'milestone' as const, line, key: `${market}:milestone:${line}` } : null
@@ -49,8 +53,9 @@ export function nbaNormalizeBookProp(input: NbaFirstBookInput, board: NbaBookPro
     if (row.unavailable) continue // Only an explicit disabled selection is absence evidence.
     const matching = identities.filter(identity => identity.names.includes(nbaName(row.name)))
     const odds = /^[+\-−]\d{3,7}$/.test(row.odds.trim()) ? Number(row.odds.replace('−', '-')) : NaN
-    if (matching.length !== 1 || !(contract.type === 'milestone' ? ['Yes'] : ['Yes', 'No']).includes(row.side) || !nbaValidOdds(odds)) { result.unmatched++; continue }
-    const player = matching[0].player, field = contract.type === 'milestone' ? 'odds' : row.side === 'Yes' ? 'over_odds' : 'under_odds', sideKey = `${player.id}:${field}`, prior = props.get(sideKey)
+    const sides = contract.type === 'milestone' ? ['Yes'] : contract.market === 'blocks' ? ['Over', 'Under'] : ['Yes', 'No']
+    if (matching.length !== 1 || !sides.includes(row.side) || !nbaValidOdds(odds)) { result.unmatched++; continue }
+    const player = matching[0].player, field = contract.type === 'milestone' ? 'odds' : ['Yes', 'Over'].includes(row.side) ? 'over_odds' : 'under_odds', sideKey = `${player.id}:${field}`, prior = props.get(sideKey)
     if (prior) { result.unmatched++; if (prior.market[field] !== odds) conflicts.add(sideKey); continue }
     const key = `${input.game.id}:${player.id}:betmgm:${contract.key}`
     props.set(sideKey, { id: -5_000_000_000_000 - parseInt(createHash('sha256').update(key).digest('hex').slice(0, 12), 16), game_id: input.game.id, player_id: player.id,

@@ -19,7 +19,8 @@ export function readMgmPropMenu() {
   return { headers, allSelected, loading }
 }
 
-export function readMgmPropPanel(panelId: string) {
+export function readMgmPropPanel(request: string | { panelId: string; target?: string }) {
+  const panelId = typeof request === 'string' ? request : request.panelId
   const empty = { targets: [] as string[], selectedTarget: '', expanded: false, allSelected: false, signature: '', rows: [] as { name: string; side: string; odds: string; unavailable: boolean }[] }
   const panel = document.getElementById(panelId)
   if (!panel || panel.getAttribute('aria-hidden') !== 'false') return empty
@@ -35,6 +36,29 @@ export function readMgmPropPanel(panelId: string) {
   const targets = tabs.map(tab => tab.textContent?.trim() ?? '').filter(text => /^\d+\+$/.test(text))
   const selected = tabs.filter(tab => tab.getAttribute('aria-selected') === 'true' && /^\d+\+$/.test(tab.textContent?.trim() ?? ''))
   const all = tabs.filter(tab => tab.textContent?.trim() === 'All')
+  const ordinaryGroups = [...panel.querySelectorAll('ms-player-milestone-over-under-option-group')].filter(visible)
+  if (ordinaryGroups.length) {
+    if (ordinaryGroups.length !== 1 || targets.length) return empty
+    const group = ordinaryGroups[0], headings = [...group.querySelectorAll('.option-group-header > span')].map(node => node.textContent?.trim() ?? '').filter(Boolean)
+    if (headings.join(',') !== 'Over,Under') return empty
+    const labels = [...group.querySelectorAll('.attribute-key.player-statistics')].filter(visible), selectionIds: string[] = []
+    const observations = labels.slice(0, 100).flatMap(label => {
+      const name = label.querySelector('.group-title .title')?.textContent?.trim() ?? '', over = label.nextElementSibling, under = over?.nextElementSibling
+      return [over, under].map((option, index) => {
+        const scoped = option?.tagName === 'MS-OPTION' && visible(option)
+        const raw = scoped ? option.querySelector('.name')?.textContent?.trim() ?? '' : '', parsed = raw.match(/^([OU])\s+(\d+\.5)$/)
+        const valid = parsed && parsed[1] === (index === 0 ? 'O' : 'U')
+        selectionIds.push(scoped ? option.querySelector('[data-test-option-id]')?.getAttribute('data-test-option-id') ?? '' : '')
+        const unavailable = Boolean(valid && scoped && option.querySelector('.option-indicator.offline .lock.option-group-lock-icon'))
+        return { name, target: valid ? `O/U ${Number(parsed[2])}` : '', side: valid ? headings[index] : '', odds: scoped ? option.querySelector('.option-value ms-font-resizer')?.textContent?.trim() ?? '' : '', unavailable }
+      })
+    })
+    const contracts = [...new Set(observations.map(row => row.target).filter(Boolean))]
+    const selectedTarget = typeof request !== 'string' && request.target ? request.target : contracts[0] ?? ''
+    const rows = observations.filter(row => !row.target || row.target === selectedTarget).map(({ name, side, odds, unavailable }) => ({ name, side, odds, unavailable }))
+    const more = [...panel.querySelectorAll('.show-more-less-button')].some(node => visible(node) && /^Show More/.test(node.textContent?.trim() ?? ''))
+    return { lineTable: true, targetsComplete: observations.every(row => Boolean(row.target)), targets: contracts, selectedTarget: contracts.includes(selectedTarget) ? selectedTarget : '', allSelected: all.length === 0 || all.length === 1 && all[0].getAttribute('aria-selected') === 'true', expanded: !more && labels.length < 100, signature: JSON.stringify([selectionIds, rows]), rows }
+  }
   const binaryGroups = [...panel.querySelectorAll('.yes-no-container')].filter(visible)
   if (binaryGroups.length) {
     if (binaryGroups.length !== 1 || targets.length) return empty

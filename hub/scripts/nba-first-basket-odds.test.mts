@@ -39,6 +39,22 @@ test('first-basket imports fail closed on ambiguous identities, unknown rules, s
   }
 })
 
+test('private First Basket rejection counts distinguish expired prices from missing identities',()=>{
+  const sample:FirstOddsEvent={...event,bookmakers:[
+    {key:'draftkings',last_update:'2026-10-20T11:54:59Z',markets:[{key:'player_first_basket',outcomes:[{name:'Test Player',price:500},{name:'Unknown Player',price:600}]}]},
+    {key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:[{name:'Unknown Player',price:500},{name:'Test Player',price:99}]},{key:'player_method_of_first_basket',outcomes:[{name:'Unknown Method',description:'Test Player',price:800}]}]},
+  ]}
+  const result=nbaNormalizeFirstOdds(sample,game,[player],now)
+  assert.equal(result.unmatched,5)
+  assert.deepEqual(result.diagnostics.reasons,{stale:2,player:1,price:1,method:1})
+  assert.deepEqual(result.diagnostics.players,[{name:'Unknown Player',market:'player_first_basket'}])
+  const many={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:Array.from({length:30},(_,i)=>({name:String(i)+'x'.repeat(120),price:500}))}]}]}
+  const bounded=nbaNormalizeFirstOdds(many,game,[player],now)
+  assert.equal(bounded.diagnostics.players.length,12)
+  assert.ok(bounded.diagnostics.players.every(row=>row.name.length<=80))
+  assert.equal(bounded.unmatched,30)
+})
+
 test('verified roster aliases retain exact first-basket prices and market identities',()=>{
   const identities=[
     {id:38017716,first_name:'Ousmane',last_name:'Dieng',alias:'Ousmane'},
