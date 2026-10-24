@@ -21,6 +21,7 @@ async function harness(initialTime:number, current:paint.PaintProp[], frozen= [q
     'server-only':{},'node:crypto':crypto,'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':paint,'./nbaOddsHistory':{nbaAttachOpenings},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>({...g,datetime:game.datetime})},
     './nbaOddsMode':{...mode,nbaPregameOpen:(g:paint.PaintGame)=>mode.nbaPregameOpen(g,now),nbaLiveOpen:(g:paint.PaintGame)=>mode.nbaLiveOpen(g,now)},
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData':{getNbaQuoteOpenings:async(_id:number,phase:string)=>[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'milestone',line:20,side:'over',odds:phase==='pregame'?1200:-500,observed_at:new Date(phase==='pregame'?tip-120000:tip+1000).toISOString()}]},
     './nbaFirstBasketOddsData':{getNbaFirstOddsForMode:async()=>({rows:firstBasket.map(offer=>({offer}))})},

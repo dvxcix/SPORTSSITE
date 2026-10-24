@@ -3,6 +3,9 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as modes from '../src/lib/nbaOddsMode.ts'
+import * as paint from '../src/lib/nbaPaint.ts'
+import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
+import type {NbaBookPropFrame} from '../src/lib/nbaBookPropsData.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaFirstBookCapture } from '../src/lib/scrapers/nbaFirstBooks.ts'
 import type { NbaFirstBookGame } from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
@@ -12,13 +15,18 @@ const now=Date.parse('2026-10-24T12:00:00Z')
 const team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
 const game:PaintGame={id:123,date:'2026-10-24',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-24T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:9},home_team_score:0,visitor_team_score:0}
 const observation=(book:NbaFirstBook,gameId:number):NbaFirstBookGame=>({gameId,complete:true,observedAt:new Date(now).toISOString(),status:'captured',unmatched:0,clockMismatch:false,props:[{id:-123,game_id:gameId,player_id:434,vendor:book,prop_type:book==='draftkings'?'first_score':'first_field_goal',line_value:'0.5',market:{type:'over_under',over_odds:500},updated_at:new Date(now).toISOString()}]})
-type Options={count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>}
+type Options={count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>}
 async function fixture(options:Options={}){
   let clock=now,scheduleReads=0,gameReads=0,rosterReads=0,collects=0,maxWrites=0
+  class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
+  const regularSaves:NbaBookPropFrame[]=[]
   const saves:NbaBookFirstFrame[]=[],leaseCalls:{key:string;ttl:number;stale:number;seconds:number}[]=[],deadlines:number[]=[],active=new Map<string,number>(),cache=new Map<string,Promise<unknown>>()
   const games=options.games??Array.from({length:options.count??2},(_,i)=>({...game,id:game.id+i}))
   const source=await readFile(new URL('../src/app/api/cron/nba-book-first-capture/route.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+  const bookSource=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),bookOutput=ts.transpileModule(bookSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,bookModule={exports:{} as typeof import('../src/lib/nbaBookPropsData.ts')}
+  const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint}
+  new Function('require','module','exports','Date',bookOutput)((name:string)=>{assert.ok(name in bookImports,name);return bookImports[name]},bookModule,bookModule.exports,Clock)
   const imports:Record<string,unknown>={
     'next/server':{NextResponse:{json:(body:unknown,init?:ResponseInit)=>Response.json(body,init)}},
     '@/lib/cron-auth':{requireCronAuth:(request:Request)=>request.headers.get('authorization')==='Bearer fixture'?null:Response.json({error:'Unauthorized'},{status:401})},
@@ -38,16 +46,16 @@ async function fixture(options:Options={}){
       if(frame.book===options.saveError)throw new Error('private-source-url')
       active.set(frame.book,(active.get(frame.book)??0)+1);maxWrites=Math.max(maxWrites,active.get(frame.book)!);await new Promise(resolve=>setTimeout(resolve,1));saves.push(frame);active.set(frame.book,active.get(frame.book)!-1)
     }},
+    '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
     '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame}[],deadline:number)=>{
       collects++;deadlines.push(deadline)
-      return{book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>observation(book,input.game.id)),errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at})}
+      return{book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>observation(book,input.game.id)),regularCoverage:book==='betmgm'?inputs.map(input=>({gameId:input.game.id,market:'points',complete:true,observedAt:new Date(clock).toISOString(),contracts:[]})):[],errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at})}
     }},
   }
   const compiled={exports:{} as {GET:(request:Request)=>Promise<Response>}}
-  class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
   new Function('require','module','exports','Date',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},compiled,compiled.exports,Clock)
   const run=async(auth=true)=>{const response=await compiled.exports.GET(new Request('https://www.slipsurge.com/api/cron/nba-book-first-capture',{headers:auth?{authorization:'Bearer fixture'}:{}}));return{response,body:await response.json()}}
-  return{run,saves,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites})}
+  return{run,saves,regularSaves,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites})}
 }
 
 test('cron authentication denies before schedules, leases, browser work or writes',async()=>{
@@ -128,4 +136,37 @@ test('preparation and save deadlines leave bounded browser/commit time and never
   const slow=await fixture({capture:(_book,_inputs,advance)=>{advance(now+261_000);return{}}}),result=await slow.run()
   assert.equal(result.response.status,503);assert.equal(result.body.saved,0);assert.equal(slow.saves.length,0)
   assert.ok(result.body.books.every((book:{games:{status:string}[]})=>book.games.every(item=>item.status==='deadline')))
+})
+
+test('verified regular panels persist independently of missing First Basket and partial panel failure remains visible',async()=>{
+  const h=await fixture({capture:(book,inputs)=>({games:book==='betmgm'?[]:inputs.map(input=>observation(book,input.id)),regular:book==='betmgm'?inputs.flatMap(input=>[15,30].map(line=>({gameId:input.id,contractKey:`points:milestone:${line}`,market:'points',status:line===15?'captured':'partial',complete:line===15,unmatched:line===15?0:1,observedAt:new Date(now).toISOString(),props:[{id:-5_000_000_000_434,game_id:input.id,player_id:434,vendor:'betmgm',prop_type:'points',line_value:String(line),market:{type:'milestone' as const,odds:400},updated_at:new Date(now).toISOString()}]}))):[]})}),result=await h.run()
+  assert.equal(result.response.status,503);assert.equal(h.regularSaves.length,4);assert.equal(h.regularSaves.filter(frame=>frame.complete).length,2)
+  assert.equal(result.body.books.find((book:{book:string})=>book.book==='betmgm').regularSaved,4)
+  assert.ok(h.saves.every(frame=>frame.book==='draftkings'))
+})
+
+test('private error telemetry contains only bounded known codes and optional game IDs',async()=>{
+  const h=await fixture({capture:(_book,inputs)=>({games:inputs.map(input=>({...observation('draftkings',input.id),complete:false,status:'error'})),errors:[...Array.from({length:70},()=>({code:'challenge' as const,gameId:123,secret:'private-source-url'})),{code:'private-source-url' as never}]})}),result=await h.run()
+  assert.equal(result.response.status,503);assert.ok(result.body.books.every((book:{errors:unknown[]})=>book.errors.length===64));assert.equal(JSON.stringify(result.body).includes('private-source-url'),false)
+  assert.deepEqual(result.body.books[0].errors[0],{code:'challenge',gameId:123})
+})
+
+test('a listed regular menu with missing or incomplete inspection fails even without any prior direct prices',async()=>{
+  for(const incomplete of [false,true]){
+    const h=await fixture({capture:(book,inputs)=>book==='betmgm'?{regular:[],regularCoverage:incomplete?inputs.map(input=>({gameId:input.id,market:'points',complete:false,observedAt:new Date(now).toISOString(),contracts:[]})):[]}:{} }),result=await h.run()
+    assert.equal(result.response.status,503);assert.equal(result.body.saved,4);assert.equal(h.regularSaves.length,0)
+    assert.equal(result.body.books.find((book:{book:string})=>book.book==='betmgm').failed,2)
+  }
+  const unlisted=await fixture({capture:(book,inputs)=>book==='betmgm'?{games:inputs.map(input=>({...observation(book,input.id),props:[],complete:false,status:'unlisted'})),regularCoverage:[]}:{} }),result=await unlisted.run()
+  assert.equal(result.response.status,200);assert.equal(result.body.deferred,2)
+})
+
+test('verified selected All with no player markets defers only when no exact prior contract exists',async()=>{
+  const capture=(book:NbaFirstBook,inputs:PaintGame[])=>book==='betmgm'?{regular:[],regularCoverage:inputs.map(input=>({gameId:input.id,market:'points',complete:false,status:'unavailable' as const,observedAt:new Date(now).toISOString(),contracts:[]}))}:{}
+  const empty=await fixture({capture}),deferred=await empty.run()
+  assert.equal(deferred.response.status,200);assert.equal(deferred.body.saved,4);assert.equal(empty.regularSaves.length,0)
+  assert.equal(deferred.body.books.find((book:{book:string})=>book.book==='betmgm').regularDeferred,2)
+  const prior=await fixture({capture,regularPrevious:g=>[{gameId:g.id,book:'betmgm',tipoff:new Date(g.datetime!).toISOString(),contract:{market:'points',type:'milestone',line:30},observedAt:new Date(now-1000).toISOString(),complete:true,props:[{id:-5_000_000_000_434,game_id:g.id,player_id:434,vendor:'betmgm',prop_type:'points',line_value:'30',market:{type:'milestone',odds:400},updated_at:new Date(now-1000).toISOString()}]}]}),held=await prior.run()
+  assert.equal(held.response.status,503);assert.equal(prior.regularSaves.length,2);assert.ok(prior.regularSaves.every(frame=>!frame.complete&&frame.props.length===0))
+  assert.equal(held.body.books.find((book:{book:string})=>book.book==='betmgm').regularDeferred,0)
 })

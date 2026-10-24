@@ -48,18 +48,24 @@ function displayedMinutes(label: string) {
   return (Number(match[1]) % 12 + (match[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + Number(match[2])
 }
 
-export function nbaNormalizeFirstBook(book: NbaFirstBook, input: NbaFirstBookInput, board: NbaFirstBookBoard, now = Date.now()): NbaFirstBookGame {
+export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'observedAt'>, now = Date.now()): NbaFirstBookGame {
   const result = nbaFirstBookMissing(input.game.id, 'identity-mismatch'), at = Date.parse(board.observedAt), start = nbaGameStart(input.game)
   if (!Number.isFinite(at) || at > now + 30_000 || now - at > 300_000 || start == null) return result
   const observed = localParts(at, board.timeZone), scheduled = localParts(start, board.timeZone), current = localParts(now, board.timeZone), clock = displayedMinutes(board.timeLabel)
   if (!observed || !scheduled || !current || clock == null || displayedDate(board.dateLabel, observed.date) !== scheduled.date
-    || !nbaFirstBookTeam(board.away, input.game.visitor_team) || !nbaFirstBookTeam(board.home, input.game.home_team)
-    || board.market !== (book === 'draftkings' ? '1st Point' : 'First field goal scorer')) return result
+    || !nbaFirstBookTeam(board.away, input.game.visitor_team) || !nbaFirstBookTeam(board.home, input.game.home_team)) return result
   result.clockMismatch = scheduled.minutes !== clock
   result.observedAt = board.observedAt
   // Canonical tip is never replaced by a sportsbook clock. An earlier book
   // clock can only close capture sooner, never permit a post-tip quote.
   if (!nbaPregameOpen(input.game, at) || !nbaPregameOpen(input.game, now) || (current.date === scheduled.date && current.minutes >= clock)) return { ...result, status: 'closed' }
+  return { ...result, status: 'unavailable' }
+}
+
+export function nbaNormalizeFirstBook(book: NbaFirstBook, input: NbaFirstBookInput, board: NbaFirstBookBoard, now = Date.now()): NbaFirstBookGame {
+  const result = nbaBookObservation(input, board, now)
+  if (['closed', 'identity-mismatch'].includes(result.status)) return result
+  if (board.market !== (book === 'draftkings' ? '1st Point' : 'First field goal scorer')) return nbaFirstBookMissing(input.game.id, 'identity-mismatch')
   if (!board.rows.length) return { ...result, status: 'unavailable' }
   const identities = nbaPlayerIdentities(input.roster.filter(player => [input.game.home_team.id, input.game.visitor_team.id].includes(player.team.id)))
   const quotes = new Map<number, PaintProp>(), conflicts = new Set<number>()

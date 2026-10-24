@@ -158,6 +158,7 @@ test('common snapshot normalizes primary on cached and fresh ingress; incomplete
   const helper = await compile<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': paint, './nbaOddsHistory': history, './nbaOddsHistoryData': {}, './nbaFirstBasketOddsData': {}, './nbaOddsMode': modes, './nbaOddsPhaseData': {getNbaPhaseSnapshot:async()=>({props:previous})}, './nbaOddsClockData': { getNbaOddsGame: async (g: paint.PaintGame) => g }, './nbaPrimaryProps': primary,
     './nbaSupplementalProps': { ...h, getNbaSupplementalProps: async () => { if (fails) throw new Error('source'); return deferred?{...secondary,props:[],complete:false,eventMatched:false,deferred:true}:secondary } },
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
   }, { fetch: async () => primaryFails ? Response.json({}, { status: 503 }) : Response.json({ data: [raw] }) })
   for (const fresh of [false, true]) { const snapshot = await helper.getPaintPropSnapshot(game, 'pregame', fresh); assert.equal(snapshot.complete, true); assert.ok(snapshot.props.some(p => p.line_value === '14.5' && p.market.type === 'over_under' && p.market.over_odds === -500)); assert.ok(snapshot.props.some(p => p.line_value === '15' && p.market.odds === -550)) }

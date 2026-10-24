@@ -5,13 +5,26 @@ import { nbaName } from '../nbaPaint'
 import { nbaPregameOpen } from '../nbaOddsMode'
 import { readDkFirstBoards, readMgmFirstIdentity, readMgmFirstRows } from './nbaFirstBookDom'
 import { nbaFirstBookMissing, nbaFirstBookTeam, nbaNormalizeFirstBook, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
+import { collectMgmProps } from './nbaMgmProps'
+import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
 type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline' }
-export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[] }
+export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
 const remaining = (deadline: number, cap = 15_000) => Math.max(1, Math.min(cap, deadline - Date.now()))
+async function preparePage(page: Page) {
+  page.setDefaultTimeout(10_000)
+  await page.route('**/*', route => ['image', 'media', 'font'].includes(route.request().resourceType()) ? route.abort() : route.continue())
+}
+async function extraPage(page: Page, deadline: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const opening = page.context().newPage()
+  try { return await Promise.race([opening, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('deadline')), remaining(deadline, 5000)) })]) }
+  catch { void opening.then(late => late.close()).catch(() => {}); return null }
+  finally { if (timer) clearTimeout(timer) }
+}
 
 async function blocked(page: Page) {
   return page.evaluate(() => {
@@ -56,7 +69,7 @@ async function dkBoards(page: Page, deadline: number) {
   return boards.map(board => ({ ...board, expanded: false }))
 }
 
-async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise<NbaFirstBookBoard | null> {
+async function mgmEvent(page: Page, eventUrl: string, deadline: number) {
   await openPage(page, eventUrl, deadline)
   await page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline) })
   const identity = await page.evaluate(readMgmFirstIdentity)
@@ -68,6 +81,10 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise
   const marketHeaders = page.locator('button[aria-controls][aria-expanded]').filter({ has: page.locator('[slot="title"]') })
   await marketHeaders.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(() => {})
   if (!(await marketHeaders.count())) throw new Error('layout-unavailable')
+  return identity
+}
+async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise<NbaFirstBookBoard | null> {
+  const identity = await mgmEvent(page, eventUrl, deadline)
   const header = page.locator('button[aria-controls]').filter({ has: page.locator('[slot="title"]').filter({ hasText: /^\s*First field goal scorer\s*$/ }) })
   // Wait for the markets to settle after the event header loads. Absence is
   // unavailable, never a successful empty board or a withdrawal signal.
@@ -115,8 +132,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
     session = await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, geoState: 'NC',
       proxyDomainPattern: book === 'betmgm' ? BETMGM_PROXY_DOMAIN_PATTERN : '^([a-zA-Z0-9-]+\\.)*draftkings\\.com$', metadata: { sport: 'nba', book, mode: 'first-market-dom' } })
     const page = session.page
-    page.setDefaultTimeout(10_000)
-    await page.route('**/*', route => ['image', 'media', 'font'].includes(route.request().resourceType()) ? route.abort() : route.continue())
+    await preparePage(page)
     if (book === 'draftkings') {
       const boards = await dkBoards(page, deadline)
       for (const input of active) {
@@ -131,6 +147,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       if (await events.count()) await events.first().click({ timeout: remaining(deadline, 3000) })
       await page.locator('a[href*="/en/sports/events/"]').first().waitFor({ state: 'attached', timeout: remaining(deadline) })
       const links = await page.locator('a[href*="/en/sports/events/"]').evaluateAll(anchors => [...new Set(anchors.map(anchor => (anchor as HTMLAnchorElement).href))])
+      const tasks: { input: NbaFirstBookInput; url: string }[] = []
       for (const input of active) {
         if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.errors.push({ gameId: input.game.id, code: 'deadline' }); continue }
         // The current league's rendered links are discovery only. The event's
@@ -138,15 +155,55 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         const labels = [input.game.visitor_team, input.game.home_team].map(team => [nbaName(team.full_name), ...(team.abbreviation === 'LAC' ? [nbaName('Los Angeles Clippers')] : [])])
         const candidates = links.filter(href => { const url = new URL(href); return url.origin === 'https://www.nc.betmgm.com' && url.pathname.startsWith('/en/sports/events/') && labels.every(names => names.some(name => nbaName(url.pathname).includes(name))) })
         if (candidates.length !== 1) { result.games.push(nbaFirstBookMissing(input.game.id, candidates.length ? 'identity-mismatch' : 'unlisted')); continue }
-        try {
-          const board = await mgmBoard(page, candidates[0], deadline)
-          result.games.push(board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable'))
-        } catch (error) {
-          const code = safeFailure(error)
-          result.errors.push({ gameId: input.game.id, code }); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
-          if (code === 'challenge') break
-        }
+        tasks.push({ input, url: candidates[0] })
       }
+      const pages = [page]
+      while (pages.length < Math.min(4, tasks.length) && deadline - Date.now() > 20_000) {
+        const extra = await extraPage(page, deadline)
+        if (!extra) break
+        await preparePage(extra); pages.push(extra)
+      }
+      result.regular = []; result.regularCoverage = []
+      let next = 0, challenged = false
+      const regularTasks: typeof tasks = [], currentUrls = new Map<Page, string>()
+      await Promise.all(pages.map(async worker => {
+        while (next < tasks.length && !challenged) {
+          const { input, url } = tasks[next++]
+          if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id)); continue }
+          try {
+            const board = await mgmBoard(worker, url, deadline)
+            currentUrls.set(worker, url)
+            const first = board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')
+            result.games.push(first)
+            if (first.status !== 'closed' && first.status !== 'identity-mismatch') regularTasks.push({ input, url })
+            else if (first.status !== 'closed') result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+          } catch (error) {
+            const code = safeFailure(error)
+            result.errors.push({ gameId: input.game.id, code }); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
+            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+            if (code === 'challenge') challenged = true
+          }
+        }
+      }))
+      // All First Basket boards get a turn before a deep regular-price ladder
+      // can consume the session. Each regular game receives a bounded share.
+      next = 0
+      const regularBudget = Math.max(0, Math.floor((deadline - Date.now()) / Math.max(1, Math.ceil(regularTasks.length / pages.length))) - 1000)
+      await Promise.all(pages.map(async worker => {
+        while (next < regularTasks.length && !challenged) {
+          const { input, url } = regularTasks[next++], gameDeadline = Math.min(deadline, Date.now() + regularBudget)
+          try {
+            if (gameDeadline - Date.now() < 1000) throw new Error('deadline')
+            if (currentUrls.get(worker) !== url) await mgmEvent(worker, url, gameDeadline)
+            const regular = await collectMgmProps(worker, input, gameDeadline)
+            result.regular!.push(...regular.frames); result.regularCoverage!.push(...regular.coverage)
+          } catch (error) {
+            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+            if (safeFailure(error) === 'challenge') challenged = true
+          }
+        }
+      }))
+      for (const { input } of regularTasks.slice(next)) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
     }
   } catch (error) { result.errors.push({ code: session ? safeFailure(error) : 'session-unavailable' }) }
   finally { await session?.close() }

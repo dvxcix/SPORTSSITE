@@ -12,6 +12,7 @@ import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
 import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaNormalizePrimaryProps } from './nbaPrimaryProps'
 import { getNbaSupplementalProps, nbaMergePropSources, nbaSupplementalQuote, type NbaSupplementalSnapshot } from './nbaSupplementalProps'
+import { getNbaBookPropEntries, nbaBookPropsSupplement } from './nbaBookPropsData'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -97,7 +98,7 @@ async function getPaintPrimaryProps(gameId: number, fresh = false): Promise<Pain
   return nbaNormalizePrimaryProps(json.data)
 }
 export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 'pregame', freshPrimary = false) {
-  const [primary, supplemental] = await Promise.allSettled([getPaintPrimaryProps(game.id, freshPrimary), getNbaSupplementalProps(game, mode)])
+  const [primary, supplemental, bookEntries] = await Promise.allSettled([getPaintPrimaryProps(game.id, freshPrimary), getNbaSupplementalProps(game, mode),mode==='pregame'?getNbaBookPropEntries(game):Promise.resolve([])])
   const coverage: Pick<NbaSupplementalSnapshot, 'complete' | 'deferred' | 'accepted' | 'unmatched' | 'stale' | 'eventMatched' | 'applicable' | 'observedAt'> = supplemental.status === 'fulfilled'
     ? { complete: supplemental.value.complete, deferred: supplemental.value.deferred, accepted: supplemental.value.accepted, unmatched: supplemental.value.unmatched, stale: supplemental.value.stale, eventMatched: supplemental.value.eventMatched, applicable: supplemental.value.applicable, observedAt: supplemental.value.observedAt }
     : { complete: false, accepted: 0, unmatched: 0, stale: 0, eventMatched: false, applicable: true, observedAt: new Date().toISOString() }
@@ -106,8 +107,12 @@ export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 
   const missingSource = coverage.deferred === true || !coverage.applicable
   const priorSupplement = missingSource ? await getNbaPhaseSnapshot(game, mode).then(snapshot => snapshot.props.some(nbaSupplementalQuote)).catch(() => true) : false
   if (!coverage.applicable && priorSupplement) { coverage.complete = false; coverage.deferred = true }
-  const complete = primary.status === 'fulfilled' && (coverage.complete || coverage.deferred === true && !priorSupplement)
-  return { props: nbaMergePropSources(primary.status === 'fulfilled' ? primary.value : [], supplemental.status === 'fulfilled' ? supplemental.value.props : []), complete, primaryComplete: primary.status === 'fulfilled', coverage, issues: primary.status === 'fulfilled' && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
+  const apiComplete = primary.status === 'fulfilled' && (coverage.complete || coverage.deferred === true && !priorSupplement)
+  const apiProps=nbaMergePropSources(primary.status==='fulfilled'?primary.value:[],supplemental.status==='fulfilled'?supplemental.value.props:[])
+  const book=bookEntries.status==='fulfilled'?nbaBookPropsSupplement(game,apiProps,bookEntries.value):{props:[] as PaintProp[],complete:false}
+  if(!book.complete){coverage.complete=false;coverage.deferred=false}
+  const complete=apiComplete&&book.complete
+  return { props: nbaMergePropSources(apiProps,book.props), complete, primaryComplete: primary.status === 'fulfilled', coverage, issues: primary.status === 'fulfilled' && book.complete && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
 }
 export async function getPaintProps(gameId: number, fresh = false): Promise<PaintProp[]> {
   const game = await getPaintGame(gameId)
@@ -166,7 +171,7 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
   }
   if (mode === 'pregame' && !nbaPregameOpen(game)) return frozen()
   if (mode === 'live' && !nbaLiveOpen(game)) return nbaGameFinal(game) ? frozen() : empty
-  const cached = await nbaSharedCache(`phase-prices:v3:${mode}:${game.id}:${nbaGameStart(game)}`, 30, 0, async () => {
+  const cached = await nbaSharedCache(`phase-prices:v4:${mode}:${game.id}:${nbaGameStart(game)}`, 30, 0, async () => {
     // Phase-specific leases ensure thousands of members share one refresh.
     const issues: string[] = []
     const optional = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => { try { return await promise } catch { issues.push(label); return fallback } }

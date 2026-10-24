@@ -44,3 +44,50 @@ Verification before release:
   nba-cloud-*.txt and nba-dk-mgm-odds-audit-2026-10-24.txt (not public assets).
 - GitHub main preflight and live deployment both d2dffcdb; recovered NFL
   ancestry 6c3811b0882e1b1a6694a30849273f3e210cd69c is retained.
+
+Verified production release 544c326102a2fbecad2178710b78c48ee26e53ed:
+- GitHub main and production READY at 11:22 UTC.
+- Natural 11:25 odds capture: 15 games checked, zero failed, 7,282 accepted
+  secondary side prices. MGM regular quotes rose from 171 to 1,648, including
+  1,477 milestones across five posted games. Porter 15+ -550 was archived at
+  11:25:18 UTC and verified in the live milestone ladder.
+- Natural 11:27 cloud capture: DK 80 First Point prices across eight games;
+  MGM 50 First FG prices across five posted boards. All 130 normalized, no
+  failures. October 25 games were unlisted on the inspected league menus.
+- Natural 11:30 archive created genuine openings for Marcus Smart DK +980,
+  Alpha Diallo DK +1060 and MGM First FG +900. Live UI showed both Diallo
+  contracts, opening prices and save controls. No actual pick was submitted.
+- Natural 11:35 capture: 15 checked, zero failed, 384 First Basket prices,
+  zero unmatched. The three new openings retained their original 11:30
+  timestamps. Refreshed cloud frames were complete. Unchanged odds correctly
+  generated no artificial movement.
+
+Further cloud-board audit and follow-up:
+- BKN/CLE had 53 active points milestones across all seven threshold tabs.
+  Porter 30+ +400 was still absent from the feed after the first release.
+- Direct MGM capture now inspects each observed milestone threshold, plus
+  double-double/triple-double Yes/No outcomes. It fills missing exact sides;
+  ordinary O/U feeds retain their own contracts. Disabled selections are
+  excluded only when the DOM explicitly identifies the locked outcome.
+- Selected threshold, All team filter, exhausted Show More, changed selection
+  identity and stable rendered content are required before recording a price.
+- Per-contract frames retain original per-quote timestamps when an inspection
+  is partial. Incomplete or expired direct data cannot replace a complete
+  archived frame. Verified withdrawals do not leave stale selectable prices.
+- First Basket is collected for every listed game before the regular-panel
+  pass, using at most four tabs inside the same bounded MGM cloud session.
+  Member traffic only reads shared cached data; no extra laptop collector.
+- Empty regular menus are distinguished from failed known-panel extraction;
+  no unavailable or unchanged price is fabricated as an opening or movement.
+- New evidence: work/nba-cloud-mgm-all-points-2026-10-24.txt,
+  nba-cloud-mgm-props-dom-2026-10-24.txt, nba-cloud-mgm-suspended-dom-2026-10-24.txt,
+  nba-cloud-mgm-binary-dom-2026-10-24.txt and nba-cloud-mgm-empty-menu-2026-10-24.txt.
+  Live screenshots and 11:25/11:30/11:35 SQL evidence are retained in work/.
+
+Follow-up release validation:
+- Full NBA suite: 424/424 before the final menu/scheduling refinements.
+- Final affected capture/storage/DOM suites: 51/51, including those refinements.
+- Production suite: 134/134. TypeScript and scoped ESLint pass.
+- Empty selected-All menus are deferred only without prior direct contracts;
+  known contracts still fail safely. No failed inspection becomes withdrawal.
+- Preflight main/live: 544c326102a2fbecad2178710b78c48ee26e53ed.

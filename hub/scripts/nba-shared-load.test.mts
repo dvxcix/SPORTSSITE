@@ -239,6 +239,7 @@ test('a stale research board cannot carry stale player or game prices into a new
   const old = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -200 } } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => { throw Error('fixture') } },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
@@ -260,6 +261,7 @@ test('cold board research finishes before current quote reads begin', async () =
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => ({ rows: [] }) },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },

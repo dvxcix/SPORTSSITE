@@ -7,6 +7,7 @@ import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { NBA_FIRST_BOOKS, saveNbaBookFirstFrame } from '@/lib/nbaBookFirstData'
 import { collectNbaFirstBooks } from '@/lib/scrapers/nbaFirstBooks'
+import { getNbaBookPropEntries, nbaReconcileBookPropFrames, saveNbaBookPropFrames } from '@/lib/nbaBookPropsData'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -50,18 +51,22 @@ async function run(request: Request) {
       try {
         // Only cron owns this lease. A duplicate invocation cannot start a
         // second browser; the source remains absent from all member loaders.
-        const result = await nbaSharedCache(`book-first-run:v1:${book}:${today}`, 60, 0, async () => {
+        const result = await nbaSharedCache(`book-first-run:v2:${book}:${today}`, 60, 0, async () => {
           const capture = await collectNbaFirstBooks(book, inputs, browserDeadline)
           let saved = 0, failed = capture.errors.length, deferred = 0
+          let regularSaved=0,regularQuotes=0,regularDeferred=0
+          const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline'].includes(error.code)).slice(0,64).map(error=>({code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{})}))
           const games: { gameId: number; status: string; quotes: number; unmatched: number; clockMismatch: boolean }[] = []
           const expected=new Set(inputs.map(input=>input.game.id))
           failed+=capture.games.filter(item=>!expected.has(item.gameId)).length
+          failed+=(capture.regular??[]).filter(item=>!expected.has(item.gameId)).length
           // Every requested game must have exactly one observation, including
           // explicit unlisted/closed outcomes. Missing output is never success.
           for(let offset=0;offset<inputs.length;offset+=4){
             await Promise.all(inputs.slice(offset,offset+4).map(async input=>{
               const matches=capture.games.filter(item=>item.gameId===input.game.id)
-              if(matches.length!==1){failed++;games.push({gameId:input.game.id,status:'coverage-failed',quotes:0,unmatched:0,clockMismatch:false});return}
+              if(matches.length!==1){failed++;games.push({gameId:input.game.id,status:'coverage-failed',quotes:0,unmatched:0,clockMismatch:false})}
+              else{
               const item=matches[0]
               let status: string = item.status
               if (!nbaPregameOpen(input.game)) { deferred++;status='closed' }
@@ -74,9 +79,32 @@ async function run(request: Request) {
               } else if (['unlisted', 'unavailable', 'closed'].includes(item.status)&&!item.complete) deferred++
               else failed++
               games.push({ gameId: item.gameId, status, quotes: item.props.length, unmatched: item.unmatched, clockMismatch: item.clockMismatch })
+              }
+              if(book==='betmgm'&&nbaPregameOpen(input.game)){
+                if(Date.now()>=saveDeadline-12_000){failed++;return}
+                try{
+                  const coverage=(capture.regularCoverage??[]).filter(frame=>frame.gameId===input.game.id)
+                  const observations=(capture.regular??[]).filter(frame=>frame.gameId===input.game.id)
+                  const previous=await getNbaBookPropEntries(input.game,true)
+                  // A stable, selected All menu with no player headers is a
+                  // normal unavailable source, not withdrawal evidence. Prior
+                  // contracts still need a fresh inspection before retiring.
+                  const unavailable=!previous.length&&!observations.length&&coverage.length>0&&coverage.every(scope=>scope.status==='unavailable'&&!scope.complete&&!scope.contracts.length)
+                  if(unavailable)regularDeferred++
+                  else if(coverage.some(scope=>!scope.complete)||(!coverage.length&&!(matches.length===1&&['unlisted','closed'].includes(matches[0].status))))failed++
+                  const reconciled=nbaReconcileBookPropFrames(input.game,observations,coverage,previous,capture.observedAt)
+                  failed+=reconciled.failed
+                  if(reconciled.frames.length){
+                    if(Date.now()>=saveDeadline){failed++;return}
+                    await saveNbaBookPropFrames(input.game,reconciled.frames,previous)
+                    regularSaved+=reconciled.frames.length
+                    regularQuotes+=reconciled.frames.reduce((sum,frame)=>sum+frame.props.length,0)
+                  }
+                }catch{failed++}
+              }
             }))
           }
-          return { book, checked: capture.games.length, saved, failed, deferred, observedAt: capture.observedAt, games }
+          return { book, checked: capture.games.length, saved, regularSaved, regularQuotes, regularDeferred, failed, deferred, observedAt: capture.observedAt, games, errors }
         }, 300)
         return result.value
       } catch { return { book, checked: 0, saved: 0, failed: 1, deferred: 0, games: [] } }
