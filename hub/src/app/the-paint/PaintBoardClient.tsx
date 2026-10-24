@@ -41,7 +41,9 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
   const [requestedMode, setRequestedMode] = useState(oddsMode)
   const switchingMode = requestedMode !== oddsMode
   const router = useRouter(); const params = useSearchParams(); const [navigating, startTransition] = useTransition()
-  const [view, setView] = useState<PaintView>(()=>['research','odds','ladders','movement','cheatsheets','usage','tracking','matchup','availability','game-markets','public','score','dvp','divergence','slate','first-basket'].includes(params.get('view')??'')?params.get('view') as PaintView:'research'); const [board, setBoard] = useState(initial); const [market, setMarket] = useState<PaintMarket>(() => PAINT_MARKETS.find(m => m.key === params.get('market'))?.key ?? 'points')
+  // Tool links can update the query while this same game component stays mounted.
+  const view: PaintView = ['research','odds','ladders','movement','cheatsheets','usage','tracking','matchup','availability','game-markets','public','score','dvp','divergence','slate','first-basket'].includes(params.get('view')??'')?params.get('view') as PaintView:'research'
+  const [board, setBoard] = useState(initial); const [market, setMarket] = useState<PaintMarket>(() => PAINT_MARKETS.find(m => m.key === params.get('market'))?.key ?? 'points')
   const [contract,setContract]=useState<'milestone'|'over_under'>(()=>params.get('contract')==='over_under'||params.get('side')==='under'?'over_under':'milestone'),[target,setTarget]=useState<{market:string;line:string}>(()=>({market:params.get('market')??'points',line:params.get('target')??'all'}))
   const targetLine=!nbaBinary(market)&&target.market===market&&target.line!=='all'&&Number.isFinite(Number(target.line))&&Number(target.line)>=0?Number(target.line):undefined
   const selection={type:contract,...(targetLine==null?{}:{line:targetLine})}
@@ -69,12 +71,12 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
     // server navigation commit its mode before syncing local board filters.
     if(switchingMode||navigating)return
     const query=new URLSearchParams(window.location.search)
-    for(const [key,value] of Object.entries({date,mode:oddsMode,market,view,side,book:vendor,sort,order:ascending?'asc':'desc'}))query.set(key,value)
+    for(const [key,value] of Object.entries({date,mode:oddsMode,market,side,book:vendor,sort,order:ascending?'asc':'desc'}))query.set(key,value)
     if(gameId)query.set('game',String(gameId))
     if(detail!=null){query.set('player',String(detail));query.set('panel',detailTab);if(detailTab==='tracking')query.set('metric',trackingMetric);else query.delete('metric');if(detailQuote){query.set('line',String(detailQuote.line));query.set('type',detailQuote.type)}else{query.delete('line');query.delete('type')}}else{query.delete('player');query.delete('panel');query.delete('metric');query.delete('line');query.delete('type')}
     query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));else query.delete('target');const search=`?${query}`
     if(window.location.search!==search)window.history.replaceState(null,'',`${window.location.pathname}${search}`)
-  },[date,oddsMode,switchingMode,navigating,market,view,side,vendor,sort,ascending,gameId,detail,detailTab,trackingMetric,detailQuote,contract,targetLine])
+  },[date,oddsMode,switchingMode,navigating,market,side,vendor,sort,ascending,gameId,detail,detailTab,trackingMetric,detailQuote,contract,targetLine])
   const refresh = useCallback(async () => {
     if (switchingMode || !gameId || refreshLock.current) return
     refreshLock.current = true; setRefreshing(true)
@@ -101,6 +103,10 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
     const measure = (p: PaintPlayer) => { const offer = nbaReference(p.props, market, vendor, side); if (sort === 'mm') return ranks.get(p.id)?.mm ?? -Infinity; if (sort === 'name') return `${p.last_name} ${p.first_name}`; if (sort === 'line') return offer ? Number(offer.line_value) : -Infinity; if (sort === 'odds') return offer ? nbaPrice(offer,side)??-Infinity : -Infinity; if (sort === 'minutes') return p.average.min ?? -Infinity; if (sort === 'l5' || sort === 'l10' || sort === 'l20') return offer ? nbaHitRate(nbaSample(nbaMarketLogs(p, market), sort === 'l5' ? 5 : sort === 'l10' ? 10 : 20, location), market, Number(offer.line_value), side, offer.market.type === 'milestone').rate ?? -Infinity : -Infinity; return nbaValue(p.average, market) ?? -Infinity }
     return rows.sort((a, b) => { const av = measure(a), bv = measure(b); if (av === -Infinity || bv === -Infinity) return av === bv ? a.id - b.id : av === -Infinity ? 1 : -1; const result = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : av === bv ? a.id - b.id : Number(av) < Number(bv) ? -1 : 1; return ascending ? result : -result })
   }, [board, selectedPlayers, team, position, query, savedOnly, watchlist.items, market, vendor, sort, location, side, ascending, ranks, coreView, view])
+  function setView(next: PaintView) {
+    const query = new URLSearchParams(window.location.search); query.set('view', next)
+    window.history.replaceState(null, '', `${window.location.pathname}?${query}`)
+  }
   function go(nextDate: string, nextGame?: number) { const query = new URLSearchParams({ date: nextDate, mode: requestedMode, market, view, side, book:vendor, sort, order:ascending?'asc':'desc' }); query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));if (nextGame) query.set('game', String(nextGame)); startTransition(() => router.push(`/the-paint?${query}`, { scroll: false })) }
   function changeMode(next: NbaOddsMode) {
     if (next === requestedMode) return

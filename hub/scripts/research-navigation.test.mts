@@ -87,7 +87,9 @@ test('NBA tool links preserve selected matchup, market and book without carrying
 
 test('every NBA workspace selects exactly its own global navigation item', () => {
   assert.equal(new Set(nbaResearchNavigation.map(item=>item.href)).size,nbaResearchNavigation.length)
-  assert.equal(nbaResearchNavigation.length,15)
+  assert.deepEqual(nbaResearchNavigation.map(item=>item.href), [
+    '/the-paint', ...['odds','ladders','movement','first-basket','cheatsheets','score','slate','public','divergence','dvp','usage','tracking','matchup','availability','game-markets'].map(view=>`/the-paint?view=${view}`),
+  ])
   assert.ok(nbaResearchNavigation.every(item=>item.ultimateOnly))
   for (const item of nbaResearchNavigation) {
     const search = new URLSearchParams(item.href.split('?')[1] ?? '')

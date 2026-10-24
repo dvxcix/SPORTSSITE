@@ -61,12 +61,20 @@ async function run(request: Request) {
           const firstRaw=new Map<number,NbaFirstBookGame>()
           type Attempt={signature:string;settled:Promise<void>}
           const firstAttempts=new Map<number,Attempt>(),regularAttempts=new Map<number,Attempt>()
+          let writing=0
+          const waitingWrites:(()=>void)[]=[]
+          async function boundedWrite(write:()=>Promise<void>){
+            if(writing>=4)await new Promise<void>(resolve=>waitingWrites.push(resolve))
+            else writing++
+            try{await write()}
+            finally{const next=waitingWrites.shift();if(next)next();else writing--}
+          }
           // Journal before awaiting: a callback timing out in the browser must
           // never cause the final response path to repeat an uncertain write.
           function once(attempts:Map<number,Attempt>,gameId:number,signature:string,write:()=>Promise<void>){
             const prior=attempts.get(gameId)
             if(prior){if(prior.signature!==signature)failed++;return prior.settled}
-            const settled=Promise.resolve().then(write).catch(()=>{failed++})
+            const settled=Promise.resolve().then(()=>boundedWrite(write)).catch(()=>{failed++})
             attempts.set(gameId,{signature,settled})
             return settled
           }
@@ -116,11 +124,12 @@ async function run(request: Request) {
               }catch{failed++;report.status='save-failed'}
             })
           }
-          // Two bounded MGM sessions share this one cron lease. Distributing
-          // tips roundrobin gives each the same amount of active slate work;
-          // tomorrow's unlisted games remain represented exactly once.
+          // At most four MGM sessions share this one cron lease. Four games
+          // per partition fit the retained-page collector; unusually larger
+          // slates keep every game in the bounded fallback, never truncate it.
           const sorted=[...inputs].sort((a,b)=>(nbaGameStart(a.game)??Infinity)-(nbaGameStart(b.game)??Infinity)||a.game.id-b.game.id)
-          const partitions=book==='betmgm'&&sorted.length>1?[sorted.filter((_,index)=>index%2===0),sorted.filter((_,index)=>index%2===1)]:[sorted]
+          const partitionCount=book==='betmgm'?Math.min(4,Math.ceil(sorted.length/4)):1
+          const partitions=Array.from({length:partitionCount},(_,partition)=>sorted.filter((_,index)=>index%partitionCount===partition))
           const captures=await Promise.all(partitions.map(async partition=>{
             const allowed=new Set(partition.map(input=>input.game.id))
             try{
@@ -158,7 +167,7 @@ async function run(request: Request) {
             }))
           }
           await Promise.all([...firstAttempts.values(),...regularAttempts.values()].map(attempt=>attempt.settled))
-          return { book, checked: capture.games.length, saved, regularSaved, regularQuotes, regularDeferred, failed, deferred, observedAt: capture.observedAt, games:[...reports.values()], regularGames:[...regularReports.values()], errors }
+          return { book, checked: capture.games.length, saved, regularSaved, regularQuotes, regularDeferred, failed, deferred, partitions:partitionCount,maxPartitionGames:Math.max(...partitions.map(partition=>partition.length)),capacityLimited:book==='betmgm'&&sorted.length>16,observedAt: capture.observedAt, games:[...reports.values()], regularGames:[...regularReports.values()], errors }
         }, 300)
         return result.value
       } catch { return { book, checked: 0, saved: 0, failed: 1, deferred: 0, games: [] } }

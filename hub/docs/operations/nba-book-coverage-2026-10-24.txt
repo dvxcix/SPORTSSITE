@@ -200,3 +200,67 @@ Natural 12:37 durable capture and final scan/current-price correction:
   724 prices across eight games with actual book comparisons and movements.
 - Full post-release regular capture and successive tape verification remain
   required; earlier partial runs are retained above as incomplete evidence.
+
+Verified durable tape and member-facing checks:
+- The 12:37 run completed on 21756254 with 409 complete regular scopes /
+  1,951 observed quotes and 13 First Basket scopes / 130 quotes. All checked
+  timestamps, exact identities and phase boundaries passed. Its old scanner
+  still had 68 held failures, so these counts are not complete-slate proof.
+- Porter 375 / BKN 21717947 / BetMGM / points milestone 30 / over now has
+  immutable opening +400 at actual observation 12:40:08.583 UTC. It committed
+  with the matching cache and tape at 12:41:14.168 UTC. Live Ladders shows
+  NOW +400, OPEN +400 and delta 0.0; 20+ moved -175 to -165 and 25+ +155 to
+  +165. Screenshot: work/nba-milestone-openings-live-2026-10-24.png.
+- a166f023 became production READY 12:40:20 UTC. Its 12:42 scheduled run
+  started on that source. By 12:43:31 all 13 First Basket scopes had second
+  real observations: Diallo DK +1080 to +1060, Smart DK +940 unchanged and
+  Diallo MGM +950 unchanged. Their original openings remain intact.
+- Combined reader proof after real tape writes took 183ms total: scoped
+  Porter points history 71 frames, full latest props one frame, recent First
+  Basket four frames. Actual TypeScript merging returned Porter 30+ +400
+  with its original 12:40 observation time. Shared caches remain in use.
+- A live browser check exposed same-game sidebar navigation changing the
+  URL but leaving the prior tool displayed. Court view now follows the URL;
+  internal tool controls alone write that parameter. Mounted reproduction
+  failed before the fix and passes after, including browser history, sort
+  changes and mode transitions. Existing stale 15-tool test was corrected to
+  the exact 16 supported tool links; First Basket was added in ba7673aa.
+- Final navigation source: NBA 477/477, production 134/134, focused navigation
+  34/34, TypeScript, scoped lint and independent review pass. Live sidebar
+  verification follows the navigation release.
+
+12:42 collector completeness audit (still incomplete):
+- a166f023 saved 471 regular frames / 1,980 observed quotes, but reported
+  63 held failures after 241 seconds. SAS and GSW completed every known panel;
+  HOU, WAS, NOP, MIL, BKN and MIA still had deadline/panel gaps. No unmatched
+  player was hidden. First Basket again saved DK 80 and MGM 50 prices.
+- The durable tape nevertheless retained 442 complete regular scopes and
+  2,146 latest quotes. Porter 30+ had a second real observation at 12:45:18.308
+  while its 12:40:08.583 opening stayed unchanged. All checked exact identities
+  and timestamps passed; 1,794 repeated regular prices were truly unchanged.
+- Reloading event shells between First Basket and regular scans consumed
+  18-30 seconds of the remaining budget. A bounded page-retention correction
+  is being verified; do not describe the 12:42 run as complete coverage.
+
+Bounded scan and navigation follow-up:
+- Reuse up to four exact game pages per MGM partition with only two active
+  workers. All-or-nothing unique page bindings prevent concurrent reuse after
+  allocation/setup failures; failed navigation cannot establish a binding.
+  The original two-page fallback and unconditional session cleanup remain.
+- Independently reviewed collector regressions pass 19/19; full NBA suite
+  before adaptive partition work passes 480/480. The same-game sidebar fix
+  is included in this release. Natural production verification remains pending.
+- Two MGM sessions cannot reliably cover fifteen fully posted games in the
+  existing budget. Adaptive partitioning uses at most four MGM sessions,
+  one DK session,
+  the original book lease and fixed browser/save/route deadlines. No new cron
+  schedule, member collector, paid plan or automatic CAPTCHA solving is added.
+- The authenticated cloud dashboard identifies this project workspace as
+  Startup; https://www.browserbase.com/pricing lists 100 concurrent browsers.
+  An exact project-API metadata lookup was blocked before credential copying;
+  no key was extracted or stored. The next natural run must establish actual
+  capacity and coverage. No billing or project settings were changed.
+- A four-write queue per book retains the observation journal and original
+  timestamps. Waiting work checks the existing save deadline after admission.
+  Independent route 29/29 and collector 19/19 checks pass, including sixteen
+  queued callbacks crossing the deadline with no late or repeated storage.

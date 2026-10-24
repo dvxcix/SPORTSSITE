@@ -221,13 +221,34 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       result.regular = []; result.regularCoverage = []
       let next = 0, challenged = false
       const regularTasks: typeof tasks = [], currentUrls = new Map<Page, string>()
-      await Promise.all(pages.map(async worker => {
+      // Keep up to four already-loaded event pages, but retain exactly two
+      // active workers. Four concurrent navigations previously overwhelmed
+      // the cloud renderer; idle retained pages avoid a second shell reload.
+      let retainEvents = tasks.length <= 4, allocatedPages = pages.length
+      const retainedPages = new Map<number, Page>()
+      await Promise.all(pages.map(async initialWorker => {
+        let worker = initialWorker
         while (next < tasks.length && !challenged) {
           const { input, url } = tasks[next++]
           if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id)); continue }
           try {
+            if (retainEvents && currentUrls.has(worker)) {
+              if (allocatedPages < tasks.length && deadline - Date.now() > 20_000) {
+                allocatedPages++ // Reserve synchronously before another worker yields.
+                const retained = await extraPage(page, deadline)
+                if (retained) {
+                  try { await preparePage(retained); worker = retained }
+                  catch { retainEvents = false }
+                } else retainEvents = false
+              } else retainEvents = false
+            }
+            // A failed navigation invalidates the previous binding even when
+            // the browser kept a partially rendered previous event visible.
+            currentUrls.delete(worker)
+            for (const [gameId, retained] of retainedPages) if (retained === worker) retainedPages.delete(gameId)
             const board = await mgmBoard(worker, url, deadline)
             currentUrls.set(worker, url)
+            if (retainEvents) retainedPages.set(input.game.id, worker)
             const first = board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')
             result.games.push(first)
             await publishFirst(first)
@@ -241,6 +262,13 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           }
         }
       }))
+      // A failed allocation or reused page must fall back as a whole. Mixing
+      // retained and worker pages could assign one physical page to two games.
+      retainEvents = retainEvents && regularTasks.every(task => {
+        const retained = retainedPages.get(task.input.game.id)
+        return retained != null && currentUrls.get(retained) === task.url
+      }) && new Set(regularTasks.map(task => retainedPages.get(task.input.game.id))).size === regularTasks.length
+      if (!retainEvents) retainedPages.clear()
       // All First Basket boards get a turn before a deep regular-price ladder
       // can consume the session. Reserve a fair share while games are queued;
       // once all remaining games fit the available workers, reclaim the slack.
@@ -250,8 +278,9 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         while (regularQueue.length && !challenged) {
           // Reuse each worker's final First Basket event before navigating
           // again. Selecting/removing is synchronous, so no game can be taken twice.
-          const loaded = regularQueue.findIndex(task => task.url === currentUrls.get(worker))
+          const loaded = retainEvents ? -1 : regularQueue.findIndex(task => task.url === currentUrls.get(worker))
           const { input, url } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0]
+          const eventPage = retainedPages.get(input.game.id) ?? worker
           inspectingGames++
           const waves = Math.max(1, Math.ceil((regularQueue.length + inspectingGames) / pages.length))
           const fairDeadline = Math.min(deadline, Date.now() + Math.max(0, Math.floor((deadline - Date.now()) / waves) - 1000))
@@ -260,8 +289,12 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           const finishInspection = () => { if (inspecting) { inspectingGames--; inspecting = false } }
           try {
             if (gameDeadline() - Date.now() < 1000) throw new Error('deadline')
-            if (currentUrls.get(worker) !== url) await atStage('regular-navigation', () => mgmEvent(worker, url, gameDeadline()))
-            const regular = await atStage('regular-capture', () => collectMgmProps(worker, input, gameDeadline))
+            if (currentUrls.get(eventPage) !== url) {
+              currentUrls.delete(eventPage)
+              await atStage('regular-navigation', () => mgmEvent(eventPage, url, gameDeadline()))
+              currentUrls.set(eventPage, url)
+            }
+            const regular = await atStage('regular-capture', () => collectMgmProps(eventPage, input, gameDeadline))
             finishInspection()
             result.regular!.push(...regular.frames); result.regularCoverage!.push(...regular.coverage)
             if (callbacks.onRegular) {

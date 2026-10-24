@@ -17,7 +17,7 @@ const team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
 const game:PaintGame={id:123,date:'2026-10-24',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-24T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:9},home_team_score:0,visitor_team_score:0}
 const observation=(book:NbaFirstBook,gameId:number):NbaFirstBookGame=>({gameId,complete:true,observedAt:new Date(now).toISOString(),status:'captured',unmatched:0,clockMismatch:false,props:[{id:-123,game_id:gameId,player_id:434,vendor:book,prop_type:book==='draftkings'?'first_score':'first_field_goal',line_value:'0.5',market:{type:'over_under',over_odds:500},updated_at:new Date(now).toISOString()}]})
 type Callbacks={onFirst:(item:NbaFirstBookGame)=>Promise<void>;onRegular:(gameId:number,frames:NbaBookPropObservation[],coverage:NbaBookPropCoverage[],observedAt:string)=>Promise<void>}
-type Options={count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
+type Options={count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;firstSave?:(frame:NbaBookFirstFrame,advance:(at:number)=>void)=>Promise<void>;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
 async function fixture(options:Options={}){
   let clock=now,scheduleReads=0,gameReads=0,rosterReads=0,collects=0,maxWrites=0
   class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
@@ -49,7 +49,7 @@ async function fixture(options:Options={}){
       assert.equal(frame.gameId,g.id);assert.equal(Date.parse(frame.tipoff),Date.parse(g.datetime!));assert.ok(modes.nbaPregameOpen(g,clock));assert.ok(frame.props.every((p:PaintProp)=>p.vendor===frame.book&&p.game_id===g.id))
       writeAttempts.push({book:frame.book,gameId:g.id,at:clock})
       if(frame.book===options.saveError)throw new Error('private-source-url')
-      active.set(frame.book,(active.get(frame.book)??0)+1);maxWrites=Math.max(maxWrites,active.get(frame.book)!);await new Promise(resolve=>setTimeout(resolve,1));saves.push(frame);active.set(frame.book,active.get(frame.book)!-1)
+      active.set(frame.book,(active.get(frame.book)??0)+1);maxWrites=Math.max(maxWrites,active.get(frame.book)!);await options.firstSave?.(frame,at=>{clock=at});await new Promise(resolve=>setTimeout(resolve,1));saves.push(frame);active.set(frame.book,active.get(frame.book)!-1)
     }},
     '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
     '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame}[],deadline:number,callbacks:Callbacks)=>{
@@ -71,20 +71,20 @@ test('cron authentication denies before schedules, leases, browser work or write
 
 test('complete schedule deduplicates today/tomorrow and persists each book/game with bounded parallel writes',async()=>{
   const h=await fixture({count:10}),result=await h.run()
-  assert.equal(result.response.status,200);assert.equal(result.body.checked,10);assert.equal(result.body.saved,20);assert.equal(h.counts().collects,3);assert.ok(h.counts().maxWrites<=4)
+  assert.equal(result.response.status,200);assert.equal(result.body.checked,10);assert.equal(result.body.saved,20);assert.equal(h.counts().collects,4);assert.ok(h.counts().maxWrites<=4)
   assert.equal(h.saves.length,20);assert.equal(new Set(h.saves.map(s=>`${s.book}:${s.gameId}`)).size,20)
   assert.ok(h.leaseCalls.every(c=>c.ttl===60&&c.stale===0&&c.seconds===300));assert.ok(h.deadlines.every(deadline=>deadline===now+240_000))
 })
 
 test('concurrent and repeated invocations share per-book leases and cannot duplicate saved captures',async()=>{
-  const h=await fixture(),results=await Promise.all(Array.from({length:20},()=>h.run()))
-  assert.ok(results.every(result=>result.response.status===200));assert.equal(h.counts().collects,3);assert.equal(h.saves.length,4)
-  await h.run();assert.equal(h.counts().collects,3);assert.equal(h.saves.length,4)
+  const h=await fixture({count:15}),results=await Promise.all(Array.from({length:20},()=>h.run()))
+  assert.ok(results.every(result=>result.response.status===200));assert.equal(h.counts().collects,5);assert.equal(h.saves.length,30)
+  await h.run();assert.equal(h.counts().collects,5);assert.equal(h.saves.length,30)
 })
 
 test('one failed book lease leaves the other book independent and reports503',async()=>{
   const h=await fixture({leaseError:'draftkings'}),result=await h.run()
-  assert.equal(result.response.status,503);assert.equal(result.body.failed,1);assert.equal(result.body.saved,2);assert.ok(h.saves.every(frame=>frame.book==='betmgm'));assert.equal(h.counts().collects,2)
+  assert.equal(result.response.status,503);assert.equal(result.body.failed,1);assert.equal(result.body.saved,2);assert.ok(h.saves.every(frame=>frame.book==='betmgm'));assert.equal(h.counts().collects,1)
 })
 
 test('schedule errors, incomplete pagination and excessive slates cannot start collectors or falsely report success',async()=>{
@@ -132,7 +132,7 @@ test('crossing canonical tip before persistence closes the frame without post-ti
 
 test('storage failures remain failed in cached receipts; a later invocation never replays uncertain writes',async()=>{
   const h=await fixture({saveError:'draftkings'}),first=await h.run(),again=await h.run()
-  assert.equal(first.response.status,503);assert.equal(again.response.status,503);assert.equal(first.body.saved,2);assert.equal(again.body.failed,2);assert.equal(h.counts().collects,3);assert.equal(h.saves.length,2)
+  assert.equal(first.response.status,503);assert.equal(again.response.status,503);assert.equal(first.body.saved,2);assert.equal(again.body.failed,2);assert.equal(h.counts().collects,2);assert.equal(h.saves.length,2)
   assert.equal(JSON.stringify(first.body).includes('private-source-url'),false)
 })
 
@@ -244,40 +244,84 @@ test('streamed observations still reject post-tip writes and final disagreement 
   assert.equal(conflict.saves.find(frame=>frame.book==='betmgm')!.props[0].market.over_odds,500)
 })
 
-test('two concurrent MGM partitions share one lease and cover all today/tomorrow games exactly once',async()=>{
+test('adaptive MGM partitions cap at four, cover all inputs and expose capacity limits above16 without truncation',async()=>{
+  for(const count of [1,4,8,15,16,17,30]){
+    const h=await fixture({count}),result=await h.run()
+    const mgm=h.collectorCalls.filter(call=>call.book==='betmgm'),dk=h.collectorCalls.filter(call=>call.book==='draftkings')
+    assert.equal(result.response.status,200);assert.equal(mgm.length,Math.min(4,Math.ceil(count/4)));assert.equal(dk.length,1)
+    const ids=mgm.flatMap(call=>call.gameIds)
+    assert.equal(ids.length,count);assert.equal(new Set(ids).size,count);assert.deepEqual([...ids].sort((a,b)=>a-b),Array.from({length:count},(_,i)=>123+i))
+    assert.ok(mgm.every(call=>call.gameIds.length<=Math.ceil(count/mgm.length)&&call.deadline===now+240_000))
+    if(count<=16)assert.ok(mgm.every(call=>call.gameIds.length<=4))
+    const receipt=result.body.books.find((book:{book:string})=>book.book==='betmgm')
+    assert.equal(receipt.partitions,mgm.length);assert.equal(receipt.maxPartitionGames,Math.ceil(count/mgm.length));assert.equal(receipt.capacityLimited,count>16)
+    assert.equal(h.saves.length,count*2);assert.equal(h.leaseCalls.filter(call=>call.key.includes(':betmgm:')).length,1)
+  }
+})
+
+test('an over-capacity fallback reports any unvisited game deadline instead of treating a capped session count as full coverage',async()=>{
+  const h=await fixture({count:17,capture:(book,inputs)=>book==='betmgm'?{complete:false,games:inputs.map((input,index)=>index<4?observation(book,input.id):{...observation(book,input.id),props:[],complete:false,status:'deadline'})}:{} }),result=await h.run()
+  const receipt=result.body.books.find((book:{book:string})=>book.book==='betmgm')
+  assert.equal(result.response.status,503);assert.equal(h.collectorCalls.filter(call=>call.book==='betmgm').length,4)
+  assert.equal(receipt.checked,17);assert.equal(receipt.games.length,17);assert.equal(receipt.saved,16);assert.equal(receipt.failed,1);assert.equal(receipt.capacityLimited,true)
+  assert.equal(receipt.games.filter((item:{status:string})=>item.status==='deadline').length,1)
+})
+
+test('four concurrent MGM partitions share one lease and cover all15 today/tomorrow games exactly once',async()=>{
   const slate=Array.from({length:15},(_,i)=>({...game,id:123+i,date:i<8?'2026-10-24':'2026-10-25',datetime:i<8?'2026-10-24T23:00:00Z':'2026-10-25T23:00:00Z'})).reverse()
   let entered=0,release:()=>void=()=>{}
   const gate=new Promise<void>(resolve=>{release=resolve})
   const h=await fixture({games:slate,stream:async(book)=>{
-    if(book==='betmgm'){entered++;if(entered===2)release();await gate}
+    if(book==='betmgm'){entered++;if(entered===4)release();await gate}
     return{}
   }}),result=await h.run()
   assert.equal(result.response.status,200);assert.equal(h.collectorCalls.filter(call=>call.book==='draftkings').length,1)
-  const mgm=h.collectorCalls.filter(call=>call.book==='betmgm');assert.equal(mgm.length,2);assert.equal(entered,2)
-  assert.deepEqual(mgm.map(call=>call.gameIds.filter(id=>id<131).length),[4,4]);assert.equal(mgm.flatMap(call=>call.gameIds).length,15);assert.equal(new Set(mgm.flatMap(call=>call.gameIds)).size,15)
+  const mgm=h.collectorCalls.filter(call=>call.book==='betmgm');assert.equal(mgm.length,4);assert.equal(entered,4)
+  assert.deepEqual(mgm.map(call=>call.gameIds.filter(id=>id<131).length),[2,2,2,2]);assert.equal(mgm.flatMap(call=>call.gameIds).length,15);assert.equal(new Set(mgm.flatMap(call=>call.gameIds)).size,15)
   assert.ok(mgm.every(call=>call.deadline===now+240_000));assert.equal(h.leaseCalls.filter(call=>call.key.includes(':betmgm:')).length,1)
   assert.equal(h.saves.length,30);assert.equal(new Set(h.saves.map(frame=>`${frame.book}:${frame.gameId}`)).size,30)
 })
 
-test('one failed MGM partition waits the healthy partition and retains its completed early writes',async()=>{
-  let healthyFinished=false
-  const h=await fixture({stream:async(book,inputs,callbacks)=>{
+test('one failed MGM partition waits all three healthy partitions and retains their completed early writes',async()=>{
+  let healthyFinished=0
+  const h=await fixture({count:15,stream:async(book,inputs,callbacks)=>{
     if(book!=='betmgm')return{}
     if(inputs[0].id===123)throw new Error('private-partition-cleanup')
-    await new Promise(resolve=>setTimeout(resolve,15));const item=observation(book,inputs[0].id)
-    await callbacks.onFirst(item);healthyFinished=true;return{games:[item]}
+    await new Promise(resolve=>setTimeout(resolve,15));const items=inputs.map(input=>observation(book,input.id))
+    await Promise.all(items.map(callbacks.onFirst));healthyFinished++;return{games:items}
   }}),result=await h.run()
-  assert.equal(result.response.status,503);assert.equal(healthyFinished,true);assert.deepEqual(h.saves.filter(frame=>frame.book==='betmgm').map(frame=>frame.gameId),[124])
-  assert.equal(result.body.books.find((book:{book:string})=>book.book==='betmgm').saved,1);assert.equal(JSON.stringify(result.body).includes('private-partition-cleanup'),false)
+  assert.equal(result.response.status,503);assert.equal(healthyFinished,3);assert.equal(h.saves.filter(frame=>frame.book==='betmgm').length,11)
+  assert.equal(result.body.books.find((book:{book:string})=>book.book==='betmgm').saved,11);assert.equal(JSON.stringify(result.body).includes('private-partition-cleanup'),false)
+  assert.ok(h.counts().maxWrites<=4)
 })
 
 test('a partition cannot emit another partition game through callbacks or its final response',async()=>{
-  const h=await fixture({stream:async(book,inputs,callbacks)=>{
+  const h=await fixture({count:8,stream:async(book,inputs,callbacks)=>{
     if(book!=='betmgm'||inputs[0].id!==123)return{}
     const foreign=observation(book,124);await callbacks.onFirst(foreign);return{games:[foreign]}
   }}),result=await h.run()
   assert.equal(result.response.status,503);assert.equal(h.writeAttempts.filter(attempt=>attempt.book==='betmgm'&&attempt.gameId===124).length,1)
   assert.equal(h.saves.filter(frame=>frame.book==='betmgm'&&frame.gameId===123).length,0)
+})
+
+test('queued callbacks check the save cutoff after acquiring a write slot and final replay never retries expired work',async()=>{
+  let admitted=0,release:()=>void=()=>{}
+  const gate=new Promise<void>(resolve=>{release=resolve})
+  const h=await fixture({count:16,firstSave:async(frame,advance)=>{
+    if(frame.book!=='betmgm')return
+    admitted++;assert.ok(admitted<=4,'callbacks waiting for a slot must not enter storage after the cutoff')
+    if(admitted===4){advance(now+260_001);release()}
+    await gate
+  },stream:async(book,inputs,callbacks)=>{
+    if(book!=='betmgm')return{}
+    const items=inputs.map(input=>observation(book,input.id))
+    await Promise.all(items.map(callbacks.onFirst));return{games:items}
+  }}),result=await h.run(),again=await h.run()
+  const receipt=result.body.books.find((book:{book:string})=>book.book==='betmgm')
+  assert.equal(result.response.status,503);assert.equal(again.response.status,503);assert.equal(admitted,4);assert.equal(h.counts().maxWrites,4)
+  assert.equal(receipt.saved,4);assert.equal(receipt.games.filter((item:{status:string})=>item.status==='deadline').length,12)
+  assert.equal(h.writeAttempts.filter(attempt=>attempt.book==='betmgm').length,4)
+  assert.ok(h.saves.filter(frame=>frame.book==='betmgm').every(frame=>frame.observedAt===new Date(now).toISOString()&&frame.props[0].updated_at===new Date(now).toISOString()))
 })
 
 test('240-second browser deadline leaves regular read/write and 260-second save cutoffs inside the300-second route',async()=>{

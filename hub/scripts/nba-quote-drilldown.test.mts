@@ -14,11 +14,19 @@ const { JSDOM } = require('jsdom')
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://www.slipsurge.com/the-paint' })
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, HTMLInputElement: dom.window.HTMLInputElement, IS_REACT_ACT_ENVIRONMENT: true })
 dom.window.HTMLElement.prototype.scrollIntoView = () => {}
+// Next's native-history integration publishes query changes without remounting.
+for (const method of ['pushState', 'replaceState'] as const) {
+  const original = dom.window.history[method].bind(dom.window.history)
+  dom.window.history[method] = (...args: Parameters<History[typeof method]>) => {
+    original(...args)
+    dom.window.dispatchEvent(new dom.window.Event('fixture:url'))
+  }
+}
 const { createRoot } = await import('react-dom/client')
 const state = { search: '', error: false, offer: null as PaintProp | null, navigations: [] as string[], requests: [] as string[] }
 ;(globalThis as typeof globalThis & { nbaQuoteFixture: typeof state }).nbaQuoteFixture = state
 const stubs: Record<string, string> = {
-  'next/navigation': `export const useSearchParams=()=>new URLSearchParams(globalThis.nbaQuoteFixture.search);export const useRouter=()=>({push(href){globalThis.nbaQuoteFixture.navigations.push(href)}})`,
+  'next/navigation': `import {useSyncExternalStore} from 'react';const subscribe=callback=>{window.addEventListener('fixture:url',callback);window.addEventListener('popstate',callback);return()=>{window.removeEventListener('fixture:url',callback);window.removeEventListener('popstate',callback)}};const snapshot=()=>window.location.search;export const useSearchParams=()=>new URLSearchParams(useSyncExternalStore(subscribe,snapshot,snapshot));export const useRouter=()=>({push(href){globalThis.nbaQuoteFixture.navigations.push(href)}})`,
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   '@/components/ui/ModalSurface': `import React from 'react';export const ModalSurface=({open,label,children})=>open?<div role="dialog" aria-label={label}>{children}</div>:null`,
   '@/context/WatchlistContext': `export const useWatchlist=()=>({items:[]})`,
@@ -29,6 +37,7 @@ const stubs: Record<string, string> = {
   './PaintVisuals': `import React from 'react';export const CourtMark=()=>null;export const PlayerAvatar=()=>null;export const TeamLogo=()=>null;export const TrendBars=()=>null;export const ShotCourt=()=>null;export const number=(n)=>n==null?'—':n.toFixed(1);export const marketNumber=number`,
   './PaintMatchup': `export const PaintMatchup=()=>null;export const PaintMatrix=()=>null`,
   './PaintMovement': `export const PaintMovement=()=>null`,
+  './PaintFirstBasket': `import React from 'react';export const PaintFirstBasket=()=><section aria-label="First Basket fixture">First Basket</section>`,
   './PaintPublic': `export const PaintPublic=()=>null`,
   './PaintDivergence': `export const PaintDivergence=()=>null`,
   './PaintSlate': `export const PaintSlate=()=>null`,
@@ -36,7 +45,7 @@ const stubs: Record<string, string> = {
   './PaintEstimate': `export const PaintEstimate=()=>null`,
   './PaintShotChart': `export const PaintShotChart=()=>null`,
   './PaintMarketSupport': `export const PaintMarketSupport=()=>null`,
-  './PaintResearchTools': `export const PAINT_TOOLS=[{key:'research',label:'The Court',icon:()=>null},{key:'score',label:'SlipSurge Score',icon:()=>null}];export const PaintCheatsheets=()=>null;export const PaintUsage=()=>null;export const PaintAvailability=()=>null;export const PaintGameMarkets=()=>null;export const PaintMatchupLab=()=>null`,
+  './PaintResearchTools': `export const PAINT_TOOLS=[{key:'research',label:'The Court',icon:()=>null},{key:'score',label:'SlipSurge Score',icon:()=>null},{key:'first-basket',label:'First Basket',icon:()=>null}];export const PaintCheatsheets=()=>null;export const PaintUsage=()=>null;export const PaintAvailability=()=>null;export const PaintGameMarkets=()=>null;export const PaintMatchupLab=()=>null`,
 }
 const bundled = await build({ stdin: { contents: `export {PaintBoardClient} from './src/app/the-paint/PaintBoardClient'`, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'quote.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'quote-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
@@ -74,9 +83,11 @@ async function harness(view: string, side = 'over', offer: PaintProp | null = nu
   await act(async () => render(initial))
   const commitNavigation=async(next:PaintBoard)=>{
     const href=state.navigations.at(-1);assert.ok(href)
-    window.history.pushState(null,'',href)
-    state.search=new URL(href,window.location.origin).search
-    await act(async()=>render(next))
+    await act(async()=>{
+      window.history.pushState(null,'',href)
+      state.search=new URL(href,window.location.origin).search
+      render(next)
+    })
   }
   const click = async (element: Element | null | undefined) => { assert.ok(element); await act(async () => element.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))) }
   const byLabel = (label: string) => [...host.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === label)
@@ -94,6 +105,35 @@ function assertSelected(host: Element, quote: PaintProp, side: string) {
   assert.equal(new URL(window.location.href).searchParams.get('line'), quote.line_value)
   assert.equal(new URL(window.location.href).searchParams.get('side'), side)
 }
+
+test('same-game sidebar navigation replaces the internally selected tool without remounting the Court', async () => {
+  const ui = await harness('ladders', 'over', null, false, 'points', '&contract=milestone&mode=live')
+  try {
+    assert.ok(ui.host.querySelector('[aria-label="Ladder player"]'))
+    await ui.click([...ui.host.querySelectorAll('nav[aria-label="NBA research tools"] button')].find(button=>button.textContent==='First Basket'))
+    assert.ok(ui.host.querySelector('[aria-label="First Basket fixture"]'))
+    assert.equal(new URL(window.location.href).searchParams.get('view'), 'first-basket')
+    const sidebar = new URL(window.location.href)
+    sidebar.searchParams.set('view', 'ladders')
+    await act(async()=>window.history.pushState(null, '', sidebar))
+    assert.ok(ui.host.querySelector('[aria-label="Ladder player"]'), 'the existing mounted board must follow the sidebar URL')
+    assert.equal(ui.host.querySelector('[aria-label="First Basket fixture"]'), null)
+    assert.equal(ui.host.querySelector('[aria-label="NBA odds mode"] [aria-pressed="true"]')?.textContent, 'Live')
+    assert.equal(new URL(window.location.href).searchParams.get('contract'), 'milestone')
+    await ui.click([...ui.host.querySelectorAll('button')].find(button=>button.textContent==='+MM'))
+    assert.equal(new URL(window.location.href).searchParams.get('view'), 'research')
+    assert.equal(new URL(window.location.href).searchParams.get('sort'), 'mm')
+    assert.ok(ui.byLabel('Analyze Test Player, Boston Celtics'), 'changing sort and workspace together keeps the requested workspace')
+    await act(async()=>{
+      window.history.replaceState(null, '', '?view=first-basket&mode=live')
+      window.dispatchEvent(new dom.window.PopStateEvent('popstate'))
+    })
+    assert.ok(ui.host.querySelector('[aria-label="First Basket fixture"]'), 'browser history also selects the requested tool')
+    await act(async()=>window.history.pushState(null, '', '?view=unknown&mode=live'))
+    assert.equal(ui.host.querySelector('[aria-label="First Basket fixture"]'), null)
+    assert.ok(ui.byLabel('Analyze Test Player, Boston Celtics'), 'an unknown tool safely returns to the player board')
+  } finally { await ui.close() }
+})
 
 test('sportsbook quote drilldown keeps exact main, alt, milestone and Under contracts across different books', async () => {
   for (const [quote, side, target] of [[main, 'over', 'O 20'], [alt, 'over', 'O 24.5'], [alt, 'under', 'U 24.5'], [quarterMilestone, 'over', '5+']] as const) {

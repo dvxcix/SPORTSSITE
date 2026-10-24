@@ -252,6 +252,92 @@ test('one MGM session finishes every First Basket board before bounded regular l
   assert.ok(result.regularCoverage!.every(value => !value.complete))
 })
 
+async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'navigation') {
+  const slate = 'ABCD'.split('').map((letter, index) => ({ game: { ...game, id: 100 + index, home_team: { ...game.home_team, id: 50 + index, name: `Home ${letter}`, full_name: `Denver ${letter}` } }, roster: [player] }))
+  const links = slate.map(value => `https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-${value.game.home_team.full_name.at(-1)!.toLowerCase()}-${value.game.id}`)
+  const first: number[] = [], regular: number[] = [], saved: number[] = [], revisited: number[] = []
+  const regularPages = new Map<number, number>(), firstPages = new Map<number, number>()
+  let opened = 0, closed = 0, pages = 0, allocations = 0, active = 0, maxActive = 0
+  const busy = new Set<number>()
+  type FixturePage = { id: number; current: number | null }
+  async function work<T>(page: FixturePage, operation: () => T): Promise<T> {
+    assert.equal(busy.has(page.id), false, 'one physical page must never serve two concurrent games')
+    busy.add(page.id); active++; maxActive = Math.max(active, maxActive)
+    assert.ok(active <= 2, 'retained pages must not add active navigation or inspection workers')
+    try { await new Promise<void>(resolve => setImmediate(resolve)); return operation() }
+    finally { busy.delete(page.id); active-- }
+  }
+  const locator = () => ({ first() { return this }, waitFor: async () => {}, count: async () => 1, click: async () => {}, evaluateAll: async () => links })
+  const makePage = () => {
+    const value = { id: ++pages, current: null as number | null,
+      setDefaultTimeout: () => {}, route: async () => { if (failure === 'preparation' && value.id === 3) throw new Error('private setup failure') },
+      getByRole: locator, locator, close: async () => {}, context: () => ({ newPage: async () => {
+        allocations++
+        if (failure === 'allocation' && allocations === 2) throw new Error('private allocation failure')
+        return makePage()
+      } }),
+    }
+    return value
+  }
+  const imports: Record<string, unknown> = {
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes,
+    './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) },
+    './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
+    './nbaMgmProps': { collectMgmProps: async (page: FixturePage, value: typeof input) => work(page, () => {
+      assert.equal(first.length, slate.length, 'First Basket retains priority for every listed game')
+      assert.equal(page.current, value.game.id, 'a retained page must still belong to the exact inspected game')
+      assert.notEqual(failure === 'navigation' ? 102 : -1, value.game.id, 'failed First navigation cannot establish a reusable binding')
+      regular.push(value.game.id); regularPages.set(value.game.id, page.id)
+      return { frames: [], coverage: [] }
+    }) },
+    '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => { opened++; return { page: makePage(), close: async () => { assert.equal(active, 0); closed++ } } } },
+  }
+  const target = { exports: {} }, code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
+  const fakeBoard = async (page: FixturePage, url: string) => work(page, () => {
+    const index = links.indexOf(url); assert.ok(index >= 0)
+    const value = slate[index]; first.push(value.game.id)
+    if (failure === 'navigation' && value.game.id === 102) { page.current = -1; throw new Error('private failed navigation left unrelated content') }
+    page.current = value.game.id; firstPages.set(value.game.id, page.id)
+    return board({ away: game.visitor_team.full_name, home: value.game.home_team.full_name, market: 'First field goal scorer', timeLabel: '4:59 PM', rows: [{ name: 'Alpha Diallo', odds: '+900' }] })
+  })
+  const fakeEvent = async (page: FixturePage, url: string) => work(page, () => {
+    const index = links.indexOf(url); assert.ok(index >= 0)
+    page.current = slate[index].game.id; revisited.push(page.current); return {}
+  })
+  new Function('require', 'module', 'exports', 'Date', 'fakeBoard', 'fakeEvent', `${code}\nmgmBoard = fakeBoard; mgmEvent = fakeEvent; openPage = async () => {};`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, fakeBoard, fakeEvent)
+  const collector = target.exports as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')
+  const result = await collector.collectNbaFirstBooks('betmgm', slate, now + 240_000, { onRegular: async gameId => { saved.push(gameId) } })
+  assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(maxActive, 2); assert.ok(pages <= 4)
+  assert.equal(new Set(regular).size, regular.length); assert.deepEqual(saved, regular)
+  assert.equal(JSON.stringify(result).includes('private'), false)
+  return { result, pages, firstPages, regularPages, revisited, regular }
+}
+
+test('four retained MGM event pages use only two active workers and avoid every second event load', async () => {
+  const value = await retainedMgmScenario()
+  assert.equal(value.pages, 4); assert.equal(value.result.complete, true)
+  assert.equal(value.regular.length, 4); assert.equal(new Set(value.regularPages.values()).size, 4)
+  assert.deepEqual(value.regularPages, value.firstPages); assert.deepEqual(value.revisited, [])
+})
+
+test('retained-page allocation or setup failure falls back to separate worker pages without concurrent reuse', async () => {
+  for (const failure of ['allocation', 'preparation'] as const) {
+    const value = await retainedMgmScenario(failure)
+    assert.equal(value.result.complete, true); assert.equal(value.regular.length, 4)
+    assert.ok(value.revisited.length >= 1, 'fallback must reload any displaced event before regular inspection')
+    assert.equal(new Set(value.regularPages.values()).size, 2, 'the fallback owns only the two original worker pages')
+  }
+})
+
+test('failed First event navigation is excluded from retained inspection while healthy pages remain usable', async () => {
+  const value = await retainedMgmScenario('navigation')
+  assert.equal(value.result.complete, false); assert.equal(value.regular.length, 3)
+  assert.equal(value.result.games.find(item => item.gameId === 102)?.status, 'error')
+  assert.ok(value.result.regularCoverage!.filter(scope => scope.gameId === 102).every(scope => !scope.complete))
+  assert.equal(value.regularPages.has(102), false); assert.deepEqual(value.revisited, [])
+})
+
 test('observation callbacks cannot extend the collector deadline or expose persistence error details', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
