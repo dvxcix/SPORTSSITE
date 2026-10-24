@@ -1,5 +1,5 @@
 import { nbaName, PAINT_MARKETS, type PaintGame, type PaintMarket, type PaintRoster } from './nbaPaint'
-export const NBA_PUBLIC_VERSION='nba-public-v4'
+export const NBA_PUBLIC_VERSION='nba-public-v5'
 export function nbaPublicEventMatches(game:Pick<PaintGame,'date'|'visitor_team'|'home_team'>,text:string){
   const normalized=nbaName(text),[,month,day]=game.date.split('-')
   return [game.visitor_team.full_name,game.home_team.full_name].every(name=>normalized.includes(nbaName(name)))&&new RegExp(`\\b${Number(month)}/${Number(day)}\\b`).test(text)
@@ -54,12 +54,26 @@ function publicAliases(market:NbaPublicMarket){
 }
 /** Row provenance wins over its containing capture, which may carry other markets forward. */
 export function nbaPublicRowAt(row:NbaPublicRow,capture:Pick<NbaPublicCapture,'capturedAt'>){return row.capturedAt??capture.capturedAt}
-export function nbaPublicVerifiedVersion(version:string|undefined){return version===NBA_PUBLIC_VERSION||version==='nba-public-v3'||version==='nba-public-v2'}
+export function nbaPublicVerifiedVersion(version:string|undefined){return version===NBA_PUBLIC_VERSION||version==='nba-public-v4'||version==='nba-public-v3'||version==='nba-public-v2'}
 export function nbaPublicPrevious(row:NbaPublicRow,previous?:Pick<NbaPublicCapture,'rows'>){
   return Object.hasOwn(row,'previous')?row.previous??null:previous?.rows.find(prior=>prior.playerId===row.playerId&&prior.market===row.market)?.picks??null
 }
+// Verified display aliases are pinned to both the provider ID and canonical
+// roster identity. This never enables general nickname or first-name matching.
+const playerAliases=[
+  {id:38017716,canonical:'Ousmane Dieng',alias:'Ousmane',firstOnly:true},
+  {id:1028028405,canonical:'Alexandre Sarr',alias:'Alex Sarr',firstOnly:false},
+  {id:1057260888,canonical:'Airious Bailey',alias:'Ace Bailey',firstOnly:false},
+  {id:56677830,canonical:'GG Jackson',alias:'Gregory Jackson',firstOnly:false},
+] as const
 export function normalizeNbaPublic(props:Record<string,Record<string,number>>,roster:PaintRoster[]){
   const found=new Map<string,NbaPublicRow>();let unmatched=0
+  const identities=roster.map(player=>{
+    const canonical=nbaName(`${player.first_name} ${player.last_name}`)
+    const aliases=playerAliases.filter(alias=>alias.id===player.id&&nbaName(alias.canonical)===canonical
+      &&(!alias.firstOnly||roster.filter(other=>nbaName(other.first_name)===nbaName(alias.alias)).length===1)).map(alias=>nbaName(alias.alias))
+    return {player,names:[canonical,...aliases]}
+  })
   for(const [label,entries] of Object.entries(props)){
     const categoryMarket=nbaPublicMarket(label),combos=/^(?:player )?combos$/i.test(label.trim())
     if((!categoryMarket&&!combos)||!entries||typeof entries!=='object'||Array.isArray(entries))continue
@@ -72,14 +86,15 @@ export function normalizeNbaPublic(props:Record<string,Record<string,number>>,ro
       let cleaned=raw.replace(/\s+(Over|Under)\s+[+-]?\d+(\.\d+)?$/i,'').trim()
       if(binary)cleaned=cleaned.replace(/^yes\s*[·:]\s*/i,'').replace(/(?:\s|[·:])+yes$/i,'').trim()
       const normalized=nbaName(cleaned)
-      const matches=roster.flatMap(p=>{
-        const name=nbaName(`${p.first_name} ${p.last_name}`)
-        if(normalized===name)return categoryMarket?[{id:p.id,market:categoryMarket}]:[]
-        if(!normalized.startsWith(name))return []
-        const suffix=normalized.slice(name.length)
+      const matches=identities.flatMap(({player:p,names})=>{
         const candidates:NbaPublicMarket[]=combos?comboMarkets:categoryMarket?[categoryMarket,...(['points','rebounds','assists'].includes(categoryMarket)?[`${categoryMarket}_1q` as PaintMarket]:[]),...(categoryMarket==='first_basket'?['first_basket_including_ft' as const,'first_field_goal' as const]:[])]:[]
-        const market=candidates.find(market=>publicAliases(market).includes(suffix))
-        return market?[{id:p.id,market}]:[]
+        const markets=names.flatMap(name=>{
+          if(normalized===name)return categoryMarket?[categoryMarket]:[]
+          if(!normalized.startsWith(name))return []
+          const market=candidates.find(market=>publicAliases(market).includes(normalized.slice(name.length)))
+          return market?[market]:[]
+        })
+        return [...new Set(markets)].map(market=>({id:p.id,market}))
       })
       if(matches.length!==1){unmatched++;continue}
       const {id:playerId,market}=matches[0],key=`${playerId}:${market}`,prior=found.get(key)

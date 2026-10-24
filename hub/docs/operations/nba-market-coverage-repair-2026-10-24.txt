@@ -58,3 +58,22 @@ work. Both explicit empty groups can prove empty coverage; missing/malformed
 siblings keep coverage partial while verified player rows persist. Group totals
 never become player counts. This follow-up needs no migration or historical
 replay. Extractor14/14, typecheck, scoped lint and independent review pass.
+
+Second natural run08:41UTC, release9a9161a0: all15 games/all11 categories read;
+grouped First Basket and combos normalized correctly. Eleven games complete.
+Four had exactly66 unmatched rows from four display-name differences: Ousmane
+versus Ousmane Dieng (38017716); Alex versus Alexandre Sarr (1028028405); Ace
+versus Airious Bailey (1057260888); Gregory versus GG Jackson (56677830).
+All are present on the exact canonical game rosters. Versionv5 pins each alias
+to its canonical ID and name; the single-name Ousmane alias additionally requires
+exactly one matching first name on the game roster. Other partial/nickname
+matching remains disabled and ambiguous matches reject. No raw history replay.
+Primary biography evidence for Bailey and Jackson:
+https://scarletknights.com/sports/mens-basketball/roster/airious--ace--bailey/14341
+https://www.nba.com/player/1641713/gg-jackson/bio
+
+Real observed deltas now verified in both DB and production UI: Bam Adebayo
+points9->10 (+1), double-double1->2 (+1), rebounds3->3 (0). His First Basket
+including FT count1 and First Field Goal count0 are distinct, with no fabricated
+previous value on their first capture. New combo identities likewise start with
+unknown prior. Screenshot work/nba-capture-deltas-live-2026-10-24.jpg.

@@ -8,6 +8,32 @@ import type { NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 
 const roster=[{id:1,first_name:'Chet',last_name:'Holmgren'},{id:2,first_name:'Wendell',last_name:'Carter Jr.'}] as PaintRoster[]
 
+test('verified display aliases require the exact roster ID and canonical name',()=>{
+  // Primary identity evidence: NBA /player/1642259/alexandre-sarr (Alex Sarr),
+  // Rutgers /sports/mens-basketball/roster/airious--ace--bailey/14341,
+  // NBA /player/1641713/gg-jackson/bio (first name Gregory). Ousmane is the
+  // observed short label in the exact MIL roster, pinned to Dieng's provider ID.
+  const identities=[
+    {id:38017716,first_name:'Ousmane',last_name:'Dieng',alias:'Ousmane'},
+    {id:1028028405,first_name:'Alexandre',last_name:'Sarr',alias:'Alex Sarr'},
+    {id:1057260888,first_name:'Airious',last_name:'Bailey',alias:'Ace Bailey'},
+    {id:56677830,first_name:'GG',last_name:'Jackson',alias:'Gregory Jackson'},
+  ]
+  const props={Points:Object.fromEntries(identities.map((p,i)=>[`${p.alias} Points`,i])), 'First Basket':Object.fromEntries(identities.map((p,i)=>[`${p.alias} First Field Goal`,i]))}
+  const matched=normalizeNbaPublic(props,identities as unknown as PaintRoster[])
+  assert.equal(matched.rows.length,8);assert.equal(matched.unmatched,0)
+  assert.deepEqual(new Set(matched.rows.map(row=>row.playerId)),new Set(identities.map(row=>row.id)))
+  for(const invalid of [identities.map(p=>({...p,id:p.id+1})),identities.map(p=>({...p,first_name:'Different'})),[]]){
+    const result=normalizeNbaPublic(props,invalid as unknown as PaintRoster[])
+    assert.equal(result.rows.length,0);assert.equal(result.unmatched,8)
+  }
+  const shortCollision=[...identities,{id:999,first_name:'Ousmane',last_name:'Other'}] as unknown as PaintRoster[]
+  assert.equal(normalizeNbaPublic({Points:{'Ousmane Points':8}},shortCollision).unmatched,1)
+  const fullCollision=[...identities,{id:999,first_name:'Alex',last_name:'Sarr'}] as unknown as PaintRoster[]
+  assert.equal(normalizeNbaPublic({Points:{'Alex Sarr Points':8}},fullCollision).unmatched,1)
+  assert.equal(normalizeNbaPublic({Points:{'Greg Jackson Points':8}},identities as unknown as PaintRoster[]).unmatched,1)
+})
+
 test('binary affirmative suffixes and prefixes import without adding negative-side counts',()=>{
   const result=normalizeNbaPublic({'Double Double':{'Chet Holmgren Double Double Yes':7,'Chet Holmgren Double Double No':90},'Triple Double':{'Yes · Chet Holmgren Triple Double':2,'No · Chet Holmgren Triple Double':99}},roster)
   assert.deepEqual(result.rows,[{playerId:1,market:'double_double',picks:7},{playerId:1,market:'triple_double',picks:2}])
