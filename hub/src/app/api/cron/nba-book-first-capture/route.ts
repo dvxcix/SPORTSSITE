@@ -55,7 +55,11 @@ async function run(request: Request) {
           const capture = await collectNbaFirstBooks(book, inputs, browserDeadline)
           let saved = 0, failed = capture.errors.length, deferred = 0
           let regularSaved=0,regularQuotes=0,regularDeferred=0
-          const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline'].includes(error.code)).slice(0,64).map(error=>({code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{})}))
+          const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline'].includes(error.code)).slice(0,64).map(error=>({
+            code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{}),
+            ...(['event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture'].includes(error.stage??'')?{stage:error.stage}:{}),
+            ...(['timeout','target-closed','navigation-interrupted','network','evaluation','unknown'].includes(error.reason??'')?{reason:error.reason}:{}),
+          }))
           const games: { gameId: number; status: string; quotes: number; unmatched: number; clockMismatch: boolean }[] = []
           const expected=new Set(inputs.map(input=>input.game.id))
           failed+=capture.games.filter(item=>!expected.has(item.gameId)).length

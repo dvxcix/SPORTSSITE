@@ -11,7 +11,9 @@ import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCov
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
-type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline' }
+type CaptureStage = 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture'
+type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
+type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
 const remaining = (deadline: number, cap = 15_000) => Math.max(1, Math.min(cap, deadline - Date.now()))
 async function preparePage(page: Page) {
@@ -40,7 +42,28 @@ async function openPage(page: Page, url: string, deadline: number) {
   if (await blocked(page)) throw new Error('challenge')
 }
 function safeFailure(error: unknown): Failure['code'] {
+  if (error instanceof CaptureFailure) return error.code
   return error instanceof Error && (error.message === 'challenge' || error.message === 'deadline' || error.message === 'layout-unavailable') ? error.message : 'navigation-failed'
+}
+class CaptureFailure extends Error {
+  readonly code: Failure['code']
+  readonly reason: CaptureReason
+  constructor(readonly stage: CaptureStage, error: unknown) {
+    super('NBA book capture stage failed')
+    this.code = safeFailure(error)
+    const message = error instanceof Error ? error.message : ''
+    this.reason = error instanceof Error && (error.name === 'TimeoutError' || /\btimeout\b|timed out/i.test(message)) ? 'timeout'
+      : /target.*closed|page.*closed|context.*closed|browser.*closed/i.test(message) ? 'target-closed'
+      : /navigation.*interrupted|interrupted.*navigation|execution context was destroyed/i.test(message) ? 'navigation-interrupted'
+      : /net::ERR_|network|connection.*closed|connection.*reset/i.test(message) ? 'network'
+      : error instanceof Error && ['ReferenceError', 'TypeError', 'SyntaxError'].includes(error.name) ? 'evaluation' : 'unknown'
+  }
+}
+async function atStage<T>(stage: CaptureStage, operation: () => Promise<T>): Promise<T> {
+  try { return await operation() } catch (error) { throw error instanceof CaptureFailure ? error : new CaptureFailure(stage, error) }
+}
+function captureFailure(error: unknown, gameId?: number): Failure {
+  return { ...(gameId == null ? {} : { gameId }), code: safeFailure(error), ...(error instanceof CaptureFailure ? { stage: error.stage, reason: error.reason } : {}) }
 }
 async function dkBoards(page: Page, deadline: number) {
   await openPage(page, DK_LEAGUE, deadline)
@@ -70,17 +93,24 @@ async function dkBoards(page: Page, deadline: number) {
 }
 
 async function mgmEvent(page: Page, eventUrl: string, deadline: number) {
-  await openPage(page, eventUrl, deadline)
-  await page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline) })
-  const identity = await page.evaluate(readMgmFirstIdentity)
-  if (!identity) throw new Error('layout-unavailable')
-  const all = page.getByRole('button', { name: 'All', exact: true })
-  await all.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(() => {})
-  if (await all.count() !== 1) throw new Error('layout-unavailable')
-  await all.click({ timeout: remaining(deadline, 3000) })
-  const marketHeaders = page.locator('button[aria-controls][aria-expanded]').filter({ has: page.locator('[slot="title"]') })
-  await marketHeaders.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(() => {})
-  if (!(await marketHeaders.count())) throw new Error('layout-unavailable')
+  await atStage('event-navigation', () => openPage(page, eventUrl, deadline))
+  await atStage('event-scoreboard', () => page.locator('ms-scoreboard-participant .participant-name-value').first().waitFor({ state: 'visible', timeout: remaining(deadline) }))
+  const identity = await atStage('event-identity', async () => {
+    const value = await page.evaluate(readMgmFirstIdentity)
+    if (!value) throw new Error('layout-unavailable')
+    return value
+  })
+  await atStage('event-all', async () => {
+    const all = page.getByRole('button', { name: 'All', exact: true })
+    await all.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) })
+    if (await all.count() !== 1) throw new Error('layout-unavailable')
+    await all.click({ timeout: remaining(deadline, 3000) })
+  })
+  await atStage('event-menu', async () => {
+    const marketHeaders = page.locator('button[aria-controls][aria-expanded]').filter({ has: page.locator('[slot="title"]') })
+    await marketHeaders.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) })
+    if (!(await marketHeaders.count())) throw new Error('layout-unavailable')
+  })
   return identity
 }
 async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise<NbaFirstBookBoard | null> {
@@ -90,24 +120,24 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise
   // unavailable, never a successful empty board or a withdrawal signal.
   await header.first().waitFor({ state: 'visible', timeout: remaining(deadline, 7000) }).catch(() => {})
   if (await header.count() !== 1) return null
-  if (await header.getAttribute('aria-expanded') !== 'true') await header.click({ timeout: remaining(deadline, 3000) })
+  await atStage('first-accordion', async () => { if (await header.getAttribute('aria-expanded') !== 'true') await header.click({ timeout: remaining(deadline, 3000) }) })
   const panelId = await header.getAttribute('aria-controls')
-  if (!panelId || !/^[a-zA-Z0-9_-]+$/.test(panelId)) throw new Error('layout-unavailable')
+  if (!panelId || !/^[a-zA-Z0-9_-]+$/.test(panelId)) throw new CaptureFailure('first-panel', new Error('layout-unavailable'))
   const panel = page.locator(`#${panelId}`)
-  await panel.waitFor({ state: 'visible', timeout: remaining(deadline, 5000) })
+  await atStage('first-panel', () => panel.waitFor({ state: 'visible', timeout: remaining(deadline, 5000) }))
   for (let click = 0; click < 5 && Date.now() < deadline; click++) {
     const more = panel.getByText(/^(?:show|see) more$/i, { exact: true }).first()
     if (!(await more.count()) || !(await more.isVisible())) break
-    await more.click({ timeout: remaining(deadline, 2000) })
+    await atStage('first-expand', () => more.click({ timeout: remaining(deadline, 2000) }))
     await page.waitForTimeout(350)
   }
   let prior = '', observed = { rows: [] as { name: string; odds: string }[], expanded: false }
   for (let poll = 0; poll < 8 && Date.now() < deadline; poll++) {
-    observed = await page.evaluate(readMgmFirstRows, panelId)
+    observed = await atStage('first-rows', () => page.evaluate(readMgmFirstRows, panelId))
     const signature = JSON.stringify(observed)
     if (observed.rows.length && signature === prior) {
-      const currentIdentity = await page.evaluate(readMgmFirstIdentity)
-      if (JSON.stringify(identity) !== JSON.stringify(currentIdentity)) throw new Error('layout-unavailable')
+      const currentIdentity = await atStage('first-revalidate', () => page.evaluate(readMgmFirstIdentity))
+      if (JSON.stringify(identity) !== JSON.stringify(currentIdentity)) throw new CaptureFailure('first-revalidate', new Error('layout-unavailable'))
       return { ...identity, ...observed, observedAt: new Date().toISOString(), market: 'First field goal scorer' }
     }
     prior = signature
@@ -179,7 +209,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
             else if (first.status !== 'closed') result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
           } catch (error) {
             const code = safeFailure(error)
-            result.errors.push({ gameId: input.game.id, code }); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
+            result.errors.push(captureFailure(error, input.game.id)); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
             result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
             if (code === 'challenge') challenged = true
           }
@@ -194,10 +224,11 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           const { input, url } = regularTasks[next++], gameDeadline = Math.min(deadline, Date.now() + regularBudget)
           try {
             if (gameDeadline - Date.now() < 1000) throw new Error('deadline')
-            if (currentUrls.get(worker) !== url) await mgmEvent(worker, url, gameDeadline)
-            const regular = await collectMgmProps(worker, input, gameDeadline)
+            if (currentUrls.get(worker) !== url) await atStage('regular-navigation', () => mgmEvent(worker, url, gameDeadline))
+            const regular = await atStage('regular-capture', () => collectMgmProps(worker, input, gameDeadline))
             result.regular!.push(...regular.frames); result.regularCoverage!.push(...regular.coverage)
           } catch (error) {
+            result.errors.push(captureFailure(error, input.game.id))
             result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
             if (safeFailure(error) === 'challenge') challenged = true
           }
@@ -205,7 +236,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       }))
       for (const { input } of regularTasks.slice(next)) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
     }
-  } catch (error) { result.errors.push({ code: session ? safeFailure(error) : 'session-unavailable' }) }
+  } catch (error) { result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' }) }
   finally { await session?.close() }
   const completed = new Set(result.games.map(game => game.gameId))
   for (const input of active) if (!completed.has(input.game.id)) result.games.push(nbaFirstBookMissing(input.game.id, 'error'))

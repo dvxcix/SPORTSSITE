@@ -145,10 +145,16 @@ test('verified regular panels persist independently of missing First Basket and 
   assert.ok(h.saves.every(frame=>frame.book==='draftkings'))
 })
 
-test('private error telemetry contains only bounded known codes and optional game IDs',async()=>{
-  const h=await fixture({capture:(_book,inputs)=>({games:inputs.map(input=>({...observation('draftkings',input.id),complete:false,status:'error'})),errors:[...Array.from({length:70},()=>({code:'challenge' as const,gameId:123,secret:'private-source-url'})),{code:'private-source-url' as never}]})}),result=await h.run()
+test('private error telemetry contains only bounded known codes, stages, reasons and optional game IDs',async()=>{
+  const h=await fixture({capture:(_book,inputs)=>({games:inputs.map(input=>({...observation('draftkings',input.id),complete:false,status:'error'})),errors:[
+    {code:'navigation-failed' as const,gameId:123,stage:'event-navigation' as const,reason:'navigation-interrupted' as const,message:'private-source-url'},
+    {code:'navigation-failed' as const,gameId:124,stage:'private-source-url' as never,reason:'private-source-url' as never},
+    ...Array.from({length:70},()=>({code:'challenge' as const,gameId:123,secret:'private-source-url'})),{code:'private-source-url' as never},
+  ]})}),result=await h.run()
   assert.equal(result.response.status,503);assert.ok(result.body.books.every((book:{errors:unknown[]})=>book.errors.length===64));assert.equal(JSON.stringify(result.body).includes('private-source-url'),false)
-  assert.deepEqual(result.body.books[0].errors[0],{code:'challenge',gameId:123})
+  assert.deepEqual(result.body.books[0].errors[0],{code:'navigation-failed',gameId:123,stage:'event-navigation',reason:'navigation-interrupted'})
+  assert.deepEqual(result.body.books[0].errors[1],{code:'navigation-failed',gameId:124})
+  assert.deepEqual(result.body.books[0].errors[2],{code:'challenge',gameId:123})
 })
 
 test('a listed regular menu with missing or incomplete inspection fails even without any prior direct prices',async()=>{

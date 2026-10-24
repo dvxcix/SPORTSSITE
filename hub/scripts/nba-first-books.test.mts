@@ -195,7 +195,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
   assert.deepEqual(valid.calls, ['navigate', 'all', 'first', 'more']); assert.equal(captured.expanded, true)
   assert.deepEqual(captured.rows, [{ name: 'Alpha Diallo', odds: '+900' }])
   const missing = await scenario(false)
-  await assert.rejects(missing.run(), /layout-unavailable/); assert.deepEqual(missing.calls, ['navigate', 'all'])
+  await assert.rejects(missing.run(), (error: unknown) => Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'layout-unavailable' && 'stage' in error && error.stage === 'event-menu')); assert.deepEqual(missing.calls, ['navigate', 'all'])
 })
 
 test('one MGM session finishes every First Basket board before bounded regular ladders, even if a ladder fails', async () => {
@@ -233,4 +233,33 @@ test('one MGM session finishes every First Basket board before bounded regular l
   assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 109_000))
   assert.equal(result.regularCoverage!.length, Object.keys(propQuotes.MGM_MILESTONE_PANELS).length)
   assert.ok(result.regularCoverage!.every(value => !value.complete))
+})
+
+test('MGM failures identify the bounded navigation stage without exposing raw errors or URLs', async () => {
+  const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const identity = { ...board(), market: undefined, rows: undefined }, readers = { readMgmFirstIdentity: function identity() {} }
+  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const target = { exports: {} }
+  const functions = new Function('require', 'module', 'exports', `${code}\nreturn {mgmEvent, captureFailure}`)((name: string) => imports[name], target, target.exports) as { mgmEvent: (page: unknown, url: string, deadline: number) => Promise<unknown>; captureFailure: (error: unknown, gameId: number) => unknown }
+  const secret = 'https://private.example/?token=do-not-expose'
+  for (const scenario of [
+    { stage: 'event-navigation', reason: 'network', fail: 'goto', error: new Error(`page.goto: net::ERR_TUNNEL_CONNECTION_FAILED ${secret}`) },
+    { stage: 'event-scoreboard', reason: 'timeout', fail: 'scoreboard', error: Object.assign(new Error(`locator.waitFor: Timeout 15000ms exceeded ${secret}`), { name: 'TimeoutError' }) },
+    { stage: 'event-all', reason: 'timeout', fail: 'all', error: Object.assign(new Error(`locator.click: Timeout 3000ms exceeded ${secret}`), { name: 'TimeoutError' }) },
+    { stage: 'event-identity', reason: 'evaluation', fail: 'identity', error: new ReferenceError(`unknown binding ${secret}`) },
+  ]) {
+    const locator = (kind: string) => ({ first() { return this }, filter() { return this }, count: async () => 1,
+      waitFor: async () => { if (scenario.fail === kind) throw scenario.error }, click: async () => {},
+    })
+    const page = { goto: async () => { if (scenario.fail === 'goto') throw scenario.error }, waitForTimeout: async () => {},
+      locator: (selector: string) => locator(selector.includes('scoreboard') ? 'scoreboard' : 'menu'), getByRole: () => locator('all'),
+      evaluate: async (fn: unknown) => { if (fn === readers.readMgmFirstIdentity) { if (scenario.fail === 'identity') throw scenario.error; return identity } return false },
+    }
+    try { await functions.mgmEvent(page, 'https://www.nc.betmgm.com/en/sports/events/observed', Date.now() + 30_000); assert.fail('expected stage failure') }
+    catch (error) {
+      const failure = functions.captureFailure(error, game.id)
+      assert.deepEqual(failure, { gameId: game.id, code: 'navigation-failed', stage: scenario.stage, reason: scenario.reason })
+      assert.equal(JSON.stringify(failure).includes(secret), false); assert.equal(String(error).includes(secret), false)
+    }
+  }
 })
