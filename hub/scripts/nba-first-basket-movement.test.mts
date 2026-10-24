@@ -65,7 +65,7 @@ test('first-basket economics preserve every event/method change and ignore provi
   assert.notDeepEqual(nbaEconomicSnapshot([offer]), nbaEconomicSnapshot([]))
 })
 
-async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }, options: { cache?: Map<string, unknown>; changed?: boolean; failArchive?: boolean; games?: number } = {}) {
+async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }, options: { cache?: Map<string, unknown>; changed?: boolean; failArchive?: boolean; games?: number; incompleteProps?: boolean; primaryUnavailableDeferred?: boolean; incompleteFirst?: boolean } = {}) {
   const source = await readFile(new URL('../src/app/api/cron/nba-market-capture/route.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: { name: string; args: Record<string, unknown> }[] = []
@@ -81,13 +81,21 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
     '@/lib/cron-auth': { requireCronAuth: () => null },
     '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
-    '@/lib/nbaPaintData': { getPaintGame:async(id: number)=>games.find(game=>game.id===id), getPaintSchedule: async () => ({ games }), getPaintProps: async (id: number) => { if (failProps) throw Error('fixture'); return empty ? [] : [{ ...regular, game_id: id }] }, getPaintGameOdds: async () => [] },
+    '@/lib/nbaPaintData': {
+      getPaintGame:async(id: number)=>games.find(game=>game.id===id), getPaintSchedule: async () => ({ games }),
+      getPaintPropSnapshot: async (game: { id: number }) => {
+        if (failProps) throw Error('fixture')
+        const complete = !options.incompleteProps && !options.primaryUnavailableDeferred
+        return { props: empty || options.primaryUnavailableDeferred ? [] : [{ ...regular, game_id: game.id }], complete, primaryComplete: !options.primaryUnavailableDeferred,
+          coverage: { complete, deferred: !!options.primaryUnavailableDeferred, accepted: 0, unmatched: options.incompleteProps ? 1 : 0, stale: 0, eventMatched: false, applicable: false, observedAt: new Date().toISOString() }, issues: [] }
+      }, getPaintGameOdds: async () => [],
+    },
     '@/lib/nbaMovement': { nbaEconomicSnapshot },
     '@/lib/nbaOddsHistory': { nbaGameEconomicSnapshot },
     '@/lib/nbaPaint': { nbaToday: () => game.date },
     '@/lib/nbaOddsMode':{...modes,nbaPregameOpen:(g:PaintGame)=>modes.nbaPregameOpen(g,now),nbaLiveOpen:(g:PaintGame)=>modes.nbaLiveOpen(g,now),nbaQuoteInMode:(q:PaintProp,g:PaintGame,m:modes.NbaOddsMode)=>modes.nbaQuoteInMode(q,g,m,now)},
     '@/lib/nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => { if (!receipts.has(key)) receipts.set(key, await load()); return { value: receipts.get(key) } } },
-    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async (game: PaintGame) => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [{ ...row, game, offer: { ...offer, game_id: game.id } }], ...firstState, withheldMethods: ['private provider label'] } } },
+    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async (game: PaintGame) => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [{ ...row, game, offer: { ...offer, game_id: game.id } }], ...firstState, captureComplete: !options.incompleteFirst, withheldMethods: ['private provider label'] } } },
   }
   const compiled = { exports: {} as { GET: (request: Request) => Promise<Response> } }
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
@@ -113,6 +121,41 @@ test('successful empty feeds record withdrawals; failed feeds cannot erase a tap
   const empty = await runCapture(false, false, true)
   assert.equal(empty.response.status, 200)
   for (const call of empty.calls) assert.deepEqual(call.args.p_quotes, [])
+})
+
+test('incomplete supplemental coverage preserves the player tape while independent feeds capture and cached failures stay failed', async () => {
+  const partial = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { incompleteProps: true })
+  assert.equal(partial.response.status, 503)
+  assert.equal(partial.body.failed, 1)
+  assert.equal(partial.body.firstBasket.captured, 1)
+  assert.deepEqual(new Set(partial.calls.map(call => call.args.p_feed)), new Set(['game', 'first']))
+  assert.equal((partial.receipts.get('market-attempt:v4:pregame:123') as { status: string }).status, 'failed')
+  assert.deepEqual(partial.body.coverage, [{ gameId: 123, mode: 'pregame', complete: false, accepted: 0, unmatched: 1, stale: 0 }])
+  const cached = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { cache: partial.receipts })
+  assert.equal(cached.response.status, 503)
+  assert.equal(cached.body.failed, 1)
+  assert.equal(cached.calls.length, 0, 'a cached partial result must neither erase nor replay any tape')
+})
+
+test('an unlisted supplemental event cannot hide a simultaneous primary outage or create a withdrawal', async () => {
+  const failed = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { primaryUnavailableDeferred: true })
+  assert.equal(failed.response.status, 503)
+  assert.equal(failed.body.failed, 1)
+  assert.deepEqual(new Set(failed.calls.map(call => call.args.p_feed)), new Set(['game', 'first']))
+  assert.equal(failed.body.firstBasket.captured, 1)
+})
+
+test('expired direct-only First Basket coverage holds its tape while other feeds continue and cached failure remains failed', async () => {
+  const partial = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { incompleteFirst: true })
+  assert.equal(partial.response.status, 503)
+  assert.equal(partial.body.firstBasket.failed, 1)
+  assert.equal(partial.body.firstBasket.quotes, 0, 'verified siblings are not misreported as a newly persisted complete First Basket frame')
+  assert.equal(partial.body.firstBasket.accepted, 1)
+  assert.deepEqual(new Set(partial.calls.map(call => call.args.p_feed)), new Set(['props', 'game']))
+  const cached = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { cache: partial.receipts })
+  assert.equal(cached.response.status, 503)
+  assert.equal(cached.body.firstBasket.failed, 1)
+  assert.equal(cached.calls.length, 0)
 })
 test('missing events and unmatched or stale first-basket quotes cannot create empty withdrawals', async () => {
   const missing = await runCapture(false, false, true, { eventMatched: false, unmatched: 0 })

@@ -140,7 +140,7 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
     throw new Error('Automated browser timeout must be between 60 and 450 seconds')
@@ -178,6 +178,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     proxies,
     browserSettings: {
       blockAds: true,
+      ...(opts.solveCaptchas == null ? {} : { solveCaptchas: opts.solveCaptchas }),
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },

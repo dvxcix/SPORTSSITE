@@ -20,7 +20,7 @@ const item=(offer=quote,side:'over'|'under'='over')=>({id:'saved',user_id:'owner
 async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:number;user?:boolean;failed?:boolean}={}){
   const writes:CapturedPost[]=[], notices:string[]=[]
   let reads=0
-  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[{offer:options.offer??quote}]})},'./nbaPaintData':{
+  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaSupplementalProps':{nbaSupplementalQuote:(quote:{id:number})=>quote.id<=-1_000_000_000_000},'./nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[{offer:options.offer??quote}]})},'./nbaPaintData':{
     getPaintGame:async()=>{reads++;return{id:123,date:'2099-10-20',datetime:options.started?'2000-10-20T20:00:00Z':'2099-10-20T20:00:00Z',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}},
     getPaintProps:async()=>[options.offer??quote],getPaintIdentity:async()=>({id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}),
   }})

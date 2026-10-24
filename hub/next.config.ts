@@ -96,6 +96,7 @@ const nextConfig: NextConfig = {
     '/api/cron/scrape-pikkit-nfl': ['./node_modules/playwright-core/**/*'],
     '/api/cron/poll-pikkit-nfl-picks': ['./node_modules/playwright-core/**/*'],
     '/api/cron/poll-pikkit-nba-picks': ['./node_modules/playwright-core/**/*'],
+    '/api/cron/nba-book-first-capture': ['./node_modules/playwright-core/**/*'],
     '/the-paint/public/capture': ['./node_modules/playwright-core/**/*'],
     '/api/admin/contact-recap-export': [
       './node_modules/ffmpeg-static/**/*',

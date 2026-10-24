@@ -32,7 +32,7 @@ export function nbaMovement(frames: PaintFrame[], player: number, market: PaintM
   const comparable = points.length > 1 && ordered.at(-1)?.captured_at === latest.at
   // Probability change only compares the exact same threshold and side.
   const gameId = nbaMovementReference(ordered.at(-1)!.props.filter(p => p.player_id === player), market, vendor, side)?.game_id
-  const fixed = ordered.flatMap(frame => { const quote = frame.props.find(p => p.game_id === gameId && p.player_id === player && p.vendor === vendor && p.prop_type === market && p.market.type === latest.type && Number(p.line_value) === latest.line); const odds=quote?nbaPrice(quote,side):null; const probability = impliedProbability(odds); return probability == null ? [] : [{ at: frame.captured_at, probability,odds:odds! }] })
+  const fixed = ordered.flatMap(frame => { const quote = frame.props.find(p => p.game_id === gameId && p.player_id === player && p.vendor === vendor && p.prop_type === market && p.market.type === latest.type && Number(p.line_value) === latest.line && nbaPrice(p,side)!=null); const odds=quote?nbaPrice(quote,side):null; const probability = impliedProbability(odds); return probability == null ? [] : [{ at: frame.captured_at, probability,odds:odds! }] })
   // A quote may have first appeared outside the replay's retained window. Its
   // immutable opening remains usable, but only if already observed at this
   // replay position. Later openings can never leak into historical captures.
@@ -44,5 +44,12 @@ export function nbaMovement(frames: PaintFrame[], player: number, market: PaintM
 }
 
 export function nbaEconomicSnapshot(props: PaintProp[]) {
-  return props.map(p => ({ game_id:p.game_id,player_id:p.player_id,prop_type:p.prop_type,vendor:p.vendor,line_value:Number(p.line_value),market:{type:p.market.type,over_odds:p.market.over_odds ?? null,under_odds:p.market.under_odds ?? null,odds:p.market.odds ?? null} })).sort((a,b) => a.player_id-b.player_id || a.prop_type.localeCompare(b.prop_type) || a.vendor.localeCompare(b.vendor) || a.market.type.localeCompare(b.market.type) || a.line_value-b.line_value || JSON.stringify(a.market).localeCompare(JSON.stringify(b.market)))
+  // Sources may observe the two sides at different times. Their grouping is
+  // metadata, not an economic change; fingerprint each exact contract once.
+  const contracts = new Map<string, PaintProp>()
+  for (const quote of [...props].sort((a,b)=>a.updated_at.localeCompare(b.updated_at))) {
+    const key = `${quote.game_id}:${quote.player_id}:${quote.vendor}:${quote.prop_type}:${quote.market.type}:${Number(quote.line_value)}`, prior = contracts.get(key)
+    contracts.set(key, prior ? { ...quote, market: { ...prior.market, ...quote.market } } : quote)
+  }
+  return [...contracts.values()].map(p => ({ game_id:p.game_id,player_id:p.player_id,prop_type:p.prop_type,vendor:p.vendor,line_value:Number(p.line_value),market:{type:p.market.type,over_odds:p.market.over_odds ?? null,under_odds:p.market.under_odds ?? null,odds:p.market.odds ?? null} })).sort((a,b) => a.player_id-b.player_id || a.prop_type.localeCompare(b.prop_type) || a.vendor.localeCompare(b.vendor) || a.market.type.localeCompare(b.market.type) || a.line_value-b.line_value || JSON.stringify(a.market).localeCompare(JSON.stringify(b.market)))
 }

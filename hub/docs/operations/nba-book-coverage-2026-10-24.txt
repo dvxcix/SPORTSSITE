@@ -1,0 +1,46 @@
+NBA DraftKings / BetMGM coverage repair, 2026-10-24
+
+Observed through the existing cloud browser, read-only:
+- DraftKings eight-game First Point board: 80 selections; feed: 78.
+  Missing Marcus Smart (HOU, +980) and Alpha Diallo (DEN, +1060).
+- BetMGM five posted First Field Goal boards: 50 selections; feed: 49.
+  Missing Alpha Diallo (DEN, +900). First Point and First Field Goal remain
+  different contracts. Book clocks differed from the canonical slate; exact
+  oriented teams and local date are verified, and the earlier clock closes
+  collection without changing canonical tipoff.
+- BetMGM BKN/CLE 15+ points included Porter -550, Harden -250 and Sharpe +350.
+  The secondary alternate feed returned those exact prices. Five primary
+  fractional points "milestones" were verified as O/U Over lines, and are
+  corrected narrowly at ingress. Archived observations are not rewritten.
+- The observed league pages listed today's games, but no October 25 slate.
+  This is evidence about the inspected pages, not proof no prices exist in
+  every sportsbook interface. Scheduled discovery checks today and tomorrow.
+
+Implementation:
+- 27 supported standard/alternate/binary/Q1 prop markets supplement DK/MGM
+  under a shared 120-second source lease. Integer-count ALT Over14.5 becomes
+  15+; ordinary O/U, integer lines with pushes, and Under remain exact.
+- A cron-only cloud collector checks both First Basket boards every five
+  minutes. Members read shared stored frames and cannot launch browsers.
+  Fresh sessions expire at 300 seconds and always release. Capture solving
+  is disabled in unattended sessions. The owner approved the interactive
+  BetMGM CAPTCHA inspection; no sportsbook account/betslip actions occurred.
+- Direct observations fill missing exact contracts only. Five-minute expiry
+  is enforced through all aggregate caches and saved-pick validation.
+  Partial/expired observations cannot erase the last complete archive frame.
+- Existing five-minute market capture writes openings and subsequent real
+  changes, separately for pregame/live. Same-price timestamps are not moves.
+- Runtime budgets, duplicate-run leases, bounded writes, complete slate and
+  roster identity checks, private pipeline telemetry and browser tracing are
+  included. No migration, historical replay, or local collector was run.
+
+Verification before release:
+- Full NBA suite: 395/395, plus final focused changes: 47/47 and 32/32.
+- Production suite: 134/134. TypeScript and changed-source lint pass.
+- Natural 11:10 UTC capture before this release preserved existing openings
+  and saved real DK/MGM movements. New cloud-only selections require the
+  first post-release scheduled observation and archive capture for openings.
+- Cloud DOM evidence and read-only SQL comparisons are retained under work/
+  nba-cloud-*.txt and nba-dk-mgm-odds-audit-2026-10-24.txt (not public assets).
+- GitHub main preflight and live deployment both d2dffcdb; recovered NFL
+  ancestry 6c3811b0882e1b1a6694a30849273f3e210cd69c is retained.

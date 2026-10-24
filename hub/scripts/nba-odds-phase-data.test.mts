@@ -87,7 +87,7 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  const route=await compiled<{GET:(request:Request)=>Promise<Response>}>('../src/app/api/cron/nba-market-capture/route.ts',{
  'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},
  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async()=>{calls.push({name,args});return{data:true,error:null}}})})},
- '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintProps:async()=>{if(options.cross)h.time(tip+1000);return props},getPaintGameOdds:async()=>[]},
+ '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintPropSnapshot:async()=>{if(options.cross)h.time(tip+1000);return {props,complete:true,coverage:{complete:true,accepted:0,unmatched:0,stale:0,eventMatched:false,applicable:false,observedAt:new Date().toISOString()},issues:[]}},getPaintGameOdds:async()=>[]},
  '@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':h.modes,'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,
  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);return{value:await load()}}},
  '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:0,rows:first.map(offer=>({offer}))})},

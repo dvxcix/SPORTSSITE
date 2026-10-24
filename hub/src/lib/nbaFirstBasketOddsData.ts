@@ -1,12 +1,13 @@
 import 'server-only'
 import { artwork, getPaintRoster, getPaintFinalStats, getPaintIdentity } from './nbaPaintData'
 import { nbaName, type PaintGame, type PaintPlayer, type PaintRoster } from './nbaPaint'
-import { nbaFirstEvent, nbaNormalizeFirstOdds, type FirstOddsEvent } from './nbaFirstBasketOdds'
+import { nbaFirstEvent, nbaNormalizeFirstOdds, type FirstOddsEvent, type FirstBasketRow } from './nbaFirstBasketOdds'
 import { nbaSharedCache } from './nbaSharedCache'
 import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
 import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaGameFinal, nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
 import { createAdminClient } from './supabase/admin'
+import { getNbaBookFirstSupplement } from './nbaBookFirstData'
 
 const BASE='https://api.the-odds-api.com/v4/sports/basketball_nba'
 export class NbaFirstOddsUnavailable extends Error {constructor(public reason:'connection'|'authorization'|'quota'|'upstream'){super('First-basket odds unavailable')}}
@@ -27,8 +28,16 @@ export async function getNbaFirstEvents(fresh=false){
   return fresh?load():(await nbaSharedCache('first-basket-events:v1',60,0,load,25)).value
 }
 export async function getNbaFirstOdds(game:PaintGame,fresh=false,slateEvents?:FirstOddsEvent[]){
-  if(!fresh)return (await nbaSharedCache(`first-basket-prices:v3:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value
-  return loadNbaFirstOdds(game,true,slateEvents)
+  if(!fresh)return freshBookRows((await nbaSharedCache(`first-basket-prices:v4:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value)
+  return freshBookRows(await loadNbaFirstOdds(game,true,slateEvents))
+}
+/** Recheck observations at every aggregate-cache return. Frozen phase history is
+ * intentionally excluded: a saved pregame close remains available after tipoff. */
+function freshBookRows<T extends {rows:FirstBasketRow[];captureComplete?:boolean}>(result:T):T {
+  const now=Date.now()
+  const rows=result.rows.filter(row=>row.offer.id>-3_000_000_000_000
+    || (Date.parse(row.offer.updated_at)<=now&&now-Date.parse(row.offer.updated_at)<=300_000))
+  return rows.length===result.rows.length?result:{...result,rows,captureComplete:false}
 }
 export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='pregame') {
   game=await getNbaOddsGame(game)
@@ -49,12 +58,12 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
   }
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
   if(mode==='live'&&!nbaLiveOpen(game))return nbaGameFinal(game)?frozen():empty()
-  const cached=await nbaSharedCache(`first-basket-phase-prices:v2:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
+  const cached=await nbaSharedCache(`first-basket-phase-prices:v3:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
     const result=await loadNbaFirstOdds(game,false)
     return {...result,rows:result.rows.filter(row=>nbaQuoteInMode(row.offer,game,mode))}
   },60)
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
-  return cached.value
+  return freshBookRows(cached.value)
 }
 async function getFrozenFirstRoster(game:PaintGame,playerIds:number[]) {
   const teams=[game.home_team,game.visitor_team],final=nbaGameFinal(game)
@@ -94,14 +103,19 @@ async function getFrozenFirstRoster(game:PaintGame,playerIds:number[]) {
 async function loadNbaFirstOdds(game:PaintGame,fresh:boolean,slateEvents?:FirstOddsEvent[]){
   const events=slateEvents??await getNbaFirstEvents(fresh)
   const match=nbaFirstEvent(events,game)
-  if(!match)return {rows:[],unmatched:0,eventMatched:false,observedAt:new Date().toISOString()}
   const teams=[game.home_team,game.visitor_team]
   const [event,roster,images]=await Promise.all([
-    odds<FirstOddsEvent>(`/events/${encodeURIComponent(match.id)}/odds?bookmakers=fanduel,draftkings,betmgm,williamhill_us,fanatics&markets=player_first_basket,player_first_team_basket,player_method_of_first_basket&oddsFormat=american`),
+    match?odds<FirstOddsEvent>(`/events/${encodeURIComponent(match.id)}/odds?bookmakers=fanduel,draftkings,betmgm,williamhill_us,fanatics&markets=player_first_basket,player_first_team_basket,player_method_of_first_basket&oddsFormat=american`):Promise.resolve(null),
     getPaintRoster(game),
     fresh?Promise.resolve([]):Promise.all(teams.map(team=>artwork(team.abbreviation).catch(()=>({headshots:new Map<string,string|null>()})))),
   ])
-  if(event.id!==match.id)throw new NbaFirstOddsUnavailable('upstream')
+  if(event&&event.id!==match?.id)throw new NbaFirstOddsUnavailable('upstream')
   const players=roster.map(p=>({...p,headshot:images[teams.findIndex(team=>team.id===p.team.id)]?.headshots.get(nbaName(`${p.first_name} ${p.last_name}`))??null,average:{},logs:[],props:[],injury:null})) as PaintPlayer[]
-  return {...nbaNormalizeFirstOdds(event,game,players),eventMatched:true,observedAt:new Date().toISOString()}
+  const result = event?nbaNormalizeFirstOdds(event,game,players):{rows:[],unmatched:0}
+  const supplement = await getNbaBookFirstSupplement(game,result.rows.map(row=>row.offer),fresh)
+  const added = supplement.props.flatMap(offer=>{
+    const player=players.find(player=>player.id===offer.player_id)
+    return player?[{game,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:player.headshot},offer}]:[]
+  })
+  return {...result,rows:[...result.rows,...added],captureComplete:supplement.complete&&added.length===supplement.props.length,eventMatched:!!match||added.length>0,observedAt:new Date().toISOString()}
 }

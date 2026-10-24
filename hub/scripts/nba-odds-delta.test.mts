@@ -3,8 +3,61 @@ import test from 'node:test'
 import { nbaOddsDelta } from '../src/lib/nbaOddsDelta.ts'
 import { nbaMovement } from '../src/lib/nbaMovement.ts'
 import type { PaintProp } from '../src/lib/nbaPaint.ts'
+import { nbaPrice, nbaTarget, nbaSelectionKey, parseNbaSelection } from '../src/lib/nbaPaint.ts'
+import { nbaNormalizePrimaryProp, nbaNormalizePrimaryProps } from '../src/lib/nbaPrimaryProps.ts'
+import { nbaAttachOpenings, type NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
+import { nbaSelectedProps } from '../src/lib/nbaMarketSelection.ts'
 
 const quote = (vendor: string, line: string, over = -110, under = -110): PaintProp => ({ id: Number(line) * 10, game_id: 123, player_id: 1, vendor, prop_type: 'points', line_value: line, market: { type: 'over_under', over_odds: over, under_odds: under }, updated_at: '2026-10-19T00:00:00Z' })
+
+test('verified BetMGM half-point points quotes retain their actual Over lines and prices, never invented Under offers',()=>{
+  const samples=[[17896038,'9.5',-135],[375,'21.5',-111],[9,'13.5',-105],[38017721,'13.5',-105],[322,'26.5',-105]] as const
+  const raw=samples.map(([player_id,line,odds])=>({...quote('betmgm',line),game_id:21717947,player_id,market:{type:'milestone' as const,odds}}))
+  const before=structuredClone(raw),normalized=nbaNormalizePrimaryProps(raw)
+  assert.deepEqual(raw,before,'raw provider inputs remain unchanged')
+  for(const [index,offer] of normalized.entries()){
+    const [id,line,odds]=samples[index]
+    assert.equal(offer.player_id,id);assert.equal(offer.line_value,line)
+    assert.deepEqual(offer.market,{type:'over_under',over_odds:odds})
+    assert.equal(nbaPrice(offer,'over'),odds);assert.equal(nbaPrice(offer,'under'),undefined)
+    assert.equal(nbaTarget(offer),`O ${line}`)
+    assert.equal(nbaSelectedProps([offer],'points',{type:'milestone'}).length,0)
+    assert.equal(nbaSelectedProps([offer],'points',{type:'over_under',line:Number(line)})[0],offer)
+    assert.deepEqual(parseNbaSelection(nbaSelectionKey(id,offer,'over')),{player_id:`bdl:${id}`,prop_key:'points',numeric_line:Number(line),market_side:'over',type:'over_under'})
+    assert.equal(nbaNormalizePrimaryProp(offer),offer,'normalization is idempotent')
+  }
+})
+
+test('the BetMGM correction never guesses another book, stat, integer milestone or conflicting price shape',()=>{
+  const raw:PaintProp={...quote('betmgm','9.5'),market:{type:'milestone',odds:-135}}
+  const untouched:PaintProp[]=[
+    {...raw,vendor:'draftkings'},{...raw,vendor:'fanduel'},
+    ...['rebounds','assists','points_1q','points_rebounds','first_score','double_double'].map(prop_type=>({...raw,prop_type})),
+    ...['10','9.25','0','-1.5','not-a-line'].map(line_value=>({...raw,line_value})),
+    {...raw,market:{type:'over_under',over_odds:-135,under_odds:115}},
+    {...raw,market:{type:'milestone',odds:-135,over_odds:-125}},
+    {...raw,market:{type:'milestone',odds:-135,under_odds:115}},
+    {...raw,market:{type:'milestone',odds:50}},
+  ]
+  for(const offer of untouched)assert.equal(nbaNormalizePrimaryProp(offer),offer)
+})
+
+test('corrected BetMGM O/U contracts cannot inherit old milestone openings or price movement',()=>{
+  const old:PaintProp={...quote('betmgm','9.5'),market:{type:'milestone',odds:-135},opening:{over:{odds:150,at:'2026-10-18T23:00:00Z'}}}
+  const corrected=nbaNormalizePrimaryProp(old),previousKey=nbaSelectionKey(old.player_id,old,'over')
+  assert.equal(corrected.opening,undefined)
+  assert.notEqual(nbaSelectionKey(corrected.player_id,corrected,'over'),previousKey)
+  const opening:NbaQuoteOpeningRow={game_id:123,player_id:1,vendor:'betmgm',market:'points',market_type:'milestone',line:9.5,side:'over',odds:150,observed_at:'2026-10-18T23:00:00Z'}
+  assert.equal(nbaAttachOpenings(123,[corrected],[],[opening]).props[0].opening,undefined)
+  const frames=[{captured_at:'2026-10-19T00:00:00Z',props:[old]},{captured_at:'2026-10-19T01:00:00Z',props:[corrected]}]
+  const first=nbaMovement(frames,1,'points','betmgm','over',[opening])
+  assert.equal(first.latest?.type,'over_under');assert.equal(first.priceChange,null);assert.equal(first.priceOpeningKnown,false)
+  const next={...corrected,market:{type:'over_under' as const,over_odds:-150}}
+  const ownOpening={...opening,market_type:'over_under',odds:-135,observed_at:'2026-10-19T01:00:00Z'}
+  const moved=nbaMovement([...frames,{captured_at:'2026-10-19T02:00:00Z',props:[next]}],1,'points','betmgm','over',[opening,ownOpening])
+  assert.equal(moved.priceFirstOdds,-135);assert.equal(moved.priceFirstAt,ownOpening.observed_at);assert.ok(moved.priceChange!>0)
+  assert.equal(old.market.type,'milestone','existing archived input remains unchanged')
+})
 
 test('NBA odds delta handles shortening, lengthening, even-money crossing and unknowns', () => {
   assert.equal(nbaOddsDelta(120, -120)?.direction, 'shorter')

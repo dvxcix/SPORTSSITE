@@ -18,6 +18,7 @@ async function harness(setup:Setup){
   const identities:number[]=[],queries:number[]=[],snapshots:paint.PaintGame[]=[]
   const imports:Record<string,unknown>={
     'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaOddsMode':mode,
+    './nbaBookFirstData':{getNbaBookFirstSupplement:async()=>{throw Error('Archived prices must not request current direct-book observations')}},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>setup.canonical??g},
     './nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})},
     './nbaOddsPhaseData':{getNbaPhaseSnapshot:async(g:paint.PaintGame)=>{snapshots.push(g);return {firstBasket:setup.offers,available:{firstBasket:true},capturedAt:{firstBasket:'2026-10-19T22:59:01Z'}}}},

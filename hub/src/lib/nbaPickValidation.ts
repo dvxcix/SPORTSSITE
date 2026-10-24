@@ -4,6 +4,7 @@ import { nbaBinary, PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaP
 import { nbaFirstMarket, nbaFirstLabel } from './nbaFirstBasketMarkets'
 import { getNbaFirstOdds } from './nbaFirstBasketOddsData'
 import { nbaSharedCache } from './nbaSharedCache'
+import { nbaSupplementalQuote } from './nbaSupplementalProps'
 export type PaintPickLeg = { player_id?: string | null; player_name: string; team: string | null; game_pk: string | null; game_date: string | null; prop_key: string; prop_label: string; line?: string; numeric_line?: number | null; market_side?: 'over' | 'under' | 'milestone'; book: string | null; odds: number | null }
 export function paintOfferMatches(offer: PaintProp, leg: PaintPickLeg) {
   const player = Number(leg.player_id?.replace(/^bdl:/, ''))
@@ -31,8 +32,10 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
         // contract and price is still validated independently below.
         const game = (await nbaSharedCache(`pick-game:v1:${id}`,15,0,()=>getPaintGame(Number(id),true),25)).value, gameLegs=legs.filter(l=>l.game_pk===id)
         const [regular,first]=await Promise.all([
-          gameLegs.some(l=>!nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-props:v1:${id}`,15,0,()=>getPaintProps(Number(id),true),25).then(result=>result.value):Promise.resolve([]),
-          gameLegs.some(l=>nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-first:v1:${id}`,15,0,()=>getNbaFirstOdds(game,true),40).then(result=>result.value):Promise.resolve({rows:[]}),
+          // Supplemental inputs retain their shared120s source policy; this
+          // wrapper does not bypass it or cache any member's validation result.
+          gameLegs.some(l=>!nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-props:v2:${id}`,15,0,()=>getPaintProps(Number(id),true),55).then(result=>result.value):Promise.resolve([]),
+          gameLegs.some(l=>nbaFirstMarket(l.prop_key))?nbaSharedCache(`pick-first:v2:${id}`,15,0,()=>getNbaFirstOdds(game,true),40).then(result=>result.value):Promise.resolve({rows:[]}),
         ])
         games.set(id,{game,props:[...regular,...first.rows.map(row=>row.offer)]})
       }),
@@ -42,7 +45,7 @@ export async function validatePaintPickLegs(legs: PaintPickLeg[]) {
       const data = games.get(leg.game_pk!)!
       const starts = Date.parse(data.game.datetime ?? data.game.status)
       if (!Number.isFinite(starts) || starts <= Date.now() || !['scheduled', undefined, 'unknown'].includes(data.game.status_state)) return `${leg.player_name}'s game has already started or is unavailable.`
-      if (!data.props.some(p => paintOfferMatches(p, leg))) return `${leg.player_name}'s selected NBA price changed. Remove the old saved selection and save the current price from The Court.`
+      if (!data.props.some(p => paintOfferMatches(p, leg) && (!nbaSupplementalQuote(p) || (Date.parse(p.updated_at)<=Date.now()&&Date.now()-Date.parse(p.updated_at)<=300_000)))) return `${leg.player_name}'s selected NBA price changed. Remove the old saved selection and save the current price from The Court.`
       const identity = identities.get(Number(leg.player_id!.slice(4)))!
       if (![data.game.home_team.id, data.game.visitor_team.id].includes(identity.team.id)) return 'Player is no longer on this matchup roster. Refresh the board.'
       leg.player_name = `${identity.first_name} ${identity.last_name}`; leg.team = identity.team.abbreviation; leg.game_date = data.game.date; leg.line = String(leg.numeric_line)

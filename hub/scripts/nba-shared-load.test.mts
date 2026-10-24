@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import * as crypto from 'node:crypto'
 import ts from 'typescript'
 import * as paint from '../src/lib/nbaPaint.ts'
+import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
@@ -238,6 +239,7 @@ test('a stale research board cannot carry stale player or game prices into a new
   const old = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -200 } } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
+    './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => { throw Error('fixture') } },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
     './nbaSharedCache': { nbaSharedCache: async (key: string) => {
@@ -258,6 +260,7 @@ test('cold board research finishes before current quote reads begin', async () =
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
+    './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => ({ rows: [] }) },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
     './nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>, lease: number) => {
@@ -282,6 +285,7 @@ test('concurrent member pick submissions share public validation inputs but stil
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 } }
   const instances = await Promise.all(caches.map(cache => compiled<typeof import('../src/lib/nbaPickValidation.ts')>('../src/lib/nbaPickValidation.ts', {
     'server-only': {}, './nbaPaint': paint, './nbaFirstBasketMarkets': firstMarkets, './nbaFirstBasketOddsData': {}, './nbaSharedCache': cache,
+    './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000 },
     './nbaPaintData': { getPaintGame: async () => { games++; return game }, getPaintProps: async () => { quotes++; return [offer] }, getPaintIdentity: async () => ({ first_name: 'Real', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }) },
   }, { Date: h.Clock })))
   const leg = { game_pk: '123', player_id: 'bdl:434', player_name: 'Real Player', team: 'BOS', game_date: game.date, prop_key: 'points', prop_label: '15+ points', numeric_line: 15, market_side: 'milestone' as const, book: 'fanduel', odds: -110 }

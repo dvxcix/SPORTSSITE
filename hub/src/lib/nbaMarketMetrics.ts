@@ -12,11 +12,14 @@ export function nbaMarketRanks(players: PaintPlayer[], market: PaintMarket, vend
     const contracts = new Map<string, PaintPlayer['props'][number]>()
     for (const quote of player.props) {
       if (quote.player_id !== player.id || boundary && quote.game_id !== boundary.gameId) continue
-      const key = `${quote.game_id}:${quote.vendor}:${quote.prop_type}:${quote.market.type}:${Number(quote.line_value)}`
-      const previous = contracts.get(key)
-      if (!previous || quote.updated_at > previous.updated_at) contracts.set(key, quote)
+      for (const side of ['over','under'] as const) {
+        if (nbaPrice(quote,side)==null) continue
+        const key = `${quote.game_id}:${quote.vendor}:${quote.prop_type}:${quote.market.type}:${Number(quote.line_value)}:${side}`
+        const previous = contracts.get(key)
+        if (!previous || quote.updated_at > previous.updated_at) contracts.set(key, quote)
+      }
     }
-    const props = [...contracts.values()]
+    const props = [...new Set(contracts.values())]
     const reference = nbaReference(props, market, vendor)
     const logs = nbaSample(nbaMarketLogs(player, market).filter(log =>
       log.player.id === player.id && nbaValue(log, market) != null &&
@@ -26,7 +29,11 @@ export function nbaMarketRanks(players: PaintPlayer[], market: PaintMarket, vend
     const recent = nbaAverage(logs, market), season = nbaValue(player.average, market)
     if (!reference || recent == null || season == null || !Number.isFinite(season) || logs.length < 5) return []
     const sameLine = props.filter(p => p.prop_type === market && p.market.type === reference.market.type && Number(p.line_value) === Number(reference.line_value) && (vendor === 'all' || p.vendor === vendor))
-    const probabilities = sameLine.flatMap(p => { const over = impliedProbability(nbaPrice(p)), under = impliedProbability(nbaPrice(p, 'under')); return over != null && under != null ? [over / (over + under)] : p.market.type === 'milestone' && over != null ? [over] : [] })
+    const probabilities = [...new Set(sameLine.map(p=>`${p.game_id}:${p.vendor}`))].flatMap(key => {
+      const quotes=sameLine.filter(p=>`${p.game_id}:${p.vendor}`===key)
+      const over=impliedProbability(quotes.map(p=>nbaPrice(p)).find(value=>value!=null)),under=impliedProbability(quotes.map(p=>nbaPrice(p,'under')).find(value=>value!=null))
+      return over!=null&&under!=null?[over/(over+under)]:reference.market.type==='milestone'&&over!=null?[over]:[]
+    })
     if (!probabilities.length) return []
     const line = Number(reference.line_value), probability = probabilities.reduce((a, b) => a + b, 0) / probabilities.length
     const threshold = reference.market.type === 'milestone' ? Math.ceil(line) - .5 : line
