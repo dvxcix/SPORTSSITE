@@ -13,7 +13,7 @@ const frame=(line=30,players=[434],at=now-1000):NbaBookPropFrame=>({gameId:123,b
 type Entry={key:string;payload:unknown;fetched_at?:string;expires_at?:string}
 async function harness(){
   const entries=new Map<string,Entry>(),cache=new Map<string,Promise<unknown>>(),calls:{key:string;ttl:number;stale:number}[]=[]
-  let clock=now,reads=0,writes=0,readError=false,writeError=false
+  let clock=now,reads=0,writes=0,readError=false,writeError=false,receipt:unknown=undefined
   class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
   const reply=(keys:string[])=>({abortSignal:async()=>{reads++;return{data:keys.flatMap(key=>entries.has(key)?[structuredClone(entries.get(key)!)]:[]),error:readError?{message:'private'}:null}}})
   const admin={from:(table:string)=>{assert.equal(table,'nba_source_cache');return{
@@ -21,12 +21,17 @@ async function harness(){
       in:(column:string,keys:string[])=>{assert.equal(column,'key');return reply(keys)},
       like:(column:string,pattern:string)=>{assert.equal(column,'key');assert.equal(pattern,`book-props:v1:123:${Date.parse(game.datetime!)}:betmgm:%`);return{limit:(limit:number)=>{assert.equal(limit,161);return reply([...entries.keys()].filter(key=>key.startsWith(pattern.slice(0,-1))).slice(0,limit))}}},
     }},
-    upsert:(rows:Entry[],options:{onConflict:string})=>{assert.equal(options.onConflict,'key');return{abortSignal:async()=>{writes++;if(!writeError)for(const row of rows)entries.set(row.key,structuredClone(row));return{error:writeError?{message:'private'}:null}}}},
-  }}}
+  }},rpc:(name:string,args:{p_game_id:number;p_game_date:string;p_tipoff:string;p_feed:string;p_book:string;p_frames:NbaBookPropFrame[]})=>{
+    assert.equal(name,'record_nba_book_frames');assert.equal(args.p_game_id,game.id);assert.equal(args.p_game_date,game.date);assert.equal(args.p_tipoff,new Date(game.datetime!).toISOString());assert.equal(args.p_feed,'props');assert.equal(args.p_book,'betmgm')
+    return{abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);writes++;
+      if(!writeError)for(const value of args.p_frames){const key=`book-props:v1:${game.id}:${Date.parse(game.datetime!)}:betmgm:${value.contract.market}:${value.contract.type}:${value.contract.line}`;entries.set(key,{key,payload:structuredClone(value),fetched_at:value.observedAt,expires_at:new Date(Date.parse(value.observedAt)+300000).toISOString()})}
+      return{data:receipt===undefined?{cached:args.p_frames.length,captured:args.p_frames.filter(value=>value.complete).length,unchanged:0}:receipt,error:writeError?{message:'private'}:null}
+    }}
+  }}
   const imports:Record<string,unknown>={'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaPaint':paint,'./nbaOddsMode':{...modes,nbaPregameOpen:(g:paint.PaintGame,at=clock)=>modes.nbaPregameOpen(g,at)},'./nbaOddsHistory':{nbaValidOdds},'./nbaSharedCache':{nbaSharedCache:async(key:string,ttl:number,stale:number,load:()=>Promise<unknown>)=>{calls.push({key,ttl,stale});if(!cache.has(key))cache.set(key,load());return{value:await cache.get(key)}}}}
   const source=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,target={exports:{}}
   new Function('require','module','exports','Date','fetch',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock,()=>{throw new Error('No member source requests')})
-  return{api:target.exports as typeof import('../src/lib/nbaBookPropsData.ts'),entries,calls,time:(at:number)=>{clock=at},errors:(r:boolean,w=false)=>{readError=r;writeError=w},counts:()=>({reads,writes})}
+  return{api:target.exports as typeof import('../src/lib/nbaBookPropsData.ts'),entries,calls,time:(at:number)=>{clock=at},errors:(r:boolean,w=false)=>{readError=r;writeError=w},receipt:(value:unknown)=>{receipt=value},counts:()=>({reads,writes})}
 }
 
 test('regular direct frame binds canonical game, exact supported threshold/type/book and every side',async()=>{
@@ -116,4 +121,11 @@ test('invalid/older/post-tip writes and database failures cannot become successf
   h.errors(true);await assert.rejects(h.api.getNbaBookPropEntries(game,true),{message:'NBA book observations unavailable'})
   h.errors(false,true);await assert.rejects(h.api.saveNbaBookPropFrames(game,[frame(30,[434],now)]),{message:'NBA book observations could not be saved'})
   h.time(Date.parse(game.datetime!));await assert.rejects(h.api.saveNbaBookPropFrames(game,[frame()]));assert.deepEqual(await h.api.getNbaBookPropsSupplement(game,[]),{props:[],complete:true})
+})
+
+test('atomic regular save checks complete-panel tape receipts separately from incomplete cache writes',async()=>{
+  const h=await harness(),frames=[frame(15),{...frame(30),complete:false}]
+  for(const invalid of [null,{}, {cached:2,captured:2,unchanged:0},{cached:1,captured:1,unchanged:0},{cached:2,captured:0,unchanged:0}]){h.receipt(invalid);await assert.rejects(h.api.saveNbaBookPropFrames(game,frames),/could not be saved/)}
+  h.receipt({cached:2,captured:0,unchanged:1});await h.api.saveNbaBookPropFrames(game,frames)
+  assert.equal((h.entries.get(h.api.nbaBookPropKey(game,frame(30).contract))!.payload as NbaBookPropFrame).complete,false)
 })

@@ -16,7 +16,7 @@ const game: PaintGame = { id: 123, date: '2026-10-20', season: 2026, status: 'Sc
 const offer: PaintProp = { id: -1, game_id: 123, player_id: 434, vendor: 'fanduel', prop_type: 'first_score', line_value: '0.5', market: { type: 'over_under', over_odds: 500 }, updated_at: at }
 const row: FirstBasketRow = { game, player: { id: 434, first_name: 'Test', last_name: 'Player', team, position: 'C', headshot: null }, offer }
 const opening: NbaQuoteOpeningRow = { game_id: 123, player_id: 434, vendor: 'fanduel', market: 'first_score', market_type: 'over_under', line: .5, side: 'over', odds: 700, observed_at: openingAt }
-const frame = (price: number, captured_at: string) => ({ captured_at, props: [{ ...offer, market: { type: 'over_under' as const, over_odds: price } }] })
+const frame = (price: number, captured_at: string) => ({ captured_at, props: [{ ...offer, updated_at:captured_at, market: { type: 'over_under' as const, over_odds: price } }] })
 
 test('first basket movement compares exact first observations and previous captures in probability points', () => {
   const result = nbaFirstMovements([row], [opening], { captures: 7, frames: [frame(600, priorAt), frame(500, at)] }, now + 1000)[0]

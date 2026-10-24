@@ -7,11 +7,12 @@ import * as paint from '../src/lib/nbaPaint.ts'
 import * as movement from '../src/lib/nbaMovement.ts'
 import * as history from '../src/lib/nbaOddsHistory.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
+import * as bookHistory from '../src/lib/nbaBookHistory.ts'
 
 async function compiled<T>(file:string,imports:Record<string,unknown>,Clock:unknown):Promise<T>{
  const source=await readFile(new URL(file,import.meta.url),'utf8'),output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const target={exports:{}}
- new Function('require','module','exports','Date',output)((key:string)=>{if(key==='./nbaOddsClockData'&&!(key in imports))return{getNbaOddsGame:async(game:unknown)=>game};assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)
+ new Function('require','module','exports','Date',output)((key:string)=>{if(key==='./nbaOddsClockData'&&!(key in imports))return{getNbaOddsGame:async(game:unknown)=>game};if(key==='./nbaBookHistory'&&!(key in imports))return bookHistory;assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)
  return target.exports as T
 }
 const tip=Date.parse('2026-10-20T20:00:00Z'),team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
@@ -24,7 +25,7 @@ async function fixture(){
  let payload:unknown=[]
  const calls:{name:string;args:Record<string,unknown>}[]=[],keys:string[]=[]
  const cache={nbaSharedCache:async(key:string,_ttl:number,stale:number,load:()=>Promise<unknown>)=>{keys.push(key);assert.equal(stale,0);return{value:await load()}}}
- const admin={rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async()=>{calls.push({name,args});return{data:payload,error:null}}})}
+ const admin={rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async()=>{calls.push({name,args});const data=Array.isArray(payload)&&payload.some(row=>'feed' in row)?payload.filter(row=>row.feed===args.p_feed).map(row=>{const result={...row};delete result.feed;return result}):payload;return{data,error:null}}})}
  const phase=await compiled<typeof import('../src/lib/nbaOddsPhaseData.ts')>('../src/lib/nbaOddsPhaseData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>admin},'./nbaSharedCache':cache,'./nbaOddsMode':modes},Clock)
  return{phase,Clock,modes,cache,admin,calls,keys,set:(value:unknown)=>{payload=value},time:(value:number)=>{now=value}}
 }
@@ -37,7 +38,7 @@ test('frozen NBA snapshots preserve each empty feed and never borrow a different
  h.set([{feed:'props',captured_at:new Date(tip+3000).toISOString(),quotes:[quote(tip+2000,-600)],fingerprint:'live'}])
  const live=await h.phase.getNbaPhaseSnapshot(game,'live')
  assert.equal(live.props[0].market.odds,-600);assert.deepEqual(live.firstBasket,[]);assert.equal(live.available.firstBasket,false)
- assert.notEqual(h.keys[0],h.keys[1]);assert.deepEqual(h.calls.map(row=>row.args.p_mode),['pregame','live'])
+ assert.notEqual(h.keys[0],h.keys.at(-1));assert.deepEqual(h.calls.map(row=>row.args.p_mode),['pregame','pregame','pregame','live','live','live'])
 })
 test('phase readers reject cross-phase frames and remove future/stale quote timestamps',async()=>{
  const h=await fixture()
@@ -71,6 +72,22 @@ test('cross-market reads only opening/latest frames and keeps a withdrawn empty 
  h.set([first,last]);assert.deepEqual(await h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'edges'}),[first,last])
  assert.equal(h.calls[0].args.p_selection,'edges');assert.match(h.keys[0],/:edges:all:all$/)
  h.set([first,first,last]);await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'edges'}),/history unavailable/)
+})
+
+test('a complete book-only panel survives the pregame freeze with its real observation time',async()=>{
+ const h=await fixture(),at=new Date(tip-2000).toISOString(),direct={...quote(tip-2000,400),vendor:'betmgm'}
+ h.set([{feed:'props',captured_at:at,base_captured_at:null,base_absence_complete:true,quotes:[],fingerprint:'book',book_contracts:[{book:'betmgm',market:'points',market_type:'milestone',line:15,observed_at:at,quotes:[direct]}]}])
+ const frozen=await h.phase.getNbaPhaseSnapshot(game)
+ assert.equal(frozen.available.props,true);assert.equal(frozen.props[0].market.odds,400);assert.equal(frozen.props[0].updated_at,at);assert.equal(frozen.capturedAt.props,at)
+ h.set([{captured_at:new Date(tip-1000).toISOString(),quotes:[],fingerprint:'bad',book_contracts:[{book:'betmgm',market:'points',market_type:'milestone',line:15,observed_at:new Date(tip+1000).toISOString(),quotes:[quote(tip+1000,500)]}]}])
+ await assert.rejects(()=>h.phase.getNbaPhaseFrames(game),/book capture phase/)
+})
+
+test('First Basket recent selection is bounded separately from general history',async()=>{
+ const h=await fixture(),frames=Array.from({length:6},(_,i)=>({captured_at:new Date(tip-10000+i*1000).toISOString(),quotes:[],fingerprint:'recent'+i}))
+ h.set(frames);assert.equal((await h.phase.getNbaPhaseFrames(game,'pregame','first',{selection:'recent'})).length,6)
+ h.set([...frames,frames[0]]);await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','first',{selection:'recent'}),/history unavailable/)
+ await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'recent'}),/recent history scope/)
 })
 test('opening history cannot use a pregame first observation as the live baseline',async()=>{
  const h=await fixture();const data=await compiled<typeof import('../src/lib/nbaOddsHistoryData.ts')>('../src/lib/nbaOddsHistoryData.ts',{'server-only':{},'./supabase/admin':{createAdminClient:()=>h.admin},'./nbaSharedCache':h.cache,'./nbaFirstBasketMarkets':firstMarkets,'./nbaOddsPhaseData':h.phase,'./nbaOddsMode':h.modes,'./nbaPaintData':{getPaintGame:async()=>game}},h.Clock)
@@ -116,7 +133,7 @@ test('a later provider schedule cannot reopen a stored cutoff or discard valid l
    if(name==='nba_phase_cutoff')return{data:new Date(tip).toISOString(),error:null}
    assert.equal(args.p_tipoff,new Date(tip).toISOString())
    if(name==='read_nba_phase_snapshot')return{data:[{feed:'props',captured_at:new Date(args.p_mode==='live'?tip+2000:tip-500).toISOString(),quotes:[args.p_mode==='live'?live:pre],fingerprint:'frame'}],error:null}
-   if(name==='read_nba_phase_frames_scoped')return{data:[{captured_at:new Date(tip+2000).toISOString(),quotes:[live],fingerprint:'live'}],error:null}
+   if(name==='read_nba_book_frames')return{data:args.p_feed==='game'?[]:[{captured_at:new Date(args.p_mode==='live'?tip+2000:tip-500).toISOString(),quotes:[args.p_feed==='first'?first:args.p_mode==='live'?live:pre],fingerprint:'frame'}],error:null}
    if(name==='read_nba_phase_openings')return{data:[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'milestone',line:15,side:'over',odds:-600,observed_at:new Date(tip+1000).toISOString()}],error:null}
    assert.equal(name,'read_nba_phase_first_state')
    return{data:{captures:1,frames:[{captured_at:new Date(tip+2000).toISOString(),props:[first]}]},error:null}
@@ -135,7 +152,8 @@ test('a later provider schedule cannot reopen a stored cutoff or discard valid l
  const firstData=await compiled<typeof import('../src/lib/nbaFirstBasketHistoryData.ts')>('../src/lib/nbaFirstBasketHistoryData.ts',{...imports,'./nbaOddsHistoryData':data,'./nbaFirstBasketMovement':{},'./nbaOddsPhaseData':phase,'./nbaPaintData':{getPaintGame:async()=>later}},h.Clock)
  assert.equal((await firstData.getNbaFirstBasketState(123,'live')).frames[0].props[0].market.over_odds,600)
  const clockPolicies=policies.filter(row=>row.key.startsWith('odds-clock:'))
- assert.ok(clockPolicies.every(row=>row.ttl===15&&row.stale===0&&row.key.includes(later.datetime!)))
+ assert.ok(clockPolicies.some(row=>row.key.includes(later.datetime!)))
+ assert.ok(clockPolicies.every(row=>row.ttl===15&&row.stale===0&&(row.key.includes(later.datetime!)||row.key.includes(game.datetime!))))
  assert.ok(calls.some(row=>row.name==='read_nba_phase_first_state'))
 })
 

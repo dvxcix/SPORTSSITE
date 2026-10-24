@@ -20,9 +20,9 @@ export function nbaValidBookFirstFrame(value: unknown, game: PaintGame, book: Nb
     || !Number.isFinite(Date.parse(value.observedAt)) || Date.parse(value.observedAt) >= start || !Array.isArray(value.props) || value.props.length > 50) return false
   const seen = new Set<string>()
   return value.props.every((prop: unknown) => {
-    if (!object(prop) || prop.game_id !== game.id || prop.vendor !== book || !Number.isSafeInteger(prop.player_id) || Number(prop.player_id) <= 0
+    if (!object(prop) || prop.game_id !== game.id || prop.vendor !== book || !Number.isSafeInteger(prop.player_id) || Number(prop.player_id) <= 0 || Number(prop.player_id) > 9_999_999_999_999
       || prop.prop_type !== (book === 'draftkings' ? 'first_score' : 'first_field_goal') || prop.line_value !== '0.5'
-      || prop.updated_at !== value.observedAt || !Number.isSafeInteger(prop.id) || !object(prop.market)
+      || prop.updated_at !== value.observedAt || !Number.isSafeInteger(prop.id) || Number(prop.id) > -3_000_000_000_000 || !object(prop.market)
       || prop.market.type !== 'over_under' || !nbaValidOdds(prop.market.over_odds) || prop.market.under_odds != null || prop.market.odds != null
       || !nbaQuoteInMode(prop as PaintProp, game, 'pregame', Date.parse(value.observedAt as string))) return false
     const key = identity(prop as PaintProp)
@@ -37,12 +37,12 @@ export function nbaValidBookFirstFrame(value: unknown, game: PaintGame, book: Nb
 export async function saveNbaBookFirstFrame(game: PaintGame, frame: NbaBookFirstFrame) {
   if (!nbaPregameOpen(game) || !nbaValidBookFirstFrame(frame, game, frame.book)
     || Date.parse(frame.observedAt) > Date.now() || Date.now() - Date.parse(frame.observedAt) > 300_000) throw new Error('NBA book observation unavailable')
-  const { error } = await createAdminClient().from('nba_source_cache').upsert({
-    key: nbaBookFirstKey(game, frame.book), payload: frame,
-    fetched_at: frame.observedAt, expires_at: new Date(Date.parse(frame.observedAt) + 300_000).toISOString(),
-    lease_token: null, lease_until: null,
-  }, { onConflict: 'key' }).abortSignal(AbortSignal.timeout(12_000))
-  if (error) throw new Error('NBA book observation could not be saved')
+  const { data, error } = await createAdminClient().rpc('record_nba_book_frames', {
+    p_game_id: game.id, p_game_date: game.date, p_tipoff: frame.tipoff,
+    p_feed: 'first', p_book: frame.book, p_frames: [frame],
+  }).abortSignal(AbortSignal.timeout(12_000))
+  if (error || !object(data) || data.cached !== 1 || !Number.isInteger(data.captured) || !Number.isInteger(data.unchanged)
+    || Number(data.captured) < 0 || Number(data.unchanged) < 0 || Number(data.captured) + Number(data.unchanged) !== 1) throw new Error('NBA book observation could not be saved')
 }
 
 export function nbaBookFirstSupplement(game: PaintGame, primary: PaintProp[], entries: { key: string; payload: unknown }[], now = Date.now()) {

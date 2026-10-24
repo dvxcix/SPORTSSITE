@@ -16,7 +16,7 @@ const frame = (book: NbaFirstBook = 'draftkings', at = now - 1000, players = [43
 type Entry = { key: string; payload: unknown; fetched_at?: string; expires_at?: string; lease_token?: null; lease_until?: null }
 
 async function harness() {
-  let clock = now, reads = 0, writes = 0, readError = false, writeError = false
+  let clock = now, reads = 0, writes = 0, readError = false, writeError = false, receipt: unknown = {cached:1,captured:1,unchanged:0}
   const entries = new Map<string, Entry>(), cached = new Map<string, unknown>(), cacheCalls: { key: string; ttl: number; stale: number; lease: number }[] = []
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const admin = { from: (table: string) => {
@@ -26,8 +26,14 @@ async function harness() {
         assert.equal(column, 'key'); assert.equal(keys.length, 2); assert.equal(new Set(keys).size, 2)
         return { abortSignal: async (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); reads++; return { data: keys.flatMap(key => entries.has(key) ? [structuredClone(entries.get(key)!)] : []), error: readError ? { message: 'private diagnostic' } : null } } }
       } } },
-      upsert: (entry: Entry, options: { onConflict: string }) => { assert.equal(options.onConflict, 'key'); return { abortSignal: async (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); writes++; if (!writeError) entries.set(entry.key, structuredClone(entry)); return { error: writeError ? { message: 'private diagnostic' } : null } } } },
     }
+  }, rpc:(name:string,args:{p_game_id:number;p_game_date:string;p_tipoff:string;p_feed:string;p_book:string;p_frames:NbaBookFirstFrame[]})=>{
+    assert.equal(name,'record_nba_book_frames');assert.equal(args.p_game_id,game.id);assert.equal(args.p_game_date,game.date);assert.equal(args.p_tipoff,new Date(game.datetime!).toISOString());assert.equal(args.p_feed,'first');assert.equal(args.p_frames.length,1)
+    const value=args.p_frames[0];assert.equal(args.p_book,value.book)
+    return{abortSignal:async(signal:AbortSignal)=>{assert.ok(signal instanceof AbortSignal);writes++;
+      if(!writeError){const key=`book-first:v1:${game.id}:${Date.parse(game.datetime!)}:${value.book}`;entries.set(key,{key,payload:structuredClone(value),fetched_at:value.observedAt,expires_at:new Date(Date.parse(value.observedAt)+300000).toISOString(),lease_token:null,lease_until:null})}
+      return{data:receipt,error:writeError?{message:'private diagnostic'}:null}
+    }}
   } }
   const imports: Record<string, unknown> = {
     'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaOddsHistory': { nbaValidOdds },
@@ -38,7 +44,7 @@ async function harness() {
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, `Unexpected dependency: ${name}`); return imports[name] }, target, target.exports, Clock, () => { throw Error('Member reads must never open a browser or fetch a sportsbook') })
-  return { api: target.exports as typeof import('../src/lib/nbaBookFirstData.ts'), entries, cacheCalls, Clock, now: () => clock, time: (at: number) => { clock = at }, errors: (read: boolean, write = false) => { readError = read; writeError = write }, metrics: () => ({ reads, writes }) }
+  return { api: target.exports as typeof import('../src/lib/nbaBookFirstData.ts'), entries, cacheCalls, Clock, now: () => clock, time: (at: number) => { clock = at }, errors: (read: boolean, write = false) => { readError = read; writeError = write },receipt:(value:unknown)=>{receipt=value}, metrics: () => ({ reads, writes }) }
 }
 
 test('verified direct frames bind exact game, book, canonical tip, market and observation time', async () => {
@@ -55,7 +61,7 @@ test('verified direct frames bind exact game, book, canonical tip, market and ob
 test('invalid prices, duplicate identities and different line, side, game or observation cannot certify a direct frame', async () => {
   const { api } = await harness(), original = offer()
   const invalid: PaintProp[] = [
-    { ...original, player_id: 0 }, { ...original, id: NaN }, { ...original, game_id: 999 }, { ...original, vendor: 'fanduel' },
+    { ...original, player_id: 0 }, { ...original, player_id: 10_000_000_000_000 }, { ...original, id: NaN }, { ...original, id: 123 }, { ...original, game_id: 999 }, { ...original, vendor: 'fanduel' },
     { ...original, prop_type: 'team_first_score' }, { ...original, line_value: '1.5' }, { ...original, updated_at: new Date(now - 2000).toISOString() },
     { ...original, market: { type: 'over_under', over_odds: 0 } }, { ...original, market: { type: 'over_under', under_odds: 900 } },
     { ...original, market: { type: 'over_under', over_odds: 900, under_odds: -1100 } }, { ...original, market: { type: 'milestone', odds: 900 } },
@@ -116,6 +122,13 @@ test('invalid, future, stale and post-tip saves never reach storage; DB failures
   h.time(now); h.errors(false, true)
   await assert.rejects(h.api.saveNbaBookFirstFrame(game, frame()), /^Error: NBA book observation could not be saved$/)
   assert.equal(h.entries.size, 0)
+})
+
+test('atomic First save requires a confirmed tape/cache receipt; unchanged retry is valid without restamping',async()=>{
+  const h=await harness()
+  for(const invalid of [null,{}, {cached:1,captured:0,unchanged:0},{cached:0,captured:1,unchanged:0},{cached:1,captured:-1,unchanged:2}]){h.receipt(invalid);await assert.rejects(h.api.saveNbaBookFirstFrame(game,frame()),/could not be saved/)}
+  h.receipt({cached:1,captured:0,unchanged:1});await h.api.saveNbaBookFirstFrame(game,frame())
+  assert.equal(h.entries.get(h.api.nbaBookFirstKey(game,'draftkings'))!.fetched_at,frame().observedAt)
 })
 
 test('member reads use two exact DB keys, shared bounded cache and no browser calls; freshness is rechecked on cache hits', async () => {

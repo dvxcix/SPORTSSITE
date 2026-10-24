@@ -34,7 +34,7 @@ export function nbaValidBookPropFrame(value:unknown,game:PaintGame):value is Nba
     ||!Array.isArray(value.props)||value.props.length>100)return false
   const seen=new Set<string>()
   return value.props.every((raw:unknown)=>{
-    if(!object(raw)||!Number.isSafeInteger(raw.id)||Number(raw.id)>-5_000_000_000_000||!Number.isSafeInteger(raw.player_id)||Number(raw.player_id)<=0||raw.game_id!==game.id||raw.vendor!=='betmgm'
+    if(!object(raw)||!Number.isSafeInteger(raw.id)||Number(raw.id)>-5_000_000_000_000||!Number.isSafeInteger(raw.player_id)||Number(raw.player_id)<=0||Number(raw.player_id)>9_999_999_999_999||raw.game_id!==game.id||raw.vendor!=='betmgm'
       ||raw.prop_type!==contract.market||raw.line_value!==String(contract.line)||!object(raw.market)||raw.market.type!==contract.type
       ||typeof raw.updated_at!=='string'||!nbaQuoteInMode(raw as PaintProp,game,'pregame',Date.parse(value.observedAt as string)))return false
     const quote=raw as PaintProp,fields=sides(quote)
@@ -70,8 +70,13 @@ export async function saveNbaBookPropFrames(game:PaintGame,frames:NbaBookPropFra
     return {key,payload:{...frame,props},fetched_at:frame.observedAt,expires_at:new Date(Date.parse(frame.observedAt)+300_000).toISOString(),lease_token:null,lease_until:null}
   })
   if(!nbaPregameOpen(game))throw new Error('NBA book observations unavailable')
-  const saved=await admin.from('nba_source_cache').upsert(rows,{onConflict:'key'}).abortSignal(AbortSignal.timeout(12_000))
-  if(saved.error)throw new Error('NBA book observations could not be saved')
+  const saved=await admin.rpc('record_nba_book_frames',{
+    p_game_id:game.id,p_game_date:game.date,p_tipoff:new Date(nbaGameStart(game)!).toISOString(),
+    p_feed:'props',p_book:'betmgm',p_frames:rows.map(row=>row.payload),
+  }).abortSignal(AbortSignal.timeout(12_000))
+  const result=saved.data,complete=rows.filter(row=>row.payload.complete).length
+  if(saved.error||!object(result)||result.cached!==rows.length||!Number.isInteger(result.captured)||!Number.isInteger(result.unchanged)
+    ||Number(result.captured)<0||Number(result.unchanged)<0||Number(result.captured)+Number(result.unchanged)!==complete)throw new Error('NBA book observations could not be saved')
 }
 
 /** Only an independently verified complete menu can establish withdrawal.

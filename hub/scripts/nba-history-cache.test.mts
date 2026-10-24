@@ -6,13 +6,14 @@ import ts from 'typescript'
 import type { PaintFrame } from '../src/lib/nbaMovement.ts'
 import * as modes from '../src/lib/nbaOddsMode.ts'
 import { nbaFirstMarket } from '../src/lib/nbaFirstBasketMarkets.ts'
+import * as bookHistory from '../src/lib/nbaBookHistory.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, clock: { new(value?: string | number): Date; now(): number }): Promise<T> {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} }
   new Function('require', 'exports', 'module', 'Date', 'setTimeout', outputText)(
-    (name: string) => { if(name==='./nbaOddsClockData'&&!(name in imports))return{getNbaOddsGame:async(game:unknown)=>game};assert.ok(name in imports, name); return imports[name] }, target.exports, target, clock,
+    (name: string) => { if(name==='./nbaOddsClockData'&&!(name in imports))return{getNbaOddsGame:async(game:unknown)=>game};if(name==='./nbaBookHistory'&&!(name in imports))return bookHistory;assert.ok(name in imports, name); return imports[name] }, target.exports, target, clock,
     (callback: () => void) => setTimeout(callback, 1),
   )
   return target.exports as T
@@ -39,7 +40,7 @@ async function harness() {
       }
     },
     rpc: (name: string, args: Args) => {
-      if (name === 'read_nba_phase_frames_scoped') return { abortSignal: async (signal: AbortSignal) => {
+      if (name === 'read_nba_book_frames') return { abortSignal: async (signal: AbortSignal) => {
         assert.ok(signal instanceof AbortSignal); reads.push(args)
         await new Promise(resolve => setTimeout(resolve, 5))
         return { data: result ?? [{ captured_at: new Clock().toISOString(), quotes: [],fingerprint:'fixture' }], error: failed ? { message: 'fixture outage' } : null }

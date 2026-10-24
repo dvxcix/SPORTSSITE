@@ -152,3 +152,28 @@ Natural 12:12 run and remaining corrections:
   First Basket 23/23, TypeScript/scoped lint and independent collector review.
 - Evidence: nba-cloud-mgm-blocks-dom-2026-10-24.txt and the 12:20 live SQL files
   in work/. Natural post-release coverage verification is still required.
+
+Durable book observations repair (24 October, 12:30 UTC):
+- Individually applied migration 20261024123018_nba_book_observation_tape.
+  New service-only, RLS-protected tables and SECURITY INVOKER functions save
+  each complete exact-contract observation, cache and immutable opening in
+  one transaction. Partial panels never establish an opening or withdrawal.
+  Fresh unchanged observations remain real zero-change observations; exact
+  retries deduplicate. No historical data or migrations were replayed.
+- Combined history selects bounded metadata before fetching quote payloads,
+  merges each exact book/market/type/line/side by its own observed timestamp,
+  preserves verified withdrawals and keeps live/pregame histories separate.
+  First Basket recent history is bounded to six frames. A filtered or partial
+  First Basket aggregate cannot falsely withdraw another book's valid quote.
+- Existing shared caches serve readers; member requests do not trigger cloud
+  collectors. Existing schedules, cloud limits and NFL runtime are preserved.
+- Both independent reviews approved. Real production PostgreSQL accepted
+  the migration plus temporary-table regression fixtures in a rollback-only
+  dry run before application. Post-apply tables were empty; anonymous/member
+  access and service-role tape deletion were denied. Tracked verification SQL
+  uses temporary table/function clones and rolls back; it is not a backfill.
+- Full NBA suite 465/465, production suite 134/134, TypeScript and scoped lint
+  passed. Live read-only query checks: scoped latest 25ms, 64-frame player
+  history 180ms, recent First Basket 23ms before the first durable book run.
+- Next natural capture after this source release must verify actual writes,
+  original First Basket openings, successive observations and member UI.
