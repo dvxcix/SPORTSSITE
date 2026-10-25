@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         needs('tracking') ? getNbaResearchTracking(board, mode).catch(() => { unavailable.push('Tracking'); return null }) : null,
         needs('picks') ? getNbaPublicCaptures(board.game.id, mode, board.game).then(captures => captures[0]?.snapshot.rows ?? []).catch(() => { unavailable.push('Public picks'); return [] }) : [],
       ])
-      return { defense, market, tracking, picks, unavailable }
+      return { defense, market, tracking, picks, unavailable: unavailable.sort() }
     })
     const scoreUnavailable = unavailable.includes('Defense context') || unavailable.includes('Market signals')
     const candidates = nbaMatrixCandidates(board, { defense: defense?.profiles, market, tracking: tracking?.rows, publicPicks: picks }).map(candidate => ({

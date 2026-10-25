@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         new Promise<never>((_resolve,reject)=>{defenseTimer=setTimeout(()=>reject(new Error('Defense context unavailable')),18_000)}),
       ]).catch(()=>{unavailable.push('Defense context');return {ready:false,season:board.sampleSeason,before:board.game.date,teams:board.teams,profiles:[],games:0,rows:0,fetchedAt:null,stale:false}}).finally(()=>{if(defenseTimer)clearTimeout(defenseTimer)})
       const [defense,marketContext]=await Promise.all([defenseLoad,getNbaResearchMarketContext(board,mode).catch(()=>{unavailable.push('Market context');return nbaEmptyMarketContext(board.game.id,board.fetchedAt,board.game.datetime??null,'No saved market context for this matchup',mode)})])
-      return { defense, marketContext, unavailable }
+      return { defense, marketContext, unavailable: unavailable.sort() }
     })
     const board = {...rawBoard,players:nbaSelectedPlayers(rawBoard.players,market,nbaReadSelection(request.nextUrl.searchParams))}
     const ranks=nbaMarketRanks(board.players,market as PaintMarket,book,'all',{gameId:board.game.id,beforeDate:board.game.date})

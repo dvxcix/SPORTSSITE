@@ -15,6 +15,61 @@ async function route(file: string, imports: Record<string, unknown>) {
 }
 const request = (search: string) => ({ nextUrl: new URL(`https://test/the-paint?${search}`), headers: new Headers() })
 
+const failedResource = (delay: number) => async () => {
+  await new Promise(resolve => setTimeout(resolve, delay))
+  throw new Error('Saved resource unavailable')
+}
+
+test('Intelligence missing-resource metadata is stable when failures finish in opposite orders', async () => {
+  const offer = { id: 7, player_id: 1, game_id: 123, prop_type: 'threes', vendor: 'fanduel', line_value: '5', market: { type: 'milestone', odds: 410 } }
+  const board = { game: { id: 123, date: '2026-10-24', datetime: '2026-10-25T00:00:00Z', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, teams: [], fetchedAt: '2026-10-24T20:00:00Z', statsComplete: true, players: [{ id: 1, team: { id: 1 }, position: 'F', props: [offer] }] }
+  const read = async (reverse: boolean) => {
+    const api = await route('../src/app/the-paint/intelligence/route.ts', {
+      '@/lib/nbaPaintData': { getPaintGame: async () => board.game, getPaintBoard: async () => board },
+      '@/lib/nbaResearchResources': { getNbaResearchDefense: failedResource(reverse ? 15 : 0), getNbaResearchMarketContext: failedResource(reverse ? 0 : 15) },
+      '@/lib/nbaMarketSelection': { nbaReadSelection: () => null, nbaSelectedPlayers: (players: unknown) => players },
+      '@/lib/nbaMarketSignal': { nbaEmptyMarketContext: () => ({ available: false }), nbaMarketSupportView: (value: unknown) => value, nbaPlayerMarketSignals: () => ({ status: 'unavailable', signal: null }) },
+      '@/lib/nbaIntelligence': { nbaGamePace: () => null, nbaPosition: () => 'F', nbaSlipSurgeScore: () => ({ score: 71, minutes: 30, production: 2.5, newTeam: false, marketSupport: { status: 'unavailable', signal: null } }) },
+      '@/lib/nbaPaint': { PAINT_MARKETS: [{ key: 'threes' }], nbaPeriod: () => 0, nbaReference: () => offer },
+      '@/lib/nbaMarketMetrics': { nbaMarketRanks: () => new Map([[1, { mm: -7 }]]) },
+    })
+    const response = await api.GET(request('game=123&market=threes&book=fanduel&mode=pregame'))
+    assert.equal(response.status, 200)
+    return response.json()
+  }
+  const first = await read(false), second = await read(true)
+  assert.deepEqual(second, first)
+  assert.deepEqual(first.unavailable, ['Defense context', 'Market context'])
+  assert.equal(first.scores[0].score, null)
+  assert.equal(first.scores[0].mm, -7)
+  assert.deepEqual(first.scores[0].offer, offer)
+  assert.equal(first.scores[0].production, 2.5)
+})
+
+test('Matrix missing-resource metadata is stable across asynchronous completion order', async () => {
+  const factors = [{ id: 'mm', category: 'score', field: 'mm' }, { id: 'score', category: 'score', field: 'score' }, { id: 'tracking', category: 'tracking', field: 'touches' }, { id: 'picks', category: 'picks', field: 'picks' }]
+  const matrix = { id: 'private-member-matrix', name: 'Frozen inputs', color: '#fff', definition: { factors } }
+  const board = { game: { id: 123 }, fetchedAt: '2026-10-24T20:00:00Z', players: [{ id: 1, first_name: 'Test', last_name: 'Player', team: { abbreviation: 'MIN' } }] }
+  const read = async (reverse: boolean) => {
+    const query = { select: () => query, eq: () => query, order: () => query, then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: [matrix], error: null })) }
+    const delay = (index: number) => (reverse ? 3 - index : index) * 10
+    const api = await route('../src/app/api/nba-matrices/evaluate/route.ts', {
+      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) },
+      '@/lib/nbaPaintData': { getPaintGame: async () => board.game, getPaintBoard: async () => board },
+      '@/lib/nbaResearchResources': { getNbaResearchDefense: failedResource(delay(0)), getNbaResearchMarketContext: failedResource(delay(1)), getNbaResearchTracking: failedResource(delay(2)) },
+      '@/lib/nbaPublicData': { getNbaPublicCaptures: failedResource(delay(3)) },
+      '@/lib/nbaMatrix': { nbaMatrixCandidates: () => [{ id: '1', values: (factor: { field: string }) => factor.field === 'mm' ? -7 : null }], evaluateNbaMatrix: () => new Set(['1']) },
+    })
+    const response = await api.GET(request('game=123&mode=pregame'))
+    assert.equal(response.status, 200)
+    return response.json()
+  }
+  const first = await read(false), second = await read(true)
+  assert.deepEqual(second, first)
+  assert.deepEqual(first.unavailable, ['Defense context', 'Market signals', 'Public picks', 'Tracking'])
+  assert.deepEqual(first.matches[0].readings[0].values, [{ id: 'mm', value: -7 }, { id: 'score', value: null }, { id: 'tracking', value: null }, { id: 'picks', value: null }])
+})
+
 test('Board defaults to Pregame and forwards Live explicitly while returning separate economic ETags', async () => {
   const modes: string[] = []
   const api = await route('../src/app/the-paint/board/route.ts', {
