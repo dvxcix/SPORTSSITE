@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
 import { safeApiError } from '@/lib/safeApiError'
+import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
+import { mlbCaptureObservationValid } from '@/lib/mlbCaptureWindow'
 import { FANDUEL_FIRST_PA_HR_SECTION_RE } from '@/lib/scrapers/fanduelMarkets'
 import {
   buildFanduelArchiveRows,
@@ -178,6 +180,8 @@ export async function POST(req: Request) {
   if (!scrapes.length || !scrapes.every(s => s && typeof s.sections === 'object')) {
     return NextResponse.json({ error: 'No "sections" object found — paste the exact scraper output' }, { status: 400 })
   }
+  if (typeof gameDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(gameDate)) return NextResponse.json({ error: 'Invalid capture date' }, { status: 400 })
+  const schedule = await getTodaysMatchups(gameDate)
 
   const fallbackGameKey = gameKey ?? `${awayTeam}@${homeTeam}`
   // The bare team-pair for whatever game is selected in the dropdown right
@@ -213,6 +217,10 @@ export async function POST(req: Request) {
     // teams overrides the dropdown, which is the actual multi-game-paste
     // case this was built for.
     const thisGameKey = detected && detected.gameKey !== selectedPairKey ? detected.gameKey : fallbackGameKey
+    const matches = schedule.filter(game => game.gameKey === thisGameKey)
+    if (matches.length !== 1 || !mlbCaptureObservationValid(matches[0], scrape.scraped_at)) {
+      return NextResponse.json({ error: 'FanDuel capture is not verified before first pitch' }, { status: 409 })
+    }
     gamesDetected.add(thisGameKey)
     const archived = buildFanduelArchiveRows(scrape, { gameDate, gameKey: thisGameKey })
     archiveCaptures.push(archived.capture)

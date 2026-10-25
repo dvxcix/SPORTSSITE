@@ -2,6 +2,17 @@
 // Playwright's page.evaluate() instead of pasted into DevTools by hand.
 // Preserve the original market parsing and section expansion. MLB additionally
 // verifies tab navigation: the SPA can replace tab nodes after each selection.
+export type FanduelTabDiagnostic = {
+  reason: 'selection-unverified' | 'root-unavailable' | 'busy' | 'no-content' | 'unchanged-content' | 'unstable-content' | 'empty-after-expansion' | 'deadline'
+  scope: 'controlled-panel' | 'tabpanel' | 'main' | 'none'
+  controlledPanels: number
+  panels: number
+  mains: number
+  buttons: number
+  odds: number
+  sections: number
+  busy: number
+}
 export type FanduelTabCapture = {
   sportsbook: string
   scraped_at: string
@@ -13,6 +24,9 @@ export type FanduelTabCapture = {
   tab_status?: string
   incomplete?: boolean
   available_tabs?: string[]
+  // Fixed reasons/counts only; failed tabs are private cron diagnostics, never
+  // imported as prices. No DOM text, URLs, provider payloads or credentials.
+  diagnostic?: FanduelTabDiagnostic
 }
 export async function runFanduelScrape(options: { maxDurationMs?: number; verifyTabs?: boolean } | void = undefined): Promise<FanduelTabCapture[]> {
   const deadline = options?.maxDurationMs ? Date.now() + options.maxDurationMs : Infinity
@@ -223,20 +237,37 @@ export async function runFanduelScrape(options: { maxDurationMs?: number; verify
     return JSON.stringify([collectBetButtons(root).map(row => row.aria_label), getCollapsedSections(root).map(el => el.getAttribute('aria-label'))])
   }
 
+  let readinessDiagnostic: FanduelTabDiagnostic | undefined
+  function diagnose(reason: FanduelTabDiagnostic['reason'], label: string, root: ParentNode | null, odds = 0, sections = 0, busy = 0) {
+    const tab = getAllTabDivs().find(item => item.label === label && item.el.getAttribute('aria-selected') === 'true')?.el
+    const panelId = tab?.getAttribute('aria-controls'), panel = panelId ? document.getElementById(panelId) : null
+    readinessDiagnostic = {
+      reason,
+      scope: !root ? 'none' : tab?.getAttribute('aria-controls') ? 'controlled-panel' : (root as Element).matches?.('[role="tabpanel"]') ? 'tabpanel' : 'main',
+      controlledPanels: Number(!!panel && visible(panel)),
+      panels: Math.min(20_000, QSA('[role="tabpanel"]').filter(visible).length),
+      mains: Math.min(20_000, QSA('main').filter(visible).length),
+      buttons: Math.min(20_000, root ? QSA('[role="button"][aria-selected]', root).filter(visible).length : 0),
+      odds: Math.min(20_000, odds), sections: Math.min(20_000, sections), busy: Math.min(20_000, busy),
+    }
+  }
+
   // Check readiness twice with the selected tab still mounted. A spinner or
   // a blank container is not evidence that a market has been withdrawn.
   async function waitForTabContent(label: string, until: number, priorTabContent?: string) {
     let prior = ''
     while (Date.now() < Math.min(until, deadline)) {
-      if (!selectedTab(label)) return false
+      if (!selectedTab(label)) { diagnose('selection-unverified', label, null); return false }
       const root = contentRoot(label)
-      if (!root) return false
-      const busy = QSA('[aria-busy="true"], [role="progressbar"]', root).some(visible)
-        || (root as Element).getAttribute?.('aria-busy') === 'true'
+      if (!root) { diagnose('root-unavailable', label, null); return false }
+      const busyCount = QSA('[aria-busy="true"], [role="progressbar"]', root).filter(visible).length
+        + Number((root as Element).getAttribute?.('aria-busy') === 'true')
+      const busy = busyCount > 0
       const outcomes = collectBetButtons(root), sections = getCollapsedSections(root)
       const fingerprint = contentFingerprint(root)
       const hasContent = (outcomes.length > 0 || sections.length > 0) && fingerprint !== priorTabContent
       if (!busy && hasContent && fingerprint === prior) return true
+      diagnose(busy ? 'busy' : !outcomes.length && !sections.length ? 'no-content' : fingerprint === priorTabContent ? 'unchanged-content' : 'unstable-content', label, root, outcomes.length, sections.length, busyCount)
       prior = !busy && hasContent ? fingerprint : ''
       await SLEEP(250)
     }
@@ -249,6 +280,7 @@ export async function runFanduelScrape(options: { maxDurationMs?: number; verify
     const ordered = initial ? [initial, ...labels.filter(label => label !== initial)] : labels
     const results: FanduelTabCapture[] = []
     for (const label of ordered) {
+      readinessDiagnostic = undefined
       let status = 'selection-unverified'
       let captured: Awaited<ReturnType<typeof scrapeCurrentTab>> | null = null
       let priorTabContent: string | undefined
@@ -282,11 +314,14 @@ export async function runFanduelScrape(options: { maxDurationMs?: number; verify
           if (Date.now() < deadline && selectedTab(label) && captured.outcome_count) { status = 'captured'; break }
           captured = null
         }
+        if (!scrape.outcome_count) diagnose('empty-after-expansion', label, contentRoot(label))
       }
       if (Date.now() >= deadline) { status = 'deadline'; captured = null }
+      if (status !== 'captured' && (status === 'deadline' || !readinessDiagnostic)) diagnose(status === 'deadline' ? 'deadline' : 'selection-unverified', label, null)
       results.push({
         ...(captured ?? { sportsbook: 'FanDuel', scraped_at: new Date().toISOString(), event: eventHeader(), active_tab: { label }, section_count: 0, outcome_count: 0, sections: {} }),
         tab_status: status, incomplete: status !== 'captured', available_tabs: labels,
+        ...(status !== 'captured' ? { diagnostic: readinessDiagnostic } : {}),
       })
     }
     return results

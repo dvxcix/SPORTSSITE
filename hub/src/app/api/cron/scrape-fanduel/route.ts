@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
+import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
+import { mlbCaptureOpen, mlbCaptureObservationValid } from '@/lib/mlbCaptureWindow'
 import { FANDUEL_PROXY_DOMAIN_PATTERN, openSession, type BBSession } from '@/lib/browserbase'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
@@ -91,6 +92,7 @@ async function installExtractionRouting(bb: BBSession) {
 }
 
 async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean, extractionDeadline: number, shared?: BBSession) {
+  if (!mlbCaptureOpen(g)) return { gameKey: g.gameKey, skipped: 'pregame capture window closed' }
   const bb = shared ?? await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, metadata: { book: 'fanduel', sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     if (!shared) await installExtractionRouting(bb)
@@ -111,11 +113,14 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on FD listing page' }
     await bb.page.waitForTimeout(2500)
 
+    if (!mlbCaptureOpen(g)) return { gameKey: g.gameKey, skipped: 'pregame capture window closed' }
     if (Date.now() >= extractionDeadline) return { gameKey: g.gameKey, error: 'FanDuel extraction deadline reached' }
-    const scrapes = await bb.page.evaluate(runFanduelScrape, { verifyTabs: true, maxDurationMs: extractionDeadline - Date.now() })
+    const remainingMs = Math.min(extractionDeadline, Date.parse(g.gameDate)) - Date.now()
+    if (remainingMs <= 0) return { gameKey: g.gameKey, skipped: 'pregame capture window closed' }
+    const scrapes = await bb.page.evaluate(runFanduelScrape, { verifyTabs: true, maxDurationMs: remainingMs })
     if (!scrapes.length) return { gameKey: g.gameKey, error: 'no tabs scraped' }
-    const complete = scrapes.filter(scrape => scrape.tab_status === 'captured' && !scrape.incomplete && scrape.outcome_count > 0)
-    const incompleteTabs = scrapes.filter(scrape => !complete.includes(scrape)).map(scrape => ({ label: scrape.active_tab?.label, status: scrape.tab_status ?? 'unverified' }))
+    const complete = scrapes.filter(scrape => scrape.tab_status === 'captured' && !scrape.incomplete && scrape.outcome_count > 0 && mlbCaptureObservationValid(g, scrape.scraped_at))
+    const incompleteTabs = scrapes.filter(scrape => !complete.includes(scrape)).map(scrape => ({ label: scrape.active_tab?.label, status: scrape.tab_status ?? 'unverified', ...(scrape.diagnostic ? { diagnostic: scrape.diagnostic } : {}) }))
 
     // Labels only, no prices or member data. This makes a sportsbook copy or
     // tab-placement change diagnosable from production logs instead of
@@ -168,6 +173,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
 }
 
 async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean, extractionDeadline: number) {
+  if (!games.some(game => mlbCaptureOpen(game))) return games.map(game => ({ gameKey: game.gameKey, skipped: 'pregame capture window closed' }))
   const bb = await openSession({
     proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN,
     metadata: { book: 'fanduel', sport: 'mlb', mode: 'batch', gameCount: games.length, gamePks: games.map(game => game.gamePk).join(',') },
@@ -208,10 +214,11 @@ async function run(req: Request) {
   // The archive is pregame-only. The scheduled intraday sweep used to keep
   // every game on the date in scope even after first pitch; any live page
   // FanDuel still exposed could therefore leak live prices into what should
-  // be opening/closing history. Freeze eligibility at the schedule status.
-  const pregameGames = games.filter(game => isPregame(game.status))
+  // be opening/closing history. The canonical clock also closes eligibility
+  // while the upstream schedule still says Scheduled/Pre-Game.
+  const pregameGames = games.filter(game => mlbCaptureOpen(game))
   const skippedAlreadyLive = games
-    .filter(game => !isPregame(game.status))
+    .filter(game => !mlbCaptureOpen(game))
     .map(game => game.gameKey)
 
   // Real incident (2026-08-07/08): findAndClickGame matches purely on team
@@ -261,7 +268,7 @@ async function run(req: Request) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in ${date}'s matchups` }, { status: 404 })
-    if (!isPregame(g.status)) {
+    if (!mlbCaptureOpen(g)) {
       return NextResponse.json({ date, gamePk, skipped: 'game already started; FanDuel archive is pregame-only' })
     }
     if (!effectiveGames.includes(g)) {

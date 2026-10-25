@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
+import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
+import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
 import { PLATFORM_URL } from '@/lib/platform'
 import { missingOpeningMarkets } from '@/lib/scrapers/retryMarkets'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
@@ -61,10 +62,10 @@ async function run(req: Request) {
 
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const games = await getTodaysMatchups(date)
-  const statusByGamePk = new Map(games.map(g => [g.gamePk, g.status]))
+  const byGamePk = new Map(games.map(g => [g.gamePk, g]))
 
-  const live = due.filter(row => !isPregame(statusByGamePk.get(row.game_pk) ?? ''))
-  const toScrape = due.filter(row => isPregame(statusByGamePk.get(row.game_pk) ?? ''))
+  const live = due.filter(row => !mlbCaptureOpen(byGamePk.get(row.game_pk)))
+  const toScrape = due.filter(row => mlbCaptureOpen(byGamePk.get(row.game_pk)))
 
   const headers = { Authorization: `Bearer ${process.env.CRON_SECRET}` }
   // FanDuel's delayed missing-market retry must not duplicate the already
@@ -113,7 +114,7 @@ async function run(req: Request) {
     // Extraction may take several minutes. Recheck eligibility before
     // enqueueing; the next dispatch also checks again before any capture.
     const latest = await getTodaysMatchups(date)
-    const pregameIds = new Set(latest.filter(game => isPregame(game.status)).map(game => game.gamePk))
+    const pregameIds = new Set(latest.filter(game => mlbCaptureOpen(game)).map(game => game.gamePk))
     const retryReadyAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
     await Promise.all(retryCandidates.filter(r => pregameIds.has(r.gamePk)).map(async r => {
       const queued = await admin.from('scrape_dispatch_queue')

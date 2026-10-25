@@ -6,7 +6,7 @@ const require = createRequire(new URL('../package.json', import.meta.url)), ts =
 const source = fs.readFileSync(new URL('../src/app/api/cron/dispatch-scrapes/route.ts', import.meta.url), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const good = { result: { imported: { ok: true, body: { marketSummary: { ready: 1 } } } } }
-function harness({ retryCount = 0, fdStatus = 200, fdBody = good, timeout = false, live = false, liveAfter = false, queueError = false, publicBody = { failed: 0, results: [{ imported: { ok: true } }] } } = {}) {
+function harness({ retryCount = 0, fdStatus = 200, fdBody = good, timeout = false, live = false, liveAfter = false, startsIn = 3600000, startAfter = false, queueError = false, publicBody = { failed: 0, results: [{ imported: { ok: true } }] } } = {}) {
   const calls = [], writes = []
   let schedules = 0
   const due = [{ game_pk: 123, retry_count: retryCount }]
@@ -17,9 +17,12 @@ function harness({ retryCount = 0, fdStatus = 200, fdBody = good, timeout = fals
       return query.update.dispatched_at === null ? { data: queueError ? null : [{ game_pk: 123 }], error: queueError ? { code: 'unavailable' } : null } : { data: due, error: null }
     } }
   } }
+  const guard = { exports: {} }
+  new Function('module', 'exports', ts.transpileModule(fs.readFileSync(new URL('../src/lib/mlbCaptureWindow.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(guard, guard.exports)
   const mocks = {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/supabase/admin': { createAdminClient: () => admin }, '@/lib/cron-auth': { requireCronAuth: () => null },
-    '@slipsurge/core/mlbSchedule': { getTodaysMatchups: async () => [{ gamePk: 123, status: live || (++schedules > 1 && liveAfter) ? 'Live' : 'Scheduled' }], isPregame: value => value === 'Scheduled' },
+    '@slipsurge/core/mlbSchedule': { getTodaysMatchups: async () => { schedules++; return [{ gamePk: 123, abstractStatus: 'Preview', gameDate: new Date(Date.now() + (schedules > 1 && startAfter ? -1 : startsIn)).toISOString(), status: live || (schedules > 1 && liveAfter) ? 'In Progress' : 'Scheduled' }] } },
+    '@/lib/mlbCaptureWindow': guard.exports,
     '@/lib/platform': { PLATFORM_URL: 'https://fixture.test' }, '@/lib/scrapers/retryMarkets': { missingOpeningMarkets: summary => summary.ready ? [] : ['fhr_fd'] },
     '@/lib/pipelineHealth': { withPipelineHealth: (_key, fn) => fn }, '@/lib/safeApiError': { safeApiError: () => Response.json({ error: 'fixture' }, { status: 503 }) },
   }
@@ -75,6 +78,15 @@ test('games already live or live after extraction cannot be queued for another c
   assert.equal(failed.status, 502)
   assert.deepEqual(failed.body.retryQueued, [])
   assert.equal(closing.writes.length, 1)
+})
+
+test('delayed Scheduled status cannot dispatch after canonical first pitch or queue a post-pitch retry', async () => {
+  for (const startsIn of [0, -17000]) {
+    const fixture = harness({ startsIn }), result = await fixture.run()
+    assert.deepEqual(result.body.skippedAlreadyLive, [123]); assert.equal(fixture.calls.length, 0)
+  }
+  const fixture = harness({ timeout: true, startAfter: true }), result = await fixture.run()
+  assert.deepEqual(result.body.retryQueued, []); assert.equal(fixture.writes.length, 1)
 })
 
 test('queue and public checkpoint failures are reported honestly without duplicating public capture', async () => {

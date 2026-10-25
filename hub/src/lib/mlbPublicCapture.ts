@@ -87,29 +87,42 @@ export async function getMlbPublicReceipts(date: string): Promise<Map<string, Pi
 }
 
 export function mlbPublicMovement(captures: Capture[]): { rows: MlbPublicMovementRow[] } {
-  const games = new Map<number, Capture[]>()
+  const games = new Map<string, Capture[]>()
+  const now = Date.now()
   for (const capture of captures) {
     const observed = Date.parse(capture.captured_at), tip = Date.parse(capture.starts_at)
-    if (!Number.isFinite(observed) || !Number.isFinite(tip) || observed >= tip || observed > Date.now()) continue
-    const rows = games.get(capture.game_id) ?? []; rows.push(capture); games.set(capture.game_id, rows)
+    if (!Number.isFinite(observed) || !Number.isFinite(tip) || observed >= tip || observed > now) continue
+    const identity = JSON.stringify([capture.game_id, capture.game_key, tip])
+    const rows = games.get(identity) ?? []; rows.push(capture); games.set(identity, rows)
   }
   const rows: MlbPublicMovementRow[] = []
   for (const group of games.values()) {
     group.sort((a, b) => Date.parse(b.captured_at) - Date.parse(a.captured_at))
-    const [latest, prior] = group
-    const previous = new Map((prior?.game_key === latest.game_key ? prior.rows : []).map(row => [rowKey(row), row]))
-    for (const row of latest.rows) {
-      const before = previous.get(rowKey(row))
-      rows.push({ gameKey: latest.game_key, playerName: row.playerName, market: row.market, current: row.picks, previous: before?.picks ?? null,
-        delta: before ? row.picks - before.picks : null, capturedAt: latest.captured_at, previousAt: before ? prior.captured_at : null })
+    const identities = new Map<string, MlbPublicMovementRow>()
+    // A capture can contain only game markets or a subset of player markets.
+    // Absence is not a zero or a withdrawal; each identity keeps its own two
+    // real observations, without inheriting another market's capture time.
+    for (const capture of group.slice(0, 24)) {
+      for (const row of capture.rows) {
+        const key = rowKey(row), current = identities.get(key)
+        if (!current) {
+          identities.set(key, { gameKey: capture.game_key, playerName: row.playerName, market: row.market, current: row.picks,
+            previous: null, delta: null, capturedAt: capture.captured_at, previousAt: null })
+        } else if (current.previousAt === null && Date.parse(capture.captured_at) < Date.parse(current.capturedAt)) {
+          current.previous = row.picks
+          current.previousAt = capture.captured_at
+          current.delta = current.current - row.picks
+        }
+      }
     }
+    rows.push(...identities.values())
   }
   return { rows }
 }
 
 export async function getMlbPublicMovement(date: string): Promise<{ rows: MlbPublicMovementRow[] }> {
   if (!datePattern.test(date)) throw new Error('Invalid capture date')
-  return (await nbaSharedCache(`mlb-public-movement:v1:${date}`, 30, 0, async () => {
+  return (await nbaSharedCache(`mlb-public-movement:v2:${date}`, 30, 0, async () => {
     const { data, error } = await createAdminClient().rpc('read_mlb_public_captures', { p_game_date: date }).abortSignal(AbortSignal.timeout(12000))
     if (error) throw new Error('Public movement unavailable')
     return mlbPublicMovement((data ?? []) as Capture[])

@@ -1,0 +1,53 @@
+Three-sport capture follow-up and MLB repair — October 25, 2026
+Verification started 02:04 CEST (00:04 UTC), before Berlin's 03:00 CEST -> 02:00 CET rollback.
+Scope: existing cloud schedules and primary database only; no collector replay, laptop collector, legacy MLB database access, CAPTCHA solving, or invented history.
+
+Verified NFL
+- All eight due public captures arrived naturally. PIT-NO's deferred second frame saved 18:08 UTC; four Sunday games saved21:07 and three more22:08.
+- 945 exact-identity comparisons,843 count increases,0 decreases. No duplicate identity keys.
+- Latest inspected CIN-BAL book archive saved23:42-23:47 UTC.
+- KC-SEA04:37 UTC (05:37 CET) checkpoint remains pending.
+
+Verified MLB and defects
+- TB-MIL849802:14:15 UTC96 player rows;20:15 UTC162;20:26:54.862 UTC22 game-only rows;21:15 UTC162 player rows.
+-96 exact matches from14:15 to20:15 had91 genuine increases (Caminero HR19 to228). The latest162 player counts are unchanged from20:15.
+- The old reader compared only the latest two whole frames, hiding every player baseline behind the intervening22-row game-only frame.
+- Repaired reader takes at most24 frames per exact game/date/key, at most40 games/960 rows. Each player+market retains its own two actual observations; absent rows are not zeros/withdrawals and keep their original timestamps.
+- Shared member cache remains30 seconds; cache key advances to v2. No member request launches a collector.
+- SQL replaces only public.read_mlb_public_captures(date), guarded by original function hash/grants/index. Service-only SECURITY INVOKER and existing RLS stay intact. No stored capture/history rewrite.
+- Applied live migration20261025001733_mlb_public_sparse_continuity. Canonical CLI file20261025001719_mlb_public_sparse_continuity.sql contains identical SQL. Do not replay.
+- Live read returns four actual frames and184 identities:162 have valid unchanged priors at20:15:33.774;22 game-only identities correctly lack a prior.
+- Temporary rollback fixture passes24-frame bound, wrong date/key/future/post-tip rejection, doubleheader isolation and162/22/162 payload retention. Initial test-only variable ambiguity was corrected; no production rows were touched. Zero fixture rows remain.
+- Eight MLB FanDuel runs from14:00 through00:00 UTC failed with all10-12 tabs content-unavailable and no imported rows. Latest runtime171.8s was below the300s ceiling.
+- Retained cloud session14550c79-6c3c-4c1a-a8b4-ba77390c77a6 visibly had populated First Appearance prices. Read-only live-page inspection also found actual prices inside sole MAIN, no linked panels, and selected DIV tabs nested in anchors. Historical readiness failure cause remains unproven.
+- Added bounded private failure reasons/container/outcome/loading counts for the next natural run; capture guards are not relaxed. This is instrumentation, not verified recovery.
+-00:00:17 scrape started after official00:00 first pitch while stale status remained Scheduled. Every tab failed, so no late prices were imported.
+- MLB-only canonical start clock now gates dispatch, browser startup and extraction. Import validates exact scheduled game/G2 and each actual pretip scraped_at. Valid pretip observations may commit after tip without restamping. NFL timing/parser behavior stays unchanged.
+
+NBA status at00:02-00:06 UTC
+- Latest direct scan recovered the three remaining pregame games:184 complete panels974 regular quotes, DK29/MGM30 First Basket prices; all11 families and no current errors.
+- Recovery does not erase intermittent failures:78/126 direct runs since13:37 failed, including34 challenge events. No challenge retried or bypassed.
+- Latest aggregate had8 timestamp-ineligible MIA live supplemental outcomes;163 accepted,0 unmatched. Exact rejected timestamps were not retained, so age versus phase cause remains unproven. BKN/MIL absent live supplemental events deferred honestly.
+- Latest515 durable direct scopes had0 identity/time/future/phase violations. Older quoted scopes mostly belong to already-started games frozen pregame.
+- Original Porter +400, Smart +980 and Diallo DK +1060/MGM +900 openings remain unchanged. Recent exact regular comparisons include78 shortened,84 lengthened and1,569 unchanged; DK First8 lengthened/21 unchanged and MGM First3 shortened/1 lengthened/46 unchanged.
+-31,467 quote-time checks found0 violations. Pregame/live readers stay isolated.
+- October25 seven-game boards remained unlisted on inspected DK/MGM interfaces; this is not a universal absence claim. Continue natural publication/ingestion checks.
+
+Validation and release
+- Production source suite134/134.
+- FanDuel archive regression and23 collector/dispatcher tests pass.
+- Persistence/movement suite110/110.
+- TypeScript, scoped ESLint and diff check pass. Independent reviews cover continuity and canonical-clock protections.
+- Refreshed origin/main and live Vercel before release: e4e89cfb8551987cabe364b6a2a000b973f788f4, READY dpl_CpSi9nbiiSi3GrCrbVNUW6Yccef6, canonical production alias.
+- Final Git release/deployment and member-visible proof are recorded under work/heartbeat-release-2026-10-25.txt after completion.
+
+Evidence
+work/heartbeat-three-sport-2026-10-25-0005.{json,sql,txt}
+work/heartbeat-mlb-books-2026-10-25-0005.{json,txt}
+work/heartbeat-nba-2026-10-25-0005.{json,txt}
+work/heartbeat-nba-tape-2026-10-25-0006.json
+work/mlb-public-continuity-{reader,verification}.sql
+work/heartbeat-production-tests-2026-10-25.txt
+work/heartbeat-fanduel-tests-2026-10-25.txt
+
+Continue the existing follow-up through October26 06:00 UTC (07:00 CET), not a new schedule. Remaining: MLB natural sportsbook recovery/diagnostics, NFL KC-SEA checkpoint, October25 NBA publication and ingestion through tipoff, and representative member-visible movement checks. Report residual external access failures honestly.

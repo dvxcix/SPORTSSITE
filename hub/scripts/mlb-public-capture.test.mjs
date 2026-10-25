@@ -77,19 +77,76 @@ test('current-row write cannot start inside its 30-second timeout window before 
   assert.throws(() => session.assertWritable(), /window closed/)
 })
 
-test('movement uses latest two exact pregame snapshots, real zero counts and null missing baselines', () => {
+test('movement uses exact pregame identity observations, real zero counts and null missing baselines', () => {
   const { api } = captureHarness(), now = Date.now()
   const old = { game_id: 1, game_key: 'TB@MIL', starts_at: new Date(now + 1000).toISOString(), captured_at: new Date(now - 60000).toISOString(), rows: [row('Player A', 'hits', 5), row('Player A', 'home_runs', 0), row('Removed', 'hits', 99)] }
   const recent = { ...old, captured_at: new Date(now - 1000).toISOString(), rows: [row('Player A', 'hits', 8), row('Player A', 'home_runs', 0), row('New', 'hits', 2)] }
   const nextGame = { ...recent, game_id: 2, game_key: 'TB@MIL-G2', rows: [row('Player A', 'hits', 100)] }
   const late = { ...recent, game_id: 3, captured_at: new Date(now - 1000).toISOString(), starts_at: new Date(now - 2000).toISOString() }
   const output = api.mlbPublicMovement([old, nextGame, recent, late]).rows
-  assert.equal(output.length, 4)
+  assert.equal(output.length, 5)
   assert.equal(output.find(r => r.gameKey === 'TB@MIL' && r.market === 'hits' && r.playerName === 'Player A').delta, 3)
   assert.equal(output.find(r => r.market === 'home_runs').delta, 0)
   assert.equal(output.find(r => r.playerName === 'New').previous, null)
   assert.equal(output.find(r => r.gameKey.endsWith('G2')).delta, null)
-  assert.equal(output.some(r => r.playerName === 'Removed'), false)
+  assert.equal(output.find(r => r.playerName === 'Removed').capturedAt, old.captured_at)
+  assert.equal(output.find(r => r.playerName === 'Removed').previous, null)
+})
+
+test('162 player rows retain their own baselines across the observed 22 game-only row capture', () => {
+  const { api } = captureHarness(), now = Date.now(), starts_at = new Date(now + 60_000).toISOString()
+  const frame = (minutes, rows) => ({ game_id: 849802, game_key: 'TB@MIL', starts_at, captured_at: new Date(now - minutes * 60_000).toISOString(), rows })
+  const players = Array.from({ length: 162 }, (_, i) => row('Player ' + i, 'hits', i))
+  const first = frame(120, players.map(r => ({ ...r, picks: Math.max(0, r.picks - 1) })))
+  const before = frame(60, players)
+  const gameOnly = frame(49, Array.from({ length: 22 }, (_, i) => row('Game selection ' + i, 'totals', i)))
+  const current = frame(1, players)
+  const result = api.mlbPublicMovement([gameOnly, first, current, before]).rows
+  const playerRows = result.filter(r => r.market === 'hits')
+  assert.equal(playerRows.length, 162)
+  assert.equal(playerRows.every(r => r.previous === r.current && r.delta === 0 && r.previousAt === before.captured_at && r.capturedAt === current.captured_at), true)
+  const carriedGameRows = result.filter(r => r.market === 'totals')
+  assert.equal(carriedGameRows.length, 22)
+  assert.equal(carriedGameRows.every(r => r.capturedAt === gameOnly.captured_at && r.previous === null && r.delta === null), true)
+  const whilePartial = api.mlbPublicMovement([gameOnly, before, first]).rows.find(r => r.playerName === 'Player 5')
+  assert.equal(whilePartial.current, 5)
+  assert.equal(whilePartial.previous, 4)
+  assert.equal(whilePartial.delta, 1)
+  assert.equal(whilePartial.capturedAt, before.captured_at)
+  assert.equal(whilePartial.previousAt, first.captured_at)
+})
+
+test('identity history preserves A-B-A and literal zero while rejecting duplicate observations and cross-game or post-tip baselines', () => {
+  const { api } = captureHarness(), now = Date.now()
+  const frame = (minutes, rows, identity = {}) => ({ game_id: 1, game_key: 'TB@MIL', starts_at: new Date(now + 1000).toISOString(), captured_at: new Date(now - minutes * 60_000).toISOString(), rows, ...identity })
+  const newest = frame(1, [row('Player', 'hits', 0), row('Player', 'home_runs', 8)])
+  const middle = frame(2, [row('Player', 'hits', 3)])
+  const oldest = frame(3, [row('Player', 'hits', 0)])
+  const result = api.mlbPublicMovement([
+    newest, newest, middle, oldest,
+    frame(4, [row('Player', 'home_runs', 99)], { game_id: 2, game_key: 'TB@MIL-G2' }),
+    frame(5, [row('Player', 'home_runs', 88)], { starts_at: new Date(now - 6 * 60_000).toISOString() }),
+    frame(-1, [row('Player', 'home_runs', 77)]),
+  ]).rows
+  const hits = result.find(r => r.gameKey === 'TB@MIL' && r.market === 'hits')
+  assert.equal(hits.current, 0)
+  assert.equal(hits.previous, 3)
+  assert.equal(hits.delta, -3)
+  assert.equal(hits.previousAt, middle.captured_at)
+  assert.equal(result.find(r => r.gameKey === 'TB@MIL' && r.market === 'home_runs').previous, null)
+  assert.equal(result.find(r => r.gameKey.endsWith('G2')).previous, null)
+})
+
+test('history scan stays bounded to 24 frames and does not invent a baseline outside the window', async () => {
+  const now = Date.now()
+  const captures = Array.from({ length: 25 }, (_, i) => ({ game_id: 1, game_key: 'TB@MIL', starts_at: new Date(now + 1000).toISOString(), captured_at: new Date(now - (i + 1) * 60_000).toISOString(), rows: [row(i === 0 || i === 24 ? 'Player' : 'Other ' + i, 'hits', i)] }))
+  const { api, calls, input } = captureHarness({ rpcResult: name => name === 'read_mlb_public_captures' ? { data: captures, error: null } : undefined })
+  const result = await api.getMlbPublicMovement(input.gameDate)
+  assert.equal(result.rows.length, 24)
+  assert.equal(result.rows.find(r => r.playerName === 'Player').previous, null)
+  assert.deepEqual(calls.map(call => call.name), ['read_mlb_public_captures'])
+  const failed = captureHarness({ rpcResult: () => ({ data: null, error: { code: 'timeout' } }) })
+  await assert.rejects(failed.api.getMlbPublicMovement(input.gameDate), /movement unavailable/)
 })
 
 test('primary receipts are batched, exclude invalid cutoff and fail instead of converting DB errors to empty history', async () => {

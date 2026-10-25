@@ -7,7 +7,7 @@ const ts = require('typescript')
 const { JSDOM } = require('jsdom')
 const compile = file => ts.transpileModule(fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], ignore = [], empty = [], delay = 0, stalePanel = false, controls = true, retainOldContent = false, initialIndex = 0, revertAfterSelectMs = Infinity } = {}) {
+function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], ignore = [], empty = [], delay = 0, stalePanel = false, controls = true, retainOldContent = false, initialIndex = 0, revertAfterSelectMs = Infinity, promoProgress = false } = {}) {
   const dom = new JSDOM('<body></body>', { url: 'https://sportsbook.fanduel.com/baseball/fixture-123456' })
   const document = dom.window.document, calls = []
   let now = 1_000_000, active = labels[initialIndex], displayed = active, readyAt = now, revertAt = Infinity, loading = false
@@ -15,6 +15,7 @@ function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], 
   dom.window.HTMLElement.prototype.scrollIntoView = () => {}
   function render() {
     document.body.innerHTML = '<main id="main"><h1>Tampa Bay Rays @ Milwaukee Brewers</h1>'
+      + (promoProgress ? '<aside aria-label="Promotions"><div role="progressbar"></div></aside>' : '')
       + labels.map((label, i) => `<div role="${controls ? 'tab' : 'button'}" ${controls ? 'aria-controls="markets"' : ''} aria-selected="${label === active}" aria-label="Tab ${i + 1} of ${labels.length}: ${label}">${label}</div>`).join('')
       + `<div id="markets" aria-busy="${loading && !retainOldContent}">${(!loading || retainOldContent) && !empty.includes(displayed) ? `<div role="button" aria-selected="false" aria-label="${displayed}, Player A, +120 Odds"></div>` : ''}${stalePanel ? '<div style="display:none"><div role="button" aria-selected="false" aria-label="Hidden stale, Player X, +999 Odds"></div></div>' : ''}</div>`
       + (stalePanel ? '<div role="tabpanel" hidden><div role="button" aria-selected="false" aria-label="Prior tab, Player B, +999 Odds"></div><div role="button" aria-expanded="false" aria-label="Prior section"></div></div>' : '') + '</main>'
@@ -150,25 +151,60 @@ test('a late prior-tab render after initial readiness cannot pass the final capt
   } finally { fixture.close() }
 })
 
-function routeFixture(scrapes, { importOk = true, importBody = { ok: true, rowsImported: 1, rawTabsArchived: 1, rawOutcomesArchived: 1 } } = {}) {
-  const calls = [], game = { gamePk: 123, gameKey: 'TB@MIL', homeTeam: 'Milwaukee Brewers', awayTeam: 'Tampa Bay Rays', status: 'Scheduled' }
-  const page = { route: async () => {}, goto: async () => {}, getByText: () => ({ first: () => ({ click: async () => {} }) }), waitForTimeout: async () => {}, evaluate: async (_fn, options) => { calls.push({ name: 'extract', options }); return scrapes }, context: () => ({ newPage: async () => page }) }
+test('failed tabs report fixed readiness reasons and counts without changing busy or stale-content guards', async () => {
+  for (const controls of [false, true]) {
+    const fixture = browserFixture({ labels: ['Same Game Parlay'], controls, promoProgress: true })
+    try {
+      const [row] = await fixture.run({ verifyTabs: true, maxDurationMs: 30000 })
+      if (controls) {
+        assert.equal(row.tab_status, 'captured')
+        assert.equal(row.diagnostic, undefined)
+      } else {
+        assert.equal(row.tab_status, 'content-unavailable')
+        assert.deepEqual(row.diagnostic, { reason: 'busy', scope: 'main', controlledPanels: 0, panels: 0, mains: 1, buttons: 2, odds: 1, sections: 0, busy: 1 })
+        assert.equal(row.outcome_count, 0)
+      }
+    } finally { fixture.close() }
+  }
+  const empty = browserFixture({ labels: ['Lasers'], empty: ['Lasers'] })
+  try {
+    const [row] = await empty.run({ verifyTabs: true, maxDurationMs: 30000 })
+    assert.deepEqual(row.diagnostic, { reason: 'no-content', scope: 'controlled-panel', controlledPanels: 1, panels: 0, mains: 1, buttons: 0, odds: 0, sections: 0, busy: 0 })
+  } finally { empty.close() }
+  const stale = browserFixture({ labels: ['Same Game Parlay', 'Lasers'], controls: false, retainOldContent: true, delay: 60000 })
+  try {
+    const result = await stale.run({ verifyTabs: true, maxDurationMs: 30000 })
+    assert.equal(result[1].diagnostic.reason, 'unchanged-content')
+    assert.equal(result[1].diagnostic.odds, 1)
+    assert.equal(result[1].outcome_count, 0)
+    assert.equal(/Player|https:|Odds/.test(JSON.stringify(result[1].diagnostic)), false)
+  } finally { stale.close() }
+})
+
+function routeFixture(scrapes, { importOk = true, importBody = { ok: true, rowsImported: 1, rawTabsArchived: 1, rawOutcomesArchived: 1 }, startsIn = 3600000, navigationAdvance = 0, extractionAdvance = 0 } = {}) {
+  let clock = Date.now()
+  class Clock extends Date { constructor(...args) { super(...(args.length ? args : [clock])) } static now() { return clock } }
+  const guard = { exports: {} }
+  new Function('module', 'exports', 'Date', compile('lib/mlbCaptureWindow.ts'))(guard, guard.exports, Clock)
+  const calls = [], game = { gamePk: 123, gameKey: 'TB@MIL', homeTeam: 'Milwaukee Brewers', awayTeam: 'Tampa Bay Rays', status: 'Scheduled', abstractStatus: 'Preview', gameDate: new Date(clock + startsIn).toISOString() }
+  const page = { route: async () => {}, goto: async () => { clock += navigationAdvance }, getByText: () => ({ first: () => ({ click: async () => {} }) }), waitForTimeout: async () => {}, evaluate: async (_fn, options) => { calls.push({ name: 'extract', options }); clock += extractionAdvance; return typeof scrapes === 'function' ? scrapes(clock, game) : scrapes }, context: () => ({ newPage: async () => page }) }
   const mocks = {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null },
     '@slipsurge/core/mlbSchedule': { getTodaysMatchups: async () => [game], isPregame: () => true },
-    '@/lib/browserbase': { openSession: async () => ({ page, close: async () => { calls.push({ name: 'close' }) } }) },
+    '@/lib/mlbCaptureWindow': guard.exports,
+    '@/lib/browserbase': { openSession: async () => { calls.push({ name: 'open' }); return { page, close: async () => { calls.push({ name: 'close' }) } } } },
     '@/lib/scrapers/fanduelScraper': { runFanduelScrape: () => {} }, '@/lib/scrapers/gameMatch': { findAndClickGame: async () => true, legIndexFor: () => 0 },
     '@/lib/platform': { PLATFORM_URL: 'https://fixture.test' }, '@/lib/balldontlie': { addDaysToDateStr: value => value },
     '@/lib/scrapers/retryMarkets': { missingCoreMarkets: () => [] }, '@/lib/pipelineHealth': { withPipelineHealth: (_key, fn) => fn },
   }
   const fixture = { exports: {} }
-  new Function('require', 'module', 'exports', 'fetch', 'console', compile('app/api/cron/scrape-fanduel/route.ts'))(id => {
+  new Function('require', 'module', 'exports', 'fetch', 'console', 'Date', compile('app/api/cron/scrape-fanduel/route.ts'))(id => {
     if (!(id in mocks)) throw Error('Unexpected dependency ' + id)
     return mocks[id]
-  }, fixture, fixture.exports, async (_url, init) => { calls.push({ name: 'import', body: JSON.parse(init.body) }); return Response.json(importBody, { status: importOk ? 200 : 502 }) }, { info() {} })
+  }, fixture, fixture.exports, async (_url, init) => { calls.push({ name: 'import', body: JSON.parse(init.body) }); return Response.json(importBody, { status: importOk ? 200 : 502 }) }, { info() {} }, Clock)
   return { ...fixture.exports, calls }
 }
-const captured = { active_tab: { label: 'Same Game Parlay' }, tab_status: 'captured', incomplete: false, outcome_count: 1, sections: {} }
+const captured = { active_tab: { label: 'Same Game Parlay' }, tab_status: 'captured', incomplete: false, outcome_count: 1, sections: {}, scraped_at: new Date().toISOString() }
 test('MLB route imports verified tabs only, reports partial failure and always releases its browser', async () => {
   for (const query of ['?gamePk=123', '?gamePks=123', '']) {
     const fixture = routeFixture([captured, { active_tab: { label: 'Lasers' }, tab_status: 'selection-unverified', incomplete: true, outcome_count: 0 }])
@@ -195,6 +231,15 @@ test('a wholly unverified event writes no empty archive; a healthy event succeed
   }
 })
 
+test('failed-tab readiness counts reach private cron results without importing failed observations', async () => {
+  const diagnostic = { reason: 'busy', scope: 'main', controlledPanels: 0, panels: 0, mains: 1, buttons: 12, odds: 6, sections: 4, busy: 1 }
+  const fixture = routeFixture([{ active_tab: { label: 'Lasers' }, tab_status: 'content-unavailable', incomplete: true, outcome_count: 0, diagnostic }])
+  const response = await fixture.GET(new Request('https://fixture.test/api/cron/scrape-fanduel?gamePk=123'))
+  assert.equal(response.status, 502)
+  assert.deepEqual((await response.json()).result.incompleteTabs, [{ label: 'Lasers', status: 'content-unavailable', diagnostic }])
+  assert.equal(fixture.calls.some(call => call.name === 'import'), false)
+})
+
 test('HTTP 200 without positive tab and outcome archive confirmation is a failure', async () => {
   for (const importBody of [null, {}, { ok: true }, { ok: true, rawTabsArchived: 0, rawOutcomesArchived: 1 }, { ok: true, rawTabsArchived: 1, rawOutcomesArchived: 0 }]) {
     const fixture = routeFixture([captured], { importBody })
@@ -203,4 +248,74 @@ test('HTTP 200 without positive tab and outcome archive confirmation is a failur
     assert.equal((await response.json()).result.imported.ok, false)
     assert.equal(fixture.calls.at(-1).name, 'close')
   }
+})
+
+test('canonical first pitch blocks stale Scheduled status before browser startup and before extraction', async () => {
+  for (const startsIn of [0, -17000]) {
+    const fixture = routeFixture([captured], { startsIn })
+    const response = await fixture.GET(new Request('https://fixture.test/api/cron/scrape-fanduel?gamePk=123'))
+    assert.equal(response.status, 200); assert.ok((await response.json()).skipped)
+    assert.equal(fixture.calls.length, 0)
+  }
+  const crossing = routeFixture([captured], { startsIn: 1000, navigationAdvance: 1001 })
+  const response = await crossing.GET(new Request('https://fixture.test/api/cron/scrape-fanduel?gamePk=123'))
+  assert.ok((await response.json()).result.skipped)
+  assert.deepEqual(crossing.calls.map(call => call.name), ['open', 'close'])
+})
+
+test('extraction is capped at first pitch and imports only actual pre-pitch observations even when saving finishes later', async () => {
+  const fixture = routeFixture((clock, game) => [
+    { ...captured, scraped_at: new Date(Date.parse(game.gameDate) - 1).toISOString() },
+    { ...captured, active_tab: { label: 'Lasers' }, scraped_at: new Date(clock).toISOString() },
+  ], { startsIn: 5000, extractionAdvance: 5001 })
+  const response = await fixture.GET(new Request('https://fixture.test/api/cron/scrape-fanduel?gamePk=123'))
+  assert.equal(response.status, 502)
+  assert.equal(fixture.calls.find(call => call.name === 'extract').options.maxDurationMs, 5000)
+  assert.equal(fixture.calls.find(call => call.name === 'import').body.json.length, 1)
+  assert.equal(fixture.calls.at(-1).name, 'close')
+})
+
+function importFixture({ startsIn = 3600000, observedOffset = -1000, gameKey = 'TB@MIL', scheduleKey = gameKey, scheduleCount = 1, status = 'Scheduled' } = {}) {
+  const clock = Date.now(), writes = [], guard = { exports: {} }, archive = { exports: {} }, markets = { exports: {} }
+  class Clock extends Date { constructor(...args) { super(...(args.length ? args : [clock])) } static now() { return clock } }
+  new Function('module', 'exports', 'Date', compile('lib/mlbCaptureWindow.ts'))(guard, guard.exports, Clock)
+  new Function('require', 'module', 'exports', compile('lib/scrapers/fanduelArchive.ts'))(require, archive, archive.exports)
+  new Function('module', 'exports', compile('lib/scrapers/fanduelMarkets.ts'))(markets, markets.exports)
+  const schedule = Array.from({ length: scheduleCount }, () => ({ gameKey: scheduleKey, gameDate: new Date(clock + startsIn).toISOString(), status, abstractStatus: status === 'Scheduled' ? 'Preview' : 'Live' }))
+  const mocks = {
+    'next/server': { NextResponse: { json: Response.json } }, '@/lib/supabase/server': { createClient: async () => { throw Error('Unexpected session auth') } },
+    '@/lib/supabase/admin': { createAdminClient: () => ({ from: table => ({ upsert: async rows => { writes.push({ table, rows }); return { error: null } } }) }) },
+    '@slipsurge/core/nameNorm': { normName: name => name.toLowerCase() }, '@/lib/safeApiError': { safeApiError: () => Response.json({ error: 'fixture' }, { status: 503 }) },
+    '@slipsurge/core/mlbSchedule': { getTodaysMatchups: async () => schedule }, '@/lib/mlbCaptureWindow': guard.exports,
+    '@/lib/scrapers/fanduelArchive': archive.exports, '@/lib/scrapers/fanduelMarkets': markets.exports,
+  }
+  const api = { exports: {} }
+  new Function('require', 'module', 'exports', 'process', 'Date', compile('app/api/admin/fanduel-import/route.ts'))(id => { assert.ok(id in mocks, id); return mocks[id] }, api, api.exports, { env: { CRON_SECRET: 'fixture' } }, Clock)
+  const scrapedAt = typeof observedOffset === 'number' ? new Date(clock + observedOffset).toISOString() : observedOffset
+  return { writes, scrapedAt, async run() {
+    return api.exports.POST(new Request('https://fixture.test/api/admin/fanduel-import', { method: 'POST', headers: { authorization: 'Bearer fixture', 'content-type': 'application/json' }, body: JSON.stringify({ gameDate: '2026-10-25', gameKey, awayTeam: 'Tampa Bay Rays', homeTeam: 'Milwaukee Brewers', isOpening: true,
+      json: { scraped_at: scrapedAt, event: { title: 'Tampa Bay Rays @ Milwaukee Brewers' }, active_tab: { label: 'Home Runs' }, sections: { 'To Hit a Home Run': [{ selection: 'Player A', odds: '+400' }] } } }) }))
+  } }
+}
+
+test('MLB importer verifies exact schedule game and actual capture time before any archive/current/opening write', async () => {
+  for (const options of [
+    { startsIn: -17000, observedOffset: -1000 }, { startsIn: 0, observedOffset: 0 },
+    { observedOffset: 60001 }, { observedOffset: -600001 }, { observedOffset: null }, { observedOffset: 'invalid' },
+    { scheduleCount: 0 }, { scheduleCount: 2 }, { gameKey: 'TB@MIL-G2', scheduleKey: 'TB@MIL' },
+  ]) {
+    const fixture = importFixture(options), response = await fixture.run()
+    assert.equal(response.status, 409); assert.equal(fixture.writes.length, 0)
+  }
+  const healthy = importFixture({ gameKey: 'TB@MIL-G2' }), response = await healthy.run()
+  assert.equal(response.status, 200)
+  assert.ok(healthy.writes.every(write => write.rows.every(row => row.game_key === 'TB@MIL-G2')))
+})
+
+test('a real pre-pitch observation may persist after pitch without changing its observation timestamp', async () => {
+  const fixture = importFixture({ startsIn: -1000, observedOffset: -2000, status: 'In Progress' }), response = await fixture.run()
+  assert.equal(response.status, 200)
+  assert.equal(fixture.writes.find(write => write.table === 'fanduel_market_captures').rows[0].scraped_at, fixture.scrapedAt)
+  assert.equal(fixture.writes.find(write => write.table === 'fanduel_market_outcomes').rows[0].scraped_at, fixture.scrapedAt)
+  assert.ok(fixture.writes.some(write => write.table === 'market_opening_prices'))
 })
