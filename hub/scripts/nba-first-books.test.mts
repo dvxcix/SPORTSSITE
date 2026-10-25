@@ -470,6 +470,139 @@ test('failed First event navigation is excluded from retained inspection while h
   assert.equal(value.regularPages.has(102), false); assert.deepEqual(value.revisited, [])
 })
 
+type RecoveryScenario = 'timeout' | 'network' | 'challenge' | 'unreadable' | 'hung-check' | 'closed' | 'short-budget' | 'closed-during-check' | 'short-during-check' | 'wrong-identity' | 'closed-after-navigation' | 'navigation-failure' | 'target-closed' | 'identity-failure' | 'first-write-timeout' | 'regular-write-timeout'
+async function firstExpansionRecovery(scenario: RecoveryScenario) {
+  let clock = now, firstCalls = 0, challengeReads = 0, navigations = 0, inspections = 0, firstWrites = 0, regularWrites = 0, closed = 0
+  const deadlines: number[] = [], saved: paint.PaintProp[] = []
+  const link = 'https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-nuggets-21717953'
+  const metadata = { away: 'Pelicans', home: 'Nuggets', dateLabel: 'Today', timeLabel: '4:59 PM', timeZone: 'America/Los_Angeles' }
+  const timeout = () => Object.assign(new Error('private source timeout'), { name: 'TimeoutError' })
+  const page = { current: 'stale-first-binding', identity: metadata,
+    setDefaultTimeout: () => {}, route: async () => {}, close: async () => {},
+    evaluate: async () => {
+      challengeReads++
+      if (scenario === 'unreadable') throw new Error('private unreadable page')
+      if (scenario === 'hung-check') return new Promise<boolean>(() => {})
+      if (scenario === 'closed-during-check') clock = Date.parse(game.datetime!)
+      if (scenario === 'short-during-check') clock = now + 221_000
+      return scenario === 'challenge'
+    },
+  }
+  class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
+  const imports: Record<string, unknown> = {
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
+    './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], clock) },
+    './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
+    './nbaMgmProps': { collectMgmProps: async (worker: typeof page, value: typeof input, deadline: () => number) => {
+      inspections++; deadlines.push(deadline())
+      assert.equal(worker.current, link, 'recovery must navigate again instead of trusting the First page binding')
+      const observedAt = new Date(clock).toISOString()
+      const frame = propQuotes.nbaNormalizeBookProp(value, { ...worker.identity, observedAt, title: 'Player points', target: '20+', selectedTarget: '20+', expanded: true, transitioned: true, rows: [{ name: 'Alpha Diallo', side: 'Yes', odds: '+400', unavailable: false }] }, clock)
+      return frame?.complete ? { frames: [frame], coverage: [{ gameId: value.game.id, market: 'points', complete: true, observedAt, contracts: [frame.contractKey] }] }
+        : { frames: [], coverage: propQuotes.nbaUnresolvedBookCoverage(value.game.id, observedAt) }
+    } },
+    '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => ({ page, close: async () => { closed++ } }) },
+  }
+  const source = readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8')
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const target = { exports: {} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts') }
+  const fakeBoard = async (worker: typeof page, url: string, failure: (stage: string, error: Error) => Error) => {
+    firstCalls++; assert.equal(url, link)
+    if (scenario === 'first-write-timeout') { worker.current = url; return board({ ...metadata, market: 'First field goal scorer' }) }
+    if (scenario === 'closed') clock = Date.parse(game.datetime!)
+    if (scenario === 'short-budget') clock = now + 221_000
+    throw failure(scenario === 'identity-failure' ? 'first-revalidate' : 'first-expand', scenario === 'network' ? new Error('net::ERR_CONNECTION_RESET private source') : scenario === 'target-closed' ? new Error('Target page closed') : scenario === 'identity-failure' ? new Error('layout-unavailable') : timeout())
+  }
+  const fakeEvent = async (worker: typeof page, url: string, deadline: number) => {
+    navigations++; deadlines.push(deadline); assert.equal(url, link)
+    if (scenario === 'navigation-failure') throw new Error('Target page closed')
+    worker.current = url
+    if (scenario === 'wrong-identity') worker.identity = { ...metadata, away: 'Wrong team' }
+    if (scenario === 'closed-after-navigation') clock = Date.parse(game.datetime!)
+    return worker.identity
+  }
+  new Function('require', 'module', 'exports', 'Date', 'fakeBoard', 'fakeEvent', 'link', `${code}\nmgmLeagueLinks = async () => [link]; mgmBoard = (page,url) => fakeBoard(page,url,(stage,error) => new CaptureFailure(stage,error)); mgmEvent = fakeEvent;`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, fakeBoard, fakeEvent, link)
+  const result = await target.exports.collectNbaFirstBooks('betmgm', [input], now + 240_000, {
+    onFirst: async () => { firstWrites++; if (scenario === 'first-write-timeout') throw timeout() },
+    onRegular: async (_id, frames) => {
+      if (!frames.length) return
+      regularWrites++; if (scenario === 'regular-write-timeout') throw timeout()
+      saved.push(...frames.flatMap(frame => frame.props))
+    },
+  })
+  assert.equal(closed, 1); assert.equal(firstCalls, 1, 'First Basket is never retried')
+  assert.equal(result.complete, false, 'independent regular success must not hide the failed First observation')
+  assert.ok(deadlines.every(deadline => deadline <= now + 240_000)); assert.equal(JSON.stringify(result).includes('private'), false)
+  return { result, challengeReads, navigations, inspections, firstWrites, regularWrites, saved }
+}
+
+test('First expansion timeout or network failure salvages independent regular prices only after fresh navigation', async () => {
+  for (const scenario of ['timeout', 'network'] as const) {
+    const value = await firstExpansionRecovery(scenario)
+    assert.equal(value.challengeReads, 1); assert.equal(value.navigations, 1); assert.equal(value.inspections, 1)
+    assert.equal(value.firstWrites, 0); assert.equal(value.regularWrites, 1); assert.equal(value.saved.length, 1)
+    assert.equal(value.saved[0].updated_at, new Date(now).toISOString()); assert.equal(value.saved[0].market.odds, 400)
+    assert.equal(value.result.games[0].status, 'error'); assert.deepEqual(value.result.games[0].props, [])
+    assert.equal(value.result.errors[0].stage, 'first-expand'); assert.equal(value.result.errors[0].reason, scenario)
+    assert.ok(value.result.regularCoverage!.every(scope => scope.complete))
+  }
+})
+
+test('First-only recovery fails closed for challenges, unreadable checks, invalid identity and phase/deadline changes', async () => {
+  for (const scenario of ['challenge', 'unreadable', 'hung-check', 'closed', 'short-budget', 'closed-during-check', 'short-during-check', 'target-closed', 'identity-failure'] as const) {
+    const value = await firstExpansionRecovery(scenario)
+    assert.equal(value.navigations, 0, scenario); assert.equal(value.inspections, 0, scenario); assert.equal(value.regularWrites, 0, scenario)
+    assert.ok(value.result.regularCoverage!.every(scope => !scope.complete), scenario)
+    if (scenario === 'challenge') assert.ok(value.result.errors.some(error => error.code === 'challenge'))
+    if (['closed', 'short-budget', 'target-closed', 'identity-failure'].includes(scenario)) assert.equal(value.challengeReads, 0, scenario)
+  }
+  for (const scenario of ['wrong-identity', 'closed-after-navigation', 'navigation-failure'] as const) {
+    const value = await firstExpansionRecovery(scenario)
+    assert.equal(value.navigations, 1); assert.equal(value.regularWrites, 0); assert.deepEqual(value.saved, [])
+    assert.ok(value.result.regularCoverage!.every(scope => !scope.complete))
+  }
+})
+
+test('First and regular persistence timeouts never enter recovery or retry uncertain writes', async () => {
+  const first = await firstExpansionRecovery('first-write-timeout')
+  assert.equal(first.firstWrites, 1); assert.equal(first.challengeReads, 0); assert.equal(first.navigations, 0); assert.equal(first.regularWrites, 1)
+  assert.equal(first.saved.length, 1, 'normal independent regular work still proceeds without retrying the uncertain First write')
+  assert.ok(first.result.errors.some(error => error.stage === 'observation-save'))
+  const regular = await firstExpansionRecovery('regular-write-timeout')
+  assert.equal(regular.firstWrites, 0); assert.equal(regular.navigations, 1); assert.equal(regular.regularWrites, 1); assert.deepEqual(regular.saved, [])
+  assert.ok(regular.result.errors.some(error => error.stage === 'observation-save'))
+})
+
+test('a recovered regular task crossing tip while another First game runs never starts another navigation', async () => {
+  let clock = now, pages = 0, closed = 0
+  const near = { ...input, game: { ...game, datetime: new Date(now + 60_000).toISOString() } }
+  const later = { ...input, game: { ...game, id: game.id + 1, home_team: { ...game.home_team, id: 9, name: 'Other', full_name: 'Denver Other' } } }
+  const links = ['new-orleans-pelicans-denver-nuggets-21717953', 'new-orleans-pelicans-denver-other-21717954'].map(path => `https://www.nc.betmgm.com/en/sports/events/${path}`)
+  let releaseLater!: () => void
+  const waiting = new Promise<void>(resolve => { releaseLater = resolve })
+  const inspected: number[] = [], navigated: string[] = []
+  const makePage = () => ({ id: ++pages, setDefaultTimeout: () => {}, route: async () => {}, close: async () => {}, context: () => ({ newPage: async () => makePage() }),
+    evaluate: async () => { setImmediate(() => { clock = now + 60_001; releaseLater() }); return false },
+  })
+  const imports: Record<string, unknown> = {
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
+    './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
+    './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input) => { inspected.push(value.game.id); return { frames: [], coverage: [] } } },
+    '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => ({ page: makePage(), close: async () => { closed++ } }) },
+  }
+  const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
+  const fakeBoard = async (_page: unknown, url: string, fail: () => Error) => { if (url === links[0]) throw fail(); await waiting; return null }
+  const target = { exports: {} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts') }
+  new Function('require', 'module', 'exports', 'Date', 'links', 'fakeBoard', 'navigate', `${code}\nmgmLeagueLinks=async()=>links;mgmBoard=(page,url)=>fakeBoard(page,url,()=>new CaptureFailure('first-expand',Object.assign(new Error('timeout'),{name:'TimeoutError'})));mgmEvent=async(page,url)=>navigate(url);`)((name: string) => imports[name], target, target.exports, Clock, links, fakeBoard, (url: string) => { navigated.push(url) })
+  const result = await target.exports.collectNbaFirstBooks('betmgm', [near, later], now + 240_000)
+  assert.equal(clock, now + 60_001); assert.equal(closed, 1); assert.equal(pages, 2)
+  assert.equal(navigated.includes(links[0]), false); assert.equal(inspected.includes(near.game.id), false)
+  assert.deepEqual(inspected, [later.game.id], 'the independent later game still gets its normal turn')
+  assert.equal(result.games.find(item => item.gameId === near.game.id)?.status, 'error')
+  assert.ok(result.regularCoverage!.filter(scope => scope.gameId === near.game.id).every(scope => !scope.complete))
+})
+
 test('observation callbacks cannot extend the collector deadline or expose persistence error details', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }

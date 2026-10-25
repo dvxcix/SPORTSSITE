@@ -1,0 +1,79 @@
+Scheduled capture and archive follow-up — October25,2026
+
+Owner authorization: complete the four reviewed repairs and publish scoped
+fixes to main/production. Refreshed origin/main and live Vercel:59a1929f9a13,
+READY dpl_DcQjnywr5oRTpjvQ9ADjAsGKvm2W. Required NFL ancestry retained.
+New NBA/NFL/MLB pregame-freeze instructions and applied migrations preserved.
+No forced capture, job replay, laptop collector, new cloud browser, challenge
+solving, database mutation, legacy database access or external message.
+
+Verified natural archive/model progress
+-03:40UTC archive passed in12.08s. Durable no-games checkpoints for Oct20–22;
+  Oct23 completed exact game849805 with18 actual strict player rows. The former
+  empty-date stall advanced; next candidate is Oct24, on the existing schedule.
+-04:20UTC model run completed04:25:47 with a persisted v5 artifact containing
+  16,884 training rows through Oct23. HTTP receipts and stored rows agree.
+-Evidence: work/heartbeat-archive-nfl-2026-10-25-1322.{json,txt}.
+
+Verified NFL public capture
+-KC–SEA second frame saved04:37:56.902UTC:148 rows/23 raw markets versus
+  125rows/21 raw markets in its original Oct24 06:38:01.102 observation.
+-122 exact prior identities:108 increases,14 unchanged;26 newly observed
+  identities have no invented priors. No timestamp/cutoff violations.
+-Live Market Story first/second capture selection displays Travis Kelce ATD
+  1,153 then2,023. Current Kenneth Walker ATD2,443 and Mahomes passing1,566 also
+  match storage. Public view displays current counts; numeric count deltas are
+  verified in exact saved comparisons, not a new public delta column.
+-Recent NFL modal-click failures recovered naturally: PIT–NO saved13:06:48,
+  32players/504markets/18complete tabs;13:22 dispatcher completed SF–ATL469 and
+  DAL–PHI399markets. Modal purpose is unproven; no speculative dismissal added.
+
+Security/grading
+-No pending picks. All21 repaired losses retain original01:34 settlement times;
+  360 scheduled grading runs over12hours succeeded. Security15, settlement35,
+  auth-resilience23 checks pass; exact backport/inventory audit passes with the
+  same five disclosed mitigated upstream advisories. Raw audit is not clean.
+-One user's refresh-token-not-found events ended11:47; retries preserve cookies.
+  An isolated Sideline enrichment timeout remains a limitation, not a verified
+  widespread sign-out or grading issue. Service-only archive grants remain intact.
+-Evidence: work/heartbeat-security-grading-2026-10-25-1322.{json,txt}.
+
+NBA publication and saved prices
+-Oct25 seven-game First markets are now posted/ingested.13:20 configured feed
+  accepted760First quotes with0unmatched. Direct13:22 DK saved70/all7games;
+  MGM40/four games, with a separate league challenge and a First expansion
+  timeout. Three regular games completed11families/178panels/1003quotes.
+-DET–PHI regular markets published naturally. MEM–SAC's inspected regular menu
+  remained unavailable; do not call that complete extraction or universal absence.
+-Exact direct MGM MEM–SAC FirstFG repeats: Quinten Post775→825, Keegan Murray
+  950→900. Original openings preserved; no missing opening or future/phase-invalid
+  timestamp in bounded latest-contract audit. Direct freshness is separate from
+  prices from other feeds. First Point and First Field Goal remain distinct.
+-Live app displays7/7games and actual opening/current/previous comparisons,
+  including Isaiah Jackson DK First Basket1400→950 and unchanged FD1200→1200.
+  NFL/NBA checked pages had no observed browser errors. No picks were submitted.
+-Evidence: work/heartbeat-nba-capture-2026-10-25-1325.{json,txt}.
+
+Proven capture coupling repair
+-Natural13:17 LAC–OKC and13:22 ORL–NYK First Show More timeouts suppressed all
+  eleven regular families because regular work was only queued after First
+  succeeded. These regular markets have independent identity/phase validation.
+-Only typed First expansion timeout/network failure can queue regular work.
+  A challenge check is bounded to2s and fails closed on unreadable/unknown state;
+  more than20s of the existing budget and an open pregame window are required.
+  The failed page binding is discarded. Regular work uses fresh navigation,
+  exact normal identity validation and another phase check when dequeued.
+-First stays failed and the receipt stays incomplete. No First retry, write
+  replay, new session, weakened identity/phase guard or extended deadline.
+-Four behavioral regressions cover successful salvage and negative challenge,
+  identity, timestamp/phase, deadline and uncertain-write cases.95focused tests,
+  TypeScript, scoped lint, independent review and134production checks pass.
+-Git deployment and qualifying natural receipts are recorded in private release
+  evidence after publication; tests alone do not establish live recovery.
+
+Still pending
+-MLB direct-board readiness: next eligible natural sweep Oct26 03:00UTC/04:00CET.
+-NBA First/regular whole-slate freshness through tip, intermittent external
+  challenges/timeouts, and near-tip countdown revalidation on new games.
+-Continue existing bounded follow-up through Oct26 06:00UTC/07:00CET; delete it
+  when required verification is complete or the window ends. No migration replay.

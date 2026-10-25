@@ -39,6 +39,15 @@ async function blocked(page: Page) {
       || [...document.querySelectorAll('iframe[title]')].some(frame => /challenge|captcha/i.test(frame.getAttribute('title') ?? '') && frame.getBoundingClientRect().height > 100)
   })
 }
+async function recoveryBlocked(page: Page, deadline: number): Promise<boolean | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([blocked(page), new Promise<null>(resolve => {
+      timer = setTimeout(() => resolve(null), remaining(deadline, 2000))
+    })])
+  } catch { return null }
+  finally { if (timer) clearTimeout(timer) }
+}
 async function openPage(page: Page, url: string, deadline: number) {
   if (Date.now() >= deadline) throw new Error('deadline')
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: remaining(deadline, 25_000) })
@@ -252,7 +261,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       }
       result.regular = []; result.regularCoverage = []
       let next = 0, challenged = false
-      const regularTasks: typeof tasks = [], currentUrls = new Map<Page, string>()
+      const regularTasks: (typeof tasks[number] & { recoveredFirst?: true })[] = [], currentUrls = new Map<Page, string>()
       // Keep up to four already-loaded event pages, but retain exactly two
       // active workers. Four concurrent navigations previously overwhelmed
       // the cloud renderer; idle retained pages avoid a second shell reload.
@@ -289,8 +298,26 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           } catch (error) {
             const code = safeFailure(error)
             result.errors.push(captureFailure(error, input.game.id)); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
-            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
             if (code === 'challenge') challenged = true
+            let continueRegular = false
+            // A failed First-only Show More click must not suppress independent
+            // regular markets. Do not retry First, reuse its page binding or
+            // replay a persistence attempt. Fresh regular navigation and its
+            // existing exact identity/phase checks remain mandatory.
+            if (error instanceof CaptureFailure && error.stage === 'first-expand' && code === 'navigation-failed'
+              && ['timeout', 'network'].includes(error.reason) && !challenged
+              && nbaPregameOpen(input.game) && deadline - Date.now() > 20_000) {
+              const challenge = await recoveryBlocked(worker, deadline)
+              if (challenge === true) {
+                challenged = true
+                result.errors.push(captureFailure(new CaptureFailure('first-expand', new Error('challenge')), input.game.id))
+              } else if (challenge === false && nbaPregameOpen(input.game) && deadline - Date.now() > 20_000) {
+                currentUrls.delete(worker)
+                for (const [gameId, retained] of retainedPages) if (retained === worker) retainedPages.delete(gameId)
+                regularTasks.push({ input, url, recoveredFirst: true }); continueRegular = true
+              }
+            }
+            if (!continueRegular) result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
           }
         }
       }))
@@ -311,7 +338,10 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           // Reuse each worker's final First Basket event before navigating
           // again. Selecting/removing is synchronous, so no game can be taken twice.
           const loaded = retainEvents ? -1 : regularQueue.findIndex(task => task.url === currentUrls.get(worker))
-          const { input, url } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0]
+          const { input, url, recoveredFirst } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0]
+          if (recoveredFirst && !nbaPregameOpen(input.game)) {
+            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id)); continue
+          }
           const eventPage = retainedPages.get(input.game.id) ?? worker
           inspectingGames++
           const waves = Math.max(1, Math.ceil((regularQueue.length + inspectingGames) / pages.length))
