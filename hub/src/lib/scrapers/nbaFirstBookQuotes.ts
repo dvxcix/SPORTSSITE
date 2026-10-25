@@ -15,8 +15,23 @@ export type NbaFirstBookGame = {
   gameId: number; props: PaintProp[]; complete: boolean; observedAt: string | null
   status: 'captured' | 'partial' | 'unlisted' | 'unavailable' | 'identity-mismatch' | 'closed' | 'deadline' | 'error'
   unmatched: number; clockMismatch: boolean
+  identity?: NbaFirstBookIdentity
 }
 export const nbaFirstBookMissing = (gameId: number, status: NbaFirstBookGame['status']): NbaFirstBookGame => ({ gameId, props: [], complete: false, observedAt: null, status, unmatched: 0, clockMismatch: false })
+const identityReasons = ['ambiguous-league-event', 'ambiguous-board', 'no-valid-board', 'invalid-observation-clock', 'future-observation', 'expired-observation', 'invalid-tipoff', 'invalid-time-zone', 'invalid-time-label', 'invalid-date-label', 'wrong-date', 'away-team', 'home-team', 'wrong-market'] as const
+export type NbaFirstBookIdentity = { reason: typeof identityReasons[number]; candidates?: number; validCandidates?: number }
+/** Fixed private receipt fields only. Never copy source labels, URLs or errors. */
+export function nbaFirstBookIdentityDiagnostic(value: unknown): NbaFirstBookIdentity | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const item = value as Record<string, unknown>
+  if (!identityReasons.includes(item.reason as NbaFirstBookIdentity['reason'])) return undefined
+  const result: NbaFirstBookIdentity = { reason: item.reason as NbaFirstBookIdentity['reason'] }
+  for (const field of ['candidates', 'validCandidates'] as const) if (Number.isSafeInteger(item[field]) && Number(item[field]) >= 0) result[field] = Math.min(200, Number(item[field]))
+  return result
+}
+export const nbaFirstBookMismatch = (gameId: number, reason: NbaFirstBookIdentity['reason'], candidates?: number, validCandidates?: number): NbaFirstBookGame => ({
+  ...nbaFirstBookMissing(gameId, 'identity-mismatch'), identity: nbaFirstBookIdentityDiagnostic({ reason, candidates, validCandidates }),
+})
 
 // Exact book abbreviations observed on the NBA Quick Hits page. These are
 // team identities, never a surname/substring fallback for player matching.
@@ -50,10 +65,19 @@ function displayedMinutes(label: string) {
 
 export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'observedAt'>, now = Date.now()): NbaFirstBookGame {
   const result = nbaFirstBookMissing(input.game.id, 'identity-mismatch'), at = Date.parse(board.observedAt), start = nbaGameStart(input.game)
-  if (!Number.isFinite(at) || at > now + 30_000 || now - at > 300_000 || start == null) return result
+  const mismatch = (reason: NbaFirstBookIdentity['reason']) => nbaFirstBookMismatch(input.game.id, reason)
+  if (!Number.isFinite(at)) return mismatch('invalid-observation-clock')
+  if (at > now + 30_000) return mismatch('future-observation')
+  if (now - at > 300_000) return mismatch('expired-observation')
+  if (start == null) return mismatch('invalid-tipoff')
   const observed = localParts(at, board.timeZone), scheduled = localParts(start, board.timeZone), current = localParts(now, board.timeZone), clock = displayedMinutes(board.timeLabel)
-  if (!observed || !scheduled || !current || clock == null || displayedDate(board.dateLabel, observed.date) !== scheduled.date
-    || !nbaFirstBookTeam(board.away, input.game.visitor_team) || !nbaFirstBookTeam(board.home, input.game.home_team)) return result
+  if (!observed || !scheduled || !current) return mismatch('invalid-time-zone')
+  if (clock == null) return mismatch('invalid-time-label')
+  const date = displayedDate(board.dateLabel, observed.date)
+  if (date == null) return mismatch('invalid-date-label')
+  if (date !== scheduled.date) return mismatch('wrong-date')
+  if (!nbaFirstBookTeam(board.away, input.game.visitor_team)) return mismatch('away-team')
+  if (!nbaFirstBookTeam(board.home, input.game.home_team)) return mismatch('home-team')
   result.clockMismatch = scheduled.minutes !== clock
   result.observedAt = board.observedAt
   // Canonical tip is never replaced by a sportsbook clock. An earlier book
@@ -65,7 +89,7 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirs
 export function nbaNormalizeFirstBook(book: NbaFirstBook, input: NbaFirstBookInput, board: NbaFirstBookBoard, now = Date.now()): NbaFirstBookGame {
   const result = nbaBookObservation(input, board, now)
   if (['closed', 'identity-mismatch'].includes(result.status)) return result
-  if (board.market !== (book === 'draftkings' ? '1st Point' : 'First field goal scorer')) return nbaFirstBookMissing(input.game.id, 'identity-mismatch')
+  if (board.market !== (book === 'draftkings' ? '1st Point' : 'First field goal scorer')) return nbaFirstBookMismatch(input.game.id, 'wrong-market')
   if (!board.rows.length) return { ...result, status: 'unavailable' }
   const identities = nbaPlayerIdentities(input.roster.filter(player => [input.game.home_team.id, input.game.visitor_team.id].includes(player.team.id)))
   const quotes = new Map<number, PaintProp>(), conflicts = new Set<number>()

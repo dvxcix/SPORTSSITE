@@ -4,7 +4,7 @@ import { BETMGM_PROXY_DOMAIN_PATTERN, openSession } from '../browserbase'
 import { nbaName } from '../nbaPaint'
 import { nbaPregameOpen } from '../nbaOddsMode'
 import { readDkFirstBoards, readMgmFirstIdentity, readMgmFirstRows } from './nbaFirstBookDom'
-import { nbaFirstBookMissing, nbaFirstBookTeam, nbaNormalizeFirstBook, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
+import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
 import { collectMgmProps } from './nbaMgmProps'
 import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 
@@ -225,7 +225,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       for (const input of active) {
         const matching = boards.filter(board => nbaFirstBookTeam(board.away, input.game.visitor_team) && nbaFirstBookTeam(board.home, input.game.home_team))
         const evaluated = matching.map(board => nbaNormalizeFirstBook(book, input, board)), valid = evaluated.filter(item => item.status !== 'identity-mismatch')
-        const item = valid.length === 1 ? valid[0] : nbaFirstBookMissing(input.game.id, matching.length ? 'identity-mismatch' : 'unlisted')
+        const item = valid.length === 1 ? valid[0] : evaluated.length === 1 ? evaluated[0] : matching.length ? nbaFirstBookMismatch(input.game.id, valid.length ? 'ambiguous-board' : 'no-valid-board', matching.length, valid.length) : nbaFirstBookMissing(input.game.id, 'unlisted')
         result.games.push(item); observed.push(item)
       }
       for (let offset = 0; offset < observed.length; offset += 4) await Promise.all(observed.slice(offset, offset + 4).map(publishFirst))
@@ -238,7 +238,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         // visible oriented teams and date must independently pass normalization.
         const labels = [input.game.visitor_team, input.game.home_team].map(team => [nbaName(team.full_name), ...(team.abbreviation === 'LAC' ? [nbaName('Los Angeles Clippers')] : [])])
         const candidates = links.filter(href => { const url = new URL(href); return url.origin === 'https://www.nc.betmgm.com' && url.pathname.startsWith('/en/sports/events/') && labels.every(names => names.some(name => nbaName(url.pathname).includes(name))) })
-        if (candidates.length !== 1) { result.games.push(nbaFirstBookMissing(input.game.id, candidates.length ? 'identity-mismatch' : 'unlisted')); continue }
+        if (candidates.length !== 1) { result.games.push(candidates.length ? nbaFirstBookMismatch(input.game.id, 'ambiguous-league-event', candidates.length) : nbaFirstBookMissing(input.game.id, 'unlisted')); continue }
         tasks.push({ input, url: candidates[0] })
       }
       const pages = [page]

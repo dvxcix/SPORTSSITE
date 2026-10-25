@@ -7,7 +7,7 @@ import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { NBA_FIRST_BOOKS, saveNbaBookFirstFrame } from '@/lib/nbaBookFirstData'
 import { collectNbaFirstBooks, type NbaFirstBookCapture } from '@/lib/scrapers/nbaFirstBooks'
-import type { NbaFirstBookGame } from '@/lib/scrapers/nbaFirstBookQuotes'
+import { nbaFirstBookIdentityDiagnostic, type NbaFirstBookGame, type NbaFirstBookIdentity } from '@/lib/scrapers/nbaFirstBookQuotes'
 import { MGM_MILESTONE_PANELS } from '@/lib/scrapers/nbaBookPropQuotes'
 import { getNbaBookPropEntries, nbaReconcileBookPropFrames, saveNbaBookPropFrames, type NbaBookPropObservation, type NbaBookPropCoverage } from '@/lib/nbaBookPropsData'
 
@@ -57,7 +57,7 @@ async function run(request: Request) {
         const result = await nbaSharedCache(`book-first-run:v2:${book}:${today}`, 60, 0, async () => {
           let saved = 0, failed = 0, deferred = 0
           let regularSaved=0,regularQuotes=0,regularDeferred=0
-          const reports=new Map<number,{gameId:number;status:string;quotes:number;unmatched:number;clockMismatch:boolean}>()
+          const reports=new Map<number,{gameId:number;status:string;quotes:number;unmatched:number;clockMismatch:boolean;identity?:NbaFirstBookIdentity}>()
           const regularReports=new Map<number,{gameId:number;status:string;contracts:number;quotes:number;unmatched:number;coverageComplete:number;coverageIncomplete:number;incompleteMarkets:string[];saved:number;states:Record<string,number>}>()
           const expected=new Map(inputs.map(input=>[input.game.id,input]))
           const firstRaw=new Map<number,NbaFirstBookGame>()
@@ -95,7 +95,8 @@ async function run(request: Request) {
                 }catch{failed++;status='save-failed'}
               }else if(['unlisted','unavailable','closed'].includes(item.status)&&!item.complete)deferred++
               else failed++
-              reports.set(item.gameId,{gameId:item.gameId,status,quotes:item.props.length,unmatched:item.unmatched,clockMismatch:item.clockMismatch})
+              const identity=item.status==='identity-mismatch'?nbaFirstBookIdentityDiagnostic(item.identity):undefined
+              reports.set(item.gameId,{gameId:item.gameId,status,quotes:item.props.length,unmatched:item.unmatched,clockMismatch:item.clockMismatch,...(identity?{identity}:{})})
             })
           }
           const onRegular=(gameId:number,observations:NbaBookPropObservation[],coverage:NbaBookPropCoverage[],observedAt:string)=>{

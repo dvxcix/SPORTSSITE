@@ -6,7 +6,10 @@ locally, no job replayed, no new CAPTCHA solved, and no legacy MLB DB queried.
 
 Release base: main 3ec548d1f04f7dace0126e06a1d3bc1a6bc57c8a, production
 dpl_7QAez1isUt22LDFvwV3X2jy4Lqgh. Required recovered NFL ancestry retained.
-Unrelated local work is preserved. Git production verification follows release.
+Unrelated local work is preserved. Main83082fd4c16899ee4d15518513a44e5bc64b003e
+is live via Git deployment dpl_FBqTLwqJJ9XcWufXV6BESnZo7zBg, READY October25
+01:32:19.539UTC (02:32CET), with both public aliases verified. Vercel cloned the
+exact commit, applied all six dependency patches and built successfully.
 
 Security
 - Next 16.4.3 / eslint-config-next 16.4.3, sharp 0.35.5 and compatible transitive
@@ -35,8 +38,10 @@ Pick grading
   uncertain writes are not replayed.
 - Read-only proof: all 21 stuck picks (20 MLB, one NFL) have determinate losses.
   Nineteen post contracts match directly; two legacy singles have their exact
-  game ID on the parent post. No real results were manually changed. Natural
-  post-release settlement still needs verification.
+  game ID on the parent post. No real results were manually changed. The natural
+  01:34UTC run settled all21 exact losses and matching post legs/rollups. The
+  01:36UTC run graded zero more; graded timestamps and notification counts stayed
+  unchanged. Live public MLB/NFL posts display the repaired results correctly.
 - Focused grading/operations/privacy checks 54/54; independent counterexamples
   pass. Root registered settlement suite 35/35, TypeScript and scoped lint pass.
 
@@ -48,6 +53,13 @@ Capture reliability
   guards, synthetic prices or public provider labels. Openings remain immutable.
 - Focused capture checks 113/113 pass. Earlier source can still encounter external
   challenges/timeouts; this release does not claim external boards never block.
+- The natural01:37UTC run on83082fd4 saved9GSW DraftKings First Point prices:
+  seven shortened and two unchanged, with original openings preserved and zero
+  phase contamination. MGM still rejected the GSW@PHX identity and held all11
+  regular families; this remains unresolved. Follow-up fixed private reasons
+  distinguish ambiguous event links from date/time/team/market rejection without
+  changing acceptance. Counts are capped and raw labels/URLs/errors excluded.
+  Diagnostic regression tests57/57, TypeScript and scoped lint pass.
 - MLB's observed selected DIV tab inside anchor plus sole MAIN accepts real odds
   in an offline replay. A promotional progress indicator could block readiness,
   but retained screenshots do not prove marker attributes. No speculative guard
@@ -88,7 +100,10 @@ Broader validation
   and network access for fonts, without any server credential. Initial local
   attempts exposed the sandbox font restriction, missing public configuration,
   then the private product-audit prerender; each was resolved and build rerun.
-  Git production install/build and live behavior still require verification.
+  Git production install/build passed. Existing owner session survived reload,
+  Feed/Court rendered and movement filtering/sorting worked. Anonymous private
+  routes require login or401; checked public image/home responses were200.
+  Initial deployment error/fatal logs were empty; this is a short observation.
 
 Evidence is private under work/four-repairs-*. Continue the existing follow-up
 through October26 06:00UTC (07:00CET); no duplicate automation. Verify natural

@@ -7,6 +7,7 @@ import * as paint from '../src/lib/nbaPaint.ts'
 import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
 import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import * as bookPropQuotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
+import * as bookFirstQuotes from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
 import type {NbaBookPropFrame,NbaBookPropObservation,NbaBookPropCoverage} from '../src/lib/nbaBookPropsData.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaFirstBookCapture } from '../src/lib/scrapers/nbaFirstBooks.ts'
@@ -54,6 +55,7 @@ async function fixture(options:Options={}){
     }},
     '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
     '@/lib/scrapers/nbaBookPropQuotes':bookPropQuotes,
+    '@/lib/scrapers/nbaFirstBookQuotes':bookFirstQuotes,
     '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame}[],deadline:number,callbacks:Callbacks)=>{
       collects++;deadlines.push(deadline)
       collectorCalls.push({book,gameIds:inputs.map(input=>input.game.id),deadline})
@@ -163,6 +165,13 @@ test('private error telemetry contains only bounded known codes, stages, reasons
   assert.deepEqual(result.body.books[0].errors[0],{code:'navigation-failed',gameId:123,stage:'event-navigation',reason:'navigation-interrupted'})
   assert.deepEqual(result.body.books[0].errors[1],{code:'navigation-failed',gameId:124})
   assert.deepEqual(result.body.books[0].errors[2],{code:'challenge',gameId:123})
+})
+
+test('private identity receipts keep only fixed rejection reasons and bounded candidate counts',async()=>{
+  const h=await fixture({capture:(book,inputs)=>({games:inputs.map((input,index)=>({...observation(book,input.id),props:[],complete:false,status:'identity-mismatch',identity:index===0?{reason:'ambiguous-league-event',candidates:250,validCandidates:0,url:'private-source-url',member:'private-member'}:{reason:'private-source-url' as never,candidates:2}}))})}),result=await h.run()
+  assert.equal(result.response.status,503);assert.equal(h.saves.length,0)
+  for(const book of result.body.books){assert.deepEqual(book.games[0].identity,{reason:'ambiguous-league-event',candidates:200,validCandidates:0});assert.equal(book.games[1].identity,undefined)}
+  assert.equal(JSON.stringify(result.body).includes('private-source-url'),false);assert.equal(JSON.stringify(result.body).includes('private-member'),false)
 })
 
 test('private telemetry retains only known league discovery stages without source URLs or arbitrary error text',async()=>{

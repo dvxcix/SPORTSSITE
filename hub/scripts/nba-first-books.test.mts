@@ -38,6 +38,63 @@ test('same pair on wrong day, reversed teams or a different winning event is wit
   }
 })
 
+test('identity diagnostics distinguish exact rejection branches without changing withheld outcomes', () => {
+  const cases: [Partial<NbaFirstBookBoard>, string][] = [
+    [{ observedAt: 'invalid' }, 'invalid-observation-clock'],
+    [{ observedAt: new Date(now + 30001).toISOString() }, 'future-observation'],
+    [{ observedAt: new Date(now - 300001).toISOString() }, 'expired-observation'],
+    [{ timeZone: 'invalid' }, 'invalid-time-zone'],
+    [{ timeLabel: '8pm private-source-url' }, 'invalid-time-label'],
+    [{ dateLabel: 'private-source-url' }, 'invalid-date-label'],
+    [{ dateLabel: 'Tomorrow' }, 'wrong-date'],
+    [{ away: 'private-source-url' }, 'away-team'],
+    [{ home: 'private-source-url' }, 'home-team'],
+    [{ market: 'private-source-url' }, 'wrong-market'],
+  ]
+  for (const [changes, reason] of cases) {
+    const result = nbaNormalizeFirstBook('draftkings', input, board(changes), now)
+    assert.equal(result.status, 'identity-mismatch'); assert.equal(result.complete, false)
+    assert.deepEqual(result.props, []); assert.deepEqual(result.identity, { reason })
+    assert.equal(JSON.stringify(result).includes('private-source-url'), false)
+  }
+  const invalidGame = { ...input, game: { ...game, datetime: null, status: 'Scheduled' } }
+  assert.deepEqual(nbaNormalizeFirstBook('draftkings', invalidGame, board(), now).identity, { reason: 'invalid-tipoff' })
+  assert.equal(nbaNormalizeFirstBook('draftkings', input, board(), now).identity, undefined)
+})
+
+test('identity diagnostic sanitizer only retains fixed codes and bounded counts', () => {
+  assert.deepEqual(quotes.nbaFirstBookIdentityDiagnostic({ reason: 'ambiguous-league-event', candidates: 250, validCandidates: 2, url: 'private-source-url', player: 'private-player' }), { reason: 'ambiguous-league-event', candidates: 200, validCandidates: 2 })
+  assert.equal(quotes.nbaFirstBookIdentityDiagnostic({ reason: 'private-source-url' }), undefined)
+  assert.deepEqual(quotes.nbaFirstBookIdentityDiagnostic({ reason: 'wrong-date', candidates: -1, validCandidates: NaN }), { reason: 'wrong-date' })
+})
+
+
+
+test('collector reports league ambiguity separately from a single rejected visible board', async () => {
+  const source = readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8')
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  for (const scenario of ['league', 'single-board', 'duplicate-board'] as const) {
+    let closed = 0, eventNavigation = 0
+    const page = { setDefaultTimeout: () => {}, route: async () => {}, goto: async () => { eventNavigation++ } }
+    const imports: Record<string, unknown> = {
+      'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (g: PaintGame) => modes.nbaPregameOpen(g, now) },
+      './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) },
+      './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
+      '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => ({ page, close: async () => { closed++ } }) },
+    }
+    const links = [1, 2].map(id => `https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-nuggets-${id}`)
+    const boards = scenario === 'single-board' ? [board({ dateLabel: 'Tomorrow' })] : [board(), board()]
+    const target = { exports: {} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts') }
+    class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
+    new Function('require', 'module', 'exports', 'Date', 'links', 'boards', `${code}\nmgmLeagueLinks = async () => links; dkBoards = async () => boards;`)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock, links, boards)
+    const result = await target.exports.collectNbaFirstBooks(scenario === 'league' ? 'betmgm' : 'draftkings', [input], now + 60_000)
+    assert.equal(result.games[0].status, 'identity-mismatch'); assert.equal(result.complete, false)
+    assert.deepEqual(result.games[0].props, []); assert.equal(closed, 1); assert.equal(eventNavigation, 0)
+    assert.deepEqual(result.games[0].identity, scenario === 'league' ? { reason: 'ambiguous-league-event', candidates: 2 } : scenario === 'single-board' ? { reason: 'wrong-date' } : { reason: 'ambiguous-board', candidates: 2, validCandidates: 2 })
+    assert.equal(JSON.stringify(result).includes('https://'), false)
+  }
+})
+
 test('Tomorrow date matching uses the visible browser calendar across year rollover', () => {
   const at = Date.parse('2026-12-31T20:00:00Z'), next = { ...game, date: '2027-01-01', datetime: '2027-01-02T01:00:00Z' }
   const result = nbaNormalizeFirstBook('draftkings', { ...input, game: next }, board({ dateLabel: 'Tomorrow', observedAt: new Date(at).toISOString() }), at)
