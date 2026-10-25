@@ -60,6 +60,19 @@ Capture reliability
   distinguish ambiguous event links from date/time/team/market rejection without
   changing acceptance. Counts are capped and raw labels/URLs/errors excluded.
   Diagnostic regression tests57/57, TypeScript and scoped lint pass.
+- Diagnostic d66e4c3c went live01:41:58.384UTC. Qualifying natural01:47 run
+  892962 proved MGM's exact rejection was invalid-time-label. Retained cloud
+  session901efaf2-3049-4bb2-85b0-1a858cac40d2 visibly showed the correct
+  GSW@PHX event20030997 with Starting in22 min instead of a clock time.
+- The repair reads only the exact countdown form from the single visible event
+  time container. Each countdown retains its actual DOM read timestamp and must
+  agree with canonical tip within minute-rounding bounds. Capture closes at the
+  earliest possible book tip and canonical tip remains absolute. Fresh headers
+  permit normal minute decrements across First Field Goal and all11 families;
+  wrong teams, ambiguous headers, contradictory times and stale clocks still
+  fail. No prices/openings are synthesized or historical observations changed.
+  Focused countdown/collector tests88/88, whole-app TypeScript and scoped lint
+  pass; independent review passes. Natural recovery still needs verification.
 - MLB's observed selected DIV tab inside anchor plus sole MAIN accepts real odds
   in an offline replay. A promotional progress indicator could block readiness,
   but retained screenshots do not prove marker attributes. No speculative guard

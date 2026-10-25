@@ -4,7 +4,7 @@ import { BETMGM_PROXY_DOMAIN_PATTERN, openSession } from '../browserbase'
 import { nbaName } from '../nbaPaint'
 import { nbaPregameOpen } from '../nbaOddsMode'
 import { readDkFirstBoards, readMgmFirstIdentity, readMgmFirstRows } from './nbaFirstBookDom'
-import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
+import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, nbaSameBookIdentity, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
 import { collectMgmProps } from './nbaMgmProps'
 import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 
@@ -164,7 +164,7 @@ async function mgmEvent(page: Page, eventUrl: string, deadline: number) {
   })
   return identity
 }
-async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise<NbaFirstBookBoard | null> {
+async function mgmBoard(page: Page, eventUrl: string, deadline: number, input: NbaFirstBookInput): Promise<NbaFirstBookBoard | null> {
   const identity = await mgmEvent(page, eventUrl, deadline)
   const header = page.locator('button[aria-controls]').filter({ has: page.locator('[slot="title"]').filter({ hasText: /^\s*First field goal scorer\s*$/ }) })
   // Wait for the markets to settle after the event header loads. Absence is
@@ -188,8 +188,8 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number): Promise
     const signature = JSON.stringify(observed)
     if (observed.rows.length && signature === prior) {
       const currentIdentity = await atStage('first-revalidate', () => page.evaluate(readMgmFirstIdentity))
-      if (JSON.stringify(identity) !== JSON.stringify(currentIdentity)) throw new CaptureFailure('first-revalidate', new Error('layout-unavailable'))
-      return { ...identity, ...observed, observedAt: new Date().toISOString(), market: 'First field goal scorer' }
+      if (!nbaSameBookIdentity(input, identity, currentIdentity, Date.now())) throw new CaptureFailure('first-revalidate', new Error('layout-unavailable'))
+      return { ...currentIdentity!, ...observed, observedAt: new Date().toISOString(), market: 'First field goal scorer' }
     }
     prior = signature
     await page.waitForTimeout(500)
@@ -277,7 +277,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
             // the browser kept a partially rendered previous event visible.
             currentUrls.delete(worker)
             for (const [gameId, retained] of retainedPages) if (retained === worker) retainedPages.delete(gameId)
-            const board = await mgmBoard(worker, url, deadline)
+            const board = await mgmBoard(worker, url, deadline, input)
             currentUrls.set(worker, url)
             if (retainEvents) retainedPages.set(input.game.id, worker)
             const first = board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')

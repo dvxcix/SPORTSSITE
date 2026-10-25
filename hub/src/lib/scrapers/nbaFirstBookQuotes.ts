@@ -8,6 +8,7 @@ export type NbaFirstBook = 'draftkings' | 'betmgm'
 export type NbaFirstBookInput = { game: PaintGame; roster: PaintRoster[] }
 export type NbaFirstBookBoard = {
   away: string; home: string; dateLabel: string; timeLabel: string; timeZone: string
+  countdown?: { minutes: number; observedAt: string }
   observedAt: string; market: string; expanded: boolean
   rows: { name: string; odds: string }[]
 }
@@ -18,7 +19,7 @@ export type NbaFirstBookGame = {
   identity?: NbaFirstBookIdentity
 }
 export const nbaFirstBookMissing = (gameId: number, status: NbaFirstBookGame['status']): NbaFirstBookGame => ({ gameId, props: [], complete: false, observedAt: null, status, unmatched: 0, clockMismatch: false })
-const identityReasons = ['ambiguous-league-event', 'ambiguous-board', 'no-valid-board', 'invalid-observation-clock', 'future-observation', 'expired-observation', 'invalid-tipoff', 'invalid-time-zone', 'invalid-time-label', 'invalid-date-label', 'wrong-date', 'away-team', 'home-team', 'wrong-market'] as const
+const identityReasons = ['ambiguous-league-event', 'ambiguous-board', 'no-valid-board', 'invalid-observation-clock', 'future-observation', 'expired-observation', 'invalid-tipoff', 'invalid-time-zone', 'invalid-time-label', 'invalid-date-label', 'wrong-date', 'countdown-tipoff-mismatch', 'away-team', 'home-team', 'wrong-market'] as const
 export type NbaFirstBookIdentity = { reason: typeof identityReasons[number]; candidates?: number; validCandidates?: number }
 /** Fixed private receipt fields only. Never copy source labels, URLs or errors. */
 export function nbaFirstBookIdentityDiagnostic(value: unknown): NbaFirstBookIdentity | undefined {
@@ -63,7 +64,8 @@ function displayedMinutes(label: string) {
   return (Number(match[1]) % 12 + (match[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + Number(match[2])
 }
 
-export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'observedAt'>, now = Date.now()): NbaFirstBookGame {
+export type NbaBookIdentity = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'countdown'>
+export function nbaBookObservation(input: NbaFirstBookInput, board: NbaBookIdentity & { observedAt: string }, now = Date.now()): NbaFirstBookGame {
   const result = nbaFirstBookMissing(input.game.id, 'identity-mismatch'), at = Date.parse(board.observedAt), start = nbaGameStart(input.game)
   const mismatch = (reason: NbaFirstBookIdentity['reason']) => nbaFirstBookMismatch(input.game.id, reason)
   if (!Number.isFinite(at)) return mismatch('invalid-observation-clock')
@@ -72,6 +74,20 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirs
   if (start == null) return mismatch('invalid-tipoff')
   const observed = localParts(at, board.timeZone), scheduled = localParts(start, board.timeZone), current = localParts(now, board.timeZone), clock = displayedMinutes(board.timeLabel)
   if (!observed || !scheduled || !current) return mismatch('invalid-time-zone')
+  if (board.countdown) {
+    const sourceAt = Date.parse(board.countdown.observedAt), minutes = board.countdown.minutes
+    if (!Number.isFinite(sourceAt) || sourceAt > Math.min(at, now) + 30_000 || now - sourceAt > 300_000) return mismatch('invalid-observation-clock')
+    if (!Number.isSafeInteger(minutes) || minutes < 0 || minutes > 59 || board.timeLabel) return mismatch('invalid-time-label')
+    if (board.dateLabel && displayedDate(board.dateLabel, observed.date) !== scheduled.date) return mismatch('wrong-date')
+    if (!nbaFirstBookTeam(board.away, input.game.visitor_team)) return mismatch('away-team')
+    if (!nbaFirstBookTeam(board.home, input.game.home_team)) return mismatch('home-team')
+    // The observed minute countdown may round either way. Bind that interval
+    // to its original DOM read, and close at its earliest possible book tip.
+    const earliest = sourceAt + Math.max(0, minutes - 1) * 60_000, latest = sourceAt + (minutes + 1) * 60_000
+    if (minutes === 0 || !nbaPregameOpen(input.game, at) || !nbaPregameOpen(input.game, now) || Math.max(at, now) >= earliest) return { ...result, status: 'closed', observedAt: board.observedAt }
+    if (start < earliest || start > latest) return mismatch('countdown-tipoff-mismatch')
+    return { ...result, status: 'unavailable', observedAt: board.observedAt }
+  }
   if (clock == null) return mismatch('invalid-time-label')
   const date = displayedDate(board.dateLabel, observed.date)
   if (date == null) return mismatch('invalid-date-label')
@@ -84,6 +100,15 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: Pick<NbaFirs
   // clock can only close capture sooner, never permit a post-tip quote.
   if (!nbaPregameOpen(input.game, at) || !nbaPregameOpen(input.game, now) || (current.date === scheduled.date && current.minutes >= clock)) return { ...result, status: 'closed' }
   return { ...result, status: 'unavailable' }
+}
+
+/** Relative clocks may decrement, but each independently observed interval
+ * must identify this same canonical pregame event. Never restamp a countdown. */
+export function nbaSameBookIdentity(input: NbaFirstBookInput, prior: NbaBookIdentity, current: NbaBookIdentity | null, now = Date.now()) {
+  if (!current || (['away', 'home', 'dateLabel', 'timeLabel', 'timeZone'] as const).some(key => current[key] !== prior[key])) return false
+  if (Boolean(prior.countdown) !== Boolean(current.countdown)) return false
+  if (prior.countdown && current.countdown && (current.countdown.minutes > prior.countdown.minutes || Date.parse(current.countdown.observedAt) < Date.parse(prior.countdown.observedAt))) return false
+  return [prior, current].every(identity => nbaBookObservation(input, { ...identity, observedAt: identity.countdown?.observedAt ?? new Date(now).toISOString() }, now).status === 'unavailable')
 }
 
 export function nbaNormalizeFirstBook(book: NbaFirstBook, input: NbaFirstBookInput, board: NbaFirstBookBoard, now = Date.now()): NbaFirstBookGame {

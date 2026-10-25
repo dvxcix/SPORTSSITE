@@ -63,5 +63,8 @@ export function readMgmFirstIdentity() {
   const clocks = [...document.querySelectorAll('.event-time')].filter(visible)
   const league = [...document.querySelectorAll('.breadcrumb-title')].some(node => node.textContent?.trim() === 'NBA' && visible(node))
   if (!league || teams.length !== 2 || clocks.length !== 1) return null
-  return { away: teams[0], home: teams[1], dateLabel: clocks[0].querySelector('.date')?.textContent?.trim() ?? '', timeLabel: clocks[0].querySelector('.time')?.textContent?.trim() ?? '', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+  const countdown = clocks[0].textContent?.trim().match(/^Starting in\s*(\d{1,2})\s*min$/i)
+  const dateLabel = countdown ? '' : clocks[0].querySelector('.date')?.textContent?.trim() ?? '', timeLabel = countdown ? '' : clocks[0].querySelector('.time')?.textContent?.trim() ?? ''
+  return { away: teams[0], home: teams[1], dateLabel, timeLabel, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ...(countdown ? { countdown: { minutes: Number(countdown[1]), observedAt: new Date().toISOString() } } : {}) }
 }

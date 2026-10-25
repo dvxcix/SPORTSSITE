@@ -1,6 +1,6 @@
 import type { Page } from 'playwright-core'
 import { readMgmFirstIdentity } from './nbaFirstBookDom'
-import { nbaBookObservation, type NbaFirstBookInput } from './nbaFirstBookQuotes'
+import { nbaBookObservation, nbaSameBookIdentity, type NbaFirstBookInput } from './nbaFirstBookQuotes'
 import { MGM_MILESTONE_PANELS, nbaBookPropContract, nbaBookPropMissing, nbaNormalizeBookProp, nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 import { readMgmPropMenu, readMgmPropPanel, type MgmPropPanel } from './nbaBookPropDom'
 
@@ -32,8 +32,7 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
       // Opening an earlier accordion can replace later headers and panel IDs.
       // Resolve this known family again; its disappearance is not a withdrawal.
       const currentIdentity = await page.evaluate(readMgmFirstIdentity)
-      if (JSON.stringify(currentIdentity) !== JSON.stringify(identity)
-        || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt: new Date().toISOString() }).status)) continue
+      if (!nbaSameBookIdentity(input, identity, currentIdentity, Date.now())) continue
       const familyDeadline = Math.min(cutoff(deadline), Date.now() + 1500)
       let currentMenu = await page.evaluate(readMgmPropMenu)
       while ((!currentMenu.allSelected || currentMenu.loading || currentMenu.headers.filter(item => item.title === title).length !== 1)
@@ -73,8 +72,7 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
           try {
             if (attempt > 0) {
               const retryIdentity = await page.evaluate(readMgmFirstIdentity)
-              if (JSON.stringify(retryIdentity) !== JSON.stringify(identity)
-                || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt: new Date().toISOString() }).status)) {
+              if (!nbaSameBookIdentity(input, identity, retryIdentity, Date.now())) {
                 frames.push(nbaBookPropMissing(input.game.id, title, target, 'identity-mismatch')!); break
               }
             }
@@ -124,8 +122,9 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
               }
             }
             extracting = false
-            const frame = nbaNormalizeBookProp(input, { ...identity, title, target, selectedTarget: row.selectedTarget, observedAt: new Date().toISOString(),
-              expanded: row.expanded && row.allSelected && row.settled===true, transitioned: (!responseRequired || row.signature !== transitionBaseline) && JSON.stringify(current) === JSON.stringify(identity), rows: row.rows })
+            if (!nbaSameBookIdentity(input, identity, current, Date.now())) { frames.push(nbaBookPropMissing(input.game.id, title, target, 'identity-mismatch')!); break }
+            const frame = nbaNormalizeBookProp(input, { ...current!, title, target, selectedTarget: row.selectedTarget, observedAt: new Date().toISOString(),
+              expanded: row.expanded && row.allSelected && row.settled===true, transitioned: (!responseRequired || row.signature !== transitionBaseline), rows: row.rows })
             if (frame) frames.push(frame)
             break
           } catch {
@@ -138,7 +137,7 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
     } catch { scope.complete = false;if(Date.now()>=cutoff(deadline))scope.status='deadline' }
   }
   const finalIdentity = await page.evaluate(readMgmFirstIdentity)
-  if (JSON.stringify(identity) !== JSON.stringify(finalIdentity) || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt: new Date().toISOString() }).status)) {
+  if (!nbaSameBookIdentity(input, identity, finalIdentity, Date.now())) {
     return { frames: frames.map(frame => ({ ...frame, complete: false, props: [], status: 'identity-mismatch' as const })), coverage: coverage.map(scope => ({ ...scope, complete: false })) }
   }
   return { frames, coverage }

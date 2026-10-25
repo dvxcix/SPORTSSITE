@@ -21,7 +21,7 @@ export type NbaBookPropCoverage = { gameId: number; market: string; complete: bo
 export function nbaUnresolvedBookCoverage(gameId: number, observedAt = new Date().toISOString()): NbaBookPropCoverage[] {
   return [...new Set(Object.values(MGM_MILESTONE_PANELS))].map(market => ({ gameId, market, complete: false, observedAt, contracts: [] }))
 }
-export type NbaBookPropBoard = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'observedAt'> & {
+export type NbaBookPropBoard = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'observedAt' | 'countdown'> & {
   title: string; target: string; selectedTarget: string; expanded: boolean; transitioned: boolean
   rows: { name: string; side: string; odds: string; unavailable: boolean }[]
 }

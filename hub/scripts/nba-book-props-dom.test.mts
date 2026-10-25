@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import type { PaintGame, PaintRoster } from '../src/lib/nbaPaint.ts'
 import * as quotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
-import { nbaBookObservation } from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
+import { nbaBookObservation, nbaSameBookIdentity } from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
 
 const { JSDOM } = createRequire(import.meta.url)('jsdom')
 const now = Date.parse('2026-10-24T11:27:00Z')
@@ -160,11 +160,11 @@ test('ordinary O/U accepts an explicitly locked known line, while blank prices o
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
+async function navigation(options: { countdown?:boolean; stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
   const prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
   let evaluations=0,remoteWaits=0,uiErrors=0,identityDelayed=false
-  const normalized:{target:string;observedAt:string}[]=[]
+  const normalized:{target:string;observedAt:string;countdownAt?:string}[]=[]
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const pending: { at: number; apply: () => void }[] = [], clicked: string[] = []
   const render = () => {
@@ -207,11 +207,12 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
       render()
     },
   })
+  const captureInput = options.countdown ? { ...input, game: { ...game, datetime: new Date(now + 22 * 60_000 + 500).toISOString() } } : input
   const identityReader = () => {
     if(!identityDelayed&&(options.slowIdentity==='retry'&&uiErrors>0||options.slowIdentity==='final'&&selected==='15+'&&displayed==='15+')){identityDelayed=true;advance(6501)}
     if(options.retryFailure==='identity'&&uiErrors>0)return{...metadata,away:'Different team'}
     if(options.liveChange&&displayed==='15+'){prices['15+']='-600';render()}
-    return metadata
+    return options.countdown ? { ...metadata, dateLabel: '', timeLabel: '', countdown: { minutes: Math.floor((Date.parse(captureInput.game.datetime!) - clock) / 60_000), observedAt: new Date(clock).toISOString() } } : metadata
   }
   const page = {
     evaluate: async (fn: (arg?: unknown) => unknown, arg?: unknown) => {evaluations++;advance(options.roundTrip??0);return fn(arg)},
@@ -222,9 +223,9 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
   }
   const imports: Record<string, unknown> = {
     './nbaFirstBookDom': { readMgmFirstIdentity: identityReader }, './nbaBookPropDom': f.readers,
-    './nbaFirstBookQuotes': { nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
+    './nbaFirstBookQuotes': { nbaSameBookIdentity, nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
     './nbaBookPropQuotes': { ...quotes, nbaNormalizeBookProp: (...args: Parameters<typeof quotes.nbaNormalizeBookProp>) => {
-      normalized.push({target:args[1].target,observedAt:args[1].observedAt})
+      normalized.push({target:args[1].target,observedAt:args[1].observedAt,countdownAt:args[1].countdown?.observedAt})
       if(options.normalizationThrow&&args[1].target==='15+')throw new Error('private normalization failure')
       return quotes.nbaNormalizeBookProp(args[0], args[1], clock)
     } },
@@ -233,7 +234,7 @@ async function navigation(options: { stalled?: boolean; flash?: boolean; failedM
   new Function('require', 'module', 'exports', 'Date', compile('../src/lib/scrapers/nbaMgmProps.ts'))((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, Clock)
   const collector = target.exports as typeof import('../src/lib/scrapers/nbaMgmProps.ts')
   const deadline = options.adaptive ? () => clock >= now + 3000 ? now + 60_000 : now + 3500 : now + (options.hardBudget ?? 60_000)
-  try { return { ...(await collector.collectMgmProps(page as never, input, deadline)), clicked,evaluations,remoteWaits,elapsed:clock-now,uiErrors,normalized } } finally { f.dom.window.close() }
+  try { return { ...(await collector.collectMgmProps(page as never, captureInput, deadline)), clicked,evaluations,remoteWaits,elapsed:clock-now,uiErrors,normalized } } finally { f.dom.window.close() }
 }
 
 test('all seven posted thresholds wait for delayed actual rows, scoped All and Show More before saving', async () => {
@@ -243,6 +244,13 @@ test('all seven posted thresholds wait for delayed actual rows, scoped All and S
   assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:30')!.props.find(prop => prop.player_id === 375)!.market.odds, 400)
   assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:25')!.props.find(prop => prop.player_id === 375)!.market.odds, 155)
   assert.deepEqual(result.clicked.slice(0, 2), ['All', 'more']); assert.ok(result.coverage.every(scope => scope.complete))
+})
+
+test('regular ladders survive a normal countdown minute decrement using each fresh identity read', async () => {
+  const result = await navigation({ countdown: true })
+  assert.equal(result.frames.length, 7); assert.ok(result.frames.every(frame => frame.complete)); assert.ok(result.coverage.every(scope => scope.complete))
+  assert.ok(result.normalized.every(value => value.countdownAt && Date.parse(value.countdownAt) > now))
+  assert.ok(result.normalized.every(value => value.observedAt === value.countdownAt), 'prices use the fresh identity time, never an old countdown with a new clock')
 })
 
 test('a selected tab with old rows, including empty-loading then old rows, never relabels the prior price', async () => {
@@ -407,7 +415,7 @@ async function familyRerender(mode: 'rotate' | 'delayed' | 'removed' | 'duplicat
   const imports: Record<string, unknown> = {
     './nbaFirstBookDom': { readMgmFirstIdentity: () => changed && mode === 'identity' ? { ...metadata, away: 'Different team' } : metadata },
     './nbaBookPropDom': f.readers,
-    './nbaFirstBookQuotes': { nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
+    './nbaFirstBookQuotes': { nbaSameBookIdentity, nbaBookObservation: (...args: Parameters<typeof nbaBookObservation>) => nbaBookObservation(args[0], args[1], clock) },
     './nbaBookPropQuotes': { ...quotes, nbaNormalizeBookProp: (...args: Parameters<typeof quotes.nbaNormalizeBookProp>) => {
       const frame = quotes.nbaNormalizeBookProp(args[0], args[1], clock)
       if (args[1].title === 'Player points') { changed = true; changedAt = clock; render() }

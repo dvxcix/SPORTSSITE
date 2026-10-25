@@ -95,6 +95,44 @@ test('collector reports league ambiguity separately from a single rejected visib
   }
 })
 
+
+test('minute countdowns stay bound to their actual DOM clock and close at the earliest possible book tip', () => {
+  const at = Date.parse(game.datetime!) - 22.5 * 60_000
+  const countdown = (minutes: number, clock = at) => board({ dateLabel: '', timeLabel: '', observedAt: new Date(clock).toISOString(), countdown: { minutes, observedAt: new Date(clock).toISOString() }, market: 'First field goal scorer' })
+  const initial = countdown(22), next = countdown(21, at + 60_000)
+  const accepted = nbaNormalizeFirstBook('betmgm', input, next, at + 60_000)
+  assert.equal(accepted.complete, true); assert.equal(accepted.props[0].updated_at, next.observedAt)
+  assert.equal(quotes.nbaSameBookIdentity(input, initial, next, at + 60_000), true)
+  for (const change of [{ away: 'Wrong team' }, { home: 'Wrong team' }, { dateLabel: 'Tomorrow' }, { timeZone: 'invalid' }]) assert.equal(nbaNormalizeFirstBook('betmgm', input, { ...next, ...change }, at + 60_000).complete, false)
+  assert.equal(quotes.nbaSameBookIdentity(input, initial, countdown(23, at + 60_000), at + 60_000), false)
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(10), at).identity?.reason, 'countdown-tipoff-mismatch')
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(0), at).status, 'closed')
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(1), at).status, 'closed')
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, { ...initial, observedAt: new Date(at + 21 * 60_000).toISOString() }, at + 21 * 60_000).complete, false, 'a later quote timestamp cannot restart an old countdown')
+  const ending = countdown(2, Date.parse(game.datetime!) - 90_000)
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, ending, Date.parse(game.datetime!) - 30_000).status, 'closed', 'close on the earliest possible source interval before canonical tip')
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, ending, Date.parse(game.datetime!)).status, 'closed')
+  for (const [title, market] of Object.entries(propQuotes.MGM_MILESTONE_PANELS)) {
+    const target = ['double_double', 'triple_double'].includes(market) ? '0.5' : market === 'blocks' ? 'O/U 0.5' : '15+'
+    const frame = propQuotes.nbaNormalizeBookProp(input, { ...next, title, target, selectedTarget: target, expanded: true, transitioned: true, rows: [{ name: 'Alpha Diallo', side: market === 'blocks' ? 'Over' : 'Yes', odds: '+400', unavailable: false }] }, at + 60_000)
+    assert.equal(frame?.complete, true, title); assert.equal(frame?.props[0].updated_at, next.observedAt)
+  }
+})
+
+test('MGM countdown reader accepts only the exact single visible event-time text and records its original read time', () => {
+  const f = domFixture('<span class="breadcrumb-title">NBA</span><ms-scoreboard-participant><div class="participant-name-value">Pelicans</div></ms-scoreboard-participant><ms-scoreboard-participant><div class="participant-name-value">Nuggets</div></ms-scoreboard-participant><div class="event-time">Starting in<span>22 min</span></div><div hidden class="event-time">Starting in99 min</div>')
+  try {
+    const before = Date.now(), value = f.readers.readMgmFirstIdentity()!, after = Date.now()
+    assert.equal(value.countdown?.minutes, 22); assert.ok(Date.parse(value.countdown!.observedAt) >= before && Date.parse(value.countdown!.observedAt) <= after)
+    const clock = f.dom.window.document.querySelector('.event-time')!
+    clock.innerHTML = '<span class="date">Starting in</span><span class="time">22 min</span>'
+    assert.equal(f.readers.readMgmFirstIdentity()!.countdown?.minutes, 22); assert.equal(f.readers.readMgmFirstIdentity()!.dateLabel, ''); assert.equal(f.readers.readMgmFirstIdentity()!.timeLabel, '')
+    for (const text of ['Starting in2 hours', 'Starting in22 min promotional text', 'Other event Starting in22 min']) { clock.textContent = text; assert.equal(f.readers.readMgmFirstIdentity()!.countdown, undefined) }
+    const duplicate = clock.cloneNode(true); f.dom.window.document.body.append(duplicate); assert.equal(f.readers.readMgmFirstIdentity(), null)
+  } finally { f.dom.window.close() }
+})
+
+
 test('Tomorrow date matching uses the visible browser calendar across year rollover', () => {
   const at = Date.parse('2026-12-31T20:00:00Z'), next = { ...game, date: '2027-01-01', datetime: '2027-01-02T01:00:00Z' }
   const result = nbaNormalizeFirstBook('draftkings', { ...input, game: next }, board({ dateLabel: 'Tomorrow', observedAt: new Date(at).toISOString() }), at)
@@ -234,9 +272,9 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
     let all = false, expanded = false, more = false
     const metadata = { away: 'Pelicans', home: 'Nuggets', dateLabel: 'Today', timeLabel: '4:59 PM', timeZone: 'America/Los_Angeles' }
     const readers = { readMgmFirstIdentity: function identity() {}, readMgmFirstRows: function rows() {} }
-    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaSameBookIdentity: (game: typeof input, prior: quotes.NbaBookIdentity, current: quotes.NbaBookIdentity) => quotes.nbaSameBookIdentity(game, prior, current, now) }, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
     const target = { exports: {} }
-    const run = new Function('require', 'module', 'exports', `${code}\nreturn mgmBoard`)((name: string) => imports[name], target, target.exports) as (page: unknown, url: string, deadline: number) => Promise<NbaFirstBookBoard>
+    const run = new Function('require', 'module', 'exports', `${code}\nreturn mgmBoard`)((name: string) => imports[name], target, target.exports) as (page: unknown, url: string, deadline: number, value: typeof input) => Promise<NbaFirstBookBoard>
     const locator = (kind: string) => ({
       first() { return this }, filter() { return this },
       count: async () => kind === 'all' ? 1 : kind === 'marketHeaders' ? Number(all && layout) : kind === 'first' ? Number(all && layout) : kind === 'more' ? Number(!more) : 1,
@@ -251,7 +289,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
       locator: (selector: string) => locator(selector === 'button[aria-controls][aria-expanded]' ? 'marketHeaders' : selector === 'button[aria-controls]' ? 'first' : selector === '#first-panel' ? 'panel' : 'other'),
       evaluate: async (fn: unknown) => fn === readers.readMgmFirstIdentity ? metadata : fn === readers.readMgmFirstRows ? { rows: more ? [{ name: 'Alpha Diallo', odds: '+900' }] : [], expanded: more } : false,
     }
-    return { run: () => run(page, 'https://www.nc.betmgm.com/en/sports/events/observed-link-123', Date.now() + 10_000), calls }
+    return { run: () => run(page, 'https://www.nc.betmgm.com/en/sports/events/observed-link-123', Date.now() + 10_000, input), calls }
   }
   const valid = await scenario(), captured = await valid.run()
   assert.deepEqual(valid.calls, ['navigate', 'all', 'first', 'more']); assert.equal(captured.expanded, true)
