@@ -4,7 +4,7 @@ import { getPaintRoster } from './nbaPaintData'
 import { getNbaFirstEvents } from './nbaFirstBasketOddsData'
 import { nbaFirstEvent, type FirstOddsEvent } from './nbaFirstBasketOdds'
 import { nbaName, type PaintGame, type PaintProp, type PaintRoster } from './nbaPaint'
-import { nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
+import { nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, nbaQuoteTimeEvidence, type NbaOddsMode, type NbaQuoteTimeReason } from './nbaOddsMode'
 import { nbaPlayerIdentities } from './nbaPlayerIdentity'
 import { nbaSharedCache } from './nbaSharedCache'
 import { nbaValidOdds } from './nbaOddsHistory'
@@ -19,7 +19,9 @@ const date = (time: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Ame
 const id = (key: string) => -1_000_000_000_000 - parseInt(createHash('sha256').update(key).digest('hex').slice(0, 12), 16)
 export const nbaSupplementalQuote = (quote: PaintProp) => quote.id <= -1_000_000_000_000
 export class NbaSupplementalUnavailable extends Error { constructor() { super('Additional sportsbook prices unavailable') } }
-export type NbaSupplementalSnapshot = { props: PaintProp[]; complete: boolean; deferred?: boolean; observedAt: string; accepted: number; unmatched: number; stale: number; eventMatched: boolean; applicable: boolean; quota: { used: number | null; remaining: number | null; last: number | null } | null }
+type QuoteRejection = NbaQuoteTimeReason
+export type NbaSupplementalDiagnostics = { reasons: Partial<Record<QuoteRejection, number>>; samples: { book: string; market: string; reason: QuoteRejection; quoteAt: string | null; checkedAt: string; tipoff: string | null; ageMs: number | null; outcomes: number; source: 'feed' | 'cache' }[] }
+export type NbaSupplementalSnapshot = { props: PaintProp[]; complete: boolean; deferred?: boolean; observedAt: string; accepted: number; unmatched: number; stale: number; eventMatched: boolean; applicable: boolean; diagnostics?: NbaSupplementalDiagnostics; quota: { used: number | null; remaining: number | null; last: number | null } | null }
 
 export function nbaSupplementalAllowed(game: PaintGame, mode: NbaOddsMode, now = Date.now()) {
   const start = nbaGameStart(game), today = date(now), tomorrow = new Date(`${today}T12:00:00Z`)
@@ -29,6 +31,15 @@ export function nbaSupplementalAllowed(game: PaintGame, mode: NbaOddsMode, now =
 }
 const empty = (): NbaSupplementalSnapshot => ({ props: [], complete: true, observedAt: new Date().toISOString(), accepted: 0, unmatched: 0, stale: 0, eventMatched: false, applicable: false, quota: null })
 const fresh = (quote: PaintProp, game: PaintGame, mode: NbaOddsMode, now: number) => nbaQuoteInMode(quote, game, mode, now) && now - Date.parse(quote.updated_at) <= 300_000
+const sides = (quote: PaintProp) => ['odds', 'over_odds', 'under_odds'].filter(field => nbaValidOdds(quote.market[field as keyof PaintProp['market']])).length
+// Private fixed metadata, never source text or player names. Classify the same
+// rejected observations without relaxing phase, future-time or age checks.
+function rejection(diagnostics: NbaSupplementalDiagnostics, book: string, market: string, at: string, outcomes: number, source: 'feed' | 'cache', game: PaintGame, mode: NbaOddsMode, now: number) {
+  const time = Date.parse(at), tip = nbaGameStart(game)
+  const reason: QuoteRejection = !Number.isFinite(time) || tip == null ? 'invalid-clock' : time > now ? 'future' : !nbaQuoteInMode({ updated_at: at }, game, mode, now) ? 'wrong-phase' : 'expired'
+  diagnostics.reasons[reason] = (diagnostics.reasons[reason] ?? 0) + outcomes
+  if (diagnostics.samples.length < 12) diagnostics.samples.push({ book, market, ...nbaQuoteTimeEvidence(at, game, reason, now), outcomes, source })
+}
 
 /** Exact sides are deduplicated independently; different observation times are
  * never stitched into a single quote with a misleading timestamp. */
@@ -56,7 +67,7 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
   if (!object(payload) || payload.sport_key !== 'basketball_nba' || payload.id !== match.id || payload.home_team !== match.home_team || payload.away_team !== match.away_team
     || typeof payload.commence_time !== 'string' || Date.parse(payload.commence_time) !== Date.parse(match.commence_time) || nbaFirstEvent([payload as FirstOddsEvent], game)?.id !== match.id
     || !Array.isArray(payload.bookmakers) || payload.bookmakers.length > BOOKS.length) throw new NbaSupplementalUnavailable()
-  const result = { ...empty(), applicable: true, eventMatched: true, observedAt: new Date(now).toISOString() }
+  const result = { ...empty(), applicable: true, eventMatched: true, observedAt: new Date(now).toISOString(), diagnostics: { reasons: {}, samples: [] } as NbaSupplementalDiagnostics }
   const identities = nbaPlayerIdentities(roster.filter(player => [game.home_team.id, game.visitor_team.id].includes(player.team.id)))
   const seenBooks = new Set<string>(), offers = new Map<string, PaintProp>(), conflicts = new Set<string>()
   let count = 0
@@ -70,7 +81,7 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
       count += market.outcomes.length
       if (count > MAX_OUTCOMES) throw new NbaSupplementalUnavailable()
       const at = typeof market.last_update === 'string' ? market.last_update : ''
-      if (!fresh({ updated_at: at } as PaintProp, game, mode, now)) { result.stale += Math.max(1, market.outcomes.length); continue }
+      if (!fresh({ updated_at: at } as PaintProp, game, mode, now)) { const count = Math.max(1, market.outcomes.length); result.stale += count; rejection(result.diagnostics, book.key, market.key, at, count, 'feed', game, mode, now); continue }
       const alternate = market.key.endsWith('_alternate'), prop = market.key.replace(/^player_/, '').replace(/_alternate$/, '').replace(/_q1$/, '_1q'), binary = ['double_double', 'triple_double'].includes(prop)
       for (const outcome of market.outcomes) {
         if (!object(outcome) || !text(outcome.description) || !nbaValidOdds(outcome.price) || !(binary ? ['Yes', 'No'] : ['Over', 'Under']).includes(String(outcome.name))
@@ -91,7 +102,7 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
     }
   }
   result.props = nbaMergePropSources([], [...offers].filter(([key]) => !conflicts.has(key)).map(([, quote]) => quote))
-  result.accepted = result.props.reduce((n, quote) => n + ['odds', 'over_odds', 'under_odds'].filter(field => nbaValidOdds(quote.market[field as keyof PaintProp['market']])).length, 0)
+  result.accepted = result.props.reduce((n, quote) => n + sides(quote), 0)
   result.complete = result.unmatched === 0 && result.stale === 0
   return result
 }
@@ -114,7 +125,7 @@ const quota = (response: Response, name: string) => { const value = response.hea
  * No stale fallback, no refresh flag, no historical or out-of-slate queries. */
 export async function getNbaSupplementalProps(game: PaintGame, mode: NbaOddsMode): Promise<NbaSupplementalSnapshot> {
   if (!nbaSupplementalAllowed(game, mode)) return empty()
-  const cached = await nbaSharedCache(`supplemental-props:v1:${mode}:${game.id}:${nbaGameStart(game)}`, 120, 0, async () => {
+  const cached = await nbaSharedCache(`supplemental-props:v2:${mode}:${game.id}:${nbaGameStart(game)}`, 120, 0, async () => {
     try {
       const key = process.env.ODDS_API_KEY?.trim()
       if (!key) throw new NbaSupplementalUnavailable()
@@ -135,7 +146,14 @@ export async function getNbaSupplementalProps(game: PaintGame, mode: NbaOddsMode
     } catch { throw new NbaSupplementalUnavailable() } // Never propagate a credential-bearing fetch URL.
   }, 55)
   if (!nbaSupplementalAllowed(game, mode)) return { ...empty(), complete: false }
-  const props = cached.value.props.filter(quote => fresh(quote, game, mode, Date.now()))
-  const accepted=props.reduce((n,quote)=>n+['odds','over_odds','under_odds'].filter(field=>nbaValidOdds(quote.market[field as keyof PaintProp['market']])).length,0)
-  return { ...cached.value, props, accepted, complete: cached.value.complete && props.length === cached.value.props.length, stale: cached.value.stale + cached.value.props.length - props.length }
+  const now = Date.now(), diagnostics: NbaSupplementalDiagnostics = { reasons: { ...cached.value.diagnostics?.reasons }, samples: [...(cached.value.diagnostics?.samples ?? [])] }
+  let expired = 0
+  const props = cached.value.props.filter(quote => {
+    if (fresh(quote, game, mode, now)) return true
+    const count = sides(quote); expired += count
+    rejection(diagnostics, quote.vendor, quote.prop_type, quote.updated_at, count, 'cache', game, mode, now)
+    return false
+  })
+  const accepted = props.reduce((n, quote) => n + sides(quote), 0)
+  return { ...cached.value, props, accepted, diagnostics, complete: cached.value.complete && props.length === cached.value.props.length, stale: cached.value.stale + expired }
 }

@@ -59,7 +59,29 @@ function settlementMetadata(body: Record<string, unknown>): ResponseMetadata {
   const failed = issues.some(issue => !['NBA time budget reached', 'NBA final data unavailable', 'NBA period 0 final stats incomplete', 'NBA period 1 final stats incomplete'].includes(issue))
   // Never copy graded_ids, notified IDs, player names, or arbitrary error text
   // into the operational ledger. HTTP success can still contain partial work.
-  return { error: issues[0] ?? null, details: { nba: { ...counts, issues } }, ...(issues.length ? { status: failed ? 'failed' as const : 'deferred' as const } : {}) }
+  const details: Record<string, unknown> = { nba: { ...counts, issues } }
+  let sportFailed = false, sportDeferred = false
+  const sportIssues: string[] = []
+  const safeReasons = new Set(['graded', 'not-final', 'unsupported-contract', 'missing-contract', 'missing-player', 'missing-stats', 'missing-plays', 'missing-statcast', 'pending-unavailable', 'source-unavailable', 'time-budget', 'write-failed', 'checkpoint-failed', 'invalid-identity', 'notification-failed', 'already-settled'])
+  const deferredReasons = new Set(['not-final', 'missing-stats', 'missing-plays', 'missing-statcast', 'missing-player', 'source-unavailable', 'time-budget'])
+  for (const sport of ['mlb', 'nfl']) {
+    const raw = body[sport]
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { sportFailed = true; sportIssues.push(`${sport.toUpperCase()} settlement report missing`); continue }
+    const report = raw as Record<string, unknown>
+    const metrics = Object.fromEntries(['claimed', 'attempted', 'checked', 'graded', 'skipped', 'won'].filter(key => typeof report[key] === 'number' && Number.isSafeInteger(report[key]) && (report[key] as number) >= 0).map(key => [key, report[key]]))
+    const reasons = report.reasons && typeof report.reasons === 'object' && !Array.isArray(report.reasons)
+      ? Object.fromEntries(Object.entries(report.reasons).filter(([key, value]) => safeReasons.has(key) && typeof value === 'number' && Number.isSafeInteger(value) && value >= 0)) : {}
+    const currentIssues = Array.isArray(report.issues) ? [...new Set(report.issues.map(issue => typeof issue === 'string' && safeReasons.has(issue) ? issue : 'settlement-issue'))] : ['report-incomplete']
+    if (Object.keys(metrics).length !== 6) currentIssues.push('report-incomplete')
+    else if (Number(metrics.attempted) > Number(metrics.claimed) || Number(metrics.checked) > Number(metrics.attempted)
+      || Number(metrics.graded) > Number(metrics.checked) || Number(metrics.won) > Number(metrics.graded)
+      || Number(metrics.graded) + Number(metrics.skipped) !== Number(metrics.claimed)) currentIssues.push('report-incomplete')
+    if (currentIssues.some(issue => !deferredReasons.has(issue))) sportFailed = true
+    if (currentIssues.length) sportDeferred = true
+    sportIssues.push(...currentIssues.map(issue => `${sport.toUpperCase()} ${issue}`))
+    details[sport] = { ...metrics, reasons, issues: currentIssues }
+  }
+  return { error: sportIssues[0] ?? issues[0] ?? null, details, ...(sportFailed || failed ? { status: 'failed' as const } : sportDeferred || issues.length ? { status: 'deferred' as const } : {}) }
 }
 
 async function responseMetadata(response: Response, jobName: string): Promise<ResponseMetadata> {

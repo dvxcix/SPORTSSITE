@@ -99,8 +99,8 @@ async function getPaintPrimaryProps(gameId: number, fresh = false): Promise<Pain
 }
 export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 'pregame', freshPrimary = false) {
   const [primary, supplemental, bookEntries] = await Promise.allSettled([getPaintPrimaryProps(game.id, freshPrimary), getNbaSupplementalProps(game, mode),mode==='pregame'?getNbaBookPropEntries(game):Promise.resolve([])])
-  const coverage: Pick<NbaSupplementalSnapshot, 'complete' | 'deferred' | 'accepted' | 'unmatched' | 'stale' | 'eventMatched' | 'applicable' | 'observedAt'> = supplemental.status === 'fulfilled'
-    ? { complete: supplemental.value.complete, deferred: supplemental.value.deferred, accepted: supplemental.value.accepted, unmatched: supplemental.value.unmatched, stale: supplemental.value.stale, eventMatched: supplemental.value.eventMatched, applicable: supplemental.value.applicable, observedAt: supplemental.value.observedAt }
+  const coverage: Pick<NbaSupplementalSnapshot, 'complete' | 'deferred' | 'accepted' | 'unmatched' | 'stale' | 'eventMatched' | 'applicable' | 'observedAt' | 'diagnostics'> = supplemental.status === 'fulfilled'
+    ? { complete: supplemental.value.complete, deferred: supplemental.value.deferred, accepted: supplemental.value.accepted, unmatched: supplemental.value.unmatched, stale: supplemental.value.stale, eventMatched: supplemental.value.eventMatched, applicable: supplemental.value.applicable, observedAt: supplemental.value.observedAt, diagnostics: supplemental.value.diagnostics }
     : { complete: false, accepted: 0, unmatched: 0, stale: 0, eventMatched: false, applicable: true, observedAt: new Date().toISOString() }
   // An unlisted future event is normal. It may not erase a supplement already
   // captured for this phase; the bounded latest frame establishes that history.

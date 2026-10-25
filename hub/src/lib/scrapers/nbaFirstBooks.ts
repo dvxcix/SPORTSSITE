@@ -11,7 +11,7 @@ import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCov
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
-type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save'
+type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save' | 'session-release'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
 type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
@@ -81,8 +81,8 @@ async function deliverObservation(callback: () => Promise<void>, deadline: numbe
   } finally { if (timer) clearTimeout(timer) }
 }
 async function dkBoards(page: Page, deadline: number) {
-  await openPage(page, DK_LEAGUE, deadline)
-  await page.locator('.cb-non-collapsible').first().waitFor({ state: 'visible', timeout: remaining(deadline) })
+  await atStage('league-navigation', () => openPage(page, DK_LEAGUE, deadline))
+  await atStage('league-links', () => page.locator('.cb-non-collapsible').first().waitFor({ state: 'visible', timeout: remaining(deadline) }))
   // Expansion is confined to each market card; odds controls are never clicked.
   const cards = page.locator('.cb-non-collapsible'), count = Math.min(await cards.count(), 200)
   for (let i = 0; i < count && Date.now() < deadline; i++) {
@@ -92,13 +92,13 @@ async function dkBoards(page: Page, deadline: number) {
     for (let click = 0; click < 5; click++) {
       const more = card.getByText(/^(?:show|see|view) more$/i, { exact: true }).first()
       if (!(await more.count()) || !(await more.isVisible())) break
-      await more.click({ timeout: remaining(deadline, 2000) })
+      await atStage('first-expand', () => more.click({ timeout: remaining(deadline, 2000) }))
       await page.waitForTimeout(300)
     }
   }
   let previous = '', boards: NbaFirstBookBoard[] = []
   for (let poll = 0; poll < 12 && Date.now() < deadline; poll++) {
-    boards = await page.evaluate(readDkFirstBoards)
+    boards = await atStage('first-rows', () => page.evaluate(readDkFirstBoards))
     const signature = JSON.stringify(boards.map(board => ({ ...board, observedAt: '' })))
     if (boards.length && signature === previous) return boards
     previous = signature
@@ -215,7 +215,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
   }
   if (deadline - Date.now() < 20_000) return { ...result, games: [...result.games, ...active.map(input => nbaFirstBookMissing(input.game.id, 'deadline'))], errors: [{ code: 'deadline' }] }
   try {
-    session = await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, geoState: 'NC',
+    session = await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, verifyRelease: true, geoState: 'NC',
       proxyDomainPattern: book === 'betmgm' ? BETMGM_PROXY_DOMAIN_PATTERN : '^([a-zA-Z0-9-]+\\.)*draftkings\\.com$', metadata: { sport: 'nba', book, mode: 'first-market-dom' } })
     const page = session.page
     await preparePage(page)
@@ -343,10 +343,17 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       for (const { input } of regularQueue) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
     }
   } catch (error) { result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' }) }
-  finally { await session?.close() }
+  finally {
+    try { await session?.close() }
+    catch {
+      // Keep earlier observations and their original capture errors. A release
+      // failure must not erase streamed success or become a successful run.
+      result.errors.push({ code: 'session-unavailable', stage: 'session-release', reason: 'unknown' })
+    }
+  }
   const completed = new Set(result.games.map(game => game.gameId))
   for (const input of active) if (!completed.has(input.game.id)) result.games.push(nbaFirstBookMissing(input.game.id, 'error'))
-  result.complete = result.games.length > 0 && result.games.every(game => game.complete)
+  result.complete = result.errors.length === 0 && result.games.length > 0 && result.games.every(game => game.complete)
   result.observedAt = new Date().toISOString()
   return result
 }

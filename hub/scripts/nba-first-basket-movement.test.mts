@@ -65,12 +65,12 @@ test('first-basket economics preserve every event/method change and ignore provi
   assert.notDeepEqual(nbaEconomicSnapshot([offer]), nbaEconomicSnapshot([]))
 })
 
-async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }, options: { cache?: Map<string, unknown>; changed?: boolean; failArchive?: boolean; games?: number; incompleteProps?: boolean; primaryUnavailableDeferred?: boolean; incompleteFirst?: boolean } = {}) {
+async function runCapture(failFirst = false, failProps = false, empty = false, firstState = { eventMatched: true, unmatched: 0 }, options: { cache?: Map<string, unknown>; changed?: boolean; failArchive?: boolean; games?: number; incompleteProps?: boolean; primaryUnavailableDeferred?: boolean; incompleteFirst?: boolean; staleDiagnostics?: Record<string, unknown>; firstUpdatedAt?: string; live?: boolean } = {}) {
   const source = await readFile(new URL('../src/app/api/cron/nba-market-capture/route.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: { name: string; args: Record<string, unknown> }[] = []
   const receipts = options.cache ?? new Map<string, unknown>()
-  const games = Array.from({ length: options.games ?? 1 }, (_, index) => ({ ...game, id: game.id + index }))
+  const games = Array.from({ length: options.games ?? 1 }, (_, index) => ({ ...game, ...(options.live ? { datetime: priorAt, status_state: 'in_progress' as const, period: 1 } : {}), id: game.id + index }))
   const regular = { ...offer, id: 1, prop_type: 'points', line_value: '15', market: { type: 'milestone', odds: -110 } }
   const admin = {
     from: () => ({ select: () => ({ in: async () => ({ data: [], error: null }) }) }),
@@ -85,9 +85,9 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
       getPaintGame:async(id: number)=>games.find(game=>game.id===id), getPaintSchedule: async () => ({ games }),
       getPaintPropSnapshot: async (game: { id: number }) => {
         if (failProps) throw Error('fixture')
-        const complete = !options.incompleteProps && !options.primaryUnavailableDeferred
+        const complete = !options.incompleteProps && !options.primaryUnavailableDeferred && !options.staleDiagnostics
         return { props: empty || options.primaryUnavailableDeferred ? [] : [{ ...regular, game_id: game.id }], complete, primaryComplete: !options.primaryUnavailableDeferred,
-          coverage: { complete, deferred: !!options.primaryUnavailableDeferred, accepted: 0, unmatched: options.incompleteProps ? 1 : 0, stale: 0, eventMatched: false, applicable: false, observedAt: new Date().toISOString() }, issues: [] }
+          coverage: { complete, deferred: !!options.primaryUnavailableDeferred, accepted: 0, unmatched: options.incompleteProps ? 1 : 0, stale: options.staleDiagnostics ? 2 : 0, eventMatched: false, applicable: false, observedAt: new Date().toISOString(), diagnostics: options.staleDiagnostics }, issues: [] }
       }, getPaintGameOdds: async () => [],
     },
     '@/lib/nbaMovement': { nbaEconomicSnapshot },
@@ -95,7 +95,7 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
     '@/lib/nbaPaint': { nbaToday: () => game.date },
     '@/lib/nbaOddsMode':{...modes,nbaPregameOpen:(g:PaintGame)=>modes.nbaPregameOpen(g,now),nbaLiveOpen:(g:PaintGame)=>modes.nbaLiveOpen(g,now),nbaQuoteInMode:(q:PaintProp,g:PaintGame,m:modes.NbaOddsMode)=>modes.nbaQuoteInMode(q,g,m,now)},
     '@/lib/nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => { if (!receipts.has(key)) receipts.set(key, await load()); return { value: receipts.get(key) } } },
-    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async (game: PaintGame) => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [{ ...row, game, offer: { ...offer, game_id: game.id } }], ...firstState, captureComplete: !options.incompleteFirst, withheldMethods: ['private provider label'] } } },
+    '@/lib/nbaFirstBasketOddsData': { getNbaFirstEvents: async () => [], getNbaFirstOdds: async (game: PaintGame) => { if (failFirst) throw Error('fixture'); return { rows: empty ? [] : [{ ...row, game, offer: { ...offer, game_id: game.id, updated_at: options.firstUpdatedAt ?? offer.updated_at } }], ...firstState, captureComplete: !options.incompleteFirst, withheldMethods: ['private provider label'] } } },
   }
   const compiled = { exports: {} as { GET: (request: Request) => Promise<Response> } }
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
@@ -117,6 +117,36 @@ test('cloud capture persists First Basket separately without suppressing ordinar
   assert.equal(failedProps.body.firstBasket.captured, 1)
   assert.equal(failedProps.calls.some(call => call.args.p_feed === 'props'), false)
 })
+
+test('stale supplemental diagnostics survive cached failed receipts without permitting a partial player archive', async () => {
+  const diagnostics = { reasons: { expired: 2 }, samples: [{ book: 'betmgm', market: 'player_points', reason: 'expired', quoteAt: priorAt, checkedAt: at, tipoff: game.datetime, ageMs: 310000, outcomes: 2, source: 'feed' }] }
+  const first = await runCapture(false, false, false, undefined, { staleDiagnostics: diagnostics })
+  assert.equal(first.response.status, 503); assert.equal(first.body.failed, 1)
+  assert.deepEqual(first.body.coverage[0].diagnostics, diagnostics)
+  assert.equal(first.calls.some(call => call.args.p_feed === 'props'), false)
+  assert.ok(first.calls.some(call => call.args.p_feed === 'game')); assert.ok(first.calls.some(call => call.args.p_feed === 'first'))
+  const cached = await runCapture(false, false, false, undefined, { cache: first.receipts })
+  assert.equal(cached.response.status, 503); assert.deepEqual(cached.body.coverage[0].diagnostics, diagnostics)
+  assert.equal(cached.calls.length, 0)
+})
+test('First Basket phase rejections retain private original clocks without a false withdrawal or replay', async () => {
+  for(const scenario of [
+    {firstUpdatedAt:new Date(now+1).toISOString(),reason:'future',live:false},
+    {firstUpdatedAt:new Date(Date.parse(priorAt)-1).toISOString(),reason:'wrong-phase',live:true},
+    {firstUpdatedAt:'https://private.invalid/?token=never-log',reason:'invalid-clock',live:false},
+  ]){
+    const result=await runCapture(false,false,false,undefined,scenario)
+    assert.equal(result.body.firstBasket.deferred,1)
+    assert.equal(result.calls.some(call=>call.args.p_feed==='first'),false)
+    const diagnostics=result.body.firstBasket.games[0].diagnostics
+    assert.deepEqual(diagnostics.timestamps,[{book:'fanduel',market:'first_score',outcomes:1,...modes.nbaQuoteTimeEvidence(scenario.firstUpdatedAt,{...game,datetime:scenario.live?priorAt:game.datetime},scenario.reason as modes.NbaQuoteTimeReason,now)}])
+    assert.equal(JSON.stringify(diagnostics).includes('private.invalid'),false)
+    const cached=await runCapture(false,false,false,undefined,{cache:result.receipts,...scenario})
+    assert.deepEqual(cached.body.firstBasket.games[0].diagnostics,diagnostics)
+    assert.equal(cached.calls.length,0)
+  }
+})
+
 test('successful empty feeds record withdrawals; failed feeds cannot erase a tape', async () => {
   const empty = await runCapture(false, false, true)
   assert.equal(empty.response.status, 200)

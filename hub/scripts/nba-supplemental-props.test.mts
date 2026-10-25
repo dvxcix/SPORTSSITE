@@ -103,6 +103,42 @@ test('freshness is checked on every cache read, and live never imports pregame t
   assert.equal(valid.props.length, 1); assert.equal(valid.complete, true)
 })
 
+test('rejected supplemental timestamps retain bounded private age and phase evidence without changing eligibility', async () => {
+  const h = await fixture()
+  const live = { ...game, datetime: new Date(now - 60_000).toISOString(), status_state: 'in_progress', period: 1 }, liveEvent = { ...event, commence_time: live.datetime }
+  for (const [at, reason] of [[now + 1, 'future'], [now - 300_001, 'expired'], [NaN, 'invalid-clock']] as const) {
+    const rejected = { ...market(), last_update: Number.isFinite(at) ? new Date(at).toISOString() : 'https://private.invalid/?token=must-not-leak' }
+    const result = h.nbaNormalizeSupplemental(payload([rejected]), event, game, [player], 'pregame', now)
+    assert.deepEqual(result.props, []); assert.equal(result.complete, false); assert.equal(result.stale, 1)
+    assert.deepEqual(result.diagnostics!.reasons, { [reason]: 1 })
+    assert.equal(result.diagnostics!.samples[0].reason, reason)
+    assert.equal(result.diagnostics!.samples[0].quoteAt, Number.isFinite(at) ? new Date(at).toISOString() : null)
+    assert.equal(result.diagnostics!.samples[0].checkedAt, new Date(now).toISOString())
+    assert.equal(result.diagnostics!.samples[0].tipoff, new Date(game.datetime!).toISOString())
+    assert.equal(result.diagnostics!.samples[0].source, 'feed')
+    assert.equal(JSON.stringify(result.diagnostics).includes('must-not-leak'), false)
+    assert.equal(JSON.stringify(result.diagnostics).includes('Alex'), false)
+  }
+  const wrongPhase = h.nbaNormalizeSupplemental({ ...payload([market('player_points', [outcome], now - 61_000)]), commence_time: live.datetime }, liveEvent, live, [player], 'live', now)
+  assert.deepEqual(wrongPhase.diagnostics!.reasons, { 'wrong-phase': 1 }); assert.equal(wrongPhase.complete, false); assert.deepEqual(wrongPhase.props, [])
+  const many = h.nbaNormalizeSupplemental(payload(h.NBA_SUPPLEMENTAL_MARKETS.map(key => market(key, [outcome], now - 300_001))), event, game, [player], 'pregame', now)
+  assert.equal(many.diagnostics!.samples.length, 12); assert.equal(many.diagnostics!.reasons.expired, 27)
+})
+
+test('cache expiry counts each priced side and does not mutate or accumulate the shared rejection evidence', async () => {
+  const h = await fixture({ value: payload([market('player_points', [outcome, { ...outcome, name: 'Under', price: 400 }], now - 290_000)]) })
+  const initial = await h.getNbaSupplementalProps(game, 'pregame')
+  assert.equal(initial.props.length, 1); assert.equal(initial.accepted, 2); assert.deepEqual(initial.diagnostics!.reasons, {})
+  h.setTime(now + 20_000)
+  for (let i = 0; i < 2; i++) {
+    const expired = await h.getNbaSupplementalProps(game, 'pregame')
+    assert.equal(expired.stale, 2); assert.equal(expired.accepted, 0); assert.equal(expired.complete, false)
+    assert.deepEqual(expired.diagnostics!.reasons, { expired: 2 }); assert.equal(expired.diagnostics!.samples.length, 1)
+    assert.equal(expired.diagnostics!.samples[0].ageMs, 310_000); assert.equal(expired.diagnostics!.samples[0].source, 'cache')
+  }
+  assert.deepEqual(initial.diagnostics!.reasons, {}); assert.equal(h.counts().requests, 1)
+})
+
 test('tipoff crossing discards a cached pregame result without querying live or archive implicitly', async () => {
   const h = await fixture(); await h.getNbaSupplementalProps(game, 'pregame'); h.setTime(Date.parse(game.datetime!) + 1)
   assert.equal((await h.getNbaSupplementalProps(game, 'pregame')).props.length, 0); assert.equal(h.counts().requests, 1)

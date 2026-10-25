@@ -86,7 +86,8 @@ async function boundedClose(browser: Browser): Promise<void> {
 // A CDP disconnect alone is not proof that the remote session ended. Confirm
 // completion before callers release the shared context lease and its sync gap.
 // Keep failures generic: SDK errors can include credential-bearing URLs.
-async function releasePersistentSession(bb: Browserbase, sessionId: string, projectId: string | undefined, browser?: Browser): Promise<void> {
+async function releasePersistentSession(bb: Browserbase, sessionId: string, projectId: string | undefined, browser?: Browser, persisted = true): Promise<void> {
+  const unverified = () => new Error(persisted ? 'Persisted browser release could not be verified; retain the shared context lease' : 'Cloud browser release could not be verified')
   const [disconnect, release] = await Promise.allSettled([
     browser ? boundedClose(browser) : Promise.resolve(),
     bb.sessions.update(sessionId, { status: 'REQUEST_RELEASE', ...(projectId ? { projectId } : {}) }, { timeout: RELEASE_REQUEST_TIMEOUT_MS, maxRetries: 0 }),
@@ -100,10 +101,10 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
     try {
       status = (await bb.sessions.retrieve(sessionId, { timeout: 2000, maxRetries: 0 })).status
     } catch {
-      throw new Error('Persisted browser release could not be verified; retain the shared context lease')
+      throw unverified()
     }
   }
-  if (status !== 'COMPLETED') throw new Error('Persisted browser release could not be verified; retain the shared context lease')
+  if (status !== 'COMPLETED') throw unverified()
   if (disconnect.status === 'rejected' || release.status === 'rejected') {
     console.warn('[browserbase] teardown request failed, but remote completion was verified')
   }
@@ -140,7 +141,7 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
     throw new Error('Automated browser timeout must be between 60 and 450 seconds')
@@ -193,7 +194,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     const context = existingContext ?? await browser.newContext()
     page = context.pages()[0] ?? await context.newPage()
   } catch (failure) {
-    if (opts.contextId) await releasePersistentSession(bb, session.id, pid, browser)
+    if (opts.contextId || opts.verifyRelease) await releasePersistentSession(bb, session.id, pid, browser, !!opts.contextId)
     else {
       await browser?.close().catch(() => {})
       await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
@@ -206,7 +207,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     page,
     sessionId: session.id,
     close: () => closing ??= (async () => {
-      if (opts.contextId) return releasePersistentSession(bb, session.id, pid, connectedBrowser)
+      if (opts.contextId || opts.verifyRelease) return releasePersistentSession(bb, session.id, pid, connectedBrowser, !!opts.contextId)
       await connectedBrowser.close().catch(() => {})
       // Browserbase documents REQUEST_RELEASE as the way to stop billing
       // before timeout. Disconnect normally completes a non-keepAlive session,

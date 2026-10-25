@@ -15,6 +15,9 @@
     "typecheck": "tsc --noEmit",
     "audit:production": "node scripts/audit-production.mjs",
     "test:production": "node --test scripts/production-smoke.test.mjs",
+    "test:security-dependencies": "node --test scripts/security-dependency-guards.test.mjs",
+    "test:member-settlement": "node --import tsx --test scripts/mlb-pick-grading.test.mts scripts/nfl-pick-grading.test.mts scripts/member-settlement.test.mjs scripts/nba-settlement-health.test.mjs",
+    "test:archive-progress": "node --test scripts/market-dna-archive-progress.test.mjs",
     "test:cross-sport": "node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts",
     "test:context-handoff": "node --test scripts/context-handoff.test.mjs",
     "test:operations-readiness": "node --test scripts/operations-readiness.test.mjs",
@@ -86,11 +89,11 @@
     "gifenc": "^1.0.3",
     "lucide-react": "^1.23.0",
     "motion": "^12.42.2",
-    "next": "^16.3.0",
+    "next": "16.4.3",
     "playwright-core": "^1.61.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "^0.35.3",
+    "sharp": "0.35.5",
     "svix": "^1.99.1",
     "swr": "2.5.1",
     "tailwind-merge": "^3.6.0",
@@ -103,11 +106,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.0",
+    "eslint-config-next": "16.4.3",
     "jsdom": "27.4.0",
     "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@vercel/cli-config": {
+      "zod": "4.6.7"
+    }
   }
 }

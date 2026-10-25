@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import process from 'node:process'
+import { validateProductionAuditReport, verifySecurityBackports } from './verify-security-backports.mjs'
 
 const allowedAdvisories = new Set([
   'https://github.com/advisories/GHSA-w3rx-r6r6-pgpr',
@@ -53,7 +54,12 @@ if (report.error) {
   fail(`npm audit failed: ${report.error.summary || report.error.message || 'unknown registry error'}`)
 }
 
-const vulnerabilities = report.vulnerabilities || {}
+let vulnerabilities
+try {
+  vulnerabilities = validateProductionAuditReport(report, result.status)
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error))
+}
 
 function advisoryUrlsFor(packageName, trail = new Set()) {
   if (trail.has(packageName)) {
@@ -92,6 +98,22 @@ for (const packageName of Object.keys(vulnerabilities)) {
   for (const url of advisoryUrlsFor(packageName)) observedAdvisories.add(url)
 }
 
+// These are not unconditional exceptions: require the exact reviewed backports
+// in every installed copy and exercise both malformed and legitimate inputs.
+try {
+  const verified = await verifySecurityBackports()
+  const tests = spawnSync(process.execPath, ['--test', 'scripts/security-dependency-guards.test.mjs'], {
+    cwd: process.cwd(), encoding: 'utf8', maxBuffer: 2 * 1024 * 1024,
+  })
+  if (tests.error || tests.status !== 0) {
+    fail(`Security backport behavioral tests failed: ${tests.error?.message || tests.stdout || tests.stderr}`)
+  }
+  for (const url of verified) allowedAdvisories.add(url)
+  console.log('[production-audit] Reviewed backport bytes, complete installed inventory and behavioral regressions verified.')
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error))
+}
+
 const unexpected = [...observedAdvisories].filter((url) => !allowedAdvisories.has(url))
 if (unexpected.length > 0) {
   fail(`Unmitigated production advisories detected: ${unexpected.join(', ')}`)
@@ -113,3 +135,4 @@ console.log(
     ? '[production-audit] No production dependency advisories reported.'
     : `[production-audit] ${observedAdvisories.size} known transitive advisories are locally mitigated and guarded.`,
 )
+for (const url of observedAdvisories) console.log(`[production-audit] Patched locally; upstream version advisory remains: ${url}`)

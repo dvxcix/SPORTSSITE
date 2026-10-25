@@ -153,7 +153,7 @@ async function run(request: Request) {
           failed+=capture.errors.length
           const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline'].includes(error.code)).slice(0,64).map(error=>({
             code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{}),
-            ...(['league-navigation','league-events','league-links','event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save'].includes(error.stage??'')?{stage:error.stage}:{}),
+            ...(['league-navigation','league-events','league-links','event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save','session-release'].includes(error.stage??'')?{stage:error.stage}:{}),
             ...(['timeout','target-closed','navigation-interrupted','network','evaluation','unknown'].includes(error.reason??'')?{reason:error.reason}:{}),
           }))
           failed+=capture.games.filter(item=>!expected.has(item.gameId)).length

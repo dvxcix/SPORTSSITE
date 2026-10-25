@@ -116,6 +116,7 @@ test('stalled uncertain writes reserve checkpoint time, never retry inline and l
 })
 
 async function healthResult(job, body, json = true) {
+  if (body.nba) body = { mlb: { claimed:0, attempted:0, checked:0, graded:0, skipped:0, won:0, reasons:{}, issues:[] }, nfl: { claimed:0, attempted:0, checked:0, graded:0, skipped:0, won:0, reasons:{}, issues:[] }, ...body }
   const writes = []
   const query = { eq() { return this }, lt() { return this }, then(resolve) { resolve({ error: null }) } }
   const admin = { from: () => ({ update: row => { writes.push(row); return query }, insert: async row => { writes.push(row); return { error: null } } }) }
@@ -157,7 +158,18 @@ test('daily settlement returns its actual NBA report for ledger inspection', asy
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) }, '@/lib/cron-auth': { requireCronAuth: () => null },
     '@/lib/watchlist': { PROP_META: {} }, '@/lib/pickGrading': {}, '@/lib/safeApiError': {}, '@/lib/nflPickGrading': {}, '@/app/the-sideline/kickoff': {},
     '@/lib/nbaSettlement': { settleNbaPicks: async () => nba },
+    '@/lib/sportSettlement': { settleSportPicks: async () => ({ graded:0, won:0, checked:0, skipped:0 }) },
   })
   const body = await (await route.GET(new Request('https://fixture.test/api/cron/settle-picks'))).json()
   assert.deepEqual(body.nba, nba); assert.equal(body.graded, 1)
+})
+
+test('MLB and NFL settlement counters and bounded reasons are visible without exposing member data', async () => {
+  const report = { claimed: 21, attempted: 21, checked: 21, graded: 19, skipped: 2, won: 0, reasons: { 'missing-contract': 2, 'private-name': 7 }, issues: ['missing-contract'], graded_ids: ['private-id'] }
+  const row = await healthResult('grade-live-picks', { nba, mlb: report })
+  assert.equal(row.status, 'failed'); assert.equal(row.details.mlb.graded, 19)
+  assert.deepEqual(row.details.mlb.reasons, { 'missing-contract': 2 }); assert.equal(JSON.stringify(row).includes('private'), false)
+  assert.equal((await healthResult('settle-picks', { nba, nfl: { ...report, reasons: { 'source-unavailable': 2 }, issues: ['source-unavailable'] } })).status, 'deferred')
+  assert.equal((await healthResult('settle-picks', { nba, mlb: null })).status, 'failed')
+  assert.equal((await healthResult('settle-picks', { nba, mlb: { ...report, issues: [], graded: 22 } })).status, 'failed')
 })

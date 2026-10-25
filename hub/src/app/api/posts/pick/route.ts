@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
+import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { combineOdds, calcPayout } from '@slipsurge/core/parlayCalc'
 import { PROP_META } from '@/lib/watchlist'
 import { notifyMentions } from '@/lib/mentions'
@@ -12,6 +12,9 @@ import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 import { findNflPickOffer } from '@/lib/nflPickOffer'
 import { validatePaintPickLegs } from '@/lib/nbaPickValidation'
 import { requirePaintAccess } from '@/lib/paintAccess'
+import { supportsMlbPick } from '@/lib/pickGrading'
+import { supportsNflPick } from '@/lib/nflPickGrading'
+import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
 
 export const revalidate = 0
 
@@ -71,6 +74,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Malformed pick leg' }, { status: 400 })
     }
     if (l.sport && l.sport !== sport) return NextResponse.json({ error: 'A parlay cannot mix sports.' }, { status: 400 })
+    const contract = { pick_type: sport === 'MLB' ? (PROP_META[l.prop_key]?.pickType ?? l.prop_key) : l.prop_key, numeric_line: l.numeric_line, market_side: l.market_side ?? 'milestone' }
+    if ((sport === 'MLB' && !supportsMlbPick(contract)) || (sport === 'NFL' && !supportsNflPick({ ...contract, numeric_line: contract.numeric_line ?? null }))) {
+      return NextResponse.json({ error: 'This market needs a supported exact line before it can be tracked.' }, { status: 400 })
+    }
   }
 
   // A leg's stored game_date is only ever a hint, not authoritative — pre-fix
@@ -108,7 +115,7 @@ export async function POST(req: Request) {
     // A game that's vanished from the schedule entirely (postponed and
     // pulled, or a bad game_pk) is treated the same as "already started" —
     // fail closed, not open, when we can't positively confirm it's pregame.
-      if (!game || !isPregame(game.status)) {
+      if (!mlbCaptureOpen(game)) {
         console.error('[posts/pick] blocked as already-started', {
           sport, player: l.player_name, game_pk: l.game_pk, game_date: l.game_date,
           candidateDates, gamesSearched, foundGame: !!game, gameStatus: game?.status ?? null,
@@ -150,7 +157,7 @@ export async function POST(req: Request) {
     sport, player_id: l.player_id ?? null, player_name: l.player_name, team: l.team, mlb_id: l.mlb_id, headshot_url: l.headshot_url,
     game_pk: l.game_pk, game_date: l.game_date,
     prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, numeric_line: l.numeric_line ?? null,
-    market_side: l.market_side ?? 'milestone', odds: l.odds, result: 'pending',
+    market_side: l.market_side ?? 'milestone', book: l.book, odds: l.odds, result: 'pending',
   }))
 
   const pickData = isParlay

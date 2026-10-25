@@ -34,7 +34,7 @@ async function fixture(options, work) {
       retrieve: async id => {
         calls.retrieve.push(id)
         if (options.retrieveFails) throw Error('lookup unavailable')
-        return { status: options.retrieveStatus ?? (released || options.releaseFails ? 'COMPLETED' : 'RUNNING'), contextId: calls.create.at(-1)?.browserSettings.context.id }
+        return { status: options.retrieveStatus ?? (released || options.releaseFails ? 'COMPLETED' : 'RUNNING'), contextId: calls.create.at(-1)?.browserSettings.context?.id }
       },
       debug: async id => { if (options.debugFails) throw Error('debug failed'); return { debuggerFullscreenUrl: 'https://fixture/live/' + id } },
     },
@@ -80,6 +80,38 @@ test('anonymous sportsbook sessions retain their isolated-context fallback', asy
     await browser.close()
     assert.equal(calls.newContext, 1)
     assert.equal(calls.create[0].timeout, 300)
+  })
+})
+
+test('opt-in sportsbook release confirms remote completion and coalesces concurrent callers', async () => {
+  for (const options of [{}, { closeFails: true }, { releaseFails: true }, { releaseStatus: 'RUNNING', retrieveStatus: 'COMPLETED' }]) await fixture(options, async (api, calls) => {
+    const browser = await api.openSession({ verifyRelease: true, timeoutSeconds: 300, solveCaptchas: false })
+    const first = browser.close(), second = browser.close()
+    assert.equal(first, second); await first
+    assert.equal(calls.release.length, 1); assert.equal(calls.disconnect, 1)
+    assert.equal(calls.create[0].browserSettings.context, undefined)
+    assert.equal(calls.create[0].browserSettings.solveCaptchas, false)
+    assert.equal(calls.create[0].timeout, 300)
+  })
+})
+
+test('opt-in sportsbook release rejects uncertain or abnormal closure without leaking SDK errors', async () => {
+  for (const options of [{ releaseFails: true, retrieveFails: true }, { releaseStatus: 'RUNNING', retrieveStatus: 'RUNNING' }, { releaseStatus: 'TIMED_OUT' }, { releaseStatus: 'ERROR' }]) await fixture(options, async (api, calls) => {
+    const browser = await api.openSession({ verifyRelease: true })
+    await assert.rejects(browser.close(), /^Error: Cloud browser release could not be verified$/)
+    await assert.rejects(browser.close(), /^Error: Cloud browser release could not be verified$/)
+    assert.equal(calls.release.length, 1); assert.ok(calls.retrieve.length <= 3)
+  })
+})
+
+test('failed opt-in sportsbook startup verifies cleanup and preserves the original failure after confirmation', async () => {
+  await fixture({ connectFails: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ verifyRelease: true }), /CDP failed/)
+    assert.equal(calls.release.length, 1)
+  })
+  await fixture({ connectFails: true, releaseFails: true, retrieveFails: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ verifyRelease: true }), /^Error: Cloud browser release could not be verified$/)
+    assert.equal(calls.release.length, 1)
   })
 })
 

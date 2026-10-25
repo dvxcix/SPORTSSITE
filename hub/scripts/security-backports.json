@@ -1,0 +1,37 @@
+{
+  "advisories": [
+    "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+    "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+  ],
+  "provenance": {
+    "rsa": "https://github.com/digitalbazaar/forge/pull/1152 (proposed upstream fix; no released version)",
+    "collections": "https://github.com/colinhacks/zod/commit/a0ebf97 (leading upper-size checks before walking elements; adapted to v3 and bundled v4-preview APIs)"
+  },
+  "packages": {
+    "node_modules/node-forge": {
+      "version": "1.4.0",
+      "files": {
+        "lib/rsa.js": "884de3a612b3fb1086c1b11de2f4d9e7236c2419de02202d38aaa03fb076412b"
+      }
+    },
+    "node_modules/zod": {
+      "version": "4.6.7",
+      "files": {
+        "v3/types.cjs": "1fea7372e34fb34f0e0c7c9c2196d0109be74f532e807576ab016104d9c7d2c5",
+        "v3/types.js": "de43f14f82c8e8501e2b176d2cea024e784cf8696ba4f2601044c02492a38f8a",
+        "src/v3/types.ts": "6951412f7d0ac358d141ab62ba9a02d771ca2afb9b8035e97f842670e40ad7e8"
+      }
+    },
+    "node_modules/expo/node_modules/zod": {
+      "version": "3.25.76",
+      "files": {
+        "v3/types.cjs": "674e29beb1bafb0ac61ad688431322e9397ab9b91272173f19dcf11e310f8e3a",
+        "v3/types.js": "7b994f7652ae24855e9fe3066de3463f9bfd1083ca7d56d22434942fcddfbffe",
+        "src/v3/types.ts": "43e7d808270d2521f9969d81fcddce1df165618483454b72d0c19df98f6e61f3",
+        "v4/core/schemas.cjs": "150a000c35025f3c58d5910460ed2494bd4ddc935a1323a9b426d57c4dd02ff2",
+        "v4/core/schemas.js": "d421e98b862506484dcf0ae2acfb285eb28614c1d78e1d89f14b32df2571c1fa",
+        "src/v4/core/schemas.ts": "23fad7874bead34a8b2880017a55557474054df734d90f0e38c6ca2fd32edfef"
+      }
+    }
+  }
+}

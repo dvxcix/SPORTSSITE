@@ -7,11 +7,12 @@ import { getPaintSchedule, getPaintPropSnapshot, getPaintGameOdds, getPaintGame 
 import { nbaEconomicSnapshot } from '@/lib/nbaMovement'
 import { nbaGameEconomicSnapshot } from '@/lib/nbaOddsHistory'
 import { nbaToday } from '@/lib/nbaPaint'
-import { nbaGameStart, nbaGameFinal, nbaPregameOpen, nbaLiveOpen, nbaQuoteInMode } from '@/lib/nbaOddsMode'
+import { nbaGameStart, nbaGameFinal, nbaPregameOpen, nbaLiveOpen, nbaQuoteInMode, nbaQuoteTimeEvidence } from '@/lib/nbaOddsMode'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import type { NbaMarketReceipt } from '@/lib/nbaMarketReceipts'
 import { getNbaFirstEvents, getNbaFirstOdds } from '@/lib/nbaFirstBasketOddsData'
 import type { NbaFirstDiagnostics } from '@/lib/nbaFirstBasketOdds'
+import type { NbaSupplementalDiagnostics } from '@/lib/nbaSupplementalProps'
 export const maxDuration = 120
 type FirstBasketReceipt = NbaMarketReceipt & {
   accepted: number
@@ -33,7 +34,7 @@ async function run(request: Request) {
   const last=(id:number)=>Math.max(0,...(attempts??[]).filter(row=>row.key.endsWith(':'+id)).map(row=>Date.parse(row.fetched_at??'1970-01-01')))
   games.sort((a,b)=>last(a.id)-last(b.id)||Date.parse(a.datetime??a.status)-Date.parse(b.datetime??b.status))
   const firstEvents = await getNbaFirstEvents(true).catch(() => null)
-  const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
+  const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number; diagnostics?: NbaSupplementalDiagnostics }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
   for (let offset = 0; offset < games.length; offset += 4) {
     if (Date.now() - started > 82_000) { report.deferred += games.length-offset; report.firstBasket.deferred += games.length-offset; break }
     await Promise.all(games.slice(offset,offset+4).map(async scheduled => {
@@ -60,7 +61,17 @@ async function run(request: Request) {
               if (!result.eventMatched) return { status: 'deferred', ...counts }
               if (!phaseOpen()) return { status: 'deferred', ...counts }
               const raw = result.rows.map(row => row.offer)
-              const props = raw.filter(prop=>nbaQuoteInMode(prop,game,mode))
+              const checkedAt=Date.now(),props = raw.filter(prop=>nbaQuoteInMode(prop,game,mode,checkedAt))
+              if(props.length!==raw.length){
+                const prior=counts.diagnostics
+                counts.diagnostics={reasons:{...prior?.reasons},players:[...(prior?.players??[])],timestamps:(prior?.timestamps??[]).map(sample=>({...sample}))}
+                for(const prop of raw.filter(prop=>!nbaQuoteInMode(prop,game,mode,checkedAt))){
+                  const time=Date.parse(prop.updated_at),sample={book:prop.vendor,market:prop.prop_type,outcomes:1,...nbaQuoteTimeEvidence(prop.updated_at,game,!Number.isFinite(time)?'invalid-clock':time>checkedAt?'future':'wrong-phase',checkedAt)}
+                  const priorSample=counts.diagnostics.timestamps!.find(value=>value.book===sample.book&&value.market===sample.market&&value.quoteAt===sample.quoteAt&&value.reason===sample.reason)
+                  if(priorSample)priorSample.outcomes++
+                  else if(counts.diagnostics.timestamps!.length<12)counts.diagnostics.timestamps!.push(sample)
+                }
+              }
               if(raw.length&&!props.length)return {status:'deferred', ...counts}
               if (props.some(prop => prop.game_id !== game.id)) return { status: 'failed', ...counts }
               counts.accepted = props.length
@@ -119,7 +130,7 @@ async function run(request: Request) {
           }catch{return {status:'failed'}}
         },70)
         report[attempt.value.status==='failed'?'failed':performed?attempt.value.status:'deferred']++
-        if(attempt.value.coverage&&report.coverage.length<64){const {complete,accepted,unmatched,stale}=attempt.value.coverage;report.coverage.push({gameId:game.id,mode,complete,accepted,unmatched,stale})}
+        if(attempt.value.coverage&&report.coverage.length<64){const {complete,accepted,unmatched,stale,diagnostics}=attempt.value.coverage;report.coverage.push({gameId:game.id,mode,complete,accepted,unmatched,stale,...(diagnostics?{diagnostics}:{})})}
       } catch { report.failed++ }
       await firstTask
     }))

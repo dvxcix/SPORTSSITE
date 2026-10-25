@@ -521,6 +521,7 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
     return { data: { id: 'post-1', pickIds: ['pick-0'], picksTracked: true }, error: null }
   } }
   const route = await compiled('../src/app/api/posts/pick/route.ts', {
+    '@/lib/pickGrading': {}, '@/lib/nflPickGrading': {}, '@/lib/mlbCaptureWindow': {},
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) } }) }, '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@slipsurge/core/mlbSchedule': {}, '@slipsurge/core/parlayCalc': { combineOdds: () => -110 }, '@/lib/watchlist': {}, '@/lib/mentions': { notifyMentions: async () => {} }, '@/lib/notify': { notifyFollowers: async () => {} }, '@/app/the-sideline/data': {}, '@/app/the-sideline/kickoff': {}, '@/lib/nflPickOffer': {}, '@/lib/nbaPickValidation': validation, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'owner' }) },
   })

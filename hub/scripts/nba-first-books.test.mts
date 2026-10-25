@@ -139,13 +139,13 @@ test('MGM identity is scoped to its NBA scoreboard and visible date, not odds ro
 })
 
 test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds and released on navigation failure', async () => {
-  let opened = 0, closed = 0
+  let opened = 0, closed = 0, releaseFails = false
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
     '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture-mgm', openSession: async (options: Record<string, unknown>) => {
       opened++; assert.equal(options.timeoutSeconds, 300); assert.equal(options.solveCaptchas, false); assert.equal(options.contextId, undefined)
-      assert.equal(options.requestTimeoutMs, 20_000)
-      return { page: { setDefaultTimeout: () => {}, route: async () => {}, goto: async () => { throw new Error('fixture network failure') } }, close: async () => { closed++ } }
+      assert.equal(options.requestTimeoutMs, 20_000); assert.equal(options.verifyRelease, true)
+      return { page: { setDefaultTimeout: () => {}, route: async () => {}, goto: async () => { throw new Error('fixture network failure') } }, close: async () => { closed++; if (releaseFails) throw new Error('private cleanup credential') } }
     } },
   }
   const target = { exports: {} }, code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -155,13 +155,18 @@ test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds an
   const result = await collector.collectNbaFirstBooks('draftkings', [input])
   assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(result.complete, false)
   assert.deepEqual(result.games[0].props, []); assert.equal(result.games[0].status, 'error')
-  assert.deepEqual(result.errors, [{ code: 'navigation-failed' }]); assert.equal(JSON.stringify(result).includes('fixture network failure'), false)
+  assert.deepEqual(result.errors, [{ code: 'navigation-failed', stage: 'league-navigation', reason: 'network' }]); assert.equal(JSON.stringify(result).includes('fixture network failure'), false)
   await collector.collectNbaFirstBooks('draftkings', [{ ...input, game: { ...game, status_state: 'final' } }])
   assert.equal(opened, 1)
+  releaseFails = true
+  const failure = await collector.collectNbaFirstBooks('draftkings', [input])
+  assert.equal(opened, 2); assert.equal(closed, 2); assert.equal(failure.complete, false)
+  assert.deepEqual(failure.errors, [{ code: 'navigation-failed', stage: 'league-navigation', reason: 'network' }, { code: 'session-unavailable', stage: 'session-release', reason: 'unknown' }])
+  assert.equal(JSON.stringify(failure).includes('private cleanup'), false)
   const expired = await collector.collectNbaFirstBooks('draftkings', [input], now + 19_999)
-  assert.equal(opened, 1); assert.equal(expired.games[0].status, 'deadline')
+  assert.equal(opened, 2); assert.equal(expired.games[0].status, 'deadline')
   await assert.rejects(collector.collectNbaFirstBooks('draftkings', [input, { ...input, game: { ...game, id: 999 } }]), /Invalid NBA capture slate/)
-  assert.equal(opened, 1)
+  assert.equal(opened, 2)
 })
 
 test('MGM navigation selects All before locating First FG, expands its scoped Show More and fails on absent market layout', async () => {
@@ -172,7 +177,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
     let all = false, expanded = false, more = false
     const metadata = { away: 'Pelicans', home: 'Nuggets', dateLabel: 'Today', timeLabel: '4:59 PM', timeZone: 'America/Los_Angeles' }
     const readers = { readMgmFirstIdentity: function identity() {}, readMgmFirstRows: function rows() {} }
-    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
     const target = { exports: {} }
     const run = new Function('require', 'module', 'exports', `${code}\nreturn mgmBoard`)((name: string) => imports[name], target, target.exports) as (page: unknown, url: string, deadline: number) => Promise<NbaFirstBookBoard>
     const locator = (kind: string) => ({
@@ -212,7 +217,7 @@ test('one MGM session finishes every First Basket board before bounded regular l
     return { setDefaultTimeout: () => {}, route: async () => {}, getByRole: locator, locator, close: async () => {}, context: () => ({ newPage: async () => makePage() }) }
   }
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input, deadline: number | (() => number)) => {
       assert.equal(first.length, slate.length, 'a deep ladder must never run ahead of an unvisited First Basket game')
       assert.equal(savedFirst.length, slate.length, 'verified First observations must reach persistence before deep ladders begin')
@@ -241,7 +246,7 @@ test('one MGM session finishes every First Basket board before bounded regular l
     onRegular: async (gameId, frames, coverage, observedAt) => { assert.equal(closed, 0); assert.deepEqual(frames, []); assert.deepEqual(coverage, []); assert.equal(observedAt, board().observedAt); savedRegular.push(gameId) },
   })
   assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(pages, 2)
-  assert.equal(result.games.length, 8); assert.ok(result.games.every(value => value.complete)); assert.equal(result.complete, true)
+  assert.equal(result.games.length, 8); assert.ok(result.games.every(value => value.complete)); assert.equal(result.complete, false, 'a failed regular ladder must not certify the whole collection')
   assert.equal(regular.length, 8); assert.ok(budgets.every(value => value > 0 && value <= 220_000)); assert.ok(budgets[0] <= 54_000)
   assert.equal(reclaimedDeadline, 220_000, 'an active scan must inherit unused global time once no game is waiting for a worker')
   assert.deepEqual(new Set(regular.slice(0, 2)), new Set(first.slice(-2)), 'regular inspection must reuse both already-loaded final event pages first')
@@ -280,7 +285,7 @@ async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'nav
     return value
   }
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': modes,
+    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) },
     './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) },
     './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (page: FixturePage, value: typeof input) => work(page, () => {
@@ -340,7 +345,7 @@ test('failed First event navigation is excluded from retained inspection while h
 
 test('observation callbacks cannot extend the collector deadline or expose persistence error details', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
   const target = { exports: {} }
   const functions = new Function('require', 'module', 'exports', `${code}\nreturn {deliverObservation, captureFailure}`)((name: string) => imports[name], target, target.exports) as { deliverObservation: (callback: () => Promise<void>, deadline: number) => Promise<void>; captureFailure: (error: unknown, gameId: number) => {code:string;stage?:string;reason?:string} }
   let called = false
@@ -357,7 +362,7 @@ test('observation callbacks cannot extend the collector deadline or expose persi
 test('MGM failures identify the bounded navigation stage without exposing raw errors or URLs', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const identity = { ...board(), market: undefined, rows: undefined }, readers = { readMgmFirstIdentity: function identity() {} }
-  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': modes, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
   const target = { exports: {} }
   const functions = new Function('require', 'module', 'exports', `${code}\nreturn {mgmEvent, captureFailure}`)((name: string) => imports[name], target, target.exports) as { mgmEvent: (page: unknown, url: string, deadline: number) => Promise<unknown>; captureFailure: (error: unknown, gameId: number) => unknown }
   const secret = 'https://private.example/?token=do-not-expose'

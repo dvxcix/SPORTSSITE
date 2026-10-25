@@ -1,0 +1,96 @@
+SlipSurge four-repair release — 2026-10-25
+
+Owner authorization: fix security updates, pick grading, captures and archive
+progress; publish reviewed fixes to main and production. No collector was run
+locally, no job replayed, no new CAPTCHA solved, and no legacy MLB DB queried.
+
+Release base: main 3ec548d1f04f7dace0126e06a1d3bc1a6bc57c8a, production
+dpl_7QAez1isUt22LDFvwV3X2jy4Lqgh. Required recovered NFL ancestry retained.
+Unrelated local work is preserved. Git production verification follows release.
+
+Security
+- Next 16.4.3 / eslint-config-next 16.4.3, sharp 0.35.5 and compatible transitive
+  updates cover available upstream fixes. Narrow node-forge and Zod backports
+  cover advisories without compatible published fixes; existing patches remain.
+- The production audit checks exact installed file hashes, all locked copies and
+  behavior before accepting five explicitly disclosed mitigated advisories.
+  Unknown advisories, missing/modified copies and malformed audit responses fail.
+  Raw npm audit still lists patched upstream advisories; it is not claimed clean.
+- Security 15/15 and auth/access/pricing 39/39 pass. Real sharp image conversion,
+  Next ImageResponse rendering and patched source checks pass. Production Git
+  install must independently prove all six postinstall patches apply.
+- Private product-audit queries now wait for a real request using the installed
+  framework's connection API, keeping operational data out of prerendering.
+  Existing admin-role/MFA gates remain intact; independent review/lint pass.
+
+Pick grading
+- Supports missing MLB fixed milestones and exact First PA/First HR/Statcast
+  contracts. Missing facts stay pending; contradictory new contracts are rejected.
+- NFL period yardage reconciles official full-game stats. Scorer markets reconcile
+  each player's actual TDs; deleted/no-play/two-point events are excluded. Null
+  sides consistently mean inclusive milestones. Incomplete facts are not zeros.
+- Existing jobs use bounded 200-pick/sport fair rotation, four game workers/sport
+  and a shared 55-second deadline. Exact expected contracts are rechecked under
+  DB locks; pick, one exact post leg and rollup update atomically. Duplicate and
+  uncertain writes are not replayed.
+- Read-only proof: all 21 stuck picks (20 MLB, one NFL) have determinate losses.
+  Nineteen post contracts match directly; two legacy singles have their exact
+  game ID on the parent post. No real results were manually changed. Natural
+  post-release settlement still needs verification.
+- Focused grading/operations/privacy checks 54/54; independent counterexamples
+  pass. Root registered settlement suite 35/35, TypeScript and scoped lint pass.
+
+Capture reliability
+- NBA direct-book browser shutdown now verifies remote release. Cleanup failure
+  is reported without losing already saved observations or original errors.
+- Fixed private DK failure stages and bounded quote-rejection diagnostics record
+  real quote/check/tip timestamps and eligibility reasons. No relaxed time/phase
+  guards, synthetic prices or public provider labels. Openings remain immutable.
+- Focused capture checks 113/113 pass. Earlier source can still encounter external
+  challenges/timeouts; this release does not claim external boards never block.
+- MLB's observed selected DIV tab inside anchor plus sole MAIN accepts real odds
+  in an offline replay. A promotional progress indicator could block readiness,
+  but retained screenshots do not prove marker attributes. No speculative guard
+  removal was shipped. Existing private readiness diagnostics require a natural
+  eligible receipt. Historical recording API lookup was denied by the existing
+  CLI credential; no access was expanded.
+- Authenticated live schedule: October25 has zero MLB games. October26 has
+  MIL@TB849804, first pitch October27 00:00UTC. The first eligible fixed sweep is
+  October26 03:00UTC (04:00CET), inside the existing bounded monitoring window.
+  Today's post-tip/idle sweeps cannot certify MLB recovery.
+
+Archive progress
+- Verified empty MLB dates now get private progress checkpoints, preventing the
+  two-workday limit from repeatedly selecting empty dates. Forward schedule scans
+  are bounded to31 dates plus two older retries; real reconstruction stays at two
+  dates per run. Invalid/incomplete schedule responses cannot advance progress.
+- Exact scheduled game IDs, minimum player coverage and zero skipped games are
+  required for completion. Partial/failed dates remain retryable even if later
+  archive rows exist. No stored archive history was rewritten.
+- Archive regressions12/12; combined archive/operations25/25. Independent review
+  passes. Natural archive job is03:40UTC (04:40CET), separate model fit04:20UTC.
+
+Applied individually reviewed migrations — DO NOT REPLAY
+- Live20261025011530_market_dna_archive_progress, CLI source
+  20261025011143_market_dna_archive_progress.sql.
+- Live20261025012153_exact_member_pick_settlement, CLI source
+  20261025011155_exact_member_pick_settlement.sql. Initial syntax failure rolled
+  back fully; corrected CASE applied successfully.
+- Both tables have RLS and no anonymous/member grants. Service role has only
+  SELECT/INSERT/UPDATE, no DELETE/TRUNCATE. Settlement RPCs are invoker and service
+  only. Temporary-table functional tests and archive fixtures rolled back; no
+  fixture rows or real member changes remained.
+
+Broader validation
+- Production contracts134/134, NBA503/503, persistence113/113, cross-sport26/26.
+- Full TypeScript and scoped lint pass; git diff whitespace check passes.
+- Full Next16.4.3 production build passes with existing public Supabase settings
+  and network access for fonts, without any server credential. Initial local
+  attempts exposed the sandbox font restriction, missing public configuration,
+  then the private product-audit prerender; each was resolved and build rerun.
+  Git production install/build and live behavior still require verification.
+
+Evidence is private under work/four-repairs-*. Continue the existing follow-up
+through October26 06:00UTC (07:00CET); no duplicate automation. Verify natural
+grading writes, archive checkpoints, NBA saved exact movements and the next
+eligible MLB capture before claiming complete recovery.

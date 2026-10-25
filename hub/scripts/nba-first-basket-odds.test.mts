@@ -55,6 +55,25 @@ test('private First Basket rejection counts distinguish expired prices from miss
   assert.equal(bounded.unmatched,30)
 })
 
+test('private First Basket clock evidence preserves original times and existing acceptance boundaries',()=>{
+  const quote=(last_update:string)=>({...event,bookmakers:[{key:'draftkings',last_update,markets:[{key:'player_first_basket',outcomes:[{name:'Test Player',price:550},{name:'Other private name',price:650}]}]}]})
+  for(const [clock,reason,ageMs] of [
+    [new Date(now-300001).toISOString(),'expired',300001],
+    [new Date(now+30001).toISOString(),'future',-30001],
+    ['https://private.invalid/?token=never-log','invalid-clock',null],
+  ] as const){
+    const result=nbaNormalizeFirstOdds(quote(clock),game,[player],now)
+    assert.equal(result.rows.length,0);assert.equal(result.unmatched,2)
+    assert.deepEqual(result.diagnostics.timestamps,[{book:'draftkings',market:'player_first_basket',outcomes:2,reason,quoteAt:reason==='invalid-clock'?null:clock,checkedAt:new Date(now).toISOString(),tipoff:new Date(game.datetime!).toISOString(),ageMs}])
+    assert.equal(JSON.stringify(result.diagnostics.timestamps).includes('private'),false)
+  }
+  for(const clock of [new Date(now-300000).toISOString(),new Date(now+30000).toISOString()])assert.equal(nbaNormalizeFirstOdds(quote(clock),game,[player],now).rows.length,1,'diagnostics do not tighten the normalizer clock policy')
+  const expired=quote(new Date(now-300001).toISOString())
+  expired.bookmakers=Array.from({length:30},()=>expired.bookmakers![0])
+  const bounded=nbaNormalizeFirstOdds(expired,game,[player],now)
+  assert.equal(bounded.unmatched,60);assert.equal(bounded.diagnostics.timestamps?.length,12)
+})
+
 test('verified roster aliases retain exact first-basket prices and market identities',()=>{
   const identities=[
     {id:38017716,first_name:'Ousmane',last_name:'Dieng',alias:'Ousmane'},

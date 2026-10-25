@@ -1387,7 +1387,7 @@ export async function archiveMarketDnaDate(date: string) {
     throw new Error(`Market DNA archive refused incomplete source data: ${sourceWarnings.join(' ')}`)
   }
   const games = slate.games.filter(game => game.players.length >= 18 && /final/i.test(game.status))
-  if (!games.length) return { date, games: 0, players: 0, skipped: slate.games.length }
+  if (!games.length) return { date, games: 0, players: 0, skipped: slate.games.length, gameIds: [] as number[] }
   const refs = games.map(game => ({ gamePk: game.gamePk, status: { abstractGameState: 'Final' } }))
   const [outcomesByGame, hrResult, scores] = await Promise.all([
     fetchBoxscoreOutcomes(refs),
@@ -1436,7 +1436,7 @@ export async function archiveMarketDnaDate(date: string) {
       .upsert(archiveRows.slice(index, index + 250), { onConflict: 'game_pk,mlb_id' })
     if (error) throw new Error(`Canonical Market DNA archive write failed: ${error.message}`)
   }
-  return { date, games: games.length, players: archiveRows.length, skipped: slate.games.length - games.length }
+  return { date, games: games.length, players: archiveRows.length, skipped: slate.games.length - games.length, gameIds: games.map(game => game.gamePk) }
 }
 
 export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketDnaGameAnalysis> {

@@ -1,3 +1,10 @@
+import type { createAdminClient } from './supabase/admin'
+import { memberPickContract } from './memberPickContract'
+type Admin = ReturnType<typeof createAdminClient>
+type BattingLine = Record<string, unknown>
+export type MlbPlay = { atBatIndex?: number; matchup?: { batter?: { id?: number } }; about?: { isComplete?: boolean }; pitchIndex?: number[]; result?: { eventType?: string; description?: string }; playEvents?: { hitData?: { launchSpeed?: number; totalDistance?: number } }[] }
+export type MlbLiveFeed = { gamePk?: number; gameData?: { status?: { abstractGameState?: string } }; liveData?: { boxscore?: { teams?: Record<string, { teamStats?: { batting?: BattingLine }; players?: Record<string, { stats?: { batting?: BattingLine; pitching?: { gamesStarted?: number; strikeOuts?: number } } }> }> }; plays?: { allPlays?: MlbPlay[] }; linescore?: { teams?: Record<string, { runs?: number }> } } }
+
 // Shared between the daily final-settlement cron (settle-picks) and the
 // live in-progress-game cron (grade-live-picks) — both need the exact same
 // stat-threshold logic so a leg can never grade differently depending on
@@ -6,44 +13,50 @@
 // Batting-stat threshold per pick_type (matches PROP_META's pickType values
 // in hub/src/lib/watchlist.ts). "first_hr" is handled separately since it
 // needs play-by-play order, not just the box score line.
-export const THRESHOLDS: Record<string, (b: any) => boolean> = {
-  anytime_hr:    (b) => (b.homeRuns ?? 0) >= 1,
-  hr_2plus:      (b) => (b.homeRuns ?? 0) >= 2,
-  hits:          (b) => (b.hits ?? 0) >= 1,
-  single:        (b) => ((b.hits ?? 0) - (b.doubles ?? 0) - (b.triples ?? 0) - (b.homeRuns ?? 0)) >= 1,
-  double:        (b) => (b.doubles ?? 0) >= 1,
-  triple:        (b) => (b.triples ?? 0) >= 1,
-  rbi:           (b) => (b.rbi ?? 0) >= 1,
-  rbi_2plus:     (b) => (b.rbi ?? 0) >= 2,
-  rbi_3plus:     (b) => (b.rbi ?? 0) >= 3,
-  total_bases:   (b) => (b.totalBases ?? 0) >= 2,
-  total_bases_4plus: (b) => (b.totalBases ?? 0) >= 4,
-  total_bases_5plus: (b) => (b.totalBases ?? 0) >= 5,
-  run_scored:    (b) => (b.runs ?? 0) >= 1,
-  stolen_base:   (b) => (b.stolenBases ?? 0) >= 1,
-  batter_strikeout: (b) => (b.strikeOuts ?? 0) >= 1,
-  hits_runs_rbis: (b) => ((b.hits ?? 0) + (b.runs ?? 0) + (b.rbi ?? 0)) >= 1,
-  hits_runs_rbis_3plus: (b) => ((b.hits ?? 0) + (b.runs ?? 0) + (b.rbi ?? 0)) >= 3,
+export const THRESHOLDS: Record<string, (b: BattingLine) => boolean> = {
+  anytime_hr:    (b) => Number(b.homeRuns ?? 0) >= 1,
+  hr_2plus:      (b) => Number(b.homeRuns ?? 0) >= 2,
+  hits:          (b) => Number(b.hits ?? 0) >= 1,
+  hits_2plus:    (b) => Number(b.hits ?? 0) >= 2,
+  single:        (b) => (Number(b.hits ?? 0) - Number(b.doubles ?? 0) - Number(b.triples ?? 0) - Number(b.homeRuns ?? 0)) >= 1,
+  double:        (b) => Number(b.doubles ?? 0) >= 1,
+  triple:        (b) => Number(b.triples ?? 0) >= 1,
+  rbi:           (b) => Number(b.rbi ?? 0) >= 1,
+  rbi_2plus:     (b) => Number(b.rbi ?? 0) >= 2,
+  rbi_3plus:     (b) => Number(b.rbi ?? 0) >= 3,
+  total_bases:   (b) => Number(b.totalBases ?? 0) >= 2,
+  total_bases_3plus: (b) => Number(b.totalBases ?? 0) >= 3,
+  total_bases_4plus: (b) => Number(b.totalBases ?? 0) >= 4,
+  total_bases_5plus: (b) => Number(b.totalBases ?? 0) >= 5,
+  run_scored:    (b) => Number(b.runs ?? 0) >= 1,
+  run_scored_2plus: (b) => Number(b.runs ?? 0) >= 2,
+  stolen_base:   (b) => Number(b.stolenBases ?? 0) >= 1,
+  stolen_base_2plus: (b) => Number(b.stolenBases ?? 0) >= 2,
+  batter_strikeout: (b) => Number(b.strikeOuts ?? 0) >= 1,
+  hits_runs_rbis: (b) => (Number(b.hits ?? 0) + Number(b.runs ?? 0) + Number(b.rbi ?? 0)) >= 1,
+  hits_runs_rbis_3plus: (b) => (Number(b.hits ?? 0) + Number(b.runs ?? 0) + Number(b.rbi ?? 0)) >= 3,
 }
 
-export async function fetchLiveFeed(gamePk: string) {
-  const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
+export async function fetchLiveFeed(gamePk: string, timeoutMs = 15_000) {
+  if (!/^\d+$/.test(gamePk) || timeoutMs <= 0) return null
+  const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(Math.min(15_000, timeoutMs)) })
   if (!res.ok) return null
-  return res.json()
+  const feed = await res.json()
+  return String(feed?.gamePk) === gamePk ? feed : null
 }
 
 // The first HR of the game, by earliest at-bat index across both teams.
 // Works fine against an in-progress feed too — it just reflects however
 // many home runs have happened so far.
-export function findFirstHrBatterId(liveFeed: any): number | null {
-  const plays: any[] = liveFeed?.liveData?.plays?.allPlays ?? []
+export function findFirstHrBatterId(liveFeed: MlbLiveFeed): number | null {
+  const plays: MlbPlay[] = liveFeed?.liveData?.plays?.allPlays ?? []
   const hrPlays = plays
-    .filter(p => p.result?.eventType === 'home_run')
-    .sort((a, b) => (a.atBatIndex ?? 0) - (b.atBatIndex ?? 0))
+    .filter(p => p.result?.eventType === 'home_run' && p.about?.isComplete === true)
+    .sort((a, b) => (a.atBatIndex ?? 0) - Number(b.atBatIndex ?? 0))
   return hrPlays[0]?.matchup?.batter?.id ?? null
 }
 
-export function findBattingLine(liveFeed: any, mlbId: number): any | null {
+export function findBattingLine(liveFeed: MlbLiveFeed, mlbId: number): BattingLine | null {
   const teams = liveFeed?.liveData?.boxscore?.teams
   if (!teams) return null
   for (const side of ['home', 'away']) {
@@ -53,7 +66,118 @@ export function findBattingLine(liveFeed: any, mlbId: number): any | null {
   return null // player not in either team's box score = did not play
 }
 
-export type PendingPick = { id: string; post_id: string | null; mlb_id: number; pick_type: string }
+export type MlbContract = { pick_type: string; numeric_line?: number | string | null; market_side?: string | null; line?: string | null }
+export type PendingPick = MlbContract & { id: string; post_id: string | null; mlb_id: number; game_pk?: string }
+
+export function canonicalMlbPickType(type: string) { return type === 'pa1' ? 'first_pa_hr' : type }
+
+const REQUIRED_STATS: Record<string, string[]> = {
+  anytime_hr: ['homeRuns'], hr_2plus: ['homeRuns'], hits: ['hits'], hits_2plus: ['hits'],
+  single: ['hits', 'doubles', 'triples', 'homeRuns'], double: ['doubles'], triple: ['triples'],
+  rbi: ['rbi'], rbi_2plus: ['rbi'], rbi_3plus: ['rbi'], total_bases: ['totalBases'],
+  total_bases_3plus: ['totalBases'], total_bases_4plus: ['totalBases'], total_bases_5plus: ['totalBases'],
+  run_scored: ['runs'], run_scored_2plus: ['runs'], stolen_base: ['stolenBases'], stolen_base_2plus: ['stolenBases'],
+  batter_strikeout: ['strikeOuts'], hits_runs_rbis: ['hits', 'runs', 'rbi'], hits_runs_rbis_3plus: ['hits', 'runs', 'rbi'],
+}
+const FIXED_LINES: Record<string, number> = {
+  anytime_hr: 1, hr_2plus: 2, hits: 1, hits_2plus: 2, single: 1, double: 1, triple: 1,
+  rbi: 1, rbi_2plus: 2, rbi_3plus: 3, total_bases: 2, total_bases_3plus: 3, total_bases_4plus: 4, total_bases_5plus: 5,
+  run_scored: 1, run_scored_2plus: 2, stolen_base: 1, stolen_base_2plus: 2, batter_strikeout: 1,
+  hits_runs_rbis: 1, hits_runs_rbis_3plus: 3, laser_105: 105, laser_110: 110,
+  first_hr: 1, first_pa_hr: 1, hr_moneyline_parlay: 1,
+}
+function count(value: unknown): value is number { return typeof value === 'number' && Number.isInteger(value) && value >= 0 }
+function exactLine(pick: MlbContract) {
+  if (pick.numeric_line == null || pick.numeric_line === '') return null
+  const value = Number(pick.numeric_line)
+  return Number.isFinite(value) && value >= 0 ? value : null
+}
+export function supportsMlbPick(pick: MlbContract): boolean {
+  const type = canonicalMlbPickType(pick.pick_type)
+  if (type === 'pitcher_strikeouts') return exactLine(pick) != null && ['over', 'under', 'milestone'].includes(pick.market_side ?? '')
+  if (pick.market_side && pick.market_side !== 'milestone') return false
+  if (type === 'moonshot') return exactLine(pick) != null && exactLine(pick)! > 0
+  if (pick.numeric_line != null && (!Object.hasOwn(FIXED_LINES, type) || exactLine(pick) !== FIXED_LINES[type])) return false
+  return Object.hasOwn(THRESHOLDS, type) || ['first_hr', 'first_pa_hr', 'laser_105', 'laser_110', 'hr_moneyline_parlay'].includes(type)
+}
+
+export type MlbGrade = { result: 'win' | 'loss' | 'push' | null; reason: 'graded' | 'not-final' | 'unsupported-contract' | 'missing-contract' | 'missing-player' | 'missing-stats' | 'missing-plays' | 'missing-statcast' }
+const decision = (result: MlbGrade['result'], reason: MlbGrade['reason'] = 'graded'): MlbGrade => ({ result, reason })
+
+/** Pure, read-only decision. Missing facts never become zero or a DNP. */
+export function gradeMlbPick(pick: MlbContract & { mlb_id: number; game_pk?: string }, feed: MlbLiveFeed, final = true): MlbGrade {
+  if (final && feed?.gameData?.status?.abstractGameState !== 'Final') return decision(null, 'not-final')
+  if (pick.game_pk && String(feed?.gamePk) !== String(pick.game_pk)) return decision(null, 'missing-stats')
+  const type = canonicalMlbPickType(pick.pick_type)
+  // Legacy Moonshot contracts with no distance can still have a mathematically
+  // certain loss when the official player line records no home runs.
+  const legacyMoonshot = type === 'moonshot' && !pick.market_side && exactLine(pick) == null
+  if (!supportsMlbPick(pick) && !legacyMoonshot) return decision(null, type === 'moonshot' ? 'missing-contract' : 'unsupported-contract')
+  const teams = feed?.liveData?.boxscore?.teams
+  const side = ['home', 'away'].find(key => teams?.[key]?.players?.[`ID${pick.mlb_id}`])
+  const player = side ? teams?.[side]?.players?.[`ID${pick.mlb_id}`] : null
+  if (!player) return decision(null, 'missing-player')
+  if (type === 'pitcher_strikeouts') {
+    const pitching = player.stats?.pitching
+    if (!pitching || !count(pitching.gamesStarted)) return decision(null, 'missing-stats')
+    if (pitching.gamesStarted === 0) return decision(final ? 'push' : null)
+    if (!count(pitching.strikeOuts)) return decision(null, 'missing-stats')
+    const line = exactLine(pick)!
+    if (!final && (pick.market_side === 'under' || pitching.strikeOuts <= line)) return decision(null)
+    if (pick.market_side === 'milestone') return decision(pitching.strikeOuts >= line ? 'win' : final ? 'loss' : null)
+    return decision(pitching.strikeOuts === line ? 'push' : (pick.market_side === 'under' ? pitching.strikeOuts < line : pitching.strikeOuts > line) ? 'win' : 'loss')
+  }
+  const batting = player.stats?.batting
+  if (!batting || !count(batting.plateAppearances)) return decision(null, 'missing-stats')
+  if (batting.plateAppearances === 0) return decision(final ? 'push' : null)
+  const required = REQUIRED_STATS[type]
+  if (required) {
+    if (!required.every(key => count(batting[key]))) return decision(null, 'missing-stats')
+    return decision(THRESHOLDS[type](batting) ? 'win' : final ? 'loss' : null)
+  }
+  const plays: MlbPlay[] | undefined = feed?.liveData?.plays?.allPlays
+  const own = Array.isArray(plays) ? plays.filter(p => p.matchup?.batter?.id === pick.mlb_id && p.about?.isComplete === true).sort((a, b) => (a.atBatIndex ?? Infinity) - (b.atBatIndex ?? Infinity)) : []
+  if (type === 'first_pa_hr') {
+    if (!own.length || own.some(p => !Number.isInteger(p.atBatIndex) || !p.result?.eventType) || new Set(own.map(p => p.atBatIndex)).size !== own.length || own.length !== batting.plateAppearances) return decision(null, 'missing-plays')
+    const first = own[0]
+    if (!Array.isArray(first.pitchIndex)) return decision(null, 'missing-plays')
+    if (!first.pitchIndex.length && first.result?.eventType === 'intent_walk') return decision(final ? 'push' : null)
+    if (!first.pitchIndex.length) return decision(null, 'missing-plays')
+    return decision(first.result?.eventType === 'home_run' ? 'win' : final ? 'loss' : null)
+  }
+  if (!count(batting.homeRuns)) return decision(null, 'missing-stats')
+  if (type === 'first_hr') {
+    if (batting.homeRuns === 0) return decision(final ? 'loss' : null)
+    if (!Array.isArray(plays) || !plays.length) return decision(null, 'missing-plays')
+    const hrs = plays.filter(p => p.result?.eventType === 'home_run' && p.about?.isComplete === true)
+    if (hrs.some(p => !Number.isInteger(p.atBatIndex) || !p.matchup?.batter?.id)) return decision(null, 'missing-plays')
+    const homeRuns = teams?.home?.teamStats?.batting?.homeRuns, awayRuns = teams?.away?.teamStats?.batting?.homeRuns
+    if (!count(homeRuns) || !count(awayRuns) || hrs.length !== homeRuns + awayRuns || new Set(hrs.map(p => p.atBatIndex)).size !== hrs.length) return decision(null, 'missing-plays')
+    return decision(findFirstHrBatterId(feed) === pick.mlb_id ? 'win' : final ? 'loss' : null)
+  }
+  if (type === 'hr_moneyline_parlay') {
+    if (!final) return decision(null)
+    const home = feed?.liveData?.linescore?.teams?.home?.runs, away = feed?.liveData?.linescore?.teams?.away?.runs
+    if (!count(home) || !count(away) || home === away) return decision(null, 'missing-stats')
+    return decision(batting.homeRuns > 0 && (side === 'home' ? home > away : away > home) ? 'win' : 'loss')
+  }
+  if (batting.homeRuns === 0) return decision(final ? 'loss' : null)
+  if (legacyMoonshot) return decision(null, 'missing-contract')
+  const hrs = own.filter(p => p.result?.eventType === 'home_run')
+  if (hrs.length !== batting.homeRuns) return decision(null, 'missing-plays')
+  const field = type === 'moonshot' ? 'totalDistance' : 'launchSpeed'
+  const threshold = type === 'moonshot' ? exactLine(pick)! : type === 'laser_105' ? 105 : 110
+  let unknown = false
+  for (const hr of hrs) {
+    if (/inside[ -]the[ -]park/i.test(hr.result?.description ?? '')) continue
+    if (!/homers|home run/i.test(hr.result?.description ?? '')) { unknown = true; continue }
+    const hits = (hr.playEvents ?? []).filter((event) => event.hitData)
+    const value = hits.at(-1)?.hitData?.[field]
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) { unknown = true; continue }
+    if (value >= threshold) return decision('win')
+  }
+  return unknown ? decision(null, 'missing-statcast') : decision(final ? 'loss' : null)
+}
 
 export type SettleOutcome = {
   result: 'win' | 'loss' | 'push'
@@ -75,40 +199,22 @@ export type SettleOutcome = {
 // a game can never grade differently depending on which cron reached it
 // first. Returns null when the pick_type isn't supported — left pending
 // rather than guessed, same as before.
-export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, propMeta: Record<string, { pickType: string }>): Promise<SettleOutcome | null> {
-  const battingLine = findBattingLine(feed, pick.mlb_id)
-  let result: 'win' | 'loss' | 'push'
+export async function settleFinalPick(admin: Admin, pick: PendingPick, feed: MlbLiveFeed, propMeta: Record<string, { pickType: string }>): Promise<SettleOutcome | null> {
+  const { result } = gradeMlbPick(pick, feed)
+  if (!result) return null
+  return applyMlbPickResult(admin, pick, result, propMeta)
+}
 
-  if (!battingLine) {
-    result = 'push' // scratched/DNP — standard sportsbook convention is void
-  } else if (pick.pick_type === 'first_hr') {
-    const firstHrBatterId = findFirstHrBatterId(feed)
-    result = firstHrBatterId === pick.mlb_id ? 'win' : 'loss'
-  } else {
-    const check = THRESHOLDS[pick.pick_type]
-    if (!check) return null
-    result = check(battingLine) ? 'win' : 'loss'
-  }
-
-  const nowIso = new Date().toISOString()
-  const { error: updateErr } = await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
-  // If the grade itself didn't persist, don't apply the leg result or let the
-  // caller treat this as settled/won — a cron retry on the next run will
-  // pick it back up since `result` is still 'pending'.
-  if (updateErr) return null
-
-  let legPlayerName: string | null = null
-  let legHeadshotUrl: string | null = null
-  let overallResult: 'win' | 'loss' | 'push' | null = null
-
-  if (pick.post_id) {
-    const applied = await applyLegResultToPost(admin, pick.post_id, pick.mlb_id, pick.pick_type, result, propMeta)
-    legPlayerName = applied.legPlayerName
-    legHeadshotUrl = applied.legHeadshotUrl
-    overallResult = applied.overallResult
-  }
-
-  return { result, postId: pick.post_id, legPlayerName, legHeadshotUrl, overallResult }
+export async function applyMlbPickResult(admin: Admin, pick: PendingPick, result: 'win' | 'loss' | 'push', propMeta: Record<string, { pickType: string }>, timeoutMs = 5_000): Promise<SettleOutcome | null> {
+  const { data, error } = await admin.rpc('settle_member_pick_exact', {
+    p_pick_id: pick.id, p_result: result,
+    p_expected: memberPickContract(pick, 'MLB'),
+    p_prop_type_map: Object.fromEntries(Object.entries(propMeta).map(([key, meta]) => [key, meta.pickType])),
+  }).abortSignal(AbortSignal.timeout(timeoutMs))
+  if (error) throw new Error('Atomic settlement failed')
+  const row = data?.[0]
+  if (!row?.applied) return null
+  return { result, postId: pick.post_id, legPlayerName: row.leg_player_name ?? null, legHeadshotUrl: row.leg_headshot_url ?? null, overallResult: row.overall_result ?? null }
 }
 
 // posts.pick_data is one JSON blob shared across every leg. This used to be
@@ -123,7 +229,7 @@ export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, 
 // have this class of bug — there's no external round-trip to compare
 // against, just a row lock. See migration apply_leg_result_to_post_atomic_rpc.
 export async function applyLegResultToPost(
-  admin: any, postId: string, mlbId: number, pickType: string, result: 'win' | 'loss' | 'push',
+  admin: Admin, postId: string, mlbId: number, pickType: string, result: 'win' | 'loss' | 'push',
   propMeta: Record<string, { pickType: string }>,
 ): Promise<{ legPlayerName: string | null; legHeadshotUrl: string | null; overallResult: 'win' | 'loss' | 'push' | null }> {
   const propTypeMap: Record<string, string> = {}
@@ -152,15 +258,6 @@ export async function applyLegResultToPost(
 // isn't supported — callers should leave the pick pending in that case,
 // NOT treat null as a loss (that determination requires the game to be
 // Final, which is what settle-picks alone still handles).
-export function checkEarlyWin(pickType: string, mlbId: number, liveFeed: any): boolean | null {
-  const battingLine = findBattingLine(liveFeed, mlbId)
-  if (!battingLine) return null // hasn't appeared in the box score yet
-
-  if (pickType === 'first_hr') {
-    const firstHrBatterId = findFirstHrBatterId(liveFeed)
-    return firstHrBatterId === mlbId ? true : null
-  }
-  const check = THRESHOLDS[pickType]
-  if (!check) return null
-  return check(battingLine) ? true : null
+export function checkEarlyWin(pickType: string, mlbId: number, liveFeed: MlbLiveFeed): boolean | null {
+  return gradeMlbPick({ pick_type: pickType, mlb_id: mlbId }, liveFeed, false).result === 'win' ? true : null
 }

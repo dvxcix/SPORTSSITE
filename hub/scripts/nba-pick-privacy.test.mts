@@ -25,6 +25,7 @@ async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:num
     getPaintProps:async()=>[options.offer??quote],getPaintIdentity:async()=>({id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}),
   }})
   const route=await compiled('../src/app/api/posts/pick/route.ts',{
+    '@/lib/pickGrading':{},'@/lib/nflPickGrading':{},'@/lib/mlbCaptureWindow':{},
     'next/server':{NextResponse:{json:Response.json}},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:options.user===false?null:{id:'owner'}}})}})},
     '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:CapturedPost)=>{assert.equal(name,'create_tracked_pick_post');writes.push(args);return options.failed?{data:null,error:{message:'transaction failed'}}:{data:{id:'post',picksTracked:true},error:null}}})},
     '@slipsurge/core/mlbSchedule':{},'@slipsurge/core/parlayCalc':{},'@/lib/watchlist':{},'@/lib/mentions':{notifyMentions:async()=>notices.push('mention')},'@/lib/notify':{notifyFollowers:async()=>notices.push('followers')},'@/app/the-sideline/data':{},'@/app/the-sideline/kickoff':{},'@/lib/nflPickOffer':{},'@/lib/nbaPickValidation':validator,'@/lib/paintAccess':{requirePaintAccess:async()=>options.gate?{error:Response.json({},{status:options.gate})}:{userId:'owner'}},

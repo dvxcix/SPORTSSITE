@@ -152,6 +152,7 @@ test('the tracked-pick API forwards a strict spoiler boolean into the atomic tra
     }})},
     '@slipsurge/core/mlbSchedule':{getTodaysMatchups:async()=>[{gamePk:1,status:'Preview'}],isPregame:()=>true},
     '@/lib/watchlist':{PROP_META:{}},
+    '@/lib/pickGrading':{supportsMlbPick:()=>true},'@/lib/nflPickGrading':{supportsNflPick:()=>true},'@/lib/mlbCaptureWindow':{mlbCaptureOpen:()=>true},
     '@/lib/mentions':{notifyMentions:async()=>{}},'@/lib/notify':{notifyFollowers:async()=>{}},
   })
   for(const isSpoiler of [true,undefined,'true']) {
@@ -228,7 +229,7 @@ test('admin retry restricts actions and dispatches model fit separately from arc
 
 test('NFL dispatcher excludes games lacking canonical players before assigning capture slots',async()=>{
   const originalFetch=globalThis.fetch,requested=[]
-  globalThis.fetch=async url=>{requested.push(String(url));return Response.json({tabs:17,markets:25,incomplete:false})}
+  globalThis.fetch=async url=>{requested.push(String(url));return Response.json({status:200,body:{tabs:17,markets:25,incomplete:false}})}
   try {
     const route=load('app/api/cron/poll-fanduel-nfl/route.ts',{
       'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
@@ -239,8 +240,8 @@ test('NFL dispatcher excludes games lacking canonical players before assigning c
       '@/lib/supabase/admin':{createAdminClient:()=>({from(table){return{select(){return this},in(){return this},not(field,operator,value){assert.equal(field,'board->players->0');assert.equal(operator,'is');assert.equal(value,null);return Promise.resolve({data:[{game_id:'sunday'}],error:null})},eq(){return this},gte(){return this},order(){return this},limit(){return table==='pipeline_runs'?Promise.resolve({data:[],error:null}):this},maybeSingle:async()=>({data:null,error:null})}}})},
     })
     const body=await(await route.GET(new Request('https://fixture.test/poll'))).json()
-    assert.equal(body.waitingForCanonical,1);assert.equal(body.games,1)
-    assert.deepEqual(requested,['https://fixture.test/api/cron/scrape-fanduel-nfl?gameId=sunday'])
+    assert.equal(body.waitingForCanonical,1);assert.equal(body.games,1);assert.equal(body.succeeded,1)
+    assert.deepEqual(requested,['https://fixture.test/api/cron/scrape-fanduel-nfl?stream=1&gameId=sunday'])
   }finally{globalThis.fetch=originalFetch}
 })
 
