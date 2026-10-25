@@ -1,4 +1,3 @@
-import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
@@ -85,18 +84,33 @@ function touchdownQuotes(boards: SidelineOddsBoard[], playerName: string, team: 
 
 export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent[]> {
   const admin = createAdminClient()
-  const [{ data: schedule, error: scheduleError }, { data: teams }] = await Promise.all([
-    admin.from('nfl_schedule').select('game_id,season,week,game_type,gameday,away_team,home_team').eq('gameday', date).limit(24).abortSignal(AbortSignal.timeout(10_000)),
-    admin.from('nfl_teams').select('team_abbr,team_logo_espn,team_color').abortSignal(AbortSignal.timeout(10_000)),
+  const deadline = Date.now() + 40_000
+  const signal = () => {
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) throw new Error('NFL touchdown feed read timed out')
+    return AbortSignal.timeout(Math.min(10_000, remaining))
+  }
+  const [{ data: schedule, error: scheduleError }, { data: teams, error: teamsError }] = await Promise.all([
+    admin.from('nfl_schedule').select('game_id,season,week,game_type,gameday,away_team,home_team').eq('gameday', date).limit(24).abortSignal(signal()),
+    admin.from('nfl_teams').select('team_abbr,team_logo_espn,team_color').abortSignal(signal()),
   ])
-  if (scheduleError) throw scheduleError
+  if (scheduleError || !Array.isArray(schedule)) throw new Error('NFL touchdown schedule unavailable')
+  if (teamsError || !Array.isArray(teams)) throw new Error('NFL touchdown teams unavailable')
+  if (Date.now() >= deadline) throw new Error('NFL touchdown feed read timed out')
   const rows = (schedule ?? []) as ScheduleRow[]
   if (!rows.length) return []
   const {data:savedFeeds,error:feedError}=await admin.from('nfl_game_feeds')
     .select('game_id,payload,fetched_at,reconciled').eq('source','bdl_plays')
-    .in('game_id',rows.map(r=>r.game_id)).abortSignal(AbortSignal.timeout(10000))
+    .in('game_id',rows.map(r=>r.game_id)).abortSignal(signal())
   // Throw on failed refresh so the shared cache retains its last good value.
-  if(feedError) throw new Error('NFL stored touchdown feed unavailable: '+feedError.message)
+  if(feedError || !Array.isArray(savedFeeds)) throw new Error('NFL stored touchdown feed unavailable')
+  if (savedFeeds.some(row => !row.payload || !Number.isSafeInteger(row.payload.game?.id)
+    || !['in_progress', 'final'].includes(row.payload.game.status_state)
+    || !Array.isArray(row.payload.plays) || !row.payload.plays.length
+    || row.payload.plays.some((play: BdlPlay) => !play || !play.id || (play.game && play.game.id !== row.payload.game.id))
+    || new Set(row.payload.plays.map((play: BdlPlay) => String(play.id))).size !== row.payload.plays.length
+    || (row.payload.stats != null && !Array.isArray(row.payload.stats)))) throw new Error('NFL stored touchdown feed malformed')
+  if (Date.now() >= deadline) throw new Error('NFL touchdown feed read timed out')
   const saved=new Map((savedFeeds ?? []).map(r=>[r.game_id,{
     ...r,payload:r.payload as {game:ApiGame;plays:BdlPlay[];stats?:Array<{player:{id:number;first_name:string;last_name:string}}>},
   }]))
@@ -119,14 +133,14 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
   }))
   const gameIds = Array.from(new Set(matched.map(({ row }) => row.game_id)))
   const [{ data: oddsRows, error: oddsError }, fanduelResults] = await Promise.all([
-    admin.from('nfl_odds_current').select('game_id,board,captured_at').in('game_id', gameIds).abortSignal(AbortSignal.timeout(10_000)),
+    admin.from('nfl_odds_current').select('game_id,board,captured_at').in('game_id', gameIds).abortSignal(signal()),
     // One indexed receipt per game, not 250 multi-megabyte boards.
-    Promise.all(gameIds.map(id => admin.from('nfl_fanduel_capture_history').select('game_id,board,captured_at').eq('game_id', id).order('captured_at', { ascending: false }).limit(1).abortSignal(AbortSignal.timeout(10_000)))),
+    Promise.all(gameIds.map(id => admin.from('nfl_fanduel_capture_history').select('game_id,board,captured_at').eq('game_id', id).order('captured_at', { ascending: false }).limit(1).abortSignal(signal()))),
   ])
   const fanduelRows = fanduelResults.flatMap(result => result.data ?? [])
   const fanduelError = fanduelResults.find(result => result.error)?.error
-  if (oddsError) console.error('[nfl-touchdowns] odds receipt lookup failed', { date, error: oddsError.message })
-  if (fanduelError) console.error('[nfl-touchdowns] FanDuel receipt lookup failed', { date, error: fanduelError.message })
+  if (oddsError || !Array.isArray(oddsRows)) throw new Error('NFL touchdown odds receipts unavailable')
+  if (fanduelError || fanduelResults.some(result => !Array.isArray(result.data))) throw new Error('NFL touchdown FanDuel receipts unavailable')
   const boardsByGame = new Map<string, SidelineOddsBoard[]>()
   for (const row of (oddsRows ?? []) as BoardRow[]) boardsByGame.set(row.game_id, [{ ...row.board, capturedAt: row.captured_at ?? row.board.capturedAt }])
   const seenFanduel = new Set<string>()
@@ -136,8 +150,9 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
     boardsByGame.set(row.game_id, [...(boardsByGame.get(row.game_id) ?? []), { ...row.board, capturedAt: row.captured_at ?? row.board.capturedAt }])
   }
   const scorerNames = Array.from(new Set([...identities.values()].map(identity => identity.name).filter(Boolean)))
-  const { data: playerRows, error: playerError } = await admin.from('nfl_players').select('gsis_id,display_name,position,headshot,latest_team').in('display_name', scorerNames).limit(250).abortSignal(AbortSignal.timeout(10_000))
-  if (playerError) console.error('[nfl-touchdowns] player identity lookup failed', { date, error: playerError.message })
+  const { data: playerRows, error: playerError } = await admin.from('nfl_players').select('gsis_id,display_name,position,headshot,latest_team').in('display_name', scorerNames).limit(250).abortSignal(signal())
+  if (playerError || !Array.isArray(playerRows)) throw new Error('NFL touchdown player identities unavailable')
+  if (Date.now() >= deadline) throw new Error('NFL touchdown feed read timed out')
   const playerByName = new Map<string, PlayerRow>()
   for (const player of (playerRows ?? []) as PlayerRow[]) {
     const name = normalizeNflPlayerName(player.display_name)
@@ -180,4 +195,10 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
   })
 }
 
-export const getNflTouchdownFeed = unstable_cache(loadNflTouchdowns, ['nfl-live-touchdown-feed-v4-stored'], { revalidate: 30, tags: ['sideline:nfl-live'] })
+export async function getNflTouchdownFeed(date: string): Promise<NflTouchdownEvent[]> {
+  // This loader is also called inside other Next caches, which bypass nested
+  // unstable_cache reads. Share one complete date observation across instances.
+  // Delay the server-only helper import so replay's pure parsers remain usable.
+  const { nbaSharedCache } = await import('./nbaSharedCache')
+  return (await nbaSharedCache(`nfl:touchdown-feed:v5:${date}`, 30, 30, () => loadNflTouchdowns(date))).value
+}

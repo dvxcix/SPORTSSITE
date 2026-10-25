@@ -1659,7 +1659,7 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[]; timeline: string[]; initialCapture?: string | null }) {
+export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]

@@ -1,0 +1,56 @@
+NFL live touchdown feed cache repair — October 25, 2026
+
+Owner-authorized scoped repair and release. Refreshed origin/main and live
+production both e0f5474d0db961855a350c67eea33a3c7fee9ec6; required recovered
+NFL ancestry and every pregame-freeze release preserved. No schema migration,
+collector, job replay, new cloud session, challenge solving or secret change.
+
+Proven issue
+Installed Next 16.4.3 bypasses nested unstable_cache reads. Public result caches
+call the date-level touchdown cache from inside another unstable_cache scope,
+so the intended 30-second shared feed can reread the same stored plays and
+receipts for different matchups. Receipt and player query failures previously
+logged and returned a nominally successful feed missing known comparisons or
+player enrichment. Current runtime logs show these independent receipt/identity
+timeouts; exact transport cause is not established by the duplicate-work defect.
+
+Repair
+Use the existing service-only shared cache and cross-instance lease under
+nfl:touchdown-feed:v5:<date>. TTL is 30 seconds; stale fallback is bounded to
+30 additional seconds and retains the original complete payload and fetched_at.
+The full source-read pipeline is bounded to 40 seconds. Query errors and known
+malformed stored feeds reject refresh instead of committing incomplete results.
+Successful empty source results remain distinguishable from failed reads.
+Actual scorer identity, event time, quote selection and openings are unchanged.
+No current input enters frozen pregame odds, research, MM or slate peer pools.
+
+Cold/expired failure remains an error for the polling and result APIs, preserving
+existing client observations. Initial page rendering catches only the optional
+touchdown-feed failure as null, keeps research usable and displays unavailable
+instead of a fabricated zero count. Successful polling replaces that unavailable
+state; failed polling retains previously displayed events and comparisons.
+
+Validation
+The dedicated regression suite exercises installed Next nesting, six independent
+instances with 36 callers, one complete refresh, query failures, cold failures,
+bounded stale expiry, recovery, legitimate empty results, malformed saved data,
+original event timestamps and total deadline. UI fixtures distinguish unavailable
+from zero and exercise polling recovery/retention. Replay, stored-result and
+cross-sport pregame-freeze tests verify unchanged data boundaries. Final counts,
+independent review and production verification are recorded in
+work/heartbeat-touchdown-release-2026-10-25.txt after release.
+
+Other natural verification
+The earlier NFL daily baseline cache refreshed naturally at 19:39:59.887275 UTC
+with all 4,044 rows / 408 players, matching source and releasing its lease.
+Five further complete NFL sportsbook frames saved 2,471 valid offers; the
+DEN–ARI failure recovered naturally at 19:26. Seven started-game frozen odds
+hashes and original timestamps remain unchanged. NBA had a complete seven-game
+regular run at 19:22 (432 panels / 2,553 quotes); the 19:37 run was partial.
+Direct TOR First Field Goal is currently unavailable on the inspected interface.
+All eight pinned NBA openings and 2,693 exact sides passed integrity checks.
+
+MLB sportsbook recovery still awaits the eligible October 26 03:00 UTC /
+04:00 CET natural sweep. NBA near-tip countdown and positive eligible independent
+regular continuation still need natural evidence. Monitoring stays bounded to
+October 26 06:00 UTC / 07:00 CET. Prior external-access limitations remain.

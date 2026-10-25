@@ -13,7 +13,7 @@ export function useSidelineMarket(
   gameId: string,
   initialOdds: SidelineOddsBoard,
   initialGameState: SidelineGameState | null,
-  initialTouchdowns: NflTouchdownEvent[],
+  initialTouchdowns: NflTouchdownEvent[] | null,
   initialTimeline: string[],
   initialCapture?: string | null,
 ) {

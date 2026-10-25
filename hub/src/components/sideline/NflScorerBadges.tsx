@@ -5,15 +5,15 @@ import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import { nflScorerBadge, type ScorerIdentity } from '@/lib/nflScorerBadges'
 import { startNflPolling } from '@/lib/nflPolling'
 
-const Scorers = createContext<{ gameId: string; events: readonly NflTouchdownEvent[] }>({ gameId: '', events: [] })
+const Scorers = createContext<{ gameId: string; events: readonly NflTouchdownEvent[] | null }>({ gameId: '', events: null })
 
-export function NflScorerProvider({ gameId, events, children }: { gameId: string; events: readonly NflTouchdownEvent[]; children: ReactNode }) {
+export function NflScorerProvider({ gameId, events, children }: { gameId: string; events: readonly NflTouchdownEvent[] | null; children: ReactNode }) {
   const value = useMemo(() => ({ gameId, events }), [gameId, events])
   return <Scorers.Provider value={value}>{children}</Scorers.Provider>
 }
 
 /** Cheatsheets refresh only the shared cached scoring feed, not odds/history. */
-export function LiveNflScorerProvider({ gameId, events: initial, children }: { gameId: string; events: NflTouchdownEvent[]; children: ReactNode }) {
+export function LiveNflScorerProvider({ gameId, events: initial, children }: { gameId: string; events: NflTouchdownEvent[] | null; children: ReactNode }) {
   const [events, setEvents] = useState(initial)
   useEffect(() => startNflPolling(async signal => {
     const response = await fetch('/the-sideline/market?touchdowns=1&game=' + encodeURIComponent(gameId), { signal })
@@ -26,6 +26,7 @@ export function LiveNflScorerProvider({ gameId, events: initial, children }: { g
 
 export function NflScorerBadges({ player }: { player: ScorerIdentity }) {
   const { gameId, events } = useContext(Scorers)
+  if (events == null) return null
   const result = nflScorerBadge(events, gameId, player)
   if (!result.count) return null
   return <span style={{ display: 'inline-flex', gap: 4, marginInlineStart: 6, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>

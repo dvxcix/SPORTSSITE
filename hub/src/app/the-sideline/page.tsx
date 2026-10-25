@@ -65,15 +65,20 @@ export default async function SidelinePage({ searchParams }: {
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
-  let [market, touchdownFeed, weatherSummary] = await Promise.all([
+  const [initialMarket, touchdownFeed, initialWeather] = await Promise.all([
     getSidelineOddsBundle(selected),
-    getNflTouchdownFeed(date),
+    getNflTouchdownFeed(date).catch(() => {
+      console.error('[the-sideline] initial touchdown feed unavailable')
+      return null
+    }),
     mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
+  let market = initialMarket
+  let weatherSummary = initialWeather
   if (mode === 'cheatsheets') {
     let lens = await getCachedSidelineCheatsheetLens(selected, sample)
     if (beganOpen && !nflPregameOpen(selected)) [market, lens] = await Promise.all([getSidelineOddsBundle(selected), getCachedSidelineCheatsheetLens(selected, sample)])
-    return <>{navigation}<PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed.filter(event => event.gameId === selected.id)}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
+    return <>{navigation}<PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed?.filter(event => event.gameId === selected.id) ?? null}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
   }
   if (mode === 'public' || mode === 'markets') {
     const results = mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null
