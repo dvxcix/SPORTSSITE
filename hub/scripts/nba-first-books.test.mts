@@ -202,6 +202,21 @@ test('verified Joshua Giddey alias is pinned to Josh Giddey ID and still rejects
   }
 })
 
+test('direct Ron Holland quotes preserve distinct First Score and First FG contracts and exact roster guards', () => {
+  const holland={...player,id:1028026508,first_name:'Ronald',last_name:'Holland II'}
+  for(const name of ['Ron Holland','Ron Holland II'])for(const book of ['draftkings','betmgm'] as const){
+    const value=board({market:book==='betmgm'?'First field goal scorer':'1st Point',rows:[{name,odds:'+1700'}]})
+    const result=nbaNormalizeFirstBook(book,{game,roster:[holland]},value,now)
+    assert.equal(result.complete,true);assert.equal(result.unmatched,0)
+    assert.equal(result.props[0].player_id,holland.id);assert.equal(result.props[0].prop_type,book==='betmgm'?'first_field_goal':'first_score')
+    assert.equal(result.props[0].market.over_odds,1700);assert.equal(result.props[0].updated_at,value.observedAt);assert.equal(result.props[0].opening,undefined)
+    for(const roster of [[],[{...holland,id:999}],[{...holland,first_name:'Other'}],[{...holland,team:{...game.home_team,id:999}}],[holland,{...holland,id:999,first_name:'Ron'}]]){
+      const rejected=nbaNormalizeFirstBook(book,{game,roster},value,now)
+      assert.deepEqual(rejected.props,[]);assert.equal(rejected.unmatched,1);assert.equal(rejected.complete,false)
+    }
+  }
+})
+
 test('partial, unexpanded, malformed and absent boards never claim complete or an authoritative empty market', () => {
   for (const changes of [{ expanded: false }, { rows: [...board().rows, { name: 'Unverified Player', odds: '+900' }] }]) {
     const result = nbaNormalizeFirstBook('draftkings', input, board(changes), now)

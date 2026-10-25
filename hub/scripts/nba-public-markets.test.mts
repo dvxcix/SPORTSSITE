@@ -8,6 +8,19 @@ import type { NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 
 const roster=[{id:1,first_name:'Chet',last_name:'Holmgren'},{id:2,first_name:'Wendell',last_name:'Carter Jr.'}] as PaintRoster[]
 
+test('observed Ron Holland II public labels preserve verified zero counts across all five affected markets',()=>{
+  const holland={id:1028026508,first_name:'Ronald',last_name:'Holland II'} as PaintRoster
+  // Retained 2026-10-25 22:42 UTC source rows, not invented historical observations.
+  const props={Points:{'Ron Holland II Points':0},Rebounds:{'Ron Holland II Rebounds':0},Combos:{'Ron Holland II PR (Points + Rebounds)':0},'Double Double':{'Ron Holland II Double Double':0},'First Basket':{'Ron Holland II First Field Goal':0}}
+  const result=normalizeNbaPublic(props,[holland])
+  assert.equal(result.unmatched,0)
+  assert.deepEqual(result.rows.map(row=>[row.playerId,row.market,row.picks]),['double_double','first_field_goal','points','points_rebounds','rebounds'].map(market=>[holland.id,market,0]))
+  for(const roster of [[],[{...holland,id:999}],[{...holland,first_name:'Other'}],[holland,{...holland,id:999,first_name:'Ron'}]]){
+    const rejected=normalizeNbaPublic(props,roster)
+    assert.deepEqual(rejected.rows,[]);assert.equal(rejected.unmatched,5)
+  }
+})
+
 test('verified display aliases require the exact roster ID and canonical name',()=>{
   // Primary identity evidence: NBA /player/1642259/alexandre-sarr (Alex Sarr),
   // Rutgers /sports/mens-basketball/roster/airious--ace--bailey/14341,

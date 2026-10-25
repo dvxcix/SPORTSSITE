@@ -111,6 +111,20 @@ test('Alex Sarr aliases resolve across first basket, team first basket and each 
     [sarr.id,'first_score',850],[sarr.id,'team_first_score',400],[sarr.id,'first_score_2pt',950],[sarr.id,'first_score_3pt',2500],[sarr.id,'first_score_dunk',1800],
   ])
 })
+test('Ron Holland first-basket aliases remain pinned to his canonical game-roster identity',()=>{
+  const holland={...player,id:1028026508,first_name:'Ronald',last_name:'Holland II',team:away}
+  for(const name of ['Ron Holland','Ron Holland II']){
+    const sample={...event,bookmakers:[{key:'fanduel',last_update:at,markets:[{key:'player_first_basket',outcomes:[{name,price:1700}]}]}]}
+    const result=nbaNormalizeFirstOdds(sample,game,[holland],now)
+    assert.equal(result.unmatched,0);assert.equal(result.rows.length,1)
+    assert.equal(result.rows[0].offer.player_id,holland.id);assert.equal(result.rows[0].offer.prop_type,'first_score')
+    assert.equal(result.rows[0].offer.market.over_odds,1700);assert.equal(result.rows[0].offer.updated_at,at)
+    for(const roster of [[],[{...holland,id:999}],[{...holland,first_name:'Other'}],[{...holland,team:{...away,id:999}}],[holland,{...holland,id:999,first_name:'Ron'}]]){
+      const rejected=nbaNormalizeFirstOdds(sample,game,roster,now)
+      assert.equal(rejected.rows.length,0);assert.equal(rejected.unmatched,1)
+    }
+  }
+})
 const play=(order:number,patch:Partial<NbaPlay>={}):NbaPlay=>({game_id:123,order,type:'Jumpball',text:'Opening tip',period:1,clock:'12:00',scoring_play:false,shooting_play:false,score_value:null,team:{id:2},coordinate_x:null,coordinate_y:null,participants:[434],...patch})
 const plays=[play(1),play(2,{type:'Free Throw',text:'Test Player makes free throw',scoring_play:true,shooting_play:true,score_value:1}),play(3,{type:'Dunk',text:'Other Player makes dunk',scoring_play:true,shooting_play:true,score_value:2,participants:[222],team:{id:9}})]
 const stats=[434,222].map(id=>({id,player:{id},team:{id:id===434?2:9},game:{id:123,date:'2026-10-20',status:'Final',status_state:'final',home_team_id:2,visitor_team_id:9},min:'30:00',pts:20}) as PaintStat)

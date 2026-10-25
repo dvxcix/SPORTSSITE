@@ -20,6 +20,21 @@ const metadata = { away: 'Nets', home: 'Cavaliers', dateLabel: 'Today', timeLabe
 const row = (name = 'Michael Porter Jr.', odds = '+400', side = 'Yes', unavailable = false) => ({ name, side, odds, unavailable })
 const board = (changes: Partial<quotes.NbaBookPropBoard> = {}): quotes.NbaBookPropBoard => ({ ...metadata, title: 'Player points', target: '30+', selectedTarget: '30+', observedAt: new Date(now).toISOString(), expanded: true, transitioned: true, rows: [row()], ...changes })
 
+test('direct regular Ron Holland aliases keep exact milestones and reject off-roster or ambiguous identities',()=>{
+  const holland={...porter,id:1028026508,first_name:'Ronald',last_name:'Holland II'}
+  for(const name of ['Ron Holland','Ron Holland II']){
+    const value=board({target:'10+',selectedTarget:'10+',rows:[row(name,'+250')]})
+    const result=quotes.nbaNormalizeBookProp({game,roster:[holland]},value,now)!
+    assert.equal(result.complete,true);assert.equal(result.unmatched,0)
+    assert.equal(result.props[0].player_id,holland.id);assert.equal(result.props[0].line_value,'10')
+    assert.deepEqual(result.props[0].market,{type:'milestone',odds:250});assert.equal(result.props[0].updated_at,value.observedAt)
+    for(const roster of [[],[{...holland,id:999}],[{...holland,first_name:'Other'}],[{...holland,team:{...game.home_team,id:999}}],[holland,{...holland,id:999,first_name:'Ron'}]]){
+      const rejected=quotes.nbaNormalizeBookProp({game,roster},value,now)!
+      assert.deepEqual(rejected.props,[]);assert.equal(rejected.unmatched,1);assert.equal(rejected.complete,false)
+    }
+  }
+})
+
 test('posted 30+ +400 stays an exact milestone; O/U and fractional targets are not relabeled', () => {
   const result = quotes.nbaNormalizeBookProp(input, board(), now)!
   assert.equal(result.complete, true); assert.equal(result.contractKey, 'points:milestone:30')

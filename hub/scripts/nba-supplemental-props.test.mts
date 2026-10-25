@@ -74,6 +74,25 @@ test('all supported stat combinations, Q1 and exact DD/TD Yes/No use existing Pa
   assert.equal(h.NBA_SUPPLEMENTAL_MARKETS.some(key => key.includes('first3min') || key.includes('first_basket')), false)
 })
 
+test('configured regular prices accept the pinned Ron Holland alias without changing exact lines, sides or clocks', async () => {
+  const h=await fixture(),holland={...player,id:1028026508,first_name:'Ronald',last_name:'Holland II',team:game.visitor_team}
+  for(const name of ['Ron Holland','Ron Holland II']){
+    const sample=payload([market('player_points_alternate',[{...outcome,description:name,point:9.5,price:250},{...outcome,description:name,name:'Under',point:9.5,price:-350}]),market('player_double_double',[{name:'Yes',description:name,price:5000}])])
+    const result=h.nbaNormalizeSupplemental(sample,event,game,[holland],'pregame',now)
+    assert.equal(result.complete,true);assert.equal(result.unmatched,0);assert.equal(result.accepted,3)
+    assert.deepEqual(result.props.map(p=>[p.player_id,p.prop_type,p.line_value,p.market]),[
+      [holland.id,'points','10',{type:'milestone',odds:250}],
+      [holland.id,'points','9.5',{type:'over_under',under_odds:-350}],
+      [holland.id,'double_double','0.5',{type:'over_under',over_odds:5000}],
+    ])
+    assert.ok(result.props.every(p=>p.updated_at===new Date(now-1000).toISOString()&&p.opening===undefined))
+    for(const roster of [[],[{...holland,id:999}],[{...holland,first_name:'Other'}],[{...holland,team:{...team,id:999}}],[holland,{...holland,id:999,first_name:'Ron'}]]){
+      const rejected=h.nbaNormalizeSupplemental(sample,event,game,roster,'pregame',now)
+      assert.deepEqual(rejected.props,[]);assert.equal(rejected.unmatched,3);assert.equal(rejected.complete,false)
+    }
+  }
+})
+
 test('6000 concurrent member reads share one paid request;120s expiry is shared and has no fresh bypass', async () => {
   const h = await fixture()
   const results = await Promise.all(Array.from({ length: 6000 }, () => h.getNbaSupplementalProps(game, 'pregame')))

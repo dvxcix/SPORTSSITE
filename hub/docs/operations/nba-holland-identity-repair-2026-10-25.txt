@@ -1,0 +1,44 @@
+NBA player identity repair — October 25, 2026
+
+Owner-authorized scoped capture repair and main/production release. Refreshed
+origin/main and live Vercel were 6d2e62f6ad0549f20ed53a172cfd276d40aa7df4,
+READY dpl_254PLrkwKyoZztpUFTFpZxocBXX4. Required recovered NFL ancestry,
+all freeze releases and unrelated local work retained.
+
+Evidence
+Detroit–Philadelphia game21717960 has canonical roster player1028026508,
+Ronald Holland II. Configured First Basket receipts rejected Ron Holland;
+regular supplemental receipts rejected14 outcomes. The public22:41 run retained
+273 matched siblings but rejected five Ron Holland II labels: Points, Rebounds,
+Points + Rebounds, Double Double and First Field Goal. Those five observed counts
+were actual zeroes at22:42:01–22:42:06UTC, not missing prior observations.
+
+Official identity evidence uses the same NBA player1641842:
+https://www.nba.com/player/1641842/ron-holland-ii/bio
+https://gleague.nba.com/player/1641842/ronald-holland-ii%26quot
+The NBA profile calls him Ronald Holland II; the G League profile calls him
+Ron Holland. This supports one explicit alias, not general first-name matching.
+
+Repair
+Add Ron Holland only for canonical ID1028026508 / Ronald Holland II to the
+existing shared alias resolver. Existing suffix normalization also handles
+Ron Holland II. Exact-game roster, canonical-name and ambiguity guards remain.
+The same resolver serves public counts, configured First/regular prices and
+direct sportsbook normalization. No stored history, opening price or timestamp
+is rewritten. Missing past prices/counts cannot be reconstructed as captures.
+Future natural observations retain their actual first-observed openings.
+
+Countdown limitation remains separate
+Fresh private diagnostics show book countdown intervals later than canonical
+starts: LAL20:57:47UTC displayed12min versus21:00UTC; IND21:57:48 displayed12min
+versus22:00UTC; ORL22:48:02 displayed21min versus23:00UTC. The current strict
+guard rejected these, holding prior prices. No acceptance interval, identity
+guard or earliest canonical cutoff is changed in this identity repair.
+No new cloud session, CAPTCHA solve, collector or job replay was run.
+
+Validation and live verification
+Cross-path identity/ambiguity tests, whole NBA suite, TypeScript, scoped lint and
+independent review are required before release. Exact counts, Git deployment,
+qualifying natural receipts and remaining gaps are recorded after publication
+in work/heartbeat-holland-release-2026-10-25.txt. A passing test or HTTP receipt
+alone does not prove fresh complete market capture.
