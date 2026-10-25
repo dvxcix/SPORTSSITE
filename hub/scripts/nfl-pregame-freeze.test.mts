@@ -14,7 +14,7 @@ const game = (id='g1', gametime='13:00'): SidelineGame => ({ id, gametime, gamed
 async function compiled(file: string, imports: Record<string,unknown>, clock: DateConstructor=Date) {
   const module={exports:{} as any}
   const source=await readFile(new URL(`../${file}`,import.meta.url),'utf8')
-  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText
+  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText
   new Function('require','module','exports','Date',js)((key:string)=>{assert.ok(key in imports, key);return imports[key]},module,module.exports,clock)
   return module.exports
 }
@@ -161,4 +161,41 @@ test('kickoff refresh covers late hydration without refreshing already-frozen pa
   new Function('require','module','exports','Date','window','document',js)((key:string)=>imports[key],module,module.exports,Clock,{setTimeout:(f:any)=>{timer=f;return 1},clearTimeout:()=>{}},{visibilityState:'visible',addEventListener:()=>{},removeEventListener:()=>{}})
   module.exports.NflPregameBoundary({game:game(),wasOpen:true});const clean=effect();timer();timer();assert.equal(refreshes,1);clean()
   timer=null;module.exports.NflPregameBoundary({game:game(),wasOpen:false});effect();assert.equal(timer,null)
+})
+
+test('historical unavailable research is visible on board, matchup and cheatsheet pages while prices remain intact', async () => {
+  let lens:any = unavailable.unavailableNflBoardLens(game(),'regular')
+  const board = {...EMPTY_SIDELINE_ODDS,status:'ready',players:[{id:1,name:'Original player',team:'A',position:'WR',markets:[{market:'receiving_yards',offers:[{current:{odds:350}}]}]}]}
+  const jsx=(type:any,props:any)=>({type,props})
+  const components:any={SidelineBoardClient:'Board',SidelineResearchClient:'Research',SidelineNavigation:'Navigation',SidelineMatchupLab:'Matchup',SidelineCheatsheets:'Cheatsheets'}
+  const imports:any={
+    'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},
+    '@/lib/sidelineWire':{packSidelineBoard:(value:any)=>value},'next/navigation':{notFound:()=>assert.fail('access')},
+    '@/lib/nflSample':samples,'@/lib/nflAccess':{requireNflAccess:async()=>({isAdmin:true})},'@/lib/supabase/authErrors':{},
+    './data':{getSidelineGames:async()=>({games:[game()],date:'2026-10-25',days:[]}),getSidelineOddsBundle:async()=>({odds:board,gameState:null}),getSidelinePregameWeather:async()=>undefined,getCachedSidelineBoardLens:async()=>lens,getCachedSidelineCheatsheetLens:async()=>lens},
+    'lucide-react':{CalendarOff:'CalendarOff'},'@/components/layout/PageState':{PageState:'PageState'},'@/components/product/ProductPage':{ProductHero:'Hero',ProductPageShell:'Shell'},
+    '@/lib/nflTouchdownFeed':{getNflTouchdownFeed:async()=>[]},'@/lib/nflPublicResultsServer':{getNflPublicResults:async()=>null},
+    '@/lib/nflPregameResearchData':{nflPregameOpen:()=>false},'./NflPregameBoundary':{NflPregameBoundary:'Boundary'},'@/components/sideline/NflScorerBadges':{LiveNflScorerProvider:'Scorers'},
+  }
+  for(const [name,value] of Object.entries(components)) imports['./'+name]={[name]:value}
+  const page=await compiled('src/app/the-sideline/page.tsx',imports)
+  function rendered(node:any):any[] {
+    if(!node || typeof node!=='object')return[]
+    if(Array.isArray(node))return node.flatMap(rendered)
+    if(typeof node.type==='function')return rendered(node.type(node.props))
+    return [node,...rendered(node.props?.children)]
+  }
+  for(const mode of ['', 'research', 'cheatsheets']) {
+    const nodes=rendered(await page.default({searchParams:Promise.resolve({date:'2026-10-25',mode})}))
+    const notice=nodes.find(node=>node.props?.role==='status')
+    assert.ok(notice,'missing research has a visible accessible notice in '+(mode||'board'))
+    assert.match(JSON.stringify(notice),/No verified pregame research snapshot/)
+    const content=nodes.find(node=>['Board','Matchup','Cheatsheets'].includes(node.type))
+    assert.equal(content.props.odds??content.props.board,board,'notice must not replace or alter original prices')
+  }
+  for(const healthy of [{...lens,status:'calculated'}, {...lens,headline:'Waiting for season sample'}]) {
+    lens=healthy
+    const nodes=rendered(await page.default({searchParams:Promise.resolve({})}))
+    assert.equal(nodes.some(node=>node.props?.role==='status'),false,'specific archive notice must not label transient awaiting states')
+  }
 })
