@@ -1,0 +1,51 @@
+NFL daily baseline cache repair — October 25, 2026
+
+Owner authorized repair and main/production release. Base origin/main and live
+Vercel verified as 14201e707e37d98df0c3420c0b5aefc839177d27. Required recovered
+NFL ancestry and all NBA/NFL/MLB pregame-freeze releases retained.
+
+Proven issue
+Next 16.4.3 bypasses nested unstable_cache reads. Both the enriched game board
+and slate-entry cache nest the daily touchdown baseline reader. Consequently
+each matchup revalidation reread all 4,044 daily rows in nine sequential HTTP
+requests, despite the intended shared 300-second cache. The installed framework
+integration test reproduces the old behavior. Primary logs recorded 708 such
+GETs from 16:54 to 16:59 UTC. Indexed first/final-page queries took 0.659/8.14 ms;
+there is no proven slow-index cause for the separate client-side timeouts.
+
+Repair
+Reuse the existing service-only shared cache and cross-instance refresh lease,
+with isolated nfl:td-baselines:v1:<date> keys. Recent dates retain 300-second TTL,
+historical dates seven days; stale fallback is bounded to 300 seconds beyond
+expiry and keeps the original fetched_at. No new table, migration, collector,
+schedule, secret or provider call. No account/tier information is shared.
+The complete source load is bounded to 40 seconds, with existing 500-row pages,
+stable identity order and 50,000-row ceiling. Any page or missing-table failure
+preserves the prior complete payload; it cannot cache a false empty result.
+Legitimately empty dates remain cacheable. Existing pregame load callbacks and
+durable cutoff checks remain unchanged. Closed games do not fetch this cache or
+today's baselines. The enriched board cache key advances to the new implementation.
+
+Validation
+Real installed Next nested-cache reproduction, six server instances/36 concurrent
+callers sharing nine total source requests, cold follower, date/TTL separation,
+failed second-page retention, original timestamps, bounded stale expiry, empty
+date and total timeout/row-bound regressions pass. Full cross-sport freeze/cache
+suite and 134 production source checks pass. TypeScript and scoped new/production
+file lint pass; independent review found no blocker. The existing freeze test
+harness has 46 pre-existing lint errors at both base and changed source; these
+were not hidden or broadened into unrelated cleanup. New tests are registered
+in test:pregame-freeze.
+
+Release and live cache/board/request-volume verification are recorded separately
+in work/heartbeat-cache-release-2026-10-25.txt after publication. This preparation
+report alone does not certify production recovery or eliminate external failures.
+
+Capture follow-up context
+NBA now has nine complete natural whole-slate runs, including MEM regular-market
+publication. Latest inspected 16:52 direct run was partial for LAL/LAC; original
+openings and 2,661 exact sides passed integrity checks. NFL earlier failures
+recovered naturally with 16 complete new sportsbook frames and 15 public frames.
+MLB sportsbook recovery still awaits October 26 03:00 UTC / 04:00 CET. No forced
+capture, historical replay or speculative challenge/readiness bypass was used.
+Details: work/heartbeat-followup-2026-10-25-1650.txt and its linked evidence.

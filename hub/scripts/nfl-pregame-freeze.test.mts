@@ -123,6 +123,7 @@ async function dataHarness() {
     maybeSingle:async()=>({data:table==='nfl_odds_snapshot_history'?original:table==='nfl_odds_current'?{board,captured_at:board.capturedAt}:null,error:null}),
     then:(resolve:any)=>Promise.resolve({data:[],error:null}).then(resolve)};return query}}
   const api=await compiled('src/app/the-sideline/data.ts',{'server-only':{},'next/cache':{unstable_cache:(fn:any)=>fn},'@/lib/supabase/admin':{createAdminClient:()=>db},
+    '@/lib/nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{tables.push('nba_source_cache');return {value:await load()}}},
     '@/lib/nflMarketArchive':{attachNflTdBaselines:(b:any)=>b},'@/lib/nflOddsTypes':{EMPTY_SIDELINE_ODDS},'@/lib/nflPikkit':{attachNflPikkitSnapshot:(b:any)=>b},'@/lib/sidelinePublicBoard':{sidelinePublicBoard:(b:any)=>b},'@/lib/nflFanduel':{attachNflFanduel:(b:any)=>b,loadNflFanduel:async(_id:string,at:string)=>{if(at)cutoffs.push(at);return null}},
     './analysis':{getSidelineLens:async()=>{analyses++;return {status:'calculated'}}},'./boardAnalysis':{getSidelineBoardLens:async()=>{analyses++;return {status:'calculated'}}},'@/lib/nflSample':samples,'@/lib/nflPregameResearchData':h.api,'@/lib/nflResearchUnavailable':unavailable,'@/lib/nflWeatherServer':{getNflWeather:async()=>''},
     './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b},'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:'In Progress',status_state:'in_progress'}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
@@ -133,6 +134,7 @@ test('missing closed odds are unavailable without reading current odds or baseli
   const result=await h.api.getSidelineOddsBundle(game())
   assert.equal(result.odds.status,'unavailable');assert.deepEqual(result.odds.players,[])
   assert.ok(!h.tables.includes('nfl_odds_current'));assert.ok(!h.tables.includes('nfl_td_baseline_daily'))
+  assert.ok(!h.tables.includes('nba_source_cache'))
   assert.ok(h.cutoffs.every(value=>Date.parse(value)<start),'exact-kickoff frames are excluded')
 })
 test('old original quotes and baselines survive without importing current roster metadata',async()=>{
@@ -140,6 +142,7 @@ test('old original quotes and baselines survive without importing current roster
   const result=await h.api.getSidelineOddsBundle(game())
   assert.equal(result.odds.players[0].jersey,7);assert.equal(result.odds.players[0].tdBaselines[0].averageOdds,333)
   assert.ok(!h.tables.includes('nfl_td_baseline_daily'))
+  assert.ok(!h.tables.includes('nba_source_cache'))
 })
 test('a live score await crossing kickoff refreshes the final research board',async()=>{
   const h=await dataHarness()

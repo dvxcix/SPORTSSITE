@@ -2,6 +2,7 @@ import 'server-only'
 
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { attachNflTdBaselines, type NflTdBaselineRow } from '@/lib/nflMarketArchive'
 import { EMPTY_SIDELINE_ODDS, type SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
@@ -113,23 +114,32 @@ const loadCurrentBoardHistorical = unstable_cache(loadCurrentBoardRaw, ['sidelin
 
 async function loadTdBaselinesRaw(date: string): Promise<NflTdBaselineRow[]> {
   const rows: NflTdBaselineRow[] = []
+  // Bound the whole paginated load below the shared 55-second refresh lease.
+  const deadline = Date.now() + 40_000
   for (let offset = 0; offset < 50000; offset += 500) {
-  const { data, error } = await createAdminClient()
-    .from('nfl_td_baseline_daily')
-    .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
-    .eq('slate_date', date).order('player_id').order('vendor').order('prop_type')
-    .range(offset, offset + 499).abortSignal(AbortSignal.timeout(10000))
-  if (error) {
-    if (error.code === '42P01') return []
-    throw new Error(`NFL TD baselines unavailable: ${error.message}`)
-  }
-  rows.push(...((data ?? []) as NflTdBaselineRow[]))
-  if ((data?.length ?? 0) < 500) return rows
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) throw new Error('NFL TD baseline paging timed out')
+    const { data, error } = await createAdminClient()
+      .from('nfl_td_baseline_daily')
+      .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
+      .eq('slate_date', date).order('player_id').order('vendor').order('prop_type')
+      .range(offset, offset + 499).abortSignal(AbortSignal.timeout(Math.min(10000, remaining)))
+    if (error) throw new Error(`NFL TD baselines unavailable: ${error.message}`)
+    if (Date.now() >= deadline) throw new Error('NFL TD baseline paging timed out')
+    rows.push(...((data ?? []) as NflTdBaselineRow[]))
+    if ((data?.length ?? 0) < 500) return rows
   }
   throw new Error('NFL TD baseline paging bound exceeded')
 }
-const loadTdBaselinesRecent = unstable_cache(loadTdBaselinesRaw, ['sideline-td-baselines-recent-v3-paged'], { revalidate: 300, tags: ['sideline:nfl-odds'] })
-const loadTdBaselinesHistorical = unstable_cache(loadTdBaselinesRaw, ['sideline-td-baselines-historical-v3-paged'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
+async function loadSharedTdBaselines(date: string, ttl: number) {
+  // Next bypasses nested unstable_cache reads. Use the existing service-only
+  // shared lease so every matchup/instance uses one complete date observation.
+  // Failed pages never replace the payload; a stale fallback keeps its original
+  // fetched_at and is bounded to five minutes beyond the requested TTL.
+  return (await nbaSharedCache(`nfl:td-baselines:v1:${date}`, ttl, 300, () => loadTdBaselinesRaw(date))).value
+}
+const loadTdBaselinesRecent = (date: string) => loadSharedTdBaselines(date, 300)
+const loadTdBaselinesHistorical = (date: string) => loadSharedTdBaselines(date, WEEK_SECONDS)
 
 async function loadPikkitCurrentRaw(gameId: string): Promise<NflPikkitSnapshot | null> {
   const { data, error } = await createAdminClient().from('nfl_pikkit_picks_current').select('snapshot').eq('game_id', gameId).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
@@ -229,7 +239,7 @@ const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
   const value = sidelinePublicBoard(attachDesignations(liveBoard, designations))
   if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
   return { value, observedAt: new Date().toISOString() }
-}, ['sideline-enriched-pregame-v1'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, ['sideline-enriched-pregame-v2-shared-baselines'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 // The boundary check must run outside Next's cache: a cached pregame response
 // cannot substitute for another process's final snapshot after kickoff.
