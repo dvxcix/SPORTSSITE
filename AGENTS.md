@@ -63,3 +63,11 @@ Only explicit Live mode may use changing inputs. Never substitute current data
 for missing historical research or replay recovered snapshots as new captures.
 See hub/docs/operations/nba-pregame-freeze-2026-10-25.txt. The three recorded
 20261025 freeze/cutoff migrations are already applied; do not replay them.
+
+The same invariant applies to NFL and MLB: default research, MM and slate peer
+pools stop at the game's earliest known scheduled/actual start. Only an explicit
+Live view may read changing inputs. Archive original observations, never invented
+historical values. Missing historical or custom inputs stay visibly unavailable.
+Preserve per-tier redaction when sharing full-depth archived payloads. NFL/MLB
+freeze migrations 20261025025710 and 20261025030336 are already applied.
+See hub/docs/operations/cross-sport-pregame-freeze-2026-10-25.txt.

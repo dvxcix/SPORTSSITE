@@ -85,6 +85,7 @@ export function computeMatchupEdgeScore(
 }
 
 export type PaperInputRow = {
+  research_available?: boolean
   matchup_edge: number | null
   s_brl: number | null
   s_spd: number | null; r_spd: number | null
@@ -103,6 +104,12 @@ export type PaperInputRow = {
 // pitch-type-level results on both sides), everything else is the batter's
 // own generic season/recent form in a vacuum.
 export function computePaperScores<T extends PaperInputRow>(rows: T[]): void {
+  // All ranks require the same complete, frozen peer pool. Never reweight a
+  // historical score around a missing archive or a current-data substitute.
+  if (rows.some(row => row.research_available === false)) {
+    for (const row of rows) row.paper = null
+    return
+  }
   const feats: Array<{ s: keyof PaperInputRow; r: keyof PaperInputRow | null; w: number }> = [
     { s: 'matchup_edge', r: null,       w: 0.26 },
     { s: 's_brl',        r: null,       w: 0.20 },
@@ -158,6 +165,7 @@ export type RankInputRow = PaperInputRow & {
 // game, both lineups combined, not per-team) and must already have `.paper`
 // set via computePaperScores above.
 export function computeMmRanks<T extends RankInputRow>(rows: T[]): void {
+  for (const row of rows) { row.bk_rk = null; row.pp_rk = null; row.mm = null }
   const bk = [...rows].filter(r => r.sa_fd != null)
     .sort((a, b) => (toImplProb(b.sa_fd) ?? 0) - (toImplProb(a.sa_fd) ?? 0))
   bk.forEach((r, i) => { r.bk_rk = i + 1 })

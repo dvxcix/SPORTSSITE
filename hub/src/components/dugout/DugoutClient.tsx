@@ -275,15 +275,21 @@ export function buildBatterRow(
   // derived nn, so an exact-string lookup silently drops a player's picks/
   // averages on the same class of mismatch (Cam/Cameron, Jr./no-Jr., etc.)
   // that was already fixed for FD/MGM.
-  const communityPickEntry  = resolveNameEntry(communityPicksMap, nn)
-  const openingEntry = resolveNameEntry(openingMap, nn)
+  const frozenInputs = player.pregameInputs
+  const researchAvailable = frozenInputs?.available !== false
+  if (frozenInputs) {
+    splitMap = buildSplitMap(frozenInputs.statSplits ?? [])
+    pitcherMap = buildPitcherMap(frozenInputs.pitcherSplits ?? [])
+  }
+  const communityPickEntry = frozenInputs ? frozenInputs.communityPicks : resolveNameEntry(communityPicksMap, nn)
+  const openingEntry = frozenInputs ? frozenInputs.opening : resolveNameEntry(openingMap, nn)
   const hrEntry       = resolveNameEntry(hrMap, nn)
   const nearEntry     = resolveNameEntry(nearMap, nn)
   // The API resolves these archive rows with the canonical MLB player ID.
   // Prefer that identity-safe value over rebuilding a name-only join in the
   // browser (two active players are both named Max Muncy).
-  const fhrAvgEntry   = player.fhrAvg ?? resolveNameEntry(fhrAvgMap, nn)
-  const saAvgEntry    = player.saAvg ?? resolveNameEntry(saAvgMap, nn)
+  const fhrAvgEntry = frozenInputs ? frozenInputs.fhrAvg : player.fhrAvg ?? resolveNameEntry(fhrAvgMap, nn)
+  const saAvgEntry = frozenInputs ? frozenInputs.saAvg : player.saAvg ?? resolveNameEntry(saAvgMap, nn)
 
   // xHR is a genuine Statcast probability MODEL (not derivable from raw
   // pitch data ourselves) — still sourced from mlb-party's season split
@@ -413,6 +419,7 @@ export function buildBatterRow(
   const paper_inputs_by_window = Object.fromEntries((['l1', 'l3', 'l5', 'l10'] as const).map(window => {
     const recent = player.statcast?.[window] ?? null
     return [window, {
+      research_available: researchAvailable,
       matchup_edge,
       s_brl,
       s_spd,
@@ -587,6 +594,7 @@ export function buildBatterRow(
   const bat_rank = lineupConfirmed ? (isHome ? 9 + (player.batting_order as number) : (player.batting_order as number)) : null
 
   return {
+    research_available: researchAvailable,
     mlb_id:        player.mlb_id as number | null,
     name:          player.name   as string,
     name_norm:     nn,
@@ -3696,6 +3704,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     .join(':')
   const [mechanicsFallback, setMechanicsFallback] = useState<Record<number, DugoutMechanicsWindows>>({})
   useEffect(() => {
+    // The game archive is the sole baseline, including honest missing windows.
+    if (game.researchSnapshot?.mode !== 'live') { setMechanicsFallback({}); return }
     const players = [...(game.awayLineup ?? []), ...(game.homeLineup ?? [])].slice(0, 18)
     const hasEveryWindow = players.length === 18 && players.every((player: any) =>
       player.mechanics?.l1 && player.mechanics?.l3 && player.mechanics?.l5 && player.mechanics?.l10,
@@ -3721,7 +3731,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       })
       .catch(() => { /* The precomputed payload remains authoritative if fallback is unavailable. */ })
     return () => controller.abort()
-  }, [date, game.gamePk, game.awayLineup, game.homeLineup, lineupMechanicsKey])
+  }, [date, game.gamePk, game.awayLineup, game.homeLineup, game.researchSnapshot?.mode, lineupMechanicsKey])
 
   const { homeRows, awayRows, pool } = useMemo(() => {
     const ap = game.awayPitcher
@@ -4251,6 +4261,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className={`dugout-board-enter${expanded ? ' has-inspector' : ''}`} style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
+      {game.researchSnapshot?.frozen && game.researchSnapshot?.observedAt && !game.researchSnapshot?.unavailable && <p style={{ color: 'var(--text-3)', fontSize: 11, padding: '4px 12px' }}>Pregame research frozen · observed {new Date(game.researchSnapshot.observedAt).toLocaleString()}</p>}
+      {game.researchSnapshot?.unavailable && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12, padding: '8px 12px' }}>Pregame research snapshot unavailable. Paper/MM is unavailable; archived prices and dated stats remain visible.</p>}
+      {game.customPitchlogUnavailable && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12, padding: '8px 12px' }}>Custom pitch-log Matrix inputs were not captured before start. Those highlights are unavailable.</p>}
       <section ref={commandBarRef} className="dugout-command-bar" aria-label="Dugout board controls">
         <div className="dugout-command-navigation">
           <button type="button" onClick={navigation.onPrevious} disabled={navigation.index === 0} aria-label="Previous game"><ChevronLeft size={17} /></button>
@@ -5061,6 +5074,19 @@ export function DugoutClient({ date }: { date: string }) {
       })
       .catch(() => { setErr('Live refresh is unavailable.'); setStaleSnapshot(Boolean(snapshot)); setLoading(false) })
   }, [activeGameStorageKey, date, highlightId, reloadToken])
+
+  // A tab held open through start must reconcile to the final durable bundle.
+  // Wake again on visibility because background timers may be throttled.
+  useEffect(() => {
+    const starts = (data?.games ?? []).filter((game: any) => game.researchSnapshot?.frozen === false)
+      .map((game: any) => Date.parse(game.researchSnapshot?.startAt ?? game.gameDate)).filter(Number.isFinite)
+    if (!starts.length) return
+    const cutoff = Math.min(...starts)
+    const refresh = () => { if (Date.now() >= cutoff && document.visibilityState === 'visible') setReloadToken(value => value + 1) }
+    const timer = window.setTimeout(refresh, Math.min(2_147_000_000, Math.max(250, cutoff - Date.now() + 100)))
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', refresh) }
+  }, [data, date])
 
   // Real gap (2026-07-24): saving/importing/deleting a Matrix elsewhere in
   // the app (the Matrix panel is mounted globally — see CustomMatrixPanel.tsx

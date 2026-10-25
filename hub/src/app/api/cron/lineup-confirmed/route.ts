@@ -9,6 +9,7 @@ import { PLATFORM_URL } from '@/lib/platform'
 import type { BDLPropMap } from '@/lib/balldontlie'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { getGameMechanicsWindows } from '@/lib/hrMechanicsCache'
+import { warmMlbPregameResearch } from '@/lib/dugoutData'
 
 export const revalidate = 0
 export const maxDuration = 120
@@ -49,6 +50,7 @@ async function fetchAllUsers(admin: Admin): Promise<{ id: string; notification_s
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
+  const runStarted = Date.now()
 
   const admin = createAdminClient()
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
@@ -215,7 +217,15 @@ async function run(req: Request) {
     })
   })
 
-  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length, scrapesRequeued: scrapeRequeues.length, mechanicsRefreshed: mechanicsRefreshes.filter(result => result.status === 'fulfilled').length })
+  let researchWarm: Record<string, unknown> = { skipped: 'runtime-budget' }
+  if (Date.now() - runStarted < 45_000) {
+    try { researchWarm = await warmMlbPregameResearch(date) }
+    catch (error) {
+      researchWarm = { error: 'pregame-research-warm-failed' }
+      console.error('[lineup-confirmed] research warm failed', { type: error instanceof Error ? error.name : typeof error })
+    }
+  }
+  return NextResponse.json({ researchWarm, ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length, scrapesRequeued: scrapeRequeues.length, mechanicsRefreshed: mechanicsRefreshes.filter(result => result.status === 'fulfilled').length })
 }
 
 const lineupSignature = (lineup: LineupPlayer[]) => lineup.map(p => p.mlb_id).sort((a, b) => a - b).join(',')

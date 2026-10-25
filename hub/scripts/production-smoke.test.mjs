@@ -490,7 +490,7 @@ test('provider-returned navigation remains on trusted Whop destinations', async 
 
 test('server-side upstream requests are time bounded', async () => {
   for (const file of [
-    'src/app/api/dugout/data/route.ts',
+    'src/lib/dugoutData.ts',
     'src/app/api/admin/dugout-name-check/route.ts',
     'src/app/api/cron/dispatch-scrapes/route.ts',
     'src/lib/matrixBacktest.ts',

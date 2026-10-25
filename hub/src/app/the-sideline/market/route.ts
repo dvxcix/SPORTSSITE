@@ -4,6 +4,7 @@ import { requireNflAccess } from '@/lib/nflAccess'
 import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
+import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
     const { games } = await getSidelineGames(undefined, id)
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+    const beganOpen = nflPregameOpen(game)
     if (params.get('touchdowns') === '1' && !at) {
       const touchdowns = (await getNflTouchdownFeed(game.gameday)).filter(event => event.gameId === game.id)
       return NextResponse.json({ touchdowns }, { headers: { 'Cache-Control': 'private, no-store' } })
@@ -32,7 +34,8 @@ export async function GET(request: Request) {
         getSidelineOddsBundle(game),
         params.get('results') === '1' ? getNflPublicResults(game, null).catch(() => null) : Promise.resolve(undefined),
       ])
-      return NextResponse.json({ ...bundle, results }, { headers: { 'Cache-Control': 'private, no-store' } })
+      const final = beganOpen && !nflPregameOpen(game) ? await getSidelineOddsBundle(game) : bundle
+      return NextResponse.json({ ...final, results }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     if (at) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())
@@ -46,10 +49,11 @@ export async function GET(request: Request) {
       getSidelineTimeline(game),
       getNflTouchdownFeed(game.gameday),
     ])
+    const final = beganOpen && !nflPregameOpen(game) ? await getSidelineOddsBundle(game) : bundle
     return NextResponse.json(
       params.get('packed') === '1'
-        ? { odds: packSidelineBoard(bundle.odds), gameState: bundle.gameState, touchdowns, timeline }
-        : { ...bundle, touchdowns, timeline },
+        ? { odds: packSidelineBoard(final.odds), gameState: final.gameState, touchdowns, timeline }
+        : { ...final, touchdowns, timeline },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {

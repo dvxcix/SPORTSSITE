@@ -1,5 +1,5 @@
 ﻿'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Check, ChevronDown, X } from 'lucide-react'
@@ -27,6 +27,8 @@ interface Game {
   homePitcher: PitcherInfo | null; awayPitcher: PitcherInfo | null
   homeLineupConfirmed: boolean; awayLineupConfirmed: boolean
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
+  pregameInputs?: { statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]; communityPicks: any[] }
+  researchSnapshot?: { unavailable?: boolean; frozen?: boolean; observedAt?: string; startAt?: string }
 }
 interface DugoutData {
   date: string; games: Game[]
@@ -177,6 +179,37 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
     return () => { cancelled = true }
   }, [date])
 
+  // A tab opened before first pitch must acquire the final archived input,
+  // including when a slow response hydrates after the boundary.
+  const boundaryRefreshes = useRef(new Set<string>())
+  const [boundaryError, setBoundaryError] = useState('')
+  useEffect(() => {
+    const pending = (data?.games ?? []).filter((game: any) => game.researchSnapshot?.frozen === false && Number.isFinite(Date.parse(game.researchSnapshot?.startAt ?? game.gameDate)) && !boundaryRefreshes.current.has(date + ':' + game.gamePk))
+    if (!pending.length) return
+    const next = Math.min(...pending.map((game: any) => Date.parse(game.researchSnapshot?.startAt ?? game.gameDate)))
+    let cancelled = false, attempts = 0
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const refresh = async () => {
+      attempts++
+      try {
+        const response = await fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store', signal: controller.signal })
+        if (!response.ok) throw new Error('Snapshot unavailable')
+        const value = await response.json()
+        if (!Array.isArray(value.games)) throw new Error('Snapshot unavailable')
+        if (cancelled) return
+        for (const game of pending) if (Date.parse(game.researchSnapshot?.startAt ?? game.gameDate) <= Date.now()) boundaryRefreshes.current.add(date + ':' + game.gamePk)
+        setBoundaryError(''); setData(value)
+      } catch {
+        if (cancelled) return
+        setBoundaryError(attempts < 3 ? 'Refreshing the final pregame snapshot…' : 'Final pregame snapshot could not refresh. Reload to retry.')
+        if (attempts < 3) timer = setTimeout(refresh, 1000 * attempts)
+      }
+    }
+    timer = setTimeout(refresh, Math.min(2_147_483_647, Math.max(0, next - Date.now() + 100)))
+    return () => { cancelled = true; controller.abort(); clearTimeout(timer) }
+  }, [data, date])
+
   const starters: StarterOption[] = useMemo(() => {
     if (!data) return []
     const out: StarterOption[] = []
@@ -210,6 +243,8 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
   }, [starters, selectedKey, linkedPitcherId])
 
   const selected = starters.find(s => s.key === selectedKey) ?? null
+  const selectedGame = data?.games.find(game => game.gamePk === selected?.gamePk) ?? null
+  const gameInputs = selectedGame?.pregameInputs
 
   useEffect(() => {
     if (!starterPickerOpen) return
@@ -239,9 +274,9 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
     }
   }, [starterPickerOpen])
 
-  const splitMap = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
-  const timingMap = useMemo(() => buildTimingMap(data?.timingSplits ?? []), [data?.timingSplits])
-  const statcastPitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
+  const splitMap = useMemo(() => buildSplitMap(gameInputs?.statSplits ?? []), [gameInputs?.statSplits])
+  const timingMap = useMemo(() => buildTimingMap(gameInputs?.timingSplits ?? []), [gameInputs?.timingSplits])
+  const statcastPitcherMap = useMemo(() => buildPitcherMap(gameInputs?.pitcherSplits ?? []), [gameInputs?.pitcherSplits])
   // Keep the home_runs row specifically — this table only ever displays an
   // "Anytime HR picks" count, so a player with picks in some OTHER market
   // (hrr, singles, tb...) but no home_runs row must show nothing here, not
@@ -256,7 +291,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
   const communityPicksMap = useMemo(() => {
     const gameKey = selected?.gameKey ?? null
     const m: Record<string, any> = {}
-    for (const r of (data?.communityPicks ?? [])) {
+    for (const r of (gameInputs?.communityPicks ?? [])) {
       if (r.game_key && gameKey && r.game_key !== gameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
@@ -267,22 +302,10 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
       }
     }
     return m
-  }, [data?.communityPicks, selected?.gameKey])
+  }, [gameInputs?.communityPicks, selected?.gameKey])
 
-  // "Last N starts" / "last N games" window — computed live from MLB's free
-  // Gumbo feed (src/lib/pitchLog.ts) for every request, so it's only ever as
-  // stale as MLB's own play-by-play feed (i.e. never, beyond the game itself
-  // finishing). This used to be one of two modes, toggled against a
-  // pre-aggregated "14-Day Window" read from mlb-party's
-  // batter_pitch_type_recent/pitcher_pitch_type_recent tables — those tables
-  // stopped updating (frozen since early July) and the fields that fed them
-  // (`pitcherPitchRecent`/`batterPitchRecent`) were removed from
-  // /api/dugout/data's response entirely on 2026-07-24 when Paper's
-  // matchup_edge/platoon_ops moved to an in-house precompute, but this page
-  // was never updated to match — so "14-Day Window" silently showed nothing
-  // for every pitcher from that day forward (confirmed via a customer
-  // report). Rather than reconnect a data source the org already moved off
-  // of sitewide in favor of games-played windows, this is now the only mode.
+  // Each selectable window belongs to this game's pregame archive. Later
+  // season games cannot enter a historical matchup's pitch mix.
   const [liveN, setLiveN] = useState(3)
   const [liveData, setLiveData] = useState<{ window: { games: number; dateFrom: string | null; dateTo: string | null }; pitcherRows: { R: any[]; L: any[] }; batters: Record<string, Record<string, { R?: any; L?: any }>> } | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
@@ -292,9 +315,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
     if (!selected) { setLiveData(null); return }
     let cancelled = false
     setLiveLoading(true); setLiveError(''); setLiveData(null)
-    const batterIds = selected.oppLineup.map(p => p.mlb_id).join(',')
-    const season = new Date(date + 'T12:00:00Z').getUTCFullYear()
-    fetch(`/api/pitcher-report/live-window?pitcherId=${selected.pitcher.id}&batterIds=${batterIds}&games=${liveN}&season=${season}`, { cache: 'no-store' })
+    fetch(`/api/pitcher-report/live-window?pitcherId=${selected.pitcher.id}&gamePk=${selected.gamePk}&date=${date}&games=${liveN}&mode=pregame`, { cache: 'no-store' })
       .then(async r => {
         const body = await r.json()
         if (!r.ok) throw new Error(body?.error || 'Failed to compute live window')
@@ -378,6 +399,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
 
   return (
     <div>
+      {boundaryError && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12 }}>{boundaryError}</p>}
       {!embedded && <DateButtonNavigator date={date} today={localToday()} onChange={setInternalDate} />}
 
       {loading ? (
@@ -426,7 +448,8 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                   </div>
                 </Link>
               </Tooltip>
-              {/* recency window — N starts/games, computed live from MLB play-by-play */}
+              {selectedGame?.researchSnapshot?.unavailable && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12 }}>Pregame research snapshot unavailable. Saved pitch windows are shown when available.</p>}
+              {/* N-start windows retain the observation made before this game. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
                   {[3, 5, 10].map(n => (
@@ -443,7 +466,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                   liveLoading ? 'Computing…' : 'No recent pitch-type data for this pitcher yet.'
                 ) : (
                   <>
-                    {`Sample: ${winLabel} — real starts, computed live from MLB play-by-play (not a rolling calendar window)`}
+                    {`Sample: ${winLabel} — real starts from MLB play-by-play, saved before this game`}
                     {/* That date range is this pitcher's own — each opposing batter's
                         numbers further down aren't from at-bats against him specifically
                         (rare to have enough of those to be meaningful); they're each
@@ -452,7 +475,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                         possible mismatch and confirmed as the intended read — this just
                         makes it explicit instead of implying one shared date range. */}
                     <div style={{ marginTop: 2 }}>
-                      Batter rows below use each hitter's own last {liveN} games vs same-handed pitching (any opponent) — his current form against this pitch, not at-bats vs this specific pitcher.
+                      Batter rows below use each hitter's own last {liveN} games vs same-handed pitching (any opponent) — his pregame form against this pitch, not at-bats vs this specific pitcher.
                     </div>
                   </>
                 )}

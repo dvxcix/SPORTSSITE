@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
+import { startNflPolling } from '@/lib/nflPolling'
 import {
   Activity, BarChart3, BrainCircuit, ChevronDown, ChevronLeft, ChevronRight,
   Crosshair, Gauge, Layers3, Radar, ScanSearch, Search, Target, TrendingUp,
@@ -139,8 +140,8 @@ export function NflSlateEdgeOverlay({ open, date, sample, onClose }: { open: boo
 
   useEffect(() => {
     if (!open) return
-    const controller = new AbortController()
-    fetch(`/api/the-sideline/slate-edge?date=${encodeURIComponent(date)}&sample=${encodeURIComponent(sample)}`, { signal: controller.signal })
+    return startNflPolling(async signal => {
+      await fetch(`/api/the-sideline/slate-edge?date=${encodeURIComponent(date)}&sample=${encodeURIComponent(sample)}`, { signal, cache: 'no-store' })
       .then(async response => {
         if (!response.ok) throw new Error('NFL Slate Edge is unavailable.')
         return response.json() as Promise<NflSlateEdgePayload>
@@ -149,8 +150,8 @@ export function NflSlateEdgeOverlay({ open, date, sample, onClose }: { open: boo
         setError('')
         setPayload(data)
       })
-      .catch(reason => { if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message) })
-    return () => controller.abort()
+      .catch(reason => { if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message); throw reason })
+    }, { immediate: true })
   }, [date, open, sample])
 
   const filtered = useMemo(() => {
@@ -208,6 +209,7 @@ export function NflSlateEdgeOverlay({ open, date, sample, onClose }: { open: boo
         </div>
       </section>
       <div className={styles.content}>
+        {!!payload?.unavailableGames?.length && <p role="status">Pregame slate snapshot unavailable for {payload.unavailableGames.length} {payload.unavailableGames.length === 1 ? 'game' : 'games'}. Available original market data is preserved.</p>}
         {!payload && !error ? <div className={styles.empty}>Building the NFL slate…</div> : error ? <div className={styles.empty}>{error}</div> : <>
           <section className={styles.summary}>
             <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{leader ? <Avatar entry={leader} size={31} /> : null}<strong>{leader?.name ?? '—'}</strong>{leader ? <Score value={leader.score[focus]} compact /> : null}</span><em>#1 by {activeSort.label}</em></div>

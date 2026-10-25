@@ -20,6 +20,7 @@ import {
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflMatchupBoard } from '@/lib/nflMatchupBoard'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
+import { warmNflPregameResearch } from '@/lib/nflSlateData'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -115,6 +116,7 @@ async function backfillOneHistoricalGame(admin: ReturnType<typeof createAdminCli
 }
 
 async function run(req: Request) {
+  const started = Date.now()
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -241,11 +243,14 @@ async function run(req: Request) {
 
   if (rows.length || backfill?.status === 'complete') revalidateTag('sideline:nfl-odds', 'max')
 
+  const research = await warmNflPregameResearch(today, started + 270_000).catch(() => ({ status: 'unavailable' }))
+
   const failed = results.filter(result => result.status === 'error').length
   return NextResponse.json({
     captured: rows.length,
     changed: changedRows.length,
     baselines: baselineCount,
+    research,
     backfill,
     failed,
     games: results.map(({ gameId, status, changed }) => ({ gameId, status, changed: Boolean(changed) })),

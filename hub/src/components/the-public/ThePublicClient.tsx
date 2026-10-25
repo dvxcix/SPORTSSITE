@@ -302,6 +302,37 @@ export function ThePublicClient({ date }: { date: string }) {
     return () => { cancelled = true }
   }, [date])
 
+  // A tab opened before first pitch must acquire the final archived input,
+  // including when a slow response hydrates after the boundary.
+  const boundaryRefreshes = useRef(new Set<string>())
+  const [boundaryError, setBoundaryError] = useState('')
+  useEffect(() => {
+    const pending = (data?.games ?? []).filter((game: any) => game.researchSnapshot?.frozen === false && Number.isFinite(Date.parse(game.researchSnapshot?.startAt ?? game.gameDate)) && !boundaryRefreshes.current.has(date + ':' + game.gamePk))
+    if (!pending.length) return
+    const next = Math.min(...pending.map((game: any) => Date.parse(game.researchSnapshot?.startAt ?? game.gameDate)))
+    let cancelled = false, attempts = 0
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const refresh = async () => {
+      attempts++
+      try {
+        const response = await fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store', signal: controller.signal })
+        if (!response.ok) throw new Error('Snapshot unavailable')
+        const value = await response.json()
+        if (!Array.isArray(value.games)) throw new Error('Snapshot unavailable')
+        if (cancelled) return
+        for (const game of pending) if (Date.parse(game.researchSnapshot?.startAt ?? game.gameDate) <= Date.now()) boundaryRefreshes.current.add(date + ':' + game.gamePk)
+        setBoundaryError(''); setData(value)
+      } catch {
+        if (cancelled) return
+        setBoundaryError(attempts < 3 ? 'Refreshing the final pregame snapshot…' : 'Final pregame snapshot could not refresh. Reload to retry.')
+        if (attempts < 3) timer = setTimeout(refresh, 1000 * attempts)
+      }
+    }
+    timer = setTimeout(refresh, Math.min(2_147_483_647, Math.max(0, next - Date.now() + 100)))
+    return () => { cancelled = true; controller.abort(); clearTimeout(timer) }
+  }, [data, date])
+
   // Re-poll while any game on this date is actually in progress, so the
   // outcome heatmap updates in real time as hits/runs/RBIs happen — a
   // Preview/Final-only slate never re-fetches at all.
@@ -316,22 +347,6 @@ export function ThePublicClient({ date }: { date: string }) {
     }, 60_000)
     return () => clearInterval(id)
   }, [anyLive, date])
-
-  // Same shape/matching Batter Cost's own communityPicksMap uses — keyed by
-  // name -> prop_type -> game_key, with an untagged '' game_key as the
-  // legacy fallback a real game_key always wins over at lookup time.
-  const communityPicksMap = useMemo(() => {
-    const m: Record<string, Record<string, Record<string, any>>> = {}
-    for (const r of (data?.communityPicks ?? [])) {
-      const nn = normName(r.player_name || '')
-      const market = r.prop_type || r.market
-      if (!nn || !market) continue
-      if (!m[nn]) m[nn] = {}
-      if (!m[nn][market]) m[nn][market] = {}
-      m[nn][market][r.game_key || ''] = r
-    }
-    return m
-  }, [data?.communityPicks])
 
   const games: GameOption[] = useMemo(() => (data?.games ?? []).map((g: any) => ({
     gameKey: g.gameKey, awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr, gameDate: g.gameDate ?? null,
@@ -351,7 +366,7 @@ export function ThePublicClient({ date }: { date: string }) {
       hr: [], hits: [], singles: [], doubles: [], triples: [], stolen_bases: [], tb: [], rbi: [], hrr: [],
     }
     if (!data?.games) return out
-    const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, isVoid: boolean, outcomes: Record<string, any>) => {
+    const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, isVoid: boolean, outcomes: Record<string, any>, communityPicksMap: Record<string, Record<string, Record<string, any>>>) => {
       for (const p of lineup ?? []) {
         const nn = p.name_norm || normName(p.name || '')
         const entry = resolveNameEntry(communityPicksMap, nn)
@@ -373,14 +388,25 @@ export function ThePublicClient({ date }: { date: string }) {
       }
     }
     for (const g of data.games) {
+      // Untagged legacy counts may only fall back within their own saved
+      // game, never across a doubleheader or a later refresh of this slate.
+      const communityPicksMap: Record<string, Record<string, Record<string, any>>> = {}
+      for (const row of g.pregameInputs?.communityPicks ?? []) {
+        if (row.game_key && row.game_key !== g.gameKey) continue
+        const name = normName(row.player_name || '')
+        const market = row.prop_type || row.market
+        if (!name || !market) continue
+        const byName = (communityPicksMap[name] ??= {})
+        ;(byName[market] ??= {})[row.game_key || ''] = row
+      }
       const gamePk = g.gamePk != null ? String(g.gamePk) : null
       const isVoid = !!g.isVoid
-      addSide(g.homeLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {})
-      addSide(g.awayLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {})
+      addSide(g.homeLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {}, communityPicksMap)
+      addSide(g.awayLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {}, communityPicksMap)
     }
     for (const cat of CATEGORIES) out[cat.key].sort((a, b) => b.picks - a.picks)
     return out
-  }, [data, communityPicksMap])
+  }, [data])
 
   const activeCat = CATEGORIES.find(c => c.key === activeCategory)!
   const rows = (rowsByCategory[activeCategory] ?? []).filter(r => activeGame === 'all' || r.gameKey === activeGame).sort((a, b) => compareMlbPublicRows(a, b, sort))
@@ -390,10 +416,15 @@ export function ThePublicClient({ date }: { date: string }) {
 
   return (
     <div>
+      {boundaryError && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12 }}>{boundaryError}</p>}
       <div className={controls.toolbar}>
         <GameSelector games={games} value={activeGame} onChange={setActiveGame} />
         <span className={controls.count}>{rows.length} players</span>
       </div>
+
+      {(data.games ?? []).some((game: any) => (activeGame === 'all' || game.gameKey === activeGame) && game.researchSnapshot?.unavailable) && (
+        <p role="status" style={{ color: 'var(--text-2)', fontSize: 12 }}>Pregame public-picks snapshot unavailable for some selected games.</p>
+      )}
 
       <div className={controls.scrollRail} aria-label="Choose a market">
         {CATEGORIES.map(c => (

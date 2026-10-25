@@ -9,7 +9,10 @@ import { sidelinePublicBoard } from '@/lib/sidelinePublicBoard'
 import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
-import type { NflSample } from '@/lib/nflSample'
+import { defaultNflSample, type NflSample } from '@/lib/nflSample'
+import { nflPregameResearch, readNflPregameResearch, NflPregameResearchUnavailable, nflPregameOpen } from '@/lib/nflPregameResearchData'
+import { unavailableNflBoardLens, unavailableNflFilmLens } from '@/lib/nflResearchUnavailable'
+import { getNflWeather } from '@/lib/nflWeatherServer'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflMatchupBoard } from '@/lib/nflMatchupBoard'
@@ -147,7 +150,7 @@ export const getSidelineTimeline = unstable_cache(async (game: SidelineGame): Pr
   for (const table of ['nfl_odds_snapshot_history', 'nfl_pikkit_picks_snapshot_history', 'nfl_fanduel_capture_history']) {
     for (let offset = 0; ; offset += 1000) {
       let query = admin.from(table).select('captured_at').eq('game_id', game.id)
-      if (cutoff) query = query.lte('captured_at', cutoff)
+      if (cutoff) query = query.lt('captured_at', cutoff)
       const { data, error } = await query.order('captured_at').range(offset, offset + 999)
         .abortSignal(AbortSignal.timeout(10000))
       if (error) throw new Error('NFL timeline unavailable')
@@ -212,7 +215,7 @@ function storedGameState(game: SidelineGame): SidelineGameState | null {
   return { status: 'Final', statusState: 'final', awayScore: game.awayScore, homeScore: game.homeScore, awayByPeriod: [], homeByPeriod: [], summary: null }
 }
 
-export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) => {
+const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
   const historical = isPastSlate(game.gameday)
   const [current, baselines, picks, supplement] = await Promise.all([
     (historical ? loadCurrentBoardHistorical : loadCurrentBoardRecent)(game.id),
@@ -222,54 +225,97 @@ export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) =
   ])
   const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(current, supplement), baselines)])
   const liveBoard = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
-  const cutoff = sidelinePregameCutoff(game)
-  const frozen = cutoff ? await getSidelineCapture(game, cutoff) : null
-  const base = frozen?.board ?? liveBoard
-  const [designations, gameState] = await Promise.all([
-    base.bdlGameId
-      ? loadDesignations(game.season, game.week, game.gameType, base.bdlGameId, base.players.flatMap(player => player.teamId ? [player.teamId] : []))
-      : Promise.resolve([]),
-    storedGameState(game) ? Promise.resolve(storedGameState(game)) : base.bdlGameId ? loadGameState(base.bdlGameId) : Promise.resolve(null),
-  ])
-  return { odds: sidelinePublicBoard(attachDesignations(base, designations)), gameState: gameState ?? storedGameState(game) }
-}, ['sideline-enriched-current-v7-exact-identity'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+  const designations = liveBoard.bdlGameId ? await loadDesignations(game.season, game.week, game.gameType, liveBoard.bdlGameId, liveBoard.players.flatMap(player => player.teamId ? [player.teamId] : [])) : []
+  const value = sidelinePublicBoard(attachDesignations(liveBoard, designations))
+  if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
+  return { value, observedAt: new Date().toISOString() }
+}, ['sideline-enriched-pregame-v1'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+
+// The boundary check must run outside Next's cache: a cached pregame response
+// cannot substitute for another process's final snapshot after kickoff.
+export async function getSidelineOddsBundle(game: SidelineGame) {
+  const beganOpen = nflPregameOpen(game)
+  let odds: SidelineOddsBoard
+  try { odds = (await nflPregameResearch(game, 'odds:v1', () => loadEnrichedPregameOdds(game))).value }
+  catch (error) {
+    if (!(error instanceof NflPregameResearchUnavailable)) throw error
+    const cutoff = sidelinePregameCutoff(game)
+    const original = cutoff ? await getSidelineCapture(game, cutoff) : null
+    odds = original?.board ?? { ...EMPTY_SIDELINE_ODDS, status: nflPregameOpen(game) ? 'not-posted' : 'unavailable' }
+  }
+  // Score/results are intentionally live and are never research rank inputs.
+  const gameState = storedGameState(game) ?? (odds.bdlGameId ? await loadGameState(odds.bdlGameId) : null)
+  if (beganOpen && !nflPregameOpen(game)) {
+    const final = await readNflPregameResearch<SidelineOddsBoard>(game, 'odds:v1')
+    const original = final ? null : await getSidelineCapture(game, sidelinePregameCutoff(game)!)
+    odds = final?.value ?? original?.board ?? { ...EMPTY_SIDELINE_ODDS, status: 'unavailable' }
+  }
+  return { odds, gameState }
+}
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
   const admin = createAdminClient()
   const kickoff = nflKickoffAt(game)?.toISOString()
-  const capturedAt = kickoff && Date.parse(requestedCapture) > Date.parse(kickoff) ? kickoff : requestedCapture
-  const [oddsResult, picksResult, baselines, supplement] = await Promise.all([
+  const capturedAt = kickoff && Date.parse(requestedCapture) >= Date.parse(kickoff) ? new Date(Date.parse(kickoff) - 1).toISOString() : requestedCapture
+  const [oddsResult, picksResult, supplement] = await Promise.all([
     admin.from('nfl_odds_snapshot_history').select('board,captured_at')
       .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
       .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
     admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at')
       .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
       .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
-    (isPastSlate(game.gameday) ? loadTdBaselinesHistorical : loadTdBaselinesRecent)(game.gameday),
     loadNflFanduel(game.id, capturedAt),
   ])
   if (oddsResult.error || picksResult.error) throw new Error('NFL capture unavailable')
   if (!oddsResult.data) return null
   const raw = { ...(oddsResult.data.board as SidelineOddsBoard), capturedAt: oddsResult.data.captured_at, source: 'snapshot' as const }
-  const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(raw, supplement), baselines)])
+  // These rows already contain their captured identity/baselines. Re-enriching
+  // an old frame from current season/roster tables changes historical research.
+  const original = attachNflFanduel(raw, supplement)
+  const [corrected] = await enrichSidelineOddsBoards(game, [original])
+  // Retain the existing exact-name collision repair for an unrelated source
+  // team. Ordinary historical roster/season metadata remains as captured.
+  const identified = { ...original, players: original.players.map((player, index) => corrected.players[index]?.team !== player.team ? corrected.players[index] : player) }
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
   return { capturedAt, board: sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr)) }
-}, ['sideline-selected-capture-v6-exact-identity'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+}, ['sideline-selected-capture-v7-original-research'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
-export const getCachedSidelineBoardLens = unstable_cache(
-  async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),
-  ['sideline-board-lens-v11-pregame-dvp'],
+const loadPregameBoardLens = unstable_cache(
+  async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample) => {
+    const value = await getSidelineBoardLens(game, roster, sample)
+    if (value.status !== 'calculated') throw new NflPregameResearchUnavailable()
+    return { value, observedAt: new Date().toISOString() }
+  },
+  ['sideline-board-lens-v12-original-observation'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 
-export const getCachedSidelineLens = unstable_cache(
-  async (game: SidelineGame) => getSidelineLens(game),
-  ['sideline-film-lens-v4-pregame'],
+const loadPregameFilmLens = unstable_cache(
+  async (game: SidelineGame, sample: NflSample, history: boolean) => {
+    const value = await getSidelineLens(game, history, sample)
+    if (value.status !== 'calculated') throw new NflPregameResearchUnavailable()
+    return { value, observedAt: new Date().toISOString() }
+  },
+  ['sideline-film-lens-v6-original-observation'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 
-export const getCachedSidelineCheatsheetLens = unstable_cache(
-  async (game: SidelineGame, sample: NflSample) => getSidelineLens(game, false, sample),
-  ['sideline-cheatsheet-lens-v5-selected-sample'],
-  { revalidate: 3600, tags: ['sideline:nfl-data'] },
-)
+export async function getCachedSidelineBoardLens(game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') {
+  try { return (await nflPregameResearch(game, `board-lens:${sample}`, () => loadPregameBoardLens(game, roster, sample))).value }
+  catch (error) { if (error instanceof NflPregameResearchUnavailable) return unavailableNflBoardLens(game, sample); throw error }
+}
+export async function getCachedSidelineLens(game: SidelineGame) {
+  return getFrozenFilmLens(game, defaultNflSample(game), true)
+}
+export async function getCachedSidelineCheatsheetLens(game: SidelineGame, sample: NflSample) {
+  return getFrozenFilmLens(game, sample, false)
+}
+async function getFrozenFilmLens(game: SidelineGame, sample: NflSample, history: boolean) {
+  try { return (await nflPregameResearch(game, `${history ? 'film' : 'cheatsheet'}-lens:${sample}`, () => loadPregameFilmLens(game, sample, history))).value }
+  catch (error) { if (error instanceof NflPregameResearchUnavailable) return unavailableNflFilmLens(game, sample); throw error }
+}
+
+export async function getSidelinePregameWeather(game: SidelineGame) {
+  try { return (await nflPregameResearch(game, 'weather:v1', async () => ({ value: { summary: await getNflWeather(game) }, observedAt: new Date().toISOString() }))).value.summary }
+  catch (error) { if (error instanceof NflPregameResearchUnavailable) return undefined; throw error }
+}

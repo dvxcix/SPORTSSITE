@@ -1,0 +1,49 @@
+Cross-sport pregame research freeze - 2026-10-25
+
+Owner authorization: release through main, freeze all pregame research/MM/slate
+rankings at the game start, recover genuine pregame observations where possible.
+Explicit Live views may change. This follows the NBA release at 4d99aaa4.
+
+NFL: durable odds/availability/board/film/cheatsheet observations and per-game
+whole-slate ranking pools. A later game's updates cannot rerank a started game.
+Missing historical enrichment is unavailable; original captured odds remain.
+MLB: full per-game research inputs, baselines, quotes/openings, mechanics/public
+inputs and custom pitch windows. Default Dugout, Pitcher Report and The Public
+use the selected game's archive. Tier gates are reapplied to shared archives.
+Custom inputs never viewed before the start cannot be reconstructed afterward.
+Raw user matrix definitions/results are not shared into global archives.
+
+Cutoffs use the earliest known scheduled/actual start and never move later to
+reopen a game. Database wall-clock checks and per-game locks reject late writes;
+slow requests re-read the final snapshot. Open views fetch once at the boundary
+and on return to the tab. Existing cloud jobs warm archives within bounded work;
+no new collectors, schedules, browser sessions or manual job replays were added.
+
+Applied individually; do not replay:
+20261025025710_freeze_nfl_pregame_research
+20261025030336_freeze_mlb_pregame_research
+Both use service-only functions and protected tables. Transactional rollback
+fixtures passed late-write/partial-write/cutoff/quality guards; no fixtures remain.
+
+Recovered NFL: 12 missing Oct 18 game-anchor pools from the original authenticated
+Oct 18 13:15:43.284Z export, preceding the earliest 13:30Z kickoff. Every pool
+retains all 458 original entries, original scores/MM and observation time.
+Digest d8c763c04b9625e9f7d0aec5ff874f2b. No old snapshot was overwritten.
+The verified 2026 export correctly includes Marvin Harrison Jr. on HOU.
+
+Prior NBA recovery: 36 boards, 77 ancillary research snapshots and 1,824 compatible
+legacy slate snapshots. Original observations are not necessarily the closing
+capture. Missing historical model/defense/custom snapshots stay unavailable.
+
+Validation and deployment evidence: enclosing outputs directory. Before this
+follow-up, NFL non-browser tests passed 165/165 plus 3/3 local transport checks.
+Six fixture browser suites need a separate local fixture/Chromium setup; actual
+production browser checks use the approved saved Edge session. Two existing
+Dugout responsive source assertions fail at unchanged HEAD 4d99aaa4: they expect
+absent dg-player-signal-row and activeElement?.focus source strings. They were
+not changed or suppressed. Integrated typecheck, 134/134 production checks and
+117/117 cross-sport freeze tests pass. Independent review found no remaining
+release blocker. No trustworthy full historical MLB pregame bundle was found;
+the only full local export was captured after first pitch and was excluded.
+Final release SHA, live verification and limitations are recorded in the matching
+cross-sport-pregame-freeze-release-verified-2026-10-25.txt output report.

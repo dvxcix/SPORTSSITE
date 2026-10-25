@@ -55,7 +55,7 @@ test('DVP uses prior observations only and preserves per-game teammate aggregati
 })
 test('game coverage panel is absent for everyone and historical caches are versioned', () => {
   assert.doesNotMatch(readFileSync('src/app/the-sideline/page.tsx', 'utf8'), /NflGameData|Game data ·/)
-  assert.match(readFileSync('src/app/the-sideline/SidelineCheatsheets.tsx', 'utf8'), /isAdmin \? <section/)
+  assert.doesNotMatch(readFileSync('src/app/the-sideline/SidelineCheatsheets.tsx', 'utf8'), /isAdmin \? <section|coverageSummary|Internal diagnostics/)
   assert.match(readFileSync('src/app/the-sideline/analysis.ts', 'utf8'), /\.lt\('week', beforeWeek\)/)
   assert.doesNotMatch(readFileSync('src/app/the-sideline/analysis.ts', 'utf8'), /\.eq\('week', 0\)/)
 })

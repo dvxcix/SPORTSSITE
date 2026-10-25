@@ -32,9 +32,11 @@ test('poller serializes requests, pauses hidden/offline, resumes, and cancels cl
 test('NFL private endpoints keep auth outside shared cache and history is opt-in',()=>{
   const read=(p:string)=>readFileSync(p,'utf8')
   const slate=read('src/app/api/the-sideline/slate-edge/route.ts')
-  assert.ok(slate.indexOf('await requireNflAccess()') < slate.indexOf('await getSlatePayload('))
+  assert.ok(slate.indexOf('await requireNflAccess()') < slate.indexOf('await getNflSlatePayload('))
   assert.match(slate,/private, no-store/)
-  assert.match(slate,/unstable_cache/)
+  const archivedSlate=read('src/lib/nflSlateData.ts')
+  assert.match(archivedSlate,/unstable_cache/)
+  assert.doesNotMatch(archivedSlate,/requireNflAccess|gate\.userId|cookies\(/)
   const research=read('src/app/the-sideline/SidelineResearchClient.tsx')
   assert.match(research,/results=1/)
   assert.doesNotMatch(research,/fetch\(`\/the-sideline\/results/)

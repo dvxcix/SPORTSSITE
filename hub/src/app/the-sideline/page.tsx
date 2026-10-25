@@ -9,13 +9,14 @@ import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
 import { SidelineCheatsheets } from './SidelineCheatsheets'
-import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getSidelineGames, getSidelineOddsBundle } from './data'
+import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getSidelineGames, getSidelineOddsBundle, getSidelinePregameWeather } from './data'
 import { CalendarOff } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
-import { getNflWeather } from '@/lib/nflWeatherServer'
+import { nflPregameOpen } from '@/lib/nflPregameResearchData'
+import { NflPregameBoundary } from './NflPregameBoundary'
 import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
 
 export const dynamic = 'force-dynamic'
@@ -47,28 +48,34 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
+  const beganOpen = nflPregameOpen(selected)
   const sample = requestedSample
     ? parseNflSample(requestedSample)
     : defaultNflSample(selected)
-  const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
+  const navigation = <><NflPregameBoundary game={selected} wasOpen={beganOpen} /><SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} /></>
 
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
-  const [market, touchdownFeed, weatherSummary] = await Promise.all([
+  let [market, touchdownFeed, weatherSummary] = await Promise.all([
     getSidelineOddsBundle(selected),
     getNflTouchdownFeed(date),
-    mode === '' ? getNflWeather({ stadium: selected.stadium, roof: selected.roof, surface: selected.surface, gameday: selected.gameday, gametime: selected.gametime, temp: selected.temp, wind: selected.wind }) : Promise.resolve(undefined),
+    mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
   if (mode === 'cheatsheets') {
-    const lens = await getCachedSidelineCheatsheetLens(selected, sample)
+    let lens = await getCachedSidelineCheatsheetLens(selected, sample)
+    if (beganOpen && !nflPregameOpen(selected)) [market, lens] = await Promise.all([getSidelineOddsBundle(selected), getCachedSidelineCheatsheetLens(selected, sample)])
     return <>{navigation}<LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed.filter(event => event.gameId === selected.id)}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
   }
-  if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
+  if (mode === 'public' || mode === 'markets') {
+    const results = mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null
+    if (beganOpen && !nflPregameOpen(selected)) market = await getSidelineOddsBundle(selected)
+    return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
-    gameId={selected.id} initialResults={mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null}
+    gameId={selected.id} initialResults={results}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
     boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
+  }
   const roster = market.odds.players.map(player => ({
     id: player.gsisId ?? `bdl-${player.id}`,
     bdlId: player.id,
@@ -77,7 +84,10 @@ export default async function SidelinePage({ searchParams }: {
     name: player.name,
     position: player.position,
   }))
-  const lens = await getCachedSidelineBoardLens(selected, roster, sample)
+  let lens = await getCachedSidelineBoardLens(selected, roster, sample)
+  if (beganOpen && !nflPregameOpen(selected)) [market, lens, weatherSummary] = await Promise.all([
+    getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
+  ])
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
   return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
 }
