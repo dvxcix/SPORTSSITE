@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
-import { getPaintFinalStats, getPaintGame } from '@/lib/nbaPaintData'
+import { getPaintBoard, getPaintFinalStats, getPaintGame } from '@/lib/nbaPaintData'
 import { getNbaPlays } from '@/lib/nbaShotsData'
 import { nbaShots } from '@/lib/nbaShots'
-export const maxDuration = 60
+import { nbaOddsMode } from '@/lib/nbaOddsMode'
+import { getNbaResearchShots } from '@/lib/nbaResearchResources'
+export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
   const game = request.nextUrl.searchParams.get('game'), player = request.nextUrl.searchParams.get('player')
-  if (!game || !player || !/^\d{1,10}$/.test(game) || !/^\d{1,10}$/.test(player)) return NextResponse.json({ error: 'Invalid shot research' }, { status: 400 })
+  const researchGame = request.nextUrl.searchParams.get('researchGame'), mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
+  if (!game || !player || !/^\d{1,10}$/.test(game) || !/^\d{1,10}$/.test(player) || researchGame != null && !/^\d{1,10}$/.test(researchGame)) return NextResponse.json({ error: 'Invalid shot research' }, { status: 400 })
   try {
+    if (researchGame) {
+      const board = await getPaintBoard(await getPaintGame(Number(researchGame)), mode)
+      return NextResponse.json(await getNbaResearchShots(board, Number(game), Number(player), mode), { headers: { 'Cache-Control': 'private, no-store' } })
+    }
+    // Standalone player-history charts have no matchup anchor. They remain
+    // completed-game history; matchup drawers always supply researchGame.
     const match = await getPaintGame(Number(game))
     if (match.season < 2025 || (match.status_state !== 'final' && match.status !== 'Final')) return NextResponse.json({ error: 'Shot research requires a completed game from 2025 onward' }, { status: 400 })
     const stats = await getPaintFinalStats(match.id), row = stats.rows.find(stat => stat.game.id === match.id && stat.player.id === Number(player))

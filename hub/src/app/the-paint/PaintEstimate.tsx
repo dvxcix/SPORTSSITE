@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react'
 import { nbaBinary, PAINT_MARKETS, type PaintPlayer, type PaintMarket } from '@/lib/nbaPaint'
 import { number } from './PaintVisuals'
 import styles from './paint.module.css'
-export function PaintEstimate({ player, market, game }: { player: PaintPlayer; market: PaintMarket; game: number }) {
+export function PaintEstimate({ player, market, game, researchRevision = '' }: { player: PaintPlayer; market: PaintMarket; game: number; researchRevision?: string }) {
   const oddsMode = useNbaOddsMode()
-  const key = `${oddsMode}:${game}:${player.id}:${market}`
+  const key = `${oddsMode}:${game}:${player.id}:${market}:${researchRevision}`
   const [state, setState] = useState<{ key: string; estimate: number | null; games: number } | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const [retry, setRetry] = useState(0)

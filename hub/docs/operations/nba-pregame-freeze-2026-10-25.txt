@@ -1,0 +1,71 @@
+NBA pregame research freeze — 2026-10-25
+
+Authorized by owner: fix through main; freeze all pregame research/MM at tip,
+including slate rankings; recover genuine original observations; deploy and
+verify; explicit Live mode continues to use live inputs.
+
+Baseline: origin/main and production df6ad8d63a7fd295e1faea94901c56c0bbea28b2.
+Required recovered NFL ancestor 6c3811b0882e1b1a6694a30849273f3e210cd69c retained.
+Work performed in isolated codex/nba-pregame-freeze checkout. Unrelated local
+work, NFL/MLB collectors, schedules, secrets and feature flags were preserved.
+
+Implementation
+- Durable, service-only nba_pregame_research stores complete original inputs,
+  observation timestamps and capture/recovery provenance, without cache expiry.
+- Board roster, season averages, full/Q1 logs, injuries, team metrics and starters
+  remain fixed. The old post-tip historical-sample substitution is bypassed.
+- Defense, tracking, models, market context, profiles, scouting, first basket
+  and previously observed shot data use the same per-game cutoff.
+- Slate MM and heat domains use a whole-slate comparison pool saved separately
+  for each anchor game, before sportsbook/market/contract filters.
+- Missing historical inputs remain unavailable; neither current data nor the
+  matchup-only MM is substituted for a missing whole-slate pool.
+- Source timestamps are genuine, not backdated. Writers serialize by game,
+  compare database wall time after lock waits, reject late/older observations
+  and preserve complete resources against partial replacements.
+- Closed reads wait for pending pre-tip commits. Requests crossing tip reread
+  the final durable winner; cached boards cannot bypass the response check.
+- Existing research cron rotates resource warming independently of score
+  attempts, and captures complete pools within its existing runtime/schedule.
+- Matchup links retain game/mode; general standalone directories are labelled
+  current. Open research panels refetch on the board's frozen revision.
+- Explicit Live bypasses the pregame archive. The normal visible board poll
+  receives the final frozen revision within its existing 60–66-second cadence.
+
+Applied additive migrations (do not replay historical migration tree)
+20261025023002_freeze_nba_pregame_research
+20261025023532_serialize_nba_pregame_research_reads
+20261025024026_harden_nba_research_ledger_tip_cutoff
+
+The legacy score ledger now also uses the canonical cutoff and database wall
+clock after locks, with captured_at explicitly set at insertion. Existing
+identity, chronology, validation and deduplication guards remain intact.
+
+Recovery
+36 full original pregame board bundles: 33 v7 originals and three compatible
+v6 originals for October20. 77 original resources: scouting34, tracking30,
+first basket13. Exact original October24 three-point slate snapshots recovered
+for all8 games (all books, over, milestones, automatic target).
+Additional exact-filter recoveries may be recorded in the external release
+evidence. Recovery scripts insert absent rows only and preserve source caches.
+Backups and preflight evidence are in the enclosing workspace outputs directory.
+These observations are not necessarily closing captures. Missing old models,
+defense/context, unobserved shots or filter combinations cannot be invented.
+
+Validation before Git release
+npm run test:paint: 522 existing/updated tests +75 new freeze tests passed.
+npm run test:production:134/134 passed.
+npm run typecheck and git diff --check passed.
+Database rollback checks passed for privileges, late/older/incomplete writers,
+canonical cutoff, final locked reads, score deduplication and transaction-clock
+backdating. All temporary fixture rows rolled back.
+Security review: archive has RLS and no client policies intentionally; anon and
+authenticated have no access; service role cannot directly mutate the archive.
+Independent code review covered cross-tip requests, caches, pool persistence,
+cron rotation and open UI panel state.
+
+Release verification
+Final deployment SHA, authenticated production API comparisons, screenshots,
+immutable archive hashes and remaining historical gaps are saved separately as
+outputs/nba-pregame-freeze-live-verification-2026-10-25.json and the final release
+evidence. This preparation record alone does not certify deployment.

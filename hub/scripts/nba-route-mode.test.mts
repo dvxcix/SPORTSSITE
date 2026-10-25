@@ -5,6 +5,7 @@ import ts from 'typescript'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 
 async function route(file: string, imports: Record<string, unknown>) {
+  imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} as Record<string, (...args: any[]) => Promise<any>> }
@@ -83,6 +84,7 @@ test('Matrix evaluation uses selected-phase exact prices and public picks while 
     '@/lib/nbaPaintData': {getPaintGame:async()=>game,getPaintBoard:async(_game:unknown,mode:string)=>{reads.push('board:'+mode);return {game,players:[{id:1,first_name:'Test',last_name:'Player',team:{id:1,abbreviation:'BOS'},logs:[],average:{},props:[{id:1,game_id:123,player_id:1,prop_type:'points',vendor:'fanduel',line_value:'15',updated_at:'2026-10-20T12:00:00Z',market:{type:'milestone',odds:mode==='live'?250:100}}]}],fetchedAt:'2026-10-20T12:00:00Z'}}},
     '@/lib/nbaMatrix': await import('../src/lib/nbaMatrix.ts'),
     '@/lib/nbaIntelligenceData': {}, '@/lib/nbaMarketSignalData': {}, '@/lib/nbaTrackingData': {},
+    '@/lib/nbaResearchResources': {},
     '@/lib/nbaPublicData': {getNbaPublicCaptures:async(_id:number,mode:string)=>{reads.push('picks:'+mode);return [{snapshot:{rows:[{playerId:1,market:'points',picks:mode==='live'?50:20}]}}]}},
   })
   const pre = await (await api.GET(request('game=123'))).json(), live = await (await api.GET(request('game=123&mode=live'))).json()
@@ -97,7 +99,6 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
   const tip = Date.parse('2020-10-20T13:00:00Z'); let now = tip - 1000, builds = 0
   const game = {id:123,date:'2020-10-20',datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}
   const cached = new Map<string, unknown>()
-  const reports = {select:()=>reports,eq:()=>reports,order:()=>reports,limit:async()=>({data:[],error:null})}
   const api = await route('../src/app/the-paint/slate/route.ts', {
     '@/lib/nbaOddsClockData': {getNbaOddsGame:async(value:any)=>({...value,datetime:new Date(tip).toISOString()})},
     '@/lib/nbaOddsMode': {...oddsMode,nbaPregameOpen:(value:any)=>oddsMode.nbaPregameOpen(value,now),nbaLiveOpen:(value:any)=>oddsMode.nbaLiveOpen(value,now)},
@@ -105,10 +106,10 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
     '@/lib/nbaPaint': {nbaDate:(value:string)=>value,PAINT_MARKETS:[{key:'points'}],nbaPeriod:()=>0},
     '@/lib/nbaPaintData': {getPaintSchedule:async()=>({date:game.date,games:[game],complete:true}),getPaintBoard:async(_game:any,mode:string)=>{assert.equal(_game.datetime,new Date(tip).toISOString());assert.equal(mode,'pregame');builds++;return {game,players:[],statsComplete:true,price:now<tip?110:130}},refreshPaintBoardPrices:async(board:unknown,mode:string)=>{assert.equal(mode,'pregame');return board}},
     '@/lib/nbaSharedCache': {nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,await load());return {value:cached.get(key),fetchedAt:new Date(now).toISOString(),stale:false}}},
-    '@/lib/supabase/admin': {createAdminClient:()=>({from:()=>reports})},
-    '@/lib/nbaIntelligenceData': {getNbaDefenseContext:async()=>({ready:false,profiles:[]})},
-    '@/lib/nbaSlate': {nbaSlateRows:(boards:any[])=>boards.map(board=>({game:board.game,player:{id:1},market:'points',offer:{odds:board.price},signalOffers:[],baseScore:50}))},
-    '@/lib/nbaMarketSignalData': {getNbaMarketContext:async()=>({gameId:123})},
+    '@/lib/nbaResearchResources': {getNbaResearchModels:async()=>[],getNbaResearchDefense:async()=>({ready:false,profiles:[]}),getNbaResearchMarketContext:async()=>({gameId:123})},
+    '@/lib/nbaSlateFreezeData': {captureNbaSlatePools:async()=>({full:1,quarter:0}),getNbaSlateRanks:async()=>({ranks:new Map(),unavailable:[],observedAt:{},heatDomains:{}}),getNbaLegacySlateRows:async()=>null},
+    '@/lib/nbaSlateHeat': await import('../src/lib/nbaSlateHeat.ts'),
+    '@/lib/nbaSlate': {nbaSlateRows:(boards:any[])=>boards.map(board=>({game:board.game,player:{id:1},market:'points',offer:{odds:board.price},signalOffers:[],baseScore:50,issues:[]}))},
     '@/lib/nbaMarketSignal': {nbaMarketSupportView:(value:unknown)=>value,nbaPlayerMarketSignals:()=>null},
     '@/lib/nbaIntelligence': {nbaContextualScore:()=>({score:50,marketSupport:null})},
   })
@@ -118,5 +119,5 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
   now=tip+1
   game.datetime=new Date(tip+3600000).toISOString()
   assert.equal((await (await api.GET(request(search))).json()).rows[0].offer.odds,130)
-  assert.equal(builds,2)
+  assert.equal(builds,3,'closed response re-resolves the final research archive after the cache loader')
 })

@@ -18,6 +18,7 @@ async function harness(initialTime:number, current:paint.PaintProp[], frozen= [q
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const keys:string[]=[], cached=new Map<string,unknown>()
   const imports:Record<string,unknown>={
+    './nbaPregameResearchData':{},
     'server-only':{},'node:crypto':crypto,'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':paint,'./nbaOddsHistory':{nbaAttachOpenings},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>({...g,datetime:game.datetime})},
     './nbaOddsMode':{...mode,nbaPregameOpen:(g:paint.PaintGame)=>mode.nbaPregameOpen(g,now),nbaLiveOpen:(g:paint.PaintGame)=>mode.nbaLiveOpen(g,now)},

@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
 import { act, createElement, type ComponentType } from 'react'
+import { nbaResearchRevision } from '../src/lib/nbaResearchRevision.ts'
 
 const require = createRequire(import.meta.url)
 const { JSDOM } = require('jsdom')
@@ -24,8 +25,8 @@ const stubs: Record<string, string> = {
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
   'next/link': 'import React from "react";export default function Link(props){return <a {...props}/>}',
 }
-const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds', 'PaintPublic']
-const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {NbaOddsModeProvider} from "./src/components/nba/NbaOddsModeContext"; export {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
+const names = ['PaintSlate', 'PaintDivergence', 'PaintTracking', 'PaintMovement', 'PaintEstimate', 'PaintMatchup', 'PaintFirstBasketOdds', 'PaintPublic', 'PaintShotChart', 'PaintPlayerPanel', 'PaintIntelligence', 'PaintFirstBasket']
+const source = names.map(name => `export {${name}} from './src/app/the-paint/${name}'`).join('\n') + '\nexport {PaintUsage} from "./src/app/the-paint/PaintResearchTools"; export {NbaOddsModeProvider} from "./src/components/nba/NbaOddsModeContext"; export {NbaEntityHistory} from "./src/components/nba/NbaEntityHistory"; export {NbaTeamRoster} from "./src/components/nba/NbaTeamRoster"'
 const bundle = await build({ stdin: { contents: source, resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, outfile: 'deep-tools.cjs', platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json', loader: { '.css': 'empty' }, plugins: [{ name: 'deep-tool-fixture', setup(builder) {
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
   builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ contents: stubs[args.path], loader: 'tsx', resolveDir: resolve('.') }))
@@ -147,7 +148,7 @@ test('matchup starter portraits match confirmed IDs per team and preserve pendin
     const homePanel = ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
     assert.ok(awayPanel.textContent?.includes('1 confirmed starter'))
     const player = awayPanel.querySelector('a[aria-label="Jayson Tatum, confirmed starter"]')!
-    assert.equal(player.getAttribute('href'), '/nba/players/11?mode=pregame')
+    assert.equal(player.getAttribute('href'), '/nba/players/11?game=123&mode=pregame')
     assert.equal(player.querySelector('img')?.getAttribute('src'), away.headshot)
     assert.equal(awayPanel.querySelectorAll('li').length, 1, 'unmatched provider IDs do not invent a player')
     assert.ok(homePanel.textContent?.includes('Starters pending'))
@@ -251,3 +252,58 @@ test('switching NBA history mode clears old captures and ignores a late response
     await act(async()=>pending[2].finish(-600)); assert.ok(host.textContent?.includes('-600')); assert.equal(host.textContent?.includes('+1000'),false)
   } finally { await act(async()=>root.unmount()); host.remove(); globalThis.fetch=originalFetch }
 })
+
+test('shot charts preserve the matchup anchor and never display a late response from another mode', async () => {
+  const originalFetch = globalThis.fetch
+  const pending: {url:URL;signal:AbortSignal;finish:(text:string)=>void}[] = []
+  const player = {id:11,first_name:'Phase',last_name:'Player',position:'G',team,headshot:null,props:[],average:{},logs:[{id:1,player:{id:11},team:{id:2},min:'30',game:{id:100,date:'2026-10-19',season:2026,status:'Final',home_team_id:2,visitor_team_id:9}}]}
+  globalThis.fetch = (async (input, init) => new Promise<Response>(resolve => {
+    pending.push({url:new URL(String(input),'https://www.slipsurge.com'),signal:init!.signal as AbortSignal,finish:text=>resolve(Response.json({gameId:100,playerId:11,shots:[{order:1,period:1,clock:'10:00',text,made:true,points:2,halfCourt:false}],boxScoreAttempts:1,coverageMatches:true,stale:false}))})
+  })) as typeof fetch
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  const render = async (mode:string, researchGame=123) => { await act(async()=>root.render(createElement(fixtureModule.exports.NbaOddsModeProvider,{mode},createElement(fixtureModule.exports.PaintShotChart,{player,researchGame})))) }
+  try {
+    await render('pregame')
+    assert.equal(pending[0].url.searchParams.get('researchGame'),'123')
+    await render('live'); assert.equal(pending[0].signal.aborted,true)
+    await act(async()=>pending[0].finish('Old pregame shot')); assert.doesNotMatch(host.textContent??'',/Old pregame shot/)
+    await act(async()=>pending[1].finish('Live sample')); assert.match(host.textContent??'',/Live sample/)
+    await render('pregame',456)
+    assert.equal(pending[2].url.searchParams.get('researchGame'),'456'); assert.doesNotMatch(host.textContent??'',/Live sample/)
+    await act(async()=>pending[2].finish('Frozen parent sample')); assert.match(host.textContent??'',/Frozen parent sample/)
+  } finally { await act(async()=>root.unmount()); host.remove(); globalThis.fetch=originalFetch }
+})
+
+for (const scenario of [
+  { component: 'PaintEstimate', path: '/the-paint/estimate', data: { estimate: 25.2, games: 10 } },
+  { component: 'PaintPlayerPanel', path: '/the-paint/profile', data: { gameId: 123, playerId: 11, shooting: null, advanced: null } },
+  { component: 'PaintTracking', path: '/the-paint/tracking', data: { gameId: 123, rows: [], seasons: [2025], fields: [], complete: true } },
+  { component: 'PaintUsage', path: '/the-paint/scouting', data: { season: 2025, players: [], issues: [] } },
+  { component: 'PaintFirstBasket', path: '/the-paint/first-basket', data: { rows: [], teams: [], coveredGames: 0, requestedGames: 0 } },
+  { component: 'PaintIntelligence', path: '/the-paint/intelligence', data: { profiles: [], scores: [], season: 2025, ready: true } },
+  { component: 'PaintShotChart', path: '/the-paint/shots', data: { gameId: 100, playerId: 11, shots: [], boxScoreAttempts: 0, coverageMatches: true } },
+]) {
+  test(`${scenario.component} refreshes an open panel at freeze and ignores the earlier in-flight response`, async () => {
+    const originalFetch = globalThis.fetch
+    const pending: { signal: AbortSignal; finish: () => void }[] = []
+    const player = { id: 11, first_name: 'Phase', last_name: 'Player', position: 'G', team, headshot: null, props: [], average: {}, logs: [{ id: 1, player: { id: 11 }, team: { id: 2 }, min: '30', game: { id: 100, date: '2026-10-19', season: 2026, status: 'Final', home_team_id: 2, visitor_team_id: 9 } }] }
+    globalThis.fetch = (async (input, init) => {
+      if (new URL(String(input), 'https://www.slipsurge.com').pathname !== scenario.path) return Response.json({ rows: [], failed: [], games: 0 })
+      return new Promise<Response>(resolve => pending.push({ signal: init!.signal as AbortSignal, finish: () => resolve(Response.json(scenario.data)) }))
+    }) as typeof fetch
+    const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+    const render = async (frozen: boolean) => {
+      const current = { ...board, fetchedAt: '2026-10-20T12:00:00Z', researchSnapshot: { observedAt: '2026-10-20T12:00:00Z', source: 'capture' as const, frozen } }
+      const props = { board: current, player, players: [], game: 123, market: 'points', side: 'over', book: 'all', mode: 'score', initialTab: 'court', close: noop, compare: noop, open: noop, onMarketChange: noop, onBookChange: noop, onSideChange: noop, researchGame: 123, researchRevision: nbaResearchRevision(current as any) }
+      await act(async () => root.render(createElement(fixtureModule.exports[scenario.component], props)))
+    }
+    try {
+      await render(false); assert.equal(pending.length, 1)
+      await render(true); assert.equal(pending.length, 2, 'same observation time still refreshes on the freeze transition')
+      assert.equal(pending[0].signal.aborted, true)
+      await act(async () => pending[0].finish())
+      await act(async () => pending[1].finish())
+      await render(true); assert.equal(pending.length, 2, 'unchanged frozen observation does not refetch')
+    } finally { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
+  })
+}

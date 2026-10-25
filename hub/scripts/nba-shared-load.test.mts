@@ -10,6 +10,7 @@ import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}): Promise<T> {
+  imports = { './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }

@@ -8,6 +8,7 @@ export type NbaSearchTeam = { id: number; name: string; abbr: string; logo: stri
 export type NbaSeasonSummary = { season: number; games: number; teamIds: number[]; pts: number | null; reb: number | null; ast: number | null; fg3m: number | null; stl: number | null; blk: number | null; min: number | null; fgPct: number | null; threePct: number | null }
 export const nbaEntityId = (value: string) => /^\d{1,10}$/.test(value) && Number(value) > 0 ? Number(value) : null
 export const nbaPlayerName = (player: Pick<PaintRoster, 'first_name' | 'last_name'>) => `${player.first_name} ${player.last_name}`.trim()
+export function nbaEntityGameHref(path: string, game?: number) { return game == null ? path : `${path}${path.includes('?') ? '&' : '?'}game=${game}` }
 
 export function searchNbaEntities(directory: NbaDirectory, query: string) {
   const normalized = nbaName(query.trim().slice(0, 64))

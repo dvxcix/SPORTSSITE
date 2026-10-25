@@ -1,5 +1,6 @@
 'use client'
 import { nbaModeHref } from '@/lib/nbaModeHref'
+import { nbaResearchRevision } from '@/lib/nbaResearchRevision'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useState } from 'react'
 import type { PaintBoard } from '@/lib/nbaPaint'
@@ -13,7 +14,8 @@ import { PaintSortHeader } from './PaintSortHeader'
 type Research = ReturnType<typeof nbaFirstBasketResearch>
 export function PaintFirstBasket({board,open}:{board:PaintBoard;open:(id:number)=>void}) {
   const oddsMode = useNbaOddsMode()
-  const [state,setState]=useState<{game:number;data:Research}|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
+  const dataKey=`${oddsMode}:${board.game.id}:${nbaResearchRevision(board)}`
+  const [state,setState]=useState<{key:string;data:Research}|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [team,setTeam]=useState('all'),[query,setQuery]=useState(''),[sort,setSort]=useState('firstFieldGoals'),[ascending,setAscending]=useState(false)
   useEffect(()=>{
     const controller=new AbortController();let pending=false
@@ -21,11 +23,11 @@ export function PaintFirstBasket({board,open}:{board:PaintBoard;open:(id:number)
       const response=await fetch(nbaModeHref(`/the-paint/first-basket?game=${board.game.id}`, oddsMode),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
       if(!response.ok)throw new Error('First-basket research could not load.')
       const data=await response.json() as Research
-      if(!controller.signal.aborted){setState({game:board.game.id,data});setError('')}
+      if(!controller.signal.aborted){setState({key:dataKey,data});setError('')}
     }catch{if(!controller.signal.aborted)setError('First-basket research could not refresh.')}finally{pending=false}}
     void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}
-  },[oddsMode, board.game.id,retry])
-  const data=state?.game===board.game.id?state.data:null
+  },[oddsMode, board.game.id,dataKey,retry])
+  const data=state?.key===dataKey?state.data:null
   const teams=[board.game.visitor_team,board.game.home_team],selectedTeam=teams.some(value=>String(value.id)===team)?team:'all'
   const rows=(data?.rows??[]).flatMap(row=>{const player=board.players.find(p=>p.id===row.playerId);return player&&row.games>0?[{...row,player}]:[]})
     .filter(row=>(selectedTeam==='all'||String(row.player.team.id)===selectedTeam)&&`${row.player.first_name} ${row.player.last_name}`.toLowerCase().includes(query.toLowerCase()))

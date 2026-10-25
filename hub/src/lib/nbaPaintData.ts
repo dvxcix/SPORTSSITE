@@ -13,6 +13,7 @@ import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaNormalizePrimaryProps } from './nbaPrimaryProps'
 import { getNbaSupplementalProps, nbaMergePropSources, nbaSupplementalQuote, type NbaSupplementalSnapshot } from './nbaSupplementalProps'
 import { getNbaBookPropEntries, nbaBookPropsSupplement } from './nbaBookPropsData'
+import { nbaPregameResearch, readNbaPregameResearch } from './nbaPregameResearchData'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -129,10 +130,27 @@ export async function getPaintGameOdds(gameId: number, fresh = false): Promise<P
   return json.data
 }
 type Average = { player: { id: number }; stats: Record<string, number | null> }
-export async function getPaintScouting(game: PaintGame): Promise<PaintScouting> {
-  if ((game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final' || game.status_state === 'in_progress' || game.period > 0 || !!game.datetime && Date.parse(game.datetime) <= Date.now())) return loadPaintScouting(game)
-  const cached = await nbaSharedCache(`scouting:v1:${game.id}:${nbaToday()}`, 3600, 3600, () => loadPaintScouting(game))
-  return { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Tracking refresh delayed; showing last captured sample'] : [])] }
+export async function getPaintScouting(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintScouting> {
+  game = await getNbaOddsGame(game)
+  const load = async () => {
+    const cached = await nbaSharedCache(`scouting:v1:${game.id}:${nbaToday()}`, 3600, 3600, () => loadPaintScouting(game))
+    if (mode === 'pregame' && !scoutingComplete(cached.value)) {
+      const prior = await readNbaPregameResearch<PaintScouting>(game, 'scouting:v1')
+      if (prior && scoutingComplete(prior.value)) return { value: prior.value, observedAt: prior.observedAt }
+    }
+    return { value: { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Tracking refresh delayed; showing last captured sample'] : [])] }, observedAt: cached.fetchedAt }
+  }
+  if (mode === 'live') {
+    if (!nbaPregameOpen(game)) return loadPaintScouting(game)
+    return (await load()).value
+  }
+  // Closed pregame research comes only from the retained observation. Never
+  // substitute current season-end profiles for a missing pretip snapshot.
+  const snapshot = await nbaPregameResearch(game, 'scouting:v1', load)
+  return { ...snapshot.value, fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
+}
+function scoutingComplete(value: PaintScouting) {
+  return value.players.length > 0 && value.issues.every(issue => issue === 'Tracking refresh delayed; showing last captured sample')
 }
 async function loadPaintScouting(game: PaintGame): Promise<PaintScouting> {
   // Full-season tracking must never leak future information into a historical board.
@@ -159,8 +177,30 @@ export async function getPaintProfile(player: number, season: number) {
 }
 export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintBoard> {
   game = await getNbaOddsGame(game)
-  const cached = await nbaSharedCache(`board:v7:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
-  return refreshPaintBoardPrices({ ...cached.value, game, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Research refresh delayed'] : [])] }, mode)
+  const load = async () => {
+    const cached = await nbaSharedCache(`board:v7:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
+    if (mode === 'pregame' && (cached.value.statsComplete !== true || cached.value.periodStatsComplete !== true || boardBaselineIncomplete(cached.value))) {
+      const prior = await readNbaPregameResearch<PaintBoard>(game, 'board:v1')
+      // Preserve a complete observation as a bundle, including its original
+      // timestamp. Never combine a new roster with older averages or logs.
+      if (prior && (prior.value.statsComplete === true && cached.value.statsComplete !== true || prior.value.periodStatsComplete === true && cached.value.periodStatsComplete !== true || !boardBaselineIncomplete(prior.value) && boardBaselineIncomplete(cached.value))) return { value: prior.value, observedAt: prior.observedAt }
+    }
+    return { value: { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Research refresh delayed'] : [])] }, observedAt: cached.fetchedAt }
+  }
+  if (mode === 'live') return refreshPaintBoardPrices({ ...(await load()).value, game }, mode)
+  const snapshot = await nbaPregameResearch(game, 'board:v1', load)
+  const board = { ...snapshot.value, game, historical: !nbaPregameOpen(game), fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
+  // Preserve every archived roster member, average, full-game/quarter log and
+  // coverage flag. Only phase-specific quotes attach after research is frozen.
+  const priced = await refreshPaintBoardPrices(board, mode)
+  if (snapshot.frozen || nbaPregameOpen(priced.game)) return priced
+  // Quotes may finish after tip while another request saved a newer research
+  // observation. Resolve the durable winner before returning a closed board.
+  const final = await nbaPregameResearch(priced.game, 'board:v1', load)
+  return refreshPaintBoardPrices({ ...final.value, game: priced.game, historical: true, fetchedAt: final.observedAt, researchSnapshot: { observedAt: final.observedAt, source: final.source, frozen: final.frozen } }, mode)
+}
+function boardBaselineIncomplete(board: PaintBoard) {
+  return board.issues.some(issue => ['Roster coverage incomplete', 'Season averages unavailable', 'Prior-season averages unavailable'].includes(issue))
 }
 export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'pregame') {
   game = await getNbaOddsGame(game)

@@ -290,9 +290,9 @@ test('NBA public results stay game-exact and distinguish zero production from DN
 test('NBA tracking refuses season-end data on a historical matchup before provider reads',async()=>{
   let reads=0
   const pure=await import('../src/lib/nbaPaint.ts')
-  const provider=await compiled('../src/lib/nbaPaintData.ts',{...emptyOpeningImports,'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure,'./nbaSharedCache':cachePassthrough},async()=>{reads++;throw new Error('Unexpected provider read')})
-  const scouting=await (provider.getPaintScouting as unknown as(g:unknown)=>Promise<{players:unknown[];issues:string[]}> )({date:'2000-01-01',season:1999})
-  assert.equal(reads,0);assert.equal(scouting.players.length,0);assert.ok(scouting.issues.length)
+  const provider=await compiled('../src/lib/nbaPaintData.ts',{...emptyOpeningImports,'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':pure,'./nbaSharedCache':cachePassthrough,'./nbaPregameResearchData':{nbaPregameResearch:async()=>{throw new Error('Pregame research snapshot unavailable')}}},async()=>{reads++;throw new Error('Unexpected provider read')})
+  await assert.rejects((provider.getPaintScouting as unknown as(g:unknown)=>Promise<unknown>)({date:'2000-01-01',season:1999}),/Pregame research snapshot unavailable/)
+  assert.equal(reads,0)
 })
 
 test('NBA Pikkit collector denies unauthorized calls before schedule or cloud browser work',async()=>{
@@ -380,6 +380,8 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
+  imports = { '@/lib/nbaResearchResources': {}, '@/lib/nbaSlateFreezeData': {}, '@/lib/nbaSlateHeat': {}, '@/lib/nbaPregameResearchData': {}, './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const target = { exports: {} as Record<string, (...args: never[]) => unknown> }
@@ -852,6 +854,7 @@ test('NBA customer projections authenticate first and return results without mod
     '@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>({game:{id:123,date:'2026-10-20'},players:[{id:434,logs}],fetchedAt:'2026-10-19T12:00:00Z'})},
     '@/lib/nbaPaint':await import('../src/lib/nbaPaint.ts'),
     '@/lib/nbaModel':{nbaValidatedEstimate},
+    '@/lib/nbaResearchResources':{getNbaResearchModels:async()=>{reads++;return[model]}},
     '@/lib/nbaSharedCache':cachePassthrough,
     '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>{reads++;return query}})},
   }

@@ -8,6 +8,8 @@ import { ArrowUpRight, ChartNoAxesCombined, CircleDot, Clock3, Crosshair, Layers
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { getNbaPlayerEntity } from '@/lib/nbaDirectory'
+import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
+import { NbaMatchupPlayer, NbaMatchupUnavailable } from '@/components/nba/NbaMatchupEntity'
 import { nbaEntityId, nbaPlayerName, nbaResearchHref } from '@/lib/nbaEntities'
 import { nbaSeason, nbaTeamLogo, type PaintPlayer } from '@/lib/nbaPaint'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -21,9 +23,16 @@ import metrics from '@/components/nba/nbaEntityMetrics.module.css'
 
 export const metadata: Metadata = { title: 'NBA Player • SlipSurge', robots: { index: false, follow: false } }
 export default async function NbaPlayerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<Record<string,string|string[]|undefined>> }) {
-  const oddsMode = nbaOddsMode((await searchParams)?.mode)
+  const query = await searchParams
+  const oddsMode = nbaOddsMode(query?.mode)
   const gate = await requirePaintAccess(); if (gate.error) return <NbaAccessFallback status={gate.error.status} />
   const id = nbaEntityId((await params).id); if (!id) notFound()
+  if (query?.game !== undefined) {
+    const gameId = typeof query.game === 'string' ? nbaEntityId(query.game) : null
+    if (!gameId) notFound()
+    try { return <NbaMatchupPlayer board={await getPaintBoard(await getPaintGame(gameId), oddsMode)} playerId={id} mode={oddsMode}/> }
+    catch { return <NbaMatchupUnavailable game={gameId} mode={oddsMode}/> }
+  }
   const data = await getNbaPlayerEntity(id); if (!data) notFound()
   const { player, seasons, logs, teams, image, games } = data
   const latest = seasons[0], next = games[0] ?? null, name = nbaPlayerName(player)
@@ -32,6 +41,7 @@ export default async function NbaPlayerPage({ params, searchParams }: { params: 
   const researchPlayer: PaintPlayer = { ...player, headshot: image, injury: null, average: {}, logs, props: [] }
   const favorite = { sport: 'nba' as const, player_id: String(id), name, team: player.team.abbreviation, headshot: image, team_logo: nbaTeamLogo(player.team.abbreviation) }
   return <NbaOddsModeProvider mode={oddsMode}><div className={entity.page}>
+    <p className={styles.empty}>Current player directory · choose a matchup to view its saved pregame baseline.</p>
     <header className={entity.hero}><div className={entity.avatar} style={{ background: nbaTeamGradient(player.team.abbreviation) }}><SafeImage src={image} alt="" loading="eager" style={{ objectFit: 'cover', transform: 'scale(1.2)', transformOrigin: 'center 12%' }} fallback={<UserRound className="h-full w-full p-4 text-zinc-500"/>}/></div><div className={entity.identity}><p className={entity.eyebrow}>NBA player</p><h1 className={entity.title}>{name}</h1><div className={entity.meta}><span>{player.position}{player.jersey_number ? ` · #${player.jersey_number}` : ''}</span><Link className={entity.metaPill} href={nbaModeHref(`/nba/teams/${player.team.id}`, oddsMode)}><TeamLogo abbr={player.team.abbreviation} size={22}/>{player.team.full_name}</Link></div></div></header>
     <div className={`${styles.actions} ${metrics.actions}`}><Link href={nbaModeHref(nbaResearchHref(next, next ? id : undefined), oddsMode)}><Layers size={16}/>The Court<ArrowUpRight size={15}/></Link>{next && <><Link href={nbaModeHref(nbaResearchHref(next, id, 'ladder'), oddsMode)}>Alt lines<ArrowUpRight size={15}/></Link><Link href={nbaModeHref(nbaResearchHref(next, id, 'movement'), oddsMode)}><ChartNoAxesCombined size={16}/>Market Story</Link></>}<FavoriteEntityButton key={id} player={favorite} label={name}/></div>
     {latest && <section className={`${entity.panel} ${entity.panelPad}`}><div className={styles.sectionHeading}><h2>{nbaSeason(latest.season)}</h2><span>{latest.games} appearances · regular season · per game</span></div><div className={metrics.metrics} data-columns="5">{[{ label: 'Points', value: latest.pts, icon: CircleDot }, { label: 'Rebounds', value: latest.reb, icon: Layers }, { label: 'Assists', value: latest.ast, icon: Waypoints }, { label: 'Threes', value: latest.fg3m, icon: Crosshair }, { label: 'Minutes', value: latest.min, icon: Clock3 }].map(stat => <div className={metrics.metric} data-missing={stat.value == null || undefined} key={stat.label}><span><stat.icon size={18} aria-hidden="true"/>{stat.label}</span><strong>{stat.value?.toFixed(1) ?? '—'}</strong></div>)}</div></section>}

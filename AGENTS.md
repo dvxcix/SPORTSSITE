@@ -56,3 +56,10 @@ Owner-approved NFL FanDuel runtime: 360s extraction, 450s browser cap, 480s
 scrape route, 540s dispatcher request, 600s dispatcher route on existing Pro.
 Other automated browsers retain 300s default. Preserve timeout hierarchy,
 explicit release and honest incomplete-capture reporting.
+
+NBA pregame research must use durable per-game snapshots after tip, including
+rosters, baselines, MM, scores, ancillary research and whole-slate ranking pools.
+Only explicit Live mode may use changing inputs. Never substitute current data
+for missing historical research or replay recovered snapshots as new captures.
+See hub/docs/operations/nba-pregame-freeze-2026-10-25.txt. The three recorded
+20261025 freeze/cutoff migrations are already applied; do not replay them.

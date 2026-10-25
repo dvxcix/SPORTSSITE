@@ -163,7 +163,7 @@ export function nbaMatrixCandidates(board: PaintBoard, context: NbaMatrixContext
       } else if (factor.category === 'stats') {
         const statMarket = PAINT_MARKETS.find(m => m.key === factor.field)?.key
         const statLogs = nbaSample(nbaMarketLogs(player, factor.field).filter(l => l.game.date.slice(0, 10) < board.game.date), count, factor.location)
-        if (factor.window === 'season' && factor.location === 'all' && !board.historical) value = statMarket ? nbaValue(player.average, statMarket) : player.average[factor.field === 'minutes' ? 'min' : factor.field] ?? null
+        if (factor.window === 'season' && factor.location === 'all' && (!board.historical || board.researchSnapshot)) value = statMarket ? nbaValue(player.average, statMarket) : player.average[factor.field === 'minutes' ? 'min' : factor.field] ?? null
         else if (statMarket) value = nbaAverage(statLogs, statMarket)
         else { const nums = statLogs.map(l => factor.field === 'minutes' ? nbaMinutes(l.min) : (l as unknown as Record<string, unknown>)[factor.field]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)); value = nums.length ? nums.reduce((a,b) => a+b,0)/nums.length : null }
       } else if (factor.category === 'score' && market && offer) {

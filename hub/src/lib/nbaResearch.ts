@@ -1,7 +1,7 @@
-import { nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaPeriod, nbaReference, nbaSample, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintPlayer, type PaintMarket } from './nbaPaint'
+import { nbaMarketLogs, nbaAverage, nbaHitRate, nbaMinutes, nbaPeriod, nbaReference, nbaSample, nbaValue, PAINT_MARKETS, type PaintBoard, type PaintPlayer, type PaintMarket, type PaintResearchSnapshot } from './nbaPaint'
 import { nbaFormGap, nbaMarketRanks } from './nbaMarketMetrics'
 
-export type PaintScouting = { season: number; fetchedAt: string; issues: string[]; players: { id: number; advanced: Record<string, number | null>; passing: Record<string, number | null>; rebounding: Record<string, number | null>; drives: Record<string, number | null> }[] }
+export type PaintScouting = { researchSnapshot?: PaintResearchSnapshot; season: number; fetchedAt: string; issues: string[]; players: { id: number; advanced: Record<string, number | null>; passing: Record<string, number | null>; rebounding: Record<string, number | null>; drives: Record<string, number | null> }[] }
 
 export function nbaRole(player: PaintPlayer, count = 10) {
   const logs = nbaSample(player.logs, count)

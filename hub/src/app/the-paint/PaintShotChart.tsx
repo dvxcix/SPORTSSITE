@@ -6,19 +6,22 @@ import { nbaAppeared, type PaintPlayer } from '@/lib/nbaPaint'
 import type { NbaShot } from '@/lib/nbaShots'
 import styles from './paint.module.css'
 type ShotResult = { gameId: number; playerId: number; shots: NbaShot[]; boxScoreAttempts: number | null; coverageMatches: boolean; fetchedAt: string; stale: boolean }
-export function PaintShotChart({ player }: { player: PaintPlayer }) {
+export function PaintShotChart({ player, researchGame, researchRevision = '' }: { player: PaintPlayer; researchGame?: number; researchRevision?: string }) {
   const oddsMode = useNbaOddsMode()
   const games = useMemo(() => [...new Map(player.logs.filter(log => (log.game.season ?? 0) >= 2025 && (log.game.status === 'Final' || log.game.status_state === 'final') && nbaAppeared(log)).map(log => [log.game.id, log.game])).values()].sort((a, b) => b.date.localeCompare(a.date)), [player.logs])
-  const [gameId, setGameId] = useState(games[0]?.id ?? 0), [result, setResult] = useState<ShotResult | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
+  const [selectedGameId, setGameId] = useState(games[0]?.id ?? 0), [result, setResult] = useState<{ key: string; value: ShotResult } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
+  const gameId = games.some(game => game.id === selectedGameId) ? selectedGameId : games[0]?.id ?? 0
+  const resultKey = `${oddsMode}:${researchGame ?? 'history'}:${gameId}:${player.id}:${researchRevision}`
   const [period, setPeriod] = useState('all'), [outcome, setOutcome] = useState('all'), [points, setPoints] = useState('all'), [selected, setSelected] = useState<number | null>(null), [heat, setHeat] = useState(false)
   useEffect(() => {
     if (!gameId) return
     const controller = new AbortController(); let timedOut = false
-    const timer = setTimeout(() => { timedOut = true; controller.abort() }, 55000)
-    fetch(nbaModeHref(`/the-paint/shots?game=${gameId}&player=${player.id}`, oddsMode), { cache: 'no-store', signal: controller.signal }).then(async response => { if (!response.ok) throw new Error('Shot locations unavailable'); return response.json() }).then(data => { if (!controller.signal.aborted) { if (data.gameId !== gameId || data.playerId !== player.id || !Array.isArray(data.shots)) throw new Error('Shot identity mismatch'); setResult(data); setError('') } }).catch(() => { if (!controller.signal.aborted || timedOut) setError(timedOut ? 'Shot locations timed out.' : 'Shot locations could not load.') }).finally(() => clearTimeout(timer))
+    const timer = setTimeout(() => { timedOut = true; controller.abort() }, researchGame ? 115000 : 55000)
+    setResult(null); setError('')
+    fetch(nbaModeHref(`/the-paint/shots?game=${gameId}&player=${player.id}${researchGame ? `&researchGame=${researchGame}` : ''}`, oddsMode), { cache: 'no-store', signal: controller.signal }).then(async response => { if (!response.ok) throw new Error('Shot locations unavailable'); return response.json() }).then(data => { if (!controller.signal.aborted) { if (data.gameId !== gameId || data.playerId !== player.id || !Array.isArray(data.shots)) throw new Error('Shot identity mismatch'); setResult({ key: resultKey, value: data }); setError('') } }).catch(() => { if (!controller.signal.aborted || timedOut) setError(timedOut ? 'Shot locations timed out.' : researchGame && oddsMode === 'pregame' ? 'Pregame shot sample unavailable. It may not have been saved before tipoff.' : 'Shot locations could not load.') }).finally(() => clearTimeout(timer))
     return () => { controller.abort(); clearTimeout(timer) }
-  }, [oddsMode, gameId, player.id, retry])
-  const current = result?.gameId === gameId && result.playerId === player.id ? result : null
+  }, [oddsMode, gameId, player.id, researchGame, resultKey, retry])
+  const current = result?.key === resultKey ? result.value : null
   const shots = (current?.shots ?? []).filter(shot => (period === 'all' || String(shot.period) === period) && (outcome === 'all' || shot.made === (outcome === 'made')) && (points === 'all' || String(shot.points) === points))
   const located = shots.filter(shot => shot.halfCourt), made = shots.filter(shot => shot.made).length
   const detail = shots.find(shot => shot.order === selected)
