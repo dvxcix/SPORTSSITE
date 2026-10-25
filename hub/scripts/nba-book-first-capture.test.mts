@@ -174,6 +174,19 @@ test('private identity receipts keep only fixed rejection reasons and bounded ca
   assert.equal(JSON.stringify(result.body).includes('private-source-url'),false);assert.equal(JSON.stringify(result.body).includes('private-member'),false)
 })
 
+test('private First revalidation receipts retain only fixed reasons and bounded original countdown clocks',async()=>{
+  const identity={phase:'current' as const,reason:'countdown-tipoff-mismatch' as const,canonicalTip:new Date(game.datetime!).toISOString(),priorCountdown:{minutes:22,readAt:new Date(now).toISOString()},currentCountdown:{minutes:21,readAt:new Date(now+60_000).toISOString()}}
+  const h=await fixture({capture:()=>({errors:[
+    {code:'layout-unavailable',stage:'first-revalidate',identity:{...identity,url:'private-source-url',member:'private-member'}},
+    {code:'layout-unavailable',stage:'event-identity',identity},
+    {code:'layout-unavailable',stage:'first-revalidate',identity:{...identity,reason:'private-source-url' as never}},
+  ]})}),result=await h.run()
+  assert.equal(result.response.status,503)
+  assert.deepEqual(result.body.books[0].errors[0],{code:'layout-unavailable',stage:'first-revalidate',identity})
+  assert.equal(result.body.books[0].errors[1].identity,undefined);assert.equal(result.body.books[0].errors[2].identity,undefined)
+  assert.equal(JSON.stringify(result.body).includes('private-source-url'),false);assert.equal(JSON.stringify(result.body).includes('private-member'),false)
+})
+
 test('private telemetry retains only known league discovery stages without source URLs or arbitrary error text',async()=>{
   const h=await fixture({capture:()=>({errors:['league-navigation','league-events','league-links'].map(stage=>({code:'navigation-failed' as const,stage:stage as 'league-links',reason:'timeout' as const,message:'private-source-url'}))})}),result=await h.run()
   assert.equal(result.response.status,503);assert.equal(JSON.stringify(result.body).includes('private-source-url'),false)

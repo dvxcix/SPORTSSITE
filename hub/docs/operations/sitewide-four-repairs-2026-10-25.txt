@@ -122,3 +122,23 @@ Evidence is private under work/four-repairs-*. Continue the existing follow-up
 through October26 06:00UTC (07:00CET); no duplicate automation. Verify natural
 grading writes, archive checkpoints, NBA saved exact movements and the next
 eligible MLB capture before claiming complete recovery.
+
+Post-release verification through October25 02:00UTC (03:00CET)
+- Natural grading settled all21 backed-up picks; the next run claimed zero and
+  preserved settlement timestamps/notification counts. Live MLB/NFL posts show
+  the correct repaired leg and whole-post losses. No manual grading replay.
+- Countdown release449e7c3f passed the full NBA suite511/511. Natural runs893017
+  at01:52 and893071 at01:57 still failed MGM at first-revalidate; each saved10
+  actual DK First Point prices and retained old MGM observations. Fresh MGM
+  prices seen in the app came from another configured feed, not those direct
+  runs. Direct capture recovery is NOT verified.
+- The reviewed follow-up keeps acceptance unchanged while recording the exact
+  failed comparison/prior/current guard, canonical tip and bounded original
+  countdown clocks in private receipts. No source labels or raw errors escape.
+  Focused91/91 tests, TypeScript, scoped lint and independent review pass.
+- One NFL cache refresh logged Supplemental markets unavailable at01:53:52UTC.
+  Its existing last-good response remained cached; read-only database follow-up
+  succeeded with the current archive and indexed query. Exact transient cause
+  is unproven; no unrelated cache/collector behavior was changed.
+- Archive natural03:40UTC and next eligible MLB October26 03:00UTC checks remain
+  pending. Do not call all four repairs fully verified before those receipts.

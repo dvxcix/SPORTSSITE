@@ -65,6 +65,21 @@ function displayedMinutes(label: string) {
 }
 
 export type NbaBookIdentity = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'countdown'>
+const identityFields = ['away', 'home', 'dateLabel', 'timeLabel', 'timeZone'] as const
+const revalidationReasons = ['missing-identity', 'identity-changed', 'clock-mode-changed', 'countdown-increased', 'countdown-clock-reversed', 'closed', ...identityReasons] as const
+export type NbaBookRevalidation = { phase: 'comparison' | 'prior' | 'current'; reason: typeof revalidationReasons[number]; field?: typeof identityFields[number]; canonicalTip: string | null; priorCountdown: { minutes: number; readAt: string } | null; currentCountdown: { minutes: number; readAt: string } | null }
+const safeIso = (value: unknown) => { const time = typeof value === 'string' ? Date.parse(value) : NaN; return Number.isFinite(time) ? new Date(time).toISOString() : null }
+export function nbaBookRevalidationDiagnostic(value: unknown): NbaBookRevalidation | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const raw = value as Record<string, unknown>
+  if (typeof raw.phase !== 'string' || !['comparison', 'prior', 'current'].includes(raw.phase) || !revalidationReasons.includes(raw.reason as NbaBookRevalidation['reason'])) return undefined
+  const countdown = (item: unknown) => {
+    if (!item || typeof item !== 'object') return null
+    const clock = item as Record<string, unknown>, readAt = safeIso(clock.readAt)
+    return Number.isSafeInteger(clock.minutes) && Number(clock.minutes) >= 0 && Number(clock.minutes) <= 59 && readAt ? { minutes: Number(clock.minutes), readAt } : null
+  }
+  return { phase: raw.phase as NbaBookRevalidation['phase'], reason: raw.reason as NbaBookRevalidation['reason'], ...(identityFields.includes(raw.field as typeof identityFields[number]) ? { field: raw.field as typeof identityFields[number] } : {}), canonicalTip: safeIso(raw.canonicalTip), priorCountdown: countdown(raw.priorCountdown), currentCountdown: countdown(raw.currentCountdown) }
+}
 export function nbaBookObservation(input: NbaFirstBookInput, board: NbaBookIdentity & { observedAt: string }, now = Date.now()): NbaFirstBookGame {
   const result = nbaFirstBookMissing(input.game.id, 'identity-mismatch'), at = Date.parse(board.observedAt), start = nbaGameStart(input.game)
   const mismatch = (reason: NbaFirstBookIdentity['reason']) => nbaFirstBookMismatch(input.game.id, reason)
@@ -105,10 +120,25 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: NbaBookIdent
 /** Relative clocks may decrement, but each independently observed interval
  * must identify this same canonical pregame event. Never restamp a countdown. */
 export function nbaSameBookIdentity(input: NbaFirstBookInput, prior: NbaBookIdentity, current: NbaBookIdentity | null, now = Date.now()) {
-  if (!current || (['away', 'home', 'dateLabel', 'timeLabel', 'timeZone'] as const).some(key => current[key] !== prior[key])) return false
-  if (Boolean(prior.countdown) !== Boolean(current.countdown)) return false
-  if (prior.countdown && current.countdown && (current.countdown.minutes > prior.countdown.minutes || Date.parse(current.countdown.observedAt) < Date.parse(prior.countdown.observedAt))) return false
-  return [prior, current].every(identity => nbaBookObservation(input, { ...identity, observedAt: identity.countdown?.observedAt ?? new Date(now).toISOString() }, now).status === 'unavailable')
+  return nbaBookIdentityRevalidation(input, prior, current, now) == null
+}
+export function nbaBookIdentityRevalidation(input: NbaFirstBookInput, prior: NbaBookIdentity, current: NbaBookIdentity | null, now = Date.now()): NbaBookRevalidation | null {
+  const failure = (phase: NbaBookRevalidation['phase'], reason: NbaBookRevalidation['reason'], field?: NbaBookRevalidation['field']) => nbaBookRevalidationDiagnostic({ phase, reason, field, canonicalTip: input.game.datetime ?? input.game.status,
+    priorCountdown: prior.countdown ? { minutes: prior.countdown.minutes, readAt: prior.countdown.observedAt } : null,
+    currentCountdown: current?.countdown ? { minutes: current.countdown.minutes, readAt: current.countdown.observedAt } : null })!
+  if (!current) return failure('comparison', 'missing-identity')
+  const field = identityFields.find(key => current[key] !== prior[key])
+  if (field) return failure('comparison', 'identity-changed', field)
+  if (Boolean(prior.countdown) !== Boolean(current.countdown)) return failure('comparison', 'clock-mode-changed')
+  if (prior.countdown && current.countdown) {
+    if (current.countdown.minutes > prior.countdown.minutes) return failure('comparison', 'countdown-increased')
+    if (Date.parse(current.countdown.observedAt) < Date.parse(prior.countdown.observedAt)) return failure('comparison', 'countdown-clock-reversed')
+  }
+  for (const [phase, identity] of [['prior', prior], ['current', current]] as const) {
+    const result = nbaBookObservation(input, { ...identity, observedAt: identity.countdown?.observedAt ?? new Date(now).toISOString() }, now)
+    if (result.status !== 'unavailable') return failure(phase, result.identity?.reason ?? 'closed')
+  }
+  return null
 }
 
 export function nbaNormalizeFirstBook(book: NbaFirstBook, input: NbaFirstBookInput, board: NbaFirstBookBoard, now = Date.now()): NbaFirstBookGame {

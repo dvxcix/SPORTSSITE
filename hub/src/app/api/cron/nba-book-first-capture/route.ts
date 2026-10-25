@@ -7,7 +7,7 @@ import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { NBA_FIRST_BOOKS, saveNbaBookFirstFrame } from '@/lib/nbaBookFirstData'
 import { collectNbaFirstBooks, type NbaFirstBookCapture } from '@/lib/scrapers/nbaFirstBooks'
-import { nbaFirstBookIdentityDiagnostic, type NbaFirstBookGame, type NbaFirstBookIdentity } from '@/lib/scrapers/nbaFirstBookQuotes'
+import { nbaFirstBookIdentityDiagnostic, nbaBookRevalidationDiagnostic, type NbaFirstBookGame, type NbaFirstBookIdentity } from '@/lib/scrapers/nbaFirstBookQuotes'
 import { MGM_MILESTONE_PANELS } from '@/lib/scrapers/nbaBookPropQuotes'
 import { getNbaBookPropEntries, nbaReconcileBookPropFrames, saveNbaBookPropFrames, type NbaBookPropObservation, type NbaBookPropCoverage } from '@/lib/nbaBookPropsData'
 
@@ -156,6 +156,7 @@ async function run(request: Request) {
             code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{}),
             ...(['league-navigation','league-events','league-links','event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save','session-release'].includes(error.stage??'')?{stage:error.stage}:{}),
             ...(['timeout','target-closed','navigation-interrupted','network','evaluation','unknown'].includes(error.reason??'')?{reason:error.reason}:{}),
+            ...(error.stage==='first-revalidate'&&nbaBookRevalidationDiagnostic(error.identity)?{identity:nbaBookRevalidationDiagnostic(error.identity)}:{}),
           }))
           failed+=capture.games.filter(item=>!expected.has(item.gameId)).length
           failed+=(capture.regular??[]).filter(item=>!expected.has(item.gameId)).length

@@ -68,6 +68,38 @@ test('identity diagnostic sanitizer only retains fixed codes and bounded counts'
   assert.deepEqual(quotes.nbaFirstBookIdentityDiagnostic({ reason: 'wrong-date', candidates: -1, validCandidates: NaN }), { reason: 'wrong-date' })
 })
 
+test('revalidation diagnostics preserve original countdown clocks and distinguish exact failed guards', () => {
+  const at = Date.parse(game.datetime!) - 22.5 * 60_000
+  const value = (minutes: number, clock = at): quotes.NbaBookIdentity => ({ away: 'NO Pelicans', home: 'DEN Nuggets', dateLabel: '', timeLabel: '', timeZone: 'America/Los_Angeles', countdown: { minutes, observedAt: new Date(clock).toISOString() } })
+  const prior = value(22), current = value(21, at + 60_000)
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, prior, current, at + 60_000), null)
+  assert.deepEqual(quotes.nbaBookIdentityRevalidation(input, prior, value(19, at + 60_000), at + 60_000), {
+    phase: 'current', reason: 'countdown-tipoff-mismatch', canonicalTip: new Date(game.datetime!).toISOString(),
+    priorCountdown: { minutes: 22, readAt: prior.countdown!.observedAt }, currentCountdown: { minutes: 19, readAt: current.countdown!.observedAt },
+  })
+  for (const [next, reason, field] of [
+    [null, 'missing-identity'], [{ ...current, home: 'Wrong team' }, 'identity-changed', 'home'],
+    [{ ...current, countdown: undefined }, 'clock-mode-changed'], [value(23, at + 60_000), 'countdown-increased'],
+    [value(21, at - 1), 'countdown-clock-reversed'],
+  ] as const) {
+    const result = quotes.nbaBookIdentityRevalidation(input, prior, next, at + 60_000)!
+    assert.equal(result.phase, 'comparison'); assert.equal(result.reason, reason); assert.equal(result.field, field)
+    assert.equal(quotes.nbaSameBookIdentity(input, prior, next, at + 60_000), false)
+  }
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, value(10), current, at + 60_000)?.reason, 'countdown-increased')
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, value(10), value(9, at + 60_000), at + 60_000)?.phase, 'prior')
+})
+
+test('revalidation diagnostic sanitizer never forwards source data or invalid clocks', () => {
+  const safe = { phase: 'current', reason: 'countdown-tipoff-mismatch', canonicalTip: game.datetime, priorCountdown: { minutes: 22, readAt: new Date(now).toISOString() }, currentCountdown: { minutes: 21, readAt: new Date(now + 60_000).toISOString() } }
+  assert.deepEqual(quotes.nbaBookRevalidationDiagnostic({ ...safe, url: 'private-source-url', member: 'private-member', field: 'private-source-url' }), { ...safe, canonicalTip: new Date(game.datetime!).toISOString() })
+  assert.equal(quotes.nbaBookRevalidationDiagnostic({ ...safe, reason: 'private-source-url' }), undefined)
+  assert.equal(quotes.nbaBookRevalidationDiagnostic({ ...safe, phase: 'private-source-url' }), undefined)
+  assert.equal(quotes.nbaBookRevalidationDiagnostic({ ...safe, phase: ['current'] }), undefined)
+  const invalid = quotes.nbaBookRevalidationDiagnostic({ ...safe, canonicalTip: 'private-source-url', priorCountdown: { minutes: 60, readAt: new Date(now).toISOString() }, currentCountdown: { minutes: 21, readAt: 'private-source-url' } })!
+  assert.equal(invalid.canonicalTip, null); assert.equal(invalid.priorCountdown, null); assert.equal(invalid.currentCountdown, null)
+})
+
 
 
 test('collector reports league ambiguity separately from a single rejected visible board', async () => {
@@ -272,7 +304,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
     let all = false, expanded = false, more = false
     const metadata = { away: 'Pelicans', home: 'Nuggets', dateLabel: 'Today', timeLabel: '4:59 PM', timeZone: 'America/Los_Angeles' }
     const readers = { readMgmFirstIdentity: function identity() {}, readMgmFirstRows: function rows() {} }
-    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaSameBookIdentity: (game: typeof input, prior: quotes.NbaBookIdentity, current: quotes.NbaBookIdentity) => quotes.nbaSameBookIdentity(game, prior, current, now) }, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaBookIdentityRevalidation: (game: typeof input, prior: quotes.NbaBookIdentity, current: quotes.NbaBookIdentity) => quotes.nbaBookIdentityRevalidation(game, prior, current, now) }, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
     const target = { exports: {} }
     const run = new Function('require', 'module', 'exports', `${code}\nreturn mgmBoard`)((name: string) => imports[name], target, target.exports) as (page: unknown, url: string, deadline: number, value: typeof input) => Promise<NbaFirstBookBoard>
     const locator = (kind: string) => ({

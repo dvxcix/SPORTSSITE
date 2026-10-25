@@ -4,7 +4,7 @@ import { BETMGM_PROXY_DOMAIN_PATTERN, openSession } from '../browserbase'
 import { nbaName } from '../nbaPaint'
 import { nbaPregameOpen } from '../nbaOddsMode'
 import { readDkFirstBoards, readMgmFirstIdentity, readMgmFirstRows } from './nbaFirstBookDom'
-import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, nbaSameBookIdentity, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
+import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, nbaBookIdentityRevalidation, nbaBookRevalidationDiagnostic, type NbaBookRevalidation, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
 import { collectMgmProps } from './nbaMgmProps'
 import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 
@@ -13,7 +13,7 @@ const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?cate
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
 type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save' | 'session-release'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
-type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason }
+type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason; identity?: NbaBookRevalidation }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
 export type NbaBookCaptureCallbacks = {
   onFirst?: (game: NbaFirstBookGame) => Promise<void>
@@ -52,7 +52,7 @@ function safeFailure(error: unknown): Failure['code'] {
 class CaptureFailure extends Error {
   readonly code: Failure['code']
   readonly reason: CaptureReason
-  constructor(readonly stage: CaptureStage, error: unknown) {
+  constructor(readonly stage: CaptureStage, error: unknown, readonly identity?: NbaBookRevalidation) {
     super('NBA book capture stage failed')
     this.code = safeFailure(error)
     const message = error instanceof Error ? error.message : ''
@@ -67,7 +67,7 @@ async function atStage<T>(stage: CaptureStage, operation: () => Promise<T>): Pro
   try { return await operation() } catch (error) { throw error instanceof CaptureFailure ? error : new CaptureFailure(stage, error) }
 }
 function captureFailure(error: unknown, gameId?: number): Failure {
-  return { ...(gameId == null ? {} : { gameId }), code: safeFailure(error), ...(error instanceof CaptureFailure ? { stage: error.stage, reason: error.reason } : {}) }
+  return { ...(gameId == null ? {} : { gameId }), code: safeFailure(error), ...(error instanceof CaptureFailure ? { stage: error.stage, reason: error.reason, ...(error.identity ? { identity: nbaBookRevalidationDiagnostic(error.identity) } : {}) } : {}) }
 }
 async function deliverObservation(callback: () => Promise<void>, deadline: number) {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -188,7 +188,8 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number, input: N
     const signature = JSON.stringify(observed)
     if (observed.rows.length && signature === prior) {
       const currentIdentity = await atStage('first-revalidate', () => page.evaluate(readMgmFirstIdentity))
-      if (!nbaSameBookIdentity(input, identity, currentIdentity, Date.now())) throw new CaptureFailure('first-revalidate', new Error('layout-unavailable'))
+      const mismatch = nbaBookIdentityRevalidation(input, identity, currentIdentity, Date.now())
+      if (mismatch) throw new CaptureFailure('first-revalidate', new Error('layout-unavailable'), mismatch)
       return { ...currentIdentity!, ...observed, observedAt: new Date().toISOString(), market: 'First field goal scorer' }
     }
     prior = signature
