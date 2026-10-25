@@ -1,0 +1,51 @@
+NBA countdown date identity repair — October 25, 2026
+
+Owner-authorized scoped capture repair. This follows the independently reviewed
+Ron Holland alias release f49f8da0 on main. Required recovered NFL ancestry and
+every pregame-freeze release remain mandatory. No job replay, source capture,
+new browser session, CAPTCHA solving, migration or historical rewrite.
+
+Proven cause
+Private natural-run diagnostics identify actual original countdown readings:
+LAL20:57:47UTC /12min versus canonical21:00; IND21:57:48 /12min versus22:00;
+ORL22:48:02 /21min versus23:00. These are source/canonical clock discrepancies,
+not proof of a permanent ten-minute offset. The fixed-clock path permits a
+different displayed start while enforcing the canonical stop. The countdown
+path required canonical start inside a narrow source minute-rounding interval,
+so it incorrectly treated these valid same-day event clocks as wrong identity.
+
+Reviewed repair rule
+Derive the source interval from the original in-browser observation timestamp:
+readAt + max(0,N-1) minutes through readAt + (N+1) minutes. Both endpoints must
+resolve to the canonical game's date in the observed browser timezone. Any
+explicit date must also agree. Reject a midnight-straddling or wrong-date
+interval. Exact oriented teams, unique league candidate and one visible NBA
+scoreboard/clock remain required. No guessed source date or fixed offset.
+
+A differing canonical time is recorded as clockMismatch, analogous to the
+existing fixed-clock path. It never changes game start. Every quote and current
+read must remain strictly before BOTH canonical start and the earliest source
+interval boundary. The original source timestamp stays anchored through the
+scan; a reread cannot extend the original closing boundary.
+
+Revalidation additionally requires prior/current source intervals to overlap,
+besides existing nonincreasing minutes, nondecreasing original read times,
+identical identity/date/timezone fields and unchanged fixed/relative clock mode.
+This rejects drifting or mixed clocks while permitting real minute decrements.
+Existing freshness, future-time, market, exact quote and storage guards remain.
+
+Review and verification
+Read-only design review is recorded in
+work/nba-countdown-guard-review-2026-10-25-2250.txt. Regressions must cover actual
+observed discrepancies, earlier source closure, canonical boundary, original
+anchor preservation, interval drift, stale/future/reversed clocks, ambiguous
+dates, DST/midnight/year rollover, wrong teams and clock-mode transitions.
+Independent implementation review and test results precede Git publication.
+Exact release and qualifying natural outcomes are recorded separately in
+work/heartbeat-countdown-release-2026-10-25.txt. Passing tests/deployment alone
+do not establish that a later natural near-tip run succeeded.
+
+Previously started games remain closed. Missing prior observations cannot be
+replayed or invented. Existing external board access failures and MLB recovery
+check atOctober26 03:00UTC /04:00CET remain open. Monitoring ends at06:00UTC /
+07:00CET even if some external limitations persist.

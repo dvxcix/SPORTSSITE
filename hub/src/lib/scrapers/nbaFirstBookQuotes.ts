@@ -63,10 +63,14 @@ function displayedMinutes(label: string) {
   if (!match || Number(match[1]) < 1 || Number(match[1]) > 12 || Number(match[2]) > 59) return null
   return (Number(match[1]) % 12 + (match[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + Number(match[2])
 }
+function countdownInterval(countdown: NonNullable<NbaFirstBookBoard['countdown']>) {
+  const at = Date.parse(countdown.observedAt)
+  return { earliest: at + Math.max(0, countdown.minutes - 1) * 60_000, latest: at + (countdown.minutes + 1) * 60_000 }
+}
 
 export type NbaBookIdentity = Pick<NbaFirstBookBoard, 'away' | 'home' | 'dateLabel' | 'timeLabel' | 'timeZone' | 'countdown'>
 const identityFields = ['away', 'home', 'dateLabel', 'timeLabel', 'timeZone'] as const
-const revalidationReasons = ['missing-identity', 'identity-changed', 'clock-mode-changed', 'countdown-increased', 'countdown-clock-reversed', 'closed', ...identityReasons] as const
+const revalidationReasons = ['missing-identity', 'identity-changed', 'clock-mode-changed', 'countdown-increased', 'countdown-clock-reversed', 'countdown-interval-changed', 'closed', ...identityReasons] as const
 export type NbaBookRevalidation = { phase: 'comparison' | 'prior' | 'current'; reason: typeof revalidationReasons[number]; field?: typeof identityFields[number]; canonicalTip: string | null; priorCountdown: { minutes: number; readAt: string } | null; currentCountdown: { minutes: number; readAt: string } | null }
 const safeIso = (value: unknown) => { const time = typeof value === 'string' ? Date.parse(value) : NaN; return Number.isFinite(time) ? new Date(time).toISOString() : null }
 export function nbaBookRevalidationDiagnostic(value: unknown): NbaBookRevalidation | undefined {
@@ -93,14 +97,19 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: NbaBookIdent
     const sourceAt = Date.parse(board.countdown.observedAt), minutes = board.countdown.minutes
     if (!Number.isFinite(sourceAt) || sourceAt > Math.min(at, now) + 30_000 || now - sourceAt > 300_000) return mismatch('invalid-observation-clock')
     if (!Number.isSafeInteger(minutes) || minutes < 0 || minutes > 59 || board.timeLabel) return mismatch('invalid-time-label')
-    if (board.dateLabel && displayedDate(board.dateLabel, observed.date) !== scheduled.date) return mismatch('wrong-date')
+    const sourceDate = localParts(sourceAt, board.timeZone)!.date
+    if (board.dateLabel && displayedDate(board.dateLabel, sourceDate) !== scheduled.date) return mismatch('wrong-date')
     if (!nbaFirstBookTeam(board.away, input.game.visitor_team)) return mismatch('away-team')
     if (!nbaFirstBookTeam(board.home, input.game.home_team)) return mismatch('home-team')
-    // The observed minute countdown may round either way. Bind that interval
-    // to its original DOM read, and close at its earliest possible book tip.
-    const earliest = sourceAt + Math.max(0, minutes - 1) * 60_000, latest = sourceAt + (minutes + 1) * 60_000
+    // Like an explicit book clock, a relative clock identifies the event's
+    // calendar date without replacing canonical tip. Both possible dates must
+    // agree; never infer a date across an ambiguous midnight interval.
+    const { earliest, latest } = countdownInterval(board.countdown)
+    if (localParts(earliest, board.timeZone)?.date !== scheduled.date || localParts(latest, board.timeZone)?.date !== scheduled.date) return mismatch('wrong-date')
+    result.clockMismatch = start < earliest || start > latest
+    // The countdown may round either way. Its original DOM read anchors the
+    // earliest possible source tip, which can only close capture sooner.
     if (minutes === 0 || !nbaPregameOpen(input.game, at) || !nbaPregameOpen(input.game, now) || Math.max(at, now) >= earliest) return { ...result, status: 'closed', observedAt: board.observedAt }
-    if (start < earliest || start > latest) return mismatch('countdown-tipoff-mismatch')
     return { ...result, status: 'unavailable', observedAt: board.observedAt }
   }
   if (clock == null) return mismatch('invalid-time-label')
@@ -117,8 +126,8 @@ export function nbaBookObservation(input: NbaFirstBookInput, board: NbaBookIdent
   return { ...result, status: 'unavailable' }
 }
 
-/** Relative clocks may decrement, but each independently observed interval
- * must identify this same canonical pregame event. Never restamp a countdown. */
+/** Relative clocks may decrement, but their original intervals must overlap
+ * and identify this same canonical pregame date. Never restamp a countdown. */
 export function nbaSameBookIdentity(input: NbaFirstBookInput, prior: NbaBookIdentity, current: NbaBookIdentity | null, now = Date.now()) {
   return nbaBookIdentityRevalidation(input, prior, current, now) == null
 }
@@ -137,6 +146,10 @@ export function nbaBookIdentityRevalidation(input: NbaFirstBookInput, prior: Nba
   for (const [phase, identity] of [['prior', prior], ['current', current]] as const) {
     const result = nbaBookObservation(input, { ...identity, observedAt: identity.countdown?.observedAt ?? new Date(now).toISOString() }, now)
     if (result.status !== 'unavailable') return failure(phase, result.identity?.reason ?? 'closed')
+  }
+  if (prior.countdown && current.countdown) {
+    const before = countdownInterval(prior.countdown), after = countdownInterval(current.countdown)
+    if (Math.max(before.earliest, after.earliest) > Math.min(before.latest, after.latest)) return failure('comparison', 'countdown-interval-changed')
   }
   return null
 }

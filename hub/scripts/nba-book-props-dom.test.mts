@@ -175,7 +175,7 @@ test('ordinary O/U accepts an explicitly locked known line, while blank prices o
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { countdown?:boolean; stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
+async function navigation(options: { countdown?:boolean; countdownOffsetMinutes?:number; stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
   const prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
   let evaluations=0,remoteWaits=0,uiErrors=0,identityDelayed=false
@@ -227,7 +227,7 @@ async function navigation(options: { countdown?:boolean; stalled?: boolean; flas
     if(!identityDelayed&&(options.slowIdentity==='retry'&&uiErrors>0||options.slowIdentity==='final'&&selected==='15+'&&displayed==='15+')){identityDelayed=true;advance(6501)}
     if(options.retryFailure==='identity'&&uiErrors>0)return{...metadata,away:'Different team'}
     if(options.liveChange&&displayed==='15+'){prices['15+']='-600';render()}
-    return options.countdown ? { ...metadata, dateLabel: '', timeLabel: '', countdown: { minutes: Math.floor((Date.parse(captureInput.game.datetime!) - clock) / 60_000), observedAt: new Date(clock).toISOString() } } : metadata
+    return options.countdown ? { ...metadata, dateLabel: '', timeLabel: '', countdown: { minutes: Math.floor((Date.parse(captureInput.game.datetime!) + (options.countdownOffsetMinutes ?? 0) * 60_000 - clock) / 60_000), observedAt: new Date(clock).toISOString() } } : metadata
   }
   const page = {
     evaluate: async (fn: (arg?: unknown) => unknown, arg?: unknown) => {evaluations++;advance(options.roundTrip??0);return fn(arg)},
@@ -266,6 +266,14 @@ test('regular ladders survive a normal countdown minute decrement using each fre
   assert.equal(result.frames.length, 7); assert.ok(result.frames.every(frame => frame.complete)); assert.ok(result.coverage.every(scope => scope.complete))
   assert.ok(result.normalized.every(value => value.countdownAt && Date.parse(value.countdownAt) > now))
   assert.ok(result.normalized.every(value => value.observedAt === value.countdownAt), 'prices use the fresh identity time, never an old countdown with a new clock')
+})
+
+test('a later same-date source countdown preserves all exact regular thresholds and actual read timestamps', async () => {
+  const result = await navigation({ countdown: true, countdownOffsetMinutes: 10 })
+  assert.equal(result.frames.length, 7); assert.ok(result.frames.every(frame => frame.complete)); assert.ok(result.coverage.every(scope => scope.complete))
+  assert.deepEqual(result.frames.map(frame => frame.contractKey), [10, 15, 20, 25, 30, 35, 40].map(value => `points:milestone:${value}`))
+  assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:30')!.props.find(prop => prop.player_id === 375)!.market.odds, 400)
+  assert.ok(result.normalized.every(value => value.countdownAt && value.observedAt === value.countdownAt))
 })
 
 test('a selected tab with old rows, including empty-loading then old rows, never relabels the prior price', async () => {

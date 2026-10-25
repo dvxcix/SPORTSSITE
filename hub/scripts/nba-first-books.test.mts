@@ -18,6 +18,7 @@ const game: PaintGame = { id: 21717953, date: '2026-10-24', season: 2026, status
 const player: PaintRoster = { id: 42, first_name: 'Alpha', last_name: 'Diallo', team: game.visitor_team, position: 'F' }
 const input = { game, roster: [player] }
 const board = (changes: Partial<NbaFirstBookBoard> = {}): NbaFirstBookBoard => ({ away: 'NO Pelicans', home: 'DEN Nuggets', dateLabel: 'Today', timeLabel: '7:00PM', timeZone: 'America/Los_Angeles', observedAt: new Date(now).toISOString(), market: '1st Point', expanded: true, rows: [{ name: 'Alpha Diallo', odds: '+1060' }], ...changes })
+const relativeBoard = (at: number, minutes: number, changes: Partial<NbaFirstBookBoard> = {}) => board({ dateLabel: '', timeLabel: '', timeZone: 'UTC', observedAt: new Date(at).toISOString(), countdown: { minutes, observedAt: new Date(at).toISOString() }, market: 'First field goal scorer', ...changes })
 
 test('observed DK 1st Point and MGM First FG remain distinct exact affirmative contracts', () => {
   const dk = nbaNormalizeFirstBook('draftkings', input, board(), now)
@@ -73,9 +74,9 @@ test('revalidation diagnostics preserve original countdown clocks and distinguis
   const value = (minutes: number, clock = at): quotes.NbaBookIdentity => ({ away: 'NO Pelicans', home: 'DEN Nuggets', dateLabel: '', timeLabel: '', timeZone: 'America/Los_Angeles', countdown: { minutes, observedAt: new Date(clock).toISOString() } })
   const prior = value(22), current = value(21, at + 60_000)
   assert.equal(quotes.nbaBookIdentityRevalidation(input, prior, current, at + 60_000), null)
-  assert.deepEqual(quotes.nbaBookIdentityRevalidation(input, prior, value(19, at + 60_000), at + 60_000), {
-    phase: 'current', reason: 'countdown-tipoff-mismatch', canonicalTip: new Date(game.datetime!).toISOString(),
-    priorCountdown: { minutes: 22, readAt: prior.countdown!.observedAt }, currentCountdown: { minutes: 19, readAt: current.countdown!.observedAt },
+  assert.deepEqual(quotes.nbaBookIdentityRevalidation(input, prior, value(18, at + 60_000), at + 60_000), {
+    phase: 'comparison', reason: 'countdown-interval-changed', canonicalTip: new Date(game.datetime!).toISOString(),
+    priorCountdown: { minutes: 22, readAt: prior.countdown!.observedAt }, currentCountdown: { minutes: 18, readAt: current.countdown!.observedAt },
   })
   for (const [next, reason, field] of [
     [null, 'missing-identity'], [{ ...current, home: 'Wrong team' }, 'identity-changed', 'home'],
@@ -87,7 +88,8 @@ test('revalidation diagnostics preserve original countdown clocks and distinguis
     assert.equal(quotes.nbaSameBookIdentity(input, prior, next, at + 60_000), false)
   }
   assert.equal(quotes.nbaBookIdentityRevalidation(input, value(10), current, at + 60_000)?.reason, 'countdown-increased')
-  assert.equal(quotes.nbaBookIdentityRevalidation(input, value(10), value(9, at + 60_000), at + 60_000)?.phase, 'prior')
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, value(10), value(9, at + 60_000), at + 60_000), null, 'an earlier source tip remains a valid, stricter pregame boundary')
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, value(0), value(0, at + 60_000), at + 60_000)?.phase, 'prior')
 })
 
 test('revalidation diagnostic sanitizer never forwards source data or invalid clocks', () => {
@@ -137,7 +139,8 @@ test('minute countdowns stay bound to their actual DOM clock and close at the ea
   assert.equal(quotes.nbaSameBookIdentity(input, initial, next, at + 60_000), true)
   for (const change of [{ away: 'Wrong team' }, { home: 'Wrong team' }, { dateLabel: 'Tomorrow' }, { timeZone: 'invalid' }]) assert.equal(nbaNormalizeFirstBook('betmgm', input, { ...next, ...change }, at + 60_000).complete, false)
   assert.equal(quotes.nbaSameBookIdentity(input, initial, countdown(23, at + 60_000), at + 60_000), false)
-  assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(10), at).identity?.reason, 'countdown-tipoff-mismatch')
+  const earlier = nbaNormalizeFirstBook('betmgm', input, countdown(10), at)
+  assert.equal(earlier.complete, true); assert.equal(earlier.clockMismatch, true)
   assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(0), at).status, 'closed')
   assert.equal(nbaNormalizeFirstBook('betmgm', input, countdown(1), at).status, 'closed')
   assert.equal(nbaNormalizeFirstBook('betmgm', input, { ...initial, observedAt: new Date(at + 21 * 60_000).toISOString() }, at + 21 * 60_000).complete, false, 'a later quote timestamp cannot restart an old countdown')
@@ -148,6 +151,94 @@ test('minute countdowns stay bound to their actual DOM clock and close at the ea
     const target = ['double_double', 'triple_double'].includes(market) ? '0.5' : market === 'blocks' ? 'O/U 0.5' : '15+'
     const frame = propQuotes.nbaNormalizeBookProp(input, { ...next, title, target, selectedTarget: target, expanded: true, transitioned: true, rows: [{ name: 'Alpha Diallo', side: market === 'blocks' ? 'Over' : 'Yes', odds: '+400', unavailable: false }] }, at + 60_000)
     assert.equal(frame?.complete, true, title); assert.equal(frame?.props[0].updated_at, next.observedAt)
+  }
+})
+
+test('observed later MGM countdowns identify the same calendar event without moving canonical tip', () => {
+  for (const [readAt, tip, minutes] of [
+    ['2026-10-25T20:57:00Z', '2026-10-25T21:00:00Z', 12],
+    ['2026-10-25T21:57:00Z', '2026-10-25T22:00:00Z', 12],
+    ['2026-10-25T22:48:00Z', '2026-10-25T23:00:00Z', 21],
+  ] as const) {
+    const at = Date.parse(readAt), currentInput = { ...input, game: { ...game, datetime: tip } }
+    const prior = relativeBoard(at, minutes), next = relativeBoard(at + 60_000, minutes - 1)
+    const result = nbaNormalizeFirstBook('betmgm', currentInput, prior, at)
+    assert.equal(result.complete, true); assert.equal(result.clockMismatch, true)
+    assert.equal(result.props[0].market.over_odds, 1060); assert.equal(result.props[0].updated_at, new Date(at).toISOString())
+    assert.equal(quotes.nbaBookIdentityRevalidation(currentInput, prior, next, at + 60_000), null)
+    for (const delta of [0, 1]) {
+      const closedAt = Date.parse(tip) + delta
+      const closed = nbaNormalizeFirstBook('betmgm', currentInput, relativeBoard(closedAt, 10), closedAt)
+      assert.equal(closed.status, 'closed'); assert.deepEqual(closed.props, [])
+    }
+  }
+})
+
+test('both countdown interval endpoints must establish the canonical date across midnight and year rollover', () => {
+  const at = Date.parse('2026-12-31T23:58:00Z'), currentInput = { ...input, game: { ...game, datetime: '2027-01-01T00:03:00Z' } }
+  const nextDay = relativeBoard(at, 5)
+  assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, nextDay, at).complete, true)
+  assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, { ...nextDay, dateLabel: 'Tomorrow' }, at).complete, true)
+  assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, { ...nextDay, dateLabel: 'Today' }, at).identity?.reason, 'wrong-date')
+  const straddles = { ...currentInput, game: { ...game, datetime: '2027-01-01T00:00:00Z' } }
+  assert.equal(nbaNormalizeFirstBook('betmgm', straddles, relativeBoard(at, 2), at).identity?.reason, 'wrong-date', 'earliest date cannot be guessed from the latest date')
+  const wrongDay = { ...currentInput, game: { ...game, datetime: '2026-12-31T23:59:00Z' } }
+  assert.equal(nbaNormalizeFirstBook('betmgm', wrongDay, nextDay, at).identity?.reason, 'wrong-date')
+  const staleLabel = { ...nextDay, dateLabel: 'Tomorrow', observedAt: '2027-01-01T00:00:30Z' }
+  assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, staleLabel, Date.parse(staleLabel.observedAt)).complete, true, 'relative date labels use the original DOM calendar, not a later quote timestamp')
+})
+
+test('countdown date and overlap use absolute time through both DST clock changes', () => {
+  for (const [readAt, tip] of [
+    ['2026-11-01T05:58:00Z', '2026-11-01T06:03:00Z'],
+    ['2027-03-14T06:58:00Z', '2027-03-14T07:03:00Z'],
+  ]) {
+    const at = Date.parse(readAt), currentInput = { ...input, game: { ...game, datetime: tip } }
+    const prior = relativeBoard(at, 12, { timeZone: 'America/New_York' }), current = relativeBoard(at + 120_000, 10, { timeZone: 'America/New_York' })
+    assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, prior, at).complete, true)
+    assert.equal(quotes.nbaBookIdentityRevalidation(currentInput, prior, current, at + 120_000), null)
+    assert.equal(nbaNormalizeFirstBook('betmgm', currentInput, current, Date.parse(tip)).status, 'closed')
+  }
+})
+
+test('the original earlier source boundary cannot be restarted by a later overlapping countdown', () => {
+  const at = Date.parse(game.datetime!) - 10 * 60_000, prior = relativeBoard(at, 3), current = relativeBoard(at + 60_000, 3)
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, prior, at + 119_999).complete, true)
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, prior, at + 120_000).status, 'closed')
+  const later = at + 150_000
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, current, later).complete, true, 'the later clock alone would still be open')
+  const result = quotes.nbaBookIdentityRevalidation(input, prior, current, later)!
+  assert.equal(result.phase, 'prior'); assert.equal(result.reason, 'closed')
+  assert.equal(result.priorCountdown!.readAt, new Date(at).toISOString())
+  assert.equal(nbaNormalizeFirstBook('betmgm', input, { ...prior, observedAt: new Date(later).toISOString() }, later).status, 'closed')
+})
+
+test('nonoverlapping countdown intervals reject drift even with nonincreasing minutes and forward clocks', () => {
+  const at = Date.parse(game.datetime!) - 20 * 60_000, prior = relativeBoard(at, 12)
+  for (const current of [relativeBoard(at + 180_000, 12), relativeBoard(at + 60_000, 8)]) {
+    const checkedAt = Date.parse(current.observedAt)
+    assert.equal(nbaNormalizeFirstBook('betmgm', input, current, checkedAt).complete, true, 'each date/clock alone is a valid pregame observation')
+    const result = quotes.nbaBookIdentityRevalidation(input, prior, current, checkedAt)!
+    assert.equal(result.phase, 'comparison'); assert.equal(result.reason, 'countdown-interval-changed')
+    assert.equal(result.priorCountdown!.readAt, prior.countdown!.observedAt)
+  }
+  assert.equal(quotes.nbaBookIdentityRevalidation(input, prior, relativeBoard(at + 60_000, 11), at + 60_000), null)
+})
+
+test('relative-date identity does not loosen observation freshness, mixed clocks or numeric bounds', () => {
+  const at = Date.parse(game.datetime!) - 20 * 60_000, valid = relativeBoard(at, 12)
+  const cases: [Partial<NbaFirstBookBoard>, string][] = [
+    [{ observedAt: new Date(at + 30_001).toISOString() }, 'future-observation'],
+    [{ observedAt: new Date(at - 300_001).toISOString() }, 'expired-observation'],
+    [{ countdown: { minutes: 12, observedAt: 'invalid' } }, 'invalid-observation-clock'],
+    [{ countdown: { minutes: 12, observedAt: new Date(at + 30_001).toISOString() } }, 'invalid-observation-clock'],
+    [{ countdown: { minutes: 12, observedAt: new Date(at - 300_001).toISOString() } }, 'invalid-observation-clock'],
+    [{ timeLabel: '1:00 AM' }, 'invalid-time-label'],
+    ...[-1, 60, 12.5, NaN].map(minutes => [{ countdown: { minutes, observedAt: valid.observedAt } }, 'invalid-time-label'] as [Partial<NbaFirstBookBoard>, string]),
+  ]
+  for (const [changes, reason] of cases) {
+    const result = nbaNormalizeFirstBook('betmgm', input, { ...valid, ...changes }, at)
+    assert.equal(result.identity?.reason, reason); assert.deepEqual(result.props, [])
   }
 })
 
