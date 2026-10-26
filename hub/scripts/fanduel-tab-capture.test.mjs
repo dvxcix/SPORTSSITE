@@ -7,15 +7,17 @@ const ts = require('typescript')
 const { JSDOM } = require('jsdom')
 const compile = file => ts.transpileModule(fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], ignore = [], empty = [], delay = 0, stalePanel = false, controls = true, retainOldContent = false, initialIndex = 0, revertAfterSelectMs = Infinity, promoProgress = false } = {}) {
+function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], ignore = [], empty = [], delay = 0, stalePanel = false, controls = true, retainOldContent = false, initialIndex = 0, revertAfterSelectMs = Infinity, promoProgress = false, extraBusyHtml = '' } = {}) {
   const dom = new JSDOM('<body></body>', { url: 'https://sportsbook.fanduel.com/baseball/fixture-123456' })
   const document = dom.window.document, calls = []
-  let now = 1_000_000, active = labels[initialIndex], displayed = active, readyAt = now, revertAt = Infinity, loading = false
+  let now = 1_000_000, active = labels[initialIndex], displayed = active, readyAt = now, revertAt = Infinity, loading = false, geometryReads = 0
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])) } static now() { return now } }
   dom.window.HTMLElement.prototype.scrollIntoView = () => {}
+  dom.window.Element.prototype.getBoundingClientRect = () => { geometryReads++; return { width: 50000, height: 12.6 } }
   function render() {
     document.body.innerHTML = '<main id="main"><h1>Tampa Bay Rays @ Milwaukee Brewers</h1>'
       + (promoProgress ? '<aside aria-label="Promotions"><div role="progressbar"></div></aside>' : '')
+      + extraBusyHtml
       + labels.map((label, i) => `<div role="${controls ? 'tab' : 'button'}" ${controls ? 'aria-controls="markets"' : ''} aria-selected="${label === active}" aria-label="Tab ${i + 1} of ${labels.length}: ${label}">${label}</div>`).join('')
       + `<div id="markets" aria-busy="${loading && !retainOldContent}">${(!loading || retainOldContent) && !empty.includes(displayed) ? `<div role="button" aria-selected="false" aria-label="${displayed}, Player A, +120 Odds"></div>` : ''}${stalePanel ? '<div style="display:none"><div role="button" aria-selected="false" aria-label="Hidden stale, Player X, +999 Odds"></div></div>' : ''}</div>`
       + (stalePanel ? '<div role="tabpanel" hidden><div role="button" aria-selected="false" aria-label="Prior tab, Player B, +999 Odds"></div><div role="button" aria-expanded="false" aria-label="Prior section"></div></div>' : '') + '</main>'
@@ -38,7 +40,7 @@ function browserFixture({ labels = ['Same Game Parlay', 'Lasers', 'Moonshots'], 
     if (now >= revertAt) { displayed = labels[initialIndex]; revertAt = Infinity; render() }
     callback()
   })
-  return { run: compiled.exports.runFanduelScrape, calls, elapsed: () => now - 1_000_000, close: () => dom.window.close() }
+  return { run: compiled.exports.runFanduelScrape, calls, elapsed: () => now - 1_000_000, geometryReads: () => geometryReads, close: () => dom.window.close() }
 }
 
 test('reacquires replaced SPA tab nodes and preserves distinct tab market parsing', async () => {
@@ -161,7 +163,14 @@ test('failed tabs report fixed readiness reasons and counts without changing bus
         assert.equal(row.diagnostic, undefined)
       } else {
         assert.equal(row.tab_status, 'content-unavailable')
-        assert.deepEqual(row.diagnostic, { reason: 'busy', scope: 'main', controlledPanels: 0, panels: 0, mains: 1, buttons: 2, odds: 1, sections: 0, busy: 1 })
+        const { busyNodes, ...counts } = row.diagnostic
+        assert.deepEqual(counts, { reason: 'busy', scope: 'main', controlledPanels: 0, panels: 0, mains: 1, buttons: 2, odds: 1, sections: 0, busy: 1 })
+        assert.equal(busyNodes.length, 1)
+        assert.equal(busyNodes[0].kind, 'progressbar')
+        assert.equal(busyNodes[0].ancestors[0].labelKind, 'promotion')
+        assert.equal(busyNodes[0].ancestors[0].odds, 0)
+        assert.equal(busyNodes[0].ancestors.at(-1).tag, 'main')
+        assert.equal(busyNodes[0].ancestors.at(-1).odds, 1)
         assert.equal(row.outcome_count, 0)
       }
     } finally { fixture.close() }
@@ -179,6 +188,32 @@ test('failed tabs report fixed readiness reasons and counts without changing bus
     assert.equal(result[1].outcome_count, 0)
     assert.equal(/Player|https:|Odds/.test(JSON.stringify(result[1].diagnostic)), false)
   } finally { stale.close() }
+})
+
+test('busy structural diagnostics are capped, private and sampled only once after failed readiness', async () => {
+  const secret = 'private-member-url-token'
+  const extraBusyHtml = '<section aria-label="' + secret + '" class="' + secret + '">' + ('<div role="' + secret + '">').repeat(9)
+    + Array.from({ length: 12 }, (_, i) => `<div ${i % 2 ? 'aria-busy="true"' : 'role="progressbar" aria-busy="true"'} aria-label="${secret}" id="${secret}${i}" style="opacity:0"></div>`).join('')
+    + '</div>'.repeat(9) + '</section>'
+  const fixture = browserFixture({ labels: ['Lasers'], controls: false, extraBusyHtml })
+  try {
+    const [row] = await fixture.run({ verifyTabs: true, maxDurationMs: 30000 })
+    assert.equal(row.tab_status, 'content-unavailable'); assert.equal(row.incomplete, true); assert.equal(row.outcome_count, 0)
+    assert.equal(row.diagnostic.reason, 'busy'); assert.equal(row.diagnostic.busy, 12)
+    const nodes = row.diagnostic.busyNodes
+    assert.equal(nodes.length, 8); assert.ok(nodes.every(node => node.ancestors.length === 6))
+    assert.equal(nodes[0].kind, 'both'); assert.equal(nodes[1].kind, 'aria-busy')
+    assert.ok(nodes.every(node => node.width === 20000 && node.height === 13 && node.opacityPercent === 0 && node.relation === 'descendant'))
+    assert.ok(nodes.every(node => node.labelKind === 'other' && node.ancestors[0].role === 'other'))
+    assert.ok(fixture.geometryReads() <= 8 * 7, 'geometry/ancestor walks are not repeated during readiness polling or retries')
+    assert.equal(JSON.stringify(row.diagnostic).includes(secret), false)
+    const keys = ['tag','role','labelKind','width','height','opacityPercent','odds','sections','tabs']
+    for (const node of nodes) {
+      assert.deepEqual(Object.keys(node).sort(), [...keys,'kind','relation','ancestors'].sort())
+      for (const ancestor of node.ancestors) assert.deepEqual(Object.keys(ancestor).sort(), keys.sort())
+    }
+    assert.equal(fixture.elapsed(), 10500, 'diagnostics do not introduce a wait or make opacity-zero blockers acceptable')
+  } finally { fixture.close() }
 })
 
 function routeFixture(scrapes, { importOk = true, importBody = { ok: true, rowsImported: 1, rawTabsArchived: 1, rawOutcomesArchived: 1 }, startsIn = 3600000, navigationAdvance = 0, extractionAdvance = 0 } = {}) {

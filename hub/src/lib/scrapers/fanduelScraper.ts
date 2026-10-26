@@ -2,6 +2,13 @@
 // Playwright's page.evaluate() instead of pasted into DevTools by hand.
 // Preserve the original market parsing and section expansion. MLB additionally
 // verifies tab navigation: the SPA can replace tab nodes after each selection.
+type FanduelBusyElement = {
+  tag: 'div' | 'span' | 'svg' | 'progress' | 'main' | 'section' | 'aside' | 'other'
+  role: 'progressbar' | 'status' | 'region' | 'complementary' | 'tabpanel' | 'button' | 'tab' | 'navigation' | 'main' | 'none' | 'other'
+  labelKind: 'promotion' | 'loading' | 'none' | 'other'
+  width: number; height: number; opacityPercent: number
+  odds: number; sections: number; tabs: number
+}
 export type FanduelTabDiagnostic = {
   reason: 'selection-unverified' | 'root-unavailable' | 'busy' | 'no-content' | 'unchanged-content' | 'unstable-content' | 'empty-after-expansion' | 'deadline'
   scope: 'controlled-panel' | 'tabpanel' | 'main' | 'none'
@@ -12,6 +19,7 @@ export type FanduelTabDiagnostic = {
   odds: number
   sections: number
   busy: number
+  busyNodes?: (FanduelBusyElement & { kind: 'aria-busy' | 'progressbar' | 'both'; relation: 'root' | 'descendant'; ancestors: FanduelBusyElement[] })[]
 }
 export type FanduelTabCapture = {
   sportsbook: string
@@ -252,6 +260,44 @@ export async function runFanduelScrape(options: { maxDurationMs?: number; verify
     }
   }
 
+  // Structural evidence only, sampled once after a failed tab. Never use
+  // these diagnostics to accept a busy market or copy arbitrary source data.
+  function busyNodeDiagnostics(label: string): FanduelTabDiagnostic['busyNodes'] {
+    const root = contentRoot(label)
+    if (!root) return []
+    const rootElement = root as Element
+    const nodes = [...(rootElement.getAttribute?.('aria-busy') === 'true' ? [rootElement] : []), ...QSA('[aria-busy="true"], [role="progressbar"]', root).filter(visible)].slice(0, 8)
+    const cache = new Map<Element, FanduelBusyElement>()
+    const describe = (el: Element): FanduelBusyElement => {
+      const cached = cache.get(el)
+      if (cached) return cached
+      const rawTag = el.tagName.toLowerCase(), rawRole = el.getAttribute('role'), label = el.getAttribute('aria-label') ?? ''
+      const rect = el.getBoundingClientRect(), opacity = Number.parseFloat(getComputedStyle(el).opacity)
+      const bounded = (value: number) => Number.isFinite(value) ? Math.min(20_000, Math.max(0, Math.round(value))) : 0
+      const value: FanduelBusyElement = {
+        tag: (['div', 'span', 'svg', 'progress', 'main', 'section', 'aside'].includes(rawTag) ? rawTag : 'other') as FanduelBusyElement['tag'],
+        role: (!rawRole ? 'none' : ['progressbar', 'status', 'region', 'complementary', 'tabpanel', 'button', 'tab', 'navigation', 'main'].includes(rawRole) ? rawRole : 'other') as FanduelBusyElement['role'],
+        labelKind: !label ? 'none' : /^promotions?\b/i.test(label) ? 'promotion' : /^(?:loading|please wait)\b/i.test(label) ? 'loading' : 'other',
+        width: bounded(rect.width), height: bounded(rect.height), opacityPercent: Number.isFinite(opacity) ? Math.min(100, Math.max(0, Math.round(opacity * 100))) : -1,
+        odds: bounded(QSA('[role="button"][aria-selected]', el).filter(node => visible(node) && !!parseAriaLabel(node.getAttribute('aria-label'))).length),
+        sections: bounded(getCollapsedSections(el).length),
+        tabs: bounded(QSA('[aria-label]', el).filter(node => visible(node) && /^Tab \d+ of \d+:/.test(node.getAttribute('aria-label') ?? '')).length),
+      }
+      cache.set(el, value)
+      return value
+    }
+    return nodes.map((el): NonNullable<FanduelTabDiagnostic['busyNodes']>[number] => {
+      const ancestors: FanduelBusyElement[] = []
+      let parent = el === rootElement ? null : el.parentElement
+      while (parent && ancestors.length < 6) {
+        ancestors.push(describe(parent))
+        if (parent === rootElement) break
+        parent = parent.parentElement
+      }
+      return { ...describe(el), kind: el.getAttribute('aria-busy') === 'true' ? el.getAttribute('role') === 'progressbar' ? 'both' : 'aria-busy' : 'progressbar', relation: el === rootElement ? 'root' : 'descendant', ancestors }
+    })
+  }
+
   // Check readiness twice with the selected tab still mounted. A spinner or
   // a blank container is not evidence that a market has been withdrawn.
   async function waitForTabContent(label: string, until: number, priorTabContent?: string) {
@@ -318,6 +364,10 @@ export async function runFanduelScrape(options: { maxDurationMs?: number; verify
       }
       if (Date.now() >= deadline) { status = 'deadline'; captured = null }
       if (status !== 'captured' && (status === 'deadline' || !readinessDiagnostic)) diagnose(status === 'deadline' ? 'deadline' : 'selection-unverified', label, null)
+      const failedDiagnostic = readinessDiagnostic as FanduelTabDiagnostic | undefined
+      if (status !== 'captured' && failedDiagnostic?.reason === 'busy') {
+        try { failedDiagnostic.busyNodes = busyNodeDiagnostics(label) } catch { /* Diagnostics cannot change the failed capture or its deadline. */ }
+      }
       results.push({
         ...(captured ?? { sportsbook: 'FanDuel', scraped_at: new Date().toISOString(), event: eventHeader(), active_tab: { label }, section_count: 0, outcome_count: 0, sections: {} }),
         tab_status: status, incomplete: status !== 'captured', available_tabs: labels,

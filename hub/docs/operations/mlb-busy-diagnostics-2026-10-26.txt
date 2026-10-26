@@ -1,0 +1,13 @@
+MLB capture diagnostics — October 26, 2026
+
+The natural 03:00 UTC /04:00 CET MLB scrape (pipeline run 910146) failed all ten tabs for MIL@TB 849804 with content-unavailable/busy. Each tab reported four visible busy indicators under the sole MAIN, despite parsed prices and sections. No verified tab was captured and no rows were imported. This is not recovered capture coverage.
+
+The location and purpose of those four indicators remain unproven. Existing recording API access was denied; no credentials or permissions were expanded. A promo-loading or geometry explanation remains a hypothesis. Readiness guards must not be weakened based on screenshots alone.
+
+The reviewed change adds private structural diagnostics only after a failed busy tab. Output contains at most eight nodes, six ancestors per node, fixed tag/role/label classifications and capped geometry/counts. It does not include raw labels, IDs, classes, URLs or account data. Descriptions are memoized within the single failure sample. Failed diagnostics cannot make a capture complete; opaque/zero-size busy elements remain rejected. No polling interval, source session, retry, import rule, canonical phase boundary or NFL timeout changes.
+
+Validation: focused collector/route tests 19/19, production source checks 134/134, TypeScript, scoped ESLint and diff checks passed. Independent review is recorded with the release evidence. No migration and no replay. A later natural qualifying capture is required to establish the actual busy-node cause and any eventual recovery.
+
+Final-window cross-sport verification is in work/heartbeat-final-nba-2026-10-26.{json,txt}, work/heartbeat-final-nfl-health-2026-10-26.{json,txt} and work/heartbeat-final-verification-2026-10-26.txt. All seven closed NBA and twelve closed NFL games passed the checked pregame boundaries. Historical capture gaps remain real and are not reconstructed. Security backports, exact settlement, shared caches and natural archive/model progress remain verified. Raw dependency audit is not clean: five explicitly mitigated advisories remain listed upstream.
+
+The bounded follow-up ends October 26 at 06:00 UTC /07:00 CET. MLB sportsbook recovery remains outstanding; diagnostics deployment alone must not be described as its repair.
