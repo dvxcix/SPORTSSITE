@@ -570,7 +570,8 @@ test('heavy analytics jobs use bounded, contention-safe cron stages', async () =
   assert.ok(marketDna.includes("stage: 'archive'"))
   assert.ok(marketDna.includes("stage: 'model-fit'"))
   assert.ok(vercel.crons.some(cron => cron.path === '/api/cron/market-dna-maintenance?fitOnly=1'))
-  assert.equal(vercel.crons.find(cron => cron.path === '/api/cron/statcast-integrity-check')?.schedule, '50 10-16 * * *')
+  // Owner paused MLB collection for the offseason; historical processing stays on.
+  assert.equal(vercel.crons.find(cron => cron.path === '/api/cron/statcast-integrity-check'), undefined)
   assert.ok(statcast.includes('const retryDelaysMs = [1_500, 5_000]'))
 })
 

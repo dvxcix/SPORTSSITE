@@ -1,0 +1,26 @@
+Owner-approved Browserbase cost containment — October27,2026
+
+Pause the two NBA browser schedules immediately, and stop MLB polling for the
+offseason. hub/vercel.json removes exactly34 entries:2 NBA browser jobs and32
+MLB collection/refresh/precompute/digest schedules.28 other entries remain exact.
+NFL collection, NBA configured API/research, grading/settlement, historical archive
+and model maintenance, billing, recap/outbox and general maintenance stay enabled.
+
+Independently reviewed JSON comparison confirms no other configuration change.
+Production smoke assertion now expects the intentionally paused MLB integrity
+poller to be absent; archive/model boundedness assertions remain in place.
+No database change, credentials change, forced capture or historical replay.
+
+Deployment must take effect before cron removal is considered live. Existing
+in-flight sessions may finish within their prior bounds. Schedule removal does
+not disable authenticated manual routes; further NBA cost controls must protect
+all browser launches before any schedule is restored.
+
+NBA counts retain genuine observation times. Direct-only prices expire under
+existing five-minute rules, potentially holding aggregate props/First archives
+when completeness cannot be established. No stale timestamps are refreshed,
+missing quotes fabricated, openings deleted or pregame freezes relaxed.
+
+The upcoming repair must enforce durable cadence/cooldowns and spending gates;
+mock/concurrency/integrity tests must pass before NBA schedules are re-enabled.
+Final deployment/source/receipt evidence is recorded separately in work/.
