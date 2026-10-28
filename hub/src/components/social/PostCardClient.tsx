@@ -114,7 +114,7 @@ function timeAgo(date: string, nowMs: number) {
 }
 
 export function PostCardClient({ post: initialPost, index = 0, detail = false }: PostCardClientProps) {
-  const { user, profile } = useAuth()
+  const { user, profile, loading: authLoading, authUnavailable } = useAuth()
   const router = useRouter()
   const { confirm: confirmAction, notify: showNotice } = useFeedback()
   const [reactionSummary, setReactionSummary] = useState<Record<string, number>>(initialPost.reaction_summary ?? {})
@@ -135,10 +135,19 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [commentText, setCommentText] = useState('')
   const commentInputRef = useRef<HTMLInputElement>(null)
   const [loadedComments, setLoadedComments] = useState(false)
+  const [commentOwner, setCommentOwner] = useState<string | null>(user?.id ?? null)
+  const [commentResultGeneration, setCommentResultGeneration] = useState(0)
+  const commentContext = `${user?.id ?? ''}:${authLoading}:${authUnavailable}`
+  const [observedCommentContext, setObservedCommentContext] = useState(commentContext)
+  const [commentGeneration, setCommentGeneration] = useState(0)
+  if (observedCommentContext !== commentContext) {
+    setObservedCommentContext(commentContext); setCommentGeneration(value => value + 1)
+    setLoadedComments(false); setShowComments(false); setCommentTree([])
+  }
   // Comments only load on-demand (click-to-expand, or immediately in
   // `detail` mode) — fetching this once per actual load, cached in a ref, is
   // cheap in a way a per-card fetch on every feed render wouldn't be.
-  const blockedIdsRef = useRef<string[] | null>(null)
+  const blockedIdsRef = useRef<{ owner: string; generation: number; ids: string[] } | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
@@ -392,8 +401,14 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // there's no separate "load replies" affordance; comment volume per post
   // is small enough that this is cheap.
   async function loadCommentTree() {
-    if (user && blockedIdsRef.current === null) {
-      blockedIdsRef.current = await getBlockedEitherWayIds(supabase, user.id)
+    if (authLoading || authUnavailable) { showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' }); return }
+    let blockedIds: string[] = []
+    if (user) {
+      if (blockedIdsRef.current?.owner === user.id && blockedIdsRef.current.generation === commentGeneration) blockedIds = blockedIdsRef.current.ids
+      else {
+        try { blockedIds = await getBlockedEitherWayIds(supabase, user.id); blockedIdsRef.current = { owner: user.id, generation: commentGeneration, ids: blockedIds } }
+        catch { showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' }); return }
+      }
     }
     const [{ data: rows, error: commentsError }, { data: myLikes }] = await Promise.all([
       supabase
@@ -406,16 +421,18 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         : Promise.resolve({ data: [] as any[] }),
     ])
     if (commentsError) { showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' }); return }
-    const blockedSet = new Set(blockedIdsRef.current ?? [])
+    const blockedSet = new Set(blockedIds)
     const visibleRows = (rows ?? []).filter((r: any) => !blockedSet.has(r.author_id))
     const likedIds = new Set((myLikes ?? []).map((r: any) => r.target_id))
     setCommentTree(buildCommentTree(visibleRows, likedIds))
+    setCommentOwner(user?.id ?? null)
+    setCommentResultGeneration(commentGeneration)
     setLoadedComments(true)
     setShowComments(true)
   }
 
   function toggleComments() {
-    if (loadedComments) { setShowComments(v => !v); return }
+    if (loadedComments && commentOwner === (user?.id ?? null) && commentResultGeneration === commentGeneration) { setShowComments(v => !v); return }
     loadCommentTree()
   }
 
@@ -423,9 +440,9 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // behind clicking the comment icon like every feed rendering of this
   // same card.
   useEffect(() => {
-    if (detail) loadCommentTree()
+    if (detail && !authLoading && !authUnavailable) loadCommentTree()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [detail, user?.id, authLoading, authUnavailable])
 
   function toggleThreadCollapsed(id: string) {
     setCollapsedThreads(prev => {
@@ -1045,7 +1062,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             navigate-to-post handler; every actual link/button inside is
             already excluded there too via closest(), this just also covers
             the non-interactive space around them. */}
-        {showComments && (
+        {showComments && commentOwner === (user?.id ?? null) && commentResultGeneration === commentGeneration && !authLoading && !authUnavailable && (
           <div
             onClick={e => e.stopPropagation()}
             style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}

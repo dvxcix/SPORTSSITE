@@ -8,6 +8,7 @@ type Row = Record<string, unknown>
 const fields: Record<string, string[]> = {
   QB: ['completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'rushing_yards', 'rushing_tds'],
   RB: ['rushing_yards', 'rushing_tds', 'receptions', 'targets', 'receiving_yards', 'receiving_tds'],
+  FB: ['rushing_yards', 'rushing_tds', 'receptions', 'targets', 'receiving_yards', 'receiving_tds'],
   WR: ['receptions', 'targets', 'receiving_yards', 'receiving_tds'],
   TE: ['receptions', 'targets', 'receiving_yards', 'receiving_tds'],
 }

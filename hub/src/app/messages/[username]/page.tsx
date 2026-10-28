@@ -1,14 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DMRoom, type DMMessage } from '@/components/chat/DMRoom'
-import { isBlockedEitherWay } from '@/lib/blocks'
+import { authVisibilityUnavailable, isBlockedEitherWay } from '@/lib/blocks'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DMPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Messages are temporarily unavailable')
   if (!user) redirect('/auth/login?next=/messages')
 
   const { data: partner } = await supabase

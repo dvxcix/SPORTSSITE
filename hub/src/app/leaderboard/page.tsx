@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
 import { TrendingUp, Trophy } from 'lucide-react'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
@@ -193,7 +193,8 @@ const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboar
 export default async function LeaderboardPage() {
   const [{ ranked, allSports }, supabase] = await Promise.all([getCachedLeaderboard(), createClient()])
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Leaderboard is temporarily unavailable')
   const blockedIds = user ? new Set(await getBlockedEitherWayIds(supabase, user.id)) : null
   const users = blockedIds ? ranked.filter(u => !blockedIds.has(u.id)) : ranked
 

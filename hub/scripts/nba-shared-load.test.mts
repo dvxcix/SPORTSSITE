@@ -52,14 +52,15 @@ async function cacheHarness() {
 
 async function defenseHarness(gamesPerTeam: Record<number, number> = { 2026: 1, 2025: 5 }, failureTable?: string) {
   const cache = await cacheHarness(), gameReads = new Map<number, number>()
+  let coverageReads = 0, failedTable = failureTable
   const admin = { from(table: string) {
     const filters = new Map<string, unknown>()
-    const result = (data: unknown) => ({ data, error: table === failureTable ? { message: 'fixture database outage' } : null })
+    const result = (data: unknown) => ({ data, error: table === failedTable ? { message: 'fixture database outage' } : null })
     const query = {
       select() { return query },
       eq(key: string, value: unknown) { filters.set(key, value); return query },
-      lt() { return query }, order() { return query }, in() { return query },
-      async maybeSingle() { return result({ complete: true, rows_seen: 0, updated_at: '2026-10-20T11:00:00Z' }) },
+      lt() { return query }, order() { return query }, in() { return query }, abortSignal() { return query },
+      async maybeSingle() { coverageReads++; return result({ complete: true, rows_seen: 0, updated_at: '2026-10-20T11:00:00Z' }) },
       async limit() {
         assert.equal(table, 'nba_games')
         const season = Number(filters.get('season'))
@@ -77,7 +78,7 @@ async function defenseHarness(gamesPerTeam: Record<number, number> = { 2026: 1, 
     'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': await cache.instance(),
     './nbaIntelligence': { nbaDefenseProfiles: () => [] }, './nbaPaint': paint,
   })
-  return { ...cache, gameReads, instance }
+  return { ...cache, gameReads, instance, coverageReads: () => coverageReads, fail: (table: string) => { failedTable = table } }
 }
 
 test('early-season defense coverage falls back across independent cache instances and serialized cache hits', async () => {
@@ -87,7 +88,8 @@ test('early-season defense coverage falls back across independent cache instance
   const results = await Promise.all(Array.from({ length: 120 }, (_, index) => instances[index % 12].getNbaDefenseContext(2026, before)))
   assert.ok(results.every(result => result.ready && result.season === 2025 && result.before === before && !result.stale))
   assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
-  assert.equal(h.metrics().writes, 2)
+  assert.equal(h.metrics().writes, 4)
+  assert.equal(h.coverageReads(), 4, '120 readers share two coverage reads per season, not one pair per reader')
   const entry = h.entries.get(`dvp:v6:2026:${before}:true`)!
   assert.equal((entry.payload as { ready: boolean }).ready, false)
   assert.equal(entry.lease_until, null, 'inadequate coverage is not a source failure cooldown')
@@ -95,6 +97,11 @@ test('early-season defense coverage falls back across independent cache instance
   for (const [key, value] of h.entries) h.entries.set(key, JSON.parse(JSON.stringify(value)))
   const fresh = await h.instance(), result = await fresh.getNbaDefenseContext(2026, before)
   assert.deepEqual(result, results[0])
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
+  assert.equal(h.coverageReads(), 4, 'another instance reads the shared coverage cache')
+  h.advance(61_000)
+  await fresh.getNbaDefenseContext(2026, before)
+  assert.equal(h.coverageReads(), 8, 'coverage expires and is rechecked without rebuilding the defense sample')
   assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
 })
 
@@ -117,7 +124,7 @@ test('unavailable prior-season defense remains unavailable and never recurses in
   assert.deepEqual(await follower.getNbaDefenseContext(2026, '2026-10-20'), result)
   const direct = await follower.getNbaDefenseContext(2026, '2026-10-20', false)
   assert.equal(direct.ready, false); assert.equal(direct.season, 2026)
-  assert.equal(h.metrics().writes, 2)
+  assert.equal(h.metrics().writes, 4)
 })
 
 test('actual defense database failures still reject instead of becoming expected coverage or a prior-season fallback', async () => {
@@ -127,8 +134,17 @@ test('actual defense database failures still reject instead of becoming expected
     const follower = await h.instance()
     await assert.rejects(() => follower.getNbaDefenseContext(2026, '2026-10-20'), /unavailable/)
     assert.equal(h.gameReads.get(2025), undefined, table)
-    assert.equal(h.metrics().writes, 0, table)
+    assert.equal(h.metrics().writes, table === 'nba_ingestion_state' ? 0 : 1, table)
   }
+})
+
+test('expired defense coverage never conceals an ingestion-state failure', async () => {
+  const h = await defenseHarness({ 2026: 5 }), owner = await h.instance()
+  assert.equal((await owner.getNbaDefenseContext(2026, '2026-10-20')).ready, true)
+  h.advance(61_000)
+  h.fail('nba_ingestion_state')
+  await assert.rejects(() => owner.getNbaDefenseContext(2026, '2026-10-20'), /NBA history coverage unavailable/)
+  assert.equal(h.gameReads.get(2026), 1, 'a failing coverage refresh cannot rebuild or fabricate a profile')
 })
 
 test('6,000 simultaneous NBA readers across twelve instances use one upstream refresh and bounded database reads', async () => {

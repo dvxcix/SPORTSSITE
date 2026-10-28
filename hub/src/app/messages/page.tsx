@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MessageCircle, Plus, ShieldCheck } from 'lucide-react'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function MessagesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Messages are temporarily unavailable')
   if (!user) redirect('/auth/login?next=/messages')
 
   const [blockedIdList, readPositionsResult, threadsResult, preferencesResult, followsResult] = await Promise.all([

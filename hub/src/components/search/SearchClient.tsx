@@ -17,6 +17,7 @@ import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
+import { useAuth } from '@/context/AuthContext'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl' | 'nba'
@@ -33,6 +34,8 @@ type EventResult = { id: string; title: string; description: string | null; cove
 type SavedSearch = { id: string; query: string; result_tab: SearchTab; last_used_at: string }
 
 export function SearchClient() {
+  const { user: activeUser, loading: authLoading, authUnavailable } = useAuth()
+  const activeUserId = activeUser?.id ?? null
   // The topbar's search box links here with ?q= already filled in — read
   // it once on mount so landing here doesn't mean retyping what you just
   // typed. Still just an initial value, not a live sync back to the URL
@@ -59,7 +62,7 @@ export function SearchClient() {
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const currentUserId = activeUserId
   const [savingSearch, setSavingSearch] = useState(false)
   const [saveError, setSaveError] = useState('')
   const supabase = useMemo(() => createClient(), [])
@@ -67,7 +70,19 @@ export function SearchClient() {
   // Fetched once on mount rather than inside doSearch (which fires on every
   // debounced keystroke) — read via the ref so the memoized callback always
   // sees the latest value without needing blockedIds in its dependency array.
-  const blockedIdsRef = useRef<string[]>([])
+  const [blockState, setBlockState] = useState<{ owner: string | null; ids: string[] | null }>({ owner: null, ids: null })
+  const currentBlockIds = !authLoading && !authUnavailable && blockState.owner === activeUserId ? blockState.ids : null
+  const [blockLookupFailed, setBlockLookupFailed] = useState(false)
+  const [socialResultOwner, setSocialResultOwner] = useState<string | null>(null)
+  const [socialResultGeneration, setSocialResultGeneration] = useState(0)
+  const accountContext = `${activeUserId ?? ''}:${authLoading}:${authUnavailable}`
+  const [observedAccountContext, setObservedAccountContext] = useState(accountContext)
+  const [accountGeneration, setAccountGeneration] = useState(0)
+  if (observedAccountContext !== accountContext) {
+    setObservedAccountContext(accountContext); setAccountGeneration(value => value + 1)
+    setBlockState({ owner: activeUserId, ids: null }); setUsers([]); setPosts([])
+    setSavedSearches([]); setNbaAllowed(false); setBlockLookupFailed(false)
+  }
   useEffect(() => {
     let cancelled = false
     try {
@@ -83,15 +98,18 @@ export function SearchClient() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      setCurrentUserId(user.id)
-      supabase.from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).maybeSingle().then(({ data }) => setNbaAllowed(hasNbaAccess(data)))
-      getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
-      supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', user.id).order('last_used_at', { ascending: false }).limit(12)
-        .then(({ data }) => setSavedSearches((data ?? []) as SavedSearch[]))
-    })
-  }, [supabase])
+    let cancelled = false
+    if (authLoading || authUnavailable) return () => { cancelled = true }
+    if (!activeUserId) {
+      queueMicrotask(() => { if (!cancelled) { setBlockState({ owner: null, ids: [] }); setBlockLookupFailed(false); setNbaAllowed(false); setSavedSearches([]) } })
+      return () => { cancelled = true }
+    }
+    supabase.from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', activeUserId).maybeSingle().then(({ data }) => { if (!cancelled) setNbaAllowed(hasNbaAccess(data)) })
+    getBlockedEitherWayIds(supabase, activeUserId).then(ids => { if (!cancelled) { setBlockState({ owner: activeUserId, ids }); setBlockLookupFailed(false) } }).catch(() => { if (!cancelled) { setBlockState({ owner: activeUserId, ids: null }); setBlockLookupFailed(true) } })
+    supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', activeUserId).order('last_used_at', { ascending: false }).limit(12)
+      .then(({ data }) => { if (!cancelled) setSavedSearches((data ?? []) as SavedSearch[]) })
+    return () => { cancelled = true }
+  }, [supabase, activeUserId, authLoading, authUnavailable])
 
   const doSearch = useCallback(async (query: string) => {
     const runId = ++searchRunRef.current
@@ -101,18 +119,18 @@ export function SearchClient() {
 
     const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
     const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData, nbaData] = await Promise.all([
-      supabase.from('users')
+      currentBlockIds !== null ? supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
         .or(`username.ilike.%${filterQuery}%,display_name.ilike.%${filterQuery}%`)
-        .limit(8),
+        .limit(8) : Promise.resolve({ data: [] }),
       // Plain ilike, not full-text search — a partial/mid-word type-ahead
       // like "mach" finding "Machado" matches how people actually use a
       // search box better than websearch_to_tsquery's whole-word stemming.
-      supabase.from('posts').select(postCols)
+      currentBlockIds !== null ? supabase.from('posts').select(postCols)
         .ilike('content', `%${filterQuery}%`)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .limit(15),
+        .limit(15) : Promise.resolve({ data: [] }),
       // A player's name usually only lives inside pick_data — the
       // top-level player_name for a single pick, nested inside legs[] for
       // a parlay — not the caption, so content-only search was silently
@@ -124,11 +142,11 @@ export function SearchClient() {
       // query; fetch a bounded recent window of picks/parlays and match
       // the whole pick_data blob client-side instead, then merge+dedupe
       // with the content matches above.
-      supabase.from('posts').select(postCols)
+      currentBlockIds !== null ? supabase.from('posts').select(postCols)
         .in('post_type', ['pick', 'parlay'])
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .limit(150),
+        .limit(150) : Promise.resolve({ data: [] }),
       supabase.from('groups').select('id,slug,name,description,avatar_url,emoji,member_count').eq('is_public', true).or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('member_count', { ascending: false }).limit(8),
       supabase.from('pages').select('id,slug,name,description,avatar_url,emoji,follower_count').eq('is_published', true).or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('follower_count', { ascending: false }).limit(8),
       supabase.from('channels').select('id,slug,name,description,icon,member_count').or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('member_count', { ascending: false }).limit(8),
@@ -141,7 +159,7 @@ export function SearchClient() {
     const q = query.toLowerCase()
     const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
     const seen = new Set<string>()
-    const blockedSet = new Set(blockedIdsRef.current)
+    const blockedSet = new Set(currentBlockIds ?? [])
     const p = [...(byContent ?? []), ...byPickData]
       .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
       .filter((post: any) => !blockedSet.has(post.author?.id) && !blockedSet.has(post.author_id))
@@ -149,8 +167,10 @@ export function SearchClient() {
       .slice(0, 15)
 
     if (runId !== searchRunRef.current) return
-    setUsers((u ?? []).filter((r: any) => !blockedSet.has(r.id)))
-    setPosts(p)
+    setSocialResultOwner(activeUserId)
+    setSocialResultGeneration(accountGeneration)
+    setUsers(currentBlockIds ? (u ?? []).filter((r: any) => !blockedSet.has(r.id)) : [])
+    setPosts(currentBlockIds ? p : [])
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])
     setMlbDate(sportsData.date ?? null)
@@ -164,7 +184,7 @@ export function SearchClient() {
     setChannels((channelRows ?? []).map(channel => ({ id: channel.id, slug: channel.slug, name: channel.name, description: channel.description, avatar_url: null, emoji: channel.icon || '#', count: channel.member_count ?? 0 })))
     setEvents(eventRows ?? [])
     setLoading(false)
-  }, [supabase, nbaAllowed])
+  }, [supabase, nbaAllowed, currentBlockIds, activeUserId, accountGeneration])
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(q), 300)
@@ -219,8 +239,12 @@ export function SearchClient() {
 
   // Picks used to only match post_type === 'pick', silently excluding
   // parlays — same bug already found/fixed on /feed and /picks.
-  const picks = posts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
+  const canShowSocial = currentBlockIds !== null && socialResultOwner === activeUserId && socialResultGeneration === accountGeneration
+  const activeBlocked = new Set(currentBlockIds ?? [])
+  const visibleUsers = canShowSocial ? users.filter(user => !activeBlocked.has(user.id)) : []
+  const visiblePosts = canShowSocial ? posts.filter(post => !activeBlocked.has(post.author_id)) : []
+  const picks = visiblePosts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
+  const hasResults = visibleUsers.length > 0 || visiblePosts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
@@ -440,13 +464,13 @@ export function SearchClient() {
           </section>}
 
           {/* Users */}
-          {showUsers && users.length > 0 && (
+          {showUsers && visibleUsers.length > 0 && (
             <div className="mb-6">
               <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
                 <Users size={12} /> Users
               </h3>
               <div className="space-y-2">
-                {users.map((u: any) => (
+                {visibleUsers.map((u: any) => (
                   <Link key={u.id} href={`/profile/${u.username}`}
                     className="ss-search-result flex items-center gap-3 p-3">
                     <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} tone={u.account_type === 'creator' ? 'creator' : 'default'} />
@@ -472,13 +496,13 @@ export function SearchClient() {
           )}
 
           {/* Posts / Picks */}
-          {((showPosts && posts.length > 0) || (showPicks && picks.length > 0)) && (
+          {((showPosts && visiblePosts.length > 0) || (showPicks && picks.length > 0)) && (
             <div>
               <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
                 <Zap size={12} /> {showPicks ? 'Picks' : 'Posts'}
               </h3>
               <div className="space-y-2">
-                {(showPicks ? picks : posts).map((p: any) => (
+                {(showPicks ? picks : visiblePosts).map((p: any) => (
                   <div
                     key={p.id}
                     onClick={e => {
@@ -520,8 +544,9 @@ export function SearchClient() {
       )}
 
       {q.trim() && showNba && nbaError && <p role="status" className="mb-4 text-sm text-zinc-400">{nbaError}</p>}
+      {q.trim() && blockLookupFailed && <p role="status" className="mb-4 text-sm text-zinc-400">Member and post results are temporarily unavailable.</p>}
 
-      {q.trim() && !loading && !hasResults && !nbaError && (
+      {q.trim() && !loading && !hasResults && !nbaError && !blockLookupFailed && (
         <div className="text-center py-16">
           <p className="text-3xl mb-3">🔍</p>
           <p className="text-zinc-400 font-medium">No results for "{q}"</p>

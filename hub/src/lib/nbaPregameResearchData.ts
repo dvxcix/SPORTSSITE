@@ -30,7 +30,10 @@ function remember<T>(game: PaintGame, resource: string, row: Stored<T> | null) {
   if (prior) { memory.delete(key); memoryBytes -= prior.bytes }
   if (bytes > 32 * 1024 * 1024) return
   const closed = !nbaPregameOpen(game) || Date.now() >= Date.parse(row.tipoff_at)
-  const until = closed ? Date.now() + 300_000 : Math.min(Date.now() + 5_000, Date.parse(row.tipoff_at))
+  // Open-game reads remain short-lived and never pass the saved tip. Ten
+  // seconds reduces repeated per-game locked reads while allowing at most five
+  // seconds more pregame latency than the former five-second cache.
+  const until = closed ? Date.now() + 300_000 : Math.min(Date.now() + 10_000, Date.parse(row.tipoff_at))
   memory.set(key, { row: structuredClone(row), bytes, until, closed }); memoryBytes += bytes
   while (memory.size > 128 || memoryBytes > 32 * 1024 * 1024) {
     const oldest = memory.keys().next().value!, entry = memory.get(oldest)!

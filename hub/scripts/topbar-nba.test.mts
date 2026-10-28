@@ -22,7 +22,7 @@ async function quickSearch(role: string, nbaResponse: Promise<{ players: typeof 
   const emptyModule = new Proxy({}, { get: () => () => null })
   const imports: Record<string, unknown> = {
     react: {
-      useState: (initial: unknown) => { const index = stateIndex++, value = index === 0 ? 'Towns' : typeof initial === 'function' ? initial() : initial; return [value, (next: unknown) => { if (next && typeof next === 'object' && 'nbaPlayers' in next) results.push(next as typeof results[number]) }] },
+      useState: (initial: unknown) => { const index = stateIndex++, value = index === 0 ? 'Towns' : initial && typeof initial === 'object' && 'owner' in initial && 'ids' in initial ? { owner: undefined, ids: [] } : typeof initial === 'function' ? initial() : initial; return [value, (next: unknown) => { if (next && typeof next === 'object' && 'nbaPlayers' in next) results.push(next as typeof results[number]) }] },
       useRef: (value: unknown) => ({ current: value }), useEffect: (effect: typeof effects[number]) => effects.push(effect), useMemo: (callback: () => unknown) => callback(),
     },
     'react/jsx-runtime': { jsx: () => null, jsxs: () => null },

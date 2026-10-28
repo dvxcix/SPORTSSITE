@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { fetchFeedPage, feedSport, type FeedFilter } from '@/lib/feedQuery'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { FeedList } from '@/components/social/FeedList'
@@ -26,7 +26,8 @@ export default async function FeedPage({
   const sport = feedSport(sportParam)
   const filter: FeedFilter = VALID_FILTERS.includes(filterParam as FeedFilter) ? (filterParam as FeedFilter) : 'latest'
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Feed is temporarily unavailable')
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const [{ posts: rawPosts, nextCursor, hasMore }, storiesEnabled] = await Promise.all([
     fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20, sport }),
@@ -35,7 +36,7 @@ export default async function FeedPage({
   const posts = await attachUserReactions(rawPosts, user?.id)
 
   let suggested: any[] = []
-  if (posts.length === 0 && user) {
+  if (posts.length === 0 && !hasMore && user) {
     const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', user.id)
     const exclude = [...(following ?? []).map((f: any) => f.following_id), user.id, ...blockedIds]
     const { data } = await supabase
@@ -91,7 +92,7 @@ export default async function FeedPage({
             <FeedComposer key={`${sport ?? 'all'}:${game ?? ''}:${pick ?? ''}`} preferredSport={sport} initialGameId={game && /^[a-zA-Z0-9_-]{1,80}$/.test(game) ? game : undefined} openPickBuilder={pick === 'true'} />
           </div>
 
-          {posts.length === 0 ? (
+          {posts.length === 0 && !hasMore ? (
             <div className="ss-feed-empty">
               <PageState
                 compact
@@ -111,7 +112,7 @@ export default async function FeedPage({
               )}
             </div>
           ) : (
-            <FeedList key={`${filter}:${sport ?? 'all'}`} filter={filter} sport={sport} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} />
+            <FeedList key={`${filter}:${sport ?? 'all'}`} filter={filter} sport={sport} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} viewerId={user?.id ?? null} />
           )}
         </div>
       </section>

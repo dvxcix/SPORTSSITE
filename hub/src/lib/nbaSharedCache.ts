@@ -5,7 +5,7 @@ import { createAdminClient } from './supabase/admin'
 export type NbaCached<T> = { value: T; fetchedAt: string; stale: boolean }
 type CacheResult<T> = { cached: NbaCached<T>; expires: number }
 type Entry<T> = { payload: T | null; fetched_at: string | null; expires_at: string | null; lease_token?: string | null; lease_until?: string | null }
-const local = new Map<string, { cached: NbaCached<unknown>; until: number; bytes: number }>()
+const local = new Map<string, { cached: NbaCached<unknown>; until: number; expires: number; bytes: number }>()
 let localBytes = 0
 const maxLocalBytes = 32 * 1024 * 1024
 const inFlight = new Map<string, Promise<CacheResult<unknown>>>()
@@ -18,19 +18,34 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
   const memoryKey = `${ttl}:${staleSeconds}:${key}`
   const hit = local.get(memoryKey)
   if (hit && hit.until > Date.now()) { local.delete(memoryKey); local.set(memoryKey,hit); return hit.cached as NbaCached<T> }
-  if (hit) { local.delete(memoryKey); localBytes -= hit.bytes }
+  // Keep the last verified payload beyond its short L1 hit window so a brief
+  // database outage does not hide otherwise usable data. Its original expiry
+  // and this caller's stale allowance remain the hard boundary.
+  if (hit && hit.expires + staleSeconds * 1000 <= Date.now()) { local.delete(memoryKey); localBytes -= hit.bytes }
+  const fallback = (): NbaCached<T> | null => {
+    const prior = local.get(memoryKey)
+    if (!prior || prior.expires + staleSeconds * 1000 <= Date.now()) return null
+    return { ...prior.cached, stale: prior.expires <= Date.now() } as NbaCached<T>
+  }
   const pending = inFlight.get(memoryKey)
-  if (pending) return (await pending).cached as NbaCached<T>
+  if (pending) {
+    try { return (await pending).cached as NbaCached<T> }
+    catch (error) { const retained = fallback(); if (retained) return retained; throw error }
+  }
   const failed = failures.get(memoryKey)
-  if (failed && failed.until > Date.now()) throw failed.error
+  if (failed && failed.until > Date.now()) { const retained = fallback(); if (retained) return retained; throw failed.error }
   failures.delete(memoryKey)
   const task = readSharedCache(key, ttl, staleSeconds, load, leaseSeconds)
   inFlight.set(memoryKey, task)
   try {
     const { cached, expires } = await task
     const bytes = Buffer.byteLength(JSON.stringify(cached.value) ?? '')
+    // A successful newer result supersedes the old local snapshot even when
+    // the new payload is too large for L1; never revive the older one later.
+    const previous = local.get(memoryKey)
+    if (previous) { local.delete(memoryKey); localBytes -= previous.bytes }
     if (bytes <= maxLocalBytes) {
-      local.set(memoryKey, { cached, bytes, until: Math.min(Date.now() + (cached.stale ? 1000 : 10000), expires + (cached.stale ? staleSeconds * 1000 : 0)) })
+      local.set(memoryKey, { cached, bytes, expires, until: Math.min(Date.now() + (cached.stale ? 1000 : 10000), expires + (cached.stale ? staleSeconds * 1000 : 0)) })
       localBytes += bytes
       while (local.size > 256 || localBytes > maxLocalBytes) {
         const oldest = local.keys().next().value!, evicted = local.get(oldest)!
@@ -41,6 +56,8 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
   } catch (error) {
     failures.set(memoryKey, { until: Date.now() + failureBackoffMs, error: error instanceof Error ? error : new Error('NBA source temporarily unavailable') })
     while (failures.size > 128) failures.delete(failures.keys().next().value!)
+    const retained = fallback()
+    if (retained) return retained
     throw error
   } finally { if (inFlight.get(memoryKey) === task) inFlight.delete(memoryKey) }
 }

@@ -73,12 +73,18 @@ export async function getNbaResearchModels(board: PaintBoard, mode: NbaOddsMode 
 
 export async function getNbaResearchProfiles(board: PaintBoard, mode: NbaOddsMode = 'pregame') {
   const saved = await resource(board, 'profiles:v1', mode, async () => {
-    const cached = await nbaSharedCache(`research-profiles:v1:${mode}:${board.game.id}:${board.sampleSeason}`, 900, 3600, async () => {
-      const players: { playerId: number; profile: Awaited<ReturnType<typeof getPaintProfile>> }[] = []
+    const cached = await nbaSharedCache(`research-profiles:v2:${mode}:${board.game.id}:${board.sampleSeason}`, 900, 3600, async () => {
+      const players: { playerId: number; profile: Awaited<ReturnType<typeof getPaintProfile>> & { season: number } }[] = []
       // Bound provider concurrency while capturing the entire matchup, not only
       // whichever player happened to have a drawer open before tipoff.
       for (let offset = 0; offset < board.players.length; offset += 6) {
-        players.push(...await Promise.all(board.players.slice(offset, offset + 6).map(async player => ({ playerId: player.id, profile: await getPaintProfile(player.id, board.sampleSeason) }))))
+        players.push(...await Promise.all(board.players.slice(offset, offset + 6).map(async player => {
+          // The board already picks a real prior-season baseline for players
+          // without current-season appearances. Use that same season for the
+          // profile, and keep its identity visible to the member.
+          const season = player.averageSeason === board.sampleSeason - 1 ? player.averageSeason : board.sampleSeason
+          return { playerId: player.id, profile: { ...await getPaintProfile(player.id, season), season } }
+        })))
       }
       return { gameId: board.game.id, season: board.sampleSeason, players, complete: players.length === board.players.length && players.every(row => row.profile.shooting != null && row.profile.advanced != null) }
     }, 100)

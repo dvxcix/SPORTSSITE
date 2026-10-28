@@ -1,0 +1,100 @@
+NBA/NFL research and site reliability — October 28, 2026
+
+Production preflight: origin/main and Git production both at
+55a9ff614a4201b2428e87afc2de47574a9c656f. Required recovered NFL ancestor
+6c3811b0882e1b1a6694a30849273f3e210cd69c remains present. Preserve all applied
+database migrations, browser budgets, the expired one-day public recovery
+allowance, source observations and the pregame/live boundaries. No collector,
+job replay, new provider request or database mutation was initiated locally.
+
+Incident evidence: Vercel and primary database logs show widespread HTTP521/503,
+PGRST002, auth failures and timeouts around21:13–21:17 UTC, then again around
+21:45–21:47 UTC. PostgreSQL restarted at21:17:13 and21:47:02 UTC; its logs say
+the latter was interrupted and ran normal startup recovery. The cause of these
+interruptions is not established. Project status reports ACTIVE_HEALTHY even
+when requests intermittently time out, so status alone is insufficient evidence.
+At21:46 a real member NBA page showed Connection interrupted; after recovery it
+loaded and showed prior-season NBA DVP profiles with actual values. A later
+five-minute runtime error scan was empty, not a permanent availability guarantee.
+The provider status page showed operational; that does not explain project-specific
+restarts. Do not describe these application changes as the infrastructure fix.
+
+The NBA defense loader had two unshared ingestion coverage reads on every
+request for a complete season, including again for the prior-season fallback.
+Coverage state is now shared for60 seconds; expired coverage is not treated as
+valid. Tested across12 instances/120 readers, current and prior season coverage
+needs four source reads, rather than approximately480. Existing dated defense
+profiles, fallback rules and persisted frozen snapshots remain authoritative.
+All12 October28 matchups had verified30-team/G-F-C prior-season profiles; the
+current season is insufficient under the existing five-game coverage guard.
+
+NBA shot/advanced profiles now use the actual player's selected average season
+and display that season, with legacy archived profiles retaining their original
+label. A new temporary cache key prevents reuse of old mismatched data; immutable
+closed-game snapshots are not rewritten. Two players without samples remain
+unavailable when the source has none.
+
+Open-game research archive memory reuse is ten seconds instead of five, bounded
+by the original cutoff and the newly resolved earliest start. Locked database
+reads still determine the final winner at/after tip. This can add up to five
+seconds of pregame archive observation latency; it does not restamp or change
+the winning observation. Existing closed-game and missing-history rules remain.
+
+NFL prior-week league-wide history is now shared by exact season, phase and
+week boundary using the existing service-only cache/lease. Complete pages only,
+40-second total/10-second per-page bounds, and a five-minute stale allowance
+retain original timestamps on failure. PRE/REG/POST and week-zero behavior are
+preserved. Production history had7440 prior-week rows/eight pages per raw read;
+the installed Next nested cache had repeated those reads per matchup. Fullback
+DVP now uses actual fullback samples, without substituting running backs or
+inventing missing opponent samples.
+
+The process-local cache retains its last verified source observation only until
+the exact caller TTL plus its pre-existing stale allowance if the shared DB read
+fails. Strict zero-stale odds never pass their expiration. Original fetchedAt,
+per-key/policy isolation,15-second failure backoff,32MiB eviction and latest
+value precedence remain; cold processes cannot invent fallback data. This
+improves bounded outage resilience but cannot replace a down auth/database or
+restore a cold page.
+
+The posts realtime channel is now active only while cards are mounted; it
+retains shared fanout, StrictMode lifecycle and cleanup semantics. Research,
+landing and other pages without post cards no longer subscribe to all updates.
+
+Feed/profile pagination uses validated per-source time-and-ID positions, keeps
+unreturned merged items, tolerates old timestamp cursors, and continues past a
+filtered empty page. It bounds follow/suppression traversal and source timeouts;
+an incomplete lookup is unavailable, never silently treated as a full list.
+Client lists discard late responses on view/account changes, preserve retry and
+hide prior-account results until a fresh server render. Account-block lookup and
+transient auth failures fail closed; verified guest behavior remains public.
+Search/notifications/comments guard pending lookups and account-switch races.
+
+The existing repost SELECT policy exposed private-account repost metadata via
+direct Data API access. Locally tested against actual PostgreSQL RLS semantics,
+independently reviewed, and dry-run transactionally against the live baseline.
+Individually applied live20261028220410_restrict_private_profile_reposts;
+CLI file20261028215600_restrict_private_profile_reposts.sql. Do not replay.
+Its SELECT-only restrictive policy checks the reposter's public/follower status
+and, for nonowners, the original post's own existing RLS. Unknown privacy fails
+closed, owners retain their own entries for deletion, and preexisting source
+restrictions, insert/delete policies, grants and service bypass stay unchanged.
+Live anon-role query before/after:93→92 visible rows; private-account rows1→0;
+inaccessible original rows0 after. It does not by itself enforce bidirectional
+blocks for direct Data API access to all posts or user metadata. Post-apply
+anon-role EXPLAIN ANALYZE on the current93-row repost table returned20 rows in
+2.825ms execution time; this small-slate measurement is not a scale guarantee.
+Live transaction-local authenticated checks confirmed that the real private
+repost remains visible to its owner and hidden from an unrelated member. There
+was no actual follower sample for that account; follower access was verified in
+the local PostgreSQL RLS fixture, not inferred from the live check.
+
+No source provenance was added to public views, and no capture timestamp was
+manufactured. Detailed tests and final production deployment verification are
+recorded in the workspace release evidence.
+
+Pre-release validation: NBA567/567 plus79/79 freeze, cross-sport freeze79/79
+and49/49, production134/134, feed visibility25/25, focused research17/17,
+TypeScript, focused production lint, and separate RLS review. Full changed-file
+lint also encountered14 pre-existing errors in three NBA files; running the
+same lint against the original source reproduced the same14. None was hidden.

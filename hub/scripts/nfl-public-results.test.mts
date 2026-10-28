@@ -53,6 +53,20 @@ test('DVP uses prior observations only and preserves per-game teammate aggregati
   assert.equal(value.games, 1)
   assert.equal(value.pct_diff, 50)
 })
+test('fullback DVP uses actual fullback samples and does not substitute running backs', () => {
+  const rows = [
+    { week: 1, opponent_team: 'BUF', position: 'FB', receiving_yards: 20 },
+    { week: 1, opponent_team: 'BUF', position: 'FB', receiving_yards: 10 },
+    { week: 1, opponent_team: 'DET', position: 'FB', receiving_yards: 10 },
+    { week: 1, opponent_team: 'BUF', position: 'RB', receiving_yards: 1000 },
+    { week: 2, opponent_team: 'DET', position: 'FB', receiving_yards: 9999 },
+  ].filter(row => nflPriorWeek(row.week, 2026, { season: 2026, week: 2 }))
+  const values = pregameDvp(rows)
+  const fullback = values.find(row => row.opponent_team === 'BUF' && row.position === 'FB' && row.stat_category === 'receiving_yards')!
+  assert.equal(fullback.games, 1)
+  assert.equal(fullback.pct_diff, 50)
+  assert.ok(!values.some(row => row.opponent_team === 'MIA' && row.position === 'FB'))
+})
 test('game coverage panel is absent for everyone and historical caches are versioned', () => {
   assert.doesNotMatch(readFileSync('src/app/the-sideline/page.tsx', 'utf8'), /NflGameData|Game data ·/)
   assert.doesNotMatch(readFileSync('src/app/the-sideline/SidelineCheatsheets.tsx', 'utf8'), /isAdmin \? <section|coverageSummary|Internal diagnostics/)

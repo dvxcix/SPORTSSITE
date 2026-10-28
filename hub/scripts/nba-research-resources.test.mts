@@ -43,7 +43,7 @@ async function fixture() {
       return query
     } }) },
     './nbaPaintData': {
-      getPaintProfile: async (id: number) => { reads++; return { shooting: complete ? { id, value: generation } : null, advanced: complete ? { value: generation } : null } },
+      getPaintProfile: async (id: number, season: number) => { reads++; return { shooting: complete ? { id, season, value: generation } : null, advanced: complete ? { value: generation } : null } },
       getPaintScouting: async () => { reads++; return {} },
       getPaintGame: async () => { reads++; return previous },
       getPaintFinalStats: async () => { reads++; return { complete: true, rows: [{ game: { id: 5 }, player: { id: 1, first_name: 'Test', last_name: 'One' }, fga: 1 }] } },
@@ -68,6 +68,18 @@ test('defense, tracking, model selection, profiles, first basket and market rece
     assert.deepEqual(after, prior, name)
   }
   assert.equal(h.reads(), 0, 'a closed game must never rerun mutable source loaders')
+})
+
+test('player profiles follow the actual selected baseline season and retain it after tip', async () => {
+  const h = await fixture()
+  const mixed = { ...board, players: board.players.map((player, index) => ({ ...player, averageSeason: index === 0 ? 2025 : 2027 })) }
+  const pre = await h.resources.getNbaResearchProfiles(mixed, 'pregame')
+  assert.deepEqual(pre.players.map((row: { playerId: number; profile: { season: number; shooting: { season: number } } }) => [row.playerId, row.profile.season, row.profile.shooting.season]), [[1, 2025, 2025], [2, 2026, 2026]])
+  h.close(); h.mutate(); h.resetReads()
+  const after = await h.resources.getNbaResearchProfiles(mixed, 'pregame')
+  assert.equal(after.researchSnapshot.frozen, true)
+  assert.deepEqual(after.players, pre.players)
+  assert.equal(h.reads(), 0, 'a frozen profile never asks a provider for a later season')
 })
 
 test('missing historical resources never rebuild; missing models leave estimates unavailable without hiding the board', async () => {

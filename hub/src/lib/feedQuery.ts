@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Post } from '@/lib/supabase/types'
+import { compareFeedRows, feedCursorFilter, InvalidFeedCursorError, mergeFeedPage, readFeedCursor, requireFeedPageSize, type RepostRow } from './feedPagination'
 
 export const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
 
@@ -15,28 +16,80 @@ export type FeedPost = Omit<Post, 'reposted_by'> & {
   reposted_by?: FeedReposter | null
 }
 
-type RepostRow = {
-  created_at: string
-  reposted_by: FeedReposter | null
-  post: FeedPost | FeedPost[] | null
-}
-
-const asFeedPosts = (rows: unknown[] | null | undefined): FeedPost[] =>
-  (rows ?? []) as FeedPost[]
-
-const asRepostRows = (rows: unknown[] | null | undefined): RepostRow[] =>
-  (rows ?? []) as RepostRow[]
-
-const repostRowPost = (row: RepostRow): FeedPost | null =>
-  Array.isArray(row.post) ? row.post[0] ?? null : row.post
-
 export interface FeedPageResult {
   posts: FeedPost[]
-  // Opaque to the caller — a keyset timestamp for latest/picks/following, a
-  // stringified offset for top (which sorts by reaction_count, not time, so
-  // a timestamp cursor doesn't apply). Null means there's nothing more.
+  // Opaque to callers. Top uses offsets; chronological views use one stable
+  // position per source, with backward compatibility for old timestamp cursors.
   nextCursor: string | null
   hasMore: boolean
+}
+
+const RELATION_PAGE = 1000
+const MAX_SUPPRESSIONS = 10000
+const MAX_FOLLOWS = 2000
+const FOLLOW_BATCH = 100
+const SAFE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// The Data API can cap a response at 1,000 rows. Traverse deterministic
+// keys and reject incomplete/error responses rather than silently ignoring a
+// member's hidden posts or followed accounts. Large follow sets are bounded.
+async function feedSuppressions(supabase: SupabaseClient, userId: string) {
+  const rows: { target_type: 'author' | 'post'; target_id: string }[] = []
+  let last: { target_type: 'author' | 'post'; target_id: string } | undefined
+  const deadline = AbortSignal.timeout(10000)
+  for (;;) {
+    let query = supabase.from('feed_suppressions').select('target_type,target_id', { count: 'exact' }).eq('user_id', userId)
+      .order('target_type', { ascending: true }).order('target_id', { ascending: true }).limit(RELATION_PAGE)
+    if (last) query = query.or(`target_type.gt.${last.target_type},and(target_type.eq.${last.target_type},target_id.gt.${last.target_id})`)
+    const { data, error, count } = await query.abortSignal(AbortSignal.any([deadline, AbortSignal.timeout(5000)]))
+    if (error || !Array.isArray(data) || data.length > RELATION_PAGE || !Number.isSafeInteger(count) || count! < data.length
+      || (count! > 0 && data.length === 0)) throw new Error('Feed preferences unavailable')
+    if (rows.length + count! > MAX_SUPPRESSIONS) throw new Error('Feed preferences exceed supported limit')
+    for (const item of data) {
+      if ((item.target_type !== 'author' && item.target_type !== 'post') || typeof item.target_id !== 'string' || !SAFE_UUID.test(item.target_id)
+        || last && (item.target_type < last.target_type || item.target_type === last.target_type && item.target_id <= last.target_id)) throw new Error('Feed preferences unavailable')
+      last = { target_type: item.target_type, target_id: item.target_id }
+      rows.push(last)
+      if (rows.length > MAX_SUPPRESSIONS) throw new Error('Feed preferences exceed supported limit')
+    }
+    if (data.length === count) return rows
+  }
+}
+
+async function feedFollowing(supabase: SupabaseClient, userId: string) {
+  const ids: string[] = []
+  let last = ''
+  const deadline = AbortSignal.timeout(10000)
+  for (;;) {
+    let query = supabase.from('follows').select('following_id', { count: 'exact' }).eq('follower_id', userId)
+      .order('following_id', { ascending: true }).limit(RELATION_PAGE)
+    if (last) query = query.gt('following_id', last)
+    const { data, error, count } = await query.abortSignal(AbortSignal.any([deadline, AbortSignal.timeout(5000)]))
+    if (error || !Array.isArray(data) || data.length > RELATION_PAGE || !Number.isSafeInteger(count) || count! < data.length
+      || (count! > 0 && data.length === 0)) throw new Error('Followed accounts unavailable')
+    if (ids.length + count! > MAX_FOLLOWS) throw new Error('Following feed exceeds supported limit')
+    for (const item of data) {
+      if (typeof item.following_id !== 'string' || !SAFE_UUID.test(item.following_id) || item.following_id <= last) throw new Error('Followed accounts unavailable')
+      last = item.following_id
+      ids.push(last)
+      if (ids.length > MAX_FOLLOWS) throw new Error('Following feed exceeds supported limit')
+    }
+    if (data.length === count) return ids
+  }
+}
+
+// Chunk large IN filters to avoid URL limits. Four batches per source at a
+// time bound database pressure, then select the global newest page.
+async function collectFeedBatches<T extends { id: string; created_at: string }>(groups: (string[] | undefined)[], load: (ids: string[] | undefined) => PromiseLike<{ data: unknown[] | null; error: unknown }>, pageSize: number): Promise<T[]> {
+  const rows: T[] = []
+  for (let offset = 0; offset < groups.length; offset += 4) {
+    const responses = await Promise.all(groups.slice(offset, offset + 4).map(load))
+    for (const response of responses) {
+      if (response.error || !Array.isArray(response.data) || response.data.length > pageSize) throw new Error('Feed posts unavailable')
+      rows.push(...response.data as T[])
+    }
+  }
+  return rows.sort(compareFeedRows).slice(0, pageSize)
 }
 
 // The feed page previously had a hard 30-post ceiling with zero pagination
@@ -45,20 +98,14 @@ export interface FeedPageResult {
 // page load and the infinite-scroll API route call, so the two can never
 // drift into different query logic.
 export async function fetchFeedPage(supabase: SupabaseClient, opts: {
-  filter: FeedFilter
-  userId: string | null | undefined
-  blockedIds: string[]
-  cursor?: string | null
-  pageSize?: number
-  sport?: FeedSport
+  filter: FeedFilter; userId: string | null | undefined; blockedIds: string[]
+  cursor?: string | null; pageSize?: number; sport?: FeedSport
 }): Promise<FeedPageResult> {
   const { filter, userId, blockedIds, cursor, pageSize = 20, sport } = opts
-  const blockedSet = new Set(blockedIds)
-  const hiddenPostIds = new Set<string>()
-  const mutedAuthorIds = new Set<string>()
+  requireFeedPageSize(pageSize)
+  const blockedSet = new Set(blockedIds), hiddenPostIds = new Set<string>(), mutedAuthorIds = new Set<string>()
   if (userId) {
-    const { data: suppressions } = await supabase.from('feed_suppressions').select('target_type,target_id').eq('user_id', userId)
-    for (const suppression of suppressions ?? []) {
+    for (const suppression of await feedSuppressions(supabase, userId)) {
       if (suppression.target_type === 'post') hiddenPostIds.add(suppression.target_id)
       if (suppression.target_type === 'author') mutedAuthorIds.add(suppression.target_id)
     }
@@ -70,77 +117,55 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   let followedIds: string[] | null = null
   if (filter === 'following') {
     if (!userId) return { posts: [], nextCursor: null, hasMore: false }
-    const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId)
-    followedIds = ((data ?? []) as { following_id: string }[]).map(f => f.following_id)
-    if (followedIds.length === 0) return { posts: [], nextCursor: null, hasMore: false }
+    followedIds = await feedFollowing(supabase, userId)
+    if (!followedIds.length) return { posts: [], nextCursor: null, hasMore: false }
   }
-
-  // "Top" sorts by reaction_count, not time, so a timestamp keyset cursor
-  // doesn't apply — falls back to plain offset pagination, encoded as a
-  // stringified integer in the same cursor field so the API/client don't
-  // need to know which pagination style a given filter uses.
   if (filter === 'top') {
-    const offset = cursor ? parseInt(cursor, 10) || 0 : 0
+    if (cursor && (!/^(0|[1-9]\d{0,4})$/.test(cursor) || Number(cursor) > 50000)) throw new InvalidFeedCursorError('Invalid feed cursor')
+    const offset = cursor ? Number(cursor) : 0
     let query = supabase.from('posts').select(POST_WITH_AUTHOR)
     if (sport) query = query.ilike('sport', sport)
-    const { data } = await query
-      .order('reaction_count', { ascending: false })
-      .range(offset, offset + pageSize - 1)
-    const posts = asFeedPosts(data).filter(p => !blockedSet.has(p.author_id) && !isSuppressed(p))
-    const gotFullPage = (data?.length ?? 0) === pageSize
-    return { posts, nextCursor: gotFullPage ? String(offset + pageSize) : null, hasMore: gotFullPage }
+    const { data, error } = await query.order('reaction_count', { ascending: false }).order('id', { ascending: false }).range(offset, offset + pageSize - 1).abortSignal(AbortSignal.timeout(10000))
+    if (error) throw new Error('Feed posts unavailable')
+    const posts = ((data ?? []) as FeedPost[]).filter(p => !blockedSet.has(p.author_id) && !isSuppressed(p))
+    const hasMore = (data?.length ?? 0) === pageSize
+    return { posts, nextCursor: hasMore ? String(offset + pageSize) : null, hasMore }
   }
 
-  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).order('created_at', { ascending: false }).limit(pageSize)
-  if (sport) postQuery = postQuery.ilike('sport', sport)
-  if (filter === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
-  if (followedIds) postQuery = postQuery.in('author_id', followedIds)
-  if (cursor) postQuery = postQuery.lt('created_at', cursor)
-
-  let repostQuery = supabase.from('reposts')
-    .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
-    .order('created_at', { ascending: false })
-    .limit(pageSize)
-  if (followedIds) repostQuery = repostQuery.in('user_id', followedIds)
-  if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
-
-  const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
-
-  let reposted = asRepostRows(repostRows)
-    .map(row => ({ row, post: repostRowPost(row) }))
-    .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
-    .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
-  if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  if (sport) reposted = reposted.filter(p => p.sport?.toUpperCase() === sport)
-
-  const typedRawPosts = asFeedPosts(rawPosts)
-  const merged = [...typedRawPosts, ...reposted]
-    .filter(p => !blockedSet.has(p.author_id) && !blockedSet.has(p.reposted_by?.id ?? '') && !isSuppressed(p))
-    .sort((a, b) =>
-      new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
-
-  const posts = merged.slice(0, pageSize)
-
-  // The cursor tracks how far back in time each RAW source has actually
-  // been fetched — not the block-filtered/paginated result — so it keeps
-  // advancing correctly even on a page where blocking (or the picks
-  // post_type filter, applied after the repost query already ran) removed
-  // everything from what's returned. A source only contributes a boundary
-  // when it came back with a full page — fewer rows means that source is
-  // exhausted and shouldn't gate `hasMore`.
-  const postsExhausted = (rawPosts?.length ?? 0) < pageSize
-  const repostsExhausted = (repostRows?.length ?? 0) < pageSize
-  const postsBoundary = !postsExhausted ? typedRawPosts[typedRawPosts.length - 1]?.created_at ?? null : null
-  const typedRepostRows = asRepostRows(repostRows)
-  const repostsBoundary = !repostsExhausted ? typedRepostRows[typedRepostRows.length - 1]?.created_at ?? null : null
-  const hasMore = !postsExhausted || !repostsExhausted
-  // Older (smaller) of the two boundaries — advancing the cursor to the
-  // more conservative point means neither source's un-fetched tail gets
-  // skipped on the next page.
-  const nextCursor = !hasMore ? null : [postsBoundary, repostsBoundary].filter(Boolean)
-    .sort((a, b) => new Date(a as string).getTime() - new Date(b as string).getTime())[0] ?? null
-
-  return { posts, nextCursor, hasMore }
+  const state = readFeedCursor(cursor)
+  const deadline = AbortSignal.timeout(15000)
+  const groups: (string[] | undefined)[] = followedIds ? Array.from({ length: Math.ceil(followedIds.length / FOLLOW_BATCH) }, (_, i) => followedIds!.slice(i * FOLLOW_BATCH, (i + 1) * FOLLOW_BATCH)) : [undefined]
+  const postQuery = (ids: string[] | undefined) => {
+    let query = supabase.from('posts').select(POST_WITH_AUTHOR).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(pageSize)
+    if (sport) query = query.ilike('sport', sport)
+    if (filter === 'picks') query = query.in('post_type', ['pick', 'parlay'])
+    if (ids) query = query.in('author_id', ids)
+    if (state.posts && state.posts !== 'done') {
+      const expression = feedCursorFilter(state.posts)
+      query = expression ? query.or(expression) : query.lt('created_at', state.posts.at)
+    }
+    return query.abortSignal(AbortSignal.any([deadline, AbortSignal.timeout(10000)]))
+  }
+  const repostQuery = (ids: string[] | undefined) => {
+    let query = supabase.from('reposts')
+      .select('id, user_id, created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(' + POST_WITH_AUTHOR + ')')
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(pageSize)
+    if (ids) query = query.in('user_id', ids)
+    if (state.reposts && state.reposts !== 'done') {
+      const expression = feedCursorFilter(state.reposts)
+      query = expression ? query.or(expression) : query.lt('created_at', state.reposts.at)
+    }
+    return query.abortSignal(AbortSignal.any([deadline, AbortSignal.timeout(10000)]))
+  }
+  const [postRows, repostRows] = await Promise.all([
+    state.posts === 'done' ? Promise.resolve([]) : collectFeedBatches<FeedPost>(groups, postQuery, pageSize),
+    state.reposts === 'done' ? Promise.resolve([]) : collectFeedBatches<RepostRow>(groups, repostQuery, pageSize),
+  ])
+  const includePost = (post: FeedPost) => !blockedSet.has(post.author_id) && !isSuppressed(post)
+  return mergeFeedPage(postRows, repostRows, state, pageSize, includePost,
+    (post, row) => includePost(post) && !blockedSet.has(row.user_id) && !mutedAuthorIds.has(row.user_id)
+      && (filter !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay')
+      && (!sport || post.sport?.toUpperCase() === sport))
 }
 
 export type ProfileTab = 'all' | 'picks' | 'reposts' | 'media'
@@ -154,77 +179,34 @@ export type ProfileTab = 'all' | 'picks' | 'reposts' | 'media'
 // from everyone the viewer follows; a profile's Reposts tab means "things
 // THIS person reposted," a query reposts.user_id already answers directly).
 export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
-  userId: string
-  tab: ProfileTab
-  cursor?: string | null
-  pageSize?: number
+  userId: string; tab: ProfileTab; cursor?: string | null; pageSize?: number
 }): Promise<FeedPageResult> {
   const { userId, tab, cursor, pageSize = 20 } = opts
-
-  if (tab === 'media') {
-    let mediaQuery = supabase.from('posts').select(POST_WITH_AUTHOR)
-      .eq('author_id', userId)
-      .not('media_urls', 'eq', '{}')
-      .order('created_at', { ascending: false })
-      .limit(pageSize)
-    if (cursor) mediaQuery = mediaQuery.lt('created_at', cursor)
-    const { data } = await mediaQuery
-    const posts = asFeedPosts(data).filter(post => Array.isArray(post.media_urls) && post.media_urls.length > 0)
-    const hasMore = (data?.length ?? 0) === pageSize
-    return { posts, nextCursor: hasMore ? posts[posts.length - 1]?.created_at ?? null : null, hasMore }
-  }
-
-  if (tab === 'reposts') {
-    let repostQuery = supabase.from('reposts')
-      .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(pageSize)
-    if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
-    const { data } = await repostQuery
-    const posts = asRepostRows(data)
-      .map(row => ({ row, post: repostRowPost(row) }))
-      .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
-      .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
-    const hasMore = (data?.length ?? 0) === pageSize
-    const last = posts[posts.length - 1]
-    return { posts, nextCursor: hasMore ? (last?.repost_created_at ?? null) : null, hasMore }
-  }
-
-  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).eq('author_id', userId).order('created_at', { ascending: false }).limit(pageSize)
+  requireFeedPageSize(pageSize)
+  const state = readFeedCursor(cursor)
+  if (tab === 'media') state.reposts = 'done'
+  if (tab === 'reposts') state.posts = 'done'
+  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).eq('author_id', userId)
+    .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(pageSize)
+  if (tab === 'media') postQuery = postQuery.not('media_urls', 'eq', '{}')
   if (tab === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
-  if (cursor) postQuery = postQuery.lt('created_at', cursor)
-
+  if (state.posts && state.posts !== 'done') {
+    const expression = feedCursorFilter(state.posts)
+    postQuery = expression ? postQuery.or(expression) : postQuery.lt('created_at', state.posts.at)
+  }
   let repostQuery = supabase.from('reposts')
-    .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(pageSize)
-  if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
-
-  const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
-
-  let reposted = asRepostRows(repostRows)
-    .map(row => ({ row, post: repostRowPost(row) }))
-    .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
-    .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
-  if (tab === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-
-  const typedRawPosts = asFeedPosts(rawPosts)
-  const merged = [...typedRawPosts, ...reposted]
-    .sort((a, b) =>
-      new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
-
-  const posts = merged.slice(0, pageSize)
-
-  const postsExhausted = (rawPosts?.length ?? 0) < pageSize
-  const repostsExhausted = (repostRows?.length ?? 0) < pageSize
-  const postsBoundary = !postsExhausted ? typedRawPosts[typedRawPosts.length - 1]?.created_at ?? null : null
-  const typedRepostRows = asRepostRows(repostRows)
-  const repostsBoundary = !repostsExhausted ? typedRepostRows[typedRepostRows.length - 1]?.created_at ?? null : null
-  const hasMore = !postsExhausted || !repostsExhausted
-  const nextCursor = !hasMore ? null : [postsBoundary, repostsBoundary].filter(Boolean)
-    .sort((a, b) => new Date(a as string).getTime() - new Date(b as string).getTime())[0] ?? null
-
-  return { posts, nextCursor, hasMore }
+    .select('id, user_id, created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(' + POST_WITH_AUTHOR + ')')
+    .eq('user_id', userId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(pageSize)
+  if (state.reposts && state.reposts !== 'done') {
+    const expression = feedCursorFilter(state.reposts)
+    repostQuery = expression ? repostQuery.or(expression) : repostQuery.lt('created_at', state.reposts.at)
+  }
+  const [postResult, repostResult] = await Promise.all([
+    state.posts === 'done' ? Promise.resolve({ data: [], error: null }) : postQuery.abortSignal(AbortSignal.timeout(10000)),
+    state.reposts === 'done' ? Promise.resolve({ data: [], error: null }) : repostQuery.abortSignal(AbortSignal.timeout(10000)),
+  ])
+  if (postResult.error || repostResult.error) throw new Error('Profile posts unavailable')
+  return mergeFeedPage((postResult.data ?? []) as FeedPost[], (repostResult.data ?? []) as RepostRow[], state, pageSize,
+    post => tab !== 'media' || Array.isArray(post.media_urls) && post.media_urls.length > 0,
+    post => tab !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay')
 }

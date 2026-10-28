@@ -3,7 +3,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { Compass, Hash } from 'lucide-react'
 import { TierGate } from '@/components/layout/TierGate'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 
@@ -13,7 +13,8 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
   const rawTag = (await params).tag
   const tag = rawTag.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50)
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Posts are temporarily unavailable')
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
   if (blockedIds.length) query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)

@@ -62,7 +62,9 @@
     "desktop:verify-release": "node scripts/verify-desktop-release.mjs",
     "postinstall": "patch-package",
     "test:nba-pregame-freeze": "node --import tsx --test scripts/nba-pregame-research.test.mts scripts/nba-board-freeze.test.mts scripts/nba-slate-freeze.test.mts scripts/nba-research-resources.test.mts scripts/nba-entity-freeze.test.mts scripts/nba-research-freeze-cron.test.mts scripts/nba-research-bundle.test.mts",
-    "test:nba-capture-controls": "node --import tsx --test scripts/nba-browser-budget.test.mts scripts/browserbase-persistence.test.mjs scripts/nba-public-control.test.mts scripts/nba-public-admin-batch.test.mts scripts/nba-book-capture-policy.test.mts scripts/nba-book-first-capture.test.mts scripts/nba-first-books.test.mts scripts/nba-book-props-dom.test.mts"
+    "test:nba-capture-controls": "node --import tsx --test scripts/nba-browser-budget.test.mts scripts/browserbase-persistence.test.mjs scripts/nba-public-control.test.mts scripts/nba-public-admin-batch.test.mts scripts/nba-book-capture-policy.test.mts scripts/nba-book-first-capture.test.mts scripts/nba-first-books.test.mts scripts/nba-book-props-dom.test.mts",
+    "test:research-resilience": "node --import tsx --test scripts/nba-shared-outage-cache.test.mts scripts/nfl-pregame-weekly-cache.test.mts scripts/nfl-public-results.test.mts scripts/post-live-lifecycle.test.mts",
+    "test:feed-visibility": "node --import tsx --test scripts/feed-pagination.test.mts scripts/feed-pagination-ui.test.mts scripts/block-visibility.test.mts scripts/search-block-race.test.mts scripts/topbar-block-race.test.mts scripts/social-route-visibility.test.mts"
   },
   "dependencies": {
     "@browserbasehq/sdk": "^2.16.0",

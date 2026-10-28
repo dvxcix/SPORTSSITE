@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NewDMForm } from '@/components/chat/NewDMForm'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 
 export default async function NewDMPage({ searchParams }: { searchParams: Promise<{ forward?: string }> }) {
   const { forward } = await searchParams
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Messages are temporarily unavailable')
   if (!user) redirect('/auth/login?next=/messages/new')
 
   const blockedIds = await getBlockedEitherWayIds(supabase, user.id)

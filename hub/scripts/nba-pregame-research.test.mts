@@ -205,6 +205,40 @@ test('caller mutation cannot alter a shared archive from either a database read 
   assert.equal(h.metrics().reads, 1)
 })
 
+test('open research reuses one locked read for at most ten seconds without restamping it', async () => {
+  const h = await harness(); h.setTime(tip - 60_000); h.setRow(stored({ baseline: 4 }, tip - 120_000))
+  const original = await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1')
+  h.setRow(stored({ baseline: 7 }, tip - 56_000)); h.setTime(tip - 54_000)
+  const retained = await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1')
+  assert.equal(h.metrics().reads, 1)
+  assert.deepEqual(retained, original)
+  h.setTime(tip - 50_000)
+  const refreshed = await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1')
+  assert.equal(h.metrics().reads, 2)
+  assert.equal(refreshed!.value.baseline, 7)
+  assert.equal(refreshed!.observedAt, new Date(tip - 56_000).toISOString())
+})
+
+test('extended open cache expires at the original tip and returns the locked final winner', async () => {
+  const h = await harness(); h.setTime(tip - 9000); h.setRow(stored({ baseline: 4 }))
+  await h.api.readNbaPregameResearch(game, 'board:v1')
+  h.setRow(stored({ baseline: 7 }, tip - 1000)); h.setTime(tip - 1000)
+  assert.equal((await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1'))!.value.baseline, 4)
+  h.setTime(tip)
+  const final = await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1')
+  assert.equal(final!.value.baseline, 7); assert.equal(final!.frozen, true)
+  assert.equal(final!.observedAt, new Date(tip - 1000).toISOString()); assert.equal(h.metrics().reads, 2)
+})
+
+test('a newly known early tip bypasses the open memory entry and reads the final winner', async () => {
+  const h = await harness(); h.setTime(tip - 60_000); h.setRow(stored({ baseline: 4 }, tip - 120_000))
+  await h.api.readNbaPregameResearch(game, 'board:v1')
+  h.setCanonicalTip(tip - 55_000); h.setRow(stored({ baseline: 7 }, tip - 56_000)); h.setTime(tip - 54_000)
+  const final = await h.api.readNbaPregameResearch<{ baseline: number }>(game, 'board:v1')
+  assert.equal(final!.value.baseline, 7); assert.equal(final!.frozen, true)
+  assert.equal(final!.observedAt, new Date(tip - 56_000).toISOString()); assert.equal(h.metrics().reads, 2)
+})
+
 test('same-observation writes coalesce and return independent values to each caller', async () => {
   const h = await harness(), entry = { value: { players: [{ average: 4 }] }, observedAt: new Date(tip - 2000).toISOString() }
   const [first, second] = await Promise.all([h.api.saveNbaPregameResearch(game, 'board:v1', entry), h.api.saveNbaPregameResearch(game, 'board:v1', entry)])

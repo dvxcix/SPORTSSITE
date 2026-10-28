@@ -140,7 +140,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const userId = user?.id
   const notificationEpoch = useRef(0)
   const [notificationOwner, setNotificationOwner] = useState(userId)
-  const visibleUnread = notificationOwner === userId ? unread : 0
   if (notificationOwner !== userId) {
     setNotificationOwner(userId)
     setNotifications([]); setUnread(0); setNotifOpen(false); setNotifLoading(false); setNotifError('')
@@ -151,10 +150,16 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const supabase = useMemo(() => createClient(), [])
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const notifTriggerRef = useRef<HTMLButtonElement>(null)
-  // Read via the ref in both the notification-bell fetch and the quick-
-  // search results below so neither needs to refetch or add this to a
-  // dependency array — same pattern as SearchClient.tsx's own copy.
-  const blockedIdsRef = useRef<string[]>([])
+  const [blockState, setBlockState] = useState<{ owner: string | undefined; ids: string[] | null }>({ owner: undefined, ids: null })
+  const accountContext = `${userId ?? ''}:${loading}:${authUnavailable}`
+  const [observedAccountContext, setObservedAccountContext] = useState(accountContext)
+  const [accountGeneration, setAccountGeneration] = useState(0)
+  if (observedAccountContext !== accountContext) {
+    setObservedAccountContext(accountContext); setAccountGeneration(value => value + 1)
+    setBlockState({ owner: userId, ids: null })
+  }
+  const currentBlockIds = blockState.owner === userId && !loading && !authUnavailable ? blockState.ids : null
+  const visibleUnread = notificationOwner === userId && currentBlockIds !== null ? unread : 0
 
   // Live type-ahead preview — same data sources /search itself uses
   // (users/posts by ilike, MLB players/teams via the shared route), just
@@ -163,6 +168,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   // hit Enter and got dumped on /search with an EMPTY box, forcing a
   // retype of what you'd already typed.
   const [quickResults, setQuickResults] = useState<QuickResults>(EMPTY_RESULTS)
+  const [quickResultsOwner, setQuickResultsOwner] = useState(userId)
+  const [quickResultsGeneration, setQuickResultsGeneration] = useState(0)
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickLoading, setQuickLoading] = useState(false)
   const searchRef = useRef<HTMLFormElement>(null)
@@ -186,17 +193,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     setQuickLoading(true)
     const t = setTimeout(async () => {
       try {
+        const socialReady = currentBlockIds !== null
         const postCols = 'id, content, pick_data, author_id, author:users!posts_author_id_fkey(username, display_name)'
         const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData, nbaData] = await Promise.all([
-          supabase.from('users')
+          socialReady ? supabase.from('users')
             .select('id, username, display_name, avatar_url')
             .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-            .limit(3).abortSignal(controller.signal),
-          supabase.from('posts').select(postCols)
+            .limit(3).abortSignal(controller.signal) : Promise.resolve({ data: [] }),
+          socialReady ? supabase.from('posts').select(postCols)
             .ilike('content', `%${query}%`)
             .eq('visibility', 'public')
             .order('created_at', { ascending: false })
-            .limit(3).abortSignal(controller.signal),
+            .limit(3).abortSignal(controller.signal) : Promise.resolve({ data: [] }),
           // Same content-then-pick_data merge as the full /search results page
           // (SearchClient.tsx) — a pick's player name usually only lives in
           // pick_data, not the caption, so content-only search missed it here
@@ -204,11 +212,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           // tree grammar rejects a `column::type` cast (confirmed live via a
           // PGRST100 parse error), so it's a separate bounded fetch merged
           // client-side instead.
-          supabase.from('posts').select(postCols)
+          socialReady ? supabase.from('posts').select(postCols)
             .in('post_type', ['pick', 'parlay'])
             .eq('visibility', 'public')
             .order('created_at', { ascending: false })
-            .limit(150).abortSignal(controller.signal),
+            .limit(150).abortSignal(controller.signal) : Promise.resolve({ data: [] }),
           fetch(`/api/search/sports?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
           fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
           nbaAccess ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`, { cache: 'no-store', signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
@@ -217,13 +225,15 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         const q = query.toLowerCase()
         const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
         const seen = new Set<string>()
-        const blockedSet = new Set(blockedIdsRef.current)
+        const blockedSet = new Set(currentBlockIds ?? [])
         const p = [...(byContent ?? []), ...byPickData]
           .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
           .filter((post: any) => !blockedSet.has(post.author_id))
           .slice(0, 3)
+        setQuickResultsOwner(userId)
+        setQuickResultsGeneration(accountGeneration)
         setQuickResults({
-          users: (u ?? []).filter((r: any) => !blockedSet.has(r.id)), posts: p,
+          users: socialReady ? (u ?? []).filter((r: any) => !blockedSet.has(r.id)) : [], posts: socialReady ? p : [],
           players: (sportsData.players ?? []).slice(0, 3),
           teams: (sportsData.teams ?? []).slice(0, 2),
           nflPlayers: (nflData.players ?? []).slice(0, 3),
@@ -238,15 +248,20 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       }
     }, 250)
     return () => { controller.abort(); clearTimeout(t) }
-  }, [search, supabase, nbaAccess])
+  }, [search, supabase, nbaAccess, userId, currentBlockIds, accountGeneration])
 
-  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
+  const showSocialQuick = quickResultsOwner === userId && quickResultsGeneration === accountGeneration && currentBlockIds !== null
+  const activeBlocked = new Set(currentBlockIds ?? [])
+  const visibleQuickUsers = showSocialQuick ? quickResults.users.filter(item => !activeBlocked.has(item.id)) : []
+  const visibleQuickPosts = showSocialQuick ? quickResults.posts.filter(item => !activeBlocked.has(item.author_id)) : []
+  const hasQuickResults = visibleQuickUsers.length > 0 || visibleQuickPosts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
   const visibleNotifications = useMemo(() => {
-    if (notificationOwner !== userId) return []
-    if (notifFilter === 'unread') return notifications.filter(notification => !notification.read)
-    if (notifFilter === 'mentions') return notifications.filter(notification => notification.type === 'mention')
-    return notifications
-  }, [notifFilter, notifications, notificationOwner, userId])
+    if (notificationOwner !== userId || currentBlockIds === null) return []
+    const filtered = notifications.filter(notification => !notification.actor_id || !currentBlockIds.includes(notification.actor_id))
+    if (notifFilter === 'unread') return filtered.filter(notification => !notification.read)
+    if (notifFilter === 'mentions') return filtered.filter(notification => notification.type === 'mention')
+    return filtered
+  }, [notifFilter, notifications, notificationOwner, userId, currentBlockIds])
 
   // Same effectiveTier() fold used everywhere else tier is checked or shown
   // (TierGate, requireTier, /pricing, /settings/membership) — the profile
@@ -276,19 +291,27 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   useEffect(() => {
-    const epoch = ++notificationEpoch.current
     let cancelled = false
-    blockedIdsRef.current = []
-    if (!userId) return
+    if (!userId) {
+      if (!loading && !authUnavailable) queueMicrotask(() => { if (!cancelled) setBlockState({ owner: undefined, ids: [] }) })
+      return () => { cancelled = true }
+    }
     getBlockedEitherWayIds(supabase, userId).then(ids => {
       if (cancelled) return
-      blockedIdsRef.current = ids
+      setBlockState({ owner: userId, ids })
+      setNotifications(current => current.filter(item => !item.actor_id || !ids.includes(item.actor_id)))
       let countQuery = supabase.from('notifications').select('id', { count: 'exact', head: true })
         .eq('user_id', userId).eq('read', false)
       if (ids.length) countQuery = countQuery.not('actor_id', 'in', `(${ids.join(',')})`)
       return countQuery.then(({ count }) => { if (!cancelled) setUnread(count ?? 0) })
-    }).catch(() => { /* Keep the current notification state during a temporary outage. */ })
+    }).catch(() => { if (!cancelled) setBlockState({ owner: userId, ids: null }) })
+    return () => { cancelled = true }
+  }, [userId, supabase, loading, authUnavailable])
 
+  useEffect(() => {
+    const epoch = ++notificationEpoch.current
+    if (!userId || currentBlockIds === null) return () => { notificationEpoch.current = epoch + 1 }
+    let cancelled = false
     // Live badge — bump the count the instant a new notification lands,
     // without the user needing to reload anything. A blocked actor's
     // notification will still insert (blocking doesn't stop the underlying
@@ -298,14 +321,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         (payload: any) => {
           if (cancelled) return
-          if (blockedIdsRef.current.includes(payload.new?.actor_id)) return
+          if (currentBlockIds.includes(payload.new?.actor_id)) return
           const incoming = { ...payload.new, actor: null } as NotifRow
           setUnread(count => count + 1)
           setNotifications(current => current.some(item => item.id === incoming.id) ? current : [incoming, ...current].slice(0, 20))
         })
       .subscribe()
     return () => { cancelled = true; notificationEpoch.current = epoch + 1; supabase.removeChannel(channel) }
-  }, [userId, supabase])
+  }, [userId, supabase, currentBlockIds])
 
   async function openNotifications() {
     const epoch = notificationEpoch.current
@@ -319,6 +342,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     // in the DB while the open dropdown kept showing stale contents.
     // Cheap enough (10 rows) to just refetch on every open.
     if (opening && user) {
+      if (currentBlockIds === null) { setNotifError('Could not refresh activity.'); return }
       setNotifLoading(true)
       setNotifError('')
       const { data, error } = await supabase
@@ -333,7 +357,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         setNotifError('Could not refresh activity.')
         return
       }
-      const blockedSet = new Set(blockedIdsRef.current)
+      const blockedSet = new Set(currentBlockIds)
       setNotifications(((data as any) ?? []).filter((n: NotifRow) => !n.actor_id || !blockedSet.has(n.actor_id)))
     }
   }
@@ -525,7 +549,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <span style={{ minWidth: 0, flex: 1 }}><span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span><span style={{ fontSize: 10, color: 'var(--text-3)' }}>{[player.position, player.teamName].filter(Boolean).join(' · ')}</span></span>
                   </button>
                 ))}
-                {quickResults.users.map(u => (
+                {visibleQuickUsers.map(u => (
                   <button type="button" key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
@@ -534,7 +558,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{u.username}</span>
                   </button>
                 ))}
-                {quickResults.posts.map(p => (
+                {visibleQuickPosts.map(p => (
                   <button type="button" key={`post-${p.id}`} onClick={() => goTo(`/posts/${p.id}`)}
                     style={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">

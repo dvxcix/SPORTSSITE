@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { Flame, Plus, Target, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -24,7 +24,8 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
   const { sport: requestedSport } = await searchParams
   const activeSport = SPORTS.includes(requestedSport ?? '') ? requestedSport! : 'All'
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Picks are temporarily unavailable')
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)'
 

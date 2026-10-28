@@ -1,6 +1,6 @@
 import { getUserProfile, attachUserReactions } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/server'
-import { isBlockedEitherWay } from '@/lib/blocks'
+import { authVisibilityUnavailable, isBlockedEitherWay } from '@/lib/blocks'
 import { fetchProfilePostsPage, type ProfileTab } from '@/lib/feedQuery'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -78,7 +78,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Profile is temporarily unavailable')
   const isOwnProfile = authUser?.id === profile.id
 
   // Checked before any of the heavier posts/achievements/social-platform
@@ -367,7 +368,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                   </Link>
                 )) : <div className="sm:col-span-2"><ProfileEmpty icon={<UsersRound size={24}/>} title="No public communities yet" /></div>}
               </div>
-            ) : mappedPosts.length === 0 ? (
+            ) : mappedPosts.length === 0 && !hasMore ? (
               <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center">
                 <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><MessageSquareText size={24} /></span>
                 <p className="font-bold text-zinc-300">
@@ -384,6 +385,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 initialPosts={mappedPosts}
                 initialCursor={nextCursor}
                 initialHasMore={hasMore}
+                viewerId={authUser?.id ?? null}
               />
             )}
           </div>

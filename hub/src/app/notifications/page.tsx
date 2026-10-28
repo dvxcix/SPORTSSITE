@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Bell, Settings2 } from 'lucide-react'
 import { NotificationsList, type NotifRow } from '@/components/social/NotificationsList'
 import { TierGate } from '@/components/layout/TierGate'
-import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Notifications are temporarily unavailable')
   if (!user) redirect('/auth/login?next=/notifications')
 
   const blockedIds = await getBlockedEitherWayIds(supabase, user.id)
