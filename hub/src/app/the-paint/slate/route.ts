@@ -12,7 +12,7 @@ import { nbaContextualScore } from '@/lib/nbaIntelligence'
 import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
 import { captureNbaSlatePools, getNbaSlateRanks, getNbaLegacySlateRows } from '@/lib/nbaSlateFreezeData'
 import { nbaSlateFrozenHeat } from '@/lib/nbaSlateHeat'
-import { nbaSlateFailure, type NbaSlateStage } from '@/lib/nbaSlateDiagnostics'
+import { nbaSlateFailure, nbaSlateTimer, type NbaSlateStage } from '@/lib/nbaSlateDiagnostics'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
   if (!date || nbaDate(date) !== date || !PAINT_MARKETS.some(item => item.key === market) || !/^[a-z0-9_]{1,30}$/.test(book) || !['over', 'under'].includes(side)) return NextResponse.json({ error: 'Invalid NBA slate filters' }, { status: 400 })
   const selection=nbaReadSelection(request.nextUrl.searchParams)
   let stage: NbaSlateStage = 'schedule'
+  const timer = nbaSlateTimer()
+  const enter = (next: NbaSlateStage) => { timer.enter(next); stage = next }
   try {
     const rawSchedule = await getPaintSchedule(date)
     const schedule = { ...rawSchedule, games: await Promise.all(rawSchedule.games.map(game => getNbaOddsGame(game))) }
@@ -29,9 +31,9 @@ export async function GET(request: NextRequest) {
     // side, market, period and contract selection are applied only after the
     // shared load, so they must not cause duplicate reads and archive writes.
     // Completeness for the selected period is computed for each response.
-    stage = 'shared-cache'
+    enter('shared-cache')
     const cached = await nbaSharedCache(`slate:v13:${mode}:${date}:${phaseKey}`, 30, 0, async () => {
-      stage = 'boards'
+      enter('boards')
       const started = Date.now(), boards: PaintBoard[] = [], failed: number[] = [], closedAtLoad=new Set<number>()
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {
@@ -39,17 +41,17 @@ export async function GET(request: NextRequest) {
         await Promise.all(games.slice(offset, offset + 3).map(async game => { try { const closed=mode==='pregame'&&!nbaPregameOpen(game);boards.push(await getPaintBoard(game, mode));if(closed)closedAtLoad.add(game.id) } catch { failed.push(game.id) } }))
       }
       if (games.length && !boards.length) throw new Error('No NBA boards available')
-      stage = 'models'
+      enter('models')
       const modelResults = await Promise.allSettled(boards.map(board => getNbaResearchModels(board, mode)))
       const reportMap = new Map(boards.map((board, index) => { const result = modelResults[index]; return [board.game.id,result.status==='fulfilled'?result.value:[]] as const }))
       const modelMissing=new Set(boards.filter((_,index)=>modelResults[index].status==='rejected').map(board=>board.game.id))
-      stage = 'defense'
+      enter('defense')
       const contexts = await Promise.allSettled(boards.map(async board=>({gameId:board.game.id,...await getNbaResearchDefense(board,mode)})))
       const defenseMap=new Map(contexts.flatMap(result=>result.status==='fulfilled'?[[result.value.gameId,result.value] as const]:[]))
       const defenseMissing=new Set(boards.filter((_,index)=>contexts[index].status==='rejected').map(board=>board.game.id))
       // Early games may have waited on a cold later game. Attach quotes only
       // after research is assembled: 30s source TTL + 30s result TTL, no stale fallback.
-      stage = 'prices'
+      enter('prices')
       const pricedMap = new Map((await Promise.all(boards.map(board => refreshPaintBoardPrices(board, mode)))).map(board=>[board.game.id,board]))
       // A pool written for a later anchor must contain the final research of
       // every peer that closed while its boards/models/prices were loading.
@@ -72,16 +74,16 @@ export async function GET(request: NextRequest) {
       }
       const pricedBoards=[...pricedMap.values()],reports=[...reportMap].map(([gameId,reports])=>({gameId,reports})),defense=[...defenseMap.values()]
       const fullComplete = schedule.complete && !failed.length && pricedBoards.length === schedule.games.length && pricedBoards.every(board => board.statsComplete)
-      stage = 'archive'
+      enter('archive')
       if (mode === 'pregame') await captureNbaSlatePools(schedule.games, pricedBoards, fullComplete && !modelMissing.size, undefined, reports)
-      stage = 'cache-commit'
+      enter('cache-commit')
       return { date: schedule.date, games: schedule.games.length, loaded: pricedBoards.length, failed, defenseMissing:[...defenseMissing], defenseUnavailable:pricedBoards.filter(board=>!defenseMap.get(board.game.id)?.ready).length, boards: pricedBoards, reports, defense }
     }, 120)
     // Keep expensive production research cached, but re-check freshness and the
     // selected exact quote for every response. A warm slate cannot extend a boost.
-    stage = 'market-context'
+    enter('market-context')
     const contextResults=await Promise.allSettled(cached.value.boards.map(board=>getNbaResearchMarketContext({ ...board, game: schedule.games.find(game=>game.id===board.game.id)??board.game }, mode)))
-    stage = 'prices'
+    enter('prices')
     const initialBoards = await Promise.all(cached.value.boards.map(board => refreshPaintBoardPrices({ ...board, game: schedule.games.find(game => game.id === board.game.id) ?? board.game }, mode)))
     const finalize = async () => {
       const boards = new Map(initialBoards.map(board=>[board.game.id,board]))
@@ -120,9 +122,9 @@ export async function GET(request: NextRequest) {
       }
       throw new Error('NBA slate phase could not settle')
     }
-    stage = 'finalize'
+    enter('finalize')
     const {pricedBoards,reports,defense,marketContexts,contextUnavailable,defenseMissing,failed,complete,frozen,legacy,missing}=await finalize()
-    stage = 'render'
+    enter('render')
     for (const entry of legacy) frozen.observedAt[entry.gameId]=entry.saved.observedAt
     const unavailable=missing.filter(gameId=>!legacy.some(entry=>entry.gameId===gameId))
     const baseRows = nbaSlateRows(pricedBoards.map(board => ({ ...board, players: nbaSelectedPlayers(board.players, market!, selection) })), market as PaintMarket, book, side as 'over' | 'under', complete, [], defense, [], { ranks: frozen.ranks, reports })
@@ -145,4 +147,5 @@ export async function GET(request: NextRequest) {
     const { boards: _boards, reports: _reports, defense: _defense, ...summary } = cached.value
     return NextResponse.json({ ...summary, complete, failed, loaded:new Set([...pricedBoards.map(board=>board.game.id),...legacy.map(entry=>entry.gameId)]).size,defenseMissing,defenseUnavailable:pricedBoards.filter(board=>!defense.find(context=>context.gameId===board.game.id)?.ready).length, rows, mode, frozenMmUnavailable: unavailable, frozenMmObservedAt: frozen.observedAt, recoveredSlateGames:legacy.map(entry=>entry.gameId), fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) { console.error('[The Court] slate unavailable', nbaSlateFailure(stage, error)); return NextResponse.json({ error: 'NBA slate could not load. Try again shortly.' }, { status: 503 }) }
+  finally { const slow = timer.finish(); if (slow) console.info('[The Court] slow slate', slow) }
 }

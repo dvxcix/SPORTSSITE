@@ -1,6 +1,23 @@
 /** Private-only, bounded diagnostics. Never return an exception message or a
  * request parameter: provider and database errors can contain sensitive data. */
 export type NbaSlateStage = 'schedule' | 'shared-cache' | 'boards' | 'models' | 'defense' | 'prices' | 'archive' | 'cache-commit' | 'market-context' | 'finalize' | 'render'
+const slowThresholdMs = 10_000
+/** One bounded set of fixed stage durations, only reported for slow requests. */
+export function nbaSlateTimer(now: () => number = Date.now) {
+  const start = now(), times: Partial<Record<NbaSlateStage, number>> = {}
+  let stage: NbaSlateStage = 'schedule', last = start
+  const advance = (next: NbaSlateStage, at: number) => { times[stage] = (times[stage] ?? 0) + Math.max(0, at - last); stage = next; last = at }
+  return {
+    enter(next: NbaSlateStage) { advance(next, now()) },
+    finish() {
+      const end = now(); advance(stage, end)
+      const total = Math.max(0, end - start)
+      if (total < slowThresholdMs) return null
+      const stages = Object.fromEntries(Object.entries(times).map(([key, elapsed]) => [key, Math.round(elapsed / 100) * 100]))
+      return { totalMs: Math.round(total / 100) * 100, stages }
+    },
+  }
+}
 export function nbaSlateFailure(stage: NbaSlateStage, failure: unknown) {
   const message = failure instanceof Error ? failure.message : ''
   const name = failure instanceof Error ? failure.name : ''
