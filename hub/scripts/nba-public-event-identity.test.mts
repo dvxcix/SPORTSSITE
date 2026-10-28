@@ -1,3 +1,4 @@
+import * as publicControl from '../src/lib/nbaPublicCaptureControl.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -139,6 +140,7 @@ async function capture(scenario: string) {
   const query = { select: () => query, in: () => query, limit: async () => ({ data: [], error: null }) }
   const route = await compiled<{ GET: (request: Request) => Promise<Response> }>('../src/app/api/cron/poll-pikkit-nba-picks/route.ts', {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null }, '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
+    '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, '@/lib/nbaOddsMode': mode,
     '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games }) }, '@/lib/nbaPaint': { nbaToday: () => game.date },
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async (value: paint.PaintGame) => { clockReads++; return scenario === 'canonical-tip-changed' && clockReads > 1 ? { ...value, datetime: '2026-10-21T22:00:00Z' } : value } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) },

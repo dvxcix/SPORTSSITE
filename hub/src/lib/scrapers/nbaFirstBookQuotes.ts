@@ -5,7 +5,7 @@ import { nbaValidOdds } from '../nbaOddsHistory'
 import { nbaPlayerIdentities } from '../nbaPlayerIdentity'
 
 export type NbaFirstBook = 'draftkings' | 'betmgm'
-export type NbaFirstBookInput = { game: PaintGame; roster: PaintRoster[] }
+export type NbaFirstBookInput = { game: PaintGame; roster: PaintRoster[]; capture?: { first: boolean; regularMarkets: string[] } }
 export type NbaFirstBookBoard = {
   away: string; home: string; dateLabel: string; timeLabel: string; timeZone: string
   countdown?: { minutes: number; observedAt: string }
@@ -14,7 +14,7 @@ export type NbaFirstBookBoard = {
 }
 export type NbaFirstBookGame = {
   gameId: number; props: PaintProp[]; complete: boolean; observedAt: string | null
-  status: 'captured' | 'partial' | 'unlisted' | 'unavailable' | 'identity-mismatch' | 'closed' | 'deadline' | 'error'
+  status: 'captured' | 'partial' | 'unlisted' | 'unavailable' | 'identity-mismatch' | 'closed' | 'deadline' | 'error' | 'not-due' | 'budget-deferred'
   unmatched: number; clockMismatch: boolean
   identity?: NbaFirstBookIdentity
 }

@@ -6,14 +6,20 @@ import { nbaPregameOpen } from '../nbaOddsMode'
 import { readDkFirstBoards, readMgmFirstIdentity, readMgmFirstRows } from './nbaFirstBookDom'
 import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormalizeFirstBook, nbaBookIdentityRevalidation, nbaBookRevalidationDiagnostic, type NbaBookRevalidation, type NbaFirstBook, type NbaFirstBookBoard, type NbaFirstBookGame, type NbaFirstBookInput } from './nbaFirstBookQuotes'
 import { collectMgmProps } from './nbaMgmProps'
-import { nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
+import { MGM_MILESTONE_PANELS, nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
+import { NbaBrowserBudgetError, type NbaBrowserBudgetCode } from '../nbaBrowserBudget'
 
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
 type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save' | 'session-release'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
-type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline'; stage?: CaptureStage; reason?: CaptureReason; identity?: NbaBookRevalidation }
+type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline' | 'budget-deferred'; stage?: CaptureStage; reason?: CaptureReason; identity?: NbaBookRevalidation; budgetReason?: NbaBrowserBudgetCode }
+function budgetDenial(error: unknown): NbaBrowserBudgetCode | null {
+  if (!(error instanceof NbaBrowserBudgetError)) return null
+  const code = error.code
+  return typeof code === 'string' && ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable'].includes(code) ? code as NbaBrowserBudgetCode : null
+}
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
 export type NbaBookCaptureCallbacks = {
   onFirst?: (game: NbaFirstBookGame) => Promise<void>
@@ -213,7 +219,13 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
   if (inputs.length > 30 || new Set(inputs.map(input => input.game.id)).size !== inputs.length
     || new Set(inputs.map(({ game }) => `${game.date}:${game.visitor_team.id}:${game.home_team.id}`)).size !== inputs.length) throw new Error('Invalid NBA capture slate')
   const result: NbaFirstBookCapture = { book, observedAt: new Date().toISOString(), complete: false, games: [], errors: [] }
-  const active = inputs.filter(input => nbaPregameOpen(input.game))
+  if (inputs.some(input => input.capture && (typeof input.capture.first !== 'boolean'
+    || new Set(input.capture.regularMarkets).size !== input.capture.regularMarkets.length
+    || input.capture.regularMarkets.some(market => !Object.values(MGM_MILESTONE_PANELS).includes(market))
+    || book === 'draftkings' && input.capture.regularMarkets.length > 0))) throw new Error('Invalid NBA capture families')
+  const wantsRegular = (input: NbaFirstBookInput) => book === 'betmgm' && (input.capture?.regularMarkets.length ?? 1) > 0
+  const unresolved = (input: NbaFirstBookInput) => nbaUnresolvedBookCoverage(input.game.id).filter(scope => !input.capture || input.capture.regularMarkets.includes(scope.market))
+  const active = inputs.filter(input => nbaPregameOpen(input.game) && (!input.capture || input.capture.first || wantsRegular(input)))
   result.games = inputs.filter(input => !nbaPregameOpen(input.game)).map(input => nbaFirstBookMissing(input.game.id, 'closed'))
   if (!active.length) return result
   let session: Awaited<ReturnType<typeof openSession>> | undefined
@@ -271,7 +283,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
         let worker = initialWorker
         while (next < tasks.length && !challenged) {
           const { input, url } = tasks[next++]
-          if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id)); continue }
+          if (Date.now() >= deadline) { result.games.push(nbaFirstBookMissing(input.game.id, 'deadline')); result.regularCoverage!.push(...unresolved(input)); continue }
           try {
             if (retainEvents && currentUrls.has(worker)) {
               if (allocatedPages < tasks.length && deadline - Date.now() > 20_000) {
@@ -287,14 +299,15 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
             // the browser kept a partially rendered previous event visible.
             currentUrls.delete(worker)
             for (const [gameId, retained] of retainedPages) if (retained === worker) retainedPages.delete(gameId)
-            const board = await mgmBoard(worker, url, deadline, input)
+            // A due regular family does not reopen or reread First Basket.
+            const board = input.capture?.first === false ? (await mgmEvent(worker, url, deadline), null) : await mgmBoard(worker, url, deadline, input)
             currentUrls.set(worker, url)
             if (retainEvents) retainedPages.set(input.game.id, worker)
-            const first = board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')
+            const first = input.capture?.first === false ? nbaFirstBookMissing(input.game.id, 'not-due') : board ? nbaNormalizeFirstBook(book, input, board) : nbaFirstBookMissing(input.game.id, 'unavailable')
             result.games.push(first)
-            await publishFirst(first)
-            if (first.status !== 'closed' && first.status !== 'identity-mismatch') regularTasks.push({ input, url })
-            else if (first.status !== 'closed') result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+            if (input.capture?.first !== false) await publishFirst(first)
+            if (wantsRegular(input) && first.status !== 'closed' && first.status !== 'identity-mismatch') regularTasks.push({ input, url })
+            else if (first.status !== 'closed') result.regularCoverage!.push(...unresolved(input))
           } catch (error) {
             const code = safeFailure(error)
             result.errors.push(captureFailure(error, input.game.id)); result.games.push(nbaFirstBookMissing(input.game.id, code === 'deadline' ? 'deadline' : 'error'))
@@ -304,7 +317,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
             // regular markets. Do not retry First, reuse its page binding or
             // replay a persistence attempt. Fresh regular navigation and its
             // existing exact identity/phase checks remain mandatory.
-            if (error instanceof CaptureFailure && error.stage === 'first-expand' && code === 'navigation-failed'
+            if (wantsRegular(input) && error instanceof CaptureFailure && error.stage === 'first-expand' && code === 'navigation-failed'
               && ['timeout', 'network'].includes(error.reason) && !challenged
               && nbaPregameOpen(input.game) && deadline - Date.now() > 20_000) {
               const challenge = await recoveryBlocked(worker, deadline)
@@ -317,7 +330,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
                 regularTasks.push({ input, url, recoveredFirst: true }); continueRegular = true
               }
             }
-            if (!continueRegular) result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+            if (!continueRegular) result.regularCoverage!.push(...unresolved(input))
           }
         }
       }))
@@ -340,7 +353,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           const loaded = retainEvents ? -1 : regularQueue.findIndex(task => task.url === currentUrls.get(worker))
           const { input, url, recoveredFirst } = regularQueue.splice(loaded >= 0 ? loaded : 0, 1)[0]
           if (recoveredFirst && !nbaPregameOpen(input.game)) {
-            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id)); continue
+            result.regularCoverage!.push(...unresolved(input)); continue
           }
           const eventPage = retainedPages.get(input.game.id) ?? worker
           inspectingGames++
@@ -366,14 +379,20 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
           } catch (error) {
             finishInspection()
             result.errors.push(captureFailure(error, input.game.id))
-            result.regularCoverage!.push(...nbaUnresolvedBookCoverage(input.game.id))
+            result.regularCoverage!.push(...unresolved(input))
             if (safeFailure(error) === 'challenge') challenged = true
           }
         }
       }))
-      for (const { input } of regularQueue) result.regularCoverage.push(...nbaUnresolvedBookCoverage(input.game.id))
+      for (const { input } of regularQueue) result.regularCoverage.push(...unresolved(input))
     }
-  } catch (error) { result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' }) }
+  } catch (error) {
+    const denied = !session ? budgetDenial(error) : null
+    if (denied) {
+      result.errors.push({ code: 'budget-deferred', budgetReason: denied })
+      result.games.push(...active.map(input => nbaFirstBookMissing(input.game.id, 'budget-deferred')))
+    } else result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' })
+  }
   finally {
     try { await session?.close() }
     catch {
@@ -384,7 +403,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
   }
   const completed = new Set(result.games.map(game => game.gameId))
   for (const input of active) if (!completed.has(input.game.id)) result.games.push(nbaFirstBookMissing(input.game.id, 'error'))
-  result.complete = result.errors.length === 0 && result.games.length > 0 && result.games.every(game => game.complete)
+  result.complete = result.errors.length === 0 && result.games.length > 0 && result.games.every(game => game.complete || game.status === 'not-due')
   result.observedAt = new Date().toISOString()
   return result
 }

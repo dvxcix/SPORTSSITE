@@ -4,9 +4,13 @@ import {withPipelineHealth} from '@/lib/pipelineHealth'
 import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
+import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaNextPublicControl,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
 import {openPikkitSession} from '@/lib/browserbase'
+import {NbaBrowserBudgetError} from '@/lib/nbaBrowserBudget'
 import {findAndClickPikkitGame} from '@/lib/scrapers/gameMatch'
 import {observePikkitLeagueDates} from '@/lib/scrapers/pikkitLeagueDate'
 import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
@@ -52,29 +56,53 @@ async function run(request:Request){
   const schedule={games:await Promise.all([...new Map(schedules.flatMap(slate=>slate.games).map(game=>[game.id,game])).values()].map(game=>getNbaOddsGame(game)))}
   const requested=new URL(request.url).searchParams.get('game')
   if(requested&&!/^\d{1,10}$/.test(requested))return NextResponse.json({error:'Invalid game'},{status:400})
-  // Daily coverage starts within 48h of tip. Prioritize missing/old captures;
-  // a busy shared browser defers this job without disrupting NFL or MLB.
-  const upcoming=schedule.games.filter(g=>['scheduled','unknown',undefined].includes(g.status_state)&&Date.parse(g.datetime??g.status)>Date.now()&&Date.parse(g.datetime??g.status)-Date.now()<48*3600000&&(!requested||String(g.id)===requested))
-  if(!upcoming.length)return NextResponse.json({games:0,skipped:'No upcoming NBA games inside the capture window'})
+  // Public counts use sparse pregame checkpoints, not continuous price polling.
+  const upcoming=schedule.games.filter(g=>['scheduled','unknown',undefined].includes(g.status_state)&&nbaPregameOpen(g,Date.now())&&nbaGameStart(g)!-Date.now()<=24*3600000&&(!requested||String(g.id)===requested))
+  if(!upcoming.length)return NextResponse.json({games:0,browserSessions:0,skipped:'No upcoming NBA games inside the capture window'})
   const admin=createAdminClient()
   const successKey=(id:number)=>`public-success:${NBA_PUBLIC_VERSION}:${id}`
   const attemptKey=(id:number)=>`public-attempt:${NBA_PUBLIC_VERSION}:${id}`
+  const contextKey=nbaPublicContextControlKey(context),gameKey=(game:typeof upcoming[number])=>nbaPublicGameControlKey(game,NBA_PUBLIC_VERSION)
+  const keys=[contextKey,...upcoming.map(gameKey)]
   const {data:checks,error:checkError}=await admin.from('nba_source_cache').select('key,fetched_at').in('key',upcoming.flatMap(g=>[successKey(g.id),attemptKey(g.id)])).limit(200)
   if(checkError)return NextResponse.json({error:'Public capture preflight failed'},{status:503})
-  // An unchanged successful read still counts toward the refresh cadence; the
-  // append-only public history preserves its actual observation time and counts.
-  // A reviewed parser version change deliberately refreshes affected games once;
-  // old source captures remain append-only and never masquerade as new facts.
-  const last=(id:number)=>checks?.find(p=>p.key===successKey(id))?.fetched_at
+  // Legacy successful observations bootstrap the new policy. A parser change
+  // cannot relabel old captures as new facts, and partial reads are never success.
+  const last=(id:number)=>checks?.find(p=>p.key===successKey(id))?.fetched_at??null
   const attempted=(id:number)=>checks?.find(p=>p.key===attemptKey(id))?.fetched_at??'1970-01-01'
-  const due=upcoming.filter(g=>!last(g.id)||Date.now()-Date.parse(last(g.id)!)>30*60000).sort((a,b)=>Date.parse(attempted(a.id))-Date.parse(attempted(b.id))||Date.parse(last(a.id)??'1970-01-01')-Date.parse(last(b.id)??'1970-01-01'))
-  if(!due.length)return NextResponse.json({games:upcoming.length,skipped:'Captures are current'})
+  let controls:Awaited<ReturnType<typeof readNbaPublicControls>>
+  try{controls=await readNbaPublicControls(keys)}catch{return NextResponse.json({error:'Public capture controls unavailable'},{status:503})}
+  const contextCooldown=()=>{const control=controls.get(contextKey);return control&&Date.parse(control.nextAttemptAt)>Date.now()?control:null}
+  const cooldownResponse=()=>{const control=contextCooldown();return NextResponse.json({stage:'deferred',reason:control?.outcome==='auth'?'NBA public authentication cooldown':'NBA public browser cooldown',retryAt:control?.nextAttemptAt,browserSessions:0,results:[]},{status:425})}
+  if(contextCooldown())return cooldownResponse()
+  const eligible=()=>upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due)
+    .sort((a,b)=>Date.parse(controls.get(gameKey(a))?.attemptedAt??attempted(a.id))-Date.parse(controls.get(gameKey(b))?.attemptedAt??attempted(b.id))||nbaGameStart(a)!-nbaGameStart(b)!)
+  let due=eligible()
+  if(!due.length)return NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current',decisions:upcoming.map(game=>({gameId:game.id,...nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now())}))})
   const lease=await acquirePikkitBrowserLease()
-  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length},{status:425})
+  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length,browserSessions:0},{status:425})
+  // A different instance may have finished between preflight and lease claim.
+  // Re-read under the existing shared-context lease before any paid launch.
+  try{
+    controls=await readNbaPublicControls(keys)
+    due=eligible()
+    if(contextCooldown()||!due.length){
+      const released=await lease.release()
+      if(released===false)return NextResponse.json({error:'Shared browser lease release could not be confirmed'},{status:503})
+      return contextCooldown()?cooldownResponse():NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current'})
+    }
+  }catch{
+    await lease.release().catch(()=>false)
+    return NextResponse.json({error:'Public capture controls unavailable'},{status:503})
+  }
+  const contextPrior=controls.get(contextKey)
   const results:{game:number;ok:boolean;reason?:string;markets?:number;rows?:number;saved?:boolean;coverage?:Record<string,number>;diagnostic?:unknown;emptyShellReloaded?:boolean}[]=[]
-  let timedOut=false,browserOpened=false,browserReleased=false,runError:string|null=null
+  let timedOut=false,browserOpened=false,browserReleased=false,authenticationRequired=false,progressFailed=false,runError:string|null=null
+  let budgetDenied:NbaBrowserBudgetError|null=null
   const cleanupIssues:string[]=[],remaining=()=>250000-(Date.now()-started)
   try{
+    // Persist even a terminated startup, so the next instance cannot hot-loop.
+    await saveNbaPublicControl(contextKey,nbaNextPublicControl(contextPrior,'running',Date.now()))
     const opening=openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length},{requestTimeoutMs:15000})
     void opening.then(browser=>{if(timedOut)void bounded(browser.close(),15000,'Late browser release deadline').catch(()=>undefined)}).catch(()=>undefined)
     const browser=await bounded(opening,Math.min(75000,remaining()),'Pikkit browser startup deadline')
@@ -82,7 +110,11 @@ async function run(request:Request){
     browser.page.setDefaultTimeout(12000);browser.page.setDefaultNavigationTimeout(20000)
     try{
       for(const game of due){
-        if(remaining()<35000)break
+        if(remaining()<35000||progressFailed)break
+        if(!nbaPregameOpen(game,Date.now()))continue
+        const controlKey=gameKey(game),prior=controls.get(controlKey)
+        let outcome:NbaPublicOutcome='failed',successAt:string|undefined
+        await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,'running',Date.now(),nbaGameStart(game)!))
         const awaySourceName=nbaPublicTeamLabel(game.visitor_team),homeSourceName=nbaPublicTeamLabel(game.home_team)
         let captureExpired=false,emptyShellReloaded=false
         const gameStarted=Date.now(),gameBudget=Math.min(110000,remaining()-25000)
@@ -198,7 +230,7 @@ async function run(request:Request){
           const payload=await browser.page.evaluate(runNbaPikkitScrape,{maxDurationMs:extractionBudget})
           // A failed category must not discard independently verified siblings.
           // Every category and its observation time is retained by the importer;
-          // incomplete coverage never earns the 30-minute success receipt.
+          // incomplete coverage never satisfies a successful checkpoint.
           if(!payload.marketStates.length)throw new Error('NBA public market controls could not be verified')
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
           const canonicalGame=await getNbaOddsGame(game)
@@ -214,6 +246,8 @@ async function run(request:Request){
           const imported=await importNbaPublic(canonicalGame,payload)
           if(captureExpired)throw new NbaCaptureDeadline('NBA game capture deadline')
           const complete=imported.complete===true&&imported.available===true
+          outcome=complete?'captured':imported.available===false?'unavailable':'partial'
+          successAt=complete?imported.observedAt??payload.capturedAt:undefined
           if(complete)await nbaSharedCache(successKey(game.id),1800,0,async()=>({game:game.id,markets:imported.markets,rows:imported.rows,observedAt:imported.observedAt,coverage:imported.coverage}),25)
           if(!captureExpired)results.push({game:game.id,ok:complete,saved:imported.available,rows:imported.rows,markets:imported.markets,coverage:imported.coverage,...(!complete?{reason:imported.available===false?'NBA public markets are not available yet':'NBA public market observations are unresolved'}:{}),...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
           })(),gameBudget,'NBA game capture deadline')
@@ -224,21 +258,29 @@ async function run(request:Request){
           const base={path,...(path&&/^\/(?:login|signin|sign-in|join|auth|verify)$/.test(path)?{authenticationRequired:true}:{})}
           const diagnostic=error instanceof NbaCaptureDeadline?{...base,deadline:true}:error instanceof NbaPikkitAuthenticationRequired?{...base,authenticationRequired:true}:await bounded(browser.page.evaluate((away)=>{const text=document.body?.innerText??'';return {bodyLength:text.length,signIn:/sign in|log in|verify your/i.test(text),awayTeamMentioned:text.toLowerCase().includes(away.toLowerCase()),selectCount:document.querySelectorAll('select').length,eventCount:document.querySelectorAll('a[href*="/event/"]').length}},awaySourceName),4000,'NBA capture diagnostic deadline').then(counts=>({...base,...counts})).catch(probeError=>({...base,diagnosticError:diagnosticError(probeError)}))
           results.push({game:game.id,ok:false,reason:error instanceof Error?error.message:'NBA capture failed',diagnostic,...(emptyShellReloaded?{emptyShellReloaded:true}:{})})
-          if(error instanceof NbaPikkitAuthenticationRequired){runError=error.message;break}
+          if(error instanceof NbaPikkitAuthenticationRequired||base.authenticationRequired){authenticationRequired=true;outcome='auth';runError='Pikkit authentication is unavailable on the current page';break}
+          if(error instanceof Error&&error.message==='NBA event is not listed')outcome='unavailable'
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
           observing=false;calendar.dispose();browser.page.off('request',observeRequest);browser.page.off('response',observe)
-          await bounded(nbaSharedCache(attemptKey(game.id),30,0,async()=>({game:game.id,ok:results.some(result=>result.game===game.id&&result.ok)}),10),5000,'NBA attempt receipt deadline').catch(()=>cleanupIssues.push('NBA public attempt progress could not save'))
+          await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,outcome,Date.now(),nbaGameStart(game)!,successAt)).catch(()=>{progressFailed=true;cleanupIssues.push('NBA public attempt progress could not save')})
         }
       }
     }finally{await bounded(browser.close(),15000,'NBA browser close deadline').then(()=>{browserReleased=true}).catch(()=>cleanupIssues.push('Browser release could not be confirmed; automatic 300-second browser expiry remains enabled'))}
-  }catch(error){timedOut=true;runError=error instanceof NbaCaptureDeadline?error.message:'Pikkit browser could not open'}finally{
-    if(!browserOpened||!browserReleased)cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
+  }catch(error){
+    // This typed admission error is thrown before session creation. Only that
+    // verified no-browser path may release the lease without remote teardown.
+    if(!browserOpened&&error instanceof NbaBrowserBudgetError)budgetDenied=error
+    else{timedOut=true;runError=error instanceof NbaCaptureDeadline?error.message:'Pikkit browser could not open'}
+  }finally{
+    await saveNbaPublicControl(contextKey,nbaNextPublicControl(contextPrior,authenticationRequired?'auth':runError||cleanupIssues.length||timedOut?'failed':'ready',Date.now())).catch(()=>cleanupIssues.push('NBA public browser cooldown could not save'))
+    if(!budgetDenied&&(!browserOpened||!browserReleased))cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
     else await bounded(lease.release(),10000,'NBA browser lease release deadline').then(released=>{if(released===false)cleanupIssues.push('Shared browser lease release could not be confirmed; automatic lease expiry remains enabled')}).catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
   }
+  if(budgetDenied&&!cleanupIssues.length)return NextResponse.json({stage:'deferred',reason:budgetDenied.message,budgetCode:budgetDenied.code,games:upcoming.length,due:due.length,browserSessions:0,attempted:0,failed:0,deferred:due.length,results:[]},{status:425})
   const unavailableReasons=new Set(['NBA event is not listed','NBA public markets are not available yet'])
   const unavailable=results.filter(result=>!result.ok&&unavailableReasons.has(result.reason??'')).length
   const failed=results.filter(result=>!result.ok&&!unavailableReasons.has(result.reason??'')).length,deferred=due.length-results.length+unavailable
-  return NextResponse.json({games:upcoming.length,due:due.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
+  return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:browserOpened?1:0,attempted:results.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
 }
 export const GET=withPipelineHealth('poll-pikkit-nba-picks',run,{allowSecondarySecret:true})

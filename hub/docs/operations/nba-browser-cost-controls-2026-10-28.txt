@@ -1,0 +1,90 @@
+NBA Browserbase containment and approved additional budget — October 28, 2026
+
+Owner approved pausing both NBA browser jobs, stopping MLB offseason polling,
+publishing tested controls, and additional NBA usage up to $3/day and $50 per
+billing period. The existing incurred bill is not a new allowance or a refund.
+
+Pause was released in main 51f3a37f4cd40d8dd9b6a02b7e52c710e7d2dc90.
+Git production dpl_GemXwodPKftqD2QZXpv5fS6vES1T was READY October 27 at
+22:38:50.299 UTC /23:38:50.299 CET, with both public aliases. Its Vercel Cron
+Jobs page showed 28 remaining schedules. Prior in-flight work completed within
+its bounds; NBA API/NFL work continued. No collector was forced or run locally.
+
+This release restores only NBA public checks at 15,45 and direct-book checks at
+17,47 each hour. These are admission checks, not promises of a browser launch.
+The 32 removed MLB collection/refresh/precompute/digest schedules remain off.
+NFL, grading, historical archive/model work and NBA API jobs remain unchanged.
+
+Public checks use durable exact-game/parser/tip checkpoints at T-24h,-10h,-4h,
+and -1h, skipping missed old checkpoints. Missing markets and failures back off;
+an auth redirect pauses the shared context for two hours. Controls are reread
+under the existing lease; failed reads/writes deny startup. Admin game selection
+cannot bypass them. An actual typed budget denial returns 425 with no browser;
+unknown startup outcomes retain the existing safety lease/cooldown.
+
+Direct checks persist per-book/game/tip/market-family due times and attempts.
+Tomorrow is three-hourly; same-day more than six hours out four-hourly; 90min to
+six hours two-hourly; final 90min half-hourly. Failures back off 30min to six
+hours. Challenges trip book-wide cooldowns. Only due games/families open. First
+and regular-family work remain independent under the existing exact identity,
+phase, completeness, timeout and release guards. No CAPTCHA solving is enabled.
+
+Every NBA browser create must first acquire a durable database reservation.
+Production config: 300 cents/day, 5000 cents/period; five sessions/25 minutes
+per UTC day and 98 sessions/490 minutes per period, anchored on day18 UTC.
+Each attempted create reserves 50MB plus its full rounded runtime (51 cents for
+the current sessions). No refund/replay exists for uncertain creation. Direct
+admission preserves one 51-cent/five-minute public attempt in both windows until
+that day's first public reservation. It guarantees room for an attempt, not a
+successful slate. The daily maximum cannot be consumed every day for a month.
+
+First admission records actual project usage as the additional-spend baseline.
+Later admissions take the larger of real usage cost and the permanent reserved
+floor, then debit the next reservation atomically under a project row lock.
+Rates are $10/decimal GB proxy and $0.10/browser hour, rounded upward. Usage is
+project-wide, so NFL can conservatively stop NBA earlier. A fresh five-second
+active check releases NBA sessions if usage reaches the approved amount or
+cannot be verified. Missing/invalid config, stale/future/reordered/decreasing
+usage, RPC errors and partial confirmations all fail closed. A provider counter
+reset requires review rather than silently granting fresh room. NBA create
+requests never automatically retry; normal/startup/usage-stop paths verify
+remote release. Existing NFL 450-second browser behavior remains unchanged.
+
+These are enforced application launch/runtime/spend controls, NOT a provider
+hard invoice cap. Browserbase allows overages and telemetry can lag; already
+transferred bytes cannot be undone. The conservative quotas bound repeated
+exposure but cannot promise an exact billed-dollar ceiling.
+
+Applied only these new migrations; do not replay either or the history tree:
+  live20261027224439_nba_browser_budget_ledger
+    CLI20261027224022_nba_browser_budget_ledger.sql
+  live20261027235314_nba_browser_additional_spend_budget
+    CLI20261027230956_nba_browser_additional_spend_budget.sql
+Ledger tables use RLS and service-only grants. The old admission RPC has no
+service execute grant after migration2, preventing a monetary bypass.
+
+Verification: 180 capture-control tests; final workflow wrapper/budget45/45;
+full NBA564/564 and freeze75/75; production134/134; TypeScript and scoped lint.
+Independent reviews cover public/direct cadence, budget deferrals, workflow
+fairness, wrapper lifecycle and monetary SQL. Real rollback SQL fixtures pass
+before and after migration2, including permissions, historical-bill baseline,
+money limits, duplicates, malformed/old/reset usage, UTC rollover and protected
+public admission. Earlier two-connection SQL quota test allowed exactly one
+debit at quota one. Live production reservations remained zero before rollout.
+No paid browser was opened for testing and no history or opening was fabricated.
+
+Existing five-minute direct-price freshness rules remain intact. Sparse scans
+and budget exhaustion mean direct-only prices may be unavailable between scans;
+expired missing scopes can hold an aggregate capture. Complete direct snapshots
+and their original openings/movements still persist immediately. Do not call
+this continuously fresh or guaranteed full-slate coverage. Never restamp old
+prices or weaken pregame/live separation to fill these gaps.
+
+Private detailed evidence: work/browser-cost-final-paint-2026-10-28.txt,
+browser-cost-final-production-2026-10-28.txt, nba-capture-activation-review-
+2026-10-28.txt, nba-browser-spend-verification.sql and cost audit/pause reports.
+Cleanup of isolated service-only SQL test schema nba_budget_verify_20261027
+returned connector Invalid or expired requestState repeatedly. Its three test
+tables contain only synthetic fixture data; no production capture data. Do not
+claim it removed without checking. No further persistent fixture was created.
+Production source/readiness/natural outcomes are recorded in the release report.

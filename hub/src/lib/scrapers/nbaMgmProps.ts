@@ -9,8 +9,12 @@ const cutoff = (deadline: CaptureDeadline) => typeof deadline === 'function' ? d
 const remaining = (deadline: CaptureDeadline, cap = 3000) => Math.max(1, Math.min(cap, cutoff(deadline) - Date.now()))
 export async function collectMgmProps(page: Page, input: NbaFirstBookInput, deadline: CaptureDeadline) {
   const frames: NbaBookPropCapture[] = [], coverage: NbaBookPropCoverage[] = []
+  const markets = input.capture?.regularMarkets ?? Object.values(MGM_MILESTONE_PANELS)
+  if (new Set(markets).size !== markets.length || markets.some(market => !Object.values(MGM_MILESTONE_PANELS).includes(market))) throw new Error('Invalid NBA capture families')
+  if (!markets.length) return { frames, coverage }
+  const unresolved = (observedAt: string) => nbaUnresolvedBookCoverage(input.game.id, observedAt).filter(scope => markets.includes(scope.market))
   const identity = await page.evaluate(readMgmFirstIdentity), observedAt = new Date().toISOString()
-  if (!identity || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt }).status)) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt) }
+  if (!identity || ['closed', 'identity-mismatch'].includes(nbaBookObservation(input, { ...identity, observedAt }).status)) return { frames, coverage: unresolved(observedAt) }
   let menu = await page.evaluate(readMgmPropMenu), stable = false, menuStableAt = Date.now()
   for (let poll = 0; poll < 16 && Date.now() < cutoff(deadline); poll++) {
     await page.waitForTimeout(250)
@@ -19,10 +23,11 @@ export async function collectMgmProps(page: Page, input: NbaFirstBookInput, dead
     if (next.headers.length && next.allSelected && !next.loading && JSON.stringify(next) === JSON.stringify(menu) && Date.now() - menuStableAt >= 1000) { menu = next; stable = true; break }
     menu = next
   }
-  if (!stable) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt) }
-  if (!menu.headers.some(item => item.title.startsWith('Player '))) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt).map(scope => ({ ...scope, status: 'unavailable' as const })) }
-  if (!menu.headers.some(item => MGM_MILESTONE_PANELS[item.title])) return { frames, coverage: nbaUnresolvedBookCoverage(input.game.id, observedAt) }
+  if (!stable) return { frames, coverage: unresolved(observedAt) }
+  if (!menu.headers.some(item => item.title.startsWith('Player '))) return { frames, coverage: unresolved(observedAt).map(scope => ({ ...scope, status: 'unavailable' as const })) }
+  if (!menu.headers.some(item => MGM_MILESTONE_PANELS[item.title])) return { frames, coverage: unresolved(observedAt) }
   for (const [title, market] of Object.entries(MGM_MILESTONE_PANELS)) {
+    if (!markets.includes(market)) continue
     const initiallyPresent = menu.headers.some(item => item.title === title)
     const scope: NbaBookPropCoverage = { gameId: input.game.id, market, complete: false, observedAt: new Date().toISOString(), contracts: [] }
     coverage.push(scope)

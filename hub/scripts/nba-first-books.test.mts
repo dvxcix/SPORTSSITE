@@ -12,6 +12,8 @@ import * as propQuotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
 
 const { JSDOM } = createRequire(import.meta.url)('jsdom')
 
+class BudgetError extends Error { constructor(readonly code:string) { super('Private budget fixture'); this.name='NbaBrowserBudgetError' } }
+
 const now = Date.parse('2026-10-24T11:00:00Z')
 const game: PaintGame = { id: 21717953, date: '2026-10-24', season: 2026, status: 'Scheduled', status_state: 'scheduled', period: 0, datetime: '2026-10-25T01:00:00Z', home_team_score: 0, visitor_team_score: 0,
   visitor_team: { id: 19, name: 'Pelicans', full_name: 'New Orleans Pelicans', abbreviation: 'NOP' }, home_team: { id: 8, name: 'Nuggets', full_name: 'Denver Nuggets', abbreviation: 'DEN' } }
@@ -111,7 +113,7 @@ test('collector reports league ambiguity separately from a single rejected visib
     let closed = 0, eventNavigation = 0
     const page = { setDefaultTimeout: () => {}, route: async () => {}, goto: async () => { eventNavigation++ } }
     const imports: Record<string, unknown> = {
-      'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (g: PaintGame) => modes.nbaPregameOpen(g, now) },
+      'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (g: PaintGame) => modes.nbaPregameOpen(g, now) },
       './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) },
       './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
       '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => ({ page, close: async () => { closed++ } }) },
@@ -374,7 +376,7 @@ test('MGM identity is scoped to its NBA scoreboard and visible date, not odds ro
 test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds and released on navigation failure', async () => {
   let opened = 0, closed = 0, releaseFails = false
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
+    'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes,
     '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture-mgm', openSession: async (options: Record<string, unknown>) => {
       opened++; assert.equal(options.timeoutSeconds, 300); assert.equal(options.solveCaptchas, false); assert.equal(options.contextId, undefined)
       assert.equal(options.requestTimeoutMs, 20_000); assert.equal(options.verifyRelease, true)
@@ -402,6 +404,22 @@ test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds an
   assert.equal(opened, 2)
 })
 
+test('typed admission denials defer before navigation without exposing provider text or inventing market absence',async()=>{
+  const code=ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+  for(const reason of ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable','private-unknown','spoofed']){
+    let opens=0,callbacks=0
+    const imports:Record<string,unknown>={'server-only':{},'../nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},'../nbaPaint':paint,'../nbaOddsMode':{...modes,nbaPregameOpen:(g:paint.PaintGame)=>modes.nbaPregameOpen(g,now)},'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes,'../browserbase':{openSession:async()=>{opens++;throw reason==='spoofed'?Object.assign(new Error('https://private/?token=secret'),{name:'NbaBrowserBudgetError',code:'spend-limit'}):new BudgetError(reason)}}}
+    const target={exports:{} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')}
+    class Clock extends Date{constructor(value:string|number=now){super(value)}static now(){return now}}
+    new Function('require','module','exports','Date',code)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock)
+    const result=await target.exports.collectNbaFirstBooks('betmgm',[input],now+240_000,{onFirst:async()=>{callbacks++},onRegular:async()=>{callbacks++}})
+    assert.equal(opens,1);assert.equal(callbacks,0);assert.equal(result.complete,false);assert.equal(JSON.stringify(result).includes('secret'),false)
+    assert.deepEqual(result.games[0].props,[]);assert.equal(result.games[0].observedAt,null)
+    if(reason==='private-unknown'||reason==='spoofed'){assert.deepEqual(result.errors,[{code:'session-unavailable'}]);assert.equal(result.games[0].status,'error')}
+    else{assert.deepEqual(result.errors,[{code:'budget-deferred',budgetReason:reason}]);assert.equal(result.games[0].status,'budget-deferred')}
+  }
+})
+
 test('MGM navigation selects All before locating First FG, expands its scoped Show More and fails on absent market layout', async () => {
   const source = readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -410,7 +428,7 @@ test('MGM navigation selects All before locating First FG, expands its scoped Sh
     let all = false, expanded = false, more = false
     const metadata = { away: 'Pelicans', home: 'Nuggets', dateLabel: 'Today', timeLabel: '4:59 PM', timeZone: 'America/Los_Angeles' }
     const readers = { readMgmFirstIdentity: function identity() {}, readMgmFirstRows: function rows() {} }
-    const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaBookIdentityRevalidation: (game: typeof input, prior: quotes.NbaBookIdentity, current: quotes.NbaBookIdentity) => quotes.nbaBookIdentityRevalidation(game, prior, current, now) }, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+    const imports: Record<string, unknown> = { 'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaBookIdentityRevalidation: (game: typeof input, prior: quotes.NbaBookIdentity, current: quotes.NbaBookIdentity) => quotes.nbaBookIdentityRevalidation(game, prior, current, now) }, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
     const target = { exports: {} }
     const run = new Function('require', 'module', 'exports', `${code}\nreturn mgmBoard`)((name: string) => imports[name], target, target.exports) as (page: unknown, url: string, deadline: number, value: typeof input) => Promise<NbaFirstBookBoard>
     const locator = (kind: string) => ({
@@ -450,7 +468,7 @@ test('one MGM session finishes every First Basket board before bounded regular l
     return { setDefaultTimeout: () => {}, route: async () => {}, getByRole: locator, locator, close: async () => {}, context: () => ({ newPage: async () => makePage() }) }
   }
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
+    'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) }, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input, deadline: number | (() => number)) => {
       assert.equal(first.length, slate.length, 'a deep ladder must never run ahead of an unvisited First Basket game')
       assert.equal(savedFirst.length, slate.length, 'verified First observations must reach persistence before deep ladders begin')
@@ -490,8 +508,8 @@ test('one MGM session finishes every First Basket board before bounded regular l
   assert.ok(result.regularCoverage!.every(value => !value.complete))
 })
 
-async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'navigation') {
-  const slate = 'ABCD'.split('').map((letter, index) => ({ game: { ...game, id: 100 + index, home_team: { ...game.home_team, id: 50 + index, name: `Home ${letter}`, full_name: `Denver ${letter}` } }, roster: [player] }))
+async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'navigation', selection?:{first:boolean;regularMarkets:string[]}) {
+  const slate = 'ABCD'.split('').map((letter, index) => ({ game: { ...game, id: 100 + index, home_team: { ...game.home_team, id: 50 + index, name: `Home ${letter}`, full_name: `Denver ${letter}` } }, roster: [player], ...(selection?{capture:selection}:{}) }))
   const links = slate.map(value => `https://www.nc.betmgm.com/en/sports/events/new-orleans-pelicans-denver-${value.game.home_team.full_name.at(-1)!.toLowerCase()}-${value.game.id}`)
   const first: number[] = [], regular: number[] = [], saved: number[] = [], revisited: number[] = []
   const regularPages = new Map<number, number>(), firstPages = new Map<number, number>()
@@ -518,11 +536,11 @@ async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'nav
     return value
   }
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) },
+    'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) },
     './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], now) },
     './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (page: FixturePage, value: typeof input) => work(page, () => {
-      assert.equal(first.length, slate.length, 'First Basket retains priority for every listed game')
+      assert.equal(first.length, selection?.first===false?0:slate.length, 'First Basket retains priority only when requested')
       assert.equal(page.current, value.game.id, 'a retained page must still belong to the exact inspected game')
       assert.notEqual(failure === 'navigation' ? 102 : -1, value.game.id, 'failed First navigation cannot establish a reusable binding')
       regular.push(value.game.id); regularPages.set(value.game.id, page.id)
@@ -549,7 +567,7 @@ async function retainedMgmScenario(failure?: 'allocation' | 'preparation' | 'nav
   assert.equal(opened, 1); assert.equal(closed, 1); assert.equal(maxActive, 2); assert.ok(pages <= 4)
   assert.equal(new Set(regular).size, regular.length); assert.deepEqual(saved, regular)
   assert.equal(JSON.stringify(result).includes('private'), false)
-  return { result, pages, firstPages, regularPages, revisited, regular }
+  return { result, pages, firstPages, regularPages, revisited, regular, first }
 }
 
 test('four retained MGM event pages use only two active workers and avoid every second event load', async () => {
@@ -557,6 +575,20 @@ test('four retained MGM event pages use only two active workers and avoid every 
   assert.equal(value.pages, 4); assert.equal(value.result.complete, true)
   assert.equal(value.regular.length, 4); assert.equal(new Set(value.regularPages.values()).size, 4)
   assert.deepEqual(value.regularPages, value.firstPages); assert.deepEqual(value.revisited, [])
+})
+
+test('regular-only due selections keep exact event pages without rereading or emitting First Basket',async()=>{
+  const value=await retainedMgmScenario(undefined,{first:false,regularMarkets:['points']})
+  assert.equal(value.first.length,0);assert.equal(value.regular.length,4)
+  assert.equal(value.revisited.length,4,'only initial event navigation, no second load')
+  assert.ok(value.result.games.every(game=>game.status==='not-due'&&!game.complete&&game.props.length===0))
+  assert.equal(value.result.complete,true)
+})
+
+test('First-only selections never inspect regular families',async()=>{
+  const value=await retainedMgmScenario(undefined,{first:true,regularMarkets:[]})
+  assert.equal(value.first.length,4);assert.equal(value.regular.length,0)
+  assert.deepEqual(value.result.regularCoverage,[])
 })
 
 test('retained-page allocation or setup failure falls back to separate worker pages without concurrent reuse', async () => {
@@ -596,7 +628,7 @@ async function firstExpansionRecovery(scenario: RecoveryScenario) {
   }
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
+    'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
     './nbaFirstBookQuotes': { ...quotes, nbaNormalizeFirstBook: (...args: Parameters<typeof nbaNormalizeFirstBook>) => nbaNormalizeFirstBook(args[0], args[1], args[2], clock) },
     './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (worker: typeof page, value: typeof input, deadline: () => number) => {
@@ -691,7 +723,7 @@ test('a recovered regular task crossing tip while another First game runs never 
     evaluate: async () => { setImmediate(() => { clock = now + 60_001; releaseLater() }); return false },
   })
   const imports: Record<string, unknown> = {
-    'server-only': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
+    'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (value: PaintGame) => modes.nbaPregameOpen(value, clock) },
     './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaBookPropQuotes': propQuotes,
     './nbaMgmProps': { collectMgmProps: async (_page: unknown, value: typeof input) => { inspected.push(value.game.id); return { frames: [], coverage: [] } } },
     '../browserbase': { BETMGM_PROXY_DOMAIN_PATTERN: 'fixture', openSession: async () => ({ page: makePage(), close: async () => { closed++ } }) },
@@ -711,7 +743,7 @@ test('a recovered regular task crossing tip while another First game runs never 
 
 test('observation callbacks cannot extend the collector deadline or expose persistence error details', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const imports: Record<string, unknown> = { 'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': {}, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
   const target = { exports: {} }
   const functions = new Function('require', 'module', 'exports', `${code}\nreturn {deliverObservation, captureFailure}`)((name: string) => imports[name], target, target.exports) as { deliverObservation: (callback: () => Promise<void>, deadline: number) => Promise<void>; captureFailure: (error: unknown, gameId: number) => {code:string;stage?:string;reason?:string} }
   let called = false
@@ -728,7 +760,7 @@ test('observation callbacks cannot extend the collector deadline or expose persi
 test('MGM failures identify the bounded navigation stage without exposing raw errors or URLs', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const identity = { ...board(), market: undefined, rows: undefined }, readers = { readMgmFirstIdentity: function identity() {} }
-  const imports: Record<string, unknown> = { 'server-only': {}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
+  const imports: Record<string, unknown> = { 'server-only': {}, '../nbaBrowserBudget': {NbaBrowserBudgetError:BudgetError}, '../browserbase': {}, '../nbaPaint': paint, '../nbaOddsMode': { ...modes, nbaPregameOpen: (game: paint.PaintGame) => modes.nbaPregameOpen(game, now) }, './nbaFirstBookQuotes': quotes, './nbaFirstBookDom': readers, './nbaMgmProps': {}, './nbaBookPropQuotes': propQuotes }
   const target = { exports: {} }
   const functions = new Function('require', 'module', 'exports', `${code}\nreturn {mgmEvent, captureFailure}`)((name: string) => imports[name], target, target.exports) as { mgmEvent: (page: unknown, url: string, deadline: number) => Promise<unknown>; captureFailure: (error: unknown, gameId: number) => unknown }
   const secret = 'https://private.example/?token=do-not-expose'
@@ -765,7 +797,7 @@ async function leagueScenario(mode: 'late' | 'network' | 'events-network' | 'rep
   let clock=now,attempt=0,linksReads=0,challenge=mode==='challenge'
   const navigations:{url:string;at:number;timeout:number}[]=[]
   class Clock extends Date { constructor(value:string|number=clock){super(value)} static now(){return clock} }
-  const imports:Record<string,unknown>={'server-only':{},'../browserbase':{openSession:()=>{assert.fail('discovery retry must not open another session')}},'../nbaPaint':paint,'../nbaOddsMode':modes,'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes}
+  const imports:Record<string,unknown>={'server-only':{},'../nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},'../browserbase':{openSession:()=>{assert.fail('discovery retry must not open another session')}},'../nbaPaint':paint,'../nbaOddsMode':modes,'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes}
   const target={exports:{}}
   const functions=new Function('require','module','exports','Date',`${code}\nreturn {mgmLeagueLinks,captureFailure}`)((name:string)=>imports[name],target,target.exports,Clock) as {mgmLeagueLinks:(page:unknown,deadline:number)=>Promise<string[]>;captureFailure:(error:unknown)=>{code:string;stage?:string;reason?:string}}
   const timeout=()=>Object.assign(new Error('private timeout URL token=must-not-leak'),{name:'TimeoutError'})

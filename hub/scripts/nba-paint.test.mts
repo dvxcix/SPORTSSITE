@@ -1,3 +1,4 @@
+import * as publicControl from '../src/lib/nbaPublicCaptureControl.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import * as milestoneSignals from '../src/lib/nbaMilestoneSignals.ts'
@@ -380,6 +381,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   imports = { '@/lib/nbaResearchResources': {}, '@/lib/nbaSlateFreezeData': {}, '@/lib/nbaSlateHeat': {}, '@/lib/nbaPregameResearchData': {}, './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -726,7 +728,7 @@ test('NBA public collection bounds startup, game work and cleanup while preservi
 })
 
 
-test('unchanged successful NBA public reads enforce thirty-minute cadence without inventing history captures',async()=>{
+test('unchanged successful NBA public reads satisfy the latest checkpoint without inventing history captures',async()=>{
  let opens=0,claims=0,currentVersion=true
  const game={id:123,datetime:new Date(Date.now()+3600000).toISOString(),status_state:'scheduled'},old=new Date(Date.now()-3600000).toISOString()
  const route=await compiled('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{

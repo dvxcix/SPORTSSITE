@@ -8,6 +8,7 @@ import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
 import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import * as bookPropQuotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
 import * as bookFirstQuotes from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
+import * as policy from '../src/lib/nbaBookCapturePolicy.ts'
 import type {NbaBookPropFrame,NbaBookPropObservation,NbaBookPropCoverage} from '../src/lib/nbaBookPropsData.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaFirstBookCapture } from '../src/lib/scrapers/nbaFirstBooks.ts'
@@ -19,13 +20,14 @@ const team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
 const game:PaintGame={id:123,date:'2026-10-24',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-24T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:9},home_team_score:0,visitor_team_score:0}
 const observation=(book:NbaFirstBook,gameId:number):NbaFirstBookGame=>({gameId,complete:true,observedAt:new Date(now).toISOString(),status:'captured',unmatched:0,clockMismatch:false,props:[{id:-123,game_id:gameId,player_id:434,vendor:book,prop_type:book==='draftkings'?'first_score':'first_field_goal',line_value:'0.5',market:{type:'over_under',over_odds:500},updated_at:new Date(now).toISOString()}]})
 type Callbacks={onFirst:(item:NbaFirstBookGame)=>Promise<void>;onRegular:(gameId:number,frames:NbaBookPropObservation[],coverage:NbaBookPropCoverage[],observedAt:string)=>Promise<void>}
-type Options={count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;firstSave?:(frame:NbaBookFirstFrame,advance:(at:number)=>void)=>Promise<void>;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
+type Options={initialSchedule?:(book:NbaFirstBook,game:PaintGame)=>policy.NbaBookScheduleState|undefined;scheduleReadError?:boolean;scheduleWriteError?:boolean;count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;firstSave?:(frame:NbaBookFirstFrame,advance:(at:number)=>void)=>Promise<void>;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
 async function fixture(options:Options={}){
   let clock=now,scheduleReads=0,gameReads=0,rosterReads=0,collects=0,maxWrites=0
   class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
+  const scheduleState=new Map<string,policy.NbaBookScheduleState>(),circuits=new Map<NbaFirstBook,policy.NbaBookCircuit>(),scheduleWrites:{book:NbaFirstBook;entries:{game:PaintGame;state:policy.NbaBookScheduleState}[]}[]=[]
   const regularSaves:NbaBookPropFrame[]=[]
   const writeAttempts:{book:NbaFirstBook;gameId:number;at:number}[]=[]
-  const collectorCalls:{book:NbaFirstBook;gameIds:number[];deadline:number}[]=[]
+  const collectorCalls:{book:NbaFirstBook;gameIds:number[];deadline:number;selection:unknown[]}[]=[]
   const saves:NbaBookFirstFrame[]=[],leaseCalls:{key:string;ttl:number;stale:number;seconds:number}[]=[],deadlines:number[]=[],active=new Map<string,number>(),cache=new Map<string,Promise<unknown>>()
   const games=options.games??Array.from({length:options.count??2},(_,i)=>({...game,id:game.id+i}))
   const source=await readFile(new URL('../src/app/api/cron/nba-book-first-capture/route.ts',import.meta.url),'utf8')
@@ -43,6 +45,11 @@ async function fixture(options:Options={}){
       getPaintGame:async(id:number)=>{gameReads++;if(options.advancePreparation)clock+=options.advancePreparation;if(id===options.gameError)throw new Error('secret');return games.find(g=>g.id===id)!},
       getPaintRoster:async(g:PaintGame)=>{rosterReads++;if(g.id===options.rosterError)throw new Error('secret');return[]},
     },
+    '@/lib/nbaBookCapturePolicy':policy,
+    '@/lib/nbaBookCaptureSchedule':{
+      readNbaBookCaptureSchedule:async(book:NbaFirstBook,requested:PaintGame[])=>{if(options.scheduleReadError)throw new Error('private schedule read');return{states:new Map(requested.flatMap(g=>{const state=scheduleState.get(`${book}:${g.id}`)??options.initialSchedule?.(book,g);return state?[[g.id,state] as const]:[]})),circuit:circuits.get(book)}},
+      writeNbaBookCaptureSchedule:async(book:NbaFirstBook,entries:{game:PaintGame;state:policy.NbaBookScheduleState}[],circuit?:policy.NbaBookCircuit)=>{if(options.scheduleWriteError)throw new Error('private schedule write');scheduleWrites.push({book,entries:structuredClone(entries)});for(const entry of entries)scheduleState.set(`${book}:${entry.game.id}`,structuredClone(entry.state));if(circuit)circuits.set(book,structuredClone(circuit))},
+    },
     '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,ttl:number,stale:number,load:()=>Promise<unknown>,seconds:number)=>{
       leaseCalls.push({key,ttl,stale,seconds});if(options.leaseError&&key.includes(`:${options.leaseError}:`))throw new Error('lease unavailable')
       if(!cache.has(key))cache.set(key,load());return{value:await cache.get(key)}
@@ -56,21 +63,96 @@ async function fixture(options:Options={}){
     '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
     '@/lib/scrapers/nbaBookPropQuotes':bookPropQuotes,
     '@/lib/scrapers/nbaFirstBookQuotes':bookFirstQuotes,
-    '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame}[],deadline:number,callbacks:Callbacks)=>{
+    '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame;capture:{first:boolean;regularMarkets:string[]}}[],deadline:number,callbacks:Callbacks)=>{
       collects++;deadlines.push(deadline)
-      collectorCalls.push({book,gameIds:inputs.map(input=>input.game.id),deadline})
-      return{book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>observation(book,input.game.id)),regularCoverage:book==='betmgm'?inputs.map(input=>({gameId:input.game.id,market:'points',complete:true,observedAt:new Date(clock).toISOString(),contracts:[]})):[],errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at}),...await options.stream?.(book,inputs.map(i=>i.game),callbacks,at=>{clock=at},()=>({first:saves,regular:regularSaves}))}
+      collectorCalls.push({book,gameIds:inputs.map(input=>input.game.id),deadline,selection:inputs.map(input=>input.capture)})
+      return{book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>input.capture.first?observation(book,input.game.id):{...observation(book,input.game.id),props:[],status:'not-due',complete:false}),regularCoverage:book==='betmgm'?inputs.flatMap(input=>input.capture.regularMarkets.map(market=>({gameId:input.game.id,market,complete:true,observedAt:new Date(clock).toISOString(),contracts:[]}))):[],errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at}),...await options.stream?.(book,inputs.map(i=>i.game),callbacks,at=>{clock=at},()=>({first:saves,regular:regularSaves}))}
     }},
   }
   const compiled={exports:{} as {GET:(request:Request)=>Promise<Response>}}
   new Function('require','module','exports','Date',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},compiled,compiled.exports,Clock)
   const run=async(auth=true)=>{const response=await compiled.exports.GET(new Request('https://www.slipsurge.com/api/cron/nba-book-first-capture',{headers:auth?{authorization:'Bearer fixture'}:{}}));return{response,body:await response.json()}}
-  return{run,saves,regularSaves,writeAttempts,collectorCalls,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites})}
+  return{run,saves,regularSaves,scheduleState,circuits,scheduleWrites,advance:(at:number)=>{clock=at;cache.clear()},writeAttempts,collectorCalls,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites})}
 }
 
 test('cron authentication denies before schedules, leases, browser work or writes',async()=>{
   const h=await fixture(),result=await h.run(false)
   assert.equal(result.response.status,401);assert.deepEqual(h.counts(),{scheduleReads:0,gameReads:0,rosterReads:0,collects:0,maxWrites:0});assert.equal(h.leaseCalls.length,0);assert.equal(h.saves.length,0)
+})
+
+test('durable control read or reservation failure opens no browser and never saves quote rows',async()=>{
+  for(const options of [{scheduleReadError:true},{scheduleWriteError:true}]){
+    const h=await fixture(options),result=await h.run()
+    assert.equal(result.response.status,503);assert.equal(h.counts().collects,0);assert.equal(h.saves.length,0);assert.equal(h.regularSaves.length,0)
+    assert.equal(JSON.stringify(result.body).includes('private'),false)
+  }
+})
+
+const recentSchedule=(book:NbaFirstBook,g:PaintGame)=>{
+  const plan=policy.planNbaBookCapture(g,book,undefined,undefined,now)
+  return policy.finishNbaBookCapture(plan,policy.reserveNbaBookCapture(plan,undefined,now),plan.families.map(family=>({family,status:'captured',observedAt:new Date(now).toISOString()})),now)
+}
+
+test('non-due games produce zero partitions and no quote freshness writes across renewed requests',async()=>{
+  const h=await fixture({count:15,initialSchedule:recentSchedule}),result=await h.run()
+  assert.equal(result.response.status,200);assert.equal(h.counts().collects,0);assert.equal(h.scheduleWrites.length,0)
+  assert.ok(result.body.books.every((book:{partitions:number;dueFamilies:number})=>book.partitions===0&&book.dueFamilies===0))
+  h.advance(now+5*60_000);await h.run();assert.equal(h.counts().collects,0);assert.equal(h.saves.length,0)
+})
+
+test('only due game families enter partitions and skipped prior quote frames are untouched',async()=>{
+  const original={gameId:game.id,book:'betmgm' as const,tipoff:new Date(game.datetime!).toISOString(),contract:{market:'assists',type:'milestone' as const,line:3},observedAt:new Date(now-60_000).toISOString(),props:[],complete:true}
+  const h=await fixture({count:15,initialSchedule:(book,g)=>{const state=recentSchedule(book,g);if(book==='betmgm'&&g.id===game.id)delete state.markets.points;return state},regularPrevious:g=>g.id===game.id?[original]:[]}),result=await h.run()
+  assert.equal(result.response.status,200);assert.equal(h.collectorCalls.length,1)
+  assert.deepEqual(h.collectorCalls[0].gameIds,[game.id]);assert.deepEqual(h.collectorCalls[0].selection,[{first:false,regularMarkets:['points']}])
+  assert.equal(h.saves.length,0);assert.deepEqual(h.regularSaves,[])
+  const state=h.scheduleState.get(`betmgm:${game.id}`)!
+  assert.equal(state.markets.points.status,'captured');assert.deepEqual(state.markets.assists,recentSchedule('betmgm',game).markets.assists)
+  assert.equal(original.observedAt,new Date(now-60_000).toISOString())
+})
+
+test('challenge establishes a durable book circuit and later requests do not launch other due games',async()=>{
+  const h=await fixture({capture:(book)=>book==='betmgm'?{errors:[{code:'challenge'}]}:{}}),first=await h.run()
+  assert.equal(first.response.status,503);assert.ok(h.circuits.get('betmgm')!.retryAt>now)
+  const calls=h.counts().collects;h.advance(now+5*60_000)
+  const next=await h.run();assert.equal(h.counts().collects,calls);assert.equal(next.response.status,200)
+  assert.equal(next.body.books.find((book:{book:string})=>book.book==='betmgm').partitions,0)
+})
+
+test('a saved unavailable outcome delays discovery without claiming a successful price observation',async()=>{
+  const h=await fixture({capture:(_book,inputs)=>({games:inputs.map(g=>({...observation('draftkings',g.id),props:[],complete:false,status:'unlisted'}))})})
+  await h.run();const calls=h.counts().collects
+  for(const state of h.scheduleState.values())assert.ok(Object.values(state.markets).every(row=>row.status==='unavailable'&&row.successAt===null))
+  h.advance(now+5*60_000);await h.run();assert.equal(h.counts().collects,calls);assert.equal(h.saves.length,0)
+})
+
+function deniedCapture(book:NbaFirstBook,inputs:PaintGame[]):Partial<NbaFirstBookCapture>{
+  return{book,complete:false,regular:[],regularCoverage:[],games:inputs.map(g=>({...observation(book,g.id),complete:false,props:[],observedAt:null,status:'budget-deferred'})),errors:[{code:'budget-deferred',budgetReason:'spend-limit'}]}
+}
+
+test('intentional budget denial is deferred425 with no quote write or false source failure/circuit',async()=>{
+  const h=await fixture({capture:deniedCapture}),result=await h.run()
+  assert.equal(result.response.status,425);assert.equal(result.body.failed,0);assert.equal(result.body.saved,0);assert.equal(result.body.deferred,4)
+  assert.equal(result.body.stage,'deferred');assert.equal(h.saves.length,0);assert.equal(h.regularSaves.length,0)
+  for(const state of h.scheduleState.values())assert.ok(Object.values(state.markets).every(row=>row.status==='deferred'&&row.successAt===null&&row.failures===0))
+  assert.ok([...h.circuits.values()].every(row=>row.failures===0&&row.retryAt===0))
+  assert.ok(result.body.books.every((book:{errors:unknown[]})=>JSON.stringify(book.errors)==='[{"code":"budget-deferred","budgetReason":"spend-limit"}]'))
+})
+
+test('one budget-blocked partition preserves healthy captures and their exact original observations',async()=>{
+  const h=await fixture({count:15,capture:(book,inputs)=>book==='betmgm'&&inputs.some(g=>g.id===game.id)?deniedCapture(book,inputs):{}}),result=await h.run()
+  assert.equal(result.response.status,425);assert.equal(result.body.failed,0);assert.equal(result.body.saved,26);assert.equal(result.body.deferred,4)
+  assert.equal(h.saves.length,26);assert.ok(h.saves.every(frame=>frame.observedAt===new Date(now).toISOString()))
+  assert.equal(new Set(h.saves.map(frame=>`${frame.book}:${frame.gameId}`)).size,26)
+  assert.equal(h.scheduleState.get(`betmgm:${game.id}`)!.markets.first.status,'deferred')
+  assert.equal(h.scheduleState.get(`draftkings:${game.id}`)!.markets.first.status,'captured')
+})
+
+test('malformed budget reports and ordinary failures cannot be relabelled intentional deferrals',async()=>{
+  for(const corrupt of [false,true]){
+    const h=await fixture({capture:(book,inputs)=>corrupt?{...deniedCapture(book,inputs),regularCoverage:[{gameId:inputs[0].id,market:'points',complete:true,observedAt:new Date(now).toISOString(),contracts:[]}]}:{...deniedCapture(book,inputs),errors:[{code:'session-unavailable'}]}}),result=await h.run()
+    assert.equal(result.response.status,503);assert.ok(result.body.failed>0);assert.equal(result.body.saved,0)
+  }
 })
 
 test('complete schedule deduplicates today/tomorrow and persists each book/game with bounded parallel writes',async()=>{

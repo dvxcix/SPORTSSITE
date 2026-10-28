@@ -1,3 +1,5 @@
+import * as publicControl from '../src/lib/nbaPublicCaptureControl.ts'
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -51,6 +53,7 @@ async function capture(scenario) {
   const query = { select() { return this }, in() { return this }, order() { return this }, limit: async () => ({ data: [], error: null }) }
   const mocks = {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null }, '@/lib/pipelineHealth': { withPipelineHealth: (_name, run) => run },
+    '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, '@/lib/nbaOddsMode': oddsMode,
     '@/lib/nbaPaintData': { getPaintSchedule: async () => ({ games: [game] }) }, '@/lib/nbaPaint': { nbaToday: () => game.date }, '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) },
     '@/lib/nbaOddsClockData': { getNbaOddsGame: async game => game },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => ({ release: async () => { released++; return true } }) }, '@/lib/browserbase': { openPikkitSession: async () => browser },
@@ -141,7 +144,7 @@ test('navigation timeout retains a sanitized path and error category when the di
 test('timeout diagnostics retain authentication state and redact dynamic event paths without resuming capture', async () => {
   for (const [scenario, diagnostic] of [['navigation-timeout-auth', { path: '/auth', authenticationRequired: true, diagnosticError: 'execution-context' }], ['navigation-timeout-event', { path: '/event/[redacted]', diagnosticError: 'execution-context' }]]) {
     const result = await capture(scenario)
-    assert.equal(result.status, 502)
+    assert.equal(result.status, scenario === 'navigation-timeout-auth' ? 503 : 502)
     assert.deepEqual(result.body.results[0].diagnostic, diagnostic)
     assert.equal(result.finds, 0); assert.equal(result.reloads, 0); assert.equal(result.captures, 0)
     assert.equal(result.closed, 1); assert.equal(result.released, 1)

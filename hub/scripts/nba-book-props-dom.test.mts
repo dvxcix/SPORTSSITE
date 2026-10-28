@@ -175,7 +175,7 @@ test('ordinary O/U accepts an explicitly locked known line, while blank prices o
   } finally { f.dom.window.close() }
 })
 
-async function navigation(options: { countdown?:boolean; countdownOffsetMinutes?:number; stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
+async function navigation(options: { regularMarkets?:string[]; countdown?:boolean; countdownOffsetMinutes?:number; stalled?: boolean; flash?: boolean; failedMenu?: boolean; unposted?: boolean; loading?: boolean; unselected?: boolean; blocks?:boolean; adaptive?:boolean; hardBudget?:number;roundTrip?:number;failedClick?:boolean;liveChange?:boolean;retryFailure?:'once'|'repeat'|'stale-selected'|'global-deadline'|'target-deadline'|'identity';normalizationThrow?:boolean;slowIdentity?:'retry'|'final' } = {}) {
   const prices: Record<string, string> = { '10+': '-2500', '15+': '-550', '20+': '-175', '25+': '+155', '30+': '+400', '35+': '+950', '40+': '+1850' }
   let clock = now, selected = '10+', displayed = '10+', all = false, allRows = false, expanded = false, expandedRows = false, empty = false
   let evaluations=0,remoteWaits=0,uiErrors=0,identityDelayed=false
@@ -222,7 +222,8 @@ async function navigation(options: { countdown?:boolean; countdownOffsetMinutes?
       render()
     },
   })
-  const captureInput = options.countdown ? { ...input, game: { ...game, datetime: new Date(now + 22 * 60_000 + 500).toISOString() } } : input
+  const baseInput={...input,...(options.regularMarkets?{capture:{first:false,regularMarkets:options.regularMarkets}}:{})}
+  const captureInput = options.countdown ? { ...input, game: { ...game, datetime: new Date(now + 22 * 60_000 + 500).toISOString() } } : baseInput
   const identityReader = () => {
     if(!identityDelayed&&(options.slowIdentity==='retry'&&uiErrors>0||options.slowIdentity==='final'&&selected==='15+'&&displayed==='15+')){identityDelayed=true;advance(6501)}
     if(options.retryFailure==='identity'&&uiErrors>0)return{...metadata,away:'Different team'}
@@ -259,6 +260,15 @@ test('all seven posted thresholds wait for delayed actual rows, scoped All and S
   assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:30')!.props.find(prop => prop.player_id === 375)!.market.odds, 400)
   assert.equal(result.frames.find(frame => frame.contractKey === 'points:milestone:25')!.props.find(prop => prop.player_id === 375)!.market.odds, 155)
   assert.deepEqual(result.clicked.slice(0, 2), ['All', 'more']); assert.ok(result.coverage.every(scope => scope.complete))
+})
+
+test('selected due families alone are traversed and reported; skipped markets never become withdrawals',async()=>{
+  const selected=await navigation({regularMarkets:['points']})
+  assert.equal(selected.frames.length,7);assert.ok(selected.frames.every(frame=>frame.complete&&frame.market==='points'))
+  assert.deepEqual(selected.coverage.map(scope=>scope.market),['points'])
+  const skipped=await navigation({regularMarkets:[]})
+  assert.equal(skipped.evaluations,0);assert.deepEqual(skipped.frames,[]);assert.deepEqual(skipped.coverage,[])
+  await assert.rejects(navigation({regularMarkets:['unverified-selector']}),/Invalid NBA capture families/)
 })
 
 test('regular ladders survive a normal countdown minute decrement using each fresh identity read', async () => {

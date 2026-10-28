@@ -111,6 +111,14 @@
     {
       "path": "/api/cron/nba-market-capture",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/poll-pikkit-nba-picks",
+      "schedule": "15,45 * * * *"
+    },
+    {
+      "path": "/api/cron/nba-book-first-capture",
+      "schedule": "17,47 * * * *"
     }
   ]
 }

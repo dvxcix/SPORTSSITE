@@ -1,6 +1,7 @@
 import Browserbase from '@browserbasehq/sdk'
 import { chromium, type Browser, type Page } from 'playwright-core'
 import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
+import { reserveNbaBrowserBudget, checkNbaBrowserBudgetUsage } from '@/lib/nbaBrowserBudget'
 
 // Thin wrapper around the Browserbase SDK + Playwright's CDP connection —
 // every scraper (FanDuel/BetMGM/Pikkit) goes through this so session
@@ -143,15 +144,14 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // on measuring usage.
 export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
+  const nba = opts.metadata?.sport === 'nba'
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
     throw new Error('Automated browser timeout must be between 60 and 450 seconds')
   }
   // A retried session-create POST can leave two writers on one profile when
   // the first response was lost. Persisted launches use one bounded attempt.
-  const bb = client(opts.requestTimeoutMs ?? (opts.contextId ? 10000 : undefined))
+  const bb = client(opts.requestTimeoutMs ?? (opts.contextId || nba ? 10000 : undefined))
   const configuredProjectId = optionalProjectId()
-  // Spend thresholds are admin alerts, never capture gates. Usage lookup also
-  // stays out of this path so a billing API outage cannot stop data ingestion.
   const pid = await resolveProjectId(bb, configuredProjectId)
   if (opts.contextId && (await activeContextSessions(bb, opts.contextId)).length) {
     throw new Error('The persisted browser context is already in use; wait for its active session to finish')
@@ -172,6 +172,15 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     proxyMode,
     region: BROWSERBASE_REGION,
   }).map(([key, value]) => [key, String(value)]))
+  // Each partition reserves its own durable allowance BEFORE a paid create.
+  // Unknown usage or a failed/ambiguous reservation must never allow a launch.
+  const budgetInput = {
+    projectId: pid,
+    workflow: opts.metadata?.book === 'pikkit' ? 'public' as const : 'direct' as const,
+    readUsage: () => bb.projects.usage(pid, { timeout: 5000, maxRetries: 0 }),
+  }
+  const reservation = nba ? await reserveNbaBrowserBudget({ ...budgetInput, timeoutSeconds }) : null
+  if (reservation) userMetadata.budgetReservation = reservation.id
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
@@ -179,7 +188,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     proxies,
     browserSettings: {
       blockAds: true,
-      ...(opts.solveCaptchas == null ? {} : { solveCaptchas: opts.solveCaptchas }),
+      ...(nba ? { solveCaptchas: false } : opts.solveCaptchas == null ? {} : { solveCaptchas: opts.solveCaptchas }),
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
@@ -194,7 +203,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     const context = existingContext ?? await browser.newContext()
     page = context.pages()[0] ?? await context.newPage()
   } catch (failure) {
-    if (opts.contextId || opts.verifyRelease) await releasePersistentSession(bb, session.id, pid, browser, !!opts.contextId)
+    if (opts.contextId || opts.verifyRelease || nba) await releasePersistentSession(bb, session.id, pid, browser, !!opts.contextId)
     else {
       await browser?.close().catch(() => {})
       await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
@@ -203,20 +212,44 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   }
   const connectedBrowser = browser
   let closing: Promise<void> | undefined
+  let monitorStopped = false
+  let monitorTimer: ReturnType<typeof setTimeout> | undefined
+  let budgetStopped = false
+  const close = () => {
+    monitorStopped = true
+    if (monitorTimer) clearTimeout(monitorTimer)
+    return closing ??= (async () => {
+      if (opts.contextId || opts.verifyRelease || nba) {
+        await releasePersistentSession(bb, session.id, pid, connectedBrowser, !!opts.contextId)
+        if (budgetStopped) throw new Error('NBA browser stopped by its usage limit')
+        return
+      }
+      await connectedBrowser.close().catch(() => {})
+      await bb.sessions.update(session.id, {
+        status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}),
+      }).catch(() => {})
+    })()
+  }
+  // This stops further activity on unknown/exceeded provider usage. It is not
+  // an invoice guarantee: already-transferred bytes and provider telemetry lag
+  // cannot be undone. Permanent launch/runtime quotas bound repeated exposure.
+  const monitor = async () => {
+    try {
+      await checkNbaBrowserBudgetUsage(budgetInput)
+    } catch {
+      if (!monitorStopped) {
+        budgetStopped = true
+        await close().catch(() => { console.warn('[browserbase] NBA usage stop requested; reservation retained') })
+      }
+    } finally {
+      if (!monitorStopped) monitorTimer = setTimeout(() => { void monitor() }, 5000)
+    }
+  }
+  if (nba) monitorTimer = setTimeout(() => { void monitor() }, 5000)
   return {
     page,
     sessionId: session.id,
-    close: () => closing ??= (async () => {
-      if (opts.contextId || opts.verifyRelease) return releasePersistentSession(bb, session.id, pid, connectedBrowser, !!opts.contextId)
-      await connectedBrowser.close().catch(() => {})
-      // Browserbase documents REQUEST_RELEASE as the way to stop billing
-      // before timeout. Disconnect normally completes a non-keepAlive session,
-      // but an explicit release protects us when CDP teardown is interrupted.
-      await bb.sessions.update(session.id, {
-        status: 'REQUEST_RELEASE',
-        ...(pid ? { projectId: pid } : {}),
-      }).catch(() => {})
-    })(),
+    close,
   }
 }
 

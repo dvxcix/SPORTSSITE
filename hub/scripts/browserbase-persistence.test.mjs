@@ -13,7 +13,7 @@ async function fixture(options, work) {
   process.env.BROWSERBASE_PROJECT_ID = 'fixture-project'
   if (options.configured !== false) process.env.PIKKIT_CONTEXT_ID = 'production-context'
   else delete process.env.PIKKIT_CONTEXT_ID
-  const calls = { create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [] }
+  const calls = { create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], timers: [], cleared: [] }
   let released = false
   const page = { goto: async (...args) => { calls.navigation.push(args); if (options.gotoFails) throw Error('navigation failed') } }
   const context = { pages: () => options.noPage ? [] : [page], newPage: async () => { if (options.newPageFails) throw Error('page failed'); return page } }
@@ -23,6 +23,7 @@ async function fixture(options, work) {
     close: async () => { calls.disconnect++; if (options.closeFails) throw Error('disconnect failed') },
   }
   const cloud = {
+    projects: { usage: async () => ({ browserMinutes: 12, proxyBytes: 20 }) },
     contexts: {
       retrieve: async id => { calls.contexts.push(['retrieve', id]); if (options.contextMissing) throw Error('context missing'); return { id } },
       create: async () => { calls.contexts.push(['create']); return { id: 'new-context' } },
@@ -43,14 +44,108 @@ async function fixture(options, work) {
     '@browserbasehq/sdk': { default: class { constructor() { return cloud } } },
     'playwright-core': { chromium: { connectOverCDP: async () => { if (options.connectFails) throw Error('CDP failed'); return browser } } },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => { calls.leaseAcquire++; return options.leaseBusy ? null : { release: async () => { calls.leaseRelease++; return true } } } },
+    '@/lib/nbaBrowserBudget': {
+      reserveNbaBrowserBudget: async input => {
+        calls.budget.push(['reserve', input.timeoutSeconds, calls.create.length])
+        calls.workflows.push(['reserve', input.workflow])
+        if (options.budgetReject) throw Error('NBA browser budget unavailable')
+        await input.readUsage()
+        return { id: 'fixture-reservation' }
+      },
+      checkNbaBrowserBudgetUsage: async input => {
+        calls.budget.push(['check'])
+        calls.workflows.push(['check', input.workflow])
+        await input.readUsage()
+        if (options.watchReject) throw Error('NBA browser usage exceeded')
+      },
+    },
   }
   const compiledModule = { exports: {} }
-  new Function('require', 'module', 'exports', 'console', compiled)(id => { if (!(id in mocks)) throw Error('Unexpected import: ' + id); return mocks[id] }, compiledModule, compiledModule.exports, { warn: message => calls.warnings.push(message) })
+  const setTimer = options.fakeTimers ? (fn, ms) => { const timer = { fn, ms }; calls.timers.push(timer); return timer } : setTimeout
+  const clearTimer = options.fakeTimers ? timer => { calls.cleared.push(timer) } : clearTimeout
+  new Function('require', 'module', 'exports', 'console', 'setTimeout', 'clearTimeout', compiled)(id => { if (!(id in mocks)) throw Error('Unexpected import: ' + id); return mocks[id] }, compiledModule, compiledModule.exports, { warn: message => calls.warnings.push(message) }, setTimer, clearTimer)
   try { await work(compiledModule.exports, calls) }
   finally { for (const [key, value] of Object.entries(old)) { if (value === undefined) delete process.env[key]; else process.env[key] = value } }
 }
 
 const session = (overrides = {}) => ({ id: 'older-session', contextId: 'production-context', status: 'RUNNING', updatedAt: '2026-10-01T00:00:00Z', expiresAt: '2026-10-24T04:00:00Z', userMetadata: { book: 'pikkit', mode: 'manual-auth' }, ...overrides })
+
+test('NBA cannot create a paid session before an accepted durable reservation', async () => {
+  await fixture({ budgetReject: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ metadata: { sport: 'nba' } }), /budget unavailable/)
+    assert.equal(calls.create.length, 0)
+    assert.deepEqual(calls.budget, [['reserve', 300, 0]])
+  })
+  await fixture({}, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nba' }, solveCaptchas: true })
+    await bb.close()
+    assert.deepEqual(calls.budget, [['reserve', 300, 0]])
+    assert.equal(calls.create[0].userMetadata.budgetReservation, 'fixture-reservation')
+    assert.equal(calls.create[0].browserSettings.solveCaptchas, false)
+  })
+})
+
+test('NBA uncertain creates consume one reservation and never retry', async () => {
+  await fixture({ createFails: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ metadata: { sport: 'nba' } }), /creation uncertain/)
+    assert.equal(calls.create.length, 1)
+    assert.equal(calls.budget.length, 1)
+    assert.equal(calls.timers.length, 0)
+  })
+})
+
+test('NBA book identity fixes the same public or direct workflow for admission and active checks', async () => {
+  for (const book of ['pikkit', 'draftkings', 'betmgm', undefined]) {
+    await fixture({ fakeTimers: true }, async (api, calls) => {
+      const expected = book === 'pikkit' ? 'public' : 'direct'
+      // An unrelated metadata field cannot override the fixed book mapping.
+      const metadata = { sport: 'nba', workflow: expected === 'public' ? 'direct' : 'public' }
+      const bb = book === 'pikkit'
+        ? await api.openPikkitSession('production-context', metadata)
+        : await api.openSession({ metadata: { ...metadata, ...(book ? { book } : {}) } })
+      assert.deepEqual(calls.workflows, [['reserve', expected]])
+      const watcher = calls.timers.find(timer => timer.ms === 5000)
+      assert.ok(watcher)
+      watcher.fn()
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+      assert.deepEqual(calls.workflows, [['reserve', expected], ['check', expected]])
+      await bb.close()
+      assert.equal(calls.create.length, 1)
+      assert.equal(calls.release.length, 1)
+    })
+  }
+})
+
+test('NBA runtime limit failure ends the remote session once and cancels its watcher', async () => {
+  await fixture({ fakeTimers: true, watchReject: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nba' } })
+    const watcher = calls.timers.find(timer => timer.ms === 5000)
+    assert.ok(watcher)
+    watcher.fn()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    await assert.rejects(bb.close(), /usage limit/)
+    await assert.rejects(bb.close(), /usage limit/)
+    assert.equal(calls.release.length, 1)
+    assert.equal(calls.disconnect, 1)
+    assert.equal(calls.timers.filter(timer => timer.ms === 5000).length, 1)
+    assert.ok(calls.cleared.includes(watcher))
+  })
+})
+
+test('normal NBA closure cancels future checks while NFL keeps its existing timeout', async () => {
+  await fixture({ fakeTimers: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nba' } })
+    await bb.close()
+    assert.ok(calls.cleared.includes(calls.timers.find(timer => timer.ms === 5000)))
+    assert.equal(calls.budget.filter(item => item[0] === 'check').length, 0)
+  })
+  await fixture({ budgetReject: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nfl' }, timeoutSeconds: 450 })
+    await bb.close()
+    assert.equal(calls.budget.length, 0)
+    assert.equal(calls.create[0].timeout, 450)
+  })
+})
 
 test('persisted automatic sessions use the saved default context and coalesce verified teardown', async () => {
   await fixture({}, async (api, calls) => {
