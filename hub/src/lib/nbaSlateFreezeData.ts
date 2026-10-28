@@ -34,10 +34,16 @@ export function encodeNbaSlatePool(pool: NbaSlatePoolV1): NbaSlatePoolV2 {
     if (prior != null) return prior
     const index = table.size; table.set(value, index); return index
   }
-  const players = pool.players.map(player => ({ ...player, props: player.props.map((row): PackedPoolQuote => [
-    intern(vendors, row[0]), intern(markets, row[1]), row[2], row[3] === 'milestone' ? 0 : 1,
-    row[4], row[5], row[6], intern(timestamps, row[7]),
-  ]) }))
+  const players = pool.players.map(player => ({ ...player, props: player.props.map((row): PackedPoolQuote => {
+    // Never silently convert an unexpected provider value into a different
+    // contract or an unreadable archive. An existing observation remains safe.
+    if (!Array.isArray(row) || row.length !== 8 || typeof row[0] !== 'string' || typeof row[1] !== 'string' || typeof row[2] !== 'string'
+      || (row[3] !== 'milestone' && row[3] !== 'over_under')
+      || ![row[4], row[5], row[6]].every(value => value === null || typeof value === 'number' && Number.isFinite(value))
+      || typeof row[7] !== 'string' || !Number.isFinite(Date.parse(row[7]))) throw new Error('Invalid NBA slate quote')
+    return [intern(vendors, row[0]), intern(markets, row[1]), row[2], row[3] === 'milestone' ? 0 : 1,
+      row[4], row[5], row[6], intern(timestamps, row[7])]
+  }) }))
   return { ...pool, version: 2, players, dictionary: { vendors: [...vendors.keys()], markets: [...markets.keys()], timestamps: [...timestamps.keys()] } }
 }
 
@@ -102,9 +108,12 @@ export async function captureNbaSlatePools(games: PaintGame[], boards: PaintBoar
   for (const period of [0, 1] as const) {
     const pool = nbaSlatePool(games, boards, complete, period, observedAt, models)
     if (!pool) continue
-    // Bound payloads before fan-out. The database independently enforces its limit.
+    // Preserve the original bound, and enforce it again on the actual encoded
+    // payload before fan-out. The database independently enforces its limit.
     if (Buffer.byteLength(JSON.stringify(pool)) > 8 * 1024 * 1024) throw new Error('NBA slate comparison snapshot exceeds its size limit')
-    const results = await Promise.all(open.map(game => saveNbaPregameResearch(game, resource(period), { value: pool, observedAt })))
+    const packed = encodeNbaSlatePool(pool)
+    if (Buffer.byteLength(JSON.stringify(packed)) > 8 * 1024 * 1024) throw new Error('NBA slate comparison snapshot exceeds its size limit')
+    const results = await Promise.all(open.map(game => saveNbaPregameResearch(game, resource(period), { value: packed, observedAt })))
     saved[period ? 'quarter' : 'full'] = results.filter(Boolean).length
   }
   return saved

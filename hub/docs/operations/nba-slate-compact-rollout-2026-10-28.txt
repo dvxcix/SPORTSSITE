@@ -1,0 +1,31 @@
+NBA compact slate snapshots — reader-first rollout
+
+The reader release 06a6c1650400bac01c2c3488ed19d311fbb2f493 supports the
+original v1 and compact v2 pool payloads. It leaves the writer on v1. Preserve
+the existing per-game locks, observation times, canonical earliest cutoff,
+phase separation, and both period-specific resource names. This work requires
+no schema migration or historical snapshot rewrite.
+
+Before releasing the v2 writer, verify the reader release is READY on both
+production aliases and all scheduled callers use it. Let every old v1-only
+execution drain, including the research snapshot route's 180-second maximum;
+verify no older running execution or direct old-deployment caller remains.
+Allow additional margin for startup/dispatch. The writer must not be activated
+while any old reader can handle the same production snapshots.
+
+The v2 writer encodes existing v1 pool inputs losslessly and keeps both the
+original size limit and the limit on the actual encoded payload. Real quote
+timestamps, market types, vendor/target/side prices, ordering and observation
+time are unchanged. Encoding adds temporary arrays and dictionaries; it is not
+a hard memory or latency guarantee. A synthetic 12-game sample shrank from
+3,667,049 to 1,587,614 bytes; one previously saved full-pool sample shrank
+from 4,493,835 to 2,445,066 bytes. Actual savings vary by slate.
+
+Once v2 has been written, roll back only to a release that includes the v2
+reader, such as the verified reader release above. A v1-only deployment cannot
+read newer v2 snapshots, and users may see unavailable frozen slate research.
+Do not repair that by filling historical values with current data. During the
+transition retain v1 reader support for previously saved snapshots.
+
+Deployment and live v2 capture verification must be recorded separately; the
+presence of this document or passing local tests does not prove either.

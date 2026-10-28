@@ -186,6 +186,40 @@ test('v2 dictionaries reduce a realistic synthetic quote-heavy slate losslessly'
   console.log(`Synthetic 12-game pool bytes: ${before} -> ${after}`)
 })
 
+test('v2 writer preserves full and quarter observations and the independent game cutoff', async () => {
+  const h=await fixture(), b=boards(), games=b.map(board=>board.game)
+  const observedAt=new Date(tip-30_000).toISOString()
+  const expectedFull=h.api.nbaSlatePool(games,b,true,0,observedAt)!,expectedQuarter=h.api.nbaSlatePool(games,b,true,1,observedAt)!
+  const saved=await h.api.captureNbaSlatePools(games,b,true,observedAt)
+  assert.deepEqual(saved,{full:2,quarter:2})
+  const first=h.archive.get('101:slate-mm-full:v1')!,quarter=h.archive.get('101:slate-mm-q1:v1')!
+  const full=first.value as import('../src/lib/nbaSlateFreezeData.ts').NbaSlatePool
+  const q1=quarter.value as import('../src/lib/nbaSlateFreezeData.ts').NbaSlatePool
+  assert.equal(full.version,2);assert.equal(q1.version,2);assert.equal(first.observedAt,observedAt);assert.equal(quarter.observedAt,observedAt)
+  assert.deepEqual(h.api.nbaSlatePoolPlayers(full),h.api.nbaSlatePoolPlayers(expectedFull))
+  assert.deepEqual(h.api.nbaSlatePoolPlayers(q1),h.api.nbaSlatePoolPlayers(expectedQuarter))
+  h.time(tip+1);b[1].players[0].props[0].line_value='100'
+  await h.api.captureNbaSlatePools(games,b,true,new Date(tip+1).toISOString())
+  assert.deepEqual(h.archive.get('101:slate-mm-full:v1'),first,'a closed anchor retains its original pool and timestamp')
+  const later=h.archive.get('102:slate-mm-full:v1')!
+  assert.equal((later.value as import('../src/lib/nbaSlateFreezeData.ts').NbaSlatePool).version,2)
+  assert.equal(later.observedAt,new Date(tip+1).toISOString())
+})
+
+test('writer rejects oversized original slate before saving any observation',async()=>{
+  const h=await fixture(),b=boards(),games=b.map(board=>board.game)
+  ;(b[0].players[0].average as Record<string,unknown>).oversized='x'.repeat(8*1024*1024)
+  await assert.rejects(h.api.captureNbaSlatePools(games,b,true),/snapshot exceeds its size limit/)
+  assert.equal(h.archive.size,0)
+})
+
+test('writer refuses malformed quote data without changing its contract or saving a pool',async()=>{
+  const h=await fixture(),b=boards(),games=b.map(board=>board.game)
+  b[0].players[0].props[0].market.type='unexpected' as never
+  await assert.rejects(h.api.captureNbaSlatePools(games,b,true),/Invalid NBA slate quote/)
+  assert.equal(h.archive.size,0)
+})
+
 test('legacy recovery is exact-filter only and rejects wrong or post-observation quotes', async () => {
   const h=await fixture(), b=boards(), g=b[0].game, filter={type:'milestone' as const,line:30}
   const key='101:'+h.api.nbaLegacySlateResource(g.date,'points','fanduel','over',filter)
@@ -213,6 +247,7 @@ async function routeFixture() {
   }
   const output=ts.transpileModule(await readFile(new URL('../src/app/the-paint/slate/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const imports:Record<string,unknown>={
+    '@/lib/nbaSlateDiagnostics':await import('../src/lib/nbaSlateDiagnostics.ts'),
     'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},
     '@/lib/paintAccess':{requirePaintAccess:async()=>({})},
     '@/lib/nbaOddsMode':{...mode,nbaPregameOpen:(g:paint.PaintGame)=>mode.nbaPregameOpen(g,now),nbaLiveOpen:(g:paint.PaintGame)=>mode.nbaLiveOpen(g,now)},
