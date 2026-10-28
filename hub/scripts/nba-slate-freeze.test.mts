@@ -165,7 +165,7 @@ async function routeFixture() {
       getPaintBoard:async(g:paint.PaintGame,live:string)=>{if(failFinalBoard&&live!=='live'&&!mode.nbaPregameOpen(g,now))throw new Error('missing final board');return structuredClone((live!=='live'&&!mode.nbaPregameOpen(g,now)?initial:source).find(board=>board.game.id===g.id))},
       refreshPaintBoardPrices:async(b:paint.PaintBoard)=>{priceHook?.();return structuredClone(b)},
     },
-    '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,{value:await load(),fetchedAt:new Date(now).toISOString(),stale:false});return cached.get(key)}},
+    '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,(async()=>({value:await load(),fetchedAt:new Date(now).toISOString(),stale:false}))());return await cached.get(key)}},
     '@/lib/nbaResearchResources':{
       getNbaResearchModels:async(b:paint.PaintBoard,live:string)=>{if(failModels)throw new Error('missing model');return resource(b,'models',live,()=>[])},
       getNbaResearchDefense:async(b:paint.PaintBoard,live:string)=>{if(failDefense)throw new Error('missing defense');return resource(b,'defense',live,()=>({ready:true,profiles:[]}))},
@@ -180,8 +180,56 @@ async function routeFixture() {
   const target={exports:{}}
   new Function('require','module','exports','Date',output)((key:string)=>{assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)
   const api=target.exports as {GET:(request:unknown)=>Promise<{status:number;value:any}>}
-  return {...h,source,finalBoards:initial,time,marker:(n:number)=>{marker=n},finalResource:(gameId:number,key:string,value:unknown)=>observations.set(gameId+':'+key,value),fail:(parts:{context?:boolean;defense?:boolean;models?:boolean;board?:boolean})=>{failContext=!!parts.context;failDefense=!!parts.defense;failModels=!!parts.models;failFinalBoard=!!parts.board},cross:()=>{crossing=true},crossInRanks:()=>{crossDuringRank=true},onPrice:(hook:()=>void)=>{priceHook=hook},captures:()=>captures,get:(params='')=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&market=points&book=fanduel&side=over'+params)})}
+  return {...h,source,finalBoards:initial,time,marker:(n:number)=>{marker=n},finalResource:(gameId:number,key:string,value:unknown)=>observations.set(gameId+':'+key,value),fail:(parts:{context?:boolean;defense?:boolean;models?:boolean;board?:boolean})=>{failContext=!!parts.context;failDefense=!!parts.defense;failModels=!!parts.models;failFinalBoard=!!parts.board},cross:()=>{crossing=true},crossInRanks:()=>{crossDuringRank=true},onPrice:(hook:()=>void)=>{priceHook=hook},captures:()=>captures,get:(params='')=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&market=points&book=fanduel&side=over'+params)}),getQuery:(query:string)=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&'+query)})}
 }
+
+test('mixed book and target requests share one full-slate capture without sharing filtered rows',async()=>{
+  const h=await routeFixture()
+  for(const board of h.source)for(const player of board.players)player.props.push({...structuredClone(player.props[0]),prop_type:'rebounds',line_value:'5'})
+  const [fanduel,draftkings,rebounds]=await Promise.all([
+    h.getQuery('market=points&book=fanduel&side=over&contract=milestone&target=30'),
+    h.getQuery('market=points&book=draftkings&side=over&contract=milestone&target=25'),
+    h.getQuery('market=rebounds&book=fanduel&side=over&contract=milestone&target=5'),
+  ])
+  assert.equal(fanduel.status,200);assert.equal(draftkings.status,200);assert.equal(rebounds.status,200);assert.equal(h.captures(),1)
+  assert.ok(fanduel.value.rows.length);assert.ok(draftkings.value.rows.length);assert.ok(rebounds.value.rows.length)
+  assert.ok(fanduel.value.rows.every((row:any)=>row.offer.vendor==='fanduel'&&Number(row.offer.line_value)===30))
+  assert.ok(draftkings.value.rows.every((row:any)=>row.offer.vendor==='draftkings'&&Number(row.offer.line_value)===25))
+  assert.ok(rebounds.value.rows.every((row:any)=>row.market==='rebounds'&&row.offer.prop_type==='rebounds'))
+  const under=await h.getQuery('market=points&book=draftkings&side=under&contract=milestone&target=25')
+  assert.equal(under.status,200);assert.equal(h.captures(),1)
+})
+
+test('period and live mode retain independent slate caches and captures',async()=>{
+  const h=await routeFixture()
+  assert.equal((await h.get()).status,200);assert.equal(h.captures(),1)
+  assert.equal((await h.getQuery('market=points_1q&book=fanduel&side=over')).status,200);assert.equal(h.captures(),2)
+  assert.equal((await h.get('&mode=live')).status,200);assert.equal(h.captures(),2)
+})
+
+test('shared filter universe still freezes each game before a later filter request',async()=>{
+  const h=await routeFixture()
+  const [first,prior]=await Promise.all([
+    h.getQuery('market=points&book=fanduel&side=over&contract=milestone&target=30'),
+    h.getQuery('market=points&book=draftkings&side=over&contract=milestone&target=25'),
+  ])
+  assert.equal(first.status,200);assert.equal(prior.status,200);assert.equal(h.captures(),1)
+  const original=prior.value.rows.find((row:any)=>row.game.id===101&&row.player.id===1)
+  assert.ok(original)
+  h.time(tip+1);h.source[0].players[0].props[1].market.odds=900
+  const after=await h.getQuery('market=points&book=draftkings&side=over&contract=milestone&target=25')
+  const frozen=after.value.rows.find((row:any)=>row.game.id===101&&row.player.id===1)
+  assert.equal(after.status,200);assert.equal(frozen.offer.market.odds,original.offer.market.odds)
+  assert.equal(frozen.mm,original.mm);assert.ok(frozen.researchObservedAt)
+})
+
+test('shared partial slate is incomplete for each filter and is never captured',async()=>{
+  const h=await routeFixture();h.source[1].statsComplete=false
+  const [first,second]=await Promise.all([h.get(),h.getQuery('market=points&book=draftkings&side=over')])
+  assert.equal(first.status,200);assert.equal(second.status,200)
+  assert.equal(first.value.complete,false);assert.equal(second.value.complete,false)
+  assert.equal(h.archive.size,0)
+})
 
 test('slate response keeps closed score, market context and MM while later source changes',async()=>{
   const h=await routeFixture(),before=await h.get()

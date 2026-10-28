@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
     const rawSchedule = await getPaintSchedule(date)
     const schedule = { ...rawSchedule, games: await Promise.all(rawSchedule.games.map(game => getNbaOddsGame(game))) }
     const phaseKey = schedule.games.map(game => `${game.id}:${game.datetime ?? game.status}:${nbaPregameOpen(game) ? 'p' : nbaLiveOpen(game) ? 'l' : 'c'}`).sort().join('|')
-    const cached = await nbaSharedCache(`slate:v11:${mode}:${date}:${market}:${book}:${side}:${selection?.type??'auto'}:${selection?.line??'auto'}:${phaseKey}`, 30, 0, async () => {
+    // The loader builds the complete, unfiltered research universe. Book,
+    // side and contract selection are applied only after the shared load, so
+    // they must not cause duplicate whole-slate reads and archive writes.
+    // Period remains part of the key because its completeness differs.
+    const cached = await nbaSharedCache(`slate:v12:${mode}:${date}:${nbaPeriod(market!)}:${phaseKey}`, 30, 0, async () => {
       const started = Date.now(), boards: PaintBoard[] = [], failed: number[] = [], closedAtLoad=new Set<number>()
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {
