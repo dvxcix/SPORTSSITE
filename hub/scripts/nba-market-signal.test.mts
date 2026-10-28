@@ -219,7 +219,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
     '@/lib/nbaMarketSignal':await import('../src/lib/nbaMarketSignal.ts'),'@/lib/nbaIntelligence':intelligence,'@/lib/nbaPaint':paint,'@/lib/nbaMarketMetrics':metrics}
   const scoreRoute=await compiled('../src/app/the-paint/intelligence/route.ts',common)
   const cached=new Map<string,unknown>()
-  const slateRoute=await compiled('../src/app/the-paint/slate/route.ts',{...common,'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,await load());return{value:cached.get(key),fetchedAt:asOf,stale:false}}},'@/lib/nbaSlate':{nbaSlateRows}})
+  const slateRoute=await compiled('../src/app/the-paint/slate/route.ts',{...common,'@/lib/nbaSlateDiagnostics':await import('../src/lib/nbaSlateDiagnostics.ts'),'@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,await load());return{value:cached.get(key),fetchedAt:asOf,stale:false}}},'@/lib/nbaSlate':{nbaSlateRows}})
   const scoreRequest={nextUrl:new URL('https://example.test/the-paint/intelligence?game=123&market=points&book=fanduel&side=over')}
   const slateRequest={nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-20&market=points&book=fanduel&side=over')}
   const scoreGet=scoreRoute.GET as (request:unknown)=>Promise<Reply>,slateGet=slateRoute.GET as (request:unknown)=>Promise<Reply>

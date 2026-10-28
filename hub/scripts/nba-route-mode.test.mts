@@ -155,6 +155,7 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
   const game = {id:123,date:'2020-10-20',datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}
   const cached = new Map<string, unknown>()
   const api = await route('../src/app/the-paint/slate/route.ts', {
+    '@/lib/nbaSlateDiagnostics': await import('../src/lib/nbaSlateDiagnostics.ts'),
     '@/lib/nbaOddsClockData': {getNbaOddsGame:async(value:any)=>({...value,datetime:new Date(tip).toISOString()})},
     '@/lib/nbaOddsMode': {...oddsMode,nbaPregameOpen:(value:any)=>oddsMode.nbaPregameOpen(value,now),nbaLiveOpen:(value:any)=>oddsMode.nbaLiveOpen(value,now)},
     '@/lib/nbaMarketSelection': {nbaReadSelection:()=>null,nbaSelectedPlayers:(players:unknown)=>players},
