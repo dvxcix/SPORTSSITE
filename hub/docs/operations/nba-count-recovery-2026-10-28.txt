@@ -33,3 +33,46 @@ preflight. Never replay earlier budget or freeze migrations. No Pikkit context,
 secret, Discord delivery, database research history or production flags change.
 
 Verification and deployed outcome will be appended after release/captures.
+
+Release verification — 2026-10-28 21:39 UTC
+Source commit cb491de77e31ae0e0b9c4a44abf88bd185d28a2a was pushed to main.
+Git production dpl_139WEDpbHAvBiLAo3HZfvKswvz4Y reached READY with both live
+SlipSurge domains. All six actual capture pipeline rows report that source SHA.
+
+Applied individually:20261028210439_nba_public_count_recovery_allowance.
+The migration tool twice returned Invalid or expired requestState. After schema
+and history reads proved it had not applied, the same reviewed SQL and its
+migration-history record were committed in one transaction through execute_sql.
+The independently checked live function body matches the reviewed source.
+Original reservation hash3bdb66cc202aef4089be76ed4a760caf and baseline hash
+480f0424bf21eb2c3d833e88baf3d464 were unchanged. RLS/service-only permissions
+and the dated allowance's lack of app write grants were verified.
+
+A Supabase startup/recovery interruption occurred21:17:13–21:17:39 UTC; its
+trigger was not established. Release/captures were held until a fresh SQL read
+succeeded and the migration outcome was resolved. No database restart was sent.
+
+Capture results21:31:59–21:38:16 UTC: all12games,6existing cloud sessions,
+3317fresh normalized count rows. Each game observed/captured all11source
+categories, normalized to19market families, with0unavailable/unsupported/
+unmatched categories. All six responses returned200; no failed or replayed
+capture, unknown shutdown, new collector, changed schedule or Discord send.
+Final ledger:11attempts/55reserved minutes (original5 plus recovery6),948-cent
+monotonic day/period floor. Every approved game appears once in the new session
+scopes. Shared context lease expired21:38:23 UTC; all browser closures confirmed.
+The floor includes conservative reservations and shared-project usage; it is
+not an invoice or an NBA-only actual-spend total. The recovery allowance is
+exhausted and expires at00UTC; recurring limits remain the original settings.
+
+Checks:185capture-control tests,51final focused budget/browser lifecycle tests,
+134production tests,TypeScript and scoped lint passed. Temp-only SQL transaction
+verified six additional admissions/seventh denied, original ledger preservation,
+normal/period limits, bad scope and expiry. Independent production audit passed.
+
+Private source/export/certificate/analysis evidence remains in enclosing outputs:
+NBA-2026-10-28-count-recovery-capture-summary.json
+NBA-2026-10-28-count-recovery-independent-live-audit.json
+NBA-2026-10-28-count-recovery-independent-postcapture-ledger.json
+NBA-2026-10-28-postcapture-2130-* (new immutable counts/prices/paths/analyses).
+Observed player-market totals and estimated rung allocations remain separate.
+No target-game results are used to select the pregame research candidates.
