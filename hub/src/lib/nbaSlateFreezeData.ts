@@ -10,9 +10,14 @@ import { nbaValidatedEstimate, type NbaModelReport } from './nbaModel'
 import { nbaSlateHeatDomains, type NbaSlateHeatDomains } from './nbaSlateHeat'
 
 type PoolQuote = [string, string, string, 'milestone' | 'over_under', number | null, number | null, number | null, string]
+type PackedPoolQuote = [number, number, string, 0 | 1, number | null, number | null, number | null, number]
 type PoolLog = [number, number, string, number, number, number, number | null, boolean | null, string, string | null, string, number | null, ...(number | null)[]]
 type PoolPlayer = { id: number; gameId: number; average: PaintPlayer['average']; logs: PoolLog[]; props: PoolQuote[] }
-export type NbaSlatePool = { version: 1; date: string; gameIds: number[]; period: 0 | 1; players: PoolPlayer[]; models?: { reports: NbaModelReport[]; games: { gameId: number; indexes: number[] }[] } }
+type PackedPoolPlayer = Omit<PoolPlayer, 'props'> & { props: PackedPoolQuote[] }
+type PoolBase = { date: string; gameIds: number[]; period: 0 | 1; models?: { reports: NbaModelReport[]; games: { gameId: number; indexes: number[] }[] } }
+export type NbaSlatePoolV1 = PoolBase & { version: 1; players: PoolPlayer[] }
+export type NbaSlatePoolV2 = PoolBase & { version: 2; players: PackedPoolPlayer[]; dictionary: { vendors: string[]; markets: string[]; timestamps: string[] } }
+export type NbaSlatePool = NbaSlatePoolV1 | NbaSlatePoolV2
 type GameModels = { gameId: number; reports: NbaModelReport[] }[]
 const resource = (period: number) => period ? 'slate-mm-q1:v1' : 'slate-mm-full:v1'
 const markets = new Set<string>(PAINT_MARKETS.map(market => market.key))
@@ -20,13 +25,41 @@ const statFields = ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga'
 function packLog(log: PaintStat): PoolLog {
   return [log.id, log.game.id, log.game.date, log.team.id, log.game.home_team_id, log.game.visitor_team_id, log.game.season ?? null, log.game.postseason ?? null, log.game.status, log.game.status_state ?? null, log.min, log.period ?? null, ...statFields.map(field => log[field])]
 }
+/** Lossless quote dictionaries. Kept separate from capture until all live
+ * readers can interpret v2; existing v1 observations remain readable. */
+export function encodeNbaSlatePool(pool: NbaSlatePoolV1): NbaSlatePoolV2 {
+  const vendors = new Map<string, number>(), markets = new Map<string, number>(), timestamps = new Map<string, number>()
+  const intern = (table: Map<string, number>, value: string) => {
+    const prior = table.get(value)
+    if (prior != null) return prior
+    const index = table.size; table.set(value, index); return index
+  }
+  const players = pool.players.map(player => ({ ...player, props: player.props.map((row): PackedPoolQuote => [
+    intern(vendors, row[0]), intern(markets, row[1]), row[2], row[3] === 'milestone' ? 0 : 1,
+    row[4], row[5], row[6], intern(timestamps, row[7]),
+  ]) }))
+  return { ...pool, version: 2, players, dictionary: { vendors: [...vendors.keys()], markets: [...markets.keys()], timestamps: [...timestamps.keys()] } }
+}
+
+function decodeQuote(pool: NbaSlatePoolV2, row: PackedPoolQuote): PoolQuote {
+  const pick = (values: string[], index: number) => {
+    if (!Array.isArray(values) || !Number.isSafeInteger(index) || index < 0 || index >= values.length || typeof values[index] !== 'string') throw new Error('Invalid NBA slate dictionary')
+    return values[index]
+  }
+  if (!Array.isArray(row) || row.length !== 8 || typeof row[2] !== 'string' || (row[3] !== 0 && row[3] !== 1)
+    || ![row[4], row[5], row[6]].every(value => value === null || typeof value === 'number' && Number.isFinite(value))
+    || !pool.dictionary) throw new Error('Invalid NBA slate quote')
+  return [pick(pool.dictionary.vendors, row[0]), pick(pool.dictionary.markets, row[1]), row[2], row[3] === 0 ? 'milestone' : 'over_under', row[4], row[5], row[6], pick(pool.dictionary.timestamps, row[7])]
+}
+
 export function nbaSlatePoolPlayers(pool: NbaSlatePool): PaintPlayer[] {
   return pool.players.map(player => {
     const logs = player.logs.map(row => ({
       id: row[0], player: { id: player.id }, team: { id: row[3] }, game: { id: row[1], date: row[2], home_team_id: row[4], visitor_team_id: row[5], season: row[6] ?? undefined, postseason: row[7] ?? undefined, status: row[8], status_state: row[9] ?? undefined }, min: row[10], period: row[11] ?? undefined,
       ...Object.fromEntries(statFields.map((field, index) => [field, row[12 + index]])),
     })) as PaintStat[]
-    const props: PaintProp[] = player.props.map((row, index) => ({ id: index, game_id: player.gameId, player_id: player.id, vendor: row[0], prop_type: row[1], line_value: row[2], market: { type: row[3], odds: row[4] ?? undefined, over_odds: row[5] ?? undefined, under_odds: row[6] ?? undefined }, updated_at: row[7] }))
+    const quotes: PoolQuote[] = pool.version === 2 ? (player.props as PackedPoolQuote[]).map(row => decodeQuote(pool, row)) : player.props as PoolQuote[]
+    const props: PaintProp[] = quotes.map((row, index) => ({ id: index, game_id: player.gameId, player_id: player.id, vendor: row[0], prop_type: row[1], line_value: row[2], market: { type: row[3], odds: row[4] ?? undefined, over_odds: row[5] ?? undefined, under_odds: row[6] ?? undefined }, updated_at: row[7] }))
     // Identity text/artwork does not participate in MM. Game/player IDs and
     // historical venue IDs remain exact; display identities use the own board.
     return { id: player.id, first_name: '', last_name: '', position: '', team: { id: 0, abbreviation: '', full_name: '', name: '' }, headshot: null, injury: null, average: player.average, logs: pool.period ? [] : logs, periodLogs: pool.period ? logs : [], props }
@@ -34,7 +67,7 @@ export function nbaSlatePoolPlayers(pool: NbaSlatePool): PaintPlayer[] {
 }
 
 /** The comparison universe is captured before filters, never replaced by one matchup. */
-export function nbaSlatePool(games: PaintGame[], boards: PaintBoard[], complete: boolean, period: 0 | 1, observedAt: string, models: GameModels = []): NbaSlatePool | null {
+export function nbaSlatePool(games: PaintGame[], boards: PaintBoard[], complete: boolean, period: 0 | 1, observedAt: string, models: GameModels = []): NbaSlatePoolV1 | null {
   const now = Date.parse(observedAt), ids = new Set(games.map(game => game.id))
   if (!complete || !games.length || games.length > 16 || ids.size !== games.length || !Number.isFinite(now)
     || new Set(games.map(game => game.date)).size !== 1 || boards.length !== games.length
@@ -121,11 +154,22 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
     }
     const snapshot = await readNbaPregameResearch<NbaSlatePool>(game, resource(nbaPeriod(market)))
     const pool = snapshot?.value
-    if (!snapshot || !pool || pool.version !== 1 || pool.date !== game.date || pool.period !== nbaPeriod(market)
-      || !pool.gameIds.includes(game.id) || !Array.isArray(pool.players)) {
+    if (!snapshot || !pool || (pool.version !== 1 && pool.version !== 2) || pool.date !== game.date || pool.period !== nbaPeriod(market)
+      || !Array.isArray(pool.gameIds) || !pool.gameIds.includes(game.id) || !Array.isArray(pool.players)) {
       unavailable.push(game.id); return
     }
-    const players=nbaSelectedPlayers(nbaSlatePoolPlayers(pool), market, selection), frozen = nbaMarketRanks(players, market, book)
+    if (pool.models != null && (!Array.isArray(pool.models.reports) || !Array.isArray(pool.models.games)
+      || !pool.models.games.every(entry => entry && typeof entry === 'object' && Number.isSafeInteger(entry.gameId)
+        && Array.isArray(entry.indexes) && entry.indexes.every(index => Number.isSafeInteger(index) && index >= 0 && index < pool.models!.reports.length)))) {
+      unavailable.push(game.id); return
+    }
+    let allPlayers: PaintPlayer[]
+    try { allPlayers = nbaSlatePoolPlayers(pool) } catch { unavailable.push(game.id); return }
+    if (pool.version === 2 && (!Number.isFinite(Date.parse(snapshot.observedAt)) || allPlayers.some(player => player.props.some(quote => {
+      const at = Date.parse(quote.updated_at)
+      return !Number.isFinite(at) || at > Date.parse(snapshot.observedAt)
+    })))) { unavailable.push(game.id); return }
+    const players=nbaSelectedPlayers(allPlayers, market, selection), frozen = nbaMarketRanks(players, market, book)
     heatDomains[game.id]=nbaSlateHeatDomains(players.flatMap(player=>{
       const offer=nbaReference(player.props,market,book,side)
       if(!offer)return []

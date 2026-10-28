@@ -128,6 +128,64 @@ test('pool capture keeps exact historical identities, periods and quote timestam
   assert.equal(h.api.nbaSlatePool([games[0], games[0]], b, true, 0, new Date(tip - 1).toISOString()), null)
 })
 
+test('v2 quote dictionaries round-trip v1 ordering, odds, contracts and real timestamps', async () => {
+  const h=await fixture(), b=boards(), games=b.map(board=>board.game)
+  for(const board of b)for(const item of board.players){
+    const quote=item.props[0]
+    item.props.push({...quote,id:999,vendor:'draftkings',line_value:'12.5',market:{type:'over_under',over_odds:-125,under_odds:105},updated_at:new Date(tip-37_000).toISOString()})
+    item.props.push({...quote,id:1000,vendor:'fanduel',line_value:'30',market:{type:'milestone',odds:220},updated_at:new Date(tip-28_000).toISOString()})
+  }
+  const original=h.api.nbaSlatePool(games,b,true,0,new Date(tip-1).toISOString())!
+  const compact=h.api.encodeNbaSlatePool(original)
+  assert.equal(original.version,1);assert.equal(compact.version,2)
+  assert.deepEqual(h.api.nbaSlatePoolPlayers(compact),h.api.nbaSlatePoolPlayers(original))
+  const quarter=h.api.nbaSlatePool(games,b,true,1,new Date(tip-1).toISOString())!
+  assert.deepEqual(h.api.nbaSlatePoolPlayers(h.api.encodeNbaSlatePool(quarter)),h.api.nbaSlatePoolPlayers(quarter))
+  assert.deepEqual(compact.gameIds,original.gameIds);assert.deepEqual(compact.models,original.models)
+  h.archive.set('101:slate-mm-full:v1',{value:original,observedAt:new Date(tip-1000).toISOString(),source:'capture',frozen:true})
+  h.time(tip+1)
+  const legacy=await h.api.getNbaSlateRanks(games,b,'points','draftkings',{type:'milestone',line:25},'pregame',true)
+  h.archive.set('101:slate-mm-full:v1',{value:compact,observedAt:new Date(tip-1000).toISOString(),source:'capture',frozen:true})
+  const encoded=await h.api.getNbaSlateRanks(games,b,'points','draftkings',{type:'milestone',line:25},'pregame',true)
+  assert.deepEqual(encoded,legacy)
+  compact.players[0].props[0][0]=99999
+  const malformed=await h.api.getNbaSlateRanks(games,b,'points','draftkings',{type:'milestone',line:25},'pregame',true)
+  assert.ok(malformed.unavailable.includes(101))
+  const badPools: { label: string; mutate: (pool: any) => void }[] = [
+    {label:'missing game IDs',mutate: pool => { pool.gameIds = null }},
+    {label:'numeric target',mutate: pool => { pool.players[0].props[0][2] = 30 }},
+    {label:'string odds',mutate: pool => { pool.players[0].props[0][4] = '-110' }},
+    {label:'nonfinite odds',mutate: pool => { pool.players[0].props[0][4] = NaN }},
+    {label:'undefined side price',mutate: pool => { pool.players[0].props[0][5] = undefined }},
+    {label:'invalid timestamp',mutate: pool => { pool.dictionary.timestamps[0] = 'invalid' }},
+    {label:'timestamp after observation',mutate: pool => { pool.dictionary.timestamps[0] = new Date(tip).toISOString() }},
+    {label:'invalid model games',mutate: pool => { pool.models.games = null }},
+    {label:'invalid model index',mutate: pool => { pool.models.games = [{gameId:101,indexes:[2]}] }},
+  ]
+  for(const {label,mutate} of badPools){
+    const bad=h.api.encodeNbaSlatePool(original);mutate(bad)
+    h.archive.set('101:slate-mm-full:v1',{value:bad,observedAt:new Date(tip-1000).toISOString(),source:'capture',frozen:true})
+    const result=await h.api.getNbaSlateRanks(games,b,'points','draftkings',{type:'milestone',line:25},'pregame',true)
+    assert.ok(result.unavailable.includes(101),label)
+  }
+})
+
+test('v2 dictionaries reduce a realistic synthetic quote-heavy slate losslessly', async () => {
+  const h=await fixture(), b=Array.from({length:12},(_,g)=>{
+    const board=structuredClone(boards()[0]);board.game=game(1000+g)
+    board.players=Array.from({length:35},(_,i)=>{
+      const p=player(g*100+i+1,board.game.id,20,20), base=p.props[0]
+      p.props=Array.from({length:96},(_,q)=>({ ...base,id:q,vendor:['fanduel','draftkings','betmgm','caesars'][q%4],prop_type:['points','rebounds','assists','threes'][q%4],line_value:String(5+q%32),market:q%3===0?{type:'over_under',over_odds:-110-q%7,under_odds:100+q%7}:{type:'milestone',odds:100+q},updated_at:new Date(tip-60_000+(q%10)*1000).toISOString() }))
+      return p
+    });return board
+  }),games=b.map(board=>board.game)
+  const original=h.api.nbaSlatePool(games,b,true,0,new Date(tip-1).toISOString())!,compact=h.api.encodeNbaSlatePool(original)
+  const before=Buffer.byteLength(JSON.stringify(original)),after=Buffer.byteLength(JSON.stringify(compact))
+  assert.deepEqual(h.api.nbaSlatePoolPlayers(compact),h.api.nbaSlatePoolPlayers(original))
+  assert.ok(after<before*0.75,`quote-heavy pool ${before} -> ${after}`)
+  console.log(`Synthetic 12-game pool bytes: ${before} -> ${after}`)
+})
+
 test('legacy recovery is exact-filter only and rejects wrong or post-observation quotes', async () => {
   const h=await fixture(), b=boards(), g=b[0].game, filter={type:'milestone' as const,line:30}
   const key='101:'+h.api.nbaLegacySlateResource(g.date,'points','fanduel','over',filter)

@@ -25,3 +25,12 @@ infrastructure limitation are recorded in workspace evidence.
 
 Validation: NBA pregame-freeze suite 97/97, production checks 134/134,
 TypeScript and focused profile tests pass. Changes received independent review.
+
+Compact-pool compatibility rollout: first deploy a reader that accepts both
+original v1 pools and lossless dictionary-encoded v2 pools while continuing to
+write v1. A representative 4,493,835-byte saved pool encoded to 2,445,066 bytes
+with all 38,606 exact quote tuples round-tripping. Validate the deployed reader
+and let previous requests/jobs drain before enabling a v2 writer. Once any v2
+pool is saved, rollback must retain the v2-capable reader. The original pool
+builder must continue validating quote identity, observation and each own-game
+cutoff; encoding must never bypass it. Older v1 snapshots remain readable.
