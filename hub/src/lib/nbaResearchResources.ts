@@ -9,7 +9,8 @@ import { nbaFirstBasketResearch, nbaOpeningSequence } from './nbaFirstBasket'
 import { nbaShots, type NbaPlay } from './nbaShots'
 import { nbaSharedCache } from './nbaSharedCache'
 import { nbaPregameResearch, readNbaPregameResearch, NbaPregameResearchUnavailable } from './nbaPregameResearchData'
-import type { NbaOddsMode } from './nbaOddsMode'
+import { nbaPregameOpen, type NbaOddsMode } from './nbaOddsMode'
+import { getNbaOddsGame } from './nbaOddsClockData'
 import type { NbaModelReport } from './nbaModel'
 import type { PaintBoard } from './nbaPaint'
 
@@ -93,6 +94,67 @@ export async function getNbaResearchProfiles(board: PaintBoard, mode: NbaOddsMod
   return { ...saved.value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
 }
 
+/** A drawer needs one player's profile, not a cold refresh of both rosters.
+ * Keep the full-matchup warmer for future frozen research; this additional
+ * game-scoped observation can also be read after tip, never rebuilt then. */
+export async function getNbaResearchProfile(board: PaintBoard, playerId: number, mode: NbaOddsMode = 'pregame') {
+  const player = board.players.find(candidate => candidate.id === playerId)
+  if (!player) throw new Error('Player not in this matchup')
+  const season = player.averageSeason === board.sampleSeason - 1 ? player.averageSeason : board.sampleSeason
+  type Profile = Awaited<ReturnType<typeof getPaintProfile>> & { season: number }
+  type MatchupProfiles = { gameId: number; players: { playerId: number; profile: Profile }[] }
+  const complete = (profile: Profile) => profile.shooting != null && profile.advanced != null
+  const quality = (profile: Profile, frozen: boolean) => (complete(profile) ? 2 : 0) + Number(!frozen && profile.season === season)
+  const savedProfiles = async () => {
+    const [full, single] = await Promise.all([
+      readNbaPregameResearch<MatchupProfiles>(board.game, 'profiles:v1'),
+      readNbaPregameResearch<Profile>(board.game, `profile-player:v1:${playerId}`),
+    ])
+    const profile = full?.value.gameId === board.game.id && Array.isArray(full.value.players) ? full.value.players.find(row => row?.playerId === playerId)?.profile : undefined
+    const fromFull = profile && full ? { ...full, value: profile } : null
+    const chosen = fromFull && (!single || quality(fromFull.value, fromFull.frozen) > quality(single.value, single.frozen)
+      || quality(fromFull.value, fromFull.frozen) === quality(single.value, single.frozen) && Date.parse(fromFull.observedAt) >= Date.parse(single.observedAt)) ? fromFull : single
+    return chosen
+  }
+  const present = (chosen: { value: Profile; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => ({ profile: chosen.value, fetchedAt: chosen.observedAt, researchSnapshot: { observedAt: chosen.observedAt, source: chosen.source, frozen: chosen.frozen } })
+  const resolveAtReturn = async (chosen: { value: Profile; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => {
+    // Another writer can commit after one of our parallel reads while tip is
+    // crossed. Resolve both final winners using the locked archive readers.
+    if (!nbaPregameOpen(await getNbaOddsGame(board.game))) {
+      const final = await savedProfiles()
+      if (!final?.frozen) throw new NbaPregameResearchUnavailable()
+      return present(final)
+    }
+    return present(chosen)
+  }
+  if (mode === 'pregame') {
+    const prior = await savedProfiles()
+    // A frozen observation never needs a provider. While open, a complete
+    // recent snapshot is already the same data the drawer would refresh.
+    if (prior && (prior.frozen || complete(prior.value) && prior.value.season === season && Date.now() - Date.parse(prior.observedAt) < 900_000)) return resolveAtReturn(prior)
+  }
+  let single: Awaited<ReturnType<typeof resource<Profile>>> | null = null
+  let failure: unknown
+  try {
+    single = await resource(board, `profile-player:v1:${playerId}`, mode, async () => {
+      const cached = await nbaSharedCache(`research-profile-player:v1:${season}:${playerId}`, 900, 3600, async () => ({ ...await getPaintProfile(playerId, season), season }), 55)
+      return { value: cached.value, observedAt: cached.fetchedAt }
+    }, complete)
+  } catch (error) {
+    failure = error
+  }
+  // Resolve the full snapshot after the potentially slow single-player read:
+  // readNbaPregameResearch performs its locked final read if tip was crossed.
+  const prior = mode === 'pregame' ? await savedProfiles() : null
+  if (!single && !prior) throw failure
+  // A partial refresh must never replace a previously captured complete
+  // profile; among equally complete observations use the latest real time.
+  const usePrior = !!prior && (!single || quality(prior.value, prior.frozen) > quality(single.value, single.frozen)
+    || quality(prior.value, prior.frozen) === quality(single.value, single.frozen) && Date.parse(prior.observedAt) >= Date.parse(single.observedAt))
+  const chosen = usePrior ? prior! : single!
+  return mode === 'pregame' ? resolveAtReturn(chosen) : present(chosen)
+}
+
 export async function getNbaResearchFirstBasket(board: PaintBoard, mode: NbaOddsMode = 'pregame') {
   const saved = await resource(board, 'first-basket:v1', mode, async () => {
     const cached = await nbaSharedCache(`first-basket-research:v4:${mode}:${board.game.id}`, 60, 86400, async () => {
@@ -128,7 +190,24 @@ export async function getNbaResearchShots(board: PaintBoard, playedGame: number,
   const player = board.players.find(candidate => candidate.id === playerId)
   const log = player?.logs.find(candidate => candidate.game.id === playedGame && candidate.game.date.slice(0, 10) < board.game.date && (candidate.game.status_state === 'final' || candidate.game.status === 'Final'))
   if (!log || (log.game.season ?? 0) < 2025) throw new Error('Shot appearance is outside this matchup sample')
-  const saved = await resource(board, `shots:v1:${playedGame}:${playerId}`, mode, async () => {
+  const key = `shots:v1:${playedGame}:${playerId}`
+  type ShotSample = { gameId: number; playerId: number; shots: ReturnType<typeof nbaShots>; boxScoreAttempts: number | null; coverageMatches: boolean; stale: boolean }
+  const complete = (sample: ShotSample) => sample.gameId === playedGame && sample.playerId === playerId && sample.coverageMatches === true && Array.isArray(sample.shots)
+    && log.fga != null && sample.boxScoreAttempts === log.fga && sample.shots.length === sample.boxScoreAttempts
+  const present = (saved: { value: ShotSample; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => ({ ...saved.value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } })
+  if (mode === 'pregame') {
+    const prior = await readNbaPregameResearch<ShotSample>(board.game, key)
+    if (prior && complete(prior.value) && (prior.frozen || Date.now() - Date.parse(prior.observedAt) < 900_000)) {
+      if (!nbaPregameOpen(await getNbaOddsGame(board.game))) {
+        // Do not return an open-game read if another writer won at tip.
+        const final = await readNbaPregameResearch<ShotSample>(board.game, key)
+        if (!final?.frozen || !complete(final.value)) throw new NbaPregameResearchUnavailable()
+        return present(final)
+      }
+      return present(prior)
+    }
+  }
+  const saved = await resource(board, key, mode, async () => {
     const match = await getPaintGame(playedGame)
     if (match.date >= board.game.date || (match.status_state !== 'final' && match.status !== 'Final')) throw new Error('Shot game is outside this matchup sample')
     const stats = await getPaintFinalStats(playedGame), row = stats.rows.find(stat => stat.game.id === playedGame && stat.player.id === playerId)
@@ -137,7 +216,7 @@ export async function getNbaResearchShots(board: PaintBoard, playedGame: number,
     const shots = nbaShots(source.value, playedGame, { id: playerId, first_name: row.player.first_name, last_name: row.player.last_name })
     return { value: { gameId: playedGame, playerId, shots, boxScoreAttempts: row.fga, coverageMatches: row.fga != null && shots.length === row.fga, stale: source.stale }, observedAt: new Date().toISOString() }
   }, value => value.coverageMatches)
-  return { ...saved.value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
+  return present(saved)
 }
 
 /** Existing research cron may warm these resources without replaying collectors.

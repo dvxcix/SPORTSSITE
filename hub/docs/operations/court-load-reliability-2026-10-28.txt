@@ -1,0 +1,27 @@
+Court reliability follow-up — October 28, 2026
+
+Observed primary Postgres restarts at 21:17:13, 21:47:02, and 22:16:35 UTC.
+Supabase resource charts showed severe memory commitment near the chart limit
+before the drops. PostgreSQL recovery logs do not identify the host-level cause;
+do not claim a proven OOM kill or a particular job as its trigger. The owner
+declined a support request. Before the third restart, six statement timeouts
+explicitly involved NBA research capture; five occurred in its archive UPSERT.
+Pregame snapshots, phase boundaries, original timestamps, existing source
+coverage, Browserbase spending controls, and cloud schedules remain in force.
+
+The slate loader's shared key now uses date, mode, and phase, not per-member
+market, period, sportsbook, side, or target. It computes period completeness,
+filters, price refresh and closed-game snapshots separately per response.
+Unknown first-quarter coverage remains incomplete. Existing pregame archival
+guards and strict no-stale policy remain unchanged. This reduces redundant
+whole-slate builds but does not establish why the database restarted.
+
+Player drawers may use a fresh complete saved exact player/season profile or
+complete saved exact shot sample, preserving source observation times. Missing
+data follows the existing loader. Closed games read only original captures,
+including a locked final reread if requests cross tip. The roster warmer still
+captures full matchups. Live production verification and the continuing
+infrastructure limitation are recorded in workspace evidence.
+
+Validation: NBA pregame-freeze suite 97/97, production checks 134/134,
+TypeScript and focused profile tests pass. Changes received independent review.

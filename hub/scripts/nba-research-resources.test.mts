@@ -15,14 +15,15 @@ async function compiled(file: string, imports: Record<string, unknown>) {
   return target.exports
 }
 const previous = { id: 5, date: '2026-10-23', season: 2026, status: 'Final', status_state: 'final' }
-const board = { game: { id: 9, date: '2026-10-25', season: 2026, datetime: '2026-10-25T23:00:00Z', status: 'Scheduled', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, players: [1, 2].map(id => ({ id, first_name: 'Test', last_name: String(id), team: { id }, logs: [{ player: { id }, team: { id }, game: previous }] })) }
+const board = { game: { id: 9, date: '2026-10-25', season: 2026, datetime: '2026-10-25T23:00:00Z', status: 'Scheduled', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, players: [1, 2].map(id => ({ id, first_name: 'Test', last_name: String(id), team: { id }, logs: [{ player: { id }, team: { id }, game: previous, fga: 1 }] })) }
 
 async function fixture() {
   let closed = false, generation = 1, complete = true, reads = 0
+  let onRead: ((key: string) => void) | undefined
   const saved = new Map<string, any>()
   class NbaPregameResearchUnavailable extends Error {}
   const observation = (value: unknown) => ({ value: structuredClone(value), observedAt: `2026-10-24T0${generation}:00:00Z`, source: 'capture', frozen: closed })
-  const read = async (_game: unknown, key: string) => saved.has(key) ? { ...structuredClone(saved.get(key)), frozen: closed } : null
+  const read = async (_game: unknown, key: string) => { const result = saved.has(key) ? { ...structuredClone(saved.get(key)), frozen: closed } : null; onRead?.(key); return result }
   const resources = await compiled('../src/lib/nbaResearchResources.ts', {
     'server-only': {},
     './nbaPregameResearchData': {
@@ -33,6 +34,8 @@ async function fixture() {
         catch (error) { const prior = await read(game, key); if (prior) return prior; throw error }
       },
     },
+    './nbaOddsMode': { nbaPregameOpen: () => !closed },
+    './nbaOddsClockData': { getNbaOddsGame: async (game: unknown) => game },
     './nbaIntelligenceData': { getNbaDefenseContext: async () => { reads++; return { ready: complete, profiles: [{ value: generation }], fetchedAt: observation(null).observedAt } } },
     './nbaTrackingData': { getNbaTracking: async () => { reads++; return { rows: [{ value: generation }], complete, fetchedAt: observation(null).observedAt } } },
     './nbaMarketSignalData': { getNbaMarketContext: async () => { reads++; const at = observation(null).observedAt; return { version: NBA_MARKET_CONTEXT_VERSION, gameId: 9, oddsMode: 'pregame', asOf: at, tipAt: board.game.datetime, marketCapturedAt: at, marketObservedAt: at, publicCapturedAt: at, publicObservedAt: at, reason: generation === 1 ? null : 'Pre-tip verification receipt was overwritten', available: generation === 1, signals: generation !== 1 ? [] : [{ playerId: 1, book: 'fanduel', target: { market: 'points', type: 'milestone', line: 30, side: 'over', open: 400, now: 500, changePp: -3, openedAt: '2026-10-23T00:00:00Z' }, related: { market: 'assists', type: 'milestone', line: 4, side: 'over', open: 100, now: -110, changePp: 2, openedAt: '2026-10-23T00:00:00Z' }, targetPicks: 10, relatedPicks: 100, adjustment: 6, opposingPicks: 0, supportingMarkets: 1, attenuation: 1 }] } } },
@@ -52,7 +55,7 @@ async function fixture() {
     './nbaShots': { nbaShots: () => [{ value: generation }] },
     './nbaFirstBasket': { nbaOpeningSequence: () => ({ firstFieldGoal: true }), nbaFirstBasketResearch: () => ({ requestedGames: 1, coveredGames: complete ? 1 : 0, rows: [{ value: generation }] }) },
   })
-  return { resources, saved, reads: () => reads, close: () => { closed = true }, mutate: (healthy = true) => { generation++; complete = healthy }, resetReads: () => { reads = 0 }, NbaPregameResearchUnavailable }
+  return { resources, saved, reads: () => reads, close: () => { closed = true }, mutate: (healthy = true) => { generation++; complete = healthy }, resetReads: () => { reads = 0 }, setReadHook: (hook?: (key: string) => void) => { onRead = hook }, NbaPregameResearchUnavailable }
 }
 
 test('defense, tracking, model selection, profiles, first basket and market receipts remain frozen after tip', async () => {
@@ -80,6 +83,99 @@ test('player profiles follow the actual selected baseline season and retain it a
   assert.equal(after.researchSnapshot.frozen, true)
   assert.deepEqual(after.players, pre.players)
   assert.equal(h.reads(), 0, 'a frozen profile never asks a provider for a later season')
+})
+
+test('a single-player profile fetch does not load the roster and freezes its real selected season', async () => {
+  const h = await fixture(), mixed = { ...board, players: board.players.map((player, index) => ({ ...player, averageSeason: index ? 2026 : 2025 })) }
+  const before = await h.resources.getNbaResearchProfile(mixed, 1)
+  assert.equal(h.reads(), 1); assert.equal(before.profile.season, 2025); assert.equal(before.profile.shooting.season, 2025)
+  assert.equal(before.fetchedAt, '2026-10-24T01:00:00Z')
+  h.close(); h.mutate(); h.resetReads()
+  const after = await h.resources.getNbaResearchProfile(mixed, 1)
+  assert.deepEqual(after.profile, before.profile); assert.equal(after.researchSnapshot.frozen, true); assert.equal(h.reads(), 0)
+  await assert.rejects(h.resources.getNbaResearchProfile(mixed, 2), h.NbaPregameResearchUnavailable)
+  await assert.rejects(h.resources.getNbaResearchProfile(mixed, 99), /not in this matchup/)
+  assert.equal(h.reads(), 0)
+})
+
+test('single-player partial refresh retains a complete full-roster capture and its original time', async () => {
+  const h = await fixture(), prior = await h.resources.getNbaResearchProfiles(board)
+  h.mutate(false); h.resetReads()
+  const result = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(result.profile, prior.players[0].profile)
+  assert.equal(result.fetchedAt, prior.fetchedAt); assert.equal(h.reads(), 1)
+  h.close(); h.mutate(); h.resetReads()
+  const frozen = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(frozen.profile, prior.players[0].profile); assert.equal(frozen.fetchedAt, prior.fetchedAt); assert.equal(h.reads(), 0)
+})
+
+test('single-player reads choose the latest complete saved observation without changing the full-roster archive', async () => {
+  const h = await fixture(), full = await h.resources.getNbaResearchProfiles(board)
+  h.mutate()
+  const single = await h.resources.getNbaResearchProfile(board, 1)
+  assert.equal(single.profile.shooting.value, 2); assert.equal(single.fetchedAt, '2026-10-24T02:00:00Z')
+  assert.equal(h.saved.get('profiles:v1').value.players[0].profile.shooting.value, 1)
+  h.close(); h.mutate(); h.resetReads()
+  const frozen = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(frozen.profile, single.profile); assert.equal(frozen.fetchedAt, single.fetchedAt); assert.equal(h.reads(), 0)
+  assert.notEqual(full.fetchedAt, frozen.fetchedAt)
+})
+
+test('a profile read crossing tip resolves both final archive winners and never uses a stale open read', async () => {
+  const h = await fixture()
+  await h.resources.getNbaResearchProfiles(board)
+  await h.resources.getNbaResearchProfile(board, 1)
+  const earlier = new Date(Date.now() - 1_000).toISOString(), later = new Date(Date.now() - 500).toISOString()
+  h.saved.get('profiles:v1').observedAt = earlier
+  h.saved.get('profile-player:v1:1').observedAt = earlier
+  let crossed = false
+  h.setReadHook(key => {
+    if (key !== 'profile-player:v1:1' || crossed) return
+    crossed = true; h.close()
+    h.saved.set('profile-player:v1:1', { value: { shooting: { value: 9 }, advanced: { value: 9 }, season: 2026 }, observedAt: later, source: 'capture' })
+  })
+  h.resetReads()
+  const result = await h.resources.getNbaResearchProfile(board, 1)
+  assert.equal(result.profile.shooting.value, 9); assert.equal(result.fetchedAt, later); assert.equal(result.researchSnapshot.frozen, true)
+  assert.equal(h.reads(), 0, 'a closed game must not fetch a current profile')
+})
+
+test('a fresh complete matchup profile is served without another provider load', async () => {
+  const h = await fixture(), captured = await h.resources.getNbaResearchProfiles(board)
+  const stamp = new Date(Date.now() - 1_000).toISOString()
+  h.saved.get('profiles:v1').observedAt = stamp; h.mutate(); h.resetReads()
+  const result = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(result.profile, captured.players[0].profile); assert.equal(result.fetchedAt, stamp); assert.equal(h.reads(), 0)
+})
+
+test('a fresh profile from a different baseline season does not suppress the correct current-season refresh', async () => {
+  const h = await fixture(), older = { ...board, players: board.players.map(player => ({ ...player, averageSeason: 2025 })) }
+  await h.resources.getNbaResearchProfiles(older)
+  h.saved.get('profiles:v1').observedAt = new Date(Date.now() - 1_000).toISOString()
+  h.mutate(); h.resetReads()
+  const current = await h.resources.getNbaResearchProfile(board, 1)
+  assert.equal(h.reads(), 1); assert.equal(current.profile.season, 2026); assert.equal(current.profile.shooting.value, 2)
+})
+
+test('a malformed full-roster entry does not hide a valid saved individual profile', async () => {
+  const h = await fixture(); await h.resources.getNbaResearchProfiles(board)
+  const single = await h.resources.getNbaResearchProfile(board, 1)
+  h.saved.get('profiles:v1').value.players = [null]
+  h.close(); h.mutate(); h.resetReads()
+  const frozen = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(frozen.profile, single.profile); assert.equal(frozen.researchSnapshot.frozen, true); assert.equal(h.reads(), 0)
+})
+
+test('a failed final archive read after tip does not fall back to an earlier open profile', async () => {
+  const h = await fixture(); await h.resources.getNbaResearchProfiles(board)
+  h.saved.get('profiles:v1').observedAt = new Date(Date.now() - 1_000).toISOString()
+  let crossed = false
+  h.setReadHook(key => {
+    if (key !== 'profile-player:v1:1') return
+    if (crossed) throw new Error('archive unavailable')
+    crossed = true; h.close()
+  })
+  await assert.rejects(h.resources.getNbaResearchProfile(board, 1), /archive unavailable/)
 })
 
 test('missing historical resources never rebuild; missing models leave estimates unavailable without hiding the board', async () => {
@@ -132,6 +228,43 @@ test('matchup shot samples require the frozen player appearance and never fetch 
   assert.equal(h.reads(), 0)
 })
 
+test('fresh complete saved shots load without the provider, but incomplete and mismatched samples refresh', async () => {
+  const h = await fixture(), key = 'shots:v1:5:1'
+  const first = await h.resources.getNbaResearchShots(board, 5, 1)
+  const recent = new Date(Date.now() - 1_000).toISOString()
+  h.saved.get(key).observedAt = recent; h.mutate(); h.resetReads()
+  const fast = await h.resources.getNbaResearchShots(board, 5, 1)
+  assert.deepEqual(fast.shots, first.shots); assert.equal(fast.fetchedAt, recent); assert.equal(h.reads(), 0)
+  h.saved.get(key).value.coverageMatches = false
+  await h.resources.getNbaResearchShots(board, 5, 1); assert.ok(h.reads() > 0)
+  h.saved.get(key).value.playerId = 2; h.resetReads()
+  await h.resources.getNbaResearchShots(board, 5, 1); assert.ok(h.reads() > 0)
+})
+
+test('shot reads crossing tip resolve the final saved winner and retain its timestamp', async () => {
+  const h = await fixture(), key = 'shots:v1:5:1'
+  await h.resources.getNbaResearchShots(board, 5, 1)
+  const earlier = new Date(Date.now() - 1_000).toISOString(), later = new Date(Date.now() - 500).toISOString()
+  h.saved.get(key).observedAt = earlier
+  let crossed = false
+  h.setReadHook(resource => {
+    if (resource !== key || crossed) return
+    crossed = true; h.close()
+    h.saved.set(key, { value: { gameId: 5, playerId: 1, shots: [{ value: 9 }], boxScoreAttempts: 1, coverageMatches: true, stale: false }, observedAt: later, source: 'capture' })
+  })
+  h.resetReads()
+  const result = await h.resources.getNbaResearchShots(board, 5, 1)
+  assert.equal(result.shots[0].value, 9); assert.equal(result.fetchedAt, later); assert.equal(result.researchSnapshot.frozen, true); assert.equal(h.reads(), 0)
+})
+
+test('failed final shot read does not fall back to an earlier open observation', async () => {
+  const h = await fixture(), key = 'shots:v1:5:1'; await h.resources.getNbaResearchShots(board, 5, 1)
+  h.saved.get(key).observedAt = new Date(Date.now() - 1_000).toISOString()
+  let crossed = false
+  h.setReadHook(resource => { if (resource !== key) return; if (crossed) throw new Error('archive unavailable'); crossed = true; h.close() })
+  await assert.rejects(h.resources.getNbaResearchShots(board, 5, 1), /archive unavailable/)
+})
+
 test('resource warming reports deadline deferrals without starting provider jobs', async () => {
   const h = await fixture(), result = await h.resources.warmNbaResearchResources(board, { deadline: Date.now() })
   assert.ok(result.length >= 7); assert.ok(result.every((item: any) => item.status === 'deferred')); assert.equal(h.reads(), 0)
@@ -145,13 +278,13 @@ test('frozen season matrix statistics retain captured averages instead of switch
   assert.equal(nbaMatrixCandidates({ ...frozen, researchSnapshot: undefined })[0].values(factor), 10)
 })
 
-test('profile endpoint validates the parent game and roster before requesting all frozen profiles', async () => {
+test('profile endpoint validates the parent game and roster before requesting one saved profile', async () => {
   let calls = 0, modeSeen: string | null = null
   const api = await compiled('../src/app/the-paint/profile/route.ts', {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'member' }) },
     '@/lib/nbaOddsMode': oddsMode,
     '@/lib/nbaPaintData': { getPaintGame: async () => board.game, getPaintBoard: async () => board },
-    '@/lib/nbaResearchResources': { getNbaResearchProfiles: async (_board: unknown, mode: string) => { calls++; modeSeen = mode; return { players: [{ playerId: 1, profile: { shooting: { fga: 10 }, advanced: null } }], fetchedAt: 'before-tip' } } },
+    '@/lib/nbaResearchResources': { getNbaResearchProfile: async (_board: unknown, id: number, mode: string) => { calls++; modeSeen = mode; assert.equal(id, 1); return { profile: { shooting: { fga: 10 }, advanced: null }, fetchedAt: 'before-tip' } } },
   })
   const get = async (search: string) => api.GET({ nextUrl: new URL('https://test/profile?' + search) })
   assert.equal((await get('player=1&season=2026')).status, 400)

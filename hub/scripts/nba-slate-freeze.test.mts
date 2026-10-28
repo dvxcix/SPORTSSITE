@@ -200,11 +200,32 @@ test('mixed book and target requests share one full-slate capture without sharin
   assert.equal(under.status,200);assert.equal(h.captures(),1)
 })
 
-test('period and live mode retain independent slate caches and captures',async()=>{
+test('full-game and quarter markets share slate inputs while live stays isolated',async()=>{
   const h=await routeFixture()
   assert.equal((await h.get()).status,200);assert.equal(h.captures(),1)
-  assert.equal((await h.getQuery('market=points_1q&book=fanduel&side=over')).status,200);assert.equal(h.captures(),2)
-  assert.equal((await h.get('&mode=live')).status,200);assert.equal(h.captures(),2)
+  const quarter=await h.getQuery('market=points_1q&book=fanduel&side=over')
+  assert.equal(quarter.status,200);assert.ok(quarter.value.rows.length);assert.equal(h.captures(),1)
+  assert.equal((await h.get('&mode=live')).status,200);assert.equal(h.captures(),1)
+})
+
+test('shared slate computes full and quarter completeness separately and preserves partial quarter archive',async()=>{
+  const h=await routeFixture();h.source[1].periodStatsComplete=false
+  const [full,quarter]=await Promise.all([h.get(),h.getQuery('market=points_1q&book=fanduel&side=over')])
+  assert.equal(full.status,200);assert.equal(quarter.status,200);assert.equal(h.captures(),1)
+  assert.equal(full.value.complete,true);assert.equal(quarter.value.complete,false)
+  assert.ok(h.archive.has('101:slate-mm-full:v1'));assert.equal(h.archive.has('101:slate-mm-q1:v1'),false)
+})
+
+test('legacy boards without quarter coverage never claim a complete quarter or invent a frozen pool',async()=>{
+  const h=await routeFixture();delete h.source[1].periodStatsComplete
+  const [full,quarter]=await Promise.all([h.get(),h.getQuery('market=points_1q&book=fanduel&side=over')])
+  assert.equal(full.status,200);assert.equal(quarter.status,200);assert.equal(h.captures(),1)
+  assert.equal(full.value.complete,true);assert.equal(quarter.value.complete,false)
+  assert.ok(h.archive.has('101:slate-mm-full:v1'));assert.equal(h.archive.has('101:slate-mm-q1:v1'),false)
+  h.time(tip+1)
+  const closed=await h.getQuery('market=points_1q&book=fanduel&side=over')
+  assert.equal(closed.status,200);assert.equal(closed.value.complete,false)
+  assert.ok(closed.value.frozenMmUnavailable.includes(101))
 })
 
 test('shared filter universe still freezes each game before a later filter request',async()=>{
@@ -220,6 +241,19 @@ test('shared filter universe still freezes each game before a later filter reque
   const after=await h.getQuery('market=points&book=draftkings&side=over&contract=milestone&target=25')
   const frozen=after.value.rows.find((row:any)=>row.game.id===101&&row.player.id===1)
   assert.equal(after.status,200);assert.equal(frozen.offer.market.odds,original.offer.market.odds)
+  assert.equal(frozen.mm,original.mm);assert.ok(frozen.researchObservedAt)
+})
+
+test('quarter market reuses a full-game load but keeps the earlier game frozen across tip',async()=>{
+  const h=await routeFixture()
+  const full=await h.get(),before=await h.getQuery('market=points_1q&book=fanduel&side=over')
+  assert.equal(full.status,200);assert.equal(before.status,200);assert.equal(h.captures(),1)
+  const original=before.value.rows.find((row:any)=>row.game.id===101&&row.player.id===1)
+  assert.ok(original)
+  h.time(tip+1);h.source[0].players[0].props[2].line_value='100'
+  const after=await h.getQuery('market=points_1q&book=fanduel&side=over')
+  const frozen=after.value.rows.find((row:any)=>row.game.id===101&&row.player.id===1)
+  assert.equal(after.status,200);assert.equal(frozen.offer.line_value,original.offer.line_value)
   assert.equal(frozen.mm,original.mm);assert.ok(frozen.researchObservedAt)
 })
 

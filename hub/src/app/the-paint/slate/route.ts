@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
     const schedule = { ...rawSchedule, games: await Promise.all(rawSchedule.games.map(game => getNbaOddsGame(game))) }
     const phaseKey = schedule.games.map(game => `${game.id}:${game.datetime ?? game.status}:${nbaPregameOpen(game) ? 'p' : nbaLiveOpen(game) ? 'l' : 'c'}`).sort().join('|')
     // The loader builds the complete, unfiltered research universe. Book,
-    // side and contract selection are applied only after the shared load, so
-    // they must not cause duplicate whole-slate reads and archive writes.
-    // Period remains part of the key because its completeness differs.
-    const cached = await nbaSharedCache(`slate:v12:${mode}:${date}:${nbaPeriod(market!)}:${phaseKey}`, 30, 0, async () => {
+    // side, market, period and contract selection are applied only after the
+    // shared load, so they must not cause duplicate reads and archive writes.
+    // Completeness for the selected period is computed for each response.
+    const cached = await nbaSharedCache(`slate:v13:${mode}:${date}:${phaseKey}`, 30, 0, async () => {
       const started = Date.now(), boards: PaintBoard[] = [], failed: number[] = [], closedAtLoad=new Set<number>()
       const games = schedule.games.slice(0, 16)
       for (let offset = 0; offset < games.length; offset += 3) {
@@ -65,9 +65,8 @@ export async function GET(request: NextRequest) {
       }
       const pricedBoards=[...pricedMap.values()],reports=[...reportMap].map(([gameId,reports])=>({gameId,reports})),defense=[...defenseMap.values()]
       const fullComplete = schedule.complete && !failed.length && pricedBoards.length === schedule.games.length && pricedBoards.every(board => board.statsComplete)
-      const complete = fullComplete && pricedBoards.every(board => !nbaPeriod(market!) || board.periodStatsComplete !== false)
       if (mode === 'pregame') await captureNbaSlatePools(schedule.games, pricedBoards, fullComplete && !modelMissing.size, undefined, reports)
-      return { date: schedule.date, games: schedule.games.length, loaded: pricedBoards.length, complete, failed, defenseMissing:[...defenseMissing], defenseUnavailable:pricedBoards.filter(board=>!defenseMap.get(board.game.id)?.ready).length, boards: pricedBoards, reports, defense }
+      return { date: schedule.date, games: schedule.games.length, loaded: pricedBoards.length, failed, defenseMissing:[...defenseMissing], defenseUnavailable:pricedBoards.filter(board=>!defenseMap.get(board.game.id)?.ready).length, boards: pricedBoards, reports, defense }
     }, 120)
     // Keep expensive production research cached, but re-check freshness and the
     // selected exact quote for every response. A warm slate cannot extend a boost.
@@ -100,7 +99,7 @@ export async function GET(request: NextRequest) {
           }
         }))
         const pricedBoards=[...boards.values()]
-        const complete=schedule.complete&&!failed.size&&pricedBoards.length===schedule.games.length&&pricedBoards.every(board=>board.statsComplete&&(!nbaPeriod(market!)||board.periodStatsComplete!==false))
+        const complete=schedule.complete&&!failed.size&&pricedBoards.length===schedule.games.length&&pricedBoards.every(board=>board.statsComplete&&(!nbaPeriod(market!)||board.periodStatsComplete===true))
         const frozen=await getNbaSlateRanks(schedule.games,pricedBoards,market as PaintMarket,book,selection,mode,complete,side as 'over'|'under')
         const missing=[...new Set([...frozen.unavailable,...[...failed].filter(id=>closedResolved.has(id))])]
         const legacyResults=mode==='pregame'?await Promise.allSettled(schedule.games.filter(game=>missing.includes(game.id)).map(async game=>({gameId:game.id,saved:await getNbaLegacySlateRows(game,market as PaintMarket,book,side as 'over'|'under',selection)}))):[]
