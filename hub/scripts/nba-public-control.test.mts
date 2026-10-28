@@ -100,6 +100,26 @@ test('unlisted game is skipped across separate route instances until its persist
   const next=f.rows.get(control.nbaPublicGameControlKey(game,parser))!.payload as control.NbaPublicControl
   assert.equal(next.failures,2);assert.equal(Date.parse(next.nextAttemptAt)-f.clock(),120*60_000)
 })
+
+test('bounded game batches reject ambiguous/invalid selections before a browser lease',async()=>{
+  for(const query of ['?game=123&games=123','?games=','?games=123,123','?games=123,NaN','?games='+Array.from({length:13},(_,i)=>i+1).join(',')]){
+    const f=await fixture()
+    assert.equal((await f.invoke(query)).status,400)
+    assert.equal(f.metrics().claims,0)
+    assert.equal(f.metrics().opens,0)
+  }
+  const excluded=await fixture()
+  assert.equal((await excluded.invoke('?games=999,1000')).body.browserSessions,0)
+  assert.equal(excluded.metrics().opens,0)
+  const included=await fixture()
+  await included.invoke('?games=123,999')
+  assert.equal(included.metrics().opens,1)
+})
+
+test('admin batch size and identifiers stay bounded and canonical',()=>{
+  assert.deepEqual(control.nbaPublicCaptureSelection([123,456]),[123,456])
+  for(const value of [null,{},[],['123'],[0],[-1],[1.5],[123,123],Array.from({length:13},(_,i)=>i+1)])assert.equal(control.nbaPublicCaptureSelection(value),null)
+})
 test('confirmed authentication failure trips the context circuit before another game or forced request can launch',async()=>{
   const f=await fixture();f.setAuth()
   assert.equal((await f.invoke()).status,503);assert.equal(f.metrics().opens,1)

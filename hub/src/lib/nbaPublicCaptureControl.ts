@@ -5,6 +5,13 @@ import type { PaintGame } from './nbaPaint'
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 export const NBA_PUBLIC_CHECKPOINT_HOURS = [24, 10, 4, 1] as const
+/** A bounded admin selection still passes every normal due/lease/budget gate. */
+export function nbaPublicCaptureSelection(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 12
+    || value.some(id => !Number.isSafeInteger(id) || id <= 0 || id > 9_999_999_999)
+    || new Set(value).size !== value.length) return null
+  return value as number[]
+}
 export type NbaPublicOutcome = 'running' | 'captured' | 'partial' | 'unavailable' | 'failed' | 'auth' | 'ready'
 export type NbaPublicControl = {
   version: 1; outcome: NbaPublicOutcome; attemptedAt: string; nextAttemptAt: string

@@ -1,0 +1,35 @@
+NBA count recovery — October 28, 2026
+
+The owner authorized correcting the spending blocker through main and obtaining
+fresh public pick counts for all twelve October 28 NBA games. This is a bounded
+recovery allowance, not an increase to recurring browser budgets or provider
+billing settings.
+
+Preflight: main and live dpl_BdksJadPyAWhvJfgakgH8voiQkNz both point to
+2e40e642190c3485f43c22cbf8afd6193b957f4b. The original ledger has five attempts
+and25 reserved minutes. Shared-project usage produced a624-cent floor by20:47Z,
+so both the300-cent daily spend guard and five-session limit prevent recovery.
+Required recovered NFL ancestry remains present. Tracked worktree was clean.
+
+The recovery allowance applies only to the existing Browserbase project,
+public-count workflow, October28 UTC, and a nonempty subset of the twelve
+reviewed game IDs21717975 through21717986. Absolute day ceilings are1200c,
+11attempts and55reserved minutes: at most six additional300-second sessions.
+It expires at2026-10-29T00:00:00Z. Existing baselines, usage floors and permanent
+reservations are retained. Normal300c/5attempt/25minute configuration and the
+5000c/98attempt/490minute period controls remain unchanged. Direct-book,
+other-date and other-game work do not gain this allowance. Active recovery
+sessions stop at expiry. Telemetry cannot guarantee an exact provider invoice.
+
+Admin capture now accepts one selected game or up to twelve selected games in
+one request. It delegates once to the existing cloud collector, allowing one
+session to serve several games within its unchanged250-second work deadline.
+Admin authorization, exact event/date validation, durable due checkpoints,
+shared context lease, cooldowns, active spend checks, remote release and
+pre-tip checks remain in effect. No extra collector or schedule is introduced.
+
+This migration must be applied individually after its function digest/schema
+preflight. Never replay earlier budget or freeze migrations. No Pikkit context,
+secret, Discord delivery, database research history or production flags change.
+
+Verification and deployed outcome will be appended after release/captures.

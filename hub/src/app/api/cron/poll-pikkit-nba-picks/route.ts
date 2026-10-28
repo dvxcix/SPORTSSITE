@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaNextPublicControl,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaNextPublicControl,nbaPublicCaptureSelection,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -54,10 +54,13 @@ async function run(request:Request){
   const dates=[0,1,2].map(offset=>{const date=new Date(today+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+offset);return date.toISOString().slice(0,10)})
   const schedules=await Promise.all(dates.map(date=>getPaintSchedule(date)))
   const schedule={games:await Promise.all([...new Map(schedules.flatMap(slate=>slate.games).map(game=>[game.id,game])).values()].map(game=>getNbaOddsGame(game)))}
-  const requested=new URL(request.url).searchParams.get('game')
-  if(requested&&!/^\d{1,10}$/.test(requested))return NextResponse.json({error:'Invalid game'},{status:400})
+  const params=new URL(request.url).searchParams,requested=params.get('game'),batch=params.get('games')
+  if(requested!==null&&batch!==null)return NextResponse.json({error:'Choose one game selection'},{status:400})
+  const raw=requested??batch
+  const selected=raw===null?null:nbaPublicCaptureSelection(raw.split(',').map(value=>/^\d{1,10}$/.test(value)?Number(value):NaN))
+  if(raw!==null&&!selected)return NextResponse.json({error:'Invalid game selection'},{status:400})
   // Public counts use sparse pregame checkpoints, not continuous price polling.
-  const upcoming=schedule.games.filter(g=>['scheduled','unknown',undefined].includes(g.status_state)&&nbaPregameOpen(g,Date.now())&&nbaGameStart(g)!-Date.now()<=24*3600000&&(!requested||String(g.id)===requested))
+  const upcoming=schedule.games.filter(g=>['scheduled','unknown',undefined].includes(g.status_state)&&nbaPregameOpen(g,Date.now())&&nbaGameStart(g)!-Date.now()<=24*3600000&&(!selected||selected.includes(g.id)))
   if(!upcoming.length)return NextResponse.json({games:0,browserSessions:0,skipped:'No upcoming NBA games inside the capture window'})
   const admin=createAdminClient()
   const successKey=(id:number)=>`public-success:${NBA_PUBLIC_VERSION}:${id}`
@@ -103,7 +106,7 @@ async function run(request:Request){
   try{
     // Persist even a terminated startup, so the next instance cannot hot-loop.
     await saveNbaPublicControl(contextKey,nbaNextPublicControl(contextPrior,'running',Date.now()))
-    const opening=openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length},{requestTimeoutMs:15000})
+    const opening=openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length,...(due.length<=12?{gameIds:due.map(game=>game.id)}:{})},{requestTimeoutMs:15000})
     void opening.then(browser=>{if(timedOut)void bounded(browser.close(),15000,'Late browser release deadline').catch(()=>undefined)}).catch(()=>undefined)
     const browser=await bounded(opening,Math.min(75000,remaining()),'Pikkit browser startup deadline')
     browserOpened=true

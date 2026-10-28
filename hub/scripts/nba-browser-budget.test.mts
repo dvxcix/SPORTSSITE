@@ -10,9 +10,10 @@ const enabled = {
   NBA_BROWSER_DAILY_MINUTE_LIMIT: '10', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '20', NBA_BROWSER_BUDGET_RESET_DAY: '18',
   NBA_BROWSER_DAILY_CENT_LIMIT: '300', NBA_BROWSER_PERIOD_CENT_LIMIT: '5000',
 }
-type Args = Record<string, string | number | null>
+type Args = Record<string, string | number | number[] | null>
 function ledger() {
   let day = '2026-10-27', period = '2026-10-18'
+  let recovery = false
   const reservations = new Map<string, unknown>(), counters = new Map<string, { sessions: number; minutes: number }>(), resets = new Map<string, number>()
   const states = new Map<string, { minutes: number; bytes: number; observedAt: number }>()
   const windows = new Map<string, { minutes: number; bytes: number; floor: number }>()
@@ -31,20 +32,26 @@ function ledger() {
     const actual = (window: typeof dayWindow) => window ? Math.ceil((usage.bytes - window.bytes) / 1_000_000 + (usage.minutes - window.minutes) / 6) : 0
     const dayActual = actual(dayWindow), periodActual = actual(periodWindow)
     const dayFloor = Math.max(dayWindow?.floor ?? 0, dayActual), periodFloor = Math.max(periodWindow?.floor ?? 0, periodActual)
+    const ids = args.p_game_ids
+    const allowance = recovery && key === 'project-fixture' && day === '2026-10-28' && args.p_workflow === 'public'
+      && Array.isArray(ids) && ids.length > 0 && ids.length <= 12 && ids.every(id => id >= 21717975 && id <= 21717986)
+    const dailyCents = allowance ? 1200 : Number(args.p_daily_cents)
+    const dailySessions = allowance ? 11 : Number(args.p_daily_sessions)
+    const dailyMinutes = allowance ? 55 : Number(args.p_daily_minutes)
     states.set(key, usage)
     if (dayWindow) dayWindow.floor = dayFloor
     if (periodWindow) periodWindow.floor = periodFloor
-    if (dayActual >= Number(args.p_daily_cents)) return { allowed: false, reason: 'daily-spend-limit' }
+    if (dayActual >= dailyCents) return { allowed: false, reason: 'daily-spend-limit' }
     if (periodActual >= Number(args.p_period_cents)) return { allowed: false, reason: 'period-spend-limit' }
     if (!id) return { allowed: true, reason: 'checked' }
     if (reservations.has(id)) return { allowed: false, reason: 'duplicate' }
     const reservedCents = Math.ceil(50 + minutes / 6)
-    if (dayFloor + reservedCents > Number(args.p_daily_cents)) return { allowed: false, reason: 'daily-spend-limit' }
+    if (dayFloor + reservedCents > dailyCents) return { allowed: false, reason: 'daily-spend-limit' }
     if (periodFloor + reservedCents > Number(args.p_period_cents)) return { allowed: false, reason: 'period-spend-limit' }
     const daily = counters.get(dailyKey) ?? { sessions: 0, minutes: 0 }, monthly = counters.get(monthlyKey) ?? { sessions: 0, minutes: 0 }
-    const reason = daily.sessions >= Number(args.p_daily_sessions) ? 'daily-session-limit'
+    const reason = daily.sessions >= dailySessions ? 'daily-session-limit'
       : monthly.sessions >= Number(args.p_period_sessions) ? 'period-session-limit'
-        : daily.minutes + minutes > Number(args.p_daily_minutes) ? 'daily-minute-limit'
+        : daily.minutes + minutes > dailyMinutes ? 'daily-minute-limit'
           : monthly.minutes + minutes > Number(args.p_period_minutes) ? 'period-minute-limit' : null
     if (reason) return { allowed: false, reason }
     const publicAttempt = [...reservations.values()].some(value => {
@@ -59,11 +66,13 @@ function ledger() {
     windows.set(dailyKey, { minutes: dayWindow?.minutes ?? usage.minutes, bytes: dayWindow?.bytes ?? usage.bytes, floor: dayFloor + reservedCents })
     windows.set(monthlyKey, { minutes: periodWindow?.minutes ?? usage.minutes, bytes: periodWindow?.bytes ?? usage.bytes, floor: periodFloor + reservedCents })
     for (const [counterKey, current] of [[dailyKey, daily], [monthlyKey, monthly]] as const) counters.set(counterKey, { sessions: current.sessions + 1, minutes: current.minutes + minutes })
-    const value = { allowed: true, reason: 'reserved', id, day, periodStart: period, reservedMinutes: minutes, reservedCents, workflow: args.p_workflow, projectId: key }
+    const value = { allowed: true, reason: 'reserved', id, day, periodStart: period, reservedMinutes: minutes, reservedCents, workflow: args.p_workflow, projectId: key,
+      ...(allowance ? { allowanceKey: 'nba-public-count-recovery-2026-10-28', allowanceExpiresAt: '2026-10-29T00:00:00.000Z' } : {}) }
     reservations.set(id, value)
     return value
   }
-  return { reserve, reservations, counters, windows, states, date(nextDay: string, nextPeriod = period) { day = nextDay; period = nextPeriod } }
+  return { reserve, reservations, counters, windows, states, date(nextDay: string, nextPeriod = period) { day = nextDay; period = nextPeriod },
+    enableRecovery() { recovery = true } }
 }
 async function harness(options: {
   env?: Record<string, string | undefined>; db?: ReturnType<typeof ledger>; rpc?: (args: Args) => unknown | Promise<unknown>;
@@ -241,6 +250,69 @@ test('above-approved cent limits and malformed monetary configuration are reject
     const h = await harness({ env })
     await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'configuration')
     assert.equal(h.metrics().reads, 0)
+  }
+})
+
+test('scoped recovery admits six further public attempts atomically while preserving prior floors and debits', async () => {
+  const db = ledger(), env = { NBA_BROWSER_DAILY_SESSION_LIMIT: '5', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '98', NBA_BROWSER_DAILY_MINUTE_LIMIT: '25', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '490' }
+  db.date('2026-10-28')
+  const seed = await harness({ db, env })
+  for (let i = 0; i < 5; i++) await seed.api.reserveNbaBrowserBudget(seed.input)
+  await rejectsCode(seed.api.checkNbaBrowserBudgetUsage({ ...seed.input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 }) }), 'spend-limit')
+  const priorIds = [...db.reservations.keys()], baseline = { ...db.windows.get('project-fixture:day:2026-10-28')! }
+  assert.equal(baseline.floor, 624)
+  db.enableRecovery()
+  const instances = await Promise.all(Array.from({ length: 12 }, () => harness({ db, env })))
+  const attempts = await Promise.allSettled(instances.map(h => h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: [21717986, 21717975], readUsage: async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 }) })))
+  assert.equal(attempts.filter(r => r.status === 'fulfilled').length, 6)
+  assert.equal(db.reservations.size, 11)
+  assert.deepEqual(db.counters.get('project-fixture:day:2026-10-28'), { sessions: 11, minutes: 55 })
+  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.floor, 624 + 6 * 51)
+  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.minutes, baseline.minutes)
+  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.bytes, baseline.bytes)
+  assert.ok(priorIds.every(id => db.reservations.has(id)))
+  assert.deepEqual(instances[0].calls[0].p_game_ids, [21717975, 21717986])
+  const admitted = attempts.find(r => r.status === 'fulfilled') as PromiseFulfilledResult<Awaited<ReturnType<Api['reserveNbaBrowserBudget']>>>
+  assert.equal(admitted.value.allowanceExpiresAt, '2026-10-29T00:00:00.000Z')
+})
+
+test('recovery cannot authorize direct, missing/mixed scope, another project, expired day or period exhaustion', async () => {
+  const h = await harness({ env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '5', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '98', NBA_BROWSER_DAILY_MINUTE_LIMIT: '25', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '490' } })
+  h.db.date('2026-10-28'); h.db.enableRecovery()
+  await h.api.reserveNbaBrowserBudget(h.input)
+  const higherUsage = async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 })
+  for (const extra of [{}, { workflow: 'direct' as const, gameIds: [21717975] }, { gameIds: [21717975, 21717987] }]) {
+    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, ...extra, readUsage: higherUsage }), 'spend-limit')
+  }
+  const input = { ...h.input, gameIds: [21717975], readUsage: higherUsage }
+  await h.api.checkNbaBrowserBudgetUsage(input)
+  assert.deepEqual(h.calls.at(-1)?.p_game_ids, [21717975])
+  await rejectsCode(h.api.checkNbaBrowserBudgetUsage({ ...input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) }), 'spend-limit')
+  // A period guard still wins even though the dated daily allowance is available.
+  const p = await harness({ db: h.db, env: { NBA_BROWSER_PERIOD_CENT_LIMIT: '600' } })
+  await rejectsCode(p.api.reserveNbaBrowserBudget({ ...p.input, gameIds: [21717975], readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) }), 'spend-limit')
+  h.db.date('2026-10-29')
+  const next = await h.api.reserveNbaBrowserBudget({ ...input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) })
+  assert.equal(next.allowanceKey, undefined)
+  const another = await h.api.reserveNbaBrowserBudget({ ...h.input, projectId: 'other-project', gameIds: [21717975] })
+  assert.equal(another.allowanceKey, undefined)
+})
+
+test('malformed scopes fail before usage/RPC; large ordinary scopes preserve normal budget behavior', async () => {
+  for (const gameIds of [[], [21717975, 21717975], [0], [-1], [1.5], [NaN], Array.from({ length: 101 }, (_, i) => i + 1), '21717975']) {
+    const h = await harness()
+    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: gameIds as number[] }), 'configuration')
+    assert.equal(h.metrics().reads, 0); assert.equal(h.calls.length, 0)
+  }
+  const h = await harness(); h.db.date('2026-10-28'); h.db.enableRecovery()
+  const ordinary = await h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: Array.from({ length: 13 }, (_, i) => 21717975 + i) })
+  assert.equal(ordinary.allowanceKey, undefined)
+})
+
+test('recovery confirmation cannot smuggle another scope or expiry into the browser lifetime', async () => {
+  for (const extra of [{ allowanceKey: 'unreviewed', allowanceExpiresAt: '2026-10-29T00:00:00.000Z' }, { allowanceKey: 'nba-public-count-recovery-2026-10-28', allowanceExpiresAt: '2026-10-30T00:00:00.000Z' }, { allowanceKey: 'nba-public-count-recovery-2026-10-28' }]) {
+    const h = await harness({ rpc: args => ({ allowed: true, reason: 'reserved', id: args.p_id, day: '2026-10-28', periodStart: '2026-10-18', reservedMinutes: 5, reservedCents: 51, ...extra }) })
+    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: [21717975] }), 'reservation-unavailable')
   }
 })
 

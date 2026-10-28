@@ -62,7 +62,7 @@
     "desktop:verify-release": "node scripts/verify-desktop-release.mjs",
     "postinstall": "patch-package",
     "test:nba-pregame-freeze": "node --import tsx --test scripts/nba-pregame-research.test.mts scripts/nba-board-freeze.test.mts scripts/nba-slate-freeze.test.mts scripts/nba-research-resources.test.mts scripts/nba-entity-freeze.test.mts scripts/nba-research-freeze-cron.test.mts scripts/nba-research-bundle.test.mts",
-    "test:nba-capture-controls": "node --import tsx --test scripts/nba-browser-budget.test.mts scripts/browserbase-persistence.test.mjs scripts/nba-public-control.test.mts scripts/nba-book-capture-policy.test.mts scripts/nba-book-first-capture.test.mts scripts/nba-first-books.test.mts scripts/nba-book-props-dom.test.mts"
+    "test:nba-capture-controls": "node --import tsx --test scripts/nba-browser-budget.test.mts scripts/browserbase-persistence.test.mjs scripts/nba-public-control.test.mts scripts/nba-public-admin-batch.test.mts scripts/nba-book-capture-policy.test.mts scripts/nba-book-first-capture.test.mts scripts/nba-first-books.test.mts scripts/nba-book-props-dom.test.mts"
   },
   "dependencies": {
     "@browserbasehq/sdk": "^2.16.0",

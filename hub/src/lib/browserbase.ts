@@ -177,9 +177,15 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   const budgetInput = {
     projectId: pid,
     workflow: opts.metadata?.book === 'pikkit' ? 'public' as const : 'direct' as const,
+    // Preserve the exact capture scope for admission and every active check.
+    // The database alone decides whether a dated task allowance applies.
+    ...(opts.metadata?.gameIds !== undefined ? { gameIds: opts.metadata.gameIds as readonly number[] } : {}),
     readUsage: () => bb.projects.usage(pid, { timeout: 5000, maxRetries: 0 }),
   }
   const reservation = nba ? await reserveNbaBrowserBudget({ ...budgetInput, timeoutSeconds }) : null
+  if (reservation?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.allowanceExpiresAt)) {
+    throw new Error('NBA public task allowance expired before browser creation')
+  }
   if (reservation) userMetadata.budgetReservation = reservation.id
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
@@ -235,6 +241,9 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   // cannot be undone. Permanent launch/runtime quotas bound repeated exposure.
   const monitor = async () => {
     try {
+      if (reservation?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.allowanceExpiresAt)) {
+        throw new Error('NBA public task allowance expired')
+      }
       await checkNbaBrowserBudgetUsage(budgetInput)
     } catch {
       if (!monitorStopped) {

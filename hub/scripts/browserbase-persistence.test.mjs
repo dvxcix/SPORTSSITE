@@ -13,7 +13,7 @@ async function fixture(options, work) {
   process.env.BROWSERBASE_PROJECT_ID = 'fixture-project'
   if (options.configured !== false) process.env.PIKKIT_CONTEXT_ID = 'production-context'
   else delete process.env.PIKKIT_CONTEXT_ID
-  const calls = { create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], timers: [], cleared: [] }
+  const calls = { create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], scopes: [], timers: [], cleared: [] }
   let released = false
   const page = { goto: async (...args) => { calls.navigation.push(args); if (options.gotoFails) throw Error('navigation failed') } }
   const context = { pages: () => options.noPage ? [] : [page], newPage: async () => { if (options.newPageFails) throw Error('page failed'); return page } }
@@ -48,13 +48,15 @@ async function fixture(options, work) {
       reserveNbaBrowserBudget: async input => {
         calls.budget.push(['reserve', input.timeoutSeconds, calls.create.length])
         calls.workflows.push(['reserve', input.workflow])
+        calls.scopes.push(['reserve', input.gameIds])
         if (options.budgetReject) throw Error('NBA browser budget unavailable')
         await input.readUsage()
-        return { id: 'fixture-reservation' }
+        return { id: 'fixture-reservation', ...options.reservation }
       },
       checkNbaBrowserBudgetUsage: async input => {
         calls.budget.push(['check'])
         calls.workflows.push(['check', input.workflow])
+        calls.scopes.push(['check', input.gameIds])
         await input.readUsage()
         if (options.watchReject) throw Error('NBA browser usage exceeded')
       },
@@ -63,7 +65,8 @@ async function fixture(options, work) {
   const compiledModule = { exports: {} }
   const setTimer = options.fakeTimers ? (fn, ms) => { const timer = { fn, ms }; calls.timers.push(timer); return timer } : setTimeout
   const clearTimer = options.fakeTimers ? timer => { calls.cleared.push(timer) } : clearTimeout
-  new Function('require', 'module', 'exports', 'console', 'setTimeout', 'clearTimeout', compiled)(id => { if (!(id in mocks)) throw Error('Unexpected import: ' + id); return mocks[id] }, compiledModule, compiledModule.exports, { warn: message => calls.warnings.push(message) }, setTimer, clearTimer)
+  const Clock = options.now ? class extends Date { static now() { return options.now() } } : Date
+  new Function('require', 'module', 'exports', 'console', 'setTimeout', 'clearTimeout', 'Date', compiled)(id => { if (!(id in mocks)) throw Error('Unexpected import: ' + id); return mocks[id] }, compiledModule, compiledModule.exports, { warn: message => calls.warnings.push(message) }, setTimer, clearTimer, Clock)
   try { await work(compiledModule.exports, calls) }
   finally { for (const [key, value] of Object.entries(old)) { if (value === undefined) delete process.env[key]; else process.env[key] = value } }
 }
@@ -129,6 +132,32 @@ test('NBA runtime limit failure ends the remote session once and cancels its wat
     assert.equal(calls.disconnect, 1)
     assert.equal(calls.timers.filter(timer => timer.ms === 5000).length, 1)
     assert.ok(calls.cleared.includes(watcher))
+  })
+})
+
+test('dated public scope reaches admission and monitoring, and expiry closes the active browser', async () => {
+  let now = Date.parse('2026-10-28T23:59:59Z')
+  await fixture({ fakeTimers: true, now: () => now, reservation: { allowanceKey: 'nba-public-count-recovery-2026-10-28', allowanceExpiresAt: '2026-10-29T00:00:00.000Z' } }, async (api, calls) => {
+    const gameIds = [21717975, 21717976]
+    const bb = await api.openPikkitSession('production-context', { sport: 'nba', gameIds })
+    assert.deepEqual(calls.scopes, [['reserve', gameIds]])
+    calls.timers[0].fn()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    assert.deepEqual(calls.scopes, [['reserve', gameIds], ['check', gameIds]])
+    now = Date.parse('2026-10-29T00:00:00Z')
+    calls.timers.at(-1).fn()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    await assert.rejects(bb.close(), /usage limit/)
+    assert.equal(calls.release.length, 1)
+    assert.equal(calls.budget.filter(x => x[0] === 'check').length, 1)
+  })
+})
+
+test('a reservation that expires before create cannot open a paid browser', async () => {
+  await fixture({ now: () => Date.parse('2026-10-29T00:00:00Z'), reservation: { allowanceExpiresAt: '2026-10-29T00:00:00.000Z' } }, async (api, calls) => {
+    await assert.rejects(api.openPikkitSession('production-context', { sport: 'nba', gameIds: [21717975] }), /expired before browser creation/)
+    assert.equal(calls.create.length, 0)
+    assert.equal(calls.budget.length, 1)
   })
 })
 
