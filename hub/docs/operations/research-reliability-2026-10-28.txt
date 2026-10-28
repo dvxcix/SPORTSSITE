@@ -98,3 +98,12 @@ and49/49, production134/134, feed visibility25/25, focused research17/17,
 TypeScript, focused production lint, and separate RLS review. Full changed-file
 lint also encountered14 pre-existing errors in three NBA files; running the
 same lint against the original source reproduced the same14. None was hidden.
+Two-way post visibility follow-up: the independently reviewed CLI migration
+20261028220449_two_way_block_social_visibility.sql was individually applied as
+live migration 20261028220923_two_way_block_social_visibility, after the private
+repost policy. It adds restrictive SELECT checks for both directions of a block
+on posts and reposts, preserving existing rules and writes. The PostgreSQL role
+fixture covers both directions, guests, owner records, followers, entitlements,
+source visibility, writes, and policy drift. This does not cover all profile
+metadata, comments, or realtime surfaces. Do not replay this migration.
+
