@@ -1,5 +1,7 @@
 import { gunzipSync } from 'zlib'
 import type { createAdminClient } from '@/lib/supabase/admin'
+import { withValidatedNflPbp } from '@/lib/nflPbpStream'
+import { NFL_PBP_RAW_COLUMNS } from '@/lib/nflPbpRequiredColumns'
 
 // Free NFL data foundation — nflverse (nflreadr's underlying source) publishes
 // static CSV/parquet files as GitHub release assets, refreshed nightly during
@@ -409,25 +411,72 @@ const PBP_STR_FIELDS = [
   'punt_returner_player_id', 'punt_returner_player_name', 'kickoff_returner_player_id', 'kickoff_returner_player_name',
   'kicker_player_id', 'kicker_player_name', 'punter_player_id', 'punter_player_name',
 ] as const
+export const NFL_PBP_REQUIRED_COLUMNS = [...new Set([
+  ...NFL_PBP_RAW_COLUMNS, 'game_id', 'play_id', 'season', 'game_date', 'desc',
+  ...PBP_NUM_FIELDS, ...PBP_INT_FIELDS, ...PBP_BOOL_FIELDS, ...PBP_STR_FIELDS,
+])]
+const PBP_MAX_ROW_BYTES = 512 * 1024
+const PBP_MAX_BATCH_BYTES = 6 * 1024 * 1024
+function mapNflPbpRow(r: Record<string, string>): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    play_id: n(r.play_id), game_id: r.game_id, game_date: s(r.game_date),
+    play_desc: s(r.desc), raw: r, updated_at: new Date().toISOString(),
+  }
+  for (const f of PBP_NUM_FIELDS) row[f] = n(r[f])
+  for (const f of PBP_INT_FIELDS) row[f] = n(r[f])
+  for (const f of PBP_BOOL_FIELDS) row[f] = b(r[f])
+  for (const f of PBP_STR_FIELDS) row[f] = s(r[f])
+  return row
+}
+function pbpRowBytes(row: Record<string, unknown>): number {
+  const bytes = Buffer.byteLength(JSON.stringify(row), 'utf8')
+  if (bytes > PBP_MAX_ROW_BYTES) throw new Error('NFL PBP mapped row is too large')
+  return bytes
+}
 
 export async function syncNflPbp(admin: ReturnType<typeof createAdminClient>, season: number): Promise<number> {
-  const rows = await fetchNflverseCsvGz(`https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_${season}.csv.gz`)
-  const mapped = rows.map(r => {
-    const row: Record<string, unknown> = {
-      play_id: n(r.play_id),
-      game_id: r.game_id,
-      game_date: s(r.game_date),
-      play_desc: s(r.desc),
-      raw: r,
-      updated_at: new Date().toISOString(),
+  const url = `https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_${season}.csv.gz`
+  // The raw baseline has been verified on 2026 data. Later seasons also use
+  // bounded ingestion but fail closed if they drop a baseline column; their
+  // actual source schemas remain unverified. Preserve prior historical imports.
+  if (season < 2026) {
+    const previousRows = await fetchNflverseCsvGz(url)
+    const previous = previousRows.map(mapNflPbpRow).filter(row => row.game_id && row.play_id != null)
+    return upsertChunked(admin, 'nfl_pbp', dedupeByKey(previous, ['game_id', 'play_id']), 'game_id,play_id')
+  }
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) })
+  if (!response.ok) throw new NflverseAssetError(`nflverse CSV.gz request failed (${response.status})`, response.status, url)
+  if (!response.body) throw new Error('NFL PBP source has no body')
+  return withValidatedNflPbp(response.body, NFL_PBP_REQUIRED_COLUMNS, row => {
+    if (row.season !== String(season)) throw new Error('NFL PBP CSV has a different season')
+    if (!row.game_id || n(row.play_id) == null) return false
+    if (Buffer.byteLength(row.game_id, 'utf8') > 128) throw new Error('NFL PBP game identity is too large')
+    pbpRowBytes(mapNflPbpRow(row))
+    return true
+  }, async rows => {
+    const seen = new Set<string>()
+    let batch: Record<string, unknown>[] = [], batchBytes = 2
+    const save = async () => {
+      if (!batch.length) return
+      // Deduplicate within each SQL statement. Sequential statements ensure a
+      // later correction also wins when the same key spans multiple batches.
+      const chunk = dedupeByKey(batch, ['game_id', 'play_id'])
+      const { error } = await admin.from('nfl_pbp').upsert(chunk, { onConflict: 'game_id,play_id' })
+      if (error) throw error
+      batch = []; batchBytes = 2
     }
-    for (const f of PBP_NUM_FIELDS) row[f] = n(r[f])
-    for (const f of PBP_INT_FIELDS) row[f] = n(r[f])
-    for (const f of PBP_BOOL_FIELDS) row[f] = b(r[f])
-    for (const f of PBP_STR_FIELDS) row[f] = s(r[f])
-    return row
-  }).filter(r => r.game_id && r.play_id != null)
-  return upsertChunked(admin, 'nfl_pbp', dedupeByKey(mapped, ['game_id', 'play_id']), 'game_id,play_id')
+    for await (const r of rows) {
+      const row = mapNflPbpRow(r)
+      if (!row.game_id || row.play_id == null) continue
+      const bytes = pbpRowBytes(row) + 1
+      if (batchBytes + bytes > PBP_MAX_BATCH_BYTES) await save()
+      seen.add(`${String(row.game_id)}|${String(row.play_id)}`)
+      batch.push(row); batchBytes += bytes
+      if (batch.length === 500) await save()
+    }
+    await save()
+    return seen.size
+  })
 }
 
 // Opponent-adjustment ("defense vs position") — the real answer to "is this

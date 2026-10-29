@@ -1,0 +1,29 @@
+NFL play-by-play memory follow-up — October 29, 2026
+
+The 01:05 UTC scheduled run's Vercel instance was killed for memory at
+01:06:22.174; the preceding three hourly runs succeeded. Its receipt did not
+complete. This was a function instance failure, not proof of a database OOM or
+the separate database restart cause. Do not replay it or mark recovery based on
+deployment alone. The next ordinary scheduled run is 02:05 UTC.
+
+For 2026 and later, the importer now spools a bounded gzip to a private unique
+temporary directory, validates the full compressed stream, CSV structure,
+known 2026 raw headers, season and row size, then performs a second streaming
+pass with bounded rows and serialized write batches. It preserves raw fields,
+typed mapping, unique counts and last duplicate wins across batches. The spool
+is removed on normal and handled-failure paths. A hard instance termination may
+prevent cleanup. Earlier seasons retain their previous ingestion implementation.
+Future schemas are unverified and fail closed if a known 2026 header disappears.
+
+Valid gzip and structurally valid CSV do not prove that the upstream published
+every play. Earlier batches may remain written after a DB error, as before; the
+route must report failure rather than refresh coverage or claim success. No
+historical jobs or captures were replayed, and no schema migration was needed.
+
+Validation: 11 streaming tests, 15 NFL freeze tests, 134 production checks,
+TypeScript, scoped lint and independent review. A synthetic 50,000-play,
+79.8 MB source passed under a 192 MB V8 heap with 100 fake writes, sampled heap
+104.5 MB and RSS 263.8 MB in 10.1s. This excludes real download, database and
+coverage time and does not prove the existing 120s deadline is sufficient.
+The prior successful real run made 38 writes and took 48.9s. Verify natural
+recovery and coverage before considering the incident resolved.
