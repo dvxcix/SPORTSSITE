@@ -420,3 +420,30 @@ test('each day/period resource independently preserves the public share, and wor
     assert.equal(h.metrics().reads, 0)
   }
 })
+
+test('October29 reviewed scope accepts exact public subsets', async () => {
+  for (const gameIds of [[21717987], [21717988, 21717989], [21717987, 21717988, 21717989]]) {
+    const h = await harness({ rpc: args => ({ allowed: true, reason: 'reserved', id: args.p_id,
+      reservedMinutes: 5, reservedCents: 51, day: '2026-10-29', periodStart: '2026-10-18',
+      allowanceKey: 'nba-public-count-recovery-2026-10-29', allowanceExpiresAt: '2026-10-30T00:00:00.000Z' }) });
+    const result = await h.api.reserveNbaBrowserBudget({ ...h.input, gameIds });
+    assert.equal(result.allowanceKey, 'nba-public-count-recovery-2026-10-29');
+  }
+});
+test('October29 reviewed scope rejects mixed IDs, direct, wrong day/key/expiry and missing scope', async () => {
+  const cases = [
+    { ids: [21717987, 21717990] }, { ids: [21717986] }, { ids: undefined }, { ids: [] },
+    { ids: [21717987], workflow: 'direct' }, { ids: [21717987], day: '2026-10-28' },
+    { ids: [21717987], key: 'nba-public-count-recovery-2026-10-28' },
+    { ids: [21717987], key: 'other' }, { ids: [21717987], expiry: '2026-10-29T00:00:00.000Z' },
+    { ids: [21717987], expiry: null }
+  ];
+  for (const c of cases) {
+    const h = await harness({ rpc: args => ({ allowed: true, reason: 'reserved', id: args.p_id,
+      reservedMinutes: 5, reservedCents: 51, day: c.day ?? '2026-10-29', periodStart: '2026-10-18',
+      allowanceKey: c.key ?? 'nba-public-count-recovery-2026-10-29',
+      allowanceExpiresAt: c.expiry === null ? undefined : (c.expiry ?? '2026-10-30T00:00:00.000Z') }) });
+    const expected = Array.isArray(c.ids) && !c.ids.length ? 'configuration' : 'reservation-unavailable';
+    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: c.ids, workflow: (c.workflow ?? 'public') as 'public' | 'direct' }), expected);
+  }
+});
