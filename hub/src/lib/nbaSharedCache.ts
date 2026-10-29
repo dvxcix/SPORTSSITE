@@ -12,6 +12,24 @@ const maxLocalBytes = 32 * 1024 * 1024
 const inFlight = new Map<string, Promise<CacheResult<unknown>>>()
 const failures = new Map<string, { until: number; error: Error }>()
 const failureBackoffMs = 15_000
+// Bounded, private-only categories: do not log cache keys or provider errors,
+// which can contain request URLs, credentials, or customer data.
+const readDiagnostics = new Map<string, number>()
+function reportReadFailure(operation: 'full-read' | 'metadata-read', status: number, code: string, signal: AbortSignal) {
+  const reason = status === 0 && signal.aborted && signal.reason?.name === 'TimeoutError' ? 'client-deadline'
+    : code === '57014' ? 'database-cancelled'
+    : code === 'PGRST003' ? 'pool-timeout'
+    : ['08000', '08001', '08003', '08006', '57P01', '57P02', '57P03'].includes(code) ? 'database-connection'
+    : ['53100', '53200', '53300'].includes(code) ? 'database-resource'
+    : status === 429 ? 'rate-limited'
+    : status >= 400 && status < 500 ? 'http-client'
+    : status >= 500 && status < 600 ? 'http-server'
+    : status === 0 ? 'transport-or-client' : 'unknown'
+  const category = `${operation}:${reason}`, now = Date.now()
+  if (now - (readDiagnostics.get(category) ?? -Infinity) < 60_000) return
+  readDiagnostics.set(category, now)
+  try { console.warn('[The Court] shared cache read failed', { operation, reason }) } catch { /* Diagnostics must not change cache behavior. */ }
+}
 /** A database lease coalesces refreshes across serverless instances, not just a process. */
 export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds = 55): Promise<NbaCached<T>> {
   // Different freshness policies may share the public source and lease, but
@@ -67,15 +85,17 @@ async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number
   const read = async () => {
     // An explicit fresh signal opts this read out of Next's render-pass GET
     // memoization, so post-commit reads and lease followers can see new rows.
-    const { data, error } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at,lease_token,lease_until').eq('key', key).abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
-    if (error) throw new Error('NBA shared cache unavailable')
+    const signal = AbortSignal.timeout(12_000)
+    const { data, error, status } = await admin.from('nba_source_cache').select('payload,fetched_at,expires_at,lease_token,lease_until').eq('key', key).abortSignal(signal).maybeSingle()
+    if (error) { reportReadFailure('full-read', status, error.code, signal); throw new Error('NBA shared cache unavailable') }
     return data as Entry<T> | null
   }
   const readMetadata = async () => {
     // Followers need the payload only after a new observation can be fresh.
     // Select no payload here: an expired slate may be several megabytes.
-    const { data, error } = await admin.from('nba_source_cache').select('fetched_at,expires_at,lease_token,lease_until').eq('key', key).abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
-    if (error) throw new Error('NBA shared cache unavailable')
+    const signal = AbortSignal.timeout(12_000)
+    const { data, error, status } = await admin.from('nba_source_cache').select('fetched_at,expires_at,lease_token,lease_until').eq('key', key).abortSignal(signal).maybeSingle()
+    if (error) { reportReadFailure('metadata-read', status, error.code, signal); throw new Error('NBA shared cache unavailable') }
     return data as Metadata | null
   }
   const expiry = (entry: Metadata | null): number | null => {

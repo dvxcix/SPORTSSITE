@@ -14,3 +14,13 @@ independent followers and freshness/cooldown races; 102 pregame freeze tests;
 134 production smoke checks; TypeScript and scoped lint. Independently reviewed.
 No schema, capture, schedule, provider, or Browserbase changes are required.
 Live deployment and natural traffic must be verified separately.
+
+Follow-up: shared cache SELECT failures previously discarded their cause. A
+private, rate-limited diagnostic now records only a fixed read operation and
+allowlisted coarse failure category. It does not record cache keys, payloads,
+error text, URLs, credentials or arbitrary database codes. Status-zero transport
+failures remain ambiguous unless this request's own timeout signal fired;
+database cancellation is not assumed to be a timeout. Thrown query exceptions
+outside the returned error path remain unclassified. The public error and all
+freshness, fallback and cooldown decisions remain unchanged. Diagnostic tests
+cover redaction, rate limiting, deadlines, database errors and both read paths.
