@@ -1,20 +1,30 @@
 /** Private-only, bounded diagnostics. Never return an exception message or a
  * request parameter: provider and database errors can contain sensitive data. */
 export type NbaSlateStage = 'schedule' | 'shared-cache' | 'boards' | 'models' | 'defense' | 'prices' | 'archive' | 'cache-commit' | 'market-context' | 'finalize' | 'render'
+type FinalizeStage = 'closed-research' | 'frozen-ranks' | 'legacy-reads'
 const slowThresholdMs = 10_000
 /** One bounded set of fixed stage durations, only reported for slow requests. */
 export function nbaSlateTimer(now: () => number = Date.now) {
   const start = now(), times: Partial<Record<NbaSlateStage, number>> = {}
+  const finalizeTimes: Partial<Record<FinalizeStage, number>> = {}
   let stage: NbaSlateStage = 'schedule', last = start
+  let finalizeStage: FinalizeStage | null = null, finalizeLast = start
   const advance = (next: NbaSlateStage, at: number) => { times[stage] = (times[stage] ?? 0) + Math.max(0, at - last); stage = next; last = at }
+  const stopFinalize = (at: number) => {
+    if (finalizeStage) finalizeTimes[finalizeStage] = (finalizeTimes[finalizeStage] ?? 0) + Math.max(0, at - finalizeLast)
+    finalizeStage = null
+  }
   return {
     enter(next: NbaSlateStage) { advance(next, now()) },
+    enterFinalize(next: FinalizeStage) { const at = now(); stopFinalize(at); finalizeStage = next; finalizeLast = at },
+    endFinalize() { stopFinalize(now()) },
     finish() {
-      const end = now(); advance(stage, end)
+      const end = now(); advance(stage, end); stopFinalize(end)
       const total = Math.max(0, end - start)
       if (total < slowThresholdMs) return null
       const stages = Object.fromEntries(Object.entries(times).map(([key, elapsed]) => [key, Math.round(elapsed / 100) * 100]))
-      return { totalMs: Math.round(total / 100) * 100, stages }
+      const finalize = Object.fromEntries(Object.entries(finalizeTimes).map(([key, elapsed]) => [key, Math.round(elapsed / 100) * 100]))
+      return { totalMs: Math.round(total / 100) * 100, stages, ...(Object.keys(finalize).length ? { finalize } : {}) }
     },
   }
 }

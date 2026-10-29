@@ -53,6 +53,33 @@ test('fast requests do not produce a timing record and a cold follower stays in 
   assert.deepEqual(follower.finish(), { totalMs: 12_000, stages: { schedule: 100, 'shared-cache': 11_900 } })
 })
 
+test('finalize timing sums repeated phase passes without changing outer stage timing', () => {
+  let clock = 0
+  const timer = nbaSlateTimer(() => clock)
+  clock = 100; timer.enter('finalize')
+  clock = 400; timer.enterFinalize('closed-research')
+  clock = 3_600; timer.enterFinalize('frozen-ranks')
+  clock = 5_100; timer.enterFinalize('legacy-reads')
+  clock = 5_800; timer.enterFinalize('closed-research')
+  clock = 6_500; timer.enterFinalize('frozen-ranks')
+  clock = 8_500; timer.enterFinalize('legacy-reads')
+  clock = 9_000; timer.endFinalize()
+  clock = 10_000; timer.enter('render')
+  clock = 12_000
+  assert.deepEqual(timer.finish(), { totalMs: 12_000, stages: { schedule: 100, finalize: 9_900, render: 2_000 }, finalize: { 'closed-research': 3_900, 'frozen-ranks': 3_500, 'legacy-reads': 1_200 } })
+})
+
+test('failed finalization is included in private timing and fast requests remain unreported', () => {
+  let clock = 0
+  const timer = nbaSlateTimer(() => clock)
+  timer.enter('finalize'); timer.enterFinalize('frozen-ranks')
+  clock = 10_200
+  assert.deepEqual(timer.finish(), { totalMs: 10_200, stages: { schedule: 0, finalize: 10_200 }, finalize: { 'frozen-ranks': 10_200 } })
+  clock = 0; const fast = nbaSlateTimer(() => clock)
+  fast.enter('finalize'); fast.enterFinalize('closed-research'); clock = 9_999; fast.endFinalize()
+  assert.equal(fast.finish(), null)
+})
+
 test('slate route uses private diagnostics and retains the generic public response', async () => {
   const source = await readFile(new URL('../src/app/the-paint/slate/route.ts', import.meta.url), 'utf8')
   assert.match(source, /console\.error\('\[The Court\] slate unavailable', nbaSlateFailure\(stage, error\)\)/)

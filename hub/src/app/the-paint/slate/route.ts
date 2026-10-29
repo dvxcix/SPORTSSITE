@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       // work, then retry if a different game crosses during archive reads.
       // A missing final board is never replaced by a cached pre-tip response.
       for (let pass=0;pass<=schedule.games.length;pass++) {
+        timer.enterFinalize('closed-research')
         if(mode==='pregame') await Promise.all(schedule.games.slice(0,16).filter(game=>!nbaPregameOpen(game)&&!closedResolved.has(game.id)).map(async game=>{
           closedResolved.add(game.id)
           try {
@@ -113,8 +114,10 @@ export async function GET(request: NextRequest) {
         }))
         const pricedBoards=[...boards.values()]
         const complete=schedule.complete&&!failed.size&&pricedBoards.length===schedule.games.length&&pricedBoards.every(board=>board.statsComplete&&(!nbaPeriod(market!)||board.periodStatsComplete===true))
+        timer.enterFinalize('frozen-ranks')
         const frozen=await getNbaSlateRanks(schedule.games,pricedBoards,market as PaintMarket,book,selection,mode,complete,side as 'over'|'under')
         const missing=[...new Set([...frozen.unavailable,...[...failed].filter(id=>closedResolved.has(id))])]
+        timer.enterFinalize('legacy-reads')
         const legacyResults=mode==='pregame'?await Promise.allSettled(schedule.games.filter(game=>missing.includes(game.id)).map(async game=>({gameId:game.id,saved:await getNbaLegacySlateRows(game,market as PaintMarket,book,side as 'over'|'under',selection)}))):[]
         const legacy=legacyResults.flatMap(result=>result.status==='fulfilled'&&result.value.saved?[{gameId:result.value.gameId,saved:result.value.saved}]:[])
         if(mode==='pregame'&&schedule.games.slice(0,16).some(game=>!nbaPregameOpen(game)&&!closedResolved.has(game.id)))continue
@@ -123,7 +126,7 @@ export async function GET(request: NextRequest) {
       throw new Error('NBA slate phase could not settle')
     }
     enter('finalize')
-    const {pricedBoards,reports,defense,marketContexts,contextUnavailable,defenseMissing,failed,complete,frozen,legacy,missing}=await finalize()
+    const {pricedBoards,reports,defense,marketContexts,contextUnavailable,defenseMissing,failed,complete,frozen,legacy,missing}=await finalize().finally(() => timer.endFinalize())
     enter('render')
     for (const entry of legacy) frozen.observedAt[entry.gameId]=entry.saved.observedAt
     const unavailable=missing.filter(gameId=>!legacy.some(entry=>entry.gameId===gameId))

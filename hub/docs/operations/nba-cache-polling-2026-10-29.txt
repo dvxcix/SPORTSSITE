@@ -24,3 +24,12 @@ database cancellation is not assumed to be a timeout. Thrown query exceptions
 outside the returned error path remain unclassified. The public error and all
 freshness, fallback and cooldown decisions remain unchanged. Diagnostic tests
 cover redaction, rate limiting, deadlines, database errors and both read paths.
+
+Slate finalization timing now also separates fixed, private closed-research,
+frozen-rank and legacy-lookup buckets while retaining the overall finalize
+stage. Buckets include adjacent synchronous work and are not query timings.
+Repeated phase passes are accumulated, including failed finalization; no queries,
+phase decisions, response contents or player identifiers are added or changed.
+Focused diagnostics 8/8, freeze 102/102, production 134/134, TypeScript and
+scoped lint passed; route lint retains three pre-existing warnings. Independently
+reviewed. These timings support investigation, not a latency or restart fix.
