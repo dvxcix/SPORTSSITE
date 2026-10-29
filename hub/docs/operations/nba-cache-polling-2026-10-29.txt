@@ -1,0 +1,16 @@
+NBA shared cache polling — October 29, 2026
+
+Slow slate refreshes can leave multiple application instances waiting for one
+shared cache owner. Previously every poll downloaded the entire expired cache
+payload, which can be multiple megabytes. Waiting readers now poll timestamps
+and lease metadata only. When those indicate a fresh result, each reader fetches
+and independently validates the complete row before using it. Initial reads,
+freshness and stale policy, failure cooldown, source observation times, and
+pregame/live boundaries remain unchanged. This does not remove owner writes or
+initial payload reads and does not establish the database restart cause.
+
+Validation: 23 focused shared cache/outage tests, including six simultaneous
+independent followers and freshness/cooldown races; 102 pregame freeze tests;
+134 production smoke checks; TypeScript and scoped lint. Independently reviewed.
+No schema, capture, schedule, provider, or Browserbase changes are required.
+Live deployment and natural traffic must be verified separately.

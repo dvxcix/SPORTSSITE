@@ -5,6 +5,7 @@ import { createAdminClient } from './supabase/admin'
 export type NbaCached<T> = { value: T; fetchedAt: string; stale: boolean }
 type CacheResult<T> = { cached: NbaCached<T>; expires: number }
 type Entry<T> = { payload: T | null; fetched_at: string | null; expires_at: string | null; lease_token?: string | null; lease_until?: string | null }
+type Metadata = Omit<Entry<unknown>, 'payload'>
 const local = new Map<string, { cached: NbaCached<unknown>; until: number; expires: number; bytes: number }>()
 let localBytes = 0
 const maxLocalBytes = 32 * 1024 * 1024
@@ -70,17 +71,27 @@ async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number
     if (error) throw new Error('NBA shared cache unavailable')
     return data as Entry<T> | null
   }
+  const readMetadata = async () => {
+    // Followers need the payload only after a new observation can be fresh.
+    // Select no payload here: an expired slate may be several megabytes.
+    const { data, error } = await admin.from('nba_source_cache').select('fetched_at,expires_at,lease_token,lease_until').eq('key', key).abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
+    if (error) throw new Error('NBA shared cache unavailable')
+    return data as Metadata | null
+  }
+  const expiry = (entry: Metadata | null): number | null => {
+    if (!entry?.fetched_at || !entry.expires_at || !Number.isFinite(Date.parse(entry.fetched_at)) || !Number.isFinite(Date.parse(entry.expires_at))) return null
+    return Math.min(Date.parse(entry.expires_at), Date.parse(entry.fetched_at) + ttl * 1000)
+  }
   const usable = (entry: Entry<T> | null, stale = false): CacheResult<T> | null => {
-    if (entry?.payload == null || !entry.fetched_at || !entry.expires_at || !Number.isFinite(Date.parse(entry.fetched_at)) || !Number.isFinite(Date.parse(entry.expires_at))) return null
-    const expires = Math.min(Date.parse(entry.expires_at), Date.parse(entry.fetched_at) + ttl * 1000)
-    if (expires + (stale ? staleSeconds * 1000 : 0) <= Date.now()) return null
+    const expires = expiry(entry)
+    if (entry?.payload == null || !entry.fetched_at || expires == null || expires + (stale ? staleSeconds * 1000 : 0) <= Date.now()) return null
     return { cached: { value: entry.payload, fetchedAt: entry.fetched_at, stale: expires <= Date.now() }, expires }
   }
   const prior = await read(), fresh = usable(prior)
   if (fresh) return fresh
   // A released token with a future lease is a shared failure cooldown. Keep
   // the prior payload intact, but do not let every viewer retry a failing feed.
-  const coolingDown = (entry: Entry<T> | null) => !entry?.lease_token && Date.parse(entry?.lease_until ?? '') > Date.now()
+  const coolingDown = (entry: Metadata | null) => !entry?.lease_token && Date.parse(entry?.lease_until ?? '') > Date.now()
   if (coolingDown(prior)) {
     const fallback = usable(prior, true)
     if (fallback) return fallback
@@ -121,9 +132,14 @@ async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number
   for (let attempt = 0, waited = 0; waited < budget && Date.now() - started < budget; attempt++) {
     const delay = Math.min(500 * 2 ** Math.min(attempt, 3), budget - waited)
     await new Promise(resolve => setTimeout(resolve, delay)); waited += delay
-    const entry = await read(), result = usable(entry)
-    if (result) return result
-    if (coolingDown(entry)) throw new Error('NBA source temporarily unavailable; retry shortly')
+    const metadata = await readMetadata(), expires = expiry(metadata)
+    if (expires != null && expires > Date.now()) {
+      // Metadata and payload are separate reads. Revalidate the complete row:
+      // the owner may expire, replace, or fail between the two requests.
+      const entry = await read(), result = usable(entry)
+      if (result) return result
+      if (coolingDown(entry)) throw new Error('NBA source temporarily unavailable; retry shortly')
+    } else if (coolingDown(metadata)) throw new Error('NBA source temporarily unavailable; retry shortly')
   }
   throw new Error('NBA research is warming; retry shortly')
 }

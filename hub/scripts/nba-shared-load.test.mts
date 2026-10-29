@@ -21,11 +21,21 @@ type Entry = { payload?: unknown; fetched_at?: string; expires_at?: string; leas
 async function cacheHarness() {
   let now = Date.parse('2026-10-20T12:00:00Z'), reads = 0, claims = 0, writes = 0
   let beforeClaim: (() => Promise<void>) | undefined
+  let onRead: ((key: string, columns: string) => Promise<void>) | undefined
+  let fullReads = 0, metadataReads = 0, transferredBytes = 0
   const entries = new Map<string, Entry>()
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   const admin = {
     from: () => ({
-      select: () => ({ eq: (_column: string, key: string) => ({ abortSignal: () => ({ maybeSingle: async () => { reads++; return { data: entries.get(key) ?? null, error: null } } }) }) }),
+      select: (columns: string) => ({ eq: (_column: string, key: string) => ({ abortSignal: () => ({ maybeSingle: async () => {
+        reads++
+        const row = entries.get(key), metadataOnly = !columns.split(',').includes('payload')
+        if (metadataOnly) metadataReads++; else fullReads++
+        const data = row ? Object.fromEntries(columns.split(',').filter(column => column in row).map(column => [column, row[column as keyof Entry]])) : null
+        transferredBytes += Buffer.byteLength(JSON.stringify(data))
+        await onRead?.(key, columns)
+        return { data, error: null }
+      } }) }) }),
       update: (patch: Entry) => ({ eq: (_column: string, key: string) => ({ eq: async (_token: string, token: string) => { const entry = entries.get(key); if (entry?.lease_token === token) entries.set(key, { ...entry, ...patch }); return { error: null } } }) }),
     }),
     rpc: async (name: string, args: Record<string, unknown>) => {
@@ -47,7 +57,7 @@ async function cacheHarness() {
     },
   }
   const instance = () => compiled<typeof import('../src/lib/nbaSharedCache.ts')>('../src/lib/nbaSharedCache.ts', { 'server-only': {}, 'node:crypto': crypto, './supabase/admin': { createAdminClient: () => admin } }, { Date: Clock, setTimeout: (callback: () => void) => setTimeout(callback, 1) })
-  return { instance, entries, Clock, onClaim: (hook: () => Promise<void>) => { beforeClaim = hook }, advance: (milliseconds: number) => { now += milliseconds }, metrics: () => ({ reads, claims, writes }) }
+  return { instance, entries, Clock, onClaim: (hook: () => Promise<void>) => { beforeClaim = hook }, onRead: (hook?: (key: string, columns: string) => Promise<void>) => { onRead = hook }, advance: (milliseconds: number) => { now += milliseconds }, metrics: () => ({ reads, claims, writes, fullReads, metadataReads, transferredBytes }) }
 }
 
 async function defenseHarness(gamesPerTeam: Record<number, number> = { 2026: 1, 2025: 5 }, failureTable?: string) {
@@ -236,6 +246,94 @@ test('the extended research lease protects a slow owner beyond the prior fifty-f
   const result = await Promise.all([first, second])
   assert.equal(loads, 1); assert.equal(h.metrics().writes, 1)
   assert.ok(result.every(row => row.value.ready && !row.stale))
+})
+
+test('concurrent followers poll metadata without repeatedly downloading an expired large payload', async () => {
+  const h = await cacheHarness(), [owner, follower] = await Promise.all([h.instance(), h.instance()])
+  const old = 'x'.repeat(1024 * 1024), key = 'large-contended'
+  h.entries.set(key, { payload: old, fetched_at: new h.Clock(h.Clock.now() - 60_000).toISOString(), expires_at: new h.Clock(h.Clock.now() - 1).toISOString() })
+  let release!: () => void, entered!: () => void, polled!: () => void, polls = 0, loads = 0
+  const waiting = new Promise<void>(resolve => { release = resolve }), started = new Promise<void>(resolve => { entered = resolve }), sawPolls = new Promise<void>(resolve => { polled = resolve })
+  h.onRead(async (readKey, columns) => { if (readKey === key && !columns.includes('payload') && ++polls === 3) polled() })
+  const first = owner.nbaSharedCache(key, 30, 0, async () => { loads++; entered(); await waiting; return 'new-price' }, 120)
+  await started
+  const second = follower.nbaSharedCache(key, 30, 0, async () => { loads++; return 'unexpected' }, 120)
+  await sawPolls
+  const pending = h.metrics()
+  assert.equal(pending.fullReads, 3, 'only owner initial/recheck and follower initial read the prior payload')
+  assert.equal(pending.metadataReads, 3)
+  assert.ok(pending.transferredBytes < 3 * 1024 * 1024 + 5000, 'polls do not download another megabyte each')
+  release()
+  const [a, b] = await Promise.all([first, second])
+  assert.equal(loads, 1); assert.equal(h.metrics().writes, 1)
+  assert.equal(a.value, 'new-price'); assert.deepEqual(b, a)
+})
+
+test('independent waiting instances share one refresh and avoid large payloads while polling', async () => {
+  const h = await cacheHarness(), instances = await Promise.all(Array.from({ length: 7 }, h.instance))
+  const key = 'large-many-followers', old = 'x'.repeat(1024 * 1024)
+  h.entries.set(key, { payload: old, fetched_at: new h.Clock(h.Clock.now() - 60_000).toISOString(), expires_at: new h.Clock(h.Clock.now() - 1).toISOString() })
+  let release!: () => void, entered!: () => void, polled!: () => void, polls = 0, loads = 0
+  const waiting = new Promise<void>(resolve => { release = resolve }), started = new Promise<void>(resolve => { entered = resolve }), sawPolls = new Promise<void>(resolve => { polled = resolve })
+  h.onRead(async (readKey, columns) => { if (readKey === key && !columns.includes('payload') && ++polls === 12) polled() })
+  const owner = instances[0].nbaSharedCache(key, 30, 0, async () => { loads++; entered(); await waiting; return { odds: -110 } }, 120)
+  await started
+  const followers = instances.slice(1).map(instance => instance.nbaSharedCache(key, 30, 0, async () => { loads++; return { odds: 100 } }, 120))
+  await sawPolls
+  const pending = h.metrics()
+  assert.equal(pending.claims, 7)
+  assert.equal(pending.fullReads, 8, 'each follower reads its initial payload once; the owner reads twice')
+  assert.ok(pending.metadataReads >= 12)
+  assert.ok(pending.transferredBytes < 8 * 1024 * 1024 + 10_000, 'waiting polls omit the old megabyte payload')
+  release()
+  const results = await Promise.all([owner, ...followers])
+  assert.equal(loads, 1); assert.equal(h.metrics().writes, 1)
+  assert.ok(results.every(result => result.value.odds === -110 && !result.stale && result.fetchedAt === results[0].fetchedAt))
+})
+
+test('a follower validates the full row when freshness expires or the payload changes after metadata', async () => {
+  for (const race of ['expired', 'missing', 'cooldown'] as const) {
+    const h = await cacheHarness(), follower = await h.instance(), key = `race-${race}`
+    const start = h.Clock.now()
+    h.entries.set(key, { payload: 'old', fetched_at: new h.Clock(start - 40_000).toISOString(), expires_at: new h.Clock(start - 1).toISOString(), lease_token: 'owner', lease_until: new h.Clock(start + 120_000).toISOString() })
+    let polls = 0
+    h.onRead(async (readKey, columns) => {
+      if (readKey !== key || columns.includes('payload')) return
+      polls++
+      if (polls === 1) {
+        // The metadata snapshot is still expired; publish a candidate before the next poll.
+        h.entries.set(key, { payload: 'candidate', fetched_at: new h.Clock().toISOString(), expires_at: new h.Clock(h.Clock.now() + 30_000).toISOString(), lease_token: null, lease_until: null })
+      } else if (polls === 2) {
+        if (race === 'expired') h.advance(30_000)
+        if (race === 'missing') h.entries.set(key, { payload: null, fetched_at: new h.Clock().toISOString(), expires_at: new h.Clock(h.Clock.now() + 30_000).toISOString(), lease_token: 'owner', lease_until: new h.Clock(h.Clock.now() + 120_000).toISOString() })
+        if (race === 'cooldown') h.entries.set(key, { payload: 'old', fetched_at: new h.Clock(h.Clock.now() - 40_000).toISOString(), expires_at: new h.Clock(h.Clock.now() - 1).toISOString(), lease_token: null, lease_until: new h.Clock(h.Clock.now() + 15_000).toISOString() })
+      } else if (polls === 3) {
+        h.entries.set(key, { payload: 'winner', fetched_at: new h.Clock().toISOString(), expires_at: new h.Clock(h.Clock.now() + 30_000).toISOString(), lease_token: null, lease_until: null })
+      }
+    })
+    const result = follower.nbaSharedCache(key, 30, 0, async () => { throw Error('follower must not load') }, 120)
+    if (race === 'cooldown') await assert.rejects(result, /temporarily unavailable/)
+    else assert.equal((await result).value, 'winner', race)
+    assert.equal(h.metrics().writes, 0)
+  }
+})
+
+test('a failed owner cooldown stops a waiting strict follower while stale allowance retains its original time', async () => {
+  const h = await cacheHarness(), [owner, strict, stale] = await Promise.all([h.instance(), h.instance(), h.instance()]), key = 'cooling-followers'
+  const observed = new h.Clock(h.Clock.now() - 40_000).toISOString()
+  h.entries.set(key, { payload: 'prior', fetched_at: observed, expires_at: new h.Clock(h.Clock.now() - 10_000).toISOString() })
+  let fail!: () => void, entered!: () => void, polled!: () => void
+  const waiting = new Promise<void>(resolve => { fail = resolve }), started = new Promise<void>(resolve => { entered = resolve }), sawPoll = new Promise<void>(resolve => { polled = resolve })
+  h.onRead(async (readKey, columns) => { if (readKey === key && !columns.includes('payload')) polled() })
+  const first = owner.nbaSharedCache(key, 30, 0, async () => { entered(); await waiting; throw Error('source failed') }, 120)
+  await started
+  const strictResult = strict.nbaSharedCache(key, 30, 0, async () => 'unexpected', 120)
+  const staleResult = await stale.nbaSharedCache(key, 30, 60, async () => 'unexpected', 120)
+  assert.equal(staleResult.value, 'prior'); assert.equal(staleResult.fetchedAt, observed); assert.equal(staleResult.stale, true)
+  await sawPoll; fail()
+  await assert.rejects(first, /source failed/)
+  await assert.rejects(strictResult, /temporarily unavailable/)
+  assert.equal(h.metrics().writes, 0)
 })
 
 test('memory cache supports the complete popular slate while enforcing a byte budget', async () => {
