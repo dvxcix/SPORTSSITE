@@ -146,7 +146,11 @@ export async function reserveNbaBrowserBudget(input: UsageInput & { timeoutSecon
         && data.day === '2026-10-29'
         && data.allowanceExpiresAt === '2026-10-30T00:00:00.000Z'
         && ids.every(game => [21717987, 21717988, 21717989].includes(game))
-      if (!october28 && !october29) throw new NbaBrowserBudgetError('reservation-unavailable')
+      const october30 = data.allowanceKey === 'nba-public-count-recovery-2026-10-30'
+        && data.day === '2026-10-30'
+        && data.allowanceExpiresAt === '2026-10-30T23:00:00.000Z'
+        && ids.every(game => [21717990,21717992,21717993,21717994,21717995,21717996,21717997,21717998,21717999,21718000].includes(game))
+      if (!october28 && !october29 && !october30) throw new NbaBrowserBudgetError('reservation-unavailable')
     }
     return { id, day: data.day, periodStart: data.periodStart, reservedMinutes, reservedCents,
       ...(hasAllowance ? { allowanceKey: data.allowanceKey, allowanceExpiresAt: data.allowanceExpiresAt } : {}) }
