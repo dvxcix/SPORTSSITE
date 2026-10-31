@@ -72,6 +72,9 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
   const [error, setError] = useState('')
   const [registering, setRegistering] = useState(false)
   const [registerResult, setRegisterResult] = useState('')
+  const [slateCommand, setSlateCommand] = useState<{ slateId: string | null; otherCount: number } | null>(null)
+  const [slateChecking, setSlateChecking] = useState(false)
+  const [slateMessage, setSlateMessage] = useState('')
   const [syncingRoles, setSyncingRoles] = useState(false)
   const [syncRolesResult, setSyncRolesResult] = useState('')
   const [alertHealth, setAlertHealth] = useState<ContactAlertHealth | null>(null)
@@ -176,6 +179,37 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
     }
   }
 
+  async function inspectSlate() {
+    setSlateChecking(true)
+    setSlateMessage('')
+    setSlateCommand(null)
+    try {
+      const response = await fetch('/api/admin/discord/slate-command', { cache: 'no-store' })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Inspection failed')
+      setSlateCommand(body)
+    } catch (error: unknown) { setSlateMessage(errorMessage(error, 'Inspection failed')) }
+    finally { setSlateChecking(false) }
+  }
+
+  async function removeSlate() {
+    if (!slateCommand?.slateId) return
+    setSlateChecking(true)
+    setSlateMessage('')
+    try {
+      const response = await fetch('/api/admin/discord/slate-command', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedId: slateCommand.slateId }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Removal was not confirmed')
+      setSlateCommand({ slateId: null, otherCount: body.otherCount })
+      setSlateMessage('The MLB slate command was removed; other command identities were unchanged.')
+    } catch (error: unknown) {
+      setSlateCommand(null)
+      setSlateMessage(errorMessage(error, 'Removal was not confirmed. Inspect again.'))
+    } finally { setSlateChecking(false) }
+  }
+
   async function syncAllRoles() {
     setSyncingRoles(true)
     setSyncRolesResult('')
@@ -194,6 +228,17 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
   return (
     <div className="space-y-6">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-bold text-white">MLB slate command</p>
+        <p className="text-xs text-zinc-400">Inspect the global command list, then remove only the MLB slate command. Two-factor verification is required.</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={inspectSlate} disabled={slateChecking} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{slateChecking ? 'Checking…' : 'Inspect command'}</button>
+          {slateCommand?.slateId && <button type="button" onClick={removeSlate} disabled={slateChecking} className="rounded-lg border border-amber-700 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Remove MLB slate</button>}
+        </div>
+        {slateCommand && <p className="text-xs text-zinc-400">{slateCommand.slateId ? 'MLB slate is registered.' : 'MLB slate is not registered.'} {slateCommand.otherCount} other commands found.</p>}
+        {slateMessage && <p role="status" className="text-xs text-zinc-300">{slateMessage}</p>}
+      </div>
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">One-time setup (do this first)</p>
