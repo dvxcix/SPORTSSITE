@@ -17,9 +17,9 @@ const quotes: paint.PaintProp[] = [1, 2].flatMap(id => ['threes', 'points_1q'].m
 function fixtureBoard(): paint.PaintBoard {
   const players: paint.PaintPlayer[] = [1, 2, 3].map(id => {
     const logs: paint.PaintStat[] = Array.from({ length: 10 }, (_, index) => ({ id: id * 100 + index, player: { id }, team: { id: team.id }, game: { id: 1000 + index, date: `2026-10-${String(index + 1).padStart(2, '0')}`, season: 2026, postseason: false, status: 'Final', status_state: 'final', home_team_id: team.id, visitor_team_id: 16 }, min: '25', pts: id * 5, reb: 5, ast: 2, fg3m: id, stl: 0, blk: 0, turnover: 1, fga: 8, fgm: 4, fg3a: 5, fta: 1, ftm: 1 }))
-    return { id, first_name: 'Player', last_name: String(id), position: 'F', team, headshot: null, injury: id === 3 ? { status: 'Questionable', description: 'Pretip report' } : null, average: { pts: id * 6, fg3m: id === 1 ? 4 : 3, points_1q: id }, logs, periodLogs: logs.map(log => ({ ...log, id: log.id + 10000, period: 1, pts: id })), props: [] }
+    return { id, first_name: 'Player', last_name: String(id), position: 'F', team, headshot: null, injury: id === 3 ? { status: 'Questionable', description: 'Pretip report' } : null, averageSeason: 2026, average: { pts: id * 6, fg3m: id === 1 ? 4 : 3, points_1q: id }, logs, periodLogs: logs.map(log => ({ ...log, id: log.id + 10000, period: 1, pts: id })), props: [] }
   })
-  return { game, players, sampleSeason: 2026, baselineSeasons: [2025, 2026], historical: false, sampleEnd: '2026-10-23', fetchedAt: new Date(tip - 3600000).toISOString(), issues: [], statsComplete: true, periodStatsComplete: true, teamStatsSeason: 2025, teamStats: [{ team, season: 2025, stats: { pace: 98 } } as never], starters: [1, 2] }
+  return { game, players, sampleSeason: 2026, baselineSeasons: [2026], historical: false, sampleEnd: '2026-10-23', fetchedAt: new Date(tip - 3600000).toISOString(), issues: [], statsComplete: true, periodStatsComplete: true, teamStatsSeason: 2026, teamStats: [{ team, season: 2026, stats: { pace: 98 } } as never], starters: [1, 2] }
 }
 type Snapshot = { value: unknown; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }
 async function harness() {
@@ -87,6 +87,37 @@ test('missing closed research fails before provider, cache or quote refresh work
   await assert.rejects(h.api.getPaintBoard(game), /Pregame research snapshot unavailable/)
   await assert.rejects(h.api.getPaintScouting(game), /Pregame research snapshot unavailable/)
   assert.deepEqual(h.metrics(), { researchReads: 0, phaseReads: 0, wrapperReads: 2 })
+})
+
+test('an already-frozen mixed-season board remains its original historical observation', async () => {
+  const h = await harness(); h.setTime(tip + 10000)
+  const saved = { ...fixtureBoard(), baselineSeasons: [2025, 2026], teamStatsSeason: 2025 }
+  h.snapshots.set('board:v1', { value: saved, observedAt: saved.fetchedAt, source: 'capture', frozen: true })
+  const result = await h.api.getPaintBoard(game)
+  assert.deepEqual(result.baselineSeasons, [2025, 2026]); assert.equal(result.teamStatsSeason, 2025)
+  assert.equal(result.fetchedAt, saved.fetchedAt); assert.equal(h.metrics().researchReads, 0)
+})
+
+test('an open game retains its roster and prices but filters mixed and unproven old research', async () => {
+  const h = await harness(); h.research.baselineSeasons = [2025, 2026]; h.research.teamStatsSeason = 2025
+  h.research.players[0].averageSeason = undefined; h.research.players[0].average.pts = 999
+  h.research.players[0].logs.push({ ...h.research.players[0].logs[0], id: 999, pts: 999, game: { ...h.research.players[0].logs[0].game, date: '2026-04-01', season: 2025 } })
+  const board = await h.api.getPaintBoard(game)
+  assert.equal(board.players.length, 3); assert.equal(board.players[0].props.length, 2)
+  assert.equal(board.players[0].logs.length, 10); assert.equal(board.players[0].average.pts, 5)
+  assert.equal(board.statsComplete, false); assert.deepEqual(board.teamStats, [])
+  assert.ok(board.issues.some(issue => issue.includes('partial current-season sample')))
+  assert.equal(h.snapshots.get('board:v1')?.value && (h.snapshots.get('board:v1')!.value as paint.PaintBoard).players[0].average.pts, 999, 'derived view never rewrites original archive')
+})
+
+test('a changed schedule never lets the saved later game date admit future logs', async () => {
+  const h = await harness(); h.research.game = { ...h.research.game, date: '2026-10-26' }
+  h.research.players[0].average.pts = 999
+  h.research.players[0].logs.push({ ...h.research.players[0].logs[0], id: 999, pts: 999, game: { ...h.research.players[0].logs[0].game, date: '2026-10-25', season: 2026 } })
+  const board = await h.api.getPaintBoard(game)
+  assert.equal(board.game.date, '2026-10-24'); assert.equal(board.players[0].logs.length, 10)
+  assert.equal(board.players[0].average.pts, 5)
+  assert.ok(board.players[0].logs.every(log => log.game.date < game.date))
 })
 
 test('recovered pretip board preserves original observation and incomplete-quarter coverage honestly', async () => {

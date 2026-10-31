@@ -62,57 +62,65 @@ async function cacheHarness() {
 
 async function defenseHarness(gamesPerTeam: Record<number, number> = { 2026: 1, 2025: 5 }, failureTable?: string) {
   const cache = await cacheHarness(), gameReads = new Map<number, number>()
-  let coverageReads = 0, failedTable = failureTable
+  let coverageReads = 0, failedTable = failureTable, omitSide = false, emptyStats = false, omitGame = false
   const admin = { from(table: string) {
     const filters = new Map<string, unknown>()
     const result = (data: unknown) => ({ data, error: table === failedTable ? { message: 'fixture database outage' } : null })
     const query = {
       select() { return query },
       eq(key: string, value: unknown) { filters.set(key, value); return query },
-      lt() { return query }, order() { return query }, in() { return query }, abortSignal() { return query },
+      lt() { return query }, order() { return query }, in(key: string, value: unknown) { filters.set(key, value); return query }, abortSignal() { return query },
       async maybeSingle() { coverageReads++; return result({ complete: true, rows_seen: 0, updated_at: '2026-10-20T11:00:00Z' }) },
       async limit() {
         assert.equal(table, 'nba_games')
         const season = Number(filters.get('season'))
         gameReads.set(season, (gameReads.get(season) ?? 0) + 1)
-        return result(Array.from({ length: (gamesPerTeam[season] ?? 0) * 15 }, (_, index) => ({ payload: {
+        const games = Array.from({ length: (gamesPerTeam[season] ?? 0) * 15 }, (_, index) => ({ payload: {
           id: season * 1000 + index, status: 'Final', season,
           home_team: { id: index % 15 * 2 + 1 }, visitor_team: { id: index % 15 * 2 + 2 },
-        } })))
+        } }))
+        return result(omitGame ? games.slice(0, -1) : games)
       },
-      async range() { assert.ok(['nba_player_game_stats', 'nba_player_period_stats'].includes(table)); return result([]) },
+      async range() {
+        assert.ok(['nba_player_game_stats', 'nba_player_period_stats'].includes(table))
+        if (table !== 'nba_player_game_stats' || emptyStats) return result([])
+        return result((filters.get('game_id') as number[]).flatMap(id => {
+          const index = id % 1000, home = index % 15 * 2 + 1, away = home + 1
+          return (omitSide ? [home] : [home, away]).map(teamId => ({ payload: { id: id * 100 + teamId, min: '24', team: { id: teamId }, player: { id: teamId, position: 'G' }, game: { id, date: '2026-10-19', status: 'Final', home_team_id: home, visitor_team_id: away } } }))
+        }))
+      },
     }
     return query
   } }
   const instance = async () => compiled<typeof import('../src/lib/nbaIntelligenceData.ts')>('../src/lib/nbaIntelligenceData.ts', {
     'server-only': {}, './supabase/admin': { createAdminClient: () => admin }, './nbaSharedCache': await cache.instance(),
-    './nbaIntelligence': { nbaDefenseProfiles: () => [] }, './nbaPaint': paint,
+    './nbaIntelligence': { nbaDefenseProfiles: (rows: unknown[]) => rows.length ? [{ value: 1 }] : [] }, './nbaPaint': paint,
   })
-  return { ...cache, gameReads, instance, coverageReads: () => coverageReads, fail: (table: string) => { failedTable = table } }
+  return { ...cache, gameReads, instance, coverageReads: () => coverageReads, fail: (table: string) => { failedTable = table }, omitSide: () => { omitSide = true }, emptyStats: () => { emptyStats = true }, omitGame: () => { omitGame = true } }
 }
 
-test('early-season defense coverage falls back across independent cache instances and serialized cache hits', async () => {
+test('early-season defense uses available current-season coverage across independent caches', async () => {
   const h = await defenseHarness(), instances = await Promise.all(Array.from({ length: 12 }, h.instance))
   const before = '2026-10-20'
   h.entries.set(`dvp:v5:2026:${before}:true`, { lease_token: null, lease_until: new h.Clock(h.Clock.now() + 15000).toISOString() })
   const results = await Promise.all(Array.from({ length: 120 }, (_, index) => instances[index % 12].getNbaDefenseContext(2026, before)))
-  assert.ok(results.every(result => result.ready && result.season === 2025 && result.before === before && !result.stale))
-  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
-  assert.equal(h.metrics().writes, 4)
-  assert.equal(h.coverageReads(), 4, '120 readers share two coverage reads per season, not one pair per reader')
-  const entry = h.entries.get(`dvp:v6:2026:${before}:true`)!
-  assert.equal((entry.payload as { ready: boolean }).ready, false)
+  assert.ok(results.every(result => result.ready && result.season === 2026 && result.before === before && !result.stale))
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), undefined)
+  assert.equal(h.metrics().writes, 2)
+  assert.equal(h.coverageReads(), 2, '120 readers share the current-season coverage reads')
+  const entry = h.entries.get(`dvp:v7:2026:${before}:true`)!
+  assert.equal((entry.payload as { ready: boolean }).ready, true)
   assert.equal(entry.lease_until, null, 'inadequate coverage is not a source failure cooldown')
   // A new server sees only the serialized payload, with no Error subclass or local memory.
   for (const [key, value] of h.entries) h.entries.set(key, JSON.parse(JSON.stringify(value)))
   const fresh = await h.instance(), result = await fresh.getNbaDefenseContext(2026, before)
   assert.deepEqual(result, results[0])
-  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
-  assert.equal(h.coverageReads(), 4, 'another instance reads the shared coverage cache')
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), undefined)
+  assert.equal(h.coverageReads(), 2, 'another instance reads the shared coverage cache')
   h.advance(61_000)
   await fresh.getNbaDefenseContext(2026, before)
-  assert.equal(h.coverageReads(), 8, 'coverage expires and is rechecked without rebuilding the defense sample')
-  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), 1)
+  assert.equal(h.coverageReads(), 4, 'coverage expires and is rechecked without rebuilding the defense sample')
+  assert.equal(h.gameReads.get(2026), 1); assert.equal(h.gameReads.get(2025), undefined)
 })
 
 test('complete current-season defense coverage is retained without loading a previous season', async () => {
@@ -125,16 +133,33 @@ test('complete current-season defense coverage is retained without loading a pre
   assert.equal(h.gameReads.get(2026), 1)
 })
 
-test('unavailable prior-season defense remains unavailable and never recurses into another season', async () => {
-  const h = await defenseHarness({ 2026: 1, 2025: 4 }), owner = await h.instance()
+test('unavailable current-season defense stays unavailable rather than returning prior-season data', async () => {
+  const h = await defenseHarness({ 2026: 0, 2025: 5 }), owner = await h.instance()
   const result = await owner.getNbaDefenseContext(2026, '2026-10-20')
-  assert.equal(result.ready, false); assert.equal(result.season, 2025); assert.deepEqual(result.profiles, [])
-  assert.deepEqual([...h.gameReads.keys()], [2026, 2025])
+  assert.equal(result.ready, false); assert.equal(result.season, 2026); assert.deepEqual(result.profiles, [])
+  assert.deepEqual([...h.gameReads.keys()], [2026])
   const follower = await h.instance()
   assert.deepEqual(await follower.getNbaDefenseContext(2026, '2026-10-20'), result)
-  const direct = await follower.getNbaDefenseContext(2026, '2026-10-20', false)
-  assert.equal(direct.ready, false); assert.equal(direct.season, 2026)
-  assert.equal(h.metrics().writes, 4)
+  assert.equal(h.metrics().writes, 2)
+})
+
+test('game records alone do not prove complete defense statistics', async () => {
+  for (const fixture of ['empty', 'partial'] as const) {
+    const h = await defenseHarness({ 2026: 1 }); fixture === 'empty' ? h.emptyStats() : h.omitSide()
+    const result = await (await h.instance()).getNbaDefenseContext(2026, '2026-10-20')
+    assert.equal(result.ready, false); assert.equal(result.season, 2026)
+    if (fixture === 'empty') assert.deepEqual(result.profiles, [])
+    else assert.ok(result.profiles.length > 0, 'observed partial profiles remain visible')
+    assert.equal(h.gameReads.get(2025), undefined)
+  }
+})
+
+test('incomplete league coverage retains observed current-season profiles as partial', async () => {
+  const h = await defenseHarness({ 2026: 1 }); h.omitGame()
+  const result = await (await h.instance()).getNbaDefenseContext(2026, '2026-10-20')
+  assert.equal(result.ready, false); assert.equal(result.season, 2026)
+  assert.ok(result.profiles.length > 0); assert.equal(result.games, 14)
+  assert.equal(h.gameReads.get(2025), undefined)
 })
 
 test('actual defense database failures still reject instead of becoming expected coverage or a prior-season fallback', async () => {
@@ -350,7 +375,7 @@ test('memory cache supports the complete popular slate while enforcing a byte bu
 })
 
 test('a stale research board cannot carry stale player or game prices into a new response', async () => {
-  const game = { id: 123, date: '2026-10-20', datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
+  const game = { id: 123, date: '2026-10-20', season: 2026, datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
   const old = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -200 } } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
@@ -359,7 +384,7 @@ test('a stale research board cannot carry stale player or game prices into a new
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => { throw Error('fixture') } },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
     './nbaSharedCache': { nbaSharedCache: async (key: string) => {
-      if (key.startsWith('board:')) return { value: { players: [{ id: 434, props: [old] }], gameOdds: [{ stale: true }], issues: [] }, fetchedAt: '2026-10-20T11:00:00Z', stale: true }
+      if (key.startsWith('board:')) return { value: { game, sampleSeason: 2026, players: [{ id: 434, averageSeason: 2026, average: {}, logs: [], props: [old] }], gameOdds: [{ stale: true }], issues: [] }, fetchedAt: '2026-10-20T11:00:00Z', stale: true }
       throw Error('quotes unavailable')
     } },
   }, { Date: class extends Date { static now() { return Date.parse('2026-10-20T12:00:00Z') } } })
@@ -372,7 +397,7 @@ test('a stale research board cannot carry stale player or game prices into a new
 test('cold board research finishes before current quote reads begin', async () => {
   let now = Date.parse('2026-10-20T12:00:00Z'), researchFinished = false, priceReads = 0
   class Clock extends Date { static now() { return now } }
-  const game = { id: 123, date: '2026-10-20', datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
+  const game = { id: 123, date: '2026-10-20', season: 2026, datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
@@ -384,7 +409,7 @@ test('cold board research finishes before current quote reads begin', async () =
       if (key.startsWith('board:')) {
         assert.equal(lease, 120)
         await Promise.resolve(); now += 60000; researchFinished = true
-        return { value: { players: [{ id: 434, props: [] }], issues: [] }, fetchedAt: new Date(now).toISOString(), stale: false }
+        return { value: { game, sampleSeason: 2026, players: [{ id: 434, averageSeason: 2026, average: {}, logs: [], props: [] }], issues: [] }, fetchedAt: new Date(now).toISOString(), stale: false }
       }
       assert.ok(researchFinished, 'a cold research wait must not age current prices')
       return { value: await load(), fetchedAt: new Date(now).toISOString(), stale: false }

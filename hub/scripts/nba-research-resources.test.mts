@@ -36,7 +36,7 @@ async function fixture() {
     },
     './nbaOddsMode': { nbaPregameOpen: () => !closed },
     './nbaOddsClockData': { getNbaOddsGame: async (game: unknown) => game },
-    './nbaIntelligenceData': { getNbaDefenseContext: async () => { reads++; return { ready: complete, profiles: [{ value: generation }], fetchedAt: observation(null).observedAt } } },
+    './nbaIntelligenceData': { getNbaDefenseContext: async () => { reads++; return { ready: complete, season: 2026, profiles: [{ value: generation }], fetchedAt: observation(null).observedAt } } },
     './nbaTrackingData': { getNbaTracking: async () => { reads++; return { rows: [{ value: generation }], complete, fetchedAt: observation(null).observedAt } } },
     './nbaMarketSignalData': { getNbaMarketContext: async () => { reads++; const at = observation(null).observedAt; return { version: NBA_MARKET_CONTEXT_VERSION, gameId: 9, oddsMode: 'pregame', asOf: at, tipAt: board.game.datetime, marketCapturedAt: at, marketObservedAt: at, publicCapturedAt: at, publicObservedAt: at, reason: generation === 1 ? null : 'Pre-tip verification receipt was overwritten', available: generation === 1, signals: generation !== 1 ? [] : [{ playerId: 1, book: 'fanduel', target: { market: 'points', type: 'milestone', line: 30, side: 'over', open: 400, now: 500, changePp: -3, openedAt: '2026-10-23T00:00:00Z' }, related: { market: 'assists', type: 'milestone', line: 4, side: 'over', open: 100, now: -110, changePp: 2, openedAt: '2026-10-23T00:00:00Z' }, targetPicks: 10, relatedPicks: 100, adjustment: 6, opposingPicks: 0, supportingMarkets: 1, attenuation: 1 }] } } },
     './nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load(), fetchedAt: observation(null).observedAt, stale: false }) },
@@ -73,11 +73,23 @@ test('defense, tracking, model selection, profiles, first basket and market rece
   assert.equal(h.reads(), 0, 'a closed game must never rerun mutable source loaders')
 })
 
-test('player profiles follow the actual selected baseline season and retain it after tip', async () => {
+test('an open game does not expose a prior-season defense after a degraded refresh, but frozen history is preserved', async () => {
+  const h = await fixture()
+  const prior = { value: { ready: true, season: 2025, profiles: [{ value: 17 }], games: 20, rows: 40 }, observedAt: '2026-10-24T01:00:00Z', source: 'capture' }
+  h.saved.set('defense:v1', prior); h.mutate(false)
+  const open = await h.resources.getNbaResearchDefense(board, 'pregame')
+  assert.equal(open.ready, false); assert.equal(open.season, 2026); assert.deepEqual(open.profiles, [])
+  h.close()
+  const frozen = await h.resources.getNbaResearchDefense(board, 'pregame')
+  assert.equal(frozen.ready, true); assert.equal(frozen.season, 2025); assert.deepEqual(frozen.profiles, prior.value.profiles)
+  assert.equal(frozen.researchSnapshot.frozen, true)
+})
+
+test('open player profiles use the current season and retain it after tip', async () => {
   const h = await fixture()
   const mixed = { ...board, players: board.players.map((player, index) => ({ ...player, averageSeason: index === 0 ? 2025 : 2027 })) }
   const pre = await h.resources.getNbaResearchProfiles(mixed, 'pregame')
-  assert.deepEqual(pre.players.map((row: { playerId: number; profile: { season: number; shooting: { season: number } } }) => [row.playerId, row.profile.season, row.profile.shooting.season]), [[1, 2025, 2025], [2, 2026, 2026]])
+  assert.deepEqual(pre.players.map((row: { playerId: number; profile: { season: number; shooting: { season: number } } }) => [row.playerId, row.profile.season, row.profile.shooting.season]), [[1, 2026, 2026], [2, 2026, 2026]])
   h.close(); h.mutate(); h.resetReads()
   const after = await h.resources.getNbaResearchProfiles(mixed, 'pregame')
   assert.equal(after.researchSnapshot.frozen, true)
@@ -85,10 +97,10 @@ test('player profiles follow the actual selected baseline season and retain it a
   assert.equal(h.reads(), 0, 'a frozen profile never asks a provider for a later season')
 })
 
-test('a single-player profile fetch does not load the roster and freezes its real selected season', async () => {
+test('a single-player profile fetch uses the current season and freezes it', async () => {
   const h = await fixture(), mixed = { ...board, players: board.players.map((player, index) => ({ ...player, averageSeason: index ? 2026 : 2025 })) }
   const before = await h.resources.getNbaResearchProfile(mixed, 1)
-  assert.equal(h.reads(), 1); assert.equal(before.profile.season, 2025); assert.equal(before.profile.shooting.season, 2025)
+  assert.equal(h.reads(), 1); assert.equal(before.profile.season, 2026); assert.equal(before.profile.shooting.season, 2026)
   assert.equal(before.fetchedAt, '2026-10-24T01:00:00Z')
   h.close(); h.mutate(); h.resetReads()
   const after = await h.resources.getNbaResearchProfile(mixed, 1)
@@ -96,6 +108,21 @@ test('a single-player profile fetch does not load the roster and freezes its rea
   await assert.rejects(h.resources.getNbaResearchProfile(mixed, 2), h.NbaPregameResearchUnavailable)
   await assert.rejects(h.resources.getNbaResearchProfile(mixed, 99), /not in this matchup/)
   assert.equal(h.reads(), 0)
+})
+
+test('older profiles are unavailable in an open game if refresh fails and unchanged after tip', async () => {
+  const h = await fixture(), oldProfile = { season: 2025, shooting: { old: true }, advanced: { old: true } }
+  const observedAt = '2026-10-24T01:00:00Z'
+  h.saved.set('profiles:v1', { value: { gameId: 9, season: 2025, players: [{ playerId: 1, profile: oldProfile }], complete: true }, observedAt, source: 'capture' })
+  h.saved.set('profile-player:v1:1', { value: oldProfile, observedAt, source: 'capture' })
+  h.mutate(false)
+  const full = await h.resources.getNbaResearchProfiles(board)
+  assert.equal(full.complete, false); assert.equal(full.players[0].profile.season, 2026); assert.equal(full.players[0].profile.shooting, null)
+  const single = await h.resources.getNbaResearchProfile(board, 1)
+  assert.equal(single.profile.season, 2026); assert.equal(single.profile.shooting, null)
+  h.close()
+  const frozen = await h.resources.getNbaResearchProfile(board, 1)
+  assert.deepEqual(frozen.profile, oldProfile); assert.equal(frozen.researchSnapshot.frozen, true)
 })
 
 test('single-player partial refresh retains a complete full-roster capture and its original time', async () => {
@@ -151,6 +178,7 @@ test('a fresh complete matchup profile is served without another provider load',
 test('a fresh profile from a different baseline season does not suppress the correct current-season refresh', async () => {
   const h = await fixture(), older = { ...board, players: board.players.map(player => ({ ...player, averageSeason: 2025 })) }
   await h.resources.getNbaResearchProfiles(older)
+  h.saved.get('profiles:v1').value.players.forEach((row: { profile: { season: number } }) => { row.profile.season = 2025 })
   h.saved.get('profiles:v1').observedAt = new Date(Date.now() - 1_000).toISOString()
   h.mutate(); h.resetReads()
   const current = await h.resources.getNbaResearchProfile(board, 1)

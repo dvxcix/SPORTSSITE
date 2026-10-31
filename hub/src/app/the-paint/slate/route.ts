@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // shared load, so they must not cause duplicate reads and archive writes.
     // Completeness for the selected period is computed for each response.
     enter('shared-cache')
-    const cached = await nbaSharedCache(`slate:v13:${mode}:${date}:${phaseKey}`, 30, 0, async () => {
+    const cached = await nbaSharedCache(`slate:v14:${mode}:${date}:${phaseKey}`, 30, 0, async () => {
       enter('boards')
       const started = Date.now(), boards: PaintBoard[] = [], failed: number[] = [], closedAtLoad=new Set<number>()
       const games = schedule.games.slice(0, 16)
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         const pricedBoards=[...boards.values()]
         const complete=schedule.complete&&!failed.size&&pricedBoards.length===schedule.games.length&&pricedBoards.every(board=>board.statsComplete&&(!nbaPeriod(market!)||board.periodStatsComplete===true))
         timer.enterFinalize('frozen-ranks')
-        const frozen=await getNbaSlateRanks(schedule.games,pricedBoards,market as PaintMarket,book,selection,mode,complete,side as 'over'|'under')
+        const frozen=await getNbaSlateRanks(schedule.games,pricedBoards,market as PaintMarket,book,selection,mode,complete,side as 'over'|'under',[...reports].map(([gameId,reports])=>({gameId,reports})))
         const missing=[...new Set([...frozen.unavailable,...[...failed].filter(id=>closedResolved.has(id))])]
         timer.enterFinalize('legacy-reads')
         const legacyResults=mode==='pregame'?await Promise.allSettled(schedule.games.filter(game=>missing.includes(game.id)).map(async game=>({gameId:game.id,saved:await getNbaLegacySlateRows(game,market as PaintMarket,book,side as 'over'|'under',selection)}))):[]
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     const rows=baseRows.filter(row=>!legacy.some(entry=>entry.gameId===row.game.id)).map(row=>{
       const {player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,issues}=row
       const missingScore=mode==='pregame'&&!nbaPregameOpen(game)&&(defenseMissing.includes(game.id)||contextUnavailable.includes(game.id))
-      const safe={player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,researchObservedAt:frozen.observedAt[game.id],frozenHeat:mode==='pregame'&&!nbaPregameOpen(game)?nbaSlateFrozenHeat(row,frozen.heatDomains[game.id]):undefined,issues:[...issues,...(unavailable.includes(game.id)?['Pregame slate comparison was not captured; MM unavailable']:[]),...(contextUnavailable.includes(game.id)?['Pregame market context was not captured; market signals unavailable']:[]),...(missingScore?['Complete pregame score inputs were not captured; score unavailable']:[])]}
+      const safe={player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,researchObservedAt:frozen.observedAt[game.id],frozenHeat:mode==='pregame'?nbaSlateFrozenHeat(row,frozen.heatDomains[game.id]):undefined,issues:[...issues,...(unavailable.includes(game.id)?['Pregame slate comparison was not captured; MM unavailable']:[]),...(contextUnavailable.includes(game.id)?['Pregame market context was not captured; market signals unavailable']:[]),...(missingScore?['Complete pregame score inputs were not captured; score unavailable']:[])]}
       const contextual=nbaContextualScore(row.baseScore,row.player.id,row.market,row.game.date,{offer:row.offer,side:side as 'over'|'under',context:marketContexts.find(context=>context.gameId===row.game.id)??null})
       const marketSignals=nbaPlayerMarketSignals({playerId:row.player.id,gameId:row.game.id,market:row.market,book,side:side as 'over'|'under',props:row.signalOffers,context:marketContexts.find(context=>context.gameId===row.game.id)??null})
       return {...safe,score:missingScore?null:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}

@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { bdlHeaders } from '@/lib/balldontlie'
-import { nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
+import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
 import { nbaSharedCache } from './nbaSharedCache'
 import { nbaAttachOpenings } from './nbaOddsHistory'
@@ -133,10 +133,10 @@ type Average = { player: { id: number }; stats: Record<string, number | null> }
 export async function getPaintScouting(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintScouting> {
   game = await getNbaOddsGame(game)
   const load = async () => {
-    const cached = await nbaSharedCache(`scouting:v1:${game.id}:${nbaToday()}`, 3600, 3600, () => loadPaintScouting(game))
+    const cached = await nbaSharedCache(`scouting:v2:${game.id}:${nbaToday()}`, 3600, 3600, () => loadPaintScouting(game))
     if (mode === 'pregame' && !scoutingComplete(cached.value)) {
       const prior = await readNbaPregameResearch<PaintScouting>(game, 'scouting:v1')
-      if (prior && scoutingComplete(prior.value)) return { value: prior.value, observedAt: prior.observedAt }
+      if (prior && prior.value.season === game.season && scoutingComplete(prior.value)) return { value: prior.value, observedAt: prior.observedAt }
     }
     return { value: { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Tracking refresh delayed; showing last captured sample'] : [])] }, observedAt: cached.fetchedAt }
   }
@@ -147,7 +147,10 @@ export async function getPaintScouting(game: PaintGame, mode: NbaOddsMode = 'pre
   // Closed pregame research comes only from the retained observation. Never
   // substitute current season-end profiles for a missing pretip snapshot.
   const snapshot = await nbaPregameResearch(game, 'scouting:v1', load)
-  return { ...snapshot.value, fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
+  const value = !snapshot.frozen && snapshot.value.season !== game.season
+    ? { ...snapshot.value, season: game.season, players: [], issues: ['Current-season scouting unavailable'] }
+    : snapshot.value
+  return { ...value, fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
 }
 function scoutingComplete(value: PaintScouting) {
   return value.players.length > 0 && value.issues.every(issue => issue === 'Tracking refresh delayed; showing last captured sample')
@@ -159,8 +162,7 @@ async function loadPaintScouting(game: PaintGame): Promise<PaintScouting> {
   const ids = [...new Set(roster.rows.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id)).map(p=>p.id))]
   if(!ids.length)throw new Error('No roster')
   const query=ids.map(id=>`player_ids[]=${id}`).join('&')
-  const current=await bdl<Average>(`/nba/v1/season_averages/general?${query}&season=${game.season}&season_type=regular&type=base&per_page=100`,900)
-  const season=current.data.some(p=>(p.stats.gp??0)>0)?game.season:game.season-1
+  const season=game.season
   const feeds=[['advanced','general','advanced'],['passing','tracking','passing'],['rebounding','tracking','rebounding'],['drives','tracking','drives']] as const
   const results=await Promise.allSettled(feeds.map(([,category,type])=>bdl<Average>(`/nba/v1/season_averages/${category}?${query}&season=${season}&season_type=regular&type=${type}&per_page=100`,3600)))
   const issues=results.flatMap((r,i)=>r.status==='rejected'?[`${feeds[i][0]} sample unavailable`]:[])
@@ -178,18 +180,22 @@ export async function getPaintProfile(player: number, season: number) {
 export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintBoard> {
   game = await getNbaOddsGame(game)
   const load = async () => {
-    const cached = await nbaSharedCache(`board:v7:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
+    const cached = await nbaSharedCache(`board:v8:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
     if (mode === 'pregame' && (cached.value.statsComplete !== true || cached.value.periodStatsComplete !== true || boardBaselineIncomplete(cached.value))) {
       const prior = await readNbaPregameResearch<PaintBoard>(game, 'board:v1')
       // Preserve a complete observation as a bundle, including its original
       // timestamp. Never combine a new roster with older averages or logs.
-      if (prior && (prior.value.statsComplete === true && cached.value.statsComplete !== true || prior.value.periodStatsComplete === true && cached.value.periodStatsComplete !== true || !boardBaselineIncomplete(prior.value) && boardBaselineIncomplete(cached.value))) return { value: prior.value, observedAt: prior.observedAt }
+      if (prior && nbaBoardUsesSeason(prior.value, game.season, game.date) && (prior.value.statsComplete === true && cached.value.statsComplete !== true || prior.value.periodStatsComplete === true && cached.value.periodStatsComplete !== true || !boardBaselineIncomplete(prior.value) && boardBaselineIncomplete(cached.value))) return { value: prior.value, observedAt: prior.observedAt }
     }
     return { value: { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Research refresh delayed'] : [])] }, observedAt: cached.fetchedAt }
   }
   if (mode === 'live') return refreshPaintBoardPrices({ ...(await load()).value, game }, mode)
   const snapshot = await nbaPregameResearch(game, 'board:v1', load)
-  const board = { ...snapshot.value, game, historical: !nbaPregameOpen(game), fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
+  // On a degraded refresh, retain the saved roster and current-season data but
+  // never present an unproven or prior-season average as this season. This
+  // transient view is not archived and frozen historical boards stay intact.
+  const value = !snapshot.frozen && !nbaBoardUsesSeason(snapshot.value, game.season, game.date) ? nbaCurrentSeasonBoard(snapshot.value, game.season, game.date) : snapshot.value
+  const board = { ...value, game, historical: !nbaPregameOpen(game), fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
   // Preserve every archived roster member, average, full-game/quarter log and
   // coverage flag. Only phase-specific quotes attach after research is frozen.
   const priced = await refreshPaintBoardPrices(board, mode)
@@ -264,8 +270,8 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const idsQuery = ids.map(id => `player_ids[]=${id}`).join('&')
   if (!ids.length) return { game, players: [], sampleSeason: game.season, historical, sampleEnd: game.date, fetchedAt: new Date().toISOString(), issues: [...issues, 'No roster returned'], statsComplete: false }
   const averages = await optional('Season averages unavailable', bdl<Average>(`/nba/v1/season_averages/general?${idsQuery}&season=${game.season}&season_type=regular&type=base&per_page=100`, 900), { data: [] })
-  const sampleSeason = averages.data.some(a => (a.stats.gp ?? 0) > 0) ? game.season : game.season - 1
-  const seasonAverages = sampleSeason === game.season ? averages : await optional('Prior-season averages unavailable', bdl<Average>(`/nba/v1/season_averages/general?${idsQuery}&season=${sampleSeason}&season_type=regular&type=base&per_page=100`, 3600), { data: [] })
+  const sampleSeason = game.season
+  const seasonAverages = averages
   const end = new Date(`${game.date}T00:00:00Z`); end.setUTCDate(end.getUTCDate() - 1)
   // No future results in any sample; previous season's regular-season logs stay separate.
   const sampleEnd = [end.toISOString().slice(0, 10), `${sampleSeason + 1}-07-01`].sort()[0]
@@ -276,37 +282,26 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     optional('First-quarter logs unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason}&season_type=regular&start_date=${sampleStart.toISOString().slice(0, 10)}&end_date=${sampleEnd}&period=1&per_page=100`, 3600, 24, deadline), { rows: [], complete: false }),
   ])
   if (!stats.complete) issues.push('Game-log coverage incomplete; rates use returned games only')
-  const needsBaseline = sampleSeason === game.season && game.date < `${game.season + 1}-01-01` && roster.rows.some(player => nbaSample(stats.rows.filter(row => row.player.id === player.id), 20).length < 20)
-  const baseline = needsBaseline ? await optional('Prior-season game-log baseline unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason - 1}&season_type=regular&start_date=${sampleSeason}-02-01&end_date=${sampleSeason}-07-01&per_page=100`, 3600, 24, deadline), { rows: [], complete: false }) : { rows: [] as PaintStat[], complete: true }
-  if (!baseline.complete) issues.push('Prior-season game-log baseline incomplete')
-  const quarterBaseline = needsBaseline ? await optional('Prior-season first-quarter baseline unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason - 1}&season_type=regular&start_date=${sampleSeason}-02-01&end_date=${sampleSeason}-07-01&period=1&per_page=100`,3600,24,deadline),{ rows: [], complete: false }) : { rows: [] as PaintStat[], complete: true }
   let teamProfiles = teamStats.data, teamStatsSeason = sampleSeason
-  if (!historical && Date.now() < deadline && sampleSeason === game.season && (teamProfiles.length < 2 || teamProfiles.some(row => (row.stats.gp ?? 0) < 5))) {
-    const prior = await optional('Prior-season team profiles unavailable', bdl<{ team: PaintTeam; stats: Record<string, number | null> }>(`/nba/v1/team_season_averages/general?${teamQuery}&season=${sampleSeason - 1}&season_type=regular&type=advanced&per_page=100`, 3600), { data: [] })
-    const verified = prior.data.filter(row => teams.some(team => team.id === row.team.id))
-    if (new Set(verified.map(row => row.team.id)).size === 2) { teamProfiles = verified; teamStatsSeason = sampleSeason - 1 }
-  }
   if (!injuries.complete) issues.push('Injury coverage incomplete')
   const avgMap = new Map<number, Record<string, number | null>>(seasonAverages.data.map(a => [a.player.id, { ...a.stats, turnover: a.stats.turnover ?? a.stats.tov ?? null }]))
   const players: PaintPlayer[] = roster.rows.map(player => {
-    const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
+    const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && row.game.date.slice(0, 10) >= `${season}-07-01` && row.game.date.slice(0, 10) < `${season + 1}-07-01` && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
     const currentLogs = stats.rows.filter(row => valid(row, sampleSeason) && row.game.date.slice(0, 10) <= sampleEnd)
-    const priorLogs = nbaSample(currentLogs, 20).length < 20 ? baseline.rows.filter(row => valid(row, sampleSeason - 1) && row.game.date.slice(0, 10) <= `${sampleSeason}-07-01`) : []
-    const logs = nbaSample([...currentLogs, ...priorLogs], 40).map(nbaCompactStat)
+    const logs = nbaSample(currentLogs, 40).map(nbaCompactStat)
     const currentQuarters = quarterStats.rows.filter(row => valid(row,sampleSeason) && row.game.date.slice(0,10)<=sampleEnd)
-    const priorQuarters = nbaSample(currentQuarters,20).length<20 ? quarterBaseline.rows.filter(row=>valid(row,sampleSeason-1)) : []
-    const periodLogs = nbaSample([...currentQuarters,...priorQuarters].map(row => ({ ...row, period: 1 })), 40).map(nbaCompactStat)
+    const periodLogs = nbaSample(currentQuarters.map(row => ({ ...row, period: 1 })), 40).map(nbaCompactStat)
     const sampleAvg: Record<string, number | null> = {}
     for (const key of ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm']) { const values = logs.map(s => (s as unknown as Record<string, number | null>)[key]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)); sampleAvg[key] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null }
     for (const market of ['double_double','triple_double']) sampleAvg[market] = nbaAverage(logs, market)
     const mins = logs.map(s => nbaMinutes(s.min)).filter((v): v is number => v != null); sampleAvg.min = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null
     return { ...player, headshot: images[teams.findIndex(t => t.id === player.team.id)]?.headshots.get(nbaName(`${player.first_name} ${player.last_name}`)) ?? null,
       injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
-      averageSeason: (avgMap.get(player.id)?.gp ?? 0) > 0 || !priorLogs.length ? sampleSeason : sampleSeason - 1,
+      averageSeason: sampleSeason,
       periodLogs, logs, props: quotes.props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
   })
   for (const player of players) for (const market of ['points_1q','rebounds_1q','assists_1q']) player.average[market] = nbaAverage(player.periodLogs ?? [], market)
-  if (!quarterStats.complete || !quarterBaseline.complete) issues.push('First-quarter sample incomplete')
+  if (!quarterStats.complete) issues.push('First-quarter sample incomplete')
   const baselineSeasons = [...new Set(players.flatMap(player => player.logs.map(log => log.game.season ?? sampleSeason)))].sort()
-  return { game, players, sampleSeason, baselineSeasons, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete && baseline.complete, periodStatsComplete: quarterStats.complete && quarterBaseline.complete, teamStats: teamProfiles, teamStatsSeason, teams: directory.data.filter(team => ['East','West'].includes(team.conference)), gameOdds: quotes.gameOdds, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
+  return { game, players, sampleSeason, baselineSeasons, historical, sampleEnd, fetchedAt: new Date().toISOString(), issues: [...new Set(issues)], statsComplete: stats.complete, periodStatsComplete: quarterStats.complete, teamStats: teamProfiles, teamStatsSeason, teams: directory.data.filter(team => ['East','West'].includes(team.conference)), gameOdds: quotes.gameOdds, starters: lineups.data.filter(p => p.starter).map(p => p.player.id) }
 }

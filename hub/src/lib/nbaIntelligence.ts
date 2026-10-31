@@ -105,6 +105,6 @@ export function nbaDefenseProfiles(stats: PaintStat[], markets: readonly PaintMa
     const leagueMinutes = league.reduce((sum, row) => sum + row.minutes, 0), leagueValue = league.reduce((sum, row) => sum + row.value, 0)
     const per48 = total && total.minutes > 0 ? total.value / total.minutes * 48 : null, leaguePer48 = leagueMinutes > 0 ? leagueValue / leagueMinutes * 48 : null
     const games = total?.games.size ?? 0
-    return { teamId: group.teamId, position: group.position, market, games, minutes: total?.minutes ?? 0, per48, leaguePer48, allowance: games >= 5 && per48 != null && leaguePer48 != null && leaguePer48 > 0 ? (per48 / leaguePer48 - 1) * games / (games + 20) : null } satisfies NbaDvp
+    return { teamId: group.teamId, position: group.position, market, games, minutes: total?.minutes ?? 0, per48, leaguePer48, allowance: games >= 1 && per48 != null && leaguePer48 != null && leaguePer48 > 0 ? (per48 / leaguePer48 - 1) * games / (games + 20) : null } satisfies NbaDvp
   }))
 }

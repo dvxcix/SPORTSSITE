@@ -11,6 +11,44 @@ export type PaintPlayer = PaintRoster & { headshot: string | null; injury: { sta
 export type PaintGameOdds = { id: number; game_id?: number; vendor: string; spread_home_value: string | null; spread_away_value: string | null; spread_home_odds?: number | null; spread_away_odds?: number | null; moneyline_home_odds: number | null; moneyline_away_odds: number | null; total_value: string | null; total_over_odds?: number | null; total_under_odds?: number | null; updated_at: string; opening?: NbaGameOpening }
 export type PaintResearchSnapshot = { observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }
 export type PaintBoard = { researchSnapshot?: PaintResearchSnapshot; oddsMode?: NbaOddsMode; teams?: PaintTeam[]; game: PaintGame; players: PaintPlayer[]; sampleSeason: number; baselineSeasons?: number[]; historical: boolean; sampleEnd: string; fetchedAt: string; issues: string[]; statsComplete: boolean; periodStatsComplete?: boolean; teamStatsSeason?: number; teamStats?: { team: PaintTeam; stats: Record<string, number | null> }[]; gameOdds?: PaintGameOdds[]; starters?: number[] }
+/** Whether a board has affirmative current-season provenance for all inputs. */
+export function nbaBoardUsesSeason(board: PaintBoard, season: number, before = board.game.date) {
+  const cutoff = board.game.date < before ? board.game.date : before
+  return board.sampleSeason === season && (board.teamStats?.length ? board.teamStatsSeason === season : board.teamStatsSeason == null || board.teamStatsSeason === season)
+    && (board.baselineSeasons ?? []).every(value => value === season)
+    && board.players.every(player => player.averageSeason === season
+      && [...(player.logs ?? []), ...(player.periodLogs ?? [])].every(log => (log.game.season == null || log.game.season === season)
+        && log.game.postseason !== true && (log.game.status_state === 'final' || log.game.status === 'Final')
+        && log.game.date.slice(0, 10) < cutoff && log.game.date.slice(0, 10) >= `${season}-07-01` && log.game.date.slice(0, 10) < `${season + 1}-07-01`))
+}
+/** Derive a current-season-only view from the board's original captured facts.
+ * The caller must not overwrite the historical board with this derived view. */
+export function nbaCurrentSeasonBoard(board: PaintBoard, season: number, before = board.game.date): PaintBoard {
+  const cutoff = board.game.date < before ? board.game.date : before
+  const valid = (log: PaintStat) => (log.game.season == null || log.game.season === season)
+    && log.game.postseason !== true && (log.game.status_state === 'final' || log.game.status === 'Final')
+    && log.game.date.slice(0, 10) < cutoff && log.game.date.slice(0, 10) >= `${season}-07-01` && log.game.date.slice(0, 10) < `${season + 1}-07-01`
+  const players = board.players.map(player => {
+    const rawLogs = [...(player.logs ?? []), ...(player.periodLogs ?? [])]
+    const logs = nbaSample((player.logs ?? []).filter(valid), 40), periodLogs = nbaSample((player.periodLogs ?? []).filter(valid), 40)
+    const trustedAverage = player.averageSeason === season && board.sampleSeason === season
+      && !rawLogs.some(log => (log.game.season == null || log.game.season === season) && !valid(log))
+    const average: Record<string, number | null> = trustedAverage ? { ...player.average } : {}
+    if (!trustedAverage) {
+      for (const key of ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm']) {
+        const values = logs.map(log => (log as unknown as Record<string, unknown>)[key]).filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+        average[key] = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+      }
+      const minutes = logs.map(log => nbaMinutes(log.min)).filter((value): value is number => value != null)
+      average.min = minutes.length ? minutes.reduce((sum, value) => sum + value, 0) / minutes.length : null
+    }
+    for (const market of ['points_1q', 'rebounds_1q', 'assists_1q'] as const) average[market] = nbaAverage(periodLogs, market)
+    return { ...player, logs, periodLogs, average, averageSeason: season }
+  })
+  return { ...board, players, sampleSeason: season, baselineSeasons: [season], teamStatsSeason: season,
+    teamStats: board.teamStatsSeason === season ? board.teamStats : [], statsComplete: false, periodStatsComplete: false,
+    issues: [...new Set([...board.issues, 'Current-season research refresh unavailable; showing a partial current-season sample'])] }
+}
 export const PAINT_MARKETS = [
   { key: 'points', label: 'Points', short: 'PTS', stats: ['pts'] },
   { key: 'rebounds', label: 'Rebounds', short: 'REB', stats: ['reb'] },

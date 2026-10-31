@@ -123,16 +123,17 @@ test('NBA walk-forward estimates never train on the graded game or later outcome
   assert.equal(nbaProductionEstimate(logs.slice(0,9),'points','2026-04-01'),null)
 })
 
-test('NBA position allowances use historical defensive opponent, valid minutes, shrinkage and minimum games',()=>{
+test('NBA position allowances use observed games, historical opponent, valid minutes and shrinkage',()=>{
   const logs=Array.from({length:10},(_,i)=>({...stat(i<5?20:10),id:i+1,player:{id:i+1,position:'G'},team:{id:i<5?2:9},game:{...stat(20).game,id:i+1,home_team_id:2,visitor_team_id:9}}))
   const profiles=nbaDefenseProfiles(logs,['points'])
   assert.ok(profiles.find(row=>row.teamId===9)!.allowance!>0)
   assert.ok(profiles.find(row=>row.teamId===2)!.allowance!<0)
-  assert.equal(nbaDefenseProfiles(logs.slice(0,4),['points'])[0].allowance,null)
+  assert.equal(nbaDefenseProfiles(logs.slice(0,4),['points'])[0].games,4)
+  assert.ok(nbaDefenseProfiles(logs.slice(0,4),['points'])[0].allowance!=null)
   assert.deepEqual(nbaDefenseProfiles([...logs,...logs],['points']),profiles)
   assert.deepEqual(nbaDefenseProfiles([...logs,{...logs[0],id:500,min:'0:00',pts:10000}],['points']),profiles)
   const incomplete=nbaDefenseProfiles(logs.slice(0,5).map((log,i)=>i===4?{...log,pts:null}:log),['points'])[0]
-  assert.equal(incomplete.games,4);assert.equal(incomplete.allowance,null)
+  assert.equal(incomplete.games,4);assert.ok(incomplete.allowance!=null)
 })
 
 test('NBA maintenance and model reads deny access before any source or ledger work',async()=>{
@@ -168,7 +169,7 @@ test('NBA fact import preserves historical team identity and rejects malformed i
   assert.throws(()=>fact('games',{id:5,date:'2026-01-01',season:2025,home_team:{id:2},visitor_team:{id:2}},2025,''))
 })
 
-test('NBA season-opening research blends prior appearances without replacing real current averages or inventing rookie data',async()=>{
+test('NBA season-opening research keeps only current appearances and leaves missing rookie data unknown',async()=>{
   const pure=await import('../src/lib/nbaPaint.ts'),team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
   const current={...stat(24,'2026-10-20'),id:1,player:{id:434},game:{...stat(24).game,id:100,date:'2026-10-20',season:2026}}
   const prior={...stat(20,'2026-04-10'),id:2,player:{id:434},game:{...stat(20).game,id:101,date:'2026-04-10',season:2025}}
@@ -182,9 +183,9 @@ test('NBA season-opening research blends prior appearances without replacing rea
   }
   const provider=await compiled('../src/lib/nbaPaintData.ts',{...emptyOpeningImports,'server-only':{},'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':{...pure,nbaToday:()=>'2026-10-19'},'./nbaSharedCache':cachePassthrough},fetcher)
   const board=await (provider.getPaintBoard as (game:unknown)=>Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({id:123,date:'2026-10-21',season:2026,home_team:team,visitor_team:{...team,id:9}})
-  assert.deepEqual(board.baselineSeasons,[2025,2026]);assert.equal(board.statsComplete,true)
-  assert.deepEqual(board.players[0].logs.map(row=>row.pts),[24,20]);assert.equal(board.players[0].average.pts,24);assert.equal(board.players[0].averageSeason,2026)
-  assert.equal(board.players[1].average.pts,16);assert.equal(board.players[1].averageSeason,2025)
+  assert.deepEqual(board.baselineSeasons,[2026]);assert.equal(board.statsComplete,true)
+  assert.deepEqual(board.players[0].logs.map(row=>row.pts),[24]);assert.equal(board.players[0].average.pts,24);assert.equal(board.players[0].averageSeason,2026)
+  assert.equal(board.players[1].average.pts,null);assert.equal(board.players[1].averageSeason,2026)
   assert.equal(board.players[2].average.pts,null);assert.equal(board.players[2].logs.length,0)
 })
 
@@ -428,17 +429,18 @@ test('provider samples bound dates, exclude future results, and expose truncated
     if (url.includes('espn.com')) return Response.json({ athletes: [{ fullName: 'Test Player', headshot: { href: 'https://a.espncdn.com/test.png' } }] })
     if (url.includes('/players/active')) data = [{ id: 434, first_name: 'Test', last_name: 'Player', team, position: 'G' }]
     if (url.includes('/season_averages/general') && !url.includes('team_season')) data = [{ player: { id: 434 }, stats: { gp: url.includes('season=2026') ? 0 : 50, pts: 22, min: 30 } }]
-    if (url.includes('/stats?')) return Response.json({ data: [stat(22), stat(100, '2026-10-19')], meta: { next_cursor: 1 } })
+    if (url.includes('/stats?')) return Response.json({ data: [stat(22, '2026-10-18'), stat(100, '2026-10-20')], meta: { next_cursor: 1 } })
     return Response.json({ data, meta: { next_cursor: null } })
   }
   const adapter = await compiled('../src/lib/nbaPaintData.ts', { ...emptyOpeningImports, 'server-only': {}, '@/lib/balldontlie': { bdlHeaders: { Authorization: 'test-only' } }, './nbaPaint': { ...pure, nbaToday: () => '2026-10-19' }, './nbaSharedCache':cachePassthrough }, fetcher)
   const board = await (adapter.getPaintBoard as unknown as (game: unknown) => Promise<import('../src/lib/nbaPaint.ts').PaintBoard>)({ id: 123, date: '2026-10-20', season: 2026, status: '2026-10-20T23:00:00Z', datetime: '2026-10-20T23:00:00Z', home_team: team, visitor_team: { ...team, id: 9, abbreviation: 'DET' } })
-  assert.equal(board.sampleSeason, 2025)
+  assert.equal(board.sampleSeason, 2026)
   assert.equal(board.statsComplete, false)
   assert.ok(board.issues.some(i => i.includes('incomplete')), JSON.stringify({issues:board.issues,players:board.players.length,urls}))
   assert.equal(board.players[0].logs.length, 1)
   assert.equal(board.players[0].logs[0].pts, 22)
-  assert.ok(urls.some(u => u.includes('end_date=2026-07-01')))
+  assert.ok(urls.some(u => u.includes('seasons[]=2026') && u.includes('end_date=2026-10-19')))
+  assert.ok(!urls.some(u => u.includes('seasons[]=2025') || u.includes('season=2025')))
 })
 
 test('MM compares the same priced roster, preserves ties and signs, and excludes missing samples', () => {

@@ -34,7 +34,13 @@ export async function getNbaResearchDefense(board: PaintBoard, mode: NbaOddsMode
     const value = await getNbaDefenseContext(board.sampleSeason, board.game.date)
     return { value, observedAt: value.fetchedAt ?? new Date().toISOString() }
   }, value => value.ready)
-  return { ...saved.value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
+  // A provider failure can return the last saved open-game snapshot. Never
+  // present an older season as a current-season defense; already frozen
+  // historical snapshots retain their original season and values.
+  const value = !saved.frozen && saved.value.season !== board.game.season
+    ? { ...saved.value, ready: false, season: board.game.season, profiles: [], games: 0, rows: 0 }
+    : saved.value
+  return { ...value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
 }
 
 export async function getNbaResearchTracking(board: PaintBoard, mode: NbaOddsMode = 'pregame') {
@@ -74,24 +80,24 @@ export async function getNbaResearchModels(board: PaintBoard, mode: NbaOddsMode 
 
 export async function getNbaResearchProfiles(board: PaintBoard, mode: NbaOddsMode = 'pregame') {
   const saved = await resource(board, 'profiles:v1', mode, async () => {
-    const cached = await nbaSharedCache(`research-profiles:v2:${mode}:${board.game.id}:${board.sampleSeason}`, 900, 3600, async () => {
+    const cached = await nbaSharedCache(`research-profiles:v3:${mode}:${board.game.id}:${board.game.season}`, 900, 3600, async () => {
       const players: { playerId: number; profile: Awaited<ReturnType<typeof getPaintProfile>> & { season: number } }[] = []
       // Bound provider concurrency while capturing the entire matchup, not only
       // whichever player happened to have a drawer open before tipoff.
       for (let offset = 0; offset < board.players.length; offset += 6) {
         players.push(...await Promise.all(board.players.slice(offset, offset + 6).map(async player => {
-          // The board already picks a real prior-season baseline for players
-          // without current-season appearances. Use that same season for the
-          // profile, and keep its identity visible to the member.
-          const season = player.averageSeason === board.sampleSeason - 1 ? player.averageSeason : board.sampleSeason
+          const season = board.game.season
           return { playerId: player.id, profile: { ...await getPaintProfile(player.id, season), season } }
         })))
       }
-      return { gameId: board.game.id, season: board.sampleSeason, players, complete: players.length === board.players.length && players.every(row => row.profile.shooting != null && row.profile.advanced != null) }
+      return { gameId: board.game.id, season: board.game.season, players, complete: players.length === board.players.length && players.every(row => row.profile.shooting != null && row.profile.advanced != null) }
     }, 100)
     return { value: cached.value, observedAt: cached.fetchedAt }
   }, value => value.complete === true)
-  return { ...saved.value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
+  const wrongSeason = !saved.frozen && (saved.value.season !== board.game.season || saved.value.players.some(row => row.profile.season !== board.game.season))
+  const value = wrongSeason ? { ...saved.value, season: board.game.season, complete: false,
+    players: saved.value.players.map(row => row.profile.season === board.game.season ? row : { ...row, profile: { season: board.game.season, shooting: null, advanced: null } }) } : saved.value
+  return { ...value, fetchedAt: saved.observedAt, researchSnapshot: { observedAt: saved.observedAt, source: saved.source, frozen: saved.frozen } }
 }
 
 /** A drawer needs one player's profile, not a cold refresh of both rosters.
@@ -100,11 +106,11 @@ export async function getNbaResearchProfiles(board: PaintBoard, mode: NbaOddsMod
 export async function getNbaResearchProfile(board: PaintBoard, playerId: number, mode: NbaOddsMode = 'pregame') {
   const player = board.players.find(candidate => candidate.id === playerId)
   if (!player) throw new Error('Player not in this matchup')
-  const season = player.averageSeason === board.sampleSeason - 1 ? player.averageSeason : board.sampleSeason
+  const season = board.game.season
   type Profile = Awaited<ReturnType<typeof getPaintProfile>> & { season: number }
   type MatchupProfiles = { gameId: number; players: { playerId: number; profile: Profile }[] }
   const complete = (profile: Profile) => profile.shooting != null && profile.advanced != null
-  const quality = (profile: Profile, frozen: boolean) => (complete(profile) ? 2 : 0) + Number(!frozen && profile.season === season)
+  const quality = (profile: Profile, frozen: boolean) => !frozen && profile.season !== season ? -1 : (complete(profile) ? 2 : 0) + Number(!frozen && profile.season === season)
   const savedProfiles = async () => {
     const [full, single] = await Promise.all([
       readNbaPregameResearch<MatchupProfiles>(board.game, 'profiles:v1'),
@@ -116,7 +122,7 @@ export async function getNbaResearchProfile(board: PaintBoard, playerId: number,
       || quality(fromFull.value, fromFull.frozen) === quality(single.value, single.frozen) && Date.parse(fromFull.observedAt) >= Date.parse(single.observedAt)) ? fromFull : single
     return chosen
   }
-  const present = (chosen: { value: Profile; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => ({ profile: chosen.value, fetchedAt: chosen.observedAt, researchSnapshot: { observedAt: chosen.observedAt, source: chosen.source, frozen: chosen.frozen } })
+  const present = (chosen: { value: Profile; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => ({ profile: !chosen.frozen && chosen.value.season !== season ? { season, shooting: null, advanced: null } : chosen.value, fetchedAt: chosen.observedAt, researchSnapshot: { observedAt: chosen.observedAt, source: chosen.source, frozen: chosen.frozen } })
   const resolveAtReturn = async (chosen: { value: Profile; observedAt: string; source: 'capture' | 'recovered-cache'; frozen: boolean }) => {
     // Another writer can commit after one of our parallel reads while tip is
     // crossed. Resolve both final winners using the locked archive readers.

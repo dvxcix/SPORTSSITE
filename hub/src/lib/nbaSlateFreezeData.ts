@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import { nbaPeriod, nbaReference, nbaMarketLogs, nbaSample, nbaAverage, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintMarket, type PaintPlayer, type PaintStat, type PaintProp } from './nbaPaint'
+import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaPeriod, nbaReference, nbaMarketLogs, nbaSample, nbaAverage, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintMarket, type PaintPlayer, type PaintStat, type PaintProp } from './nbaPaint'
 import { nbaMarketRanks, nbaFormGap } from './nbaMarketMetrics'
 import { nbaSelectedPlayers, type NbaMarketSelection } from './nbaMarketSelection'
 import { nbaGameStart, nbaPregameOpen, type NbaOddsMode } from './nbaOddsMode'
@@ -14,7 +14,7 @@ type PackedPoolQuote = [number, number, string, 0 | 1, number | null, number | n
 type PoolLog = [number, number, string, number, number, number, number | null, boolean | null, string, string | null, string, number | null, ...(number | null)[]]
 type PoolPlayer = { id: number; gameId: number; average: PaintPlayer['average']; logs: PoolLog[]; props: PoolQuote[] }
 type PackedPoolPlayer = Omit<PoolPlayer, 'props'> & { props: PackedPoolQuote[] }
-type PoolBase = { date: string; gameIds: number[]; period: 0 | 1; models?: { reports: NbaModelReport[]; games: { gameId: number; indexes: number[] }[] } }
+type PoolBase = { date: string; gameIds: number[]; period: 0 | 1; sources?: { gameId: number; observedAt: string; seasonFiltered: boolean }[]; models?: { reports: NbaModelReport[]; games: { gameId: number; indexes: number[] }[] } }
 export type NbaSlatePoolV1 = PoolBase & { version: 1; players: PoolPlayer[] }
 export type NbaSlatePoolV2 = PoolBase & { version: 2; players: PackedPoolPlayer[]; dictionary: { vendors: string[]; markets: string[]; timestamps: string[] } }
 export type NbaSlatePool = NbaSlatePoolV1 | NbaSlatePoolV2
@@ -22,6 +22,14 @@ type GameModels = { gameId: number; reports: NbaModelReport[] }[]
 const resource = (period: number) => period ? 'slate-mm-q1:v1' : 'slate-mm-full:v1'
 const markets = new Set<string>(PAINT_MARKETS.map(market => market.key))
 const statFields = ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm'] as const
+/** Produce an ephemeral 2026-only peer view from captured facts, never rewrite
+ * an earlier game's own frozen board or rank. The original data completeness
+ * flags still govern whether a whole-slate comparison is allowed. */
+function currentSeasonPeers(boards: PaintBoard[]) {
+  return boards.map(board => nbaBoardUsesSeason(board, board.game.season) ? board : {
+    ...nbaCurrentSeasonBoard(board, board.game.season), statsComplete: board.statsComplete, periodStatsComplete: board.periodStatsComplete,
+  })
+}
 function packLog(log: PaintStat): PoolLog {
   return [log.id, log.game.id, log.game.date, log.team.id, log.game.home_team_id, log.game.visitor_team_id, log.game.season ?? null, log.game.postseason ?? null, log.game.status, log.game.status_state ?? null, log.min, log.period ?? null, ...statFields.map(field => log[field])]
 }
@@ -80,7 +88,10 @@ export function nbaSlatePool(games: PaintGame[], boards: PaintBoard[], complete:
     || new Set(boards.map(board => board.game.id)).size !== games.length) return null
   if (boards.some(board => !ids.has(board.game.id) || board.game.date !== games[0].date || !board.statsComplete
     || period === 1 && board.periodStatsComplete !== true)) return null
-  const players = boards.flatMap(board => {
+  const sources = boards.map(board => ({ gameId: board.game.id, observedAt: board.researchSnapshot?.observedAt ?? board.fetchedAt, seasonFiltered: !nbaBoardUsesSeason(board, board.game.season) }))
+  if (sources.some(source => { const at = Date.parse(source.observedAt), tip = nbaGameStart(games.find(game => game.id === source.gameId)!)
+    return !Number.isFinite(at) || at > now || tip == null || at >= tip })) return null
+  const players = currentSeasonPeers(boards).flatMap(board => {
     const tip = nbaGameStart(board.game)
     return board.players.map(player => ({
       id: player.id, gameId: board.game.id, average: player.average,
@@ -97,7 +108,7 @@ export function nbaSlatePool(games: PaintGame[], boards: PaintBoard[], complete:
     if(existing>=0)return existing
     signatures.push(signature);reports.push(report);return reports.length-1
   })}))
-  return { version: 1, date: games[0].date, gameIds: [...ids].sort((a, b) => a - b), period, players, models:{reports,games:modelGames} }
+  return { version: 1, date: games[0].date, gameIds: [...ids].sort((a, b) => a - b), period, players, sources, models:{reports,games:modelGames} }
 }
 
 /** Used by the existing research pass and ordinary complete slate reads. */
@@ -147,9 +158,19 @@ export async function getNbaLegacySlateRows(game: PaintGame, market: PaintMarket
   return saved
 }
 /** Re-run at response time: a cached live slate cannot cross an anchor's cutoff. */
-export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[], market: PaintMarket, book: string, selection: NbaMarketSelection | undefined, mode: NbaOddsMode, complete: boolean, side:'over'|'under'='over'): Promise<NbaSlateFreeze> {
+export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[], market: PaintMarket, book: string, selection: NbaMarketSelection | undefined, mode: NbaOddsMode, complete: boolean, side:'over'|'under'='over', models: GameModels = []): Promise<NbaSlateFreeze> {
   const ranks = new Map<string, number>(), unavailable: number[] = [], observedAt: Record<number, string> = {}, heatDomains:Record<number,NbaSlateHeatDomains>={}
-  const current = complete ? nbaMarketRanks(nbaSelectedPlayers(boards.flatMap(board => board.players), market, selection), market, book) : new Map()
+  const peerBoards = mode === 'live' ? boards : currentSeasonPeers(boards)
+  const sourceValid = mode === 'live' || boards.every(board => { const at = Date.parse(board.researchSnapshot?.observedAt ?? board.fetchedAt), tip = nbaGameStart(board.game)
+    return Number.isFinite(at) && at <= Date.now() && tip != null && at < tip })
+  const current = complete && sourceValid ? nbaMarketRanks(nbaSelectedPlayers(peerBoards.flatMap(board => board.players), market, selection), market, book) : new Map()
+  const currentDomains = complete && sourceValid ? nbaSlateHeatDomains(peerBoards.flatMap(board => nbaSelectedPlayers(board.players, market, selection).flatMap(player => {
+    const offer = nbaReference(player.props, market, book, side)
+    if (!offer) return []
+    const report = models.find(item => item.gameId === board.game.id)?.reports.find(item => item.market === market && item.validationThrough < board.game.date)
+    const logs = nbaMarketLogs(player, market), average = nbaAverage(nbaSample(logs, 10), market)
+    return [{ average, estimate: nbaValidatedEstimate(logs, market, board.game.date, report), gap: nbaFormGap(average, offer, side) }]
+  }))) : undefined
   if (mode === 'live') {
     for (const board of boards) for (const player of board.players) { const rank = current.get(player.id); if (rank) ranks.set(`${board.game.id}:${player.id}`, rank.mm) }
     return { ranks, unavailable, observedAt, heatDomains }
@@ -158,6 +179,8 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
     const board = boards.find(board => board.game.id === game.id)
     if (!board) return
     if (nbaPregameOpen(game)) {
+      if (!complete || !sourceValid) { unavailable.push(game.id); return }
+      if (currentDomains) heatDomains[game.id] = currentDomains
       for (const player of board.players) { const rank = current.get(player.id); if (rank) ranks.set(`${game.id}:${player.id}`, rank.mm) }
       return
     }

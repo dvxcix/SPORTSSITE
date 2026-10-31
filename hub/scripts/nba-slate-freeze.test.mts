@@ -18,7 +18,7 @@ const game = (id: number, start = tip): paint.PaintGame => ({ id, date: '2026-10
 function player(id: number, gameId: number, performance: number, line: number): paint.PaintPlayer {
   const logs = Array.from({ length: 10 }, (_, i): paint.PaintStat => ({ id: id * 100 + i, player: { id }, team: { id: 1 }, game: { id: 900 + i, date: '2026-10-01', status: 'Final', status_state: 'final', home_team_id: 1, visitor_team_id: 2 }, min: '30', pts: performance, reb: 5, ast: 5, fg3m: 2, stl: 0, blk: 0, turnover: 1, fga: 10, fgm: 5, fg3a: 3, fta: 2, ftm: 2 }))
   const quote = (vendor: string, market: string, target: number, odds = 100): paint.PaintProp => ({ id, game_id: gameId, player_id: id, vendor, prop_type: market, line_value: String(target), market: { type: 'milestone', odds }, updated_at: new Date(tip - 60_000).toISOString() })
-  return { id, first_name: 'Player', last_name: String(id), position: 'G', team, headshot: null, injury: null, average: { pts: performance, points_1q: performance / 4 }, logs, periodLogs: logs.map(log => ({ ...log, period: 1, pts: performance / 4 })), props: [quote('fanduel', 'points', line), quote('draftkings', 'points', 25, id === 1 ? 300 : 100), quote('fanduel', 'points_1q', line / 4)] }
+  return { id, first_name: 'Player', last_name: String(id), position: 'G', team, headshot: null, injury: null, averageSeason: 2026, average: { pts: performance, points_1q: performance / 4 }, logs, periodLogs: logs.map(log => ({ ...log, period: 1, pts: performance / 4 })), props: [quote('fanduel', 'points', line), quote('draftkings', 'points', 25, id === 1 ? 300 : 100), quote('fanduel', 'points_1q', line / 4)] }
 }
 const boards = (): paint.PaintBoard[] => [
   { game: game(101), players: [player(1, 101, 40, 30), player(2, 101, 10, 10)], sampleSeason: 2026, historical: false, sampleEnd: '2026-10-24', fetchedAt: new Date(tip - 60_000).toISOString(), issues: [], statsComplete: true, periodStatsComplete: true },
@@ -60,6 +60,28 @@ test('earlier matchup keeps the whole-slate MM pool while a later game refreshes
   assert.equal(after.ranks.get('101:2'), before.ranks.get('101:2'))
   assert.notEqual(after.ranks.get('102:3'), before.ranks.get('102:3'))
   assert.deepEqual(after.unavailable, [])
+})
+
+test('a mixed-year closed peer contributes only captured current-season data to an open pool', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game)
+  await h.api.captureNbaSlatePools(games, b, true)
+  const before = await h.api.getNbaSlateRanks(games, b, 'points', 'fanduel', undefined, 'pregame', true)
+  const oldClosedArchive = structuredClone(h.archive.get('101:slate-mm-full:v1'))
+  h.time(tip + 1000); b[0].baselineSeasons = [2025, 2026]
+  b[0].players[0].averageSeason = 2025; b[0].players[0].average.pts = 999
+  b[0].players[0].logs.push({ ...b[0].players[0].logs[0], id: 999, pts: 999, game: { ...b[0].players[0].logs[0].game, date: '2026-04-01', season: 2025 } })
+  const original = structuredClone(b[0])
+  const after = await h.api.getNbaSlateRanks(games, b, 'points', 'fanduel', undefined, 'pregame', true)
+  assert.equal(after.ranks.get('101:1'), before.ranks.get('101:1'), 'the closed game preserves its original frozen rank')
+  assert.deepEqual(after.unavailable, []); assert.equal(after.ranks.get('102:3'), before.ranks.get('102:3'))
+  assert.deepEqual(after.heatDomains[102], before.heatDomains[102], 'open heat domains exclude the old-year extreme')
+  await h.api.captureNbaSlatePools(games, b, true)
+  assert.deepEqual(b[0], original); assert.deepEqual(h.archive.get('101:slate-mm-full:v1'), oldClosedArchive, 'historical board and pool are untouched')
+  const pool = h.archive.get('102:slate-mm-full:v1')!.value as import('../src/lib/nbaSlateFreezeData.ts').NbaSlatePool
+  const peer = h.api.nbaSlatePoolPlayers(pool).find(player => player.id === 1)!
+  assert.equal(peer.average.pts, 40); assert.ok(peer.logs.every(log => log.game.season !== 2025))
+  assert.equal(pool.sources?.find(source => source.gameId === 101)?.seasonFiltered, true)
+  assert.equal(pool.sources?.find(source => source.gameId === 101)?.observedAt, b[0].fetchedAt)
 })
 
 test('all books and exact contract targets replay from the same unfiltered frozen pool', async () => {
