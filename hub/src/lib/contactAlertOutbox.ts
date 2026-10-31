@@ -6,6 +6,7 @@ import { renderContactAlertMedia, type ContactAlertMedia } from '@/lib/contactRe
 import { postAlertAttachmentChecked } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/platform'
 import type { DailyContactEvent } from '@/lib/contactRecapTypes'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const BUCKET = 'contact-recap-exports'
 const OPERATION = 'contact_alert_media'
@@ -40,6 +41,7 @@ function cleanKey(value: string) {
 }
 
 export async function enqueueContactAlert(event: DailyContactEvent, source = 'cron') {
+  if (MLB_HIBERNATING) throw new Error('MLB off-season')
   const admin = createAdminClient()
   const [enriched] = await enrichContactRecapMarkets(event.gameDate, [event])
   const eventKey = contactAlertEventKey(enriched)
@@ -236,6 +238,7 @@ async function failOrRetry(job: ContactAlertJob, error: unknown) {
 }
 
 export async function processContactAlertJob(jobId: string) {
+  if (MLB_HIBERNATING) return { processed: false, reason: 'mlb-offseason' }
   const job = await claimJob(jobId)
   if (!job) return { processed: false, reason: 'not-ready' }
   const admin = createAdminClient()
@@ -287,6 +290,7 @@ export async function processContactAlertJobs(jobIds: string[], concurrency = CO
 }
 
 export async function processPendingContactAlertJobs(limit = 6) {
+  if (MLB_HIBERNATING) return []
   const admin = createAdminClient()
   const { data, error } = await admin.from('operational_retry_queue').select('id').eq('provider', 'discord').eq('operation', OPERATION)
     .eq('status', 'pending').lte('next_attempt_at', new Date().toISOString()).order('next_attempt_at', { ascending: true }).limit(limit)
@@ -295,6 +299,7 @@ export async function processPendingContactAlertJobs(limit = 6) {
 }
 
 export async function recoverStaleContactAlertJobs() {
+  if (MLB_HIBERNATING) return
   const admin = createAdminClient()
   const cutoff = new Date(Date.now() - STALE_RUNNING_MINUTES * 60_000).toISOString()
   const { error } = await admin.from('operational_retry_queue').update({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeApiError } from '@/lib/safeApiError'
 import { precomputeMatchupEdgeForDate } from '@/lib/dugoutMatchupEdgePrecompute'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const maxDuration = 300
 
@@ -22,6 +23,7 @@ async function requireAdmin() {
 export async function GET(req: Request) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date')

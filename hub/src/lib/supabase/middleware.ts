@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './authErrors'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { isMlbOnlyPath, isMlbPullPath } from '@/lib/mlbOffseasonAccess'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
 
@@ -15,6 +18,13 @@ function authUnavailable(request: NextRequest, code = 'AUTH_TEMPORARILY_UNAVAILA
     })
   }
   return NextResponse.json({ error: 'Account verification temporarily unavailable', code }, { status: 503, headers: AUTH_UNAVAILABLE_HEADERS })
+}
+
+function mlbProviderPaused(request: NextRequest) {
+  const headers = { 'Cache-Control': 'private, no-store, max-age=0' }
+  return request.nextUrl.pathname.startsWith('/api/')
+    ? NextResponse.json({ error: 'Live MLB data is paused for the off-season.' }, { status: 503, headers })
+    : new NextResponse('Live MLB data is paused for the off-season.', { status: 503, headers })
 }
 
 export async function updateSession(request: NextRequest) {
@@ -149,7 +159,27 @@ export async function updateSession(request: NextRequest) {
   // it isn't a bypass of auth itself, since every gated route still calls
   // its own requireTier/requireAdmin check and returns a real 401/403 for
   // an invalid or missing token.
-  if (request.nextUrl.pathname.startsWith('/api/') && /^Bearer\s+/i.test(request.headers.get('authorization') ?? '')) {
+  const baseballOnly = MLB_HIBERNATING && isMlbOnlyPath(request.nextUrl.pathname)
+  const bearer = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
+  if (baseballOnly && bearer && request.nextUrl.pathname.startsWith('/api/')) {
+    // Native clients bypass cookie auth below. Verify the access token and
+    // trusted account type here before allowing any baseball-only API.
+    try {
+      const client = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+        global: { headers: { Authorization: `Bearer ${bearer}` } },
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      })
+      const { data: { user }, error } = await client.auth.getUser(bearer)
+      if (isRetryableAuthError(error)) return authUnavailable(request)
+      if (error || !user) return NextResponse.json({ error: 'Sign in required' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } })
+      const { data: profile, error: profileError } = await client.from('users').select('account_type').eq('id', user.id).maybeSingle()
+      if (profileError || !profile) return authUnavailable(request)
+      if (profile.account_type !== 'admin') return NextResponse.json({ error: 'Not found' }, { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
+      if (isMlbPullPath(request.nextUrl.pathname)) return mlbProviderPaused(request)
+      return NextResponse.next({ request })
+    } catch { return authUnavailable(request) }
+  }
+  if (request.nextUrl.pathname.startsWith('/api/') && bearer) {
     return NextResponse.next({ request })
   }
 
@@ -216,6 +246,19 @@ export async function updateSession(request: NextRequest) {
   }
   if (authError) supabaseResponse = NextResponse.next({ request })
   if (userId && request.cookies.has(AUTH_REFRESH_RETRY_COOKIE)) clearRefreshRetry(supabaseResponse)
+
+  if (baseballOnly && userId) {
+    try {
+      const { data: profile, error: profileError } = await supabase.from('users').select('account_type').eq('id', userId).maybeSingle()
+      if (profileError || !profile) return finish(authUnavailable(request))
+      if (profile.account_type !== 'admin') {
+        return finish(request.nextUrl.pathname.startsWith('/api/')
+          ? NextResponse.json({ error: 'Not found' }, { status: 404 })
+          : new NextResponse('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }))
+      }
+      if (isMlbPullPath(request.nextUrl.pathname)) return finish(mlbProviderPaused(request))
+    } catch { return finish(authUnavailable(request)) }
+  }
 
   if (userId && request.nextUrl.pathname.startsWith('/api/admin/')) {
     try {

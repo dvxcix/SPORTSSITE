@@ -1,8 +1,9 @@
 import { isNbaToolHref } from '@/lib/nbaAccessPolicy'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export type ResearchSport = 'mlb' | 'nfl' | 'nba'
 
-const mlbRoutes = ['/mlb', '/players', '/dugout', '/weather-lab', '/pitcher-report', '/slate-breakdown', '/batter-cost', '/odds-terminal', '/synergy', '/daily-recap', '/spray-charts', '/the-public']
+const mlbRoutes = ['/mlb', '/players', '/dugout', '/weather-lab', '/pitcher-report', '/slate-breakdown', '/batter-cost', '/odds-terminal', '/synergy', '/daily-recap', '/spray-charts', '/the-public', '/research']
 
 export function researchSportForPath(path: string): ResearchSport | null {
   if (path.startsWith('/sports/nba/')) return 'nba'
@@ -16,17 +17,18 @@ export function researchSportForPath(path: string): ResearchSport | null {
 export const NBA_UPGRADE_HREF = '/pricing#plan-ultimate'
 
 /** Discovery is public; access is checked separately before opening a tool. */
-export function availableResearchSports(nflAccess: boolean): ResearchSport[] {
-  return ['mlb', ...(nflAccess ? ['nfl' as const] : []), 'nba']
+export function availableResearchSports(nflAccess: boolean, mlbAccess = false): ResearchSport[] {
+  return [...(!MLB_HIBERNATING || mlbAccess ? ['mlb' as const] : []), ...(nflAccess ? ['nfl' as const] : []), 'nba']
 }
 
 /** A persisted sport preference selects a menu, never grants access. */
-export function resolveResearchSport(sport: ResearchSport, nflAccess: boolean): ResearchSport {
-  return availableResearchSports(nflAccess).includes(sport) ? sport : 'mlb'
+export function resolveResearchSport(sport: ResearchSport, nflAccess: boolean, mlbAccess = false): ResearchSport {
+  const available = availableResearchSports(nflAccess, mlbAccess)
+  return available.includes(sport) ? sport : (nflAccess ? 'nfl' : (!MLB_HIBERNATING || mlbAccess ? 'mlb' : 'nba'))
 }
 
-export function researchHome(sport: ResearchSport, nflAccess: boolean, nbaAccess = false) {
-  const selected = resolveResearchSport(sport, nflAccess)
+export function researchHome(sport: ResearchSport, nflAccess: boolean, nbaAccess = false, mlbAccess = false) {
+  const selected = resolveResearchSport(sport, nflAccess, mlbAccess)
   return selected === 'nba' ? (nbaAccess ? '/the-paint' : NBA_UPGRADE_HREF) : selected === 'nfl' ? '/the-sideline' : '/dugout'
 }
 

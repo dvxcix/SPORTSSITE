@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
+import { isMlbCronPaused, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const runtime = 'nodejs'
 export const maxDuration = 650
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as { jobName?: string; action?: string } | null
   const jobName = body?.jobName ?? ''
   if (!TRACKED_PIPELINES.some(pipeline => pipeline.name === jobName)) return NextResponse.json({ error: 'Unknown pipeline.' }, { status: 400 })
+  if (isMlbCronPaused(jobName)) return mlbPausedResponse(503)
   const action = body?.action ?? 'run'
   if (action !== 'run' && !(action === 'fit' && jobName === 'market-dna-maintenance') && !(action === 'preview' && jobName === 'slate-drop')) {
     return NextResponse.json({ error: 'Unsupported pipeline action.' }, { status: 400 })

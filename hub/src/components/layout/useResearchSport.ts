@@ -5,7 +5,7 @@ import { researchSportForPath, type ResearchSport } from './researchNavigation'
 
 const KEY = 'slipsurge:research-sport:v1'
 const EVENT = 'slipsurge:research-sport'
-let sessionSport: ResearchSport = 'mlb'
+let sessionSport: ResearchSport = 'nfl'
 
 function readSport(): ResearchSport {
   try {
@@ -30,7 +30,7 @@ function subscribe(onChange: () => void) {
 
 export function useResearchSport(path: string) {
   const routeSport = researchSportForPath(path)
-  const sport = useSyncExternalStore(subscribe, readSport, () => routeSport ?? 'mlb')
+  const sport = useSyncExternalStore(subscribe, readSport, () => routeSport ?? 'nfl')
   // A new research route selects its sport. Manual switching remains possible
   // while browsing the menu without navigating away from the current page.
   useEffect(() => { if (routeSport) chooseSport(routeSport) }, [path, routeSport])

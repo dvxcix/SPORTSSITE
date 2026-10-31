@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getDailyContactRecap } from '@/lib/dailyContactRecap'
 import { enrichContactRecapMarkets } from '@/lib/contactRecapMarkets'
 import { renderContactRecap, type ContactRecapExportAspect, type ContactRecapExportFormat } from '@/lib/contactRecapGif'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const BUCKET = 'contact-recap-exports'
 const MAX_ATTEMPTS = 3
@@ -27,6 +28,7 @@ async function updateJob(id: string, values: Record<string, unknown>) {
 }
 
 export async function recoverStaleContactRecapExports() {
+  if (MLB_HIBERNATING) return
   const now = new Date().toISOString()
   return createAdminClient().from('contact_recap_export_jobs').update({
     status: 'queued',
@@ -37,6 +39,7 @@ export async function recoverStaleContactRecapExports() {
 }
 
 export async function processContactRecapExportJob(jobId: string) {
+  if (MLB_HIBERNATING) return { processed: false, error: 'MLB off-season' }
   const admin = createAdminClient()
   const { data, error } = await admin.from('contact_recap_export_jobs')
     .select('id,recap_date,kind,format,aspect,status,attempt_count')
@@ -107,6 +110,7 @@ export async function processContactRecapExportJob(jobId: string) {
 }
 
 export async function processNextContactRecapExport() {
+  if (MLB_HIBERNATING) return { processed: false }
   const { data } = await createAdminClient().from('contact_recap_export_jobs')
     .select('id')
     .in('status', ['queued', 'retrying'])

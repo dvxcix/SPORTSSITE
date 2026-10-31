@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Search, Bell, ChevronDown, ChevronRight, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards, CheckCheck, Bookmark, CreditCard, CircleHelp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
@@ -128,6 +129,7 @@ function TopbarNotificationEntry({
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile, loading, authUnavailable, retrySession, signOut: signOutSession } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [signOutError, setSignOutError] = useState('')
@@ -194,7 +196,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     const t = setTimeout(async () => {
       try {
         const socialReady = currentBlockIds !== null
-        const postCols = 'id, content, pick_data, author_id, author:users!posts_author_id_fkey(username, display_name)'
+        const postCols = 'id, content, pick_data, sport, author_id, author:users!posts_author_id_fkey(username, display_name)'
         const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData, nbaData] = await Promise.all([
           socialReady ? supabase.from('users')
             .select('id, username, display_name, avatar_url')
@@ -217,7 +219,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             .eq('visibility', 'public')
             .order('created_at', { ascending: false })
             .limit(150).abortSignal(controller.signal) : Promise.resolve({ data: [] }),
-          fetch(`/api/search/sports?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+          mlbAccess ? fetch(`/api/search/sports?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
           fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
           nbaAccess ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`, { cache: 'no-store', signal: controller.signal }).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
         ])
@@ -229,6 +231,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         const p = [...(byContent ?? []), ...byPickData]
           .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
           .filter((post: any) => !blockedSet.has(post.author_id))
+          .filter(post => mlbAccess || post.sport?.toUpperCase() !== 'MLB')
           .slice(0, 3)
         setQuickResultsOwner(userId)
         setQuickResultsGeneration(accountGeneration)
@@ -248,13 +251,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       }
     }, 250)
     return () => { controller.abort(); clearTimeout(t) }
-  }, [search, supabase, nbaAccess, userId, currentBlockIds, accountGeneration])
+  }, [search, supabase, nbaAccess, mlbAccess, userId, currentBlockIds, accountGeneration])
 
   const showSocialQuick = quickResultsOwner === userId && quickResultsGeneration === accountGeneration && currentBlockIds !== null
   const activeBlocked = new Set(currentBlockIds ?? [])
   const visibleQuickUsers = showSocialQuick ? quickResults.users.filter(item => !activeBlocked.has(item.id)) : []
-  const visibleQuickPosts = showSocialQuick ? quickResults.posts.filter(item => !activeBlocked.has(item.author_id)) : []
-  const hasQuickResults = visibleQuickUsers.length > 0 || visibleQuickPosts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
+  const visibleQuickPosts = showSocialQuick ? quickResults.posts.filter(item => !activeBlocked.has(item.author_id) && (mlbAccess || item.sport?.toUpperCase() !== 'MLB')) : []
+  const hasQuickResults = visibleQuickUsers.length > 0 || visibleQuickPosts.length > 0 || mlbAccess && (quickResults.players.length > 0 || quickResults.teams.length > 0) || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0 || nbaAccess && (quickResults.nbaPlayers.length > 0 || quickResults.nbaTeams.length > 0)
   const visibleNotifications = useMemo(() => {
     if (notificationOwner !== userId || currentBlockIds === null) return []
     const filtered = notifications.filter(notification => !notification.actor_id || !currentBlockIds.includes(notification.actor_id))
@@ -490,7 +493,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               <div style={{ padding: '16px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>No results for "{search.trim()}"</div>
             ) : (
               <>
-                {quickResults.teams.map(t => (
+                {mlbAccess && quickResults.teams.map(t => (
                   <button type="button" key={`t-${t.abbr}`} onClick={() => goTo(t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports')}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
@@ -499,7 +502,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     {t.gamePk && <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--red)' }}>LIVE</span>}
                   </button>
                 ))}
-                {quickResults.players.map(p => (
+                {mlbAccess && quickResults.players.map(p => (
                   <button type="button" key={`p-${p.mlbId}`} onClick={() => goTo(`/players/${p.mlbId}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">

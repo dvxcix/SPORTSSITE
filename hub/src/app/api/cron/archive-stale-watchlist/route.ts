@@ -3,6 +3,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 30
@@ -26,11 +27,14 @@ async function run(req: Request) {
   const admin = createAdminClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
-  const { error, count } = await admin
+  let query = admin
     .from('watchlist_items')
     .update({ status: 'archived' }, { count: 'exact' })
     .eq('status', 'pending')
     .lt('game_date', today)
+  // Preserve MLB items during hibernation; continue other sports normally.
+  if (MLB_HIBERNATING) query = query.or('sport.is.null,sport.not.ilike.MLB')
+  const { error, count } = await query
 
   if (error) return safeApiError('archive-stale-watchlist', error)
   return NextResponse.json({ ok: true, archived: count ?? 0, today })

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const SPORTS = new Set(['MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'NCAAB'])
@@ -16,13 +17,14 @@ async function creator() {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('users').select('account_type').eq('id', user.id).single()
   if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) return { error: NextResponse.json({ error: 'Creator access required' }, { status: 403 }) }
-  return { user, admin }
+  return { user, admin, mlbAccess: !MLB_HIBERNATING || profile.account_type === 'admin' }
 }
 
 export async function POST(request: NextRequest) {
   const gate = await creator(); if ('error' in gate) return gate.error
   const body = await request.json().catch(() => null) as { content?: string; postType?: string; sport?: string; visibility?: string; scheduledFor?: string; draft?: boolean } | null
   const payload = body ?? {}
+  if (!gate.mlbAccess && typeof payload.sport === 'string' && payload.sport.toUpperCase() === 'MLB') return NextResponse.json({ error: 'Sport unavailable.' }, { status: 404 })
   const content = payload.content?.trim() ?? ''
   const scheduledFor = new Date(payload.scheduledFor ?? '')
   if (!content || content.length > 500) return NextResponse.json({ error: 'Post must be between 1 and 500 characters.' }, { status: 400 })
@@ -48,6 +50,7 @@ export async function PATCH(request: NextRequest) {
   if (!rate.allowed) return NextResponse.json({ error: 'Update limit reached. Try again later.' }, { status: 429 })
   const body = await request.json().catch(() => null) as { id?: string; action?: 'cancel' | 'schedule' | 'edit'; scheduledFor?: string; content?: string; postType?: string; sport?: string; visibility?: string; draft?: boolean } | null
   if (!body?.id || !UUID.test(body.id) || !['cancel', 'schedule', 'edit'].includes(body.action ?? '')) return NextResponse.json({ error: 'Invalid scheduled-post update.' }, { status: 400 })
+  if (!gate.mlbAccess && typeof body.sport === 'string' && body.sport.toUpperCase() === 'MLB') return NextResponse.json({ error: 'Sport unavailable.' }, { status: 404 })
   const updates: Record<string, string | null> = body.action === 'cancel' ? { status: 'canceled' } : { status: body.draft ? 'draft' : 'scheduled' }
   if (body.action === 'schedule' || (body.action === 'edit' && !body.draft)) {
     const when = new Date(body.scheduledFor ?? '')
@@ -62,8 +65,11 @@ export async function PATCH(request: NextRequest) {
     updates.sport = SPORTS.has(body.sport ?? '') ? body.sport! : null
     updates.visibility = VISIBILITY.has(body.visibility ?? '') ? body.visibility! : 'public'
   }
-  const { data, error } = await gate.admin.from('creator_scheduled_posts').update(updates).eq('id', body.id).eq('creator_id', gate.user.id).in('status', ['draft', 'scheduled', 'failed']).select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').maybeSingle()
-  if (error || !data) return safeApiError('creator-scheduled-post-update', error, 'Could not update scheduled post')
+  let query = gate.admin.from('creator_scheduled_posts').update(updates).eq('id', body.id).eq('creator_id', gate.user.id).in('status', ['draft', 'scheduled', 'failed'])
+  if (!gate.mlbAccess) query = query.or('sport.is.null,sport.not.ilike.MLB')
+  const { data, error } = await query.select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').maybeSingle()
+  if (error) return safeApiError('creator-scheduled-post-update', error, 'Could not update scheduled post')
+  if (!data) return NextResponse.json({ error: 'Post unavailable.' }, { status: 404 })
   return NextResponse.json({ post: data })
 }
 
@@ -74,7 +80,9 @@ export async function DELETE(request: NextRequest) {
   if (!rate.allowed) return NextResponse.json({ error: 'Delete limit reached. Try again later.' }, { status: 429 })
   const id = new URL(request.url).searchParams.get('id')
   if (!id || !UUID.test(id)) return NextResponse.json({ error: 'Invalid scheduled post.' }, { status: 400 })
-  const { error } = await gate.admin.from('creator_scheduled_posts').delete().eq('id', id).eq('creator_id', gate.user.id).in('status', ['draft', 'scheduled', 'failed', 'canceled'])
+  let query = gate.admin.from('creator_scheduled_posts').delete().eq('id', id).eq('creator_id', gate.user.id).in('status', ['draft', 'scheduled', 'failed', 'canceled'])
+  if (!gate.mlbAccess) query = query.or('sport.is.null,sport.not.ilike.MLB')
+  const { error } = await query
   if (error) return safeApiError('creator-scheduled-post-delete', error, 'Could not delete scheduled post')
   return NextResponse.json({ ok: true })
 }

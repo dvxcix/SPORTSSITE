@@ -11,6 +11,7 @@ function load(file, mocks, fetchFixture) {
   }).outputText
   const fixtureModule = { exports: {} }
   new Function('require', 'module', 'exports', 'fetch', code)(id => {
+    if (id === '@/lib/mlbOffseason' && !(id in mocks)) return { isMlbCronPaused: () => false }
     if (!(id in mocks)) throw Error(`Unexpected dependency ${id}`)
     return mocks[id]
   }, fixtureModule, fixtureModule.exports, fetchFixture)

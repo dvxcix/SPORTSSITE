@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDailyContactRecap } from '@/lib/dailyContactRecap'
 import { enrichContactRecapMarkets } from '@/lib/contactRecapMarkets'
 import { renderContactRecap, type ContactRecapExportAspect, type ContactRecapExportFormat } from '@/lib/contactRecapGif'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,7 @@ async function requireAdmin() {
 export async function GET(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const url = new URL(request.url)
   const date = url.searchParams.get('date') ?? ''
   const kind = url.searchParams.get('kind') === 'near' ? 'near' : 'hr'

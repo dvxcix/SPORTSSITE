@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { ResearchWorkspaceClient } from '@/components/research/ResearchWorkspaceClient'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,7 @@ export default async function WorkspacePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/workspace')
+  const showMlb = await canViewMlb(supabase, user.id)
 
   const db = supabase
   const [workspaceResult, notesResult] = await Promise.all([
@@ -31,13 +33,13 @@ export default async function WorkspacePage() {
   const [ownWatchlist, sharedWatchlist, ownMlb, sharedMlb, ownNfl, sharedNfl] = await Promise.all([
     admin.from('watchlist_items').select(watchlistFields).eq('user_id', user.id).neq('status', 'archived').order('created_at', { ascending: false }),
     sharedWatchlistIds.length ? admin.from('watchlist_items').select(watchlistFields).in('id', sharedWatchlistIds) : Promise.resolve({ data: [] }),
-    admin.from('matrices').select(matrixFields).eq('user_id', user.id).order('priority').order('created_at'),
-    sharedMlbMatrixIds.length ? admin.from('matrices').select(matrixFields).in('id', sharedMlbMatrixIds) : Promise.resolve({ data: [] }),
+    showMlb ? admin.from('matrices').select(matrixFields).eq('user_id', user.id).order('priority').order('created_at') : Promise.resolve({ data: [] }),
+    showMlb && sharedMlbMatrixIds.length ? admin.from('matrices').select(matrixFields).in('id', sharedMlbMatrixIds) : Promise.resolve({ data: [] }),
     admin.from('nfl_matrices').select(matrixFields).eq('user_id', user.id).order('priority').order('created_at'),
     sharedNflMatrixIds.length ? admin.from('nfl_matrices').select(matrixFields).in('id', sharedNflMatrixIds) : Promise.resolve({ data: [] }),
   ])
   const unique = <T extends { id: string }>(rows: T[]) => [...new Map(rows.map(row => [row.id, row])).values()]
-  const watchlistItems = unique([...(ownWatchlist.data ?? []), ...(sharedWatchlist.data ?? [])])
+  const watchlistItems = unique([...(ownWatchlist.data ?? []), ...(sharedWatchlist.data ?? [])]).filter(item => showMlb || item.sport?.toUpperCase() !== 'MLB')
   const mlbMatrices = unique([...(ownMlb.data ?? []), ...(sharedMlb.data ?? [])])
   const nflMatrices = unique([...(ownNfl.data ?? []), ...(sharedNfl.data ?? [])])
 
@@ -51,12 +53,13 @@ export default async function WorkspacePage() {
     />
     <ResearchWorkspaceClient
       userId={user.id}
+      showMlb={showMlb}
       initialItems={watchlistItems}
       initialMlbMatrices={mlbMatrices}
       initialNflMatrices={nflMatrices}
       initialWorkspaces={workspaces}
-      initialNotes={notesResult.data ?? []}
-      initialEvidenceItems={evidenceResult.data ?? []}
+      initialNotes={(notesResult.data ?? []).filter(note => showMlb || note.sport?.toUpperCase() !== 'MLB')}
+      initialEvidenceItems={(evidenceResult.data ?? []).filter(item => showMlb || (item.payload as { sport?: string } | null)?.sport === 'NFL')}
     />
   </ProductPageShell>
 }

@@ -70,7 +70,7 @@ test('lower-tier command search discovers NBA upgrades without requesting NBA id
     await ui.open()
     await ui.type('tatum'); await ui.flush()
     assert.equal(ui.requests.some(request => request.path === '/api/search/nba'), false)
-    assert.ok(ui.result('MLB Result')); assert.ok(ui.result('NFL Result'))
+    assert.equal(ui.result('MLB Result'), undefined); assert.ok(ui.result('NFL Result'))
     assert.equal(ui.result('Jayson Tatum'), undefined)
   } finally { await ui.close() }
 })
@@ -184,7 +184,7 @@ test('being on an NBA route never grants member search access to NBA', async () 
   const ui = await harness('user', async () => nbaResult(), { pathname: '/nba/players/434' })
   try {
     await ui.open(); await ui.type('tatum'); await ui.flush()
-    assert.deepEqual([...ui.host.querySelectorAll('[role="option"] strong')].map(node => node.textContent), ['MLB Result', 'NFL Result'])
+    assert.deepEqual([...ui.host.querySelectorAll('[role="option"] strong')].map(node => node.textContent), ['NFL Result'])
     assert.equal(ui.requests.some(request => request.path === '/api/search/nba'), false)
     assert.equal(ui.host.textContent?.includes('Jayson Tatum'), false)
   } finally { await ui.close() }

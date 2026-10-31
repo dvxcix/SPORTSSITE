@@ -10,8 +10,9 @@ import Image from 'next/image'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { AuthAlert, AuthBrand, AuthDivider, AuthExperience, AuthField, AuthHeading, AuthSubmit, ProviderButton, authExperienceStyles as auth } from '@/components/auth/AuthExperience'
 import { normalizeRegistrationEmail, registrationErrorMessage } from '@/lib/authRegistration'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
-const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
+const SPORTS = [...(!MLB_HIBERNATING ? ['MLB'] : []), 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
 
 const statVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -24,7 +25,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [sports, setSports] = useState<string[]>(['MLB'])
+  const [sports, setSports] = useState<string[]>(['NFL'])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)

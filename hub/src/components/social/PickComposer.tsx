@@ -105,9 +105,10 @@ function labelFor(market: Market, side: Offer['side']) {
   return `${side === 'over' ? 'Over' : 'Under'} ${market.line} ${market.label}`
 }
 
-export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSport = 'MLB', initialGameId }: {
+export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSport = 'NFL', initialGameId, mlbAccess = false }: {
   initialSport?: Sport
   initialGameId?: string
+  mlbAccess?: boolean
   legs: ComposedPick[]
   onAddLeg: (pick: ComposedPick) => void
   onRemoveLeg: (index: number) => void
@@ -117,7 +118,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
   const lockedSport = legs[0]?.sport ?? null
   const lockedBook = legs[0]?.book ?? null
   const [selectedSport, setSelectedSport] = useState<Sport>(initialSport)
-  const sport = lockedSport ?? selectedSport
+  const sport = !mlbAccess && (lockedSport ?? selectedSport) === 'MLB' ? 'NFL' : (lockedSport ?? selectedSport)
   const [gameDate, setGameDate] = useState(easternToday)
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
@@ -246,7 +247,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
       </header>
 
       <div className={styles.sportTabs} aria-label="Sport">
-        {(['MLB', 'NFL', 'NBA'] as const).map(item => (
+        {([...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'] as Sport[]).map(item => (
           <button key={item} type="button" data-active={sport === item} disabled={!!lockedSport && lockedSport !== item} onClick={() => chooseSport(item)}>
             {item === 'MLB' ? '⚾' : item === 'NFL' ? '🏈' : '🏀'} {item}
           </button>

@@ -6,8 +6,12 @@ import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import { Upload, Type } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export function CreateStoryForm({ userId }: { userId: string }) {
+  const { profile } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [type, setType] = useState<'text' | 'image'>('text')
@@ -74,7 +78,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
     <div className="space-y-4">
       <label className="block text-xs font-bold text-zinc-400">Sport
         <select aria-label="Story sport" value={sport} onChange={event => setSport(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white">
-          <option value="">All sports</option>{['MLB', 'NFL', 'NBA'].map(league => <option key={league} value={league}>{league}</option>)}
+          <option value="">All sports</option>{[...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'].map(league => <option key={league} value={league}>{league}</option>)}
         </select>
       </label>
       {/* Toggle */}
@@ -101,7 +105,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       {type === 'text' ? (
         <div className="space-y-3">
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
-            placeholder="Share your MLB, NFL or NBA moment…"
+            placeholder={mlbAccess ? 'Share your MLB, NFL or NBA moment…' : 'Share your NFL or NBA moment…'}
             className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-2">Background Color</label>

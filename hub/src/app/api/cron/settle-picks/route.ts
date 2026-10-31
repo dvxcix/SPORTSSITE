@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { settleNbaPicks } from '@/lib/nbaSettlement'
 import { settleSportPicks } from '@/lib/sportSettlement'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -13,7 +14,7 @@ async function run(req: Request) {
   if (authError) return authError
   const admin = createAdminClient(), deadline = Date.now() + 55_000
   const [mlb, nfl, nba] = await Promise.all([
-    settleSportPicks(admin, 'MLB', deadline, false),
+    MLB_HIBERNATING ? Promise.resolve({ claimed: 0, attempted: 0, checked: 0, graded: 0, skipped: 0, won: 0, reasons: {}, issues: [], paused: true }) : settleSportPicks(admin, 'MLB', deadline, false),
     settleSportPicks(admin, 'NFL', deadline),
     settleNbaPicks(admin, deadline),
   ])

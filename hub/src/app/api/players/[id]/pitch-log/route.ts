@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { fetchPlayerPitchRows, fetchPlayerSprayRows, enrichPitchRows } from '@/lib/pitchLogFetch'
 import { fetchMlbPartyRows } from '@/lib/mlbPartyServer'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 
@@ -75,7 +76,7 @@ const getCachedPitchLog = unstable_cache(
     ])
 
     if (!pitcherRows.length && !batterRows.length && !sprayRows.length) {
-      return { pitcherRows: [], batterRows: [], sprayRows: [] }
+      return { pitcherRows: [], batterRows: [], sprayRows: [], nearHrAvailable: !MLB_HIBERNATING }
     }
 
     const opponentIds = new Set<number>()
@@ -95,7 +96,7 @@ const getCachedPitchLog = unstable_cache(
     const [oppRes, gamesRes, nearHrRows, homeRunDetails] = await Promise.all([
       opponentIds.size ? admin.from('players').select('mlb_id, full_name, current_team_abbr').in('mlb_id', Array.from(opponentIds)) : Promise.resolve({ data: [] as { mlb_id: number; full_name: string | null; current_team_abbr: string | null }[] }),
       gamePks.size ? admin.from('games').select('game_pk, day_night, venue_id, venue_name, home_team_id, home_team, away_team_id, away_team').in('game_pk', Array.from(gamePks)) : Promise.resolve({ data: [] as { game_pk: string; day_night: string | null; venue_id: number | null; venue_name: string | null; home_team_id: number | null; home_team: string | null; away_team_id: number | null; away_team: string | null }[] }),
-      firstDate ? fetchMlbPartyRows<NearHrRow>(
+      !MLB_HIBERNATING && firstDate ? fetchMlbPartyRows<NearHrRow>(
         `/rest/v1/near_hrs?batter_id=eq.${mlbId}&game_date=gte.${encodeURIComponent(firstDate)}&select=game_pk,game_date,result,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,park_hr_list`,
         { maxRows: 1000, revalidateSeconds: 86400 },
       ).catch(() => [] as NearHrRow[]) : Promise.resolve([] as NearHrRow[]),
@@ -120,7 +121,7 @@ const getCachedPitchLog = unstable_cache(
         parks_hr_count: parksHrCount,
         park_hr_list: near?.park_hr_list ?? null,
         hit_bearing: near?.hit_bearing ?? null,
-        is_near_hr: Boolean(near),
+        is_near_hr: MLB_HIBERNATING ? null : Boolean(near),
       }
     })
 
@@ -128,9 +129,10 @@ const getCachedPitchLog = unstable_cache(
       pitcherRows: enrichPitchRows(pitcherRows, 'batter_id', opponents, gameInfo),
       batterRows: enrichPitchRows(batterRows, 'pitcher_id', opponents, gameInfo),
       sprayRows: enrichedSprayRows,
+      nearHrAvailable: !MLB_HIBERNATING,
     }
   },
-  ['player-pitch-log-v2'],
+  [MLB_HIBERNATING ? 'player-pitch-log-offseason-v1' : 'player-pitch-log-v2'],
   { revalidate: 86400, tags: ['player-pitch-log'] }
 )
 

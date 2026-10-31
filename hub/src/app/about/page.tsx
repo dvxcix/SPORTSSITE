@@ -1,4 +1,5 @@
 import { InfoPageShell, Section } from '@/components/marketing/InfoPageShell'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-static'
 
@@ -11,10 +12,10 @@ export default function AboutPage() {
         build a parlay with same-book odds and payout math built in, and follow cappers whose track record you can
         actually verify on their profile.
       </Section>
-      <Section title="The Dugout">
+      {!MLB_HIBERNATING && <Section title="The Dugout">
         For MLB, SlipSurge goes deeper than a feed — The Dugout surfaces live odds deltas, Statcast splits, pitch-mix
         breakdowns, and opening-vs-current line movement across sportsbooks, all in one board.
-      </Section>
+      </Section>}
       <Section title="The Sideline · NFL">
         Follow NFL matchups, compare player props and ladders, and research the slate in The Sideline.
       </Section>
@@ -22,7 +23,7 @@ export default function AboutPage() {
         Compare NBA odds and alternate lines, explore player trends and defense by position, and build your research in The Court.
       </Section>
       <Section title="Your sports, together">
-        Follow MLB, NFL and NBA teams and players, share picks and stories, and open live scores, box scores and play-by-play from one community. Ultimate includes all three research workspaces.
+        Follow {!MLB_HIBERNATING && 'MLB, '}NFL and NBA teams and players, share picks and stories, and open live scores, box scores and play-by-play from one community. Ultimate includes {MLB_HIBERNATING ? 'both' : 'all three'} research workspaces.
       </Section>
       <Section title="Not a sportsbook">
         SlipSurge is a social and content platform. We don't accept wagers or process bets — any odds or payout

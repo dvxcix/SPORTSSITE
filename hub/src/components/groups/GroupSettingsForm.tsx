@@ -8,10 +8,14 @@ import { uploadMedia } from '@/lib/uploadMedia'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { Switch } from '@/components/ui/Switch'
 import Image from 'next/image'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 
 export function GroupSettingsForm({ group }: { group: any }) {
+  const { profile } = useAuth()
+  const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
@@ -93,7 +97,7 @@ export function GroupSettingsForm({ group }: { group: any }) {
         <div>
           <label>Sport</label>
           <div className="flex flex-wrap gap-1.5">
-            {SPORTS.map(s => {
+            {SPORTS.filter(s => showMlb || s !== 'MLB').map(s => {
               const logo = sportLogoUrl(s)
               return (
                 <button key={s} type="button" aria-pressed={form.sport === s || (s === 'General' && !form.sport)} onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}

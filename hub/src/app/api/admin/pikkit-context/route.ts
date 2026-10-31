@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createPersistentContext } from '@/lib/browserbase'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const maxDuration = 120
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
   const fresh = request.nextUrl.searchParams.get('fresh') === '1'
-  const setup = await createPersistentContext(undefined, { fresh })
+  const setup = await createPersistentContext(MLB_HIBERNATING ? 'https://app.pikkit.com/leagues/nba' : undefined, { fresh })
   console.info('[pikkit-context] manual auth ready', {
     session: setup.sessionId.slice(-8),
     context: setup.contextId.slice(-8),

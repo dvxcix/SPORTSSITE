@@ -7,6 +7,7 @@ import { TierGate } from '@/components/layout/TierGate'
 import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,8 @@ export default async function BookmarksPage() {
     .order('created_at', { ascending: false })
     .limit(30)
 
-  const bookmarkedPosts = (bookmarks ?? []).map((bookmark: any) => bookmark.post).filter(Boolean)
+  const showMlb = await canViewMlb(supabase, user.id)
+  const bookmarkedPosts = (bookmarks ?? []).map((bookmark: any) => bookmark.post).filter(post => post && (showMlb || post.sport?.toUpperCase() !== 'MLB'))
   const posts = (await attachUserReactions(bookmarkedPosts, user.id)).map(post => ({ ...post, user_bookmarked: true }))
 
   return (

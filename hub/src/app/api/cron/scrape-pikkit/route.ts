@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
@@ -246,6 +247,7 @@ async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
 export async function GET(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse()
   const lease = await acquirePikkitBrowserLease()
   if (!lease) {
     return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })

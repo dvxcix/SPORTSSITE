@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDailyContactRecap } from '@/lib/dailyContactRecap'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ async function requireAdmin() {
 export async function GET(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const date = new URL(request.url).searchParams.get('date') ?? ''
   try {
     return NextResponse.json(await getDailyContactRecap(date))

@@ -11,8 +11,9 @@ import { Modal } from '@/components/ui/Modal'
 import { SafeImage } from '@/components/ui/SafeImage'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 import { areaNavigation, productAreaMeta, type ProductArea } from './navigationConfig'
-import { NBA_UPGRADE_HREF, researchNavigationHref } from './researchNavigation'
+import { NBA_UPGRADE_HREF, researchNavigationHref, researchSportForPath } from './researchNavigation'
 import styles from './GlobalCommandPalette.module.css'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 type CommandItem = { id: string; label: string; detail: string; href: string; icon: typeof Search; image?: string | null; keywords?: string; locked?: boolean }
 const destinationDetails: Record<string, string> = {
@@ -54,6 +55,7 @@ export function GlobalCommandPalette() {
   const pathname = usePathname()
   const { allowed: nflAccess } = useNflAccess()
   const { profile } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const nbaAccess = hasNbaAccess(profile)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -75,7 +77,7 @@ export function GlobalCommandPalette() {
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       const [mlb, nfl, nba] = await Promise.all([
-        fetch(`/api/search/sports?q=${encodeURIComponent(value)}`, { signal: controller.signal }).then(response => response.ok ? response.json() as Promise<SportsResults> : Promise.resolve({} as SportsResults)).catch(() => ({} as SportsResults)),
+        mlbAccess ? fetch(`/api/search/sports?q=${encodeURIComponent(value)}`, { signal: controller.signal }).then(response => response.ok ? response.json() as Promise<SportsResults> : Promise.resolve({} as SportsResults)).catch(() => ({} as SportsResults)) : Promise.resolve({} as SportsResults),
         fetch(`/api/search/nfl?q=${encodeURIComponent(value)}`, { signal: controller.signal }).then(response => response.ok ? response.json() as Promise<NflResults> : Promise.resolve({} as NflResults)).catch(() => ({} as NflResults)),
         nbaAccess ? fetch(`/api/search/nba?q=${encodeURIComponent(value)}`, { cache: 'no-store', signal: controller.signal }).then(response => response.ok ? response.json() as Promise<NbaResults> : Promise.resolve({} as NbaResults)).catch(() => ({} as NbaResults)) : Promise.resolve({} as NbaResults),
       ])
@@ -90,21 +92,21 @@ export function GlobalCommandPalette() {
       ] })
     }, 180)
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timer) }
-  }, [query, nbaAccess, open])
+  }, [query, nbaAccess, mlbAccess, open])
   const local = useMemo(() => {
     const value = query.trim().toLowerCase()
-    return destinations.filter(item => (!isNflToolHref(item.href) || nflAccess)
+    return destinations.filter(item => (mlbAccess || researchSportForPath(item.href.split('?')[0]) !== 'mlb') && (!isNflToolHref(item.href) || nflAccess)
       && (!value || `${item.label} ${item.detail} ${item.keywords ?? ''}`.toLowerCase().includes(value)))
       .map(item => isNbaToolHref(item.href) && !nbaAccess ? { ...item, href: NBA_UPGRADE_HREF, detail: 'NBA research · Upgrade to Ultimate', locked: true } : item)
-  }, [query, nflAccess, nbaAccess])
+  }, [query, nflAccess, nbaAccess, mlbAccess])
   const searchPending = query.trim().length >= 2 && sports.query !== query.trim()
   const items = useMemo(() => {
-    const results = sports.query === query.trim() ? sports.items.filter(item => nbaAccess || !isNbaToolHref(item.href)) : []
+    const results = sports.query === query.trim() ? sports.items.filter(item => (mlbAccess || !item.id.startsWith('mlb-')) && (nbaAccess || !isNbaToolHref(item.href))) : []
     const ordered = nbaAccess && isNbaToolHref(pathname ?? '')
       ? [...results.filter(item => isNbaToolHref(item.href)), ...results.filter(item => !isNbaToolHref(item.href))]
       : results
     return [...local, ...ordered]
-  }, [local, sports, query, nbaAccess, pathname])
+  }, [local, sports, query, nbaAccess, mlbAccess, pathname])
   const activeIndex = Math.min(active, Math.max(0, items.length - 1))
   useEffect(() => {
     if (open) resultsRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })

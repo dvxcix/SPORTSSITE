@@ -4,6 +4,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { InvalidFeedCursorError } from '@/lib/feedPagination'
 import { authVisibilityUnavailable, isAccountId, isBlockedEitherWay } from '@/lib/blocks'
 import { fetchProfilePostsPage, type ProfileTab } from '@/lib/feedQuery'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 const VALID_TABS: ProfileTab[] = ['all', 'picks', 'reposts', 'media']
 
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
     if (!follow) return NextResponse.json({ posts: [], nextCursor: null, hasMore: false })
   }
 
-  const page = await fetchProfilePostsPage(supabase, { userId, tab, cursor, pageSize: 20 })
+  const page = await fetchProfilePostsPage(supabase, { userId, tab, cursor, pageSize: 20, hideMlb: !(await canViewMlb(supabase, user?.id)) })
     .catch(error => { if (error instanceof InvalidFeedCursorError) return null; throw error })
   if (!page) return NextResponse.json({ error: 'Invalid cursor' }, { status: 400 })
   const { posts: rawPosts, nextCursor, hasMore } = page

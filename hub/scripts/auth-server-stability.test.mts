@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { NextRequest, NextResponse } from 'next/server'
 import * as authErrors from '../src/lib/supabase/authErrors.ts'
+import { isMlbOnlyPath, isMlbPullPath } from '../src/lib/mlbOffseasonAccess.ts'
 
 async function compiled(file: string, imports: Record<string, unknown>, fallback?: (name: string) => unknown) {
   const source = await readFile(new URL('../src/' + file, import.meta.url), 'utf8')
@@ -27,7 +28,21 @@ const cookieName = 'sb-primary-auth-token'
 
 async function proxyFixture(options: { result?: AuthResult; throws?: unknown; updates?: Cookie[][]; profile?: Record<string, unknown> | null; profileError?: unknown; queryThrows?: boolean } = {}) {
   let clientCalls = 0, queryCalls = 0
+  const query = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => {
+    queryCalls++
+    if (options.queryThrows) throw new TypeError('fetch failed')
+    return { data: options.profile === undefined ? { onboarding_completed_at: '2026-10-01', account_type: 'user' } : options.profile, error: options.profileError ?? null }
+  } }) }) })
   const mod = await compiled('lib/supabase/middleware.ts', {
+    '@/lib/mlbOffseason': { MLB_HIBERNATING: true },
+    '@/lib/mlbOffseasonAccess': { isMlbOnlyPath, isMlbPullPath },
+    '@supabase/supabase-js': { createClient: () => ({
+      auth: { getUser: async () => {
+        if (options.throws) throw options.throws
+        const result = options.result ?? signedIn
+        return { data: { user: result.error ? null : result.data?.claims?.sub ? { id: result.data.claims.sub } : null }, error: result.error }
+      } }, from: query,
+    }) },
     '@supabase/ssr': { createServerClient: (_url: string, _key: string, settings: any) => {
       clientCalls++
       return {
@@ -39,19 +54,46 @@ async function proxyFixture(options: { result?: AuthResult; throws?: unknown; up
           },
           mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { nextLevel: 'aal1', currentLevel: 'aal1' }, error: null }) },
         },
-        from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => {
-          queryCalls++
-          if (options.queryThrows) throw new TypeError('fetch failed')
-          return { data: options.profile === undefined ? { onboarding_completed_at: '2026-10-01', account_type: 'user' } : options.profile, error: options.profileError ?? null }
-        } }) }) }),
+        from: query,
       }
     } },
   })
   return {
-    run: (path: string, retry = false, accept = 'application/json') => mod.updateSession(new NextRequest('https://www.slipsurge.com' + path, { headers: { cookie: cookieName + '=old-session' + (retry ? '; ss-auth-refresh-retry=1' : ''), accept } })) as Promise<NextResponse>,
+    run: (path: string, retry = false, accept = 'application/json', bearer?: string) => mod.updateSession(new NextRequest('https://www.slipsurge.com' + path, { headers: { cookie: cookieName + '=old-session' + (retry ? '; ss-auth-refresh-retry=1' : ''), accept, ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) } })) as Promise<NextResponse>,
     get clientCalls() { return clientCalls }, get queryCalls() { return queryCalls },
   }
 }
+
+test('offseason hides baseball pages and APIs from members while allowing administrators', async () => {
+  const paths = ['/dugout', '/api/dugout/data', '/players/123', '/api/players/123', '/sports/mlb/123', '/api/matrices', '/api/matrix-marketplace', '/api/odds/mlb', '/api/search/sports']
+  for (const path of paths) {
+    assert.equal(isMlbOnlyPath(path), true, path)
+    assert.equal((await (await proxyFixture()).run(path)).status, 404, path)
+    const admin = await proxyFixture({ profile: { account_type: 'admin', onboarding_completed_at: '2026-10-01' } })
+    const expected = isMlbPullPath(path) ? 503 : 200
+    assert.equal((await admin.run(path)).status, expected, path)
+    if (path.startsWith('/api/')) {
+      assert.equal((await (await proxyFixture()).run(path, false, 'application/json', 'member-token')).status, 404, path)
+      assert.equal((await admin.run(path, false, 'application/json', 'admin-token')).status, expected, path)
+    }
+  }
+  for (const path of ['/the-sideline', '/the-paint', '/api/nfl/players/123', '/api/nba-matrices', '/sports/nba/123', '/api/nfl-matrix-marketplace']) assert.equal(isMlbOnlyPath(path), false, path)
+  assert.equal(isMlbOnlyPath('/dugout-other'), false)
+  assert.equal(isMlbOnlyPath('/%64ugout'), true)
+  assert.equal(isMlbOnlyPath('/marketplace/abc'), true)
+  assert.equal(isMlbOnlyPath('/marketplace/sell'), false)
+  for (const path of ['/api/slate/games', '/api/mlb/games', '/api/search/sports', '/api/weather-lab', '/api/players/123/today', '/api/dugout/data', '/api/composer/games', '/sports/mlb/123', '/mlb/teams/123']) assert.equal(isMlbPullPath(path), true, path)
+  for (const path of ['/api/players/123', '/api/players/123/pitch-log', '/api/matrices', '/api/odds-terminal', '/sports/nfl/123']) assert.equal(isMlbPullPath(path), false, path)
+})
+
+test('baseball bearer authorization fails closed during outages and invalid sessions', async () => {
+  const expired = await proxyFixture({ result: { data: null, error: { status: 401 } } })
+  assert.equal((await expired.run('/api/mlb/games', false, 'application/json', 'bad-token')).status, 401)
+  const outage = await proxyFixture({ profileError: { code: 'PGRST002' } })
+  assert.equal((await outage.run('/api/mlb/games', false, 'application/json', 'token')).status, 503)
+  const beta = await proxyFixture({ profile: { account_type: 'user', beta_access_active: true } })
+  assert.equal((await beta.run('/api/mlb/games', false, 'application/json', 'token')).status, 404)
+})
 
 test('parallel refresh losers cannot delete a winning session, including a second retry-marked request', async () => {
   const winner = await proxyFixture({ updates: [[{ name: cookieName, value: 'fresh-session', options: { path: '/', httpOnly: true } }]] })

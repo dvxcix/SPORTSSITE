@@ -18,6 +18,8 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { getScoreboard } from '@slipsurge/core/espn-api'
 import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
 import { GameCard } from '@/components/sports/GameCard'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const revalidate = 60
 
@@ -90,6 +92,7 @@ function mlbLogo(teamId: number | undefined) {
 export default async function ExplorePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const showMlb = await canViewMlb(supabase, user?.id)
   const date = todayET()
   const oneDayAgo = new Date(new Date().getTime() - 86400000).toISOString()
 
@@ -109,14 +112,14 @@ export default async function ExplorePage() {
       .eq('is_published', true).order('follower_count', { ascending: false }).limit(4),
     supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')
       .eq('is_public', true).order('member_count', { ascending: false }).limit(4),
-    getSlateActivity(date).catch(() => ({ schedule: [], homeRuns: [], nearHomeRuns: [] })),
+    MLB_HIBERNATING ? Promise.resolve({ schedule: [], homeRuns: [], nearHomeRuns: [] }) : getSlateActivity(date).catch(() => ({ schedule: [], homeRuns: [], nearHomeRuns: [] })),
     getStoredNflScoreboard(date).catch(() => []),
     getScoreboard('nba', date).catch(() => []),
   ])
 
   const [topPosts, trendingPicks] = await Promise.all([
-    attachUserReactions(rawTopPosts ?? [], user?.id),
-    attachUserReactions(rawTrendingPicks ?? [], user?.id),
+    attachUserReactions((rawTopPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id),
+    attachUserReactions((rawTrendingPicks ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id),
   ])
 
   const spotlightUsers = [...(topCappers ?? []), ...(topBettors ?? [])] as ExploreUser[]
@@ -133,7 +136,7 @@ export default async function ExplorePage() {
   const games = allGames.slice(0, 8)
   const liveGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Live').length
   const finalGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Final').length
-  const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
+  const sports = [...(MLB_HIBERNATING ? [] : ['MLB']), 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
 
   return (
     <TierGate requiredTier="basic" label="Explore">
@@ -146,7 +149,7 @@ export default async function ExplorePage() {
           </div>
           <Link href="/search" className="ss-explore-search"><Search size={16} /> Search SlipSurge</Link>
           <div className="ss-explore-pulse" aria-label="Today's activity summary">
-            <Metric value={allGames.length} label="MLB games" />
+            {!MLB_HIBERNATING && <Metric value={allGames.length} label="MLB games" />}
             <Metric value={nflGames.length} label="NFL games" />
             <Metric value={nbaGames.length} label="NBA games" />
             <Metric value={liveGames + [...nflGames, ...nbaGames].filter(game => game.status.type.state === 'in').length} label="Live now" live={liveGames > 0 || [...nflGames, ...nbaGames].some(game => game.status.type.state === 'in')} />
@@ -170,14 +173,14 @@ export default async function ExplorePage() {
               <SectionHeader icon={<Activity size={16}/>} eyebrow={league.label} title={`${league.label} slate`} href={`/sports?date=${date}#scores-${league.sport}`} linkLabel="Scores & play-by-play"/>
               <div className="ss-explore-games">{league.games.length ? league.games.slice(0, 8).map(game => <GameCard key={game.id} game={game} sport={league.sport}/>) : <EmptyCard title={`No ${league.label} games scheduled`} detail="Browse another date in Live Scores."/>}</div>
             </section>)}
-            <SectionHeader icon={<Activity size={16}/>} eyebrow="MLB" title="MLB slate" href={`/sports?date=${date}#scores-mlb`} linkLabel="Scores & play-by-play"/>
+            {!MLB_HIBERNATING && <><SectionHeader icon={<Activity size={16}/>} eyebrow="MLB" title="MLB slate" href={`/sports?date=${date}#scores-mlb`} linkLabel="Scores & play-by-play"/>
             <div className="ss-explore-games">
               {games.length ? games.map((game: any) => <GameDiscoveryCard key={game.gamePk} game={game} />) : (
                 <EmptyCard title="No MLB games scheduled" detail="The next slate will appear here when it is available." />
               )}
-            </div>
+            </div></>}
 
-            <div className="ss-explore-event-grid">
+            {!MLB_HIBERNATING && <div className="ss-explore-event-grid">
               <EventBoard
                 className="is-hot" icon={<Flame size={17} />} title="Home runs today" href="/daily-recap"
                 empty="No confirmed home runs yet."
@@ -196,7 +199,7 @@ export default async function ExplorePage() {
                   value: near.parks_hr_count != null ? `${near.parks_hr_count}/30 parks` : near.hit_distance ? `${near.hit_distance} ft` : 'Near HR',
                 }))}
               />
-            </div>
+            </div>}
 
             {trendingPicks.length > 0 && (
               <section className="ss-explore-section">
@@ -215,10 +218,10 @@ export default async function ExplorePage() {
 
           <aside className="ss-explore-rail">
             <ToolCard />
-            <Directory title="Pages to follow" icon={<Star size={15} />} href="/pages" rows={(pages ?? []).map((page: any) => ({
+            <Directory title="Pages to follow" icon={<Star size={15} />} href="/pages" rows={(pages ?? []).filter(page => showMlb || page.category?.toUpperCase() !== 'MLB').map((page: any) => ({
               id: page.id, href: `/pages/${page.slug}`, name: page.name, detail: page.category || `${page.follower_count ?? 0} followers`, image: page.avatar_url, fallback: page.emoji || '★',
             }))} />
-            <Directory title="Groups to discover" icon={<Users size={15} />} href="/groups" rows={(groups ?? []).map((group: any) => ({
+            <Directory title="Groups to discover" icon={<Users size={15} />} href="/groups" rows={(groups ?? []).filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB').map((group: any) => ({
               id: group.id, href: `/groups/${group.slug}`, name: group.name, detail: group.sport || `${group.member_count ?? 0} members`, image: group.avatar_url, fallback: group.emoji || 'G',
             }))} />
             {(topCappers?.length ?? 0) > 0 && <PeopleSection title="Creators to watch" users={topCappers as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />}
@@ -261,7 +264,7 @@ function EventBoard({ className, icon, title, href, items, empty }: { className:
 }
 
 function ToolCard() {
-  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Your sports. Your research.</h2><span>MLB, NFL and NBA workspaces together in Ultimate.</span><div><Link href="/dugout">The Dugout · MLB</Link><Link href="/the-sideline">The Sideline · NFL</Link><Link href="/the-paint">The Court · NBA</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
+  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Your sports. Your research.</h2><span>{MLB_HIBERNATING ? 'NFL and NBA workspaces together in Ultimate.' : 'MLB, NFL and NBA workspaces together in Ultimate.'}</span><div>{!MLB_HIBERNATING && <Link href="/dugout">The Dugout · MLB</Link>}<Link href="/the-sideline">The Sideline · NFL</Link><Link href="/the-paint">The Court · NBA</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
 }
 
 function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {

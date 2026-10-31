@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { ProductPageShell } from '@/components/product/ProductPage'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -22,10 +23,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient()
   const { data: post } = await supabase
     .from('posts')
-    .select('visibility, pick_data, content, author:users!posts_author_id_fkey(display_name, username)')
+    .select('visibility, sport, pick_data, content, author:users!posts_author_id_fkey(display_name, username)')
     .eq('id', id)
     .single()
   if (!post) return {}
+  if (post.sport?.toUpperCase() === 'MLB') {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!(await canViewMlb(supabase, user?.id))) return { robots: { index: false, follow: false, nocache: true } }
+  }
   if (post.visibility === 'private') return { title: 'Only me • SlipSurge', robots: { index: false, follow: false, nocache: true } }
   const author = (Array.isArray(post.author) ? post.author[0] : post.author) as { display_name?: string; username?: string } | null
   const name = author?.display_name || author?.username || 'Someone'
@@ -54,6 +59,7 @@ export default async function PostDetailPage({ params }: Props) {
     .single()
 
   if (!post) notFound()
+  if (post.sport?.toUpperCase() === 'MLB' && !(await canViewMlb(supabase, user?.id))) notFound()
 
   // This page never went through attachUserReactions — a poll (or a
   // reaction/repost/bookmark) always looked un-interacted-with here even

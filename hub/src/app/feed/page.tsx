@@ -12,6 +12,7 @@ import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import Link from 'next/link'
 import { Zap, TrendingUp, Clock, Users, Compass } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,14 +24,17 @@ export default async function FeedPage({
   searchParams: Promise<{ filter?: string; sport?: string; game?: string; pick?: string }>
 }) {
   const { filter: filterParam = 'latest', sport: sportParam, game, pick } = await searchParams
-  const sport = feedSport(sportParam)
   const filter: FeedFilter = VALID_FILTERS.includes(filterParam as FeedFilter) ? (filterParam as FeedFilter) : 'latest'
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authVisibilityUnavailable(authError)) throw new Error('Feed is temporarily unavailable')
+  const { data: viewer } = user ? await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle() : { data: null }
+  const mlbAccess = !MLB_HIBERNATING || viewer?.account_type === 'admin'
+  const requestedSport = feedSport(sportParam)
+  const sport = requestedSport === 'MLB' && !mlbAccess ? undefined : requestedSport
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const [{ posts: rawPosts, nextCursor, hasMore }, storiesEnabled] = await Promise.all([
-    fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20, sport }),
+    fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20, sport, hideMlb: !mlbAccess }),
     isFeatureEnabledServer(FEATURE_FLAGS.stories),
   ])
   const posts = await attachUserReactions(rawPosts, user?.id)
@@ -84,7 +88,7 @@ export default async function FeedPage({
             })}
           </nav>
           <nav className="ss-feed-filters" aria-label="Feed sports">
-            {(['All', 'MLB', 'NFL', 'NBA'] as const).map(league => <Link key={league} href={`/feed?filter=${filter}${league === 'All' ? '' : `&sport=${league}`}`} className={`ss-feed-filter ${(sport ?? 'All') === league ? 'is-active' : ''}`} aria-current={(sport ?? 'All') === league ? 'page' : undefined}>{league}</Link>)}
+            {(['All', ...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'] as const).map(league => <Link key={league} href={`/feed?filter=${filter}${league === 'All' ? '' : `&sport=${league}`}`} className={`ss-feed-filter ${(sport ?? 'All') === league ? 'is-active' : ''}`} aria-current={(sport ?? 'All') === league ? 'page' : undefined}>{league}</Link>)}
           </nav>
           {storiesEnabled && <StoriesBar />}
 

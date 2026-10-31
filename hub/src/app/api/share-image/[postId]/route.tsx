@@ -3,6 +3,7 @@ import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 // BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
 // module, and every export of a client module becomes an opaque client
@@ -117,6 +118,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
 
   if (!post || !pd) {
     return new Response('No shareable pick on this post', { status: 404 })
+  }
+  if (post.sport?.toUpperCase() === 'MLB') {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!(await canViewMlb(supabase, user?.id))) return new Response('No shareable pick on this post', { status: 404 })
   }
 
   const legs: any[] | null = Array.isArray(pd.legs) ? pd.legs : null

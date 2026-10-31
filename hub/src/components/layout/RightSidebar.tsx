@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TrendingUp, Users } from 'lucide-react'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 const HASHTAG_RE = /#(\w{2,})/g
 
@@ -16,7 +17,7 @@ function formatPostCount(n: number) {
 // new schema: tally each recent public post's sport plus any #hashtags in
 // its content, rank by count. Every resulting link lands on a page that
 // actually shows matching posts, unlike the old static list.
-async function getTrendingTags(supabase: Awaited<ReturnType<typeof createClient>>) {
+async function getTrendingTags(supabase: Awaited<ReturnType<typeof createClient>>, showMlb: boolean) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data } = await supabase
     .from('posts')
@@ -28,11 +29,13 @@ async function getTrendingTags(supabase: Awaited<ReturnType<typeof createClient>
 
   const counts = new Map<string, number>()
   for (const post of (data ?? []) as Array<{ content: string | null; sport: string | null }>) {
+    if (!showMlb && post.sport?.toUpperCase() === 'MLB') continue
     if (post.sport) {
       const tag = String(post.sport).toUpperCase()
       counts.set(tag, (counts.get(tag) ?? 0) + 1)
     }
     for (const m of String(post.content ?? '').matchAll(HASHTAG_RE)) {
+      if (!showMlb && m[1].toUpperCase() === 'MLB') continue
       counts.set(m[1], (counts.get(m[1]) ?? 0) + 1)
     }
   }
@@ -47,7 +50,7 @@ export async function RightSidebar() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const trending = await getTrendingTags(supabase)
+  const trending = await getTrendingTags(supabase, await canViewMlb(supabase, user?.id))
 
   let suggested: SuggestedUser[] = []
   if (user) {

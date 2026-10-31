@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BookmarkPlus, Check, FileText, Grid2X2, Layers3, LoaderCircle, Pencil, Pin, Plus, Save, Search, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -23,14 +23,17 @@ type Note = { id: string; title: string; body: string; sport: string | null; gam
 type EvidenceItem = { id: string; workspace_id: string; added_by: string; item_type: string; title: string; source_path: string; payload: SlateEdgeEvidence; created_at: string }
 
 function displayOdds(value: number | null) { return value == null ? '—' : value > 0 ? `+${value}` : String(value) }
-export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatrices, initialNflMatrices, initialWorkspaces, initialNotes, initialEvidenceItems }: {
-  userId: string; initialItems: SavedItem[]; initialMlbMatrices: Matrix[]; initialNflMatrices: Matrix[]; initialWorkspaces: Workspace[]; initialNotes: Note[]; initialEvidenceItems: EvidenceItem[]
+export function ResearchWorkspaceClient({ userId, showMlb, initialItems, initialMlbMatrices, initialNflMatrices, initialWorkspaces, initialNotes, initialEvidenceItems }: {
+  userId: string; showMlb: boolean; initialItems: SavedItem[]; initialMlbMatrices: Matrix[]; initialNflMatrices: Matrix[]; initialWorkspaces: Workspace[]; initialNotes: Note[]; initialEvidenceItems: EvidenceItem[]
 }) {
   const db = createClient()
+  const visibleItemIds = new Set(initialItems.map(item => item.id))
+  const visibleSelection = (workspace: Workspace | undefined) => (workspace?.watchlist_item_ids ?? []).filter(id => visibleItemIds.has(id)).slice(0, 4)
+  const selectionBaseline = useRef(new Map(initialWorkspaces.map(workspace => [workspace.id, visibleSelection(workspace)])))
   const [workspaces, setWorkspaces] = useState(initialWorkspaces)
   const [notes, setNotes] = useState(initialNotes)
   const [activeId, setActiveId] = useState(initialWorkspaces[0]?.id ?? '')
-  const [draftIds, setDraftIds] = useState<string[]>(initialWorkspaces[0]?.watchlist_item_ids?.slice(0, 4) ?? [])
+  const [draftIds, setDraftIds] = useState<string[]>(visibleSelection(initialWorkspaces[0]))
   const [mlbMatrixIds, setMlbMatrixIds] = useState<string[]>(initialWorkspaces[0]?.mlb_matrix_ids ?? [])
   const [nflMatrixIds, setNflMatrixIds] = useState<string[]>(initialWorkspaces[0]?.nfl_matrix_ids ?? [])
   const [query, setQuery] = useState('')
@@ -55,7 +58,8 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
   }, [initialItems, query])
 
   function chooseWorkspace(workspace: Workspace) {
-    setActiveId(workspace.id); setDraftIds(workspace.watchlist_item_ids.slice(0, 4)); setMlbMatrixIds(workspace.mlb_matrix_ids); setNflMatrixIds(workspace.nfl_matrix_ids); setMessage('')
+    selectionBaseline.current.set(workspace.id, visibleSelection(workspace))
+    setActiveId(workspace.id); setDraftIds(visibleSelection(workspace)); setMlbMatrixIds(workspace.mlb_matrix_ids); setNflMatrixIds(workspace.nfl_matrix_ids); setMessage('')
   }
   function toggleCompare(id: string) {
     setMessage('')
@@ -70,19 +74,25 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
     const name = newName.trim()
     if (!name) return
     setBusy('create'); setMessage('')
-    const { data, error } = await db.from('research_workspaces').insert({ user_id: userId, name, sport: 'MULTI', watchlist_item_ids: draftIds, mlb_matrix_ids: mlbMatrixIds, nfl_matrix_ids: nflMatrixIds }).select('id,user_id,name,description,sport,watchlist_item_ids,mlb_matrix_ids,nfl_matrix_ids,created_at,updated_at').single()
+    const { data, error } = await db.from('research_workspaces').insert({ user_id: userId, name, sport: 'MULTI', watchlist_item_ids: draftIds, mlb_matrix_ids: showMlb ? mlbMatrixIds : [], nfl_matrix_ids: nflMatrixIds }).select('id,user_id,name,description,sport,watchlist_item_ids,mlb_matrix_ids,nfl_matrix_ids,created_at,updated_at').single()
     setBusy('')
     if (error) { setMessage(error.code === '23505' ? 'A workspace with that name already exists.' : 'Workspace could not be created.'); return }
-    setWorkspaces(current => [data, ...current]); setActiveId(data.id); setNewName(''); setMessage('Workspace created.')
+    selectionBaseline.current.set(data.id, [...draftIds])
+    setWorkspaces(current => [data, ...current]); setActiveId(data.id); setMlbMatrixIds(data.mlb_matrix_ids ?? []); setNflMatrixIds(data.nfl_matrix_ids ?? []); setNewName(''); setMessage('Workspace created.')
   }
   async function saveWorkspace() {
     if (!active) { setMessage('Create a workspace to save this tray.'); return }
+    // Preserve hidden, unavailable, and visible overflow entries while editing
+    // the four selections this tray actually presents.
+    const initiallyVisible = new Set(selectionBaseline.current.get(active.id) ?? visibleSelection(active))
+    const savedIds = [...new Set([...active.watchlist_item_ids.filter(id => !initiallyVisible.has(id)), ...draftIds])]
     setBusy('save'); setMessage('')
     const before = workspaces
-    setWorkspaces(current => current.map(workspace => workspace.id === active.id ? { ...workspace, watchlist_item_ids: draftIds, mlb_matrix_ids: mlbMatrixIds, nfl_matrix_ids: nflMatrixIds, updated_at: new Date().toISOString() } : workspace))
-    const { error } = await db.rpc('save_research_workspace_board', { p_workspace_id: active.id, p_watchlist_item_ids: draftIds, p_mlb_matrix_ids: mlbMatrixIds, p_nfl_matrix_ids: nflMatrixIds })
+    setWorkspaces(current => current.map(workspace => workspace.id === active.id ? { ...workspace, watchlist_item_ids: savedIds, mlb_matrix_ids: mlbMatrixIds, nfl_matrix_ids: nflMatrixIds, updated_at: new Date().toISOString() } : workspace))
+    const { error } = await db.rpc('save_research_workspace_board', { p_workspace_id: active.id, p_watchlist_item_ids: savedIds, p_mlb_matrix_ids: mlbMatrixIds, p_nfl_matrix_ids: nflMatrixIds })
     setBusy('')
     if (error) { setWorkspaces(before); setMessage('Changes could not be saved.'); return }
+    selectionBaseline.current.set(active.id, [...draftIds])
     setMessage('Workspace saved.')
   }
   async function deleteWorkspace() {
@@ -92,7 +102,9 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
     setBusy('')
     if (error) { setMessage('Workspace could not be deleted.'); return }
     const remaining = workspaces.filter(workspace => workspace.id !== active.id)
-    setWorkspaces(remaining); setActiveId(remaining[0]?.id ?? ''); setDraftIds(remaining[0]?.watchlist_item_ids?.slice(0, 4) ?? []); setMlbMatrixIds(remaining[0]?.mlb_matrix_ids ?? []); setNflMatrixIds(remaining[0]?.nfl_matrix_ids ?? []); setMessage('Workspace deleted.')
+    selectionBaseline.current.delete(active.id)
+    if (remaining[0]) selectionBaseline.current.set(remaining[0].id, visibleSelection(remaining[0]))
+    setWorkspaces(remaining); setActiveId(remaining[0]?.id ?? ''); setDraftIds(visibleSelection(remaining[0])); setMlbMatrixIds(remaining[0]?.mlb_matrix_ids ?? []); setNflMatrixIds(remaining[0]?.nfl_matrix_ids ?? []); setMessage('Workspace deleted.')
   }
   async function addNote() {
     const title = noteTitle.trim()
@@ -132,8 +144,8 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
     <aside className={styles.sidebar}>
       <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Saved views</span><h2>Workspaces</h2></div><Grid2X2 size={18}/></div>
       <div className={styles.createRow}><input value={newName} onChange={event => setNewName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void createWorkspace() }} placeholder="Workspace name" maxLength={64} aria-label="New workspace name"/><button type="button" onClick={() => void createWorkspace()} disabled={!newName.trim() || busy === 'create'} aria-label="Create workspace">{busy === 'create' ? <LoaderCircle className={styles.spin} size={16}/> : <Plus size={16}/>}</button></div>
-      <div className={styles.workspaceList}>{workspaces.map(workspace => <button type="button" key={workspace.id} className={workspace.id === activeId ? styles.workspaceActive : styles.workspaceButton} onClick={() => chooseWorkspace(workspace)}><span>{workspace.name}</span><small>{workspace.watchlist_item_ids.length} compared{workspace.user_id !== userId ? ' · shared' : ''}</small></button>)}{!workspaces.length && <div className={styles.emptyMini}>Build your first saved research view.</div>}</div>
-      <div className={styles.matrixSection}><span className={styles.eyebrow}>Attached Matrices</span>{initialMlbMatrices.map(matrix => <MatrixToggle key={matrix.id} matrix={matrix} checked={mlbMatrixIds.includes(matrix.id)} onClick={() => toggleMatrix('mlb', matrix.id)} sport="MLB"/>)}{initialNflMatrices.map(matrix => <MatrixToggle key={matrix.id} matrix={matrix} checked={nflMatrixIds.includes(matrix.id)} onClick={() => toggleMatrix('nfl', matrix.id)} sport="NFL"/>)}{!initialMlbMatrices.length && !initialNflMatrices.length && <div className={styles.emptyMini}>Your MLB and NFL Matrices will appear here.</div>}</div>
+      <div className={styles.workspaceList}>{workspaces.map(workspace => <button type="button" key={workspace.id} className={workspace.id === activeId ? styles.workspaceActive : styles.workspaceButton} onClick={() => chooseWorkspace(workspace)}><span>{workspace.name}</span><small>{workspace.watchlist_item_ids.filter(id => visibleItemIds.has(id)).length} compared{workspace.user_id !== userId ? ' · shared' : ''}</small></button>)}{!workspaces.length && <div className={styles.emptyMini}>Build your first saved research view.</div>}</div>
+      <div className={styles.matrixSection}><span className={styles.eyebrow}>Attached Matrices</span>{initialMlbMatrices.map(matrix => <MatrixToggle key={matrix.id} matrix={matrix} checked={mlbMatrixIds.includes(matrix.id)} onClick={() => toggleMatrix('mlb', matrix.id)} sport="MLB"/>)}{initialNflMatrices.map(matrix => <MatrixToggle key={matrix.id} matrix={matrix} checked={nflMatrixIds.includes(matrix.id)} onClick={() => toggleMatrix('nfl', matrix.id)} sport="NFL"/>)}{!initialMlbMatrices.length && !initialNflMatrices.length && <div className={styles.emptyMini}>Your Matrices will appear here.</div>}</div>
     </aside>
 
     <div className={styles.main}>
@@ -142,7 +154,7 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
         {activeEvidence.length ? <div className={styles.evidenceList}>{activeEvidence.map(item => <SlateEdgeEvidenceCard key={item.id} evidence={item.payload}/>)}</div> : <div className={styles.emptyTray}><Layers3 size={25}/><strong>No captured reads yet</strong><span>Use Share in Slate Edge to pin the exact board evidence here.</span></div>}
       </section>
       <section className={styles.comparePanel}>
-        <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Live Dugout context · up to four markets</span><h2>Compare Tray</h2></div><div className={styles.headerActions}><div className={styles.windowPicker} role="group" aria-label="Compare data window">{(['l1','l3','l5','l10'] as const).map(value => <button type="button" key={value} data-active={compareWindow === value} onClick={() => setCompareWindow(value)}>{value.toUpperCase()}</button>)}</div><span>{compared.length}/4</span><button type="button" onClick={() => void saveWorkspace()} disabled={busy === 'save'}>{busy === 'save' ? <LoaderCircle className={styles.spin} size={15}/> : <Save size={15}/>}Save</button>{active?.user_id === userId && <button className={styles.dangerButton} type="button" onClick={() => void deleteWorkspace()} disabled={busy === 'delete'} aria-label="Delete workspace"><Trash2 size={15}/></button>}</div></div>
+        <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Saved context · up to four markets</span><h2>Compare Tray</h2></div><div className={styles.headerActions}><div className={styles.windowPicker} role="group" aria-label="Compare data window">{(['l1','l3','l5','l10'] as const).map(value => <button type="button" key={value} data-active={compareWindow === value} onClick={() => setCompareWindow(value)}>{value.toUpperCase()}</button>)}</div><span>{compared.length}/4</span><button type="button" onClick={() => void saveWorkspace()} disabled={busy === 'save'}>{busy === 'save' ? <LoaderCircle className={styles.spin} size={15}/> : <Save size={15}/>}Save</button>{active?.user_id === userId && <button className={styles.dangerButton} type="button" onClick={() => void deleteWorkspace()} disabled={busy === 'delete'} aria-label="Delete workspace"><Trash2 size={15}/></button>}</div></div>
         {compared.length ? <div className={styles.compareGrid}>{compared.map(item => <WorkspaceMarketCard key={item.id} item={item} windowKey={compareWindow} onRemove={() => toggleCompare(item.id)} />)}</div> : <div className={styles.emptyTray}><BookmarkPlus size={25}/><strong>Add saved markets to compare</strong><span>Select items from the library below.</span></div>}
       </section>
 
@@ -155,7 +167,7 @@ export function ResearchWorkspaceClient({ userId, initialItems, initialMlbMatric
     <aside className={styles.notesPanel}>
       {active ? <WorkspaceCollaboration workspace={active} userId={userId} /> : null}
       <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Private</span><h2>Notebook</h2></div><FileText size={18}/></div>
-      <div className={styles.noteComposer}><input value={noteTitle} onChange={event => setNoteTitle(event.target.value)} placeholder="Note title" maxLength={100} aria-label="Note title"/><textarea value={noteBody} onChange={event => setNoteBody(event.target.value)} placeholder="Capture the read…" maxLength={10000} aria-label="Note body"/><div><select value={noteSport} onChange={event => setNoteSport(event.target.value)} aria-label="Note sport"><option value="">Any sport</option><option value="MLB">MLB</option><option value="NFL">NFL</option></select><button type="button" onClick={() => void addNote()} disabled={!noteTitle.trim() || busy === 'note'}>{busy === 'note' ? <LoaderCircle className={styles.spin} size={15}/> : <Plus size={15}/>}Add</button></div></div>
+      <div className={styles.noteComposer}><input value={noteTitle} onChange={event => setNoteTitle(event.target.value)} placeholder="Note title" maxLength={100} aria-label="Note title"/><textarea value={noteBody} onChange={event => setNoteBody(event.target.value)} placeholder="Capture the read…" maxLength={10000} aria-label="Note body"/><div><select value={noteSport} onChange={event => setNoteSport(event.target.value)} aria-label="Note sport"><option value="">Any sport</option>{showMlb && <option value="MLB">MLB</option>}<option value="NFL">NFL</option></select><button type="button" onClick={() => void addNote()} disabled={!noteTitle.trim() || busy === 'note'}>{busy === 'note' ? <LoaderCircle className={styles.spin} size={15}/> : <Plus size={15}/>}Add</button></div></div>
       <div className={styles.notesList}>{notes.map(note => <article className={styles.noteCard} key={note.id}>{editingNoteId === note.id ? <div className={styles.noteEditor}><input value={editTitle} onChange={event => setEditTitle(event.target.value)} maxLength={100} aria-label="Edit note title"/><textarea value={editBody} onChange={event => setEditBody(event.target.value)} maxLength={10000} aria-label="Edit note body"/><div><button type="button" onClick={() => setEditingNoteId('')}>Cancel</button><button type="button" onClick={() => void saveNote(note)} disabled={!editTitle.trim() || busy === `edit-${note.id}`}>{busy === `edit-${note.id}` ? <LoaderCircle className={styles.spin} size={14}/> : <Save size={14}/>}Save</button></div></div> : <><div className={styles.noteTop}><div><strong>{note.title}</strong>{note.sport && <span>{note.sport}</span>}</div><div><button type="button" onClick={() => editNote(note)} aria-label="Edit note"><Pencil size={14}/></button><button type="button" onClick={() => void togglePin(note)} className={note.pinned ? styles.pinned : ''} aria-label={note.pinned ? 'Unpin note' : 'Pin note'}><Pin size={14}/></button><button type="button" onClick={() => void deleteNote(note)} aria-label="Delete note"><Trash2 size={14}/></button></div></div>{note.body && <p><LinkifiedText text={note.body} /></p>}<time>{new Date(note.updated_at).toLocaleDateString()}</time></>}</article>)}{!notes.length && <div className={styles.emptyMini}>Your private research notes will stay here.</div>}</div>
       {message && <div className={styles.message} role="status">{message}</div>}
     </aside>

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { safeApiError } from '@/lib/safeApiError'
 import { isValidPikkitGameMetadata } from '@/lib/pikkitImportValidation'
 import { beginMlbPublicCapture } from '@/lib/mlbPublicCapture'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 // Was hardcoded here (and in api/dugout/data/route.ts) — a live service_role
@@ -76,6 +77,7 @@ async function requireAdmin(req: Request) {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
   const contentLength = Number(req.headers.get('content-length') ?? 0)
   if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })

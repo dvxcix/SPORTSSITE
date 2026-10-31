@@ -12,6 +12,8 @@ import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { CheckCircle2, Share2, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
@@ -108,6 +110,8 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
 
 export function WatchlistButton() {
   const wl = useWatchlist()
+  const { profile } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const fab = useDraggableFab('wl-fab-pos')
   const [open, setOpen] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
@@ -125,7 +129,8 @@ export function WatchlistButton() {
 
   if (!wl.signedIn) return null
 
-  const pendingItems = wl.items.filter(i => i.status === 'pending')
+  const visibleItems = wl.items.filter(i => mlbAccess || i.sport.toLowerCase() !== 'mlb')
+  const pendingItems = visibleItems.filter(i => i.status === 'pending')
   const selectedItems = pendingItems.filter(i => selectedIds.has(i.id))
   const selectedBooks = new Set(selectedItems.map(i => i.book).filter(Boolean))
   const booksMismatch = selectedItems.length > 1 && selectedBooks.size > 1
@@ -189,10 +194,10 @@ export function WatchlistButton() {
         }}
       >
         <span style={{ fontSize: 15 }}>★</span> Watchlist
-        {wl.pendingCount > 0 && (
+        {pendingItems.length > 0 && (
           <span style={{
             background: 'rgba(0,0,0,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11,
-          }}>{wl.pendingCount}</span>
+          }}>{pendingItems.length}</span>
         )}
       </button>
 
@@ -210,7 +215,7 @@ export function WatchlistButton() {
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
               <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>★ My Watchlist</span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{wl.pendingCount} pending</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
               <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             {postedId && <div role="status" aria-atomic="true" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 12px 12px', padding: '8px 10px', border: '1px solid var(--border-2)', borderRadius: 9, background: 'var(--accent-dim)' }}>
@@ -293,12 +298,12 @@ export function WatchlistButton() {
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {wl.loading ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>
-              ) : wl.items.length === 0 ? (
+              ) : visibleItems.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
                   No picks saved yet.<br />Save an odds selection from a research board using its star button.
                 </div>
               ) : (
-                wl.items.map(item => (
+                visibleItems.map(item => (
                   <WatchlistRow
                     key={item.id} item={item} wl={wl}
                     selectMode={selectMode} selected={selectedIds.has(item.id)}

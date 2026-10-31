@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { BETMGM_PROXY_DOMAIN_PATTERN, openSession } from '@/lib/browserbase'
 import { scrapeMgmGame } from '@/lib/scrapers/mgmScraper'
@@ -79,6 +80,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
 export async function GET(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse()
 
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const games = await getTodaysMatchups(date)

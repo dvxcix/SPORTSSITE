@@ -4,6 +4,7 @@ import { useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown, MessageCircle, Microscope, EyeOff } from 'lucide-react'
 import { PickComposer, type ComposedPick } from './PickComposer'
 import { combineOdds, calcPayout, fmtUsd } from '@slipsurge/core/parlayCalc'
@@ -31,11 +32,13 @@ interface FeedComposerProps {
 
 export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
   const { user, profile } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [content, setContent] = useState('')
   const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>(openPickBuilder ? 'pick' : 'take')
   const [showPickForm, setShowPickForm] = useState(openPickBuilder)
   const [showPollForm, setShowPollForm] = useState(false)
-  const [sport, setSport] = useState(() => preferredSport ?? profile?.favorite_sports?.find((value: string) => SPORTS.includes(value)) ?? 'MLB')
+  const [selectedSport, setSport] = useState(() => preferredSport === 'MLB' && !mlbAccess ? 'NFL' : preferredSport ?? profile?.favorite_sports?.find((value: string) => SPORTS.includes(value) && (mlbAccess || value !== 'MLB')) ?? 'NFL')
+  const sport = selectedSport === 'MLB' && !mlbAccess ? 'NFL' : selectedSport
   const [legs, setLegs] = useState<ComposedPick[]>([])
   const [wager, setWager] = useState('')
   const [pollOptions, setPollOptions] = useState(['', ''])
@@ -242,7 +245,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
                 <span>{sport}</span><ChevronDown size={12} />
               </button>
               <FloatingSurface open={sportOpen} anchorRef={sportMenuRef} onClose={() => setSportOpen(false)} className="ss-composer-sport-menu" width={240} mobileSheet role="menu" ariaLabel="Choose a sport">
-                  {SPORTS.map(option => {
+                  {SPORTS.filter(option => mlbAccess || option !== 'MLB').map(option => {
                     const logo = sportLogoUrl(option)
                     return <button key={option} type="button" role="menuitemradio" aria-checked={sport === option} onClick={() => { setSport(option); setSportOpen(false) }}>
                       {logo ? <SafeImage src={logo} alt="" /> : <span className="ss-composer-sport-fallback">{option.slice(0, 1)}</span>}
@@ -257,7 +260,8 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
           {showPickForm && (
             <>
               <PickComposer
-                initialSport={sport === 'NBA' ? 'NBA' : sport === 'NFL' ? 'NFL' : 'MLB'}
+                initialSport={sport === 'NBA' ? 'NBA' : sport === 'MLB' && mlbAccess ? 'MLB' : 'NFL'}
+                mlbAccess={mlbAccess}
                 initialGameId={initialGameId}
                 legs={legs}
                 onAddLeg={l => setLegs(prev => [...prev, l])}

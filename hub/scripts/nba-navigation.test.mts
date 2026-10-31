@@ -65,7 +65,7 @@ test('mobile sport picker and switcher show every NBA tool with explicit Ultimat
     if (allowed) { assert.match(html,/href="\/the-paint\?view=ladders/);assert.doesNotMatch(html,/Ultimate required/) }
     else { assert.doesNotMatch(html,/href="\/the-paint/);assert.equal((html.match(/href="\/pricing#plan-ultimate"/g)??[]).length,16);assert.match(switcher,/aria-label="NBA research · Ultimate required"/) }
     assert.match(html,/NFL tools/)
-    assert.match(html,/MLB tools/)
+    assert.doesNotMatch(html,/MLB tools/)
   }
 })
 
@@ -113,13 +113,13 @@ test('mobile NBA tab changes the actual tool menu and dismissing restores focus 
   const host=document.createElement('div');document.body.append(host)
   const root=createRoot(host)
   function Fixture(){
-    const [sport,setSport]=useState('mlb'),[open,setOpen]=useState(true)
+    const [sport,setSport]=useState('nfl'),[open,setOpen]=useState(true)
     return open?createElement(compiled.exports.MobileResearchPicker,{path:'/feed',sport,nflAccess:true,nbaAccess:false,hasUltimate:false,onSport:setSport,onClose:()=>setOpen(false)}):null
   }
   try{
     await act(async()=>root.render(createElement(Fixture)))
     assert.equal(document.body.style.overflow,'hidden')
-    assert.ok(host.querySelector('nav[aria-label="MLB quick tools"]'))
+    assert.ok(host.querySelector('nav[aria-label="NFL quick tools"]'))
     const tab=host.querySelector('button[aria-label="NBA tools · Ultimate required"]')!
     await act(async()=>tab.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
     assert.equal(tab.getAttribute('aria-pressed'),'true')

@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { processContactRecapExportJob } from '@/lib/contactRecapExportQueue'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const BUCKET = 'contact-recap-exports'
 export const runtime = 'nodejs'
@@ -40,6 +41,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return NextResponse.json({ error: 'MLB exports are paused for the off-season.' }, { status: 503 })
   const { id } = await params
   const { data: job, error } = await loadJob(id)
   if (error || !job) return NextResponse.json({ error: 'Export not found.' }, { status: 404 })

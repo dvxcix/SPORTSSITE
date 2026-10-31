@@ -21,7 +21,7 @@ const BENEFITS = [
   ['community', MessageSquareText, 'Private groups and channels'],
 ] as const
 
-export function CreatorStudioClient({ profile, products, groups, stats, analytics, events, scheduledPosts, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; analytics: CreatorAnalytics; events: Event[]; scheduledPosts: ScheduledPost[]; isTestAccount?: boolean }) {
+export function CreatorStudioClient({ profile, products, groups, stats, analytics, events, scheduledPosts, mlbAccess, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; analytics: CreatorAnalytics; events: Event[]; scheduledPosts: ScheduledPost[]; mlbAccess: boolean; isTestAccount?: boolean }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -116,11 +116,11 @@ export function CreatorStudioClient({ profile, products, groups, stats, analytic
 
     <section className={styles.workspace}>
       <div className={styles.primaryColumn}>
-        <ScheduledPostPlanner posts={scheduledPosts}/>
+        <ScheduledPostPlanner posts={scheduledPosts} mlbAccess={mlbAccess}/>
         <article className={styles.panel}>
           <header><div><span>MEMBERSHIP BUILDER</span><h2>Package your member experience</h2><p>Create recurring access or a one-time drop. Select what members receive, then publish through Whop.</p></div><Layers3 size={21} /></header>
           <div className={styles.builder}>
-            <label><span>Offer name</span><input value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Example: All-Access MLB" /></label>
+            <label><span>Offer name</span><input value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Example: All-Access NFL" /></label>
             <div className={styles.split}><label><span>Price</span><div className={styles.money}><i>$</i><input value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} inputMode="decimal" /></div></label><label><span>Billing</span><select value={form.productType} onChange={event => setForm({ ...form, productType: event.target.value })}><option value="membership">Monthly membership</option><option value="one_time">One-time access</option></select></label></div>
             <label><span>Member promise</span><textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Explain what you cover, how often you publish, and what members can expect." /></label>
             <fieldset><legend>Included with this tier</legend><div className={styles.benefits}>{BENEFITS.map(([key, Icon, label]) => <button aria-pressed={benefits[key]} className={benefits[key] ? styles.selected : ''} onClick={() => setBenefits(current => ({ ...current, [key]: !current[key] }))} type="button" key={key}><Icon size={17} /><span>{label}</span><i>{benefits[key] && <Check size={13} />}</i></button>)}</div></fieldset>

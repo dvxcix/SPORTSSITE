@@ -72,17 +72,18 @@ test('ordinary members can search NBA favorites without receiving research, and 
 test('league feed filters apply to top/latest posts and reposts without changing cursor boundaries', async () => {
   for (const filter of ['latest', 'top'] as const) {
     let sportApplied = false
-    const raw = [{ id: 'nba', sport: 'NBA', author_id: 'a', created_at: '2026-10-20T10:00:00Z' }, { id: 'nfl', sport: 'NFL', author_id: 'b', created_at: '2026-10-20T09:00:00Z' }]
+    const raw = [{ id: '00000000-0000-0000-0000-000000000001', sport: 'NBA', author_id: 'a', created_at: '2026-10-20T10:00:00Z' }, { id: '00000000-0000-0000-0000-000000000002', sport: 'NFL', author_id: 'b', created_at: '2026-10-20T09:00:00Z' }]
     const client: any = { from: (table: string) => {
       let sport: string | undefined
       const query: any = { select: () => query, order: () => query, limit: () => query, range: () => query,
+        abortSignal: (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); return query },
         ilike: (key: string, value: string) => { assert.equal(key, 'sport'); sportApplied = true; sport = value; return query },
-        then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: table === 'posts' ? raw.filter(post => !sport || post.sport === sport) : [{ created_at: '2026-10-20T11:00:00Z', reposted_by: { id: 'r' }, post: raw[1] }] })),
+        then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: table === 'posts' ? raw.filter(post => !sport || post.sport === sport) : [{ id: '00000000-0000-0000-0000-000000000003', user_id: 'r', created_at: '2026-10-20T11:00:00Z', reposted_by: { id: 'r' }, post: raw[1] }] })),
       }; return query
     } }
     const result = await fetchFeedPage(client, { filter, sport: 'NBA', userId: null, blockedIds: [], pageSize: 2 })
     assert.equal(sportApplied, true)
-    assert.deepEqual(result.posts.map(post => post.id), ['nba'])
+    assert.deepEqual(result.posts.map(post => post.id), [raw[0].id])
     assert.equal(result.hasMore, false)
   }
   assert.equal(feedSport('nba'), 'NBA'); assert.equal(feedSport('SQL%'), undefined)

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { postToChannelChecked } from '@/lib/discord'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -36,25 +37,37 @@ async function run(request: Request) {
   // only deduplicates recent requests, so never blindly replay it 10 minutes
   // later. Leave an actionable failed item for delivery confirmation instead.
   const interruptedBefore = new Date(Date.now() - 10 * 60_000).toISOString()
-  const { error: uncertainSlateError } = await admin.from('operational_retry_queue').update({
-    status: 'failed',
-    last_error: 'Daily slate delivery confirmation missing after interruption; inspect Discord before manual retry.',
-    updated_at: now,
-  }).eq('status', 'processing').lt('updated_at', interruptedBefore).like('payload->payload->>nonce', 'slate-%')
-  if (uncertainSlateError) return NextResponse.json({ error: 'Daily slate delivery recovery failed.' }, { status: 500 })
-  await admin.from('operational_retry_queue').update({
+  if (!MLB_HIBERNATING) {
+    const { error: uncertainSlateError } = await admin.from('operational_retry_queue').update({
+      status: 'failed',
+      last_error: 'Daily slate delivery confirmation missing after interruption; inspect Discord before manual retry.',
+      updated_at: now,
+    }).eq('status', 'processing').lt('updated_at', interruptedBefore).like('payload->payload->>nonce', 'slate-%')
+    if (uncertainSlateError) return NextResponse.json({ error: 'Daily slate delivery recovery failed.' }, { status: 500 })
+  }
+  let recovery = admin.from('operational_retry_queue').update({
     status: 'pending',
     next_attempt_at: now,
     last_error: 'Recovered after an interrupted replay.',
     updated_at: now,
   }).eq('status', 'processing').lt('updated_at', interruptedBefore)
-  const { data: items, error } = await admin.from('operational_retry_queue')
+  // Filter in SQL before LIMIT so a backlog of paused MLB work cannot starve
+  // other sports or delivery operations. Null nonces remain eligible.
+  if (MLB_HIBERNATING) recovery = recovery
+    .or('payload->payload->>nonce.is.null,payload->payload->>nonce.not.like.slate-*')
+    .or('dedupe_key.is.null,dedupe_key.not.like.daily-slate:*')
+  await recovery
+  let pending = admin.from('operational_retry_queue')
     .select('id,provider,operation,payload,attempts,max_attempts')
     .eq('status', 'pending')
     .neq('operation', 'contact_alert_media')
     .lte('next_attempt_at', now)
     .order('next_attempt_at', { ascending: true })
     .limit(20)
+  if (MLB_HIBERNATING) pending = pending
+    .or('payload->payload->>nonce.is.null,payload->payload->>nonce.not.like.slate-*')
+    .or('dedupe_key.is.null,dedupe_key.not.like.daily-slate:*')
+  const { data: items, error } = await pending
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   let succeeded = 0

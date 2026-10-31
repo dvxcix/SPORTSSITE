@@ -8,6 +8,7 @@ function load(file, mocks, clock = Date, abortSignal = AbortSignal) {
   const code = ts.transpileModule(fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const fixtureModule = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', 'AbortSignal', code)(id => {
+    if (id === '@/lib/mlbOffseason' && !(id in mocks)) return { MLB_HIBERNATING: false, isMlbCronPaused: () => false }
     if (!(id in mocks)) throw Error(`Unexpected dependency ${id}`)
     return mocks[id]
   }, fixtureModule, fixtureModule.exports, clock, abortSignal)

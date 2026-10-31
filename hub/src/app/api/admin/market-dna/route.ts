@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeMarketDna, analyzeMarketDnaGame, analyzeMarketDnaSlate, archiveMarketDnaDate, buildMarketDnaSlate } from '@/lib/marketDna'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -18,6 +19,7 @@ async function requireAdmin() {
 export async function GET(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const date = new URL(request.url).searchParams.get('date') ?? ''
   if (!DATE_RE.test(date)) return NextResponse.json({ error: 'Pass a valid YYYY-MM-DD date.' }, { status: 400 })
   try {
@@ -30,6 +32,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const body = await request.json().catch(() => null)
   const date = typeof body?.date === 'string' ? body.date : ''
   const gamePk = Number(body?.gamePk)

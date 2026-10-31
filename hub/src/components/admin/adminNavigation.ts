@@ -90,6 +90,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: 'Data & research',
     description: 'Imports, models, and research operations',
     links: [
+      { href: '/admin/mlb-archive', label: 'MLB archive', description: 'Saved pregame prices and research', icon: BookOpen, keywords: ['baseball', 'history', 'odds', 'offseason'] },
       { href: '/admin/fanduel-import', label: 'FanDuel markets', description: 'Browser-imported market data', icon: Upload, keywords: ['odds', 'fhr'] },
       { href: '/admin/mgm-import', label: 'BetMGM odds', description: 'BetMGM market ingestion', icon: Upload, keywords: ['odds'] },
       { href: '/admin/pikkit-import', label: 'Pikkit import', description: 'Bet history ingestion', icon: Upload },

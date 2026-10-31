@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildHrIntelligenceSlate } from '@/lib/hrIntelligenceData'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -19,6 +20,7 @@ async function requireAdmin() {
 export async function GET(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
   const url = new URL(request.url)
   const date = url.searchParams.get('date') ?? ''

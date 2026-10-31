@@ -569,8 +569,8 @@ test('heavy analytics jobs use bounded, contention-safe cron stages', async () =
   assert.ok(marketDna.includes("searchParams.get('fitOnly') === '1'"))
   assert.ok(marketDna.includes("stage: 'archive'"))
   assert.ok(marketDna.includes("stage: 'model-fit'"))
-  assert.ok(vercel.crons.some(cron => cron.path === '/api/cron/market-dna-maintenance?fitOnly=1'))
-  // Owner paused MLB collection for the offseason; historical processing stays on.
+  // Both collection and historical MLB processing are paused for the offseason.
+  assert.equal(vercel.crons.find(cron => cron.path.startsWith('/api/cron/market-dna-maintenance')), undefined)
   assert.equal(vercel.crons.find(cron => cron.path === '/api/cron/statcast-integrity-check'), undefined)
   assert.ok(statcast.includes('const retryDelaysMs = [1_500, 5_000]'))
 })
@@ -636,7 +636,8 @@ test('contact recap exports are durable without a vulnerable workflow runtime', 
   assert.ok(createRoute.includes('after(async () =>'))
   assert.ok(replayRoute.includes('after(async () =>'))
   assert.ok(cronRoute.includes("withPipelineHealth('process-contact-recap-exports'"))
-  assert.ok(vercel.includes('/api/cron/process-contact-recap-exports'))
+  assert.ok(!vercel.includes('/api/cron/process-contact-recap-exports'))
+  assert.ok(queue.includes('MLB_HIBERNATING'))
 })
 
 test('release workflow validates before publishing', async () => {
@@ -1046,7 +1047,7 @@ test('global discovery supports durable member-scoped saved searches', async () 
   assert.ok(search.includes(".from('saved_searches').upsert"))
   assert.ok(search.includes("onConflict: 'user_id,query_key,result_tab'"))
   assert.ok(search.includes(".from('saved_searches').delete"))
-  assert.ok(search.includes("setQ(saved.query); setTab(saved.result_tab === 'nba' && !nbaAllowed ? 'all' : saved.result_tab)"), 'saved searches restore their tab while hidden NBA searches fall back for members')
+  assert.ok(search.includes("saved.result_tab === 'nba' && !nbaAllowed") && search.includes("saved.result_tab === 'mlb' && !mlbAccess") && search.includes("? 'all' : saved.result_tab"), 'saved searches restore allowed tabs and fall back when NBA or MLB is hidden')
   assert.ok(search.includes('aria-labelledby="saved-searches-heading"'))
   assert.ok(search.includes('role="alert"'))
   assert.ok(migration.includes('alter table public.saved_searches enable row level security'))
@@ -1503,7 +1504,7 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(onboardingSave.includes('createAdminClient()'))
   assert.ok(onboardingSave.includes("safeApiError('account-onboarding-save'"))
   assert.ok(onboardingSave.includes("'Cache-Control': 'private, no-store, max-age=0'"))
-  assert.ok(onboardingSave.includes("import { favoriteUpdates } from '@/lib/sportFavorites'"))
+  assert.match(onboardingSave, /import\s*\{[^}]*\bfavoriteUpdates\b[^}]*\}\s*from\s*'@\/lib\/sportFavorites'/)
   assert.ok(onboardingSave.includes('...favoriteUpdates({ teams: body.teams ?? [], players: body.favoritePlayers ?? [] }, profile, true)'))
   assert.ok(onboardingSave.includes('banner_url: safeImageUrl(body.bannerUrl)'))
   assert.ok(onboardingPage.includes(".from('groups')"))

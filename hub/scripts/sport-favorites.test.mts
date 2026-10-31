@@ -60,6 +60,7 @@ async function routeFixture(role: string | null = 'admin', entitlement: { tier?:
     '@/lib/nbaAccessPolicy': { hasNbaAccess },
     '@/lib/favoriteCatalog': { getFavoriteCatalog: async (nba: boolean) => { catalogLoads++; return catalog.filter(team => nba || team.sport !== 'nba') } },
     '@/lib/sportFavorites': favorites,
+    '@/lib/mlbOffseason': { MLB_HIBERNATING: true },
     '@/lib/safeApiError': { safeApiError: () => ({ status: 500, body: { error: 'Unavailable' } }) },
   }
   const source = await readFile(new URL('../src/app/api/account/favorites/route.ts', import.meta.url), 'utf8')
@@ -82,6 +83,22 @@ test('favorites API requires sign-in and makes all three leagues available to or
   assert.equal((await member.patch({ action: 'add', player: nba })).status, 200)
   assert.equal((await member.patch({ action: 'add', team: 'NBA:1' })).status, 200)
   assert.equal(member.counts().updates, 2)
+})
+
+test('offseason favorites hide MLB from members without deleting saved selections', async () => {
+  const member = await routeFixture('user')
+  const read = await member.get()
+  assert.ok((read.body.catalog as favorites.FavoriteTeam[]).every(team => team.sport !== 'mlb'))
+  assert.deepEqual(read.body.teams, [])
+  assert.deepEqual(read.body.players, [])
+  assert.equal((await member.patch({ teams: ['NFL:ATL'], players: [nfl] })).status, 200)
+  assert.deepEqual(member.current().favorite_teams, ['NFL:ATL', 'NYY'])
+  assert.deepEqual(member.current().favorite_players.map(favorites.favoritePlayerKey), ['mlb:123', 'nfl:00-0033873'])
+  assert.equal((await member.patch({ action: 'add', team: 'MLB:ATL' })).status, 403)
+  assert.equal((await member.patch({ action: 'add', player: { ...mlb, mlb_id: 999 } })).status, 403)
+  const admin = await routeFixture('admin')
+  assert.ok((await admin.get()).body.teams instanceof Array)
+  assert.deepEqual((await admin.get()).body.teams, ['NYY'])
 })
 
 test('favorites API saves/removes exact NFL and NBA IDs while preserving unrelated favorites', async () => {
@@ -149,6 +166,8 @@ test('onboarding persists MLB, NFL and NBA favorites for every account tier', as
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) } }) },
       '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile }) }) }), update: (value: Record<string, unknown>) => ({ eq: async () => { saved = value; return { error: null } } }) }) }) },
       '@/lib/nbaAccessPolicy': { hasNbaAccess }, '@/lib/sportFavorites': favorites,
+      '@/lib/mlbOffseason': { MLB_HIBERNATING: true },
+      '@/lib/favoriteCatalog': { getFavoriteCatalog: async () => catalog },
       '@/lib/safeApiError': { safeApiError: () => ({ status: 500 }) },
     }
     const mod = { exports: {} as { POST: (request: Request) => Promise<{ status: number }> } }
@@ -157,7 +176,7 @@ test('onboarding persists MLB, NFL and NBA favorites for every account tier', as
     assert.equal(result.status, 200)
     assert.ok(saved)
     const values = saved as Record<string, unknown>
-    assert.deepEqual(values.favorite_teams, allowed ? ['NYY', 'NFL:ATL', 'NBA:1'] : ['NYY', 'NFL:ATL'])
+    assert.deepEqual(values.favorite_teams, entitlement.account_type === 'admin' ? ['NYY', 'NFL:ATL', 'NBA:1'] : ['NFL:ATL', 'NBA:1', 'NYY'])
     assert.deepEqual((values.favorite_players as favorites.FavoritePlayer[]).map(favorites.favoritePlayerKey), allowed ? ['mlb:123', 'nfl:00-0033873', 'nba:123'] : ['mlb:123', 'nfl:00-0033873'])
     assert.equal((values.notification_settings as Record<string, boolean>).dm, true)
     assert.equal(typeof values.onboarding_completed_at, 'string')

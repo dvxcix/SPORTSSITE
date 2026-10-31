@@ -101,6 +101,23 @@ async function allPages(fetch: (cursor: string | null) => Promise<{ posts: Row[]
 }
 const ids = (pages: Row[][]) => pages.flat().map(row => row.reposted_by ? `r:${row.id}` : `p:${row.id}`)
 
+test('offseason filtering hides MLB posts and reposts without losing other sports across pages', async () => {
+  const owner = uuid(9000)
+  const originals = Array.from({ length: 28 }, (_, i) => ({ ...post(i + 1, time(59 - i), owner), sport: i % 2 ? 'mlb' : 'NBA' }))
+  const shares = Array.from({ length: 12 }, (_, i) => repost(i + 1, { ...post(i + 101), sport: i % 2 ? 'MLB' : 'NFL' }, time(58 - i), owner))
+  const db = new FakeDb({ posts: originals, reposts: shares })
+  const feed = await allPages(cursor => fetchFeedPage(db.client(), { filter: 'latest', userId: null, blockedIds: [], cursor, pageSize: 5, hideMlb: true }))
+  const profile = await allPages(cursor => fetchProfilePostsPage(db.client(), { userId: owner, tab: 'all', cursor, pageSize: 5, hideMlb: true }))
+  assert.equal(feed.flat().length, 20)
+  assert.equal(profile.flat().length, 20)
+  assert.ok([...feed.flat(), ...profile.flat()].every(row => row.sport?.toUpperCase() !== 'MLB'))
+  assert.equal(new Set(ids(feed)).size, 20)
+  const admin = await fetchFeedPage(db.client(), { filter: 'latest', userId: null, blockedIds: [], pageSize: 5, hideMlb: false })
+  assert.ok(admin.posts.some(row => row.sport?.toUpperCase() === 'MLB'))
+  const hiddenOnly = await fetchFeedPage(db.client(), { filter: 'latest', userId: null, blockedIds: [], sport: 'MLB', hideMlb: true })
+  assert.deepEqual(hiddenOnly, { posts: [], nextCursor: null, hasMore: false })
+})
+
 test('feed keeps the unreturned tail when both source queries are short', async () => {
   const originals = Array.from({ length: 15 }, (_, i) => post(i + 1, time(59 - i)))
   const shares = Array.from({ length: 15 }, (_, i) => repost(i + 1, post(i + 101), time(44 - i)))

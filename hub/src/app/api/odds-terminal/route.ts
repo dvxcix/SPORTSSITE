@@ -6,6 +6,7 @@ import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { canonGameKey } from '@slipsurge/core/teamAbbr'
 import { getThreePlusHrrArchive } from '@/lib/hrrArchive'
 import { threePlusHrr } from '@/lib/hrrMarket'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +17,7 @@ type PriceBook = Record<string, number | string>
 type PropEntry = { name?: string; [market: string]: string | PriceBook | undefined }
 type SnapshotRow = { captured_at: string; prop_map: Record<string, PropEntry> | null }
 type GapRow = { name_norm: string; player_name: string | null; updated_at: string; [column: string]: string | number | null }
+class MlbSavedCutoffUnavailable extends Error {}
 
 const FANDUEL_GAP_MARKETS: Record<string, string> = {
   fhr_fd: 'fhr', sa_fd: 'sa', hr2_fd: 'hr2', sng_fd: 'singles', dbl_fd: 'doubles', tri_fd: 'triples',
@@ -90,7 +92,7 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
   // never fail merely because the presentation payload omitted gameKey.
   const { data: gameMeta, error: gameMetaError } = await admin
     .from('pregame_odds_snapshots')
-    .select('home_abbr,away_abbr')
+    .select('home_abbr,away_abbr,is_frozen,frozen_at')
     .eq('game_pk', gamePk)
     .maybeSingle()
   if (gameMetaError) throw gameMetaError
@@ -100,7 +102,23 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
   const gameKey = requestedGameKey ?? derivedGameKey
   if (!gameKey) throw new Error(`Could not resolve game key for ${gamePk}`)
 
-  const firstPitchAt = await getFirstPitchAt(gamePk)
+  let firstPitchAt: string | null
+  if (MLB_HIBERNATING) {
+    // Use only the original persisted boundary. Never call MLB for a new
+    // game feed while hibernating, or assume a missing cutoff means pregame.
+    const { data: clock, error: clockError } = await admin.from('mlb_research_clock').select('start_at').eq('game_pk', gamePk).maybeSingle()
+    if (clockError) throw clockError
+    // frozen_at is the time the snapshot was marked frozen; it may be after
+    // first pitch and is not sufficient evidence of a pregame cutoff.
+    if (typeof clock?.start_at !== 'string' || !Number.isFinite(Date.parse(clock.start_at))) throw new MlbSavedCutoffUnavailable('Saved pregame cutoff unavailable')
+    const candidates = [clock.start_at, gameMeta?.is_frozen ? gameMeta?.frozen_at : null]
+      .filter((value): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value)))
+      .sort((a, b) => Date.parse(a) - Date.parse(b))
+    firstPitchAt = candidates[0] ?? null
+    if (!firstPitchAt) throw new MlbSavedCutoffUnavailable('Saved pregame cutoff unavailable')
+  } else {
+    firstPitchAt = await getFirstPitchAt(gamePk)
+  }
 
   // PostgREST caps a response at 1,000 rows in this project. Busy pregame
   // histories exceed that, so every capture must be read in ordered pages.
@@ -116,7 +134,7 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
 
     if (error) throw error
     const page = (data ?? []) as SnapshotRow[]
-    rows.push(...(firstPitchAt ? page.filter(row => row.captured_at <= firstPitchAt) : page))
+    rows.push(...(firstPitchAt ? page.filter(row => Number.isFinite(Date.parse(row.captured_at)) && Date.parse(row.captured_at) < Date.parse(firstPitchAt)) : page))
     if (page.length < PAGE_SIZE) break
   }
 
@@ -136,21 +154,22 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
   if (gapError) throw gapError
   if (openingError) throw openingError
 
-  const openers = (openingRows ?? []) as Array<{ name_norm: string; market: string; opening_price: number; captured_at: string }>
+  const openers = ((openingRows ?? []) as Array<{ name_norm: string; market: string; opening_price: number; captured_at: string }>)
+    .filter(row => !firstPitchAt || (Number.isFinite(Date.parse(row.captured_at)) && Date.parse(row.captured_at) < Date.parse(firstPitchAt)))
   const openerMap = buildFanDuelMap(openers)
   if (Object.keys(openerMap).length) {
     const openingCapture = openers.reduce((earliest, row) => row.captured_at < earliest ? row.captured_at : earliest, openers[0].captured_at)
     rows.push({ captured_at: openingCapture, prop_map: openerMap })
   }
 
-  const gaps = ((gapRows ?? []) as unknown as GapRow[]).filter(row => !firstPitchAt || row.updated_at <= firstPitchAt)
+  const gaps = ((gapRows ?? []) as unknown as GapRow[]).filter(row => !firstPitchAt || (Number.isFinite(Date.parse(row.updated_at)) && Date.parse(row.updated_at) < Date.parse(firstPitchAt)))
   if (gaps.length) {
     const latestImport = gaps.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, gaps[0].updated_at)
     rows.push({ captured_at: latestImport, prop_map: buildFanDuelMap(gaps) })
   }
   for (const quote of await getThreePlusHrrArchive(date)) {
     if (canonGameKey(quote.game_key) !== canonGameKey(gameKey)) continue
-    if (firstPitchAt && Date.parse(quote.scraped_at) > Date.parse(firstPitchAt)) continue
+    if (firstPitchAt && (!Number.isFinite(Date.parse(quote.scraped_at)) || Date.parse(quote.scraped_at) >= Date.parse(firstPitchAt))) continue
     rows.push({ captured_at: quote.scraped_at, prop_map: {
       [quote.selection]: { name: quote.selection, hrr3: { fanduel: quote.odds } },
     } })
@@ -160,8 +179,8 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
   return { sourceCount: rows.length, snapshots: compactSnapshots(rows), firstPitchAt }
 }
 
-const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v5-hrr3'], { revalidate: 20 })
-const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v5-hrr3'], { revalidate: 86400 })
+const readLiveHistory = unstable_cache(readHistory, [MLB_HIBERNATING ? 'odds-terminal-history-offseason-live-v1' : 'odds-terminal-history-live-v5-hrr3'], { revalidate: 20 })
+const readArchivedHistory = unstable_cache(readHistory, [MLB_HIBERNATING ? 'odds-terminal-history-offseason-v1' : 'odds-terminal-history-archive-v5-hrr3'], { revalidate: 86400 })
 
 export async function GET(req: Request) {
   const gate = await requireTier('ultimate')
@@ -183,6 +202,7 @@ export async function GET(req: Request) {
       { headers: { 'Cache-Control': date === today ? 'private, max-age=20' : 'private, max-age=86400, immutable' } },
     )
   } catch (error) {
+    if (error instanceof MlbSavedCutoffUnavailable) return NextResponse.json({ error: 'Saved pregame cutoff is unavailable.' }, { status: 503, headers: { 'Cache-Control': 'private, no-store' } })
     console.error('[odds-terminal] history read failed', { date, gamePk, type: error instanceof Error ? error.name : typeof error })
     return NextResponse.json({ error: 'Odds history is temporarily unavailable.' }, { status: 500 })
   }

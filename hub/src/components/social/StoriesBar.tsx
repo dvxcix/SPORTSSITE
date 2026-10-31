@@ -6,8 +6,12 @@ import { Plus, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StoriesViewer } from './StoriesViewer'
 import { MemberAvatar } from './MemberAvatar'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export function StoriesBar() {
+  const { profile } = useAuth()
+  const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [stories, setStories] = useState<any[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -21,7 +25,7 @@ export function StoriesBar() {
 
       const { data } = await supabase
         .from('stories')
-        .select('id, author:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), media_url, story_type, content, bg_color, created_at')
+        .select('id, sport, author:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), media_url, story_type, content, bg_color, created_at')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(12)
@@ -29,6 +33,8 @@ export function StoriesBar() {
     }
     load()
   }, [supabase])
+
+  const visibleStories = stories.filter(story => showMlb || story.sport?.toUpperCase() !== 'MLB')
 
   function openViewer(idx: number) {
     setViewerStart(idx)
@@ -38,7 +44,7 @@ export function StoriesBar() {
   return (
     <>
       <section className="ss-stories-bar" aria-label="Community stories">
-        <div className="ss-stories-heading"><span><Sparkles size={12}/> Stories</span><small>{stories.length ? `${stories.length} live` : 'Share the moment'}</small></div>
+        <div className="ss-stories-heading"><span><Sparkles size={12}/> Stories</span><small>{visibleStories.length ? `${visibleStories.length} live` : 'Share the moment'}</small></div>
         <div className="ss-stories-rail">
           {userId && (
             <Link href="/stories/create" className="ss-story-item is-create">
@@ -49,7 +55,7 @@ export function StoriesBar() {
             </Link>
           )}
 
-          {stories.map((s: any, i: number) => (
+          {visibleStories.map((s: any, i: number) => (
             <button type="button" key={s.id} onClick={() => openViewer(i)} className="ss-story-item" aria-label={`View ${s.author?.display_name || s.author?.username || 'member'}'s story`}>
               <div className="ss-story-ring">
                 <div>
@@ -62,10 +68,11 @@ export function StoriesBar() {
         </div>
       </section>
 
-      {viewerOpen && stories.length > 0 && (
+      {viewerOpen && visibleStories.length > 0 && (
         <StoriesViewer
-          stories={stories}
-          initialIndex={viewerStart}
+          key={showMlb ? 'all-sports' : 'active-sports'}
+          stories={visibleStories}
+          initialIndex={Math.min(viewerStart, visibleStories.length - 1)}
           onClose={() => setViewerOpen(false)}
         />
       )}

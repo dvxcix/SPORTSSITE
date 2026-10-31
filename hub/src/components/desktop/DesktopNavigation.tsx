@@ -15,6 +15,7 @@ import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeM
 import { researchHome, researchSportForPath, resolveResearchSport, researchToolActive, researchNavigationHref } from '@/components/layout/researchNavigation'
 import { useResearchSport } from '@/components/layout/useResearchSport'
 import { ResearchSportSwitcher } from '@/components/layout/ResearchSportSwitcher'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import navigationStyles from '@/components/layout/researchNavigation.module.css'
 
 export function DesktopNavigation() {
@@ -24,7 +25,8 @@ export function DesktopNavigation() {
   const { allowed: nflAccess } = useNflAccess()
   const { profile, loading } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
-  const selectedSport = resolveResearchSport(sport, nflAccess)
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
+  const selectedSport = resolveResearchSport(sport, nflAccess, mlbAccess)
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
   const contextCollapsed = collapsed && !channelsWorkspace
@@ -53,7 +55,7 @@ export function DesktopNavigation() {
             const Icon = item.icon
             const active = routeMatches(pathname, item)
             return (
-              <Link key={item.href} href={item.label === 'Research' ? researchNavigationHref(researchHome(selectedSport, nflAccess, nbaAccess), pathname, searchParams, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label === 'Research' && selectedSport === 'nba' ? undefined : item.label} aria-label={item.label}>
+              <Link key={item.href} href={item.label === 'Research' ? researchNavigationHref(researchHome(selectedSport, nflAccess, nbaAccess, mlbAccess), pathname, searchParams, nbaAccess) : item.href} prefetch={false} data-active={active} title={item.label === 'Research' && selectedSport === 'nba' ? undefined : item.label} aria-label={item.label}>
                 <Icon size={19} />
                 {item.badge && <i>{item.badge === 'LIVE' ? '' : item.badge}</i>}
               </Link>
@@ -77,7 +79,7 @@ export function DesktopNavigation() {
           <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
           </button>
-          {context.area === 'research' && <ResearchSportSwitcher sport={selectedSport} onChange={chooseSport} nflAccess={nflAccess} nbaAccess={nbaAccess} compact={contextCollapsed} />}
+          {context.area === 'research' && <ResearchSportSwitcher sport={selectedSport} onChange={chooseSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={contextCollapsed} />}
           <div className={`ss-desktop-context-label ${navigationStyles.heading}`}>{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}</div>
           <nav className={navigationStyles.desktopTools} aria-label={`${context.area === 'research' ? selectedSport.toUpperCase() + ' research' : context.meta.label} navigation`}>
             {items.map(item => {

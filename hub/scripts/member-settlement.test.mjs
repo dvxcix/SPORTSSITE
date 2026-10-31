@@ -6,7 +6,7 @@ const require = createRequire(new URL('../package.json', import.meta.url)), ts =
 function load(file, mocks, clock = Date) {
   const code = ts.transpileModule(fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
-  new Function('require','module','exports','Date',code)(id => { assert.ok(id in mocks, id); return mocks[id] },target,target.exports,clock)
+  new Function('require','module','exports','Date',code)(id => { if (id === '@/lib/mlbOffseason' && !(id in mocks)) return { MLB_HIBERNATING: false }; assert.ok(id in mocks, id); return mocks[id] },target,target.exports,clock)
   return target.exports
 }
 const empty = () => ({ claimed:0, attempted:0, checked:0, graded:0, skipped:0, won:0, reasons:{}, issues:[] })

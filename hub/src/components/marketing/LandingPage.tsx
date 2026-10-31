@@ -6,10 +6,9 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import styles from './LandingPage.module.css'
 import { motion, AnimatePresence } from 'motion/react'
-import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, Megaphone, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { Activity, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { Spotlight } from '@/components/ui/spotlight'
-import { CometCard } from '@/components/ui/comet-card'
 import { Badge } from '@/components/ui/badge'
 import { BookLogo } from '@/components/BookLogo'
 
@@ -49,11 +48,6 @@ function TierPill({ tier }: { tier: TierKey }) {
 const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: TierKey; link: string }[] = [
   { icon: <Activity size={18}/>, title: 'The Sideline · NFL', description: 'Player props, ladders, matchup research and market movement.', tier: 'ultimate', link: '/the-sideline' },
   { icon: <TrendingUp size={18}/>, title: 'The Court · NBA', description: 'Odds comparisons, player trends, defense by position and alternate lines.', tier: 'ultimate', link: '/the-paint' },
-  { icon: <CloudSun size={18} />, title: 'Weather Lab', description: 'See wind, temperature, altitude, and game conditions in one focused view.', tier: 'basic', link: '/auth/register?utm_feature=weather' },
-  { icon: <Activity size={18} />, title: 'Pitcher Report', description: 'See exactly what a starter has thrown lately and who in tonight\'s lineup has been hitting it hard.', tier: 'basic', link: '/auth/register?utm_feature=pitcher' },
-  { icon: <Rows3 size={18} />, title: 'Slate Breakdown', description: 'Every pitcher and batter matchup on tonight\'s slate, laid out side by side before first pitch.', tier: 'advanced', link: '/auth/register?utm_feature=slate' },
-  { icon: <TrendingUp size={18} />, title: 'Batter Cost', description: 'Compare opening and current prices across the slate without rebuilding the board by hand.', tier: 'ultimate', link: '/auth/register?utm_feature=batter-cost' },
-  { icon: <Megaphone size={18} />, title: 'The Public', description: 'See where community attention is concentrated across players and prop markets.', tier: 'advanced', link: '/auth/register?utm_feature=public' },
 ]
 
 // Illustrative mockup only — not a live screenshot. Team pairs and numbers
@@ -61,51 +55,21 @@ const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: 
 // the shape of the real Dugout table (matchup rows, heat-mapped odds
 // columns) without depending on there being live games right now or
 // exposing any real user-posted content on a logged-out marketing page.
-const DUGOUT_ROWS = [
-  { matchup: 'NYY @ BOS', hr1: '+650', hrAny: '+140', k: '-115', hot: true },
-  { matchup: 'LAD @ SF', hr1: '+800', hrAny: '+165', k: '-105', hot: false },
-  { matchup: 'ATL @ NYM', hr1: '+575', hrAny: '+125', k: '-130', hot: false },
-]
-
-function DugoutMockup() {
-  return (
-    <div className={styles.boardMockup}>
-      <div className={styles.boardChrome}>
-        <span className={`${styles.chromeDot} ${styles.chromeRed}`} />
-        <span className={`${styles.chromeDot} ${styles.chromeGold}`} />
-        <span className={`${styles.chromeDot} ${styles.chromeGreen}`} />
-        <span className={styles.boardTitle}>The Dugout <span>Tonight&apos;s matchups</span></span>
-      </div>
-      <div className={styles.boardHeader}>
-        <span>Matchup</span><span>1st HR</span><span>Anytime HR</span><span>Strikeouts</span>
-      </div>
-      {DUGOUT_ROWS.map(r => (
-        <div key={r.matchup} className={`${styles.boardRow} ${r.hot ? styles.boardRowHot : ''}`}>
-          <span>{r.matchup}</span>
-          <span className={r.hot ? styles.hotOdd : undefined}>{r.hr1}</span>
-          <span>{r.hrAny}</span>
-          <span>{r.k}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 const PRICING_TEASER = [
   { tier: 'free' as const, label: 'Free', price: '$0', period: '', tagline: 'Browse the community & your profile.' },
   { tier: 'basic' as const, label: 'Basic', price: '$9.99', period: '/mo', tagline: 'Community, research, live scores.' },
   // trialDays is monthly-plan-only (confirmed against the real Whop plan
   // config) — this teaser only ever shows the monthly price, so it's always
   // safe to show here without an interval check like /pricing needs.
-  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', trialDays: 7 },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout and The Public.', popular: true, trialDays: 3 },
+  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'More ways to research and follow the action.', trialDays: 7 },
+  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'NFL and NBA research tools.', popular: true, trialDays: 3 },
 ]
 
 const FAQS = [
   { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks. We never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
   { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile. Their picks land in your feed automatically, and their record updates when each pick grades. No screenshots or self-reported win rates.' },
   { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded. Any single loss fails the whole slip, while an all-push result is graded as a push.' },
-  { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout, The Public) are unlocked across Basic, Advanced, and Ultimate.' },
+  { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. Community features and live scores are available with paid plans; NFL and NBA research tools are included with Ultimate.' },
 ]
 
 function FaqAccordion() {
@@ -218,25 +182,7 @@ export function LandingPage() {
         >
           Research tools built for bettors, not analysts
         </motion.h2>
-        <p className={styles.sectionCopy}>MLB in The Dugout. NFL in The Sideline. NBA in The Court. Three research workspaces, together in Ultimate.</p>
-
-        <div className={styles.featureShowcase}>
-          <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
-            <TierPill tier="ultimate" />
-            <h3 className={styles.featureTitle}>The Dugout</h3>
-            <p className={styles.featureCopy}>
-              Our proprietary Game Matrix is a live, sortable board of every MLB matchup tonight, with odds, splits, and pitch-mix data in one dense view.
-            </p>
-            <Link href="/auth/register?utm_feature=dugout" className={styles.inlineLink}>Explore The Dugout <ArrowRight size={14} /></Link>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
-            <CometCard>
-              <div className={styles.mockupWrap}>
-                <DugoutMockup />
-              </div>
-            </CometCard>
-          </motion.div>
-        </div>
+        <p className={styles.sectionCopy}>NFL in The Sideline. NBA in The Court. Research workspaces together in Ultimate.</p>
 
         <div className={styles.toolGrid}>
           {TOOLS.map((t, i) => (

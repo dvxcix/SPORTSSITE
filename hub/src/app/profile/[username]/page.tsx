@@ -21,6 +21,7 @@ import { hasCreatorAccess } from '@/lib/creator'
 import type { Metadata } from 'next'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -81,6 +82,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
   if (authVisibilityUnavailable(authError)) throw new Error('Profile is temporarily unavailable')
   const isOwnProfile = authUser?.id === profile.id
+  const { data: viewer } = authUser ? await supabase.from('users').select('account_type').eq('id', authUser.id).maybeSingle() : { data: null }
 
   // Checked before any of the heavier posts/achievements/social-platform
   // fetches below — a block (either direction) means neither party should
@@ -99,7 +101,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   }
 
   const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }, { data: profileReplies }, { data: profileCommunities }] = await Promise.all([
-    fetchProfilePostsPage(supabase, { userId: profile.id, tab: postTab, pageSize: 20 }),
+    fetchProfilePostsPage(supabase, { userId: profile.id, tab: postTab, pageSize: 20, hideMlb: MLB_HIBERNATING && viewer?.account_type !== 'admin' }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
@@ -303,7 +305,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           {/* Sport badges */}
           {((profile.favorite_sports?.length ?? 0) > 0 || profile.sport_preferences?.length > 0) && (
             <div className="flex gap-1.5 pt-1 flex-wrap">
-              {(profile.favorite_sports?.length ? profile.favorite_sports : profile.sport_preferences).map((s: string) => <Badge key={s}>{s}</Badge>)}
+              {(profile.favorite_sports?.length ? profile.favorite_sports : profile.sport_preferences).filter((s: string) => !MLB_HIBERNATING || viewer?.account_type === 'admin' || s.toUpperCase() !== 'MLB').map((s: string) => <Badge key={s}>{s}</Badge>)}
             </div>
           )}
         </div>
@@ -324,7 +326,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       )}
 
       <AchievementsSection achievements={achievements} />
-      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} sports={profile.favorite_sports ?? []} />
+      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} sports={profile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} />
 
       <div className="border-t border-white/[.07]" />
 

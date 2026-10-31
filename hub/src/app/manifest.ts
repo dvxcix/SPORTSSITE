@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -21,8 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       { name: 'The Feed', short_name: 'Feed', description: 'Open your SlipSurge feed', url: '/feed', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
-      { name: 'The Dugout', short_name: 'Dugout', description: 'Open the MLB research matrix', url: '/dugout', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
-      { name: 'Odds Terminal', short_name: 'Terminal', description: 'Open live market movement', url: '/odds-terminal', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+      ...(!MLB_HIBERNATING ? [{ name: 'The Dugout', short_name: 'Dugout', description: 'Open the MLB research matrix', url: '/dugout', icons: [{ src: '/icon-192.png', sizes: '192x192' }] }, { name: 'Odds Terminal', short_name: 'Terminal', description: 'Open live market movement', url: '/odds-terminal', icons: [{ src: '/icon-192.png', sizes: '192x192' }] }] : []),
       { name: 'Live Scores', short_name: 'Scores', description: 'Open live games and scores', url: '/sports', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
     ],
   }

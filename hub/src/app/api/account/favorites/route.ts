@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
 import { FAVORITE_PLAYERS_PER_SPORT, favoritePlayerKey, favoritePlayerSport, favoriteUpdates, normalizeFavoritePlayers, normalizeFavoriteTeams, resolveFavoriteTeam } from '@/lib/sportFavorites'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store, max-age=0' }
@@ -16,14 +17,18 @@ async function account() {
   const { data: profile, error } = await admin.from('users').select('id,account_type,tier,discord_advanced_claimed,admin_granted_tier,favorite_teams,favorite_players,favorite_sports').eq('id', userId).maybeSingle()
   if (error) return { error: safeApiError('favorites-account', error, 'Favorites could not be loaded.') }
   if (!profile) return { error: NextResponse.json({ error: 'Your profile is not ready.' }, { status: 409, headers }) }
-  return { admin, profile, allowNba: true }
+  return { admin, profile, allowNba: true, allowMlb: !MLB_HIBERNATING || profile.account_type === 'admin' }
 }
 
 export async function GET() {
   const auth = await account()
   if (auth.error) return auth.error
   try {
-    return NextResponse.json({ catalog: await getFavoriteCatalog(auth.allowNba), teams: normalizeFavoriteTeams(auth.profile.favorite_teams, auth.allowNba), players: normalizeFavoritePlayers(auth.profile.favorite_players, auth.allowNba), sports: auth.profile.favorite_sports ?? [] }, { headers })
+    const catalog = await getFavoriteCatalog(auth.allowNba)
+    const priorSports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string') : []
+    const teamIsMlb = (key: string) => resolveFavoriteTeam(key, catalog, priorSports)?.sport === 'mlb' || key.startsWith('MLB:')
+    const sports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string' && (auth.allowMlb || sport.toUpperCase() !== 'MLB')) : []
+    return NextResponse.json({ catalog: auth.allowMlb ? catalog : catalog.filter(team => team.sport !== 'mlb'), teams: normalizeFavoriteTeams(auth.profile.favorite_teams, auth.allowNba).filter(key => auth.allowMlb || !teamIsMlb(key)), players: normalizeFavoritePlayers(auth.profile.favorite_players, auth.allowNba).filter(player => auth.allowMlb || favoritePlayerSport(player) !== 'mlb'), sports }, { headers })
   } catch (error) { return safeApiError('favorites-catalog', error, 'Teams could not be loaded. Please try again.') }
 }
 
@@ -34,29 +39,47 @@ export async function PATCH(request: Request) {
   try { body = await request.json(); if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Invalid') } catch { return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers }) }
   let teams = body.teams, players = body.players
   if (teams !== undefined && !Array.isArray(teams) || players !== undefined && !Array.isArray(players)) return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers })
+  const catalog = await getFavoriteCatalog(auth.allowNba).catch(() => null)
+  if (!catalog) return NextResponse.json({ error: 'Teams could not be loaded.' }, { status: 503, headers })
+  const priorSports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string') : []
+  const teamIsMlb = (key: string) => resolveFavoriteTeam(key, catalog, priorSports)?.sport === 'mlb' || key.startsWith('MLB:')
   if (body.action === 'add' || body.action === 'remove') {
     const currentTeams = normalizeFavoriteTeams(auth.profile.favorite_teams)
     const currentPlayers = normalizeFavoritePlayers(auth.profile.favorite_players)
     if (body.team !== undefined) {
       const team = normalizeFavoriteTeams([body.team])[0]
       if (!team || team.startsWith('NBA:') && !auth.allowNba) return NextResponse.json({ error: 'That team is unavailable.' }, { status: 403, headers })
-      const catalog = await getFavoriteCatalog(auth.allowNba).catch(() => null)
-      if (!catalog) return NextResponse.json({ error: 'Teams could not be loaded.' }, { status: 503, headers })
+      if (!auth.allowMlb && teamIsMlb(team)) return NextResponse.json({ error: 'That team is unavailable.' }, { status: 403, headers })
       if (!catalog.some(item => item.key === team)) return NextResponse.json({ error: 'Unknown team.' }, { status: 400, headers })
-      const matches = (key: string) => resolveFavoriteTeam(key, catalog, auth.profile.favorite_sports ?? [])?.key === team
+      const matches = (key: string) => resolveFavoriteTeam(key, catalog, priorSports)?.key === team
       teams = body.action === 'add' ? currentTeams.some(matches) ? currentTeams : [...currentTeams, team] : currentTeams.filter(key => !matches(key))
     } else {
       const player = normalizeFavoritePlayers([body.player])[0]
       if (!player || favoritePlayerSport(player) === 'nba' && !auth.allowNba) return NextResponse.json({ error: 'That player is unavailable.' }, { status: 403, headers })
+      if (!auth.allowMlb && favoritePlayerSport(player) === 'mlb') return NextResponse.json({ error: 'That player is unavailable.' }, { status: 403, headers })
       const key = favoritePlayerKey(player)
       const sport = favoritePlayerSport(player), count = currentPlayers.filter(item => favoritePlayerSport(item) === sport).length
       if (body.action === 'add' && count >= FAVORITE_PLAYERS_PER_SPORT && !currentPlayers.some(item => favoritePlayerKey(item) === key)) return NextResponse.json({ error: `Choose up to ${FAVORITE_PLAYERS_PER_SPORT} favorite ${sport.toUpperCase()} players. Edit your favorites in Settings.` }, { status: 400, headers })
       players = body.action === 'add' ? [...currentPlayers, player] : currentPlayers.filter(item => favoritePlayerKey(item) !== key)
     }
   }
+  if (!auth.allowMlb) {
+    if (teams !== undefined) {
+      const old = normalizeFavoriteTeams(auth.profile.favorite_teams).filter(teamIsMlb)
+      const requested = normalizeFavoriteTeams(teams, auth.allowNba)
+      if (requested.some(key => teamIsMlb(key) && !old.includes(key))) return NextResponse.json({ error: 'That team is unavailable.' }, { status: 403, headers })
+      teams = [...requested.filter(key => !teamIsMlb(key)), ...old]
+    }
+    if (players !== undefined) {
+      const old = normalizeFavoritePlayers(auth.profile.favorite_players).filter(player => favoritePlayerSport(player) === 'mlb')
+      const requested = normalizeFavoritePlayers(players, auth.allowNba)
+      if (requested.some(player => favoritePlayerSport(player) === 'mlb' && !old.some(previous => favoritePlayerKey(previous) === favoritePlayerKey(player)))) return NextResponse.json({ error: 'That player is unavailable.' }, { status: 403, headers })
+      players = [...old, ...requested.filter(player => favoritePlayerSport(player) !== 'mlb')]
+    }
+  }
   const update = favoriteUpdates({ teams, players }, auth.profile, auth.allowNba)
   if (!Object.keys(update).length) return NextResponse.json({ error: 'No favorites supplied.' }, { status: 400, headers })
   const { error } = await auth.admin.from('users').update(update).eq('id', auth.profile.id)
   if (error) return safeApiError('favorites-save', error, 'Favorites could not be saved.')
-  return NextResponse.json({ ok: true, teams: normalizeFavoriteTeams(update.favorite_teams ?? auth.profile.favorite_teams, auth.allowNba), players: normalizeFavoritePlayers(update.favorite_players ?? auth.profile.favorite_players, auth.allowNba) }, { headers })
+  return NextResponse.json({ ok: true, teams: normalizeFavoriteTeams(update.favorite_teams ?? auth.profile.favorite_teams, auth.allowNba).filter(key => auth.allowMlb || !teamIsMlb(key)), players: normalizeFavoritePlayers(update.favorite_players ?? auth.profile.favorite_players, auth.allowNba).filter(player => auth.allowMlb || favoritePlayerSport(player) !== 'mlb') }, { headers })
 }

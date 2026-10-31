@@ -130,7 +130,7 @@ export default async function MembershipSettingsPage({
         <div className={`${styles.card} ${styles.cardAccent}`}>
           <h3>Add Ultimate — $10/mo</h3>
           <p>
-            You already get Advanced free through your Discord membership — add every Ultimate tool (including The Dugout) for just $10/mo on top, instead of the full price. This stays active only as long as your Discord membership does.
+            You already get Advanced free through your Discord membership — add every Ultimate tool for just $10/mo on top, instead of the full price. This stays active only as long as your Discord membership does.
           </p>
           <PricingCheckoutButton planId={DISCORD_ADDON_PLAN_ID} label="Add Ultimate — $10/mo" loggedIn />
         </div>

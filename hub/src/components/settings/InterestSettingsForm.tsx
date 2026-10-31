@@ -5,6 +5,8 @@ import { FavoritePicker } from '@/components/profile/FavoritePicker'
 import { normalizeFavoritePlayers, type FavoritePlayer } from '@/lib/sportFavorites'
 import { Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 type InterestSettings = {
   content_mix?: string[]
@@ -35,6 +37,7 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
   favoritePlayers: FavoritePlayer[]
   allowNba?: boolean
 }) {
+  const { profile } = useAuth()
   const supabase = useMemo(() => createClient(), [])
   const [sports, setSports] = useState(favoriteSports)
   const [teams, setTeams] = useState(favoriteTeams)
@@ -65,7 +68,7 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
 
   return <div className="ss-interest-settings">
     <PreferenceSection title="Sports" description="Choose the leagues that shape your home and discovery views.">
-      <ChoiceGrid>{SPORTS.filter(sport => allowNba || sport !== 'NBA').map(sport => <Choice key={sport} selected={sports.includes(sport)} onClick={() => toggle(sport, sports, setSports)}>{sport}</Choice>)}</ChoiceGrid>
+      <ChoiceGrid>{SPORTS.filter(sport => (allowNba || sport !== 'NBA') && (!MLB_HIBERNATING || profile?.account_type === 'admin' || sport !== 'MLB')).map(sport => <Choice key={sport} selected={sports.includes(sport)} onClick={() => toggle(sport, sports, setSports)}>{sport}</Choice>)}</ChoiceGrid>
     </PreferenceSection>
 
     <PreferenceSection title="Teams & players" description="Keep your favorites close."><FavoritePicker teams={teams} players={players} sports={sports} allowNba={allowNba} onTeamsChange={setTeams} onPlayersChange={setPlayers}/></PreferenceSection>

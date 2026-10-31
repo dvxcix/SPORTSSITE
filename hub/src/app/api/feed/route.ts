@@ -4,6 +4,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { InvalidFeedCursorError } from '@/lib/feedPagination'
 import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { fetchFeedPage, feedSport, type FeedFilter } from '@/lib/feedQuery'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 const VALID_FILTERS: FeedFilter[] = ['latest', 'top', 'picks', 'following']
 
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   catch { return NextResponse.json({ error: 'Feed is temporarily unavailable.' }, { status: 503 }) }
 
   const page = await fetchFeedPage(supabase, {
-    filter, userId: user?.id, blockedIds, cursor, pageSize: 20, sport: feedSport(searchParams.get('sport')),
+    filter, userId: user?.id, blockedIds, cursor, pageSize: 20, sport: feedSport(searchParams.get('sport')), hideMlb: !(await canViewMlb(supabase, user?.id)),
   }).catch(error => { if (error instanceof InvalidFeedCursorError) return null; throw error })
   if (!page) return NextResponse.json({ error: 'Invalid cursor' }, { status: 400 })
   const { posts: rawPosts, nextCursor, hasMore } = page

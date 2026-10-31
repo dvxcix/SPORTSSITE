@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const maxDuration = 30
 export const revalidate = 0
@@ -10,7 +11,9 @@ export const revalidate = 0
 async function run(request: Request) {
   const authError = requireCronAuth(request); if (authError) return authError
   const admin = createAdminClient()
-  const { data: due, error } = await admin.from('creator_scheduled_posts').select('id,creator_id,content,post_type,sport,visibility,media_urls,attempts').eq('status', 'scheduled').lte('scheduled_for', new Date().toISOString()).order('scheduled_for').limit(50)
+  let query = admin.from('creator_scheduled_posts').select('id,creator_id,content,post_type,sport,visibility,media_urls,attempts').eq('status', 'scheduled').lte('scheduled_for', new Date().toISOString()).order('scheduled_for').limit(50)
+  if (MLB_HIBERNATING) query = query.or('sport.is.null,sport.not.ilike.MLB')
+  const { data: due, error } = await query
   if (error) return safeApiError('publish-scheduled-posts', error)
   let published = 0; let failed = 0
   for (const item of due ?? []) {

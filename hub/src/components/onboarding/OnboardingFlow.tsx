@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/Switch";
 import { Users } from "lucide-react";
 import { FavoritePicker } from "@/components/profile/FavoritePicker";
 import { normalizeFavoritePlayers, type FavoritePlayer } from "@/lib/sportFavorites";
+import { MLB_HIBERNATING } from "@/lib/mlbOffseason";
 import { SafeImage } from "@/components/ui/SafeImage";
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
@@ -574,7 +575,7 @@ export function OnboardingFlow({
                   copy="Choose what you follow. You can refine this anytime."
                 />
                 <div className="ss-onboarding-sports">
-                  {SPORTS.filter((sport) => allowNba || sport !== "NBA").map((sport) => (
+                  {SPORTS.filter((sport) => (allowNba || sport !== "NBA") && (!MLB_HIBERNATING || initialProfile?.account_type === "admin" || sport !== "MLB")).map((sport) => (
                     <button
                       key={sport}
                       type="button"
@@ -707,7 +708,7 @@ export function OnboardingFlow({
                       label: "Direct messages",
                       desc: "New private messages",
                     },
-                  ].map((item) => (
+                  ].filter((item) => !MLB_HIBERNATING || initialProfile?.account_type === "admin" || item.key !== "lineup_confirmed").map((item) => (
                     <div key={item.key}>
                       <div>
                         <strong>{item.label}</strong>

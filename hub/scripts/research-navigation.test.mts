@@ -21,7 +21,8 @@ test('sport detection does not confuse social pages or similarly named URLs', ()
   assert.equal(researchSportForPath('/players-other'), null)
 })
 test('NFL preference never grants NFL access', () => {
-  assert.equal(researchHome('nfl', false), '/dugout')
+  assert.equal(researchHome('nfl', false), NBA_UPGRADE_HREF)
+  assert.equal(researchHome('nfl', false, false, true), '/dugout')
   assert.equal(researchHome('nfl', true), '/the-sideline')
 })
 test('tool navigation preserves game, date, sample and capture but replaces mode', () => {
@@ -50,7 +51,7 @@ test('NBA discovery is public but stored preference never grants Ultimate tool a
   for (const profile of [undefined, null, {}, { account_type: 'user', tier: 'advanced' }, { account_type: 'beta', tier: 'free' }, { account_type: 'ultimate' }, { account_type: 'Admin' }]) {
     const nbaAccess = hasNbaAccess(profile)
     assert.equal(nbaAccess, false)
-    assert.deepEqual(availableResearchSports(true), ['mlb', 'nfl', 'nba'])
+    assert.deepEqual(availableResearchSports(true), ['nfl', 'nba'])
     assert.equal(resolveResearchSport('nba', true), 'nba')
     assert.equal(researchHome('nba', true, nbaAccess), NBA_UPGRADE_HREF)
     assert.equal(researchNavigationHref('/the-paint?view=score', '/the-paint', new URLSearchParams('game=123'), nbaAccess), NBA_UPGRADE_HREF)
@@ -60,7 +61,10 @@ test('NBA discovery is public but stored preference never grants Ultimate tool a
     assert.equal(researchHome('nba', false, hasNbaAccess(profile)), '/the-paint')
     assert.equal(researchNavigationHref('/the-paint?view=score', '/the-paint', new URLSearchParams('game=123'), hasNbaAccess(profile)), '/the-paint?view=score&game=123')
   }
-  assert.deepEqual(availableResearchSports(false), ['mlb','nba'])
+  assert.deepEqual(availableResearchSports(false), ['nba'])
+  assert.deepEqual(availableResearchSports(true, true), ['mlb','nfl','nba'])
+  assert.equal(resolveResearchSport('mlb', true), 'nfl')
+  assert.equal(resolveResearchSport('mlb', true, true), 'mlb')
 })
 
 test('NBA page families are recognized without matching similarly named public paths', () => {

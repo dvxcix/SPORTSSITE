@@ -5,12 +5,17 @@ import { Check, Loader2, Search, X } from 'lucide-react'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FAVORITE_PLAYERS_PER_SPORT, MLB_FAVORITE_TEAMS, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, favoriteSearchPlayers, favoriteTeamSelected, toggleFavoriteTeam, type FavoritePlayer, type FavoriteSport, type FavoriteTeam } from '@/lib/sportFavorites'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export function FavoritePicker({ teams, players, sports = [], allowNba = true, onTeamsChange, onPlayersChange }: {
   teams: string[]; players?: FavoritePlayer[]; sports?: string[]; allowNba?: boolean
   onTeamsChange: (teams: string[]) => void; onPlayersChange?: (players: FavoritePlayer[]) => void
 }) {
-  const [sport, setSport] = useState<FavoriteSport>(() => allowNba && sports.includes('NBA') ? 'nba' : sports.includes('NFL') && !sports.includes('MLB') ? 'nfl' : 'mlb')
+  const { profile } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
+  const [chosenSport, setSport] = useState<FavoriteSport>(() => allowNba && sports.includes('NBA') ? 'nba' : 'nfl')
+  const sport = chosenSport === 'mlb' && !mlbAccess ? 'nfl' : chosenSport
   const [catalog, setCatalog] = useState<FavoriteTeam[]>(MLB_FAVORITE_TEAMS)
   const [catalogError, setCatalogError] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -41,7 +46,7 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = true, o
     return () => { clearTimeout(timer); controller.abort() }
   }, [query, sport, searchEnabled])
   const selectedPlayers = (players ?? []).filter(player => favoritePlayerSport(player) === sport && (allowNba || sport !== 'nba'))
-  const visibleCatalog = catalog.filter(team => allowNba || team.sport !== 'nba')
+  const visibleCatalog = catalog.filter(team => (allowNba || team.sport !== 'nba') && (mlbAccess || team.sport !== 'mlb'))
   function changeQuery(value: string) { setQuery(value); setResults([]); setSearching(value.trim().length >= 2); setSearchError(false) }
   function changeSport(value: FavoriteSport) { setSport(value); changeQuery('') }
   function addPlayer(player: FavoritePlayer) {
@@ -51,7 +56,7 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = true, o
   }
   return <div className="space-y-5">
     <div className="flex flex-wrap gap-2" role="group" aria-label="Favorite league">
-      {(['mlb', 'nfl', ...(allowNba ? ['nba'] : [])] as FavoriteSport[]).map(league => <button key={league} type="button" aria-pressed={sport === league} onClick={() => changeSport(league)} className={`min-h-10 rounded-xl border px-4 text-xs font-bold transition ${sport === league ? 'border-lime-400/40 bg-lime-400/10 text-lime-300' : 'border-white/10 text-zinc-400 hover:bg-white/5'}`}>{league.toUpperCase()}</button>)}
+      {([...(mlbAccess ? ['mlb'] : []), 'nfl', ...(allowNba ? ['nba'] : [])] as FavoriteSport[]).map(league => <button key={league} type="button" aria-pressed={sport === league} onClick={() => changeSport(league)} className={`min-h-10 rounded-xl border px-4 text-xs font-bold transition ${sport === league ? 'border-lime-400/40 bg-lime-400/10 text-lime-300' : 'border-white/10 text-zinc-400 hover:bg-white/5'}`}>{league.toUpperCase()}</button>)}
     </div>
     <section aria-label={`Favorite ${sport.toUpperCase()} teams`}>
       <h3 className="mb-3 text-xs font-bold text-zinc-400">Favorite teams</h3>

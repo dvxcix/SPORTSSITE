@@ -1,5 +1,6 @@
 import { after, NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { homeRunAlertEvent, nearHomeRunAlertEvent, type NearHrSourceRow } from '@/lib/contactAlertEvents'
@@ -65,6 +66,9 @@ async function canonicalNearHrWebhookRow(body: TriggerBody): Promise<NearHrSourc
 }
 
 export async function POST(request: Request) {
+  // Even webhook verification would make an MLB source request; do not
+  // validate, enqueue, render or deliver while the league is hibernating.
+  if (MLB_HIBERNATING) return mlbPausedResponse()
   const body = await request.json().catch(() => null) as TriggerBody | null
   if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
 

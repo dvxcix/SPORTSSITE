@@ -19,9 +19,10 @@ import { useNflAccess } from '@/lib/useNflAccess'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { useResearchSport } from './useResearchSport'
 import { ResearchSportSwitcher } from './ResearchSportSwitcher'
-import { researchToolActive, researchNavigationHref, resolveResearchSport } from './researchNavigation'
+import { researchToolActive, researchNavigationHref, resolveResearchSport, researchSportForPath } from './researchNavigation'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nbaResearchNavigation } from './navigationConfig'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import navigationStyles from './researchNavigation.module.css'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
@@ -105,7 +106,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const { allowed: nflAccess } = useNflAccess()
   const { sport, chooseSport } = useResearchSport(path)
   const nbaAccess = hasNbaAccess(profile)
-  const selectedSport = resolveResearchSport(sport, nflAccess)
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
+  const selectedSport = resolveResearchSport(sport, nflAccess, mlbAccess)
   const [menuSearch, setMenuSearch] = useState('')
   const drawerRef = useRef<HTMLElement>(null)
   const closeRef = useRef(onClose)
@@ -180,6 +182,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
   const permittedNav = nav.filter(item => {
     if (!item) return true
+    if (!mlbAccess && (('section' in item && item.section === 'MLB Research') || ('href' in item && researchSportForPath(item.href.split('?')[0]) === 'mlb'))) return false
     if (item.nflOnly && !nflAccess) return false
     if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
@@ -303,7 +306,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </button>
 
       <div className={navigationStyles.controls}>
-        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
+        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
         {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page or tool" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
       </div>
       {/* Remount the scroll area when switching sports so its first tool is visible. */}

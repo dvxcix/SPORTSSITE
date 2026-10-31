@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { processContactRecapExportJob } from '@/lib/contactRecapExportQueue'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,6 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const auth = await requireAdmin()
   if (auth.error || !auth.user) return auth.error
+  if (MLB_HIBERNATING) return NextResponse.json({ error: 'MLB exports are paused for the off-season.' }, { status: 503 })
   const body = await request.json().catch(() => null) as Record<string, unknown> | null
   const date = typeof body?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : null
   const kind = body?.kind === 'near' ? 'near' : body?.kind === 'hr' ? 'hr' : null

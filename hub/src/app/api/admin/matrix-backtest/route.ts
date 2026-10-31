@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runMatrixBacktest } from '@/lib/matrixBacktest'
 import type { Matrix } from '@slipsurge/core/matrixEngine'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -37,6 +38,7 @@ function dateRange(start: string, end: string): string[] {
 export async function POST(req: Request) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return NextResponse.json({ error: 'MLB backtesting is paused for the off-season.' }, { status: 503 })
 
   const body = await req.json().catch(() => null)
   const elementCode = typeof body?.element_code === 'string' ? body.element_code.trim().toUpperCase() : ''

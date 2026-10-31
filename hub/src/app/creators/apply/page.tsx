@@ -32,6 +32,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import styles from './CreatorApply.module.css'
 import { hasCreatorAccess } from '@/lib/creator'
 import { trackProductEvent } from '@/lib/productAnalytics'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Tennis', 'Golf', 'Boxing', 'CFB', 'CBB']
 
@@ -302,7 +303,7 @@ export default function CreatorApplyPage() {
               <fieldset>
                 <legend>Sports you cover <em>*</em></legend>
                 <div className={styles.sportGrid}>
-                  {SPORTS.map((sport) => {
+                  {SPORTS.filter(sport => sport !== 'MLB' || !MLB_HIBERNATING || profile?.account_type === 'admin').map((sport) => {
                     const selected = sports.includes(sport)
                     const logo = sportLogoUrl(sport)
                     return <button className={selected ? styles.sportSelected : styles.sport} aria-pressed={selected} key={sport} type="button" onClick={() => toggleSport(sport)}>{logo && <SafeImage src={logo} alt="" width={18} height={18} />}<span>{sport}</span>{selected && <Check size={14} />}</button>

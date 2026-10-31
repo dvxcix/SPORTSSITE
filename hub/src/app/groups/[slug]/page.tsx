@@ -18,6 +18,7 @@ import { GroupMemberOnboarding } from '@/components/groups/GroupMemberOnboarding
 import { GroupChannelWorkspace, type GroupWorkspaceChannel } from '@/components/groups/GroupChannelWorkspace'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 import styles from './GroupPage.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -25,8 +26,12 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createClient()
-  const { data: group } = await supabase.from('groups').select('name, description, banner_url').eq('slug', slug).single()
+  const { data: group } = await supabase.from('groups').select('name, description, banner_url, sport').eq('slug', slug).single()
   if (!group) return {}
+  if (group.sport?.toUpperCase() === 'MLB') {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!(await canViewMlb(supabase, user?.id))) return { robots: { index: false, follow: false, nocache: true } }
+  }
   const description = group.description || `${group.name} on SlipSurge`
   return {
     title: `${group.name} · SlipSurge`,
@@ -44,6 +49,8 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     supabase.from('groups').select('*').eq('slug', slug).single(),
   ])
   if (!group) notFound()
+  const showMlb = await canViewMlb(supabase, user?.id)
+  if (!showMlb && group.sport?.toUpperCase() === 'MLB') notFound()
 
   let isMember = false
   let isOwner = false
@@ -89,7 +96,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
       .limit(20)
-    return attachUserReactions(rawPosts ?? [], user?.id)
+    return attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
   }
   const [
     { data: members },

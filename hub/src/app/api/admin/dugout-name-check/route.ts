@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 import {
   canonicalProviderArchiveKey,
   normName,
@@ -179,6 +180,7 @@ const KNOWN_DIAGNOSTIC_MLB_IDS: Record<string, number> = {
 export async function GET(req: Request) {
   const gate = await requireAdmin()
   if (gate.error) return gate.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

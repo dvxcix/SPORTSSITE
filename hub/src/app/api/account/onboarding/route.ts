@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { favoriteUpdates } from '@/lib/sportFavorites'
+import { favoritePlayerKey, favoritePlayerSport, favoriteUpdates, normalizeFavoritePlayers, normalizeFavoriteTeams, resolveFavoriteTeam } from '@/lib/sportFavorites'
+import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { safeApiError } from '@/lib/safeApiError'
 
 export const dynamic = 'force-dynamic'
@@ -55,13 +57,37 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('users')
-    .select('id, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_teams, favorite_players, notification_settings, interest_settings')
+    .select('id, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_teams, favorite_players, favorite_sports, notification_settings, interest_settings')
     .eq('id', user.id)
     .maybeSingle()
 
   if (profileError) return safeApiError('account-onboarding-profile', profileError, 'We could not load your account setup.')
   if (!profile) {
     return NextResponse.json({ error: 'Your account profile is not ready yet. Refresh and try again.', code: 'PROFILE_NOT_READY' }, { status: 409 })
+  }
+
+  if (MLB_HIBERNATING && profile.account_type !== 'admin') {
+    // Hidden MLB favorites remain stored unchanged when a member updates other
+    // sports. Resolve legacy bare team abbreviations using the same catalog and
+    // prior sport preferences as the favorites editor; never infer from names.
+    const catalog = await getFavoriteCatalog(true).catch(() => null)
+    if (!catalog) return NextResponse.json({ error: 'Teams could not be loaded.' }, { status: 503 })
+    const oldSports = boundedStrings(profile.favorite_sports, ALLOWED_SPORTS, 8)
+    const oldTeams = normalizeFavoriteTeams(profile.favorite_teams)
+    const oldPlayers = normalizeFavoritePlayers(profile.favorite_players)
+    const teamIsMlb = (key: string) => resolveFavoriteTeam(key, catalog, oldSports)?.sport === 'mlb' || key.startsWith('MLB:')
+    const hiddenTeams = oldTeams.filter(teamIsMlb)
+    const hiddenPlayers = oldPlayers.filter(player => favoritePlayerSport(player) === 'mlb')
+    const requestedTeams = normalizeFavoriteTeams(body.teams ?? [])
+    const requestedPlayers = normalizeFavoritePlayers(body.favoritePlayers ?? [])
+    if (sports.includes('MLB') && !oldSports.includes('MLB')
+      || requestedTeams.some(key => teamIsMlb(key) && !hiddenTeams.includes(key))
+      || requestedPlayers.some(player => favoritePlayerSport(player) === 'mlb' && !hiddenPlayers.some(previous => favoritePlayerKey(previous) === favoritePlayerKey(player)))) {
+      return NextResponse.json({ error: 'That sport is unavailable.' }, { status: 403 })
+    }
+    body.teams = [...requestedTeams.filter(key => !teamIsMlb(key)), ...hiddenTeams]
+    body.favoritePlayers = [...hiddenPlayers, ...requestedPlayers.filter(player => favoritePlayerSport(player) !== 'mlb')]
+    if (oldSports.includes('MLB') && !sports.includes('MLB')) sports.push('MLB')
   }
 
   const alerts = { ...((profile.notification_settings as Record<string, boolean> | null) ?? {}) }

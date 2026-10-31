@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
 // the /api/cron/* jobs already use — the latter lets the scrape-books
@@ -34,6 +35,7 @@ function parseOdds(odds: string | null): number | null {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const contentLength = Number(req.headers.get('content-length') || 0)
   if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })
 

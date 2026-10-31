@@ -18,11 +18,12 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl' | 'nba'
 
-const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
+const TRENDING_TAGS = ['OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
 const RECENT_SEARCHES_KEY = 'slipsurge:recent-searches'
 
 type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null; isProbableStarter: boolean }
@@ -34,7 +35,8 @@ type EventResult = { id: string; title: string; description: string | null; cove
 type SavedSearch = { id: string; query: string; result_tab: SearchTab; last_used_at: string }
 
 export function SearchClient() {
-  const { user: activeUser, loading: authLoading, authUnavailable } = useAuth()
+  const { user: activeUser, profile, loading: authLoading, authUnavailable } = useAuth()
+  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const activeUserId = activeUser?.id ?? null
   // The topbar's search box links here with ?q= already filled in — read
   // it once on mount so landing here doesn't mean retyping what you just
@@ -151,7 +153,7 @@ export function SearchClient() {
       supabase.from('pages').select('id,slug,name,description,avatar_url,emoji,follower_count').eq('is_published', true).or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('follower_count', { ascending: false }).limit(8),
       supabase.from('channels').select('id,slug,name,description,icon,member_count').or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('member_count', { ascending: false }).limit(8),
       supabase.from('events').select('id,title,description,cover_image,start_date,going_count').or(`title.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('start_date', { ascending: true }).limit(8),
-      fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+      mlbAccess ? fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
       fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
       nbaAllowed ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [], error: 'NBA search is temporarily unavailable.' }).catch(() => ({ players: [], teams: [], error: 'NBA search is temporarily unavailable.' })) : Promise.resolve({ players: [], teams: [] }),
     ])
@@ -163,6 +165,7 @@ export function SearchClient() {
     const p = [...(byContent ?? []), ...byPickData]
       .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
       .filter((post: any) => !blockedSet.has(post.author?.id) && !blockedSet.has(post.author_id))
+      .filter(post => mlbAccess || post.sport?.toUpperCase() !== 'MLB')
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
       .slice(0, 15)
 
@@ -184,7 +187,7 @@ export function SearchClient() {
     setChannels((channelRows ?? []).map(channel => ({ id: channel.id, slug: channel.slug, name: channel.name, description: channel.description, avatar_url: null, emoji: channel.icon || '#', count: channel.member_count ?? 0 })))
     setEvents(eventRows ?? [])
     setLoading(false)
-  }, [supabase, nbaAllowed, currentBlockIds, activeUserId, accountGeneration])
+  }, [supabase, nbaAllowed, mlbAccess, currentBlockIds, activeUserId, accountGeneration])
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(q), 300)
@@ -231,7 +234,7 @@ export function SearchClient() {
   }
 
   async function openSavedSearch(saved: SavedSearch) {
-    setQ(saved.query); setTab(saved.result_tab === 'nba' && !nbaAllowed ? 'all' : saved.result_tab)
+    setQ(saved.query); setTab((saved.result_tab === 'nba' && !nbaAllowed) || (saved.result_tab === 'mlb' && !mlbAccess) ? 'all' : saved.result_tab)
     const lastUsedAt = new Date().toISOString()
     setSavedSearches(current => current.map(item => item.id === saved.id ? { ...item, last_used_at: lastUsedAt } : item).sort((a, b) => b.last_used_at.localeCompare(a.last_used_at)))
     await supabase.from('saved_searches').update({ last_used_at: lastUsedAt }).eq('id', saved.id).eq('user_id', currentUserId)
@@ -242,13 +245,13 @@ export function SearchClient() {
   const canShowSocial = currentBlockIds !== null && socialResultOwner === activeUserId && socialResultGeneration === accountGeneration
   const activeBlocked = new Set(currentBlockIds ?? [])
   const visibleUsers = canShowSocial ? users.filter(user => !activeBlocked.has(user.id)) : []
-  const visiblePosts = canShowSocial ? posts.filter(post => !activeBlocked.has(post.author_id)) : []
+  const visiblePosts = canShowSocial ? posts.filter(post => !activeBlocked.has(post.author_id) && (mlbAccess || post.sport?.toUpperCase() !== 'MLB')) : []
   const picks = visiblePosts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  const hasResults = visibleUsers.length > 0 || visiblePosts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
+  const hasResults = visibleUsers.length > 0 || visiblePosts.length > 0 || mlbAccess && (players.length > 0 || teams.length > 0) || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
-  const showMlb = tab === 'all' || tab === 'mlb'
+  const showMlb = mlbAccess && (tab === 'all' || tab === 'mlb')
   const showNfl = tab === 'all' || tab === 'nfl'
   const showNba = nbaAllowed && (tab === 'all' || tab === 'nba')
   const showCommunity = tab === 'all' || tab === 'community'
@@ -316,7 +319,7 @@ export function SearchClient() {
         <>
           {/* Tabs */}
           <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 scrollbar-hide">
-            {([['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ...(nbaAllowed ? [['nba', 'NBA']] : []), ['community', 'Community'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as [SearchTab, string][]).map(([k, l]) => (
+            {([['all', 'All'], ...(mlbAccess ? [['mlb', 'MLB']] : []), ['nfl', 'NFL'], ...(nbaAllowed ? [['nba', 'NBA']] : []), ['community', 'Community'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as [SearchTab, string][]).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
                 className={`min-w-16 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {l}

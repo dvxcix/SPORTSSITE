@@ -10,6 +10,7 @@ import { BookLogo } from '@/components/BookLogo'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { FavoritePicker } from '@/components/profile/FavoritePicker'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 
@@ -242,7 +243,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Sports</label>
         <div className="flex flex-wrap gap-2">
-          {SPORTS.map(s => {
+          {SPORTS.filter(s => !MLB_HIBERNATING || profile?.account_type === 'admin' || s !== 'MLB').map(s => {
             const logo = sportLogoUrl(s)
             return (
               <button key={s} type="button" aria-pressed={form.favorite_sports.includes(s)} onClick={() => toggleSport(s)}

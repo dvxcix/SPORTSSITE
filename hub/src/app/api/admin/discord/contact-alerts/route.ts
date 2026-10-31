@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendContactAlertCanary } from '@/lib/contactAlertOutbox'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -88,6 +89,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const authError = await requireAdmin()
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const body = await request.json().catch(() => null) as { kind?: 'hr' | 'near_hr' } | null
   if (body?.kind !== 'hr' && body?.kind !== 'near_hr') {
     return NextResponse.json({ error: 'kind must be hr or near_hr' }, { status: 400 })

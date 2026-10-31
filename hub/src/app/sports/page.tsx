@@ -10,6 +10,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Radio, Trophy } from 'lucide-r
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 30
 
@@ -61,7 +62,7 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
   const today = cookieStore.get('local_date')?.value ?? new Date().toISOString().split('T')[0]
   const date = dateParam
   const checkDate = new Date(date + 'T12:00:00Z')
-  const mlbActive = isSeasonActive('mlb', checkDate)
+  const mlbActive = !MLB_HIBERNATING && isSeasonActive('mlb', checkDate)
   const activeNonMLB = NON_MLB_SPORTS.filter(({ key }) => isSeasonActive(key, checkDate))
   const [mlbGames, ...espnResults] = await Promise.all([
     mlbActive ? getMLBSchedule(date) : Promise.resolve([]),

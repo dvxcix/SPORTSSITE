@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { registerGlobalCommands } from '@/lib/discord'
 import { safeApiError } from '@/lib/safeApiError'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -21,7 +22,7 @@ async function requireAdmin() {
 // route doesn't know how to answer.
 const COMMANDS = [
   { name: 'help', description: 'List what the SlipSurge bot can do' },
-  { name: 'slate', description: "Today's MLB matchups and probable pitchers" },
+  ...(!MLB_HIBERNATING ? [{ name: 'slate', description: "Today's MLB matchups and probable pitchers" }] : []),
 ]
 
 export async function POST() {

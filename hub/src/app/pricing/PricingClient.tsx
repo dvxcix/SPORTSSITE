@@ -50,7 +50,7 @@ const TIERS: TierDef[] = [
     monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
   },
   {
-    tier: 'ultimate', label: 'Ultimate', tagline: 'The complete MLB, NFL and NBA research workspace.',
+    tier: 'ultimate', label: 'Ultimate', tagline: 'The complete NFL and NBA research workspace.',
     monthlyPlanId: 'plan_tCrVAX62uKyEq', annualPlanId: 'plan_1eWRTXv0XXTrI',
     monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium', trialDaysMonthly: 3,
   },
@@ -68,21 +68,16 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Community access: posts, DMs, groups, channels, and notifications', minTier: 'basic' },
   { label: 'Community leaderboard', minTier: 'free' },
   { label: 'Player research & search', minTier: 'basic' },
-  { label: 'MLB, NFL & NBA live scores, box scores & play-by-play', minTier: 'basic' },
-  { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
-  { label: 'Full Slate Breakdown', minTier: 'advanced' },
-  { label: 'The Dugout, our proprietary Game Matrix', minTier: 'ultimate' },
+  { label: 'NFL & NBA live scores, box scores & play-by-play', minTier: 'basic' },
   { label: 'TheSideline · NFL research', minTier: 'ultimate' },
   { label: 'The Court · NBA research, odds and ladders', minTier: 'ultimate' },
-  { label: 'The Public', minTier: 'advanced' },
-  { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
-const FREE_ROWS = ['Browse the MLB, NFL & NBA community feed', 'View & manage your profile', 'Choose MLB, NFL & NBA favorite teams and players']
+const FREE_ROWS = ['Browse the NFL & NBA community feed', 'View & manage your profile', 'Choose NFL & NBA favorite teams and players']
 
 const PLAN_GUIDE = [
-  { href: '#plan-basic', label: 'Start with Basic', detail: 'Community, live scores, and core MLB research' },
+  { href: '#plan-basic', label: 'Start with Basic', detail: 'Community and live scores' },
   { href: '#plan-advanced', label: 'Choose Advanced', detail: 'Add full-slate analysis and public market context' },
-  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'TheDugout, TheSideline and The Court' },
+  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'The Sideline and The Court' },
 ]
 
 export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {

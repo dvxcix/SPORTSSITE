@@ -5,6 +5,7 @@ import { Activity, Gauge, LoaderCircle, Radar, Target, Wind, X } from 'lucide-re
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { MarketBaselineRead } from '@/components/dugout/MarketBaselineRead'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import styles from './WorkspaceMarketCard.module.css'
 
 export type WorkspaceSavedMarket = {
@@ -130,11 +131,11 @@ function contextFrom(payload: unknown, item: WorkspaceSavedMarket, windowKey: Wi
 
 export function WorkspaceMarketCard({ item, windowKey, onRemove }: { item: WorkspaceSavedMarket; windowKey: WindowKey; onRemove: () => void }) {
   const [context, setContext] = useState<Context | null>(null)
-  const [loading, setLoading] = useState(item.sport === 'MLB' && Boolean(item.game_date))
+  const [loading, setLoading] = useState(!MLB_HIBERNATING && item.sport === 'MLB' && Boolean(item.game_date))
 
   useEffect(() => {
     let live = true
-    if (item.sport !== 'MLB' || !item.game_date) { setLoading(false); return }
+    if (MLB_HIBERNATING || item.sport !== 'MLB' || !item.game_date) { setLoading(false); return }
     const url = `/api/dugout/data?date=${encodeURIComponent(item.game_date)}&research=1`
     let request = cache.get(url)
     if (!request) {

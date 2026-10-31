@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { precomputeDugoutPitchlogStatForDate } from '@/lib/dugoutPitchlogStatPrecompute'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const maxDuration = 300
 
@@ -26,6 +27,7 @@ async function requireAdmin() {
 export async function GET(req: Request) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
   const { searchParams } = new URL(req.url)
   const single = searchParams.get('date')

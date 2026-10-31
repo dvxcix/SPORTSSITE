@@ -1,6 +1,7 @@
 import { nbaTeamLogo } from '@/lib/nbaPaint'
 /* eslint-disable @next/next/no-img-element -- ImageResponse/Satori requires native image elements. */
 import { ImageResponse } from 'next/og'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { createClient } from '@/lib/supabase/server'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
@@ -161,6 +162,7 @@ export async function GET(req: Request) {
   if (itemsError) return new Response('Could not load your selections. Please retry.', { status: 503 })
   if (rowsFound?.length !== ids.length) return new Response('Your Watchlist changed. Close and reopen Share to refresh it.', { status: 409 })
   const items = ids.map(id => rowsFound.find(item => item.id === id)!)
+  if (items.some(item => item.sport?.toUpperCase() === 'MLB') && !(await canViewMlb(supabase, user.id))) return new Response('Nothing on your watchlist yet', { status: 404 })
 
   if (!items || items.length === 0) {
     return new Response('Nothing on your watchlist yet', { status: 404 })

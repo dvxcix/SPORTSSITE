@@ -15,6 +15,7 @@ import { requirePaintAccess } from '@/lib/paintAccess'
 import { supportsMlbPick } from '@/lib/pickGrading'
 import { supportsNflPick } from '@/lib/nflPickGrading'
 import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
   const sport = body?.sport === 'NBA' ? 'NBA' : body?.sport === 'NFL' ? 'NFL' : 'MLB'
+  if (MLB_HIBERNATING && sport === 'MLB') return NextResponse.json({ error: 'MLB picks are paused for the off-season.' }, { status: 503 })
   if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
   if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in The Court.' }, { status: 403 })
   if (visibility === 'private' && (groupId || pageId)) return NextResponse.json({ error: 'Only-me picks belong in your personal picks.' }, { status: 400 })

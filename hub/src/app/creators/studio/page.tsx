@@ -4,6 +4,7 @@ import { CreatorStudioClient } from './CreatorStudioClient'
 import { hasCreatorAccess } from '@/lib/creator'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { CreatorAnalytics } from './CreatorAnalyticsDashboard'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,5 +81,5 @@ export default async function CreatorStudioPage() {
       }
     }),
   }
-  return <CreatorStudioClient profile={profile} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={scheduledPosts ?? []} />
+  return <CreatorStudioClient profile={profile} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={(scheduledPosts ?? []).filter(post => !MLB_HIBERNATING || profile.account_type === 'admin' || post.sport?.toUpperCase() !== 'MLB')} mlbAccess={!MLB_HIBERNATING || profile.account_type === 'admin'} />
 }

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isCronRequestAuthorized } from '@/lib/cron-auth'
 import { safeErrorMetadata } from '@/lib/safeApiError'
+import { isMlbCronPaused, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 type RouteHandler = (request: Request) => Promise<Response>
 
@@ -79,7 +80,7 @@ function settlementMetadata(body: Record<string, unknown>): ResponseMetadata {
     if (currentIssues.some(issue => !deferredReasons.has(issue))) sportFailed = true
     if (currentIssues.length) sportDeferred = true
     sportIssues.push(...currentIssues.map(issue => `${sport.toUpperCase()} ${issue}`))
-    details[sport] = { ...metrics, reasons, issues: currentIssues }
+    details[sport] = { ...metrics, reasons, issues: currentIssues, ...(sport === 'mlb' && report.paused === true ? { paused: true } : {}) }
   }
   return { error: sportIssues[0] ?? issues[0] ?? null, details, ...(sportFailed || failed ? { status: 'failed' as const } : sportDeferred || issues.length ? { status: 'deferred' as const } : {}) }
 }
@@ -107,6 +108,8 @@ async function responseMetadata(response: Response, jobName: string): Promise<Re
 export function withPipelineHealth(jobName: string, handler: RouteHandler, options?: { allowSecondarySecret?: boolean }): RouteHandler {
   return async request => {
     if (!isCronRequestAuthorized(request, options?.allowSecondarySecret)) return handler(request)
+    // Stop before the health ledger, queue, provider or browser is touched.
+    if (isMlbCronPaused(jobName)) return mlbPausedResponse()
 
     const admin = createAdminClient()
     const runId = randomUUID()

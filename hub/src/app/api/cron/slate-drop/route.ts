@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getDiscordConfig } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/platform'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -22,6 +23,7 @@ type SlateGame = {
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
+  if (MLB_HIBERNATING) return mlbPausedResponse()
 
   const admin = createAdminClient()
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

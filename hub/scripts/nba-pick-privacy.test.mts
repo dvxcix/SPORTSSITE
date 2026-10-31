@@ -25,7 +25,7 @@ async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:num
     getPaintProps:async()=>[options.offer??quote],getPaintIdentity:async()=>({id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}),
   }})
   const route=await compiled('../src/app/api/posts/pick/route.ts',{
-    '@/lib/pickGrading':{},'@/lib/nflPickGrading':{},'@/lib/mlbCaptureWindow':{},
+    '@/lib/pickGrading':{},'@/lib/nflPickGrading':{},'@/lib/mlbCaptureWindow':{},'@/lib/mlbOffseason':{MLB_HIBERNATING:true},
     'next/server':{NextResponse:{json:Response.json}},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:options.user===false?null:{id:'owner'}}})}})},
     '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:CapturedPost)=>{assert.equal(name,'create_tracked_pick_post');writes.push(args);return options.failed?{data:null,error:{message:'transaction failed'}}:{data:{id:'post',picksTracked:true},error:null}}})},
     '@slipsurge/core/mlbSchedule':{},'@slipsurge/core/parlayCalc':{},'@/lib/watchlist':{},'@/lib/mentions':{notifyMentions:async()=>notices.push('mention')},'@/lib/notify':{notifyFollowers:async()=>notices.push('followers')},'@/app/the-sideline/data':{},'@/app/the-sideline/kickoff':{},'@/lib/nflPickOffer':{},'@/lib/nbaPickValidation':validator,'@/lib/paintAccess':{requirePaintAccess:async()=>options.gate?{error:Response.json({},{status:options.gate})}:{userId:'owner'}},
@@ -67,7 +67,7 @@ test('Only-me does not bypass NBA access, pregame state, exact price or transact
 test('Only-me rejects group/page publishing and non-NBA posting before source reads',async()=>{
   for(const extra of [{groupId:'group'},{pageId:'page'},{sport:'NFL'},{sport:'MLB'}]){
     const h=await harness(),res=await h.post(request(item(),extra))
-    assert.equal(res.status,'sport'in extra?403:400);assert.equal(h.reads,0);assert.equal(h.writes.length,0);assert.deepEqual(h.notices,[])
+    assert.equal(res.status,'sport'in extra?(extra.sport==='MLB'?503:403):400);assert.equal(h.reads,0);assert.equal(h.writes.length,0);assert.deepEqual(h.notices,[])
   }
 })
 test('Existing public and followers posting continue their notification behavior',async()=>{

@@ -381,7 +381,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
-  imports = { '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
+  imports = { '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/nbaSlateDiagnostics': { nbaSlateFailure: () => {}, nbaSlateTimer: () => ({ enter: () => {} }) }, '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   imports = { '@/lib/nbaResearchResources': {}, '@/lib/nbaSlateFreezeData': {}, '@/lib/nbaSlateHeat': {}, '@/lib/nbaPregameResearchData': {}, './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -839,7 +839,7 @@ test('NBA cache post-commit and follower reads bypass render-pass memoized initi
     const cache=cacheModule.nbaSharedCache as typeof import('../src/lib/nbaSharedCache.ts').nbaSharedCache
     const result=await cache(`memoized-${mode}`,60,300,async()=>{loads++;return{points:25}})
     assert.equal(result.value.points,25);assert.equal(result.stale,false);assert.equal(result.fetchedAt,ready.fetched_at)
-    assert.equal(loads,mode==='owner'?1:0);assert.equal(writes,mode==='owner'?1:0);assert.equal(reads,3)
+    assert.equal(loads,mode==='owner'?1:0);assert.equal(writes,mode==='owner'?1:0);assert.equal(reads,mode==='owner'?3:4)
     assert.equal(signals.length,reads);assert.equal(new Set(signals).size,reads)
     assert.ok(signals.every(signal=>signal instanceof AbortSignal&&!signal.aborted))
   }

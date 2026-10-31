@@ -8,6 +8,8 @@ import { Switch } from '@/components/ui/Switch'
 import Image from 'next/image'
 import { ArrowRight, Camera, ImagePlus, Loader2, X } from 'lucide-react'
 import { uploadMedia } from '@/lib/uploadMedia'
+import { useAuth } from '@/context/AuthContext'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
@@ -15,6 +17,8 @@ const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '
 type CreatorProduct = { id: string; title: string; price: number; currency: string }
 
 export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[] }) {
+  const { profile } = useAuth()
+  const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({ name: '', description: '', sport: '', emoji: '👥', is_public: true })
@@ -132,7 +136,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
         <div>
           <label>Sport category</label>
           <div className="flex flex-wrap gap-1.5">
-            {SPORTS.map(s => {
+            {SPORTS.filter(s => showMlb || s !== 'MLB').map(s => {
               const logo = sportLogoUrl(s)
               return (
                 <button key={s} type="button" onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}

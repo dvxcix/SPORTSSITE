@@ -99,10 +99,11 @@ async function collectFeedBatches<T extends { id: string; created_at: string }>(
 // drift into different query logic.
 export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   filter: FeedFilter; userId: string | null | undefined; blockedIds: string[]
-  cursor?: string | null; pageSize?: number; sport?: FeedSport
+  cursor?: string | null; pageSize?: number; sport?: FeedSport; hideMlb?: boolean
 }): Promise<FeedPageResult> {
-  const { filter, userId, blockedIds, cursor, pageSize = 20, sport } = opts
+  const { filter, userId, blockedIds, cursor, pageSize = 20, sport, hideMlb = false } = opts
   requireFeedPageSize(pageSize)
+  if (hideMlb && sport === 'MLB') return { posts: [], nextCursor: null, hasMore: false }
   const blockedSet = new Set(blockedIds), hiddenPostIds = new Set<string>(), mutedAuthorIds = new Set<string>()
   if (userId) {
     for (const suppression of await feedSuppressions(supabase, userId)) {
@@ -113,6 +114,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   const isSuppressed = (post: FeedPost) => hiddenPostIds.has(post.id)
     || mutedAuthorIds.has(post.author_id)
     || mutedAuthorIds.has(post.reposted_by?.id ?? '')
+    || (hideMlb && post.sport?.toUpperCase() === 'MLB')
 
   let followedIds: string[] | null = null
   if (filter === 'following') {
@@ -179,9 +181,9 @@ export type ProfileTab = 'all' | 'picks' | 'reposts' | 'media'
 // from everyone the viewer follows; a profile's Reposts tab means "things
 // THIS person reposted," a query reposts.user_id already answers directly).
 export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
-  userId: string; tab: ProfileTab; cursor?: string | null; pageSize?: number
+  userId: string; tab: ProfileTab; cursor?: string | null; pageSize?: number; hideMlb?: boolean
 }): Promise<FeedPageResult> {
-  const { userId, tab, cursor, pageSize = 20 } = opts
+  const { userId, tab, cursor, pageSize = 20, hideMlb = false } = opts
   requireFeedPageSize(pageSize)
   const state = readFeedCursor(cursor)
   if (tab === 'media') state.reposts = 'done'
@@ -207,6 +209,6 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
   ])
   if (postResult.error || repostResult.error) throw new Error('Profile posts unavailable')
   return mergeFeedPage((postResult.data ?? []) as FeedPost[], (repostResult.data ?? []) as RepostRow[], state, pageSize,
-    post => tab !== 'media' || Array.isArray(post.media_urls) && post.media_urls.length > 0,
-    post => tab !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay')
+    post => (!hideMlb || post.sport?.toUpperCase() !== 'MLB') && (tab !== 'media' || Array.isArray(post.media_urls) && post.media_urls.length > 0),
+    post => (!hideMlb || post.sport?.toUpperCase() !== 'MLB') && (tab !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay'))
 }

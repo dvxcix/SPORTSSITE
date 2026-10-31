@@ -11,6 +11,7 @@ import { ArrowLeft, LockKeyhole, Search, Wifi, WifiOff } from 'lucide-react'
 import { getContextNavigation, routeMatches } from './navigationConfig'
 import { researchSportForPath, resolveResearchSport, researchToolActive, researchNavigationHref } from './researchNavigation'
 import { useResearchSport } from './useResearchSport'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export function DesktopCommandBar() {
   const pathname = usePathname()
@@ -19,7 +20,7 @@ export function DesktopCommandBar() {
   const { allowed: nflAccess } = useNflAccess()
   const { profile } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
-  const selectedSport = resolveResearchSport(sport, nflAccess)
+  const selectedSport = resolveResearchSport(sport, nflAccess, !MLB_HIBERNATING || profile?.account_type === 'admin')
   const router = useRouter()
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const context = getContextNavigation(pathname)

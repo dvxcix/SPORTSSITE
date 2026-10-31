@@ -9,6 +9,7 @@ import type { GameRoomMessage } from '@/components/community/GameRoom'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getNflGameCenter } from '@/lib/nflGameCenterServer'
 import { nbaGameReference } from '@/lib/nbaGameReference'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 15
 
@@ -64,6 +65,7 @@ async function fetchGameRoomMessages(supabase: SupabaseClient, sport: string, ga
 export default async function GameDetailPage({ params }: { params: Promise<{ sport: string; gameId: string }> }) {
   const { sport, gameId } = await params
   if (!Object.hasOwn(SPORT_LABEL, sport)) notFound()
+  if (MLB_HIBERNATING && sport === 'mlb') notFound()
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

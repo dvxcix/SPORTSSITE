@@ -7,6 +7,7 @@ import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupMemberManager, type GroupMemberManagerMember, type GroupRole } from '@/components/groups/GroupMemberManager'
 import { GroupChannelManager, type ManagedGroupChannel } from '@/components/groups/GroupChannelManager'
 import { GroupRoleManager, type CommunityChannelOverride, type CommunityRole, type CommunityRoleAssignment } from '@/components/groups/GroupRoleManager'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   const { data: group } = await supabase.from('groups').select('*').eq('slug', slug).single()
   if (!group) notFound()
+  if (group.sport?.toUpperCase() === 'MLB' && !(await canViewMlb(supabase, user.id))) notFound()
 
   const { data: member } = await supabase
     .from('group_members')

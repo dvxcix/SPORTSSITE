@@ -5,6 +5,7 @@ import { ArrowRight, LockKeyhole, MessageSquareText, Plus, Settings2, Sparkles, 
 import { SafeImage } from '@/components/ui/SafeImage'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 type GroupCardData = { id: string; slug: string; name: string; description?: string | null; avatar_url?: string | null; emoji?: string | null; access_type?: string | null; member_count?: number | null }
 
@@ -19,8 +20,10 @@ export default async function GroupsPage() {
     supabase.from('groups').select('*').order('member_count', { ascending: false }).limit(50),
   ])
   const creator = hasCreatorAccess(profile?.account_type, Boolean(approval))
-  const owned = (visibleGroups ?? []).filter(group => group.owner_id === user?.id)
-  const discover = (visibleGroups ?? []).filter(group => group.owner_id !== user?.id && group.is_public)
+  const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
+  const allowedGroups = (visibleGroups ?? []).filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB')
+  const owned = allowedGroups.filter(group => group.owner_id === user?.id)
+  const discover = allowedGroups.filter(group => group.owner_id !== user?.id && group.is_public)
 
   return (
     <ProductPageShell>

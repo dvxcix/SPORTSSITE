@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { verifyDiscordSignature, editDeferredReply } from '@/lib/discord'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
           flags: 64, // ephemeral — only the invoking user sees it
           embeds: [{
             title: 'SlipSurge Bot',
-            description: '`/slate` — today\'s MLB matchups + probable pitchers\n`/help` — this message',
+            description: MLB_HIBERNATING ? '`/help` — this message' : '`/slate` — today\'s MLB matchups + probable pitchers\n`/help` — this message',
             color: 0xB4FF4D,
           }],
         },
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
     }
 
     if (name === 'slate') {
+      if (MLB_HIBERNATING) return NextResponse.json({ type: 4, data: { flags: 64, content: 'This command is currently unavailable.' } })
       // getTodaysMatchups hits MLB's live schedule/lineup endpoints —
       // comfortably over Discord's 3s ack budget, so defer (type 5) and
       // edit the reply once the real data's back.

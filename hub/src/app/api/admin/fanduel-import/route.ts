@@ -5,6 +5,7 @@ import { normName } from '@slipsurge/core/nameNorm'
 import { safeApiError } from '@/lib/safeApiError'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { mlbCaptureObservationValid } from '@/lib/mlbCaptureWindow'
+import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 import { FANDUEL_FIRST_PA_HR_SECTION_RE } from '@/lib/scrapers/fanduelMarkets'
 import {
   buildFanduelArchiveRows,
@@ -157,6 +158,7 @@ function parseOdds(odds: string): number | null {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
+  if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const contentLength = Number(req.headers.get('content-length') || 0)
   if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })
 

@@ -10,6 +10,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 import { EmojiText } from '@/components/social/EmojiText'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,10 +23,12 @@ function teamLogo(sport: string, abbr: string): string | null {
 
 export default async function PicksPage({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
   const { sport: requestedSport } = await searchParams
-  const activeSport = SPORTS.includes(requestedSport ?? '') ? requestedSport! : 'All'
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authVisibilityUnavailable(authError)) throw new Error('Picks are temporarily unavailable')
+  const mlbAccess = await canViewMlb(supabase, user?.id)
+  const visibleSports = SPORTS.filter(sport => mlbAccess || sport !== 'MLB')
+  const activeSport = visibleSports.includes(requestedSport ?? '') ? requestedSport! : 'All'
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)'
 
@@ -37,14 +40,15 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
   if (blockedIds.length) hotQuery = hotQuery.not('author_id', 'in', `(${blockedIds.join(',')})`)
 
   const [{ data: rawPicks }, { data: rawHotPicks }] = await Promise.all([picksQuery, hotQuery])
-  const picks = await attachUserReactions(rawPicks ?? [], user?.id)
-  const hotPicks = [...(rawHotPicks ?? [])].sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0)).slice(0, 6)
+  const visible = (posts: typeof rawPicks) => (posts ?? []).filter(post => mlbAccess || post.sport?.toUpperCase() !== 'MLB')
+  const picks = await attachUserReactions(visible(rawPicks), user?.id)
+  const hotPicks = visible(rawHotPicks).sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0)).slice(0, 6)
 
   return (
     <ProductPageShell>
       <ProductHero icon={<TrendingUp size={23} />} eyebrow="Community board" title="Picks" description="Fresh picks and parlays from across the SlipSurge community." status={`${picks.length} recent`} actions={user ? <ProductAction href="/feed"><Plus size={14} /> Post a pick</ProductAction> : undefined} />
       <nav className="ss-picks-filters" aria-label="Filter picks by sport">
-        {SPORTS.map(sport => {
+        {visibleSports.map(sport => {
           const logo = sportLogoUrl(sport)
           return <Link key={sport} href={sport === 'All' ? '/picks' : `/picks?sport=${sport}`} className={activeSport === sport ? 'is-active' : ''} aria-current={activeSport === sport ? 'page' : undefined}>
             {logo ? <Image src={logo} alt="" width={15} height={15} /> : <Target size={14} />}{sport}

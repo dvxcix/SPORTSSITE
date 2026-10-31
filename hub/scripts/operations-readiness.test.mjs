@@ -8,7 +8,7 @@ function load(file, mocks) {
   const source = fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const module = { exports: {} }
-  new Function('require', 'module', 'exports', code)(id => mocks[id] ?? new Proxy({}, { get: (_, key) => () => { throw Error(`Unexpected dependency ${id}.${String(key)}`) } }), module, module.exports)
+  new Function('require', 'module', 'exports', code)(id => mocks[id] ?? (id === '@/lib/mlbOffseason' ? { MLB_HIBERNATING: false, isMlbCronPaused: () => false } : new Proxy({}, { get: (_, key) => () => { throw Error(`Unexpected dependency ${id}.${String(key)}`) } })), module, module.exports)
   return module.exports
 }
 const next = { NextResponse: { json: (data, init) => Response.json(data, init) } }
