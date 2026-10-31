@@ -28,6 +28,7 @@ const client = {
 class InvalidFeedCursorError extends Error {}
 Object.assign(globalThis, { socialRouteFixture: { fixture, client, InvalidFeedCursorError } })
 const stubs: Record<string, string> = {
+  'server-only': 'export {}',
   'next/server': 'export const NextResponse={json:(data,options)=>Response.json(data,options)}',
   '@/lib/supabase/server': 'export const createClient=async()=>globalThis.socialRouteFixture.client',
   '@/lib/queries': 'export const attachUserReactions=async(posts)=>posts',

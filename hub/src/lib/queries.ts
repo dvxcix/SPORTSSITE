@@ -1,6 +1,8 @@
 import { createClient } from './supabase/server'
 import { createAdminClient } from './supabase/admin'
-import { PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
+import { FAVORITE_USER_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
+import { visibleFavorites } from './visibleFavorites'
+import { canViewMlb } from './mlbViewerAccess'
 import type { Post, Channel, Message, Notification, User } from './supabase/types'
 import { AuthTemporarilyUnavailableError } from './supabase/authErrors'
 
@@ -106,7 +108,18 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
 export async function getUserProfile(username: string): Promise<User | null> {
   const supabase = await createClient()
   const { data } = await supabase.from('users').select(PUBLIC_USER_COLUMNS).eq('username', username).single()
-  return data as unknown as User | null
+  if (!data) return null
+  const baseProfile = data as unknown as User
+  // Preserve the ordinary user's RLS-visible base lookup before accessing
+  // mixed-sport fields with the server-only client. Filter before this value
+  // can reach metadata, a server component, or a client component.
+  const [{ data: authData }, { data: favorites, error }] = await Promise.all([
+    supabase.auth.getUser(),
+    createAdminClient().from('users').select(FAVORITE_USER_COLUMNS).eq('id', baseProfile.id).maybeSingle(),
+  ])
+  if (error || !favorites) throw new Error('Profile favorites are temporarily unavailable')
+  const allowMlb = await canViewMlb(supabase, authData.user?.id)
+  return visibleFavorites({ ...baseProfile, ...favorites } as unknown as User, allowMlb)
 }
 
 const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,is_verified,account_type,pick_record,tier,beta_access_active)`

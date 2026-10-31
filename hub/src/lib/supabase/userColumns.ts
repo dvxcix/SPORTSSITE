@@ -5,19 +5,23 @@
 export const PUBLIC_USER_COLUMNS = [
   'id', 'username', 'display_name', 'bio', 'avatar_url', 'banner_url',
   'avatar_ring_style', 'avatar_ring_color',
-  'sport_preferences', 'account_type', 'is_verified', 'is_active_member',
-  'follower_count', 'following_count', 'pick_record', 'favorite_teams',
-  'favorite_sports',
-  'favorite_players', 'social_links', 'sportsbooks', 'website',
+  'account_type', 'is_verified', 'is_active_member',
+  'follower_count', 'following_count', 'pick_record',
+  'social_links', 'sportsbooks', 'website',
   'twitter_handle', 'location', 'created_at', 'is_private', 'hide_win_rate',
   'allow_dms', 'tier', 'beta_access_active', 'verified_identities',
   'onboarding_completed_at',
 ].join(',')
 
+// Mixed-sport values are fetched only on the server, after the base profile
+// passes its normal user-scoped read. Never grant these raw columns to clients.
+export const FAVORITE_USER_COLUMNS = 'sport_preferences, favorite_teams, favorite_sports, favorite_players'
+
 // Returned only after the account endpoint verifies the matching Supabase
 // session on the server.
 export const PRIVATE_ACCOUNT_COLUMNS = [
   PUBLIC_USER_COLUMNS,
+  FAVORITE_USER_COLUMNS,
   'email', 'notification_settings', 'notification_delivery_settings', 'interest_settings', 'dugout_column_prefs',
   'discord_advanced_claimed', 'admin_granted_tier',
   'admin_granted_tier_by', 'admin_granted_tier_at',

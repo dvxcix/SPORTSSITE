@@ -249,6 +249,8 @@ test('member profile outage cannot become a signed-out current user', async () =
     './supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'member-a' } }, error: null }) } }) },
     './supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { code: 'PGRST002' } }) }) }) }) }) },
     './supabase/userColumns': { PRIVATE_ACCOUNT_COLUMNS: 'id', PUBLIC_USER_COLUMNS: 'id' },
+    './visibleFavorites': { visibleFavorites: (value: unknown) => value },
+    './mlbViewerAccess': { canViewMlb: async () => false },
   })
   await assert.rejects(mod.getCurrentUser(), { name: 'AuthTemporarilyUnavailableError', status: 503 })
 })
