@@ -472,3 +472,15 @@ test('October30 approved recovery rejects wrong game, workflow, day, key, expiry
     await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: c.ids, workflow: (c.workflow ?? 'public') as 'public' | 'direct' }), expected)
   }
 })
+
+test('October31 exact public subsets admitted', async () => {
+  for (const gameIds of [[21718001],[21718002,21718007],[21718001,21718002,21718003,21718004,21718005,21718006,21718007]]) {
+    const h=await harness({rpc:args=>({allowed:true,reason:'reserved',id:args.p_id,reservedMinutes:5,reservedCents:51,day:'2026-10-31',periodStart:'2026-10-18',allowanceKey:'nba-public-count-recovery-2026-10-31',allowanceExpiresAt:'2026-10-31T19:00:00.000Z'})});
+    assert.equal((await h.api.reserveNbaBrowserBudget({...h.input,gameIds})).allowanceKey,'nba-public-count-recovery-2026-10-31');
+  }
+});
+test('October31 rejects mixed IDs, wrong workflow, key, day, expiry and absent scope', async () => {
+  const cases=[{ids:[21718001,21718008]},{ids:[21718000]},{ids:undefined},{ids:[]},{ids:[21718001],workflow:'direct'},{ids:[21718001],day:'2026-10-30'},{ids:[21718001],key:'unreviewed'},{ids:[21718001],expiry:'2026-10-31T20:00:00.000Z'},{ids:[21718001],expiry:null}];
+  for(const c of cases){const h=await harness({rpc:args=>({allowed:true,reason:'reserved',id:args.p_id,reservedMinutes:5,reservedCents:51,day:c.day??'2026-10-31',periodStart:'2026-10-18',allowanceKey:c.key??'nba-public-count-recovery-2026-10-31',allowanceExpiresAt:c.expiry===null?undefined:(c.expiry??'2026-10-31T19:00:00.000Z')})});
+    await rejectsCode(h.api.reserveNbaBrowserBudget({...h.input,gameIds:c.ids,workflow:(c.workflow??'public') as 'public'|'direct'}),Array.isArray(c.ids)&&!c.ids.length?'configuration':'reservation-unavailable');}
+});
