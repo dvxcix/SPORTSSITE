@@ -22,6 +22,7 @@ import type { Metadata } from 'next'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { visibleFavorites } from '@/lib/visibleFavorites'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -83,6 +84,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   if (authVisibilityUnavailable(authError)) throw new Error('Profile is temporarily unavailable')
   const isOwnProfile = authUser?.id === profile.id
   const { data: viewer } = authUser ? await supabase.from('users').select('account_type').eq('id', authUser.id).maybeSingle() : { data: null }
+  const visibleProfile = visibleFavorites(profile, !MLB_HIBERNATING || viewer?.account_type === 'admin')
 
   // Checked before any of the heavier posts/achievements/social-platform
   // fetches below — a block (either direction) means neither party should
@@ -326,7 +328,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       )}
 
       <AchievementsSection achievements={achievements} />
-      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} sports={profile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} />
+      <FavoritesSection teams={visibleProfile.favorite_teams ?? []} players={visibleProfile.favorite_players ?? []} sports={visibleProfile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} />
 
       <div className="border-t border-white/[.07]" />
 

@@ -38,7 +38,19 @@ export async function PATCH(request: Request) {
   let body: Record<string, unknown>
   try { body = await request.json(); if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Invalid') } catch { return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers }) }
   let teams = body.teams, players = body.players
-  if (teams !== undefined && !Array.isArray(teams) || players !== undefined && !Array.isArray(players)) return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers })
+  if (teams !== undefined && !Array.isArray(teams) || players !== undefined && !Array.isArray(players) || body.sports !== undefined && !Array.isArray(body.sports)) return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers })
+  const allowedSports = new Set(['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball'])
+  let sports: string[] | undefined
+  if (Array.isArray(body.sports)) {
+    const oldSports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports : []
+    if (body.sports.some(sport => typeof sport !== 'string' || !allowedSports.has(sport) && !oldSports.includes(sport))) return NextResponse.json({ error: 'Invalid favorites.' }, { status: 400, headers })
+    sports = [...new Set(body.sports as string[])]
+    if (!auth.allowMlb) {
+      if (sports.includes('MLB') && !oldSports.includes('MLB')) return NextResponse.json({ error: 'That sport is unavailable.' }, { status: 403, headers })
+      sports = sports.filter(sport => sport !== 'MLB')
+      if (oldSports.includes('MLB')) sports.push('MLB')
+    }
+  }
   const catalog = await getFavoriteCatalog(auth.allowNba).catch(() => null)
   if (!catalog) return NextResponse.json({ error: 'Teams could not be loaded.' }, { status: 503, headers })
   const priorSports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string') : []
@@ -77,7 +89,7 @@ export async function PATCH(request: Request) {
       players = [...old, ...requested.filter(player => favoritePlayerSport(player) !== 'mlb')]
     }
   }
-  const update = favoriteUpdates({ teams, players }, auth.profile, auth.allowNba)
+  const update = { ...favoriteUpdates({ teams, players }, auth.profile, auth.allowNba), ...(sports !== undefined ? { favorite_sports: sports } : {}) }
   if (!Object.keys(update).length) return NextResponse.json({ error: 'No favorites supplied.' }, { status: 400, headers })
   const { error } = await auth.admin.from('users').update(update).eq('id', auth.profile.id)
   if (error) return safeApiError('favorites-save', error, 'Favorites could not be saved.')

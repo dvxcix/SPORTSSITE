@@ -55,11 +55,10 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
   async function save() {
     setSaving(true); setSaved(false); setError('')
     const { error: saveError } = await supabase.from('users').update({
-      favorite_sports: sports,
       interest_settings: { content_mix: contentMix, market_focus: marketFocus, discovery_mode: discoveryMode },
     }).eq('id', userId)
     if (saveError) { setSaving(false); setError('Could not save your interests. Try again.'); return }
-    const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams, players }) }).catch(() => null)
+    const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams, players, sports }) }).catch(() => null)
     setSaving(false)
     if (!favoritesResponse?.ok) { setError('Your interests were saved, but favorites could not be saved. Please try again.'); return }
     setSaved(true)

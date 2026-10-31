@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
 import { Spotlight } from '@/components/ui/spotlight'
+import { visibleFavorites } from '@/lib/visibleFavorites'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -40,7 +42,7 @@ export default async function OnboardingPage() {
       <div className="ss-onboarding-content">
         <OnboardingFlow
           userId={user.id}
-          initialProfile={profile}
+          initialProfile={profile ? visibleFavorites(profile, !MLB_HIBERNATING || profile.account_type === 'admin') : profile}
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}
           suggestedGroups={suggestedGroups ?? []}

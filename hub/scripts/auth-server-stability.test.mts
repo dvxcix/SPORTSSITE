@@ -218,6 +218,7 @@ test('account API distinguishes outage from sign-out without profile reads on fa
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getClaims: async () => ({ data: null, error }) } }) },
       '@/lib/supabase/admin': { createAdminClient: () => { profileReads++; throw new Error('Should not read profile') } },
       '@/lib/supabase/userColumns': { PRIVATE_ACCOUNT_COLUMNS: 'id' }, '@/lib/safeApiError': {},
+      '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/visibleFavorites': { visibleFavorites: (value: unknown) => value },
     })
     const response = await mod.GET() as Response
     assert.equal(response.status, status)

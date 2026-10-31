@@ -128,12 +128,11 @@ export function ProfileForm({ profile }: { profile: any }) {
         banner_url: form.banner_url.trim() || null,
         avatar_ring_style: form.avatar_ring_style,
         avatar_ring_color: form.avatar_ring_color,
-        favorite_sports: form.favorite_sports,
         social_links: form.social_links,
         sportsbooks: form.sportsbooks,
       }).eq('id', profile.id)
       if (err) { setError('Your profile could not be saved. Try again.'); return }
-      const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams: form.favorite_teams, players: form.favorite_players }) }).catch(() => null)
+      const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams: form.favorite_teams, players: form.favorite_players, sports: form.favorite_sports }) }).catch(() => null)
       if (!favoritesResponse?.ok) { setError('Your profile was saved, but favorites could not be saved. Please try again.'); return }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
       router.refresh()

@@ -4,6 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PRIVATE_ACCOUNT_COLUMNS } from '@/lib/supabase/userColumns'
 import { safeApiError } from '@/lib/safeApiError'
 import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from '@/lib/supabase/authErrors'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { visibleFavorites } from '@/lib/visibleFavorites'
+import type { User } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +38,8 @@ export async function GET() {
   if (!profile) {
     return NextResponse.json({ error: 'Account profile is unavailable', code: 'PROFILE_NOT_FOUND' }, { status: 404 })
   }
-  return NextResponse.json({ profile }, {
+  const accountProfile = profile as unknown as User
+  return NextResponse.json({ profile: visibleFavorites(accountProfile, !MLB_HIBERNATING || accountProfile.account_type === 'admin') }, {
     headers: { 'Cache-Control': 'private, no-store, max-age=0' },
   })
 }
