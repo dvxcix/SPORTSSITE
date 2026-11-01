@@ -66,7 +66,12 @@ The Court and The Sideline loaded after the change. Do not replay it.
 Primary migration `20261101084722_get_own_onboarding_complete` corresponds to
 CLI source `20261101084500_get_own_onboarding_complete.sql`. It installs an
 authenticated, caller-bound boolean helper before the compatible middleware
-release; the timestamp has not yet been restricted. Do not replay it.
+release. Primary migration `20261101085140_users_onboarding_member_private`
+corresponds to `20261101085200_users_onboarding_member_private.sql` and removes
+raw API-role SELECT on membership status and onboarding completion time. The
+compatible application was live and signed-in Explore loaded before the
+restriction; afterward the same signed-in page loaded normally and role checks
+confirmed neither field is readable to either API role. Do not replay them.
 
 Public profile links intentionally shared by members may still include a
 provider identifier. No historical access or exploitation is implied. Legacy
