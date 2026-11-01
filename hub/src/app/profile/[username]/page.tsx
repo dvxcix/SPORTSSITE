@@ -23,6 +23,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { visibleFavorites } from '@/lib/visibleFavorites'
+import { profileMetadata } from '@/lib/profileMetadata'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -35,28 +36,7 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const profile = await getUserProfile(username)
-  if (!profile) return {}
-  const name = profile.display_name || profile.username
-  const record = profile.pick_record as { wins?: number; losses?: number; pushes?: number } | null
-  const recordStr = record && ((record.wins ?? 0) + (record.losses ?? 0) + (record.pushes ?? 0)) > 0
-    ? `${record.wins ?? 0}-${record.losses ?? 0}${record.pushes ? `-${record.pushes}` : ''} record. `
-    : ''
-  const description = `${recordStr}${profile.bio || `${name}'s picks and posts on SlipSurge.`}`.trim()
-  return {
-    title: `${name} (@${profile.username}) · SlipSurge`,
-    description,
-    openGraph: {
-      title: `${name} (@${profile.username})`,
-      description,
-      images: profile.avatar_url ? [profile.avatar_url] : undefined,
-    },
-    twitter: {
-      card: 'summary',
-      title: `${name} (@${profile.username})`,
-      description,
-      images: profile.avatar_url ? [profile.avatar_url] : undefined,
-    },
-  }
+  return profileMetadata(profile)
 }
 
 const TABS = [
