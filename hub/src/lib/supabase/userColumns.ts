@@ -1,27 +1,28 @@
 // Public profile fields only. Keep billing identifiers, email, notification
 // preferences and admin-grant metadata out of every public/profile query
-// by default. verified_identities is intentionally public because it only
-// contains the handle/profile URL rendered on a member's public profile.
+// by default. Raw verified identities are projected on the server.
 export const PUBLIC_USER_COLUMNS = [
   'id', 'username', 'display_name', 'bio', 'avatar_url', 'banner_url',
   'avatar_ring_style', 'avatar_ring_color',
   'account_type', 'is_verified', 'is_active_member',
-  'follower_count', 'following_count', 'pick_record',
+  'follower_count', 'following_count',
   'social_links', 'sportsbooks', 'website',
   'twitter_handle', 'location', 'created_at', 'is_private', 'hide_win_rate',
-  'allow_dms', 'tier', 'beta_access_active', 'verified_identities',
+  'allow_dms', 'tier', 'beta_access_active',
   'onboarding_completed_at',
 ].join(',')
 
 // Mixed-sport values are fetched only on the server, after the base profile
 // passes its normal user-scoped read. Never grant these raw columns to clients.
 export const FAVORITE_USER_COLUMNS = 'sport_preferences, favorite_teams, favorite_sports, favorite_players'
+export const PROFILE_PROJECTION_COLUMNS = `${FAVORITE_USER_COLUMNS}, verified_identities`
 
 // Returned only after the account endpoint verifies the matching Supabase
 // session on the server.
 export const PRIVATE_ACCOUNT_COLUMNS = [
   PUBLIC_USER_COLUMNS,
-  FAVORITE_USER_COLUMNS,
+  PROFILE_PROJECTION_COLUMNS,
+  'pick_record',
   'email', 'notification_settings', 'notification_delivery_settings', 'interest_settings', 'dugout_column_prefs',
   'discord_advanced_claimed', 'admin_granted_tier',
   'admin_granted_tier_by', 'admin_granted_tier_at',

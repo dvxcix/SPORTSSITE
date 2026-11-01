@@ -152,7 +152,8 @@ async function routeFixture(role: string | null = 'admin', userId: string | null
   const access = await compile('../src/lib/paintAccess.ts', {
     'server-only': {}, 'next/server': { NextResponse: { json: Response.json } },
     '@/lib/nbaAccessPolicy': { NBA_ACCESS_COLUMNS: 'account_type,tier', hasNbaAccess: (profile: { account_type: string; tier: string }) => profile.account_type === 'admin' || profile.tier === 'ultimate' },
-    '@/lib/requireTier': { resolveAuthedClient: async () => { authReads++; return { userId, supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: role == null ? null : { account_type: role, tier: 'ultimate' }, error: profileError ? {} : null }) }) }) }) } } } },
+    '@/lib/requireTier': { resolveAuthedClient: async () => { authReads++; return { userId } } },
+    '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: role == null ? null : { account_type: role, tier: 'ultimate' }, error: profileError ? {} : null }) }) }) }) }) },
   })
   const route = await compile('../src/app/api/admin/nba-price-audit/route.ts', {
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': access,

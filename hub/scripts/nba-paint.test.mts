@@ -393,7 +393,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fetcher:
 }
 test('server authorization fails closed for guests, regular members and failed role reads', async () => {
   for (const [id, role, error, status] of [[null, null, null, 401], ['u', 'member', null, 403], ['u', 'admin', 'db error', 503], ['u', 'admin', null, undefined]] as const) {
-    const gate = await compiled('../src/lib/paintAccess.ts', { '@/lib/nbaAccessPolicy': { hasNbaAccess }, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: id, supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role }, error }) }) }) }) } }) } })
+    const gate = await compiled('../src/lib/paintAccess.ts', { '@/lib/nbaAccessPolicy': { hasNbaAccess }, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: id }) }, '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: role }, error }) }) }) }) }) } })
     const result = await gate.requirePaintAccess() as { error?: Response; userId?: string }
     assert.equal(result.error?.status, status)
     if (!status) assert.equal(result.userId, id)
@@ -536,8 +536,18 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
   assert.equal((await (watchlist.fetchWatchlist as unknown as (owner: string) => Promise<WatchlistItem[]>)('owner')).length, 1)
   const posted = await (watchlist.postBetToFeed as unknown as (owner: string, items: WatchlistItem[]) => Promise<{ postId: string }>)('owner', [item])
   assert.equal(posted.postId, 'post-1'); assert.equal(picks[0].sport, 'NBA'); assert.equal(picks[0].player_id, 'bdl:434'); assert.equal(picks[0].numeric_line, 20); assert.equal(picks[0].line, '20'); assert.equal(picks[0].player_name, 'Canonical Player')
-  const myPicks = await compiled('../src/lib/myPicks.ts', { '@/lib/supabase/client': { createClient: () => client } })
+  let hydrationCalls = 0
+  const myPicks = await compiled('../src/lib/myPicks.ts', {
+    '@/lib/supabase/client': { createClient: () => client },
+    '@/lib/visiblePickRecords': { hydrateVisibleAuthorRecords: async (receivedClient: unknown, rows: unknown[]) => {
+      assert.equal(receivedClient, client)
+      assert.deepEqual(rows, posts)
+      hydrationCalls++
+      return { posts: rows, available: true }
+    } },
+  })
   assert.equal((await (myPicks.fetchMyPicks as unknown as (owner: string) => Promise<{ id: string }[]>)('owner'))[0].id, 'post-1')
+  assert.equal(hydrationCalls, 1)
   const settlement = await compiled('../src/lib/nbaSettlement.ts', { 'server-only': {}, './nbaPickGrading': { gradeNbaPick }, './nbaPaint': { nbaPeriod, nbaToday: () => '2099-10-20' }, './nbaPaintData': { getPaintGame: async () => ({ status_state: 'final' }), getPaintFinalStats: async () => ({ complete: true, rows: [stat(21)] }) } })
   const chain = { select: () => chain, eq: () => chain, not: () => chain, lte: () => chain, order: () => chain, limit: async () => ({ data: picks, error: null }), upsert: () => ({ abortSignal: async () => ({ error: null }) }) }
   const settled = await (settlement.settleNbaPicks as unknown as (client: unknown) => Promise<{ graded: number }>)({ from: () => chain, rpc: (name: string, args: Record<string, unknown>) => ({ abortSignal: async (signal: AbortSignal) => { assert.ok(signal instanceof AbortSignal); if(name==='claim_pending_nba_picks')return{data:picks,error:null};assert.equal(name, 'settle_nba_pick_exact'); assert.deepEqual(args, { p_pick_id: 'pick-0', p_result: 'win' }); return { data: true, error: null } } }) })

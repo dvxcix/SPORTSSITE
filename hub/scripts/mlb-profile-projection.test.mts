@@ -3,11 +3,12 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { visibleFavorites } from '../src/lib/visibleFavorites.ts'
-import { FAVORITE_USER_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from '../src/lib/supabase/userColumns.ts'
+import { PROFILE_PROJECTION_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from '../src/lib/supabase/userColumns.ts'
+import { publicVerifiedIdentities } from '../src/lib/publicVerifiedIdentities.ts'
 
 const source = await readFile(new URL('../src/lib/queries.ts', import.meta.url), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-const mixed = { sport_preferences: ['MLB', 'NFL'], favorite_sports: ['MLB', 'NFL'], favorite_teams: ['MLB:NYY', 'NFL:ATL'], favorite_players: [{ mlb_id: 7, name: 'Baseball', team: 'NYY' }, { sport: 'nfl', player_id: '1', name: 'Football', team: 'ATL' }] }
+const mixed = { sport_preferences: ['MLB', 'NFL'], favorite_sports: ['MLB', 'NFL'], favorite_teams: ['MLB:NYY', 'NFL:ATL'], favorite_players: [{ mlb_id: 7, name: 'Baseball', team: 'NYY' }, { sport: 'nfl', player_id: '1', name: 'Football', team: 'ATL' }], verified_identities: { discord: { handle: 'public-handle', profileUrl: 'https://discord.com/users/123456789012345678', access_token: 'fake-secret' }, other: { handle: 'fake', profileUrl: 'https://example.org/' } } }
 
 function fixture(options: { exists?: boolean; admin?: boolean; favoriteError?: boolean } = {}) {
   const calls: string[] = []
@@ -17,12 +18,14 @@ function fixture(options: { exists?: boolean; admin?: boolean; favoriteError?: b
       auth: { getUser: async () => ({ data: { user: options.admin ? { id: 'admin-id' } : null } }) },
     }) },
     './supabase/admin': { createAdminClient: () => ({ from: () => ({ select: (columns: string) => { calls.push(`favorite:${columns}`); return { eq: (key: string, id: string) => { calls.push(`${key}:${id}`); return { maybeSingle: async () => ({ data: options.favoriteError ? null : mixed, error: options.favoriteError ? new Error('unavailable') : null }) } } } } }) }) },
-    './supabase/userColumns': { PUBLIC_USER_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, FAVORITE_USER_COLUMNS },
+    './supabase/userColumns': { PUBLIC_USER_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PROFILE_PROJECTION_COLUMNS },
     './visibleFavorites': { visibleFavorites },
+    './publicVerifiedIdentities': { publicVerifiedIdentities },
+    './visiblePickRecords': { fetchVisiblePickRecords: async (_client: unknown, ids: string[]) => ({ records: new Map(ids.map(id => [id, { wins: 2, losses: 1, pushes: 0 }])), available: true }), hydrateVisibleAuthorRecords: async (_client: unknown, posts: unknown[]) => ({ posts, available: true }) },
     './mlbViewerAccess': { canViewMlb: async (_client: unknown, id: string | undefined) => id === 'admin-id' },
     './supabase/authErrors': { AuthTemporarilyUnavailableError: class extends Error {} },
   }
-  const mod = { exports: {} as { getUserProfile: (username: string) => Promise<{ id: string; favorite_teams: unknown; favorite_sports: unknown; favorite_players: unknown } | null> } }
+  const mod = { exports: {} as { getUserProfile: (username: string) => Promise<{ id: string; favorite_teams: unknown; favorite_sports: unknown; favorite_players: unknown; verified_identities: unknown; pick_record: unknown } | null> } }
   new Function('require', 'exports', 'module', code)((key: string) => { assert.ok(key in imports, key); return imports[key] }, mod.exports, mod)
   return { get: mod.exports.getUserProfile, calls }
 }
@@ -33,10 +36,16 @@ test('base profile uses caller-scoped fields and mixed-sport data is filtered fo
   assert.ok(profile)
   assert.equal(f.calls[0], `base:${PUBLIC_USER_COLUMNS}`)
   assert.ok(!PUBLIC_USER_COLUMNS.includes('favorite_teams'))
+  assert.ok(!PUBLIC_USER_COLUMNS.includes('verified_identities'))
+  assert.ok(!PUBLIC_USER_COLUMNS.includes('pick_record'))
   assert.ok(PRIVATE_ACCOUNT_COLUMNS.includes('favorite_teams'))
+  assert.ok(PRIVATE_ACCOUNT_COLUMNS.includes('verified_identities'))
+  assert.ok(PRIVATE_ACCOUNT_COLUMNS.includes('pick_record'))
   assert.deepEqual(profile.favorite_teams, ['NFL:ATL'])
   assert.deepEqual(profile.favorite_sports, ['NFL'])
   assert.deepEqual(profile.favorite_players, [mixed.favorite_players[1]])
+  assert.deepEqual(profile.verified_identities, { discord: { handle: 'public-handle', profileUrl: 'https://discord.com/users/123456789012345678' } })
+  assert.deepEqual(profile.pick_record, { wins: 2, losses: 1, pushes: 0 })
   assert.ok(f.calls.includes('id:profile-id'))
 })
 

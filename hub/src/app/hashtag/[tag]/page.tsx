@@ -8,6 +8,7 @@ import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { notFound } from 'next/navigation'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 export const revalidate = 60
 
@@ -20,10 +21,11 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
   const showMlb = await canViewMlb(supabase, user?.id)
   if (!showMlb && tag.toUpperCase() === 'MLB') notFound()
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
-  let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
+  let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
   if (blockedIds.length) query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
   const { data: rawPosts } = tag ? await query : { data: [] }
-  const posts = await attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
+  const enriched = await attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
+  const { posts } = await hydrateVisibleAuthorRecords(supabase, enriched)
 
   return <TierGate requiredTier="basic" label="Hashtags">
     <ProductPageShell narrow>

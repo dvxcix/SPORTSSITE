@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getNflGameCenter } from '@/lib/nflGameCenterServer'
 import { nbaGameReference } from '@/lib/nbaGameReference'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 export const revalidate = 15
 
@@ -32,13 +33,14 @@ type GamePickPost = {
   game_pk?: string | number | null
   pick_data?: { legs?: Array<{ game_pk?: string | number | null }> } | null
   reaction_count?: number | null
+  author?: { id?: string | null } | null
   [key: string]: unknown
 }
 
 async function fetchCommunityPicksForGame(supabase: SupabaseClient, gameId: string, sport: string) {
   const { data } = await supabase
     .from('posts')
-    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)')
     .in('post_type', ['pick', 'parlay'])
     .ilike('sport', sport)
     .order('created_at', { ascending: false })
@@ -52,7 +54,7 @@ async function fetchCommunityPicksForGame(supabase: SupabaseClient, gameId: stri
   })
 
   matches.sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0))
-  return matches.slice(0, 20)
+  return (await hydrateVisibleAuthorRecords(supabase, matches.slice(0, 20))).posts
 }
 
 async function fetchGameRoomMessages(supabase: SupabaseClient, sport: string, gameId: string): Promise<GameRoomMessage[]> {

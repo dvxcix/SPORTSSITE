@@ -20,10 +20,11 @@ import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
 import { GameCard } from '@/components/sports/GameCard'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 export const revalidate = 60
 
-const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)`
 
 // Near-HR events live in the external MLB data project, not SlipSurge's
 // primary application database. Keep Explore on the same source and date
@@ -74,7 +75,6 @@ type ExploreUser = {
   is_verified: boolean
   account_type: string
   follower_count: number
-  pick_record: { wins: number; losses: number } | null
 }
 
 function todayET() {
@@ -100,9 +100,9 @@ export default async function ExplorePage() {
     { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
     { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity, nflGames, nbaGames,
   ] = await Promise.all([
-    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record')
+    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
       .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
-    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record')
+    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
       .eq('is_active_member', true).neq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
       .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
@@ -117,12 +117,20 @@ export default async function ExplorePage() {
     getScoreboard('nba', date).catch(() => []),
   ])
 
-  const [topPosts, trendingPicks] = await Promise.all([
+  const [enrichedTopPosts, enrichedTrendingPicks] = await Promise.all([
     attachUserReactions((rawTopPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id),
     attachUserReactions((rawTrendingPicks ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id),
   ])
 
-  const spotlightUsers = [...(topCappers ?? []), ...(topBettors ?? [])] as ExploreUser[]
+  // One caller-scoped batch for both post rails; no viewer result is cached.
+  const { posts: visibleRecords } = await hydrateVisibleAuthorRecords(supabase, [
+    ...enrichedTopPosts, ...enrichedTrendingPicks,
+  ])
+  const topPosts = visibleRecords.slice(0, enrichedTopPosts.length)
+  const trendingPicks = visibleRecords.slice(enrichedTopPosts.length, enrichedTopPosts.length + enrichedTrendingPicks.length)
+  const visibleCappers = (topCappers ?? []) as ExploreUser[]
+  const visibleBettors = (topBettors ?? []) as ExploreUser[]
+  const spotlightUsers = [...visibleCappers, ...visibleBettors]
   let followingIds = new Set<string>()
   if (user && spotlightUsers.length) {
     const { data } = await supabase.from('follows').select('following_id').eq('follower_id', user.id)
@@ -224,8 +232,8 @@ export default async function ExplorePage() {
             <Directory title="Groups to discover" icon={<Users size={15} />} href="/groups" rows={(groups ?? []).filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB').map((group: any) => ({
               id: group.id, href: `/groups/${group.slug}`, name: group.name, detail: group.sport || `${group.member_count ?? 0} members`, image: group.avatar_url, fallback: group.emoji || 'G',
             }))} />
-            {(topCappers?.length ?? 0) > 0 && <PeopleSection title="Creators to watch" users={topCappers as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />}
-            {(topBettors?.length ?? 0) > 0 && <PeopleSection title="Community standouts" users={topBettors as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />}
+            {visibleCappers.length > 0 && <PeopleSection title="Creators to watch" users={visibleCappers} currentUserId={user?.id ?? null} followingIds={followingIds} />}
+            {visibleBettors.length > 0 && <PeopleSection title="Community standouts" users={visibleBettors} currentUserId={user?.id ?? null} followingIds={followingIds} />}
             <p className="ss-explore-rail-note">{finalGames ? `${finalGames} game${finalGames === 1 ? '' : 's'} final today.` : 'Live activity updates throughout the slate.'}</p>
           </aside>
         </div>

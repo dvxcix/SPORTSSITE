@@ -47,6 +47,14 @@ the functions alone does not restrict the existing raw `pick_record` grant;
 the compatible application and a separately reviewed revoke are required.
 Do not replay these migrations.
 
+Primary migration `20261101083928_changelog_private_access` applies CLI source
+`20261101083903_changelog_private_access.sql`. Its no-argument, caller-bound
+private helper preserves the prior changelog audience policy without requiring
+API users to read another account's grant field. Synthetic rollback fixtures
+covered standard, Ultimate, admin, anonymous and service cases; production
+checks confirmed the postgres owner, fixed search path and function grants.
+Do not replay this migration.
+
 This is only the first containment step. User preferences, mixed favorites,
 grant entitlements, other tables and API/RPC paths need further review and
 protection. Public profile links intentionally shared by members may still

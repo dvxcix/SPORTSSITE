@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { ProductPageShell } from '@/components/product/ProductPage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -54,7 +55,7 @@ export default async function PostDetailPage({ params }: Props) {
 
   const { data: post } = await supabase
     .from('posts')
-    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)')
     .eq('id', id)
     .single()
 
@@ -65,7 +66,8 @@ export default async function PostDetailPage({ params }: Props) {
   // reaction/repost/bookmark) always looked un-interacted-with here even
   // when the viewer really had already voted/liked/etc, since every one of
   // those relies on this same enrichment everywhere else on the site.
-  const [enriched] = await attachUserReactions([post], user?.id)
+  const reactions = await attachUserReactions([post], user?.id)
+  const { posts: [enriched] } = await hydrateVisibleAuthorRecords(supabase, reactions)
 
   return (
     <ProductPageShell narrow>

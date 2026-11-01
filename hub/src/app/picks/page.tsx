@@ -11,6 +11,7 @@ import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 import { EmojiText } from '@/components/social/EmojiText'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,7 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
   const visibleSports = SPORTS.filter(sport => mlbAccess || sport !== 'MLB')
   const activeSport = visibleSports.includes(requestedSport ?? '') ? requestedSport! : 'All'
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
-  const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)'
+  const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)'
 
   let picksQuery = supabase.from('posts').select(fields).in('post_type', ['pick', 'parlay']).order('created_at', { ascending: false }).limit(30)
   if (activeSport !== 'All') picksQuery = picksQuery.eq('sport', activeSport)
@@ -41,7 +42,8 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
 
   const [{ data: rawPicks }, { data: rawHotPicks }] = await Promise.all([picksQuery, hotQuery])
   const visible = (posts: typeof rawPicks) => (posts ?? []).filter(post => mlbAccess || post.sport?.toUpperCase() !== 'MLB')
-  const picks = await attachUserReactions(visible(rawPicks), user?.id)
+  const enrichedPicks = await attachUserReactions(visible(rawPicks), user?.id)
+  const { posts: picks } = await hydrateVisibleAuthorRecords(supabase, enrichedPicks)
   const hotPicks = visible(rawHotPicks).sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0)).slice(0, 6)
 
   return (

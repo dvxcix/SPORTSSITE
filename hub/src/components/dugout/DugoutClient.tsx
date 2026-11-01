@@ -37,6 +37,7 @@ import { ModalSurface } from '@/components/ui/ModalSurface'
 import type { SlateEdgeEntry } from '@/components/dugout/SlateEdgeOverlay'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { useDugoutColumnSave } from '@/components/dugout/useDugoutColumnSave'
+import { useDugoutColumnState } from '@/components/dugout/useDugoutColumnState'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { BatterCharge } from '@/components/dugout/BatterCharge'
@@ -5017,14 +5018,8 @@ export function DugoutClient({ date }: { date: string }) {
   // Reuse the private profile already loaded by the app-wide AuthProvider.
   // Fetching /api/account/me again here doubled profile traffic for every
   // Dugout visit and added an unnecessary auth/database round trip.
-  const [columnPrefs, setColumnPrefsState] = useState<DugoutColumnPrefs | null>(null)
-  const [showColumnPanel, setShowColumnPanel] = useState(false)
-  const { saving: columnSaving, error: columnSaveError, clearError: clearColumnSaveError, save: saveColumns } = useDugoutColumnSave(authUser?.id ?? null, authProfile?.dugout_column_prefs ?? null)
-  useEffect(() => {
-    if (authProfile?.dugout_column_prefs) {
-      setColumnPrefsState(authProfile.dugout_column_prefs as DugoutColumnPrefs)
-    }
-  }, [authUser?.id, authProfile?.dugout_column_prefs])
+  const { prefs: columnPrefs, stored: ownerColumnPrefs, open: showColumnPanel, setPrefs: setColumnPrefsState, setOpen: setShowColumnPanel } = useDugoutColumnState(authUser?.id ?? null, authProfile?.id ?? null, authProfile?.dugout_column_prefs ?? null)
+  const { saving: columnSaving, error: columnSaveError, clearError: clearColumnSaveError, save: saveColumns } = useDugoutColumnSave(authUser?.id ?? null, ownerColumnPrefs)
   const saveColumnPrefs = async (next: DugoutColumnPrefs) => {
     if (!await saveColumns(next)) return
     setColumnPrefsState(next)

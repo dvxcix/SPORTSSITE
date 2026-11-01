@@ -19,6 +19,7 @@ import { GroupChannelWorkspace, type GroupWorkspaceChannel } from '@/components/
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 import styles from './GroupPage.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -92,11 +93,12 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     if (!canViewContent) return []
     const { data: rawPosts } = await supabase
       .from('posts')
-      .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)')
+      .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)')
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
       .limit(20)
-    return attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
+    const enriched = await attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
+    return (await hydrateVisibleAuthorRecords(supabase, enriched)).posts
   }
   const [
     { data: members },

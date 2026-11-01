@@ -104,3 +104,64 @@ test('a failed block lookup never starts member/post search and explains unavail
     assert.ok(!host.textContent?.includes('Hidden Smith'))
   } finally { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
 })
+
+test('NBA access is private, fails closed and cannot leak across an account switch', async () => {
+  const originalFetch = globalThis.fetch
+  const first = deferred<Response>(), second = deferred<Response>()
+  let checks = 0
+  globalThis.fetch = async (input, init) => {
+    if (input === '/api/account/nba-access') {
+      assert.equal(init?.cache, 'no-store')
+      assert.equal(init?.credentials, 'same-origin')
+      checks++
+      return checks === 1 ? first.promise : second.promise
+    }
+    return Response.json({ players: [], teams: [] })
+  }
+  globalFixture.auth = { user: { id: 'account-a' }, loading: false, authUnavailable: false }
+  globalFixture.blockA = deferred<string[]>()
+  globalFixture.blockB = deferred<string[]>()
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  const hasNbaTab = () => [...host.querySelectorAll('button')].some(button => button.textContent?.trim() === 'NBA')
+  try {
+    await act(async () => { root.render(createElement(compiled.exports.SearchClient)); await Promise.resolve() })
+    assert.equal(checks, 1)
+    assert.equal(hasNbaTab(), false)
+    globalFixture.auth = { user: { id: 'account-b' }, loading: false, authUnavailable: false }
+    await act(async () => { root.render(createElement(compiled.exports.SearchClient)); await Promise.resolve() })
+    assert.equal(checks, 2)
+    await act(async () => { second.resolve(Response.json({ allowed: false })); await Promise.resolve() })
+    await act(async () => { first.resolve(Response.json({ allowed: true })); await Promise.resolve() })
+    assert.equal(hasNbaTab(), false, 'late prior-user access must not reach the new user')
+  } finally { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
+})
+
+test('switching accounts removes previously granted NBA access while the next decision is pending', async () => {
+  const originalFetch = globalThis.fetch
+  const nextDecision = deferred<Response>()
+  let checks = 0
+  globalThis.fetch = async input => {
+    if (input === '/api/account/nba-access') {
+      checks++
+      return checks === 1 ? Response.json({ allowed: true }) : nextDecision.promise
+    }
+    if (String(input).startsWith('/api/search/nfl')) return Response.json({ players: [], teams: [{ team_abbr: 'TEST', team_name: 'Test team', team_nick: null, team_logo_espn: null }] })
+    return Response.json({ players: [], teams: [] })
+  }
+  globalFixture.auth = { user: { id: 'account-a' }, loading: false, authUnavailable: false }
+  globalFixture.blockA = deferred<string[]>()
+  globalFixture.blockB = deferred<string[]>()
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  const hasNbaTab = () => [...host.querySelectorAll('button')].some(button => button.textContent?.trim() === 'NBA')
+  try {
+    await act(async () => { root.render(createElement(compiled.exports.SearchClient)); await Promise.resolve() })
+    await act(async () => { await pause() })
+    assert.equal(hasNbaTab(), true, 'the verified first account has access')
+    globalFixture.auth = { user: { id: 'account-b' }, loading: false, authUnavailable: false }
+    await act(async () => { root.render(createElement(compiled.exports.SearchClient)); await Promise.resolve() })
+    assert.equal(checks, 2)
+    assert.equal(hasNbaTab(), false, 'a new account cannot inherit the earlier account’s access')
+    await act(async () => { nextDecision.resolve(Response.json({ allowed: false })); await Promise.resolve() })
+    assert.equal(hasNbaTab(), false)
+  } finally { await act(async () => root.unmount()); host.remove(); globalThis.fetch = originalFetch }
+})

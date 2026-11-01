@@ -8,6 +8,7 @@ import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
+import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,14 +19,15 @@ export default async function BookmarksPage() {
 
   const { data: bookmarks } = await supabase
     .from('bookmarks')
-    .select(`post:posts(*,author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active))`)
+    .select(`post:posts(*,author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active))`)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(30)
 
   const showMlb = await canViewMlb(supabase, user.id)
   const bookmarkedPosts = (bookmarks ?? []).map((bookmark: any) => bookmark.post).filter(post => post && (showMlb || post.sport?.toUpperCase() !== 'MLB'))
-  const posts = (await attachUserReactions(bookmarkedPosts, user.id)).map(post => ({ ...post, user_bookmarked: true }))
+  const enriched = (await attachUserReactions(bookmarkedPosts, user.id)).map(post => ({ ...post, user_bookmarked: true }))
+  const { posts } = await hydrateVisibleAuthorRecords(supabase, enriched)
 
   return (
     <TierGate requiredTier="basic" label="Bookmarks">

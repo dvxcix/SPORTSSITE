@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Post } from '@/lib/supabase/types'
 import { compareFeedRows, feedCursorFilter, InvalidFeedCursorError, mergeFeedPage, readFeedCursor, requireFeedPageSize, type RepostRow } from './feedPagination'
+import { hydrateVisibleAuthorRecords } from './visiblePickRecords'
 
-export const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
+export const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)`
 
 export type FeedFilter = 'latest' | 'top' | 'picks' | 'following'
 export type FeedSport = 'MLB' | 'NFL' | 'NBA'
@@ -131,7 +132,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
     if (error) throw new Error('Feed posts unavailable')
     const posts = ((data ?? []) as FeedPost[]).filter(p => !blockedSet.has(p.author_id) && !isSuppressed(p))
     const hasMore = (data?.length ?? 0) === pageSize
-    return { posts, nextCursor: hasMore ? String(offset + pageSize) : null, hasMore }
+    return { posts: (await hydrateVisibleAuthorRecords(supabase, posts)).posts, nextCursor: hasMore ? String(offset + pageSize) : null, hasMore }
   }
 
   const state = readFeedCursor(cursor)
@@ -164,10 +165,11 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
     state.reposts === 'done' ? Promise.resolve([]) : collectFeedBatches<RepostRow>(groups, repostQuery, pageSize),
   ])
   const includePost = (post: FeedPost) => !blockedSet.has(post.author_id) && !isSuppressed(post)
-  return mergeFeedPage(postRows, repostRows, state, pageSize, includePost,
+  const page = mergeFeedPage(postRows, repostRows, state, pageSize, includePost,
     (post, row) => includePost(post) && !blockedSet.has(row.user_id) && !mutedAuthorIds.has(row.user_id)
       && (filter !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay')
       && (!sport || post.sport?.toUpperCase() === sport))
+  return { ...page, posts: (await hydrateVisibleAuthorRecords(supabase, page.posts)).posts }
 }
 
 export type ProfileTab = 'all' | 'picks' | 'reposts' | 'media'
@@ -208,7 +210,8 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
     state.reposts === 'done' ? Promise.resolve({ data: [], error: null }) : repostQuery.abortSignal(AbortSignal.timeout(10000)),
   ])
   if (postResult.error || repostResult.error) throw new Error('Profile posts unavailable')
-  return mergeFeedPage((postResult.data ?? []) as FeedPost[], (repostResult.data ?? []) as RepostRow[], state, pageSize,
+  const page = mergeFeedPage((postResult.data ?? []) as FeedPost[], (repostResult.data ?? []) as RepostRow[], state, pageSize,
     post => (!hideMlb || post.sport?.toUpperCase() !== 'MLB') && (tab !== 'media' || Array.isArray(post.media_urls) && post.media_urls.length > 0),
     post => (!hideMlb || post.sport?.toUpperCase() !== 'MLB') && (tab !== 'picks' || post.post_type === 'pick' || post.post_type === 'parlay'))
+  return { ...page, posts: (await hydrateVisibleAuthorRecords(supabase, page.posts)).posts }
 }

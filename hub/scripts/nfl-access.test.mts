@@ -46,7 +46,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     grants: new Set<string>(), audit: [] as unknown[], adminCalls: 0,
     tier: 'free', adminTier: null as string | null, discord: false,
     assurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
-    error: false,
+    error: false, profileError: false,
   }
   function client() {
     return {
@@ -64,7 +64,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
           then(resolve: (value: unknown) => unknown) { return Promise.resolve(result()).then(resolve) },
         }
         function result() {
-          if (table === 'users') return { data: state.accounts.has(id) ? { id, account_type: state.accounts.get(id), tier: state.tier, admin_granted_tier: state.adminTier, discord_advanced_claimed: state.discord } : null, error: null }
+          if (table === 'users') return { data: state.accounts.has(id) ? { id, account_type: state.accounts.get(id), tier: state.tier, admin_granted_tier: state.adminTier, discord_advanced_claimed: state.discord } : null, error: state.profileError ? { message: 'Unavailable' } : null }
           if (state.error) return { data: null, error: { message: 'Database unavailable' } }
           if (operation === 'upsert') state.grants.add(values!.user_id)
           if (operation === 'delete') state.grants.delete(id)
@@ -104,6 +104,9 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     assert.equal((await api.requireNflAccess()).error.status, 401)
     assert.equal((await api.GET(new Request('https://slipsurge.com/api/admin/nfl-access'))).status, 401)
     state.caller = member
+    state.profileError = true
+    assert.equal((await api.requireNflAccess()).error.status, 503, 'Private entitlement failures fail closed')
+    state.profileError = false
     assert.equal((await api.requireNflAccess()).error.status, 403)
     state.tier = 'ultimate'
     assert.deepEqual(await api.requireNflAccess(), { userId: member, isAdmin: false })
@@ -117,8 +120,9 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     state.discord = true
     assert.equal((await api.requireNflAccess()).error.status, 403, 'Discord Advanced is not Ultimate')
     state.discord = false
+    const beforeDeniedAdminRoute = state.adminCalls
     assert.equal((await api.POST(request({ userId: member, granted: true }))).status, 403)
-    assert.equal(state.adminCalls, 0, 'Unauthorized requests must not create a privileged client')
+    assert.equal(state.adminCalls, beforeDeniedAdminRoute, 'Unauthorized admin actions must not create a privileged client')
     state.caller = adminId
     assert.equal((await api.requireNflAccess()).userId, adminId)
     state.assurance.nextLevel = 'aal2'

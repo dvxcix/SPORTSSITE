@@ -24,12 +24,13 @@ async function access(profile: Profile | null, signedIn = true, failed = false) 
   let reads = 0, current = profile
   const gates = await compiled('../src/lib/paintAccess.ts', {
     'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/nbaAccessPolicy': policy,
-    '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: signedIn ? 'viewer' : null, supabase: { from: (table: string) => {
+    '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: signedIn ? 'viewer' : null }) },
+    '@/lib/supabase/admin': { createAdminClient: () => ({ from: (table: string) => {
       assert.equal(table, 'users'); reads++
       return { select: (columns: string) => { assert.equal(columns, policy.NBA_ACCESS_COLUMNS); return { eq: (key: string, id: string) => {
         assert.equal(key, 'id'); assert.equal(id, 'viewer'); return { maybeSingle: async () => ({ data: current, error: failed ? new Error('unavailable') : null }) }
       } } } }
-    } } }) },
+    } }) },
   })
   type Result = { userId?: string; isAdmin?: boolean; error?: Response }
   return { gate: gates.requirePaintAccess as () => Promise<Result>, admin: gates.requirePaintAdmin as () => Promise<Result>, get reads() { return reads }, replace: (next: Profile) => { current = next } }
@@ -56,6 +57,26 @@ test('NBA release allows effective Ultimate and admin, excluding unrelated beta,
   const revoked = await access({ tier: 'ultimate' })
   assert.equal((await revoked.gate()).error, undefined)
   revoked.replace({ tier: 'free' }); assert.equal((await revoked.gate()).error?.status, 403); assert.equal(revoked.reads, 2)
+})
+
+test('NBA self-access endpoint returns only a private uncached decision and preserves outages', async () => {
+  for (const [profile, signedIn, failed, allowed, status] of [
+    [{ tier: 'ultimate' }, true, false, true, 200],
+    [{ tier: 'free' }, true, false, false, 200],
+    [null, false, false, false, 200],
+    [null, true, true, false, 503],
+  ] as [Profile | null, boolean, boolean, boolean, number][]) {
+    const h = await access(profile, signedIn, failed)
+    const route = await compiled('../src/app/api/account/nba-access/route.ts', {
+      'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: h.gate },
+    })
+    const response = await (route.GET as () => Promise<Response>)()
+    assert.equal(response.status, status)
+    assert.equal(response.headers.get('cache-control'), 'private, no-store')
+    const body = await response.json()
+    if (status === 200) assert.deepEqual(body, { allowed })
+    else assert.deepEqual(body, { error: 'NBA access unavailable' })
+  }
 })
 
 test('every NBA customer data endpoint rejects lower tiers before reading research or invoking providers', async () => {

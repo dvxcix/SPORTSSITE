@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import { resolveAuthedClient } from '@/lib/requireTier'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { hasNflAccess } from '@/lib/nflAccessPolicy'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 
@@ -9,7 +10,10 @@ export async function requireNflAccess() {
   const { supabase, userId, error: authError } = await resolveAuthedClient()
   if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }
-  const { data: profile, error: profileError } = await supabase.from('users')
+  // Only read private entitlement fields after verifying the caller, and bind
+  // the privileged lookup to that verified identity. Keep it uncached so a
+  // revoked grant takes effect on the next request.
+  const { data: profile, error: profileError } = await createAdminClient().from('users')
     .select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', userId).maybeSingle()
   if (profileError || !profile) return { error: NextResponse.json({ error: 'Access unavailable' }, { status: 503 }) }
   const isAdmin = profile.account_type === 'admin'

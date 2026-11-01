@@ -16,9 +16,9 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
-import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { fetchVisiblePickRecords } from '@/lib/visiblePickRecords'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'community' | 'mlb' | 'nfl' | 'nba'
@@ -106,11 +106,15 @@ export function SearchClient() {
       queueMicrotask(() => { if (!cancelled) { setBlockState({ owner: null, ids: [] }); setBlockLookupFailed(false); setNbaAllowed(false); setSavedSearches([]) } })
       return () => { cancelled = true }
     }
-    supabase.from('users').select('account_type,tier,discord_advanced_claimed,admin_granted_tier').eq('id', activeUserId).maybeSingle().then(({ data }) => { if (!cancelled) setNbaAllowed(hasNbaAccess(data)) })
+    const controller = new AbortController()
+    void fetch('/api/account/nba-access', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
+      .then(response => response.ok ? response.json() : { allowed: false })
+      .then(data => { if (!cancelled) setNbaAllowed(data.allowed === true) })
+      .catch(() => { if (!cancelled) setNbaAllowed(false) })
     getBlockedEitherWayIds(supabase, activeUserId).then(ids => { if (!cancelled) { setBlockState({ owner: activeUserId, ids }); setBlockLookupFailed(false) } }).catch(() => { if (!cancelled) { setBlockState({ owner: activeUserId, ids: null }); setBlockLookupFailed(true) } })
     supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', activeUserId).order('last_used_at', { ascending: false }).limit(12)
       .then(({ data }) => { if (!cancelled) setSavedSearches((data ?? []) as SavedSearch[]) })
-    return () => { cancelled = true }
+    return () => { cancelled = true; controller.abort() }
   }, [supabase, activeUserId, authLoading, authUnavailable])
 
   const doSearch = useCallback(async (query: string) => {
@@ -122,7 +126,7 @@ export function SearchClient() {
     const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
     const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData, nbaData] = await Promise.all([
       currentBlockIds !== null ? supabase.from('users')
-        .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+        .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count')
         .or(`username.ilike.%${filterQuery}%,display_name.ilike.%${filterQuery}%`)
         .limit(8) : Promise.resolve({ data: [] }),
       // Plain ilike, not full-text search — a partial/mid-word type-ahead
@@ -170,9 +174,12 @@ export function SearchClient() {
       .slice(0, 15)
 
     if (runId !== searchRunRef.current) return
+    const userRows = currentBlockIds ? (u ?? []).filter((r: any) => !blockedSet.has(r.id)) : []
+    const recordBatch = await fetchVisiblePickRecords(supabase, userRows.flatMap(row => typeof row.id === 'string' ? [row.id] : []))
+    if (runId !== searchRunRef.current) return
     setSocialResultOwner(activeUserId)
     setSocialResultGeneration(accountGeneration)
-    setUsers(currentBlockIds ? (u ?? []).filter((r: any) => !blockedSet.has(r.id)) : [])
+    setUsers(userRows.map(row => ({ ...row, pick_record: typeof row.id === 'string' ? recordBatch.records.get(row.id.toLowerCase()) ?? null : null })))
     setPosts(currentBlockIds ? p : [])
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])

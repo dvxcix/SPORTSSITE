@@ -250,6 +250,8 @@ test('member profile outage cannot become a signed-out current user', async () =
     './supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { code: 'PGRST002' } }) }) }) }) }) },
     './supabase/userColumns': { PRIVATE_ACCOUNT_COLUMNS: 'id', PUBLIC_USER_COLUMNS: 'id' },
     './visibleFavorites': { visibleFavorites: (value: unknown) => value },
+    './publicVerifiedIdentities': { publicVerifiedIdentities: (value: unknown) => value },
+    './visiblePickRecords': { fetchVisiblePickRecords: async () => ({ records: new Map(), available: false }), hydrateVisibleAuthorRecords: async (_client: unknown, posts: unknown[]) => ({ posts, available: false }) },
     './mlbViewerAccess': { canViewMlb: async () => false },
   })
   await assert.rejects(mod.getCurrentUser(), { name: 'AuthTemporarilyUnavailableError', status: 503 })
@@ -259,6 +261,7 @@ test('NBA and NFL gates return failed verification before any entitlement or spo
   for (const [file, method] of [['lib/paintAccess.ts', 'requirePaintAccess'], ['lib/nflAccess.ts', 'requireNflAccess']]) {
     const mod = await compiled(file, {
       'server-only': {}, '@/lib/nbaAccessPolicy': {}, '@/lib/nflAccessPolicy': {}, '@slipsurge/core/tiers': {},
+      '@/lib/supabase/admin': { createAdminClient: () => { throw new Error('Privileged read before verification') } },
       '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: null, error: NextResponse.json({ code: 'AUTH_TEMPORARILY_UNAVAILABLE' }, { status: 503 }), supabase: { from: () => { throw new Error('Read before verification') } } }) },
     })
     const gate = await mod[method]()

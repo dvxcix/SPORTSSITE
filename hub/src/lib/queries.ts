@@ -1,7 +1,9 @@
 import { createClient } from './supabase/server'
 import { createAdminClient } from './supabase/admin'
-import { FAVORITE_USER_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
+import { PROFILE_PROJECTION_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
 import { visibleFavorites } from './visibleFavorites'
+import { publicVerifiedIdentities } from './publicVerifiedIdentities'
+import { fetchVisiblePickRecords, hydrateVisibleAuthorRecords } from './visiblePickRecords'
 import { canViewMlb } from './mlbViewerAccess'
 import type { Post, Channel, Message, Notification, User } from './supabase/types'
 import { AuthTemporarilyUnavailableError } from './supabase/authErrors'
@@ -65,10 +67,10 @@ export async function getFeedPosts(limit = 20, offset = 0): Promise<Post[]> {
   // posts from the people who are actually supposed to see them.
   const { data } = await supabase
     .from('posts')
-    .select(`*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,is_verified,account_type,pick_record,tier,beta_access_active)`)
+    .select(`*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,is_verified,account_type,tier,beta_access_active)`)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
-  return data ?? []
+  return (await hydrateVisibleAuthorRecords(supabase, (data ?? []) as Post[])).posts
 }
 
 export async function getChannels(): Promise<Channel[]> {
@@ -113,16 +115,17 @@ export async function getUserProfile(username: string): Promise<User | null> {
   // Preserve the ordinary user's RLS-visible base lookup before accessing
   // mixed-sport fields with the server-only client. Filter before this value
   // can reach metadata, a server component, or a client component.
-  const [{ data: authData }, { data: favorites, error }] = await Promise.all([
+  const [{ data: authData }, { data: favorites, error }, visibleRecords] = await Promise.all([
     supabase.auth.getUser(),
-    createAdminClient().from('users').select(FAVORITE_USER_COLUMNS).eq('id', baseProfile.id).maybeSingle(),
+    createAdminClient().from('users').select(PROFILE_PROJECTION_COLUMNS).eq('id', baseProfile.id).maybeSingle(),
+    fetchVisiblePickRecords(supabase, [baseProfile.id]),
   ])
   if (error || !favorites) throw new Error('Profile favorites are temporarily unavailable')
   const allowMlb = await canViewMlb(supabase, authData.user?.id)
-  return visibleFavorites({ ...baseProfile, ...favorites } as unknown as User, allowMlb)
+  return visibleFavorites({ ...baseProfile, ...favorites, verified_identities: publicVerifiedIdentities(favorites.verified_identities), pick_record: visibleRecords.records.get(baseProfile.id.toLowerCase()) ?? null } as unknown as User, allowMlb)
 }
 
-const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,is_verified,account_type,pick_record,tier,beta_access_active)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,is_verified,account_type,tier,beta_access_active)`
 
 // A profile's post list is authored posts UNION what that user reposted —
 // reposting previously had zero visible effect anywhere (it only bumped a
@@ -153,18 +156,9 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
     .filter(r => r.post)
     .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
 
-  return [...(authored ?? []), ...reposted]
+  const posts = [...(authored ?? []), ...reposted]
     .sort((a: any, b: any) =>
       new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
     .slice(0, 20)
-}
-
-export async function getLeaderboard(limit = 50) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('users')
-    .select('id,username,display_name,avatar_url,is_verified,pick_record,account_type')
-    .order('pick_record->>wins', { ascending: false })
-    .limit(limit)
-  return data ?? []
+  return (await hydrateVisibleAuthorRecords(supabase, posts)).posts
 }

@@ -17,7 +17,7 @@ export interface User {
   is_active_member: boolean
   follower_count: number
   following_count: number
-  pick_record: { wins: number; losses: number; pushes: number }
+  pick_record: { wins: number; losses: number; pushes: number } | null
   favorite_teams: string[]
   favorite_players: FavoritePlayer[]
   social_links: Record<string, string>

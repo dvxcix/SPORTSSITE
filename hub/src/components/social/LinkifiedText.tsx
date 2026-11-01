@@ -13,11 +13,13 @@ async function resolveProfiles(usernames: string[]) {
   const missing = usernames.filter(username => !mentionProfileCache.has(username))
   if (missing.length) {
     const { data, error } = await createClient().from('users')
-      .select('id, username, display_name, avatar_url, bio, is_verified, follower_count, pick_record')
+      .select('id, username, display_name, avatar_url, bio, is_verified, follower_count')
       .or(missing.map(username => `username.ilike.${username}`).join(','))
       .limit(missing.length)
     if (!error) {
-      const found = new Map(((data ?? []) as MentionProfile[]).map(profile => [profile.username.toLowerCase(), profile]))
+      // Cache only viewer-independent identity. Records are resolved on hover
+      // for the current viewer and are never kept in this module-wide cache.
+      const found = new Map(((data ?? []) as Omit<MentionProfile, 'pick_record'>[]).map(profile => [profile.username.toLowerCase(), { ...profile, pick_record: null }]))
       for (const username of missing) mentionProfileCache.set(username, found.get(username) ?? null)
     }
   }

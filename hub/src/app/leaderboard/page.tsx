@@ -1,12 +1,14 @@
 import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createPublicClient } from '@supabase/supabase-js'
 import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
 import { TrendingUp, Trophy } from 'lucide-react'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { filterLeaderboardSports } from '@/lib/mlbLeaderboardVisibility'
+import { currentPublicLeaderboard } from '@/lib/leaderboardPrivacy'
 
 // The page itself is NOT statically cached anymore — every request needs
 // the real signed-in viewer to filter blocked users out of a shared
@@ -55,14 +57,14 @@ type LeaderboardPickRow = {
 
 // The shared, expensive part — every user's picks re-aggregated and
 // re-ranked — cached across all viewers at the same 120s interval this
-// whole page used to revalidate at. Uses the admin client (service role,
-// no cookies) rather than the per-request cookie-bound one specifically so
-// this can be safely wrapped in unstable_cache: RLS never restricted this
-// query to begin with (it ran with zero auth context even before this
-// refactor), so bypassing it here changes nothing about what data is
-// exposed, only which client is safe to call inside a cache scope.
+// whole page used to revalidate at. Profile aggregates require the service
+// client, but post breakdowns use a sessionless public client so post RLS
+// remains authoritative inside the shared cache.
 async function fetchRankedLeaderboard() {
   const admin = createAdminClient()
+  const publicClient = createPublicClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
 
   // Private accounts and accounts that hide their win rate never appear here — this is a public ranking with no
   // per-viewer follow check (unlike the profile page, which can show a
@@ -89,11 +91,13 @@ async function fetchRankedLeaderboard() {
     if (!data || data.length < pageSize) break
   }
   for (let from = 0; ; from += pageSize) {
-    const { data, error } = await admin
+    const { data, error } = await publicClient
       .from('posts')
       .select('id, author_id, sport, pick_data, created_at')
       .in('post_type', ['pick', 'parlay'])
-      .or('visibility.is.null,visibility.neq.private')
+      .eq('visibility', 'public')
+      .eq('is_premium', false)
+      .is('creator_product_id', null)
       .not('pick_data', 'is', null)
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })
@@ -190,7 +194,7 @@ async function fetchRankedLeaderboard() {
   return { ranked, allSports }
 }
 
-const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard'], { revalidate: 120 })
+const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard-public-outcomes-v2'], { revalidate: 120 })
 
 export default async function LeaderboardPage() {
   const [{ ranked, allSports }, supabase] = await Promise.all([getCachedLeaderboard(), createClient()])
@@ -198,7 +202,10 @@ export default async function LeaderboardPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authVisibilityUnavailable(authError)) throw new Error('Leaderboard is temporarily unavailable')
   const blockedIds = user ? new Set(await getBlockedEitherWayIds(supabase, user.id)) : null
-  const eligibleUsers = blockedIds ? ranked.filter(u => !blockedIds.has(u.id)) : ranked
+  // The shared ranking may be up to 120s old. Recheck privacy on every request
+  // before it reaches HTML or client props; never fall back to cached rows.
+  const { users: currentlyPublic } = await currentPublicLeaderboard(createAdminClient(), ranked)
+  const eligibleUsers = blockedIds ? currentlyPublic.filter(u => !blockedIds.has(u.id)) : currentlyPublic
   const { users, allSports: visibleSports } = filterLeaderboardSports(eligibleUsers, allSports, await canViewMlb(supabase, user?.id))
 
   return (
