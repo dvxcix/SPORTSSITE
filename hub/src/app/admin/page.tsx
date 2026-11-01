@@ -69,7 +69,7 @@ export default async function AdminDashboard() {
     { data: recentPostsData },
     { data: pipelineData },
   ] = await Promise.all([
-    supabase.from('users').select('*', { count: 'exact', head: true }),
+    supabase.from('users').select('id', { count: 'exact', head: true }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).neq('visibility', 'private'),
     supabase.from('groups').select('*', { count: 'exact', head: true }),
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),

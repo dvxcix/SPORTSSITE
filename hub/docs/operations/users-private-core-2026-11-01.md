@@ -42,10 +42,9 @@ Primary migrations `20261101083502_visible_pick_records_projection` and
 sources `20261101083001_visible_pick_records_projection.sql` and
 `20261101083427_public_leaderboard_eligibility.sql`. They add a bounded
 viewer-aware record projection and a service-only fresh leaderboard eligibility
-check. Both passed rolled-back role fixtures and independent review. Installing
-the functions alone does not restrict the existing raw `pick_record` grant;
-the compatible application and a separately reviewed revoke are required.
-Do not replay these migrations.
+check. Both passed rolled-back role fixtures and independent review. The
+compatible application was deployed before the separate restriction described
+below. Do not replay these migrations.
 
 Primary migration `20261101083928_changelog_private_access` applies CLI source
 `20261101083903_changelog_private_access.sql`. Its no-argument, caller-bound
@@ -55,9 +54,21 @@ covered standard, Ultimate, admin, anonymous and service cases; production
 checks confirmed the postgres owner, fixed search path and function grants.
 Do not replay this migration.
 
-This is only the first containment step. User preferences, mixed favorites,
-grant entitlements, other tables and API/RPC paths need further review and
-protection. Public profile links intentionally shared by members may still
-include a provider identifier. No historical access or exposure conclusion
-is implied. Test app, owner settings, direct API and other-sport behavior
-before asserting end-to-end privacy or compatibility.
+Primary migration `20261101084831_users_private_projection_read` corresponds
+to CLI source `20261101084800_users_private_projection_read.sql`. Following
+deployment of commit `0f5ec1ad`, it removed anonymous and authenticated raw
+SELECT on pick records, connected identities, favorite and sport preference
+arrays, and internal access grant flags. It preserves service reads and all
+write privileges. Live role checks found zero readable protected columns for
+either API role and eight for the service role. The signed-in owner's profile,
+The Court and The Sideline loaded after the change. Do not replay it.
+
+Primary migration `20261101084722_get_own_onboarding_complete` corresponds to
+CLI source `20261101084500_get_own_onboarding_complete.sql`. It installs an
+authenticated, caller-bound boolean helper before the compatible middleware
+release; the timestamp has not yet been restricted. Do not replay it.
+
+Public profile links intentionally shared by members may still include a
+provider identifier. No historical access or exploitation is implied. Legacy
+clients that request every users column may need an update; owner-only data
+continues through the verified server paths.

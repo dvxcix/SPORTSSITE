@@ -4,12 +4,11 @@
 export const PUBLIC_USER_COLUMNS = [
   'id', 'username', 'display_name', 'bio', 'avatar_url', 'banner_url',
   'avatar_ring_style', 'avatar_ring_color',
-  'account_type', 'is_verified', 'is_active_member',
+  'account_type', 'is_verified',
   'follower_count', 'following_count',
   'social_links', 'sportsbooks', 'website',
   'twitter_handle', 'location', 'created_at', 'is_private', 'hide_win_rate',
   'allow_dms', 'tier', 'beta_access_active',
-  'onboarding_completed_at',
 ].join(',')
 
 // Mixed-sport values are fetched only on the server, after the base profile
@@ -23,6 +22,7 @@ export const PRIVATE_ACCOUNT_COLUMNS = [
   PUBLIC_USER_COLUMNS,
   PROFILE_PROJECTION_COLUMNS,
   'pick_record',
+  'is_active_member',
   'email', 'notification_settings', 'notification_delivery_settings', 'interest_settings', 'dugout_column_prefs',
   'discord_advanced_claimed', 'admin_granted_tier',
   'admin_granted_tier_by', 'admin_granted_tier_at',

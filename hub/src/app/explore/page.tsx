@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { createClient } from '@/lib/supabase/server'
+import { exploreSpotlightMembers, visibleExploreSpotlights, type ExploreUser } from '@/lib/exploreActiveMembers'
 import { attachUserReactions } from '@/lib/queries'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { sportLogoUrl } from '@/lib/sportLogos'
@@ -65,18 +66,6 @@ const getSlateActivity = unstable_cache(async (date: string) => {
   }
 }, ['explore-slate-activity-v3'], { revalidate: 30 })
 
-type ExploreUser = {
-  id: string
-  username: string
-  display_name: string | null
-  avatar_url: string | null
-  avatar_ring_style: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
-  avatar_ring_color: string | null
-  is_verified: boolean
-  account_type: string
-  follower_count: number
-}
-
 function todayET() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -91,19 +80,20 @@ function mlbLogo(teamId: number | undefined) {
 
 export default async function ExplorePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
   const showMlb = await canViewMlb(supabase, user?.id)
   const date = todayET()
   const oneDayAgo = new Date(new Date().getTime() - 86400000).toISOString()
+  const spotlightMembers = Promise.all([
+    exploreSpotlightMembers(supabase, true),
+    exploreSpotlightMembers(supabase, false),
+  ])
 
   const [
-    { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
+    [topCappers, topBettors], { data: rawTopPosts },
     { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity, nflGames, nbaGames,
   ] = await Promise.all([
-    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
-      .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
-    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
-      .eq('is_active_member', true).neq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
+    spotlightMembers,
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
       .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('post_type', 'pick').eq('visibility', 'public')
@@ -128,8 +118,7 @@ export default async function ExplorePage() {
   ])
   const topPosts = visibleRecords.slice(0, enrichedTopPosts.length)
   const trendingPicks = visibleRecords.slice(enrichedTopPosts.length, enrichedTopPosts.length + enrichedTrendingPicks.length)
-  const visibleCappers = (topCappers ?? []) as ExploreUser[]
-  const visibleBettors = (topBettors ?? []) as ExploreUser[]
+  const [visibleCappers, visibleBettors] = await visibleExploreSpotlights(supabase, user?.id ?? null, authError, [topCappers, topBettors])
   const spotlightUsers = [...visibleCappers, ...visibleBettors]
   let followingIds = new Set<string>()
   if (user && spotlightUsers.length) {

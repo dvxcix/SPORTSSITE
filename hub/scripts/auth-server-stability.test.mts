@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { NextRequest, NextResponse } from 'next/server'
 import * as authErrors from '../src/lib/supabase/authErrors.ts'
+import * as ownOnboarding from '../src/lib/supabase/ownOnboarding.ts'
 import { isMlbOnlyPath, isMlbPullPath } from '../src/lib/mlbOffseasonAccess.ts'
 
 async function compiled(file: string, imports: Record<string, unknown>, fallback?: (name: string) => unknown) {
@@ -12,6 +13,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fallback
   const target = { exports: {} as Record<string, any> }
   new Function('require', 'exports', 'module', outputText)((name: string) => {
     if (name.endsWith('/authErrors') || name === './authErrors') return authErrors
+    if (name === './ownOnboarding') return ownOnboarding
     if (name === 'next/server') return { NextResponse }
     if (name in imports) return imports[name]
     if (fallback) return fallback(name)
@@ -55,6 +57,14 @@ async function proxyFixture(options: { result?: AuthResult; throws?: unknown; up
           mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { nextLevel: 'aal1', currentLevel: 'aal1' }, error: null }) },
         },
         from: query,
+        rpc: async (name: string, ...args: unknown[]) => {
+          assert.equal(name, 'get_own_onboarding_complete')
+          assert.equal(args.length, 0)
+          queryCalls++
+          if (options.queryThrows) throw new TypeError('fetch failed')
+          const profile = options.profile === undefined ? { onboarding_completed_at: '2026-10-01' } : options.profile
+          return { data: Boolean(profile?.onboarding_completed_at), error: options.profileError ?? null }
+        },
       }
     } },
   })
@@ -63,6 +73,13 @@ async function proxyFixture(options: { result?: AuthResult; throws?: unknown; up
     get clientCalls() { return clientCalls }, get queryCalls() { return queryCalls },
   }
 }
+
+test('mobile bearer API bypasses the page-only onboarding gate', async () => {
+  const fixture = await proxyFixture({ profile: { onboarding_completed_at: null } })
+  const response = await fixture.run('/api/nfl/players/123', false, 'application/json', 'mobile-token')
+  assert.equal(response.status, 200)
+  assert.equal(fixture.queryCalls, 0)
+})
 
 test('offseason hides baseball pages and APIs from members while allowing administrators', async () => {
   const paths = ['/dugout', '/api/dugout/data', '/players/123', '/api/players/123', '/sports/mlb/123', '/api/matrices', '/api/matrix-marketplace', '/api/odds/mlb', '/api/search/sports']

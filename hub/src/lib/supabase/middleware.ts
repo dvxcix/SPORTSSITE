@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './authErrors'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { isMlbOnlyPath, isMlbPullPath } from '@/lib/mlbOffseasonAccess'
+import { ownOnboardingComplete } from './ownOnboarding'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
 
@@ -332,13 +333,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname !== '/onboarding'
   ) {
     try {
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('onboarding_completed_at')
-      .eq('id', userId)
-      .maybeSingle()
-    if (profileError) return finish(authUnavailable(request))
-    if (!profile?.onboarding_completed_at) {
+    if (!await ownOnboardingComplete(supabase)) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       url.search = ''
