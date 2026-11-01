@@ -36,6 +36,7 @@ import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import type { SlateEdgeEntry } from '@/components/dugout/SlateEdgeOverlay'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
+import { useDugoutColumnSave } from '@/components/dugout/useDugoutColumnSave'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { BatterCharge } from '@/components/dugout/BatterCharge'
@@ -3028,10 +3029,12 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
 // and touch-drag reliability is genuinely poor on the mobile viewports
 // ~90% of members are actually on — ⤒/⤓ covers the "move it 80 spots"
 // case a pure up/down chain would make painfully slow.
-function ColumnCustomizePanel({ prefs, onSave, onClose }: {
+function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
   prefs: DugoutColumnPrefs | null
   onSave: (next: DugoutColumnPrefs) => void
   onClose: () => void
+  saving: boolean
+  error: string
 }) {
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
@@ -3170,9 +3173,10 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
             <div id="dugout-columns-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
             <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show, hide, and reorder the data that matters to you.</div>
           </div>
-          <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close column settings" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <button type="button" data-modal-autofocus onClick={onClose} disabled={saving} aria-label="Close column settings" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
+        <fieldset disabled={saving} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
         <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Quick layouts</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
@@ -3291,15 +3295,18 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
           )}
         </div>
 
+        </fieldset>
+        {error && <p role="alert" style={{ padding: '8px 16px', color: 'var(--text-1)' }}>{error}</p>}
         <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'space-between', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
           <button
             onClick={() => { setHiddenGroups(new Set()); setHiddenColumns(new Set()); setOrder(DUGOUT_ALL_COLUMNS.map(c => c.key)) }}
+            disabled={saving}
             style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', background: 'none', color: 'var(--text-3)' }}
           >
             Reset to default
           </button>
-          <button onClick={save} style={{ fontSize: 12, fontWeight: 800, cursor: 'pointer', border: '1px solid var(--accent)', borderRadius: 8, padding: '7px 16px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
-            Save
+          <button onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 800, cursor: 'pointer', border: '1px solid var(--accent)', borderRadius: 8, padding: '7px 16px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
     </ModalSurface>
@@ -5012,16 +5019,16 @@ export function DugoutClient({ date }: { date: string }) {
   // Dugout visit and added an unnecessary auth/database round trip.
   const [columnPrefs, setColumnPrefsState] = useState<DugoutColumnPrefs | null>(null)
   const [showColumnPanel, setShowColumnPanel] = useState(false)
+  const { saving: columnSaving, error: columnSaveError, clearError: clearColumnSaveError, save: saveColumns } = useDugoutColumnSave(authUser?.id ?? null, authProfile?.dugout_column_prefs ?? null)
   useEffect(() => {
     if (authProfile?.dugout_column_prefs) {
       setColumnPrefsState(authProfile.dugout_column_prefs as DugoutColumnPrefs)
     }
-  }, [authProfile?.dugout_column_prefs])
+  }, [authUser?.id, authProfile?.dugout_column_prefs])
   const saveColumnPrefs = async (next: DugoutColumnPrefs) => {
-    setColumnPrefsState(next) // update the board immediately - don't wait on the write
-    if (!authUser) return
-    const supabase = createClient()
-    await supabase.from('users').update({ dugout_column_prefs: next }).eq('id', authUser.id)
+    if (!await saveColumns(next)) return
+    setColumnPrefsState(next)
+    setShowColumnPanel(false)
   }
 
   // Deep link from elsewhere (e.g. Weather Lab's park-HR modal) — jump
@@ -5423,8 +5430,10 @@ export function DugoutClient({ date }: { date: string }) {
       {showColumnPanel && (
         <ColumnCustomizePanel
           prefs={columnPrefs}
-          onSave={next => { saveColumnPrefs(next); setShowColumnPanel(false) }}
-          onClose={() => setShowColumnPanel(false)}
+          onSave={next => { void saveColumnPrefs(next) }}
+          onClose={() => { if (!columnSaving) { clearColumnSaveError(); setShowColumnPanel(false) } }}
+          saving={columnSaving}
+          error={columnSaveError}
         />
       )}
 

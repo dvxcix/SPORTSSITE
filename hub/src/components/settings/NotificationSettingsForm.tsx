@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type { NotificationDeliverySettings } from '@/lib/notificationDelivery'
@@ -35,7 +34,12 @@ const TIMEZONES = [
 ] as const
 
 export function NotificationSettingsForm({ settings, deliverySettings }: { settings: Record<string, boolean>; deliverySettings: NotificationDeliverySettings }) {
-  const supabase = useMemo(() => createClient(), [])
+  const expected = useRef({
+    notification_settings: Object.fromEntries(SETTINGS.flatMap(item => [item.key, `${item.key}_email`]).filter(key => Object.hasOwn(settings, key)).map(key => [key, settings[key]])),
+    notification_delivery_settings: Object.fromEntries(['quiet_hours_enabled', 'quiet_start', 'quiet_end', 'timezone', 'live_game_priority'].filter(key => Object.hasOwn(deliverySettings, key)).map(key => [key, deliverySettings[key as keyof NotificationDeliverySettings]])),
+  })
+  const saveInFlight = useRef(false)
+  const [saving, setSaving] = useState(false)
   const [values, setValues] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {}
     for (const s of SETTINGS) {
@@ -55,11 +59,13 @@ export function NotificationSettingsForm({ settings, deliverySettings }: { setti
   })
 
   async function save() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (saveInFlight.current) return
+    saveInFlight.current = true; setSaving(true)
     setError('')
-    const { error: err } = await supabase.from('users').update({ notification_settings: values, notification_delivery_settings: delivery }).eq('id', user.id)
-    if (err) { setError('Could not save — please try again.'); return }
+    const response = await fetch('/api/account/preferences', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'notifications', value: { settings: values, delivery }, expected: expected.current }) }).catch(() => null)
+    saveInFlight.current = false; setSaving(false)
+    if (!response?.ok) { setError(response?.status === 409 ? 'Preferences changed elsewhere. Refresh and try again.' : 'Could not save — please try again.'); return }
+    expected.current = { notification_settings: { ...expected.current.notification_settings, ...values }, notification_delivery_settings: { ...expected.current.notification_delivery_settings, ...delivery } }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
@@ -73,6 +79,7 @@ export function NotificationSettingsForm({ settings, deliverySettings }: { setti
 
   return (
     <div className="space-y-4">
+      <fieldset disabled={saving} className="space-y-4" style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <section className="ss-notification-delivery" aria-labelledby="delivery-timing-heading">
         <header><div><h2 id="delivery-timing-heading">Delivery timing</h2><p>Pause non-game push and email alerts on your schedule.</p></div><Switch checked={delivery.quiet_hours_enabled ?? false} onChange={checked => setDelivery(current => ({ ...current, quiet_hours_enabled: checked }))} ariaLabel="Quiet hours"/></header>
         <div className="ss-notification-time-grid">
@@ -113,9 +120,10 @@ export function NotificationSettingsForm({ settings, deliverySettings }: { setti
           </div>
         ))}
       </div>
+      </fieldset>
       {error && <p role="alert" className="ss-settings-feedback">{error}</p>}
-      <button type="button" onClick={save} className="ss-settings-primary">
-        {saved ? <><Check size={13} /> Saved</> : 'Save preferences'}
+      <button type="button" onClick={save} disabled={saving} className="ss-settings-primary">
+        {saving ? 'Saving…' : saved ? <><Check size={13} /> Saved</> : 'Save preferences'}
       </button>
     </div>
   )

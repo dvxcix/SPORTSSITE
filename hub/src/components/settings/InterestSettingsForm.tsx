@@ -1,10 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useRef, useState } from 'react'
 import { FavoritePicker } from '@/components/profile/FavoritePicker'
 import { normalizeFavoritePlayers, type FavoritePlayer } from '@/lib/sportFavorites'
 import { Check, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
@@ -29,7 +28,7 @@ const MODES = [
   ['live', 'Live first', 'Prioritize active games, movement, and breaking updates.'],
 ] as const
 
-export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, favoritePlayers, settings, allowNba = true }: {
+export function InterestSettingsForm({ favoriteSports, favoriteTeams, favoritePlayers, settings, allowNba = true }: {
   userId: string
   favoriteSports: string[]
   favoriteTeams: string[]
@@ -38,13 +37,14 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
   allowNba?: boolean
 }) {
   const { profile } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
   const [sports, setSports] = useState(favoriteSports)
   const [teams, setTeams] = useState(favoriteTeams)
   const [players, setPlayers] = useState(() => normalizeFavoritePlayers(favoritePlayers))
   const [contentMix, setContentMix] = useState(settings.content_mix ?? ['research', 'picks', 'live-games'])
   const [marketFocus, setMarketFocus] = useState(settings.market_focus ?? ['player-props', 'milestones'])
   const [discoveryMode, setDiscoveryMode] = useState<InterestSettings['discovery_mode']>(settings.discovery_mode ?? 'balanced')
+  const expected = useRef<InterestSettings>({ content_mix: settings.content_mix, market_focus: settings.market_focus, discovery_mode: settings.discovery_mode })
+  const saveInFlight = useRef(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -53,12 +53,15 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
     set(current.includes(value) ? current.filter(item => item !== value) : [...current, value])
 
   async function save() {
+    if (saveInFlight.current) return
+    saveInFlight.current = true
     setSaving(true); setSaved(false); setError('')
-    const { error: saveError } = await supabase.from('users').update({
-      interest_settings: { content_mix: contentMix, market_focus: marketFocus, discovery_mode: discoveryMode },
-    }).eq('id', userId)
-    if (saveError) { setSaving(false); setError('Could not save your interests. Try again.'); return }
+    const interestValues = { content_mix: contentMix, market_focus: marketFocus, discovery_mode: discoveryMode }
+    const interestsResponse = await fetch('/api/account/preferences', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'interests', value: interestValues, expected: { interest_settings: expected.current } }) }).catch(() => null)
+    if (!interestsResponse?.ok) { saveInFlight.current = false; setSaving(false); setError(interestsResponse?.status === 409 ? 'Your interests changed elsewhere. Refresh and try again.' : 'Could not save your interests. Try again.'); return }
+    expected.current = { ...expected.current, ...interestValues }
     const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams, players, sports }) }).catch(() => null)
+    saveInFlight.current = false
     setSaving(false)
     if (!favoritesResponse?.ok) { setError('Your interests were saved, but favorites could not be saved. Please try again.'); return }
     setSaved(true)
@@ -66,6 +69,7 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
   }
 
   return <div className="ss-interest-settings">
+    <fieldset disabled={saving} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
     <PreferenceSection title="Sports" description="Choose the leagues that shape your home and discovery views.">
       <ChoiceGrid>{SPORTS.filter(sport => (allowNba || sport !== 'NBA') && (!MLB_HIBERNATING || profile?.account_type === 'admin' || sport !== 'MLB')).map(sport => <Choice key={sport} selected={sports.includes(sport)} onClick={() => toggle(sport, sports, setSports)}>{sport}</Choice>)}</ChoiceGrid>
     </PreferenceSection>
@@ -83,6 +87,7 @@ export function InterestSettingsForm({ userId, favoriteSports, favoriteTeams, fa
     <PreferenceSection title="Discovery" description="Control what leads when your home feed has room to explore.">
       <div className="ss-interest-modes">{MODES.map(([value, label, copy]) => <button key={value} type="button" aria-pressed={discoveryMode === value} className={discoveryMode === value ? 'is-selected' : ''} onClick={() => setDiscoveryMode(value)}><span>{discoveryMode === value && <Check size={14}/>}</span><strong>{label}</strong><small>{copy}</small></button>)}</div>
     </PreferenceSection>
+    </fieldset>
 
     {error && <p role="alert" className="ss-settings-feedback">{error}</p>}
     <button type="button" className="ss-settings-primary" disabled={saving} onClick={save}>{saving ? <><Loader2 size={14} className="animate-spin"/> Saving…</> : saved ? <><Check size={14}/> Saved</> : 'Save interests'}</button>

@@ -20,6 +20,14 @@ restricts creator entitlement Whop membership IDs and subscription Stripe
 subscription IDs, retaining other reads, existing RLS, write grants and server
 access. Those tables had no rows at the time of review. Do not replay it.
 
+Primary migration `20261101082627_save_account_preferences_private` corresponds
+to CLI source `20261101081737_save_account_preferences_private.sql`. It adds a
+service-only invoker function for owner-bound, atomic preference saves; it does
+not change stored settings or client grants. Never replay it. Rollback-only
+staging fixtures verified expected-value conflicts, preservation of unknown and
+malformed legacy values, and role restrictions; separate-session concurrency
+and live gateway behavior require verification.
+
 This is only the first containment step. User preferences, mixed favorites,
 grant entitlements, other tables and API/RPC paths need further review and
 protection. Public profile links intentionally shared by members may still
