@@ -37,6 +37,16 @@ The owner's unchanged notification settings saved via the real application
 before and after the restriction; their persisted digest stayed identical and
 the row version advanced. Do not replay this migration.
 
+Primary migrations `20261101083502_visible_pick_records_projection` and
+`20261101083511_public_leaderboard_eligibility` correspond to tracked CLI
+sources `20261101083001_visible_pick_records_projection.sql` and
+`20261101083427_public_leaderboard_eligibility.sql`. They add a bounded
+viewer-aware record projection and a service-only fresh leaderboard eligibility
+check. Both passed rolled-back role fixtures and independent review. Installing
+the functions alone does not restrict the existing raw `pick_record` grant;
+the compatible application and a separately reviewed revoke are required.
+Do not replay these migrations.
+
 This is only the first containment step. User preferences, mixed favorites,
 grant entitlements, other tables and API/RPC paths need further review and
 protection. Public profile links intentionally shared by members may still
