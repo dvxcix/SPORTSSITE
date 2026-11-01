@@ -14,6 +14,12 @@ confirmed zero readable protected fields for both API roles, all 21 still
 available to the service role, email denied, and public username available.
 Two rolled-back staging role fixtures and independent review passed.
 
+Primary migration `20261101081611_creator_provider_id_containment` applies
+tracked source `20261101081553_creator_provider_id_containment.sql`. It also
+restricts creator entitlement Whop membership IDs and subscription Stripe
+subscription IDs, retaining other reads, existing RLS, write grants and server
+access. Those tables had no rows at the time of review. Do not replay it.
+
 This is only the first containment step. User preferences, mixed favorites,
 grant entitlements, other tables and API/RPC paths need further review and
 protection. Public profile links intentionally shared by members may still
