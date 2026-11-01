@@ -28,6 +28,15 @@ staging fixtures verified expected-value conflicts, preservation of unknown and
 malformed legacy values, and role restrictions; separate-session concurrency
 and live gateway behavior require verification.
 
+Primary migration `20261101083314_users_private_settings_read` applies tracked
+source `20261101083254_users_private_settings_read.sql`, removing API-role
+SELECT on notification and delivery settings, interests, Dugout columns,
+onboarding-complete flag and profile updated timestamp while preserving UPDATE
+and service access. The owner-scoped application was live before this change.
+The owner's unchanged notification settings saved via the real application
+before and after the restriction; their persisted digest stayed identical and
+the row version advanced. Do not replay this migration.
+
 This is only the first containment step. User preferences, mixed favorites,
 grant entitlements, other tables and API/RPC paths need further review and
 protection. Public profile links intentionally shared by members may still
