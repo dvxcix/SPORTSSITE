@@ -73,6 +73,15 @@ compatible application was live and signed-in Explore loaded before the
 restriction; afterward the same signed-in page loaded normally and role checks
 confirmed neither field is readable to either API role. Do not replay them.
 
+Primary migration `20261101085710_channel_roster_privacy` corresponds to
+`20261101085700_channel_roster_privacy.sql`. It limits channel roster reads to
+the viewer's own membership or an authorized channel and group, preserving
+public rosters and the MLB offseason restriction. A rolled-back synthetic
+staging fixture covered guest, denied-role, authorized, MLB and recursion cases;
+production has no membership rows, so populated production behavior remains
+unverified. Existing access helpers trust retained membership after paid
+entitlement expiry; this change does not establish billing enforcement.
+
 Public profile links intentionally shared by members may still include a
 provider identifier. No historical access or exploitation is implied. Legacy
 clients that request every users column may need an update; owner-only data
