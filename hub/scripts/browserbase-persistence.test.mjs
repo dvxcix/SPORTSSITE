@@ -19,7 +19,7 @@ async function fixture(options, work) {
   process.env.BROWSERBASE_PROJECT_ID = 'fixture-project'
   if (options.configured !== false) process.env.PIKKIT_CONTEXT_ID = 'production-context'
   else delete process.env.PIKKIT_CONTEXT_ID
-  const calls = { create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], scopes: [], timers: [], cleared: [] }
+  const calls = { sdkOptions: [], create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], scopes: [], timers: [], cleared: [] }
   let released = false
   const page = { goto: async (...args) => { calls.navigation.push(args); if (options.gotoFails) throw Error('navigation failed') } }
   const context = { pages: () => options.noPage ? [] : [page], newPage: async () => { if (options.newPageFails) throw Error('page failed'); return page } }
@@ -47,7 +47,7 @@ async function fixture(options, work) {
     },
   }
   const mocks = {
-    '@browserbasehq/sdk': { default: class { constructor() { return cloud } } },
+    '@browserbasehq/sdk': { default: class { constructor(options) { calls.sdkOptions.push(options); return cloud } } },
     'playwright-core': { chromium: { connectOverCDP: async () => { if (options.connectFails) throw Error('CDP failed'); return browser } } },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => { calls.leaseAcquire++; return options.leaseBusy ? null : { release: async () => { calls.leaseRelease++; return true } } } },
     '@/lib/nbaBrowserBudget': {
@@ -78,6 +78,17 @@ async function fixture(options, work) {
 }
 
 const session = (overrides = {}) => ({ id: 'older-session', contextId: 'production-context', status: 'RUNNING', updatedAt: '2026-10-01T00:00:00Z', expiresAt: '2026-10-24T04:00:00Z', userMetadata: { book: 'pikkit', mode: 'manual-auth' }, ...overrides })
+
+test('all paid browser sessions disable automatic SDK retries', async () => {
+  for (const metadata of [{ sport: 'nfl' }, { sport: 'nba' }, {}]) {
+    await fixture({}, async (api, calls) => {
+      const browser = await api.openSession({ metadata })
+      await browser.close()
+      assert.ok(calls.sdkOptions.length > 0)
+      assert.ok(calls.sdkOptions.every(options => options.maxRetries === 0))
+    })
+  }
+})
 
 test('NBA cannot create a paid session before an accepted durable reservation', async () => {
   await fixture({ budgetReject: true }, async (api, calls) => {

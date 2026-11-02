@@ -20,7 +20,9 @@ function assertBrowserbaseSpendingPause(nba = false): void {
 function client(requestTimeoutMs?: number): Browserbase {
   const apiKey = process.env.BROWSERBASE_API_KEY
   if (!apiKey) throw new Error('BROWSERBASE_API_KEY is not configured')
-  return new Browserbase({ apiKey, ...(requestTimeoutMs ? { timeout: requestTimeoutMs, maxRetries: 0 } : {}) })
+  // A retry after an ambiguous create response can open a second paid browser
+  // without a second reservation. Never retry SDK requests automatically.
+  return new Browserbase({ apiKey, maxRetries: 0, ...(requestTimeoutMs ? { timeout: requestTimeoutMs } : {}) })
 }
 
 // projectId is genuinely optional on every Browserbase SDK call — omitted,
