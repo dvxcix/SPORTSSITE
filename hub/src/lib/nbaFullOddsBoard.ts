@@ -6,7 +6,7 @@ import { nbaValidOdds, type NbaQuoteOpeningRow } from './nbaOddsHistory'
 export type NbaBoardObservation = { odds:number; at:string }
 export type NbaBoardCell = { gameId:number; playerId:number; vendor:string; market:string; line:number; current:NbaBoardObservation; opening:NbaBoardObservation|null; previous:NbaBoardObservation|null }
 export type NbaBoardPlayer = Pick<PaintRoster,'id'|'first_name'|'last_name'|'position'|'team'> & { gameId:number }
-export type NbaFullOddsBoard = { date:string; games:PaintGame[]; players:NbaBoardPlayer[]; cells:NbaBoardCell[]; failed:number[]; unavailable:number[]; complete:boolean; stale?:boolean; books?:string[]; selectedBook?:string }
+export type NbaFullOddsBoard = { date:string; games:PaintGame[]; players:NbaBoardPlayer[]; cells:NbaBoardCell[]; failed:number[]; unavailable:number[]; complete:boolean; stale?:boolean; books?:string[]; selectedBook?:string; phaseCheckedAt?:number }
 /** Preserve sub-millisecond quote order; Date.parse alone truncates it. */
 export function nbaTimestampNanoseconds(value:string):bigint|null {
   const match=/^(\d{4}-\d{2}-\d{2})[Tt ](\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}(?::?\d{2})?)$/i.exec(value)
@@ -35,7 +35,7 @@ export function nbaPackFullBoard(board:NbaFullOddsBoard):NbaPackedBoard {
   const identity=(gameId:number,playerId:number)=>{const key=`${gameId}:${playerId}`,found=identityIndex.get(key);if(found!=null)return found;const index=identities.length;identities.push([gameId,playerId]);identityIndex.set(key,index);return index}
   const time=(value:string)=>{const found=timeIndex.get(value);if(found!=null)return found;const prefix=value.slice(0,11);let p=prefixIndex.get(prefix);if(p==null){p=prefixes.length;prefixes.push(prefix);prefixIndex.set(prefix,p)}const index=times.length;times.push([p,value.slice(11)]);timeIndex.set(value,index);return index}
   const quotes=board.cells.map((cell):NbaPackedCell=>[identity(cell.gameId,cell.playerId),bookIndex.get(cell.vendor)!,cell.line,cell.current.odds,time(cell.current.at),cell.opening?.odds??null,cell.opening?time(cell.opening.at):null,cell.previous?.odds??null,cell.previous?time(cell.previous.at):null])
-  return {date:board.date,games:board.games,players:board.players,failed:board.failed,unavailable:board.unavailable,complete:board.complete,stale:board.stale,selectedBook:board.selectedBook,books,identities,prefixes,times,quotes}
+  return {date:board.date,games:board.games,players:board.players,failed:board.failed,unavailable:board.unavailable,complete:board.complete,stale:board.stale,selectedBook:board.selectedBook,phaseCheckedAt:board.phaseCheckedAt,books,identities,prefixes,times,quotes}
 }
 /** Return one book without duplicating the cached slate or unrelated times. */
 export function nbaSelectPackedBoard(board:NbaPackedBoard,book:string):NbaPackedBoard {
@@ -64,7 +64,7 @@ export function nbaUnpackFullBoard(board:NbaPackedBoard,market:string):NbaFullOd
     if(at==null||(opening&&(openAt==null||(openAt>=at&&opening.odds!==current.odds)))||(previous&&(previousAt==null||previousAt>=at)))throw new Error('Invalid odds chronology')
     return {gameId:pair[0],playerId:pair[1],vendor:board.books[row[1]],market,line:row[2],current,opening,previous}
   })
-  return {date:board.date,games:board.games,players:board.players,failed:board.failed,unavailable:board.unavailable,complete:board.complete,stale:board.stale,selectedBook:board.selectedBook,books:board.books,cells}
+  return {date:board.date,games:board.games,players:board.players,failed:board.failed,unavailable:board.unavailable,complete:board.complete,stale:board.stale,selectedBook:board.selectedBook,phaseCheckedAt:board.phaseCheckedAt,books:board.books,cells}
 }
 
 /** Compare only the exact game/player/book/market/milestone/over contract. */

@@ -39,6 +39,7 @@ const stubs: Record<string, string> = {
   './PaintPublic': `export const PaintPublic=()=>null`,
   './PaintDivergence': `export const PaintDivergence=()=>null`,
   './PaintSlate': `export const PaintSlate=()=>null`,
+  './PaintFullOddsBoard': `import React from 'react';export function PaintFullOddsBoard({phaseCheck,onResume}){return <div data-testid="full-board" data-phase={phaseCheck?phaseCheck.phase?'valid':'unavailable':'pending'} data-date={phaseCheck?.date??''} data-mode={phaseCheck?.mode??''}><button data-testid="resume" onClick={()=>onResume(Date.now())}>Resume</button></div>}`,
   './PaintTracking': `export const PaintTracking=()=>null`,
   './PaintEstimate': `export const PaintEstimate=()=>null`,
   './PaintShotChart': `export const PaintShotChart=()=>null`,
@@ -123,6 +124,70 @@ test('background board checks keep the studied player, filters and nested scroll
     assert.equal(call,3)
     assert.match(ui.host.textContent??'', /Refresh failed\. Showing your last loaded board\./)
   } finally { await ui.close() }
+})
+
+test('only the open Odds Board piggybacks its phase check on the existing 200/304 poll',async()=>{
+  const preTipBoard={...board,game:{...board.game,datetime:new Date(Date.now()+86400000).toISOString()}},ui=await harness('odds-board','over',null,false,'points','',preTipBoard)
+  try {
+    let call=0
+    globalThis.fetch=async input=>{
+      const url=new URL(String(input),'https://slipsurge.com');assert.equal(url.searchParams.get('slate_date'),preTipBoard.game.date);assert.equal(url.searchParams.get('mode'),'pregame')
+      call++;const token=`v1|${preTipBoard.game.date}|${Date.now()}|123,${Date.parse(preTipBoard.game.datetime!)},0`
+      return call===1?Response.json({...preTipBoard,oddsMode:'pregame'},{headers:{ETag:'W/"one"','X-NBA-Slate-Phase':token}}):call===2?new Response(null,{status:304,headers:{'X-NBA-Slate-Phase':token}}):call===3?new Response(null,{status:304}):Response.json({...preTipBoard,game:{...preTipBoard.game,id:999},oddsMode:'pregame'},{headers:{'X-NBA-Slate-Phase':token}})
+    }
+    for(let i=0;i<4;i++){
+      await act(async()=>{window.dispatchEvent(new dom.window.Event('fixture:board-poll'));await new Promise(resolve=>setTimeout(resolve,0))})
+      assert.equal(ui.host.querySelector('[data-testid="full-board"]')?.getAttribute('data-phase'),i<2?'valid':'unavailable')
+    }
+    assert.equal(ui.host.querySelector('[data-testid="full-board"]')?.getAttribute('data-mode'),'pregame');assert.equal(call,4)
+  }finally{await ui.close()}
+  const normal=await harness('research','over',null,false,'points','',preTipBoard)
+  try {
+    globalThis.fetch=async input=>{assert.equal(new URL(String(input),'https://slipsurge.com').searchParams.has('slate_date'),false);return new Response(null,{status:304})}
+    await act(async()=>{window.dispatchEvent(new dom.window.Event('fixture:board-poll'));await new Promise(resolve=>setTimeout(resolve,0))})
+  }finally{await normal.close()}
+})
+
+test('resume reuses the board request and retries an old shared token only once after expiry',async()=>{
+  const preTipBoard={...board,game:{...board.game,datetime:new Date(Date.now()+86400000).toISOString()}},ui=await harness('odds-board','over',null,false,'points','',preTipBoard),originalRandom=Math.random
+  try {
+    let calls=0;const beforeResume=Date.now()-10;Math.random=()=>0
+    globalThis.fetch=async input=>{
+      assert.equal(new URL(String(input),'https://slipsurge.com').searchParams.get('slate_date'),preTipBoard.game.date)
+      calls++;const checked=calls===1?beforeResume:Date.now(),expires=Date.now()+30,token=`v1|${preTipBoard.game.date}|${checked}|123,${Date.parse(preTipBoard.game.datetime!)},0`
+      return new Response(null,{status:304,headers:{'X-NBA-Slate-Phase':token,'X-NBA-Slate-Phase-Expires':String(expires)}})
+    }
+    await ui.click(ui.host.querySelector('[data-testid="resume"]'))
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,6500))})
+    assert.equal(calls,2);assert.equal(ui.host.querySelector('[data-testid="full-board"]')?.getAttribute('data-phase'),'valid')
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,200))});assert.equal(calls,2)
+  }finally{Math.random=originalRandom;await ui.close()}
+})
+
+test('leaving Odds Board cancels an already scheduled post-expiry resume retry',async()=>{
+  const preTipBoard={...board,game:{...board.game,datetime:new Date(Date.now()+86400000).toISOString()}},ui=await harness('odds-board','over',null,false,'points','',preTipBoard),originalRandom=Math.random
+  try {
+    let calls=0;const beforeResume=Date.now()-10;Math.random=()=>0
+    globalThis.fetch=async()=>{calls++;const token=`v1|${preTipBoard.game.date}|${beforeResume}|123,${Date.parse(preTipBoard.game.datetime!)},0`;return new Response(null,{status:304,headers:{'X-NBA-Slate-Phase':token,'X-NBA-Slate-Phase-Expires':String(Date.now()+30)}})}
+    await ui.click(ui.host.querySelector('[data-testid="resume"]'))
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,1300))});assert.equal(calls,1)
+    await act(async()=>window.history.replaceState(null,'','/the-paint?view=research'))
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,5200))});assert.equal(calls,1)
+  }finally{Math.random=originalRandom;await ui.close()}
+})
+
+test('a board response arriving after leaving the Odds Board cannot retain its phase token',async()=>{
+  const preTipBoard={...board,game:{...board.game,datetime:new Date(Date.now()+86400000).toISOString()}},ui=await harness('odds-board','over',null,false,'points','',preTipBoard)
+  try{
+    let release:((response:Response)=>void)|undefined
+    globalThis.fetch=async()=>await new Promise<Response>(resolve=>{release=resolve})
+    await act(async()=>window.dispatchEvent(new dom.window.Event('fixture:board-poll')));assert.ok(release)
+    await act(async()=>window.history.replaceState(null,'','/the-paint?view=research'))
+    const token=`v1|${preTipBoard.game.date}|${Date.now()}|123,${Date.parse(preTipBoard.game.datetime!)},0`
+    await act(async()=>{release!(new Response(null,{status:304,headers:{'X-NBA-Slate-Phase':token}}));await new Promise(resolve=>setTimeout(resolve,0))})
+    await act(async()=>window.history.replaceState(null,'','/the-paint?view=odds-board'))
+    assert.equal(ui.host.querySelector('[data-testid="full-board"]')?.getAttribute('data-phase'),'pending')
+  }finally{await ui.close()}
 })
 
 test('exact pregame cutoff hides an unfrozen board even when the boundary fetch fails', async () => {

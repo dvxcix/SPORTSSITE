@@ -44,9 +44,9 @@ export async function GET(request:NextRequest) {
     }
     // A phase crossing while a shared result was loading must not use the old
     // slate key. The next request loads the new boundary, never a live fallback.
-    const check=await nbaFullBoardCutoffs(games)
+    const phaseCheckedAt=Date.now(),check=await nbaFullBoardCutoffs(games)
     if(check.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')!==key) return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
-    return NextResponse.json({...nbaSelectPackedBoard(cached.value,book),stale:cached.stale},{headers:{'Cache-Control':'private, no-store'}})
+    return NextResponse.json({...nbaSelectPackedBoard(cached.value,book),stale:cached.stale,phaseCheckedAt},{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503})}
 }
 

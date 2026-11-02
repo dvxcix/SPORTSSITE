@@ -6,6 +6,7 @@ import { build } from 'esbuild'
 import { act,createElement,type ComponentType } from 'react'
 import type { PaintGame } from '../src/lib/nbaPaint.ts'
 import { nbaPackFullBoard,nbaSelectPackedBoard } from '../src/lib/nbaFullOddsBoard.ts'
+import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '../src/lib/nbaOddsBoardPhase.ts'
 const require=createRequire(import.meta.url),{JSDOM}=require('jsdom')
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://www.slipsurge.com/the-paint'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
@@ -15,7 +16,7 @@ const built=await build({stdin:{contents:"export {PaintFullOddsBoard} from './sr
   builder.onResolve({filter:/^(\.\/PaintEntitySelect|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
   builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return 'pregame'}`,loader:'tsx'}))
 }}]})
-const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[]}>}}
+const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null}>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,require)
 const team={id:1,abbreviation:'AAA',full_name:'Alpha',name:'Alpha'},away={id:2,abbreviation:'BBB',full_name:'Beta',name:'Beta'}
 const game:PaintGame={id:12,date:'2026-11-02',season:2026,status:'Scheduled',status_state:'scheduled',datetime:new Date(Date.now()+3600000).toISOString(),period:0,home_team:team,visitor_team:away,home_team_score:0,visitor_team_score:0}
@@ -24,7 +25,7 @@ const players=[{id:1,gameId:12,first_name:'Amy',last_name:'Adams',position:'G',t
 const base={gameId:12,vendor:'fanduel',market:'points',opening:{odds:200,at:'2026-11-02T15:00:00Z'},previous:{odds:175,at:'2026-11-02T16:00:00Z'}}
 const data={date:'2026-11-02',games:[game,otherGame],players,failed:[],unavailable:[],complete:true,books:['fanduel'],selectedBook:'fanduel',cells:[{...base,playerId:1,line:15,current:{odds:150,at:'2026-11-02T17:00:00Z'}},{...base,playerId:1,line:20,current:{odds:220,at:'2026-11-02T17:00:00Z'}},{...base,playerId:2,line:15,current:{odds:300,at:'2026-11-02T17:00:00Z'}},{...base,gameId:13,playerId:3,line:15,current:{odds:250,at:'2026-11-02T17:00:00Z'}}]}
 test('full board exposes all posted rungs, exact comparisons, sorting, search and keyboard scroll',async()=>{
- const original=globalThis.fetch;globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard(data),'fanduel'))
+ const original=globalThis.fetch;globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:Date.now()}),'fanduel'))
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
  const select=async(label:string,value:string)=>{const el=host.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;el.value=value;await act(async()=>el.dispatchEvent(new dom.window.Event('change',{bubbles:true})))}
  try{
@@ -39,4 +40,70 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   await select('Sort by milestone','20');assert.match(region.querySelector('tbody tr')?.textContent??'',/Amy Adams/)
   assert.equal(host.querySelector('[role="tooltip"]'),null)
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
+})
+
+test('piggybacked phase checks preserve an unchanged grid, hide corrections, and fail closed on missing token and resume',async()=>{
+ const originalFetch=globalThis.fetch,originalNow=Date.now;let clock=originalNow(),calls=0,release:((response:Response)=>void)|undefined
+ Date.now=()=>clock
+ const games=[game,otherGame],corrected={...game,datetime:new Date(Date.parse(game.datetime!)-60000).toISOString()},revised=[corrected,otherGame]
+ const result=(items:PaintGame[],checkedAt:number)=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,games:items,phaseCheckedAt:checkedAt}),'fanduel'))
+ globalThis.fetch=async()=>{calls++;if(calls===1)return result(games,clock-1000);return await new Promise<Response>(resolve=>{release=resolve})}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ const render=(phaseCheck:NbaOddsBoardPhaseCheck|null)=>root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games,phaseCheck}))
+ const token=(items:PaintGame[],at:number):NbaOddsBoardPhaseCheck=>({date:data.date,mode:'pregame',receivedAt:at,phase:{date:data.date,checkedAt:at,signature:nbaOddsBoardPhaseSignature(items)!}})
+ try{
+  await act(async()=>{render(null);await new Promise(done=>setTimeout(done,20))})
+  const original=host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]');assert.ok(original);assert.equal(calls,1)
+  original.scrollLeft=117;await act(async()=>original.dispatchEvent(new dom.window.Event('scroll',{bubbles:true})))
+  clock+=10;await act(async()=>render(token(games,clock)))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),original);assert.equal(calls,1,'matching phase must not reload the grid')
+  clock+=10;await act(async()=>{render(token(revised,clock));await new Promise(done=>setTimeout(done,0))})
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null);assert.equal(calls,2);assert.ok(release)
+  clock+=10;await act(async()=>{release!(result(revised,clock));await new Promise(done=>setTimeout(done,20))})
+  assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2,'correction must not cause a duplicate full fetch')
+  clock+=10;await act(async()=>render({date:data.date,mode:'pregame',phase:null,receivedAt:clock}))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)
+  clock+=10;await act(async()=>render(token(revised,clock)))
+  assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2)
+  Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
+  clock+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'resume hides prior prices until a later successful phase check')
+  const beforeResume=clock-5;clock+=5
+  await act(async()=>render({date:data.date,mode:'pregame',receivedAt:clock,phase:{date:data.date,checkedAt:beforeResume,signature:nbaOddsBoardPhaseSignature(revised)!}}))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'a request arriving after resume cannot reuse a pre-resume check')
+  clock+=10;await act(async()=>render(token(revised,clock)));assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch;Date.now=originalNow;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})}
+})
+
+test('an in-flight old grid is hidden and replaced when a newer token corrects tipoff',async()=>{
+ const originalFetch=globalThis.fetch,originalNow=Date.now;let clock=originalNow(),calls=0;Date.now=()=>clock
+ const games=[game,otherGame],corrected={...game,datetime:new Date(Date.parse(game.datetime!)-60000).toISOString()},revised=[corrected,otherGame]
+ let releaseFirst:((response:Response)=>void)|undefined,releaseSecond:((response:Response)=>void)|undefined
+ globalThis.fetch=async()=>{calls++;return await new Promise<Response>(resolve=>{if(calls===1)releaseFirst=resolve;else releaseSecond=resolve})}
+ const result=(items:PaintGame[],checkedAt:number)=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,games:items,phaseCheckedAt:checkedAt}),'fanduel'))
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ const render=(phaseCheck:NbaOddsBoardPhaseCheck|null)=>root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games,phaseCheck}))
+ const started=clock
+ try{
+  await act(async()=>render(null));assert.ok(releaseFirst)
+  clock+=10;const phaseCheck:NbaOddsBoardPhaseCheck={date:data.date,mode:'pregame',receivedAt:clock,phase:{date:data.date,checkedAt:clock,signature:nbaOddsBoardPhaseSignature(revised)!}}
+  await act(async()=>render(phaseCheck))
+  clock+=10;await act(async()=>{releaseFirst!(result(games,started));await new Promise(done=>setTimeout(done,20))})
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null);assert.equal(calls,2);assert.ok(releaseSecond)
+  clock+=10;await act(async()=>{releaseSecond!(result(revised,clock));await new Promise(done=>setTimeout(done,20))})
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'));assert.equal(calls,2)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch;Date.now=originalNow}
+})
+
+test('an expired phase check hides the grid on its timer without starting another request',async()=>{
+ const originalFetch=globalThis.fetch;let calls=0
+ const checkedAt=Date.now()-NBA_ODDS_BOARD_PHASE_MAX_AGE+1200
+ globalThis.fetch=async()=>{calls++;return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:checkedAt}),'fanduel'))}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ try{
+  await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame]}));await new Promise(done=>setTimeout(done,30))})
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
+  await act(async()=>{await new Promise(done=>setTimeout(done,1350))})
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null);assert.equal(calls,1)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
 })

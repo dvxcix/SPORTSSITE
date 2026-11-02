@@ -8,6 +8,7 @@ import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
+import * as oddsBoardPhase from '../src/lib/nbaOddsBoardPhase.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}): Promise<T> {
   imports = { './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
@@ -195,6 +196,28 @@ test('6,000 simultaneous NBA readers across twelve instances use one upstream re
   await Promise.all(Array.from({ length: 6000 }, (_, index) => instances[index % instances.length].nbaSharedCache('first-quotes', 60, 0, load)))
   assert.equal(h.metrics().reads, before, 'warm instance memory avoids a database read per member')
   assert.equal(loads, 1)
+})
+
+test('6,000 piggybacked slate phase checks share two cutoff reads and a bounded 15-second cache',async()=>{
+  const h=await cacheHarness(), caches=await Promise.all(Array.from({length:12},h.instance))
+  const team={id:1,abbreviation:'AAA',name:'Alpha',full_name:'Alpha'}
+  const game={id:123,date:'2026-10-20',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-20T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:2},home_team_score:0,visitor_team_score:0}
+  let batches=0
+  const instances=await Promise.all(caches.map(cache=>compiled<typeof import('../src/lib/nbaOddsBoardPhaseData.ts')>('../src/lib/nbaOddsBoardPhaseData.ts',{
+    'server-only':{},'./nbaPaintData':{getPaintSchedule:async()=>({date:game.date,games:[game],complete:true})},
+    './nbaFullBoardCutoffsData':{nbaFullBoardCutoffs:async()=>{batches++;await Promise.resolve();return [game]}},
+    './nbaSharedCache':cache,'./nbaOddsBoardPhase':oddsBoardPhase,
+  },{Date:h.Clock})))
+  const values=await Promise.all(Array.from({length:6000},(_,index)=>instances[index%instances.length].getNbaOddsBoardPhaseHeader(game.date)))
+  assert.equal(batches,1);assert.ok(values.every(value=>value===values[0]));assert.ok(h.metrics().reads<=36,JSON.stringify(h.metrics()))
+  h.advance(10_001)
+  await Promise.all(instances.map(instance=>instance.getNbaOddsBoardPhaseHeader(game.date)))
+  assert.equal(batches,1,'per-instance L1 expires without extending the 15-second source observation')
+  const reused=await instances[0].getNbaOddsBoardPhase(game.date)
+  assert.equal(reused.expiresAt-h.Clock.now(),4_999,'resume retries use the existing shared entry expiry')
+  h.advance(5_001)
+  await Promise.all(instances.map(instance=>instance.getNbaOddsBoardPhaseHeader(game.date)))
+  assert.equal(batches,2,'the shared phase observation is refreshed after its bounded lifetime')
 })
 
 test('shared failure cooldown prevents cross-instance retry storms without serving expired odds', async () => {
