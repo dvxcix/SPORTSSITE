@@ -1,12 +1,21 @@
 import Browserbase from '@browserbasehq/sdk'
 import { chromium, type Browser, type Page } from 'playwright-core'
 import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
-import { reserveNbaBrowserBudget, checkNbaBrowserBudgetUsage } from '@/lib/nbaBrowserBudget'
+import { NbaBrowserBudgetError, reserveNbaBrowserBudget, checkNbaBrowserBudgetUsage } from '@/lib/nbaBrowserBudget'
 
 // Thin wrapper around the Browserbase SDK + Playwright's CDP connection —
 // every scraper (FanDuel/BetMGM/Pikkit) goes through this so session
 // creation/teardown and context persistence (Pikkit's login) only exist in
 // one place.
+
+// The current billing period has exceeded the owner's shared overage limit.
+// Keep every entry point closed until a reviewed shared budget guard is live
+// and a new eligible billing period is confirmed. Existing sessions may still
+// incur charges until they end.
+function assertBrowserbaseSpendingPause(nba = false): void {
+  if (nba) throw new NbaBrowserBudgetError('spend-limit')
+  throw new Error('Cloud browser sessions are paused for the spending limit')
+}
 
 function client(requestTimeoutMs?: number): Browserbase {
   const apiKey = process.env.BROWSERBASE_API_KEY
@@ -143,6 +152,7 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
 export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+  assertBrowserbaseSpendingPause(opts.metadata?.sport === 'nba')
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   const nba = opts.metadata?.sport === 'nba'
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
@@ -363,6 +373,7 @@ export async function createPersistentContext(
   navigateUrl = 'https://app.pikkit.com/leagues/mlb',
   options: { fresh?: boolean } = {},
 ): Promise<PersistentContextSetup> {
+  assertBrowserbaseSpendingPause()
   const lease = await acquirePikkitBrowserLease()
   if (!lease) throw new Error('Shared browser setup is busy; retry after the current session finishes')
   let safeToReleaseLease = true
