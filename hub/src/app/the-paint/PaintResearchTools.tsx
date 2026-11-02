@@ -20,6 +20,7 @@ import heatmap from './heatmap.module.css'
 
 export const PAINT_TOOLS = [
   {key:'research',label:'The Court',icon:Layers3},
+  {key:'odds-board',label:'Odds Board',icon:Layers3},
   {key:'first-basket',label:'First basket',icon:Target},
   {key:'cheatsheets',label:'Cheatsheets',icon:ClipboardList},
   {key:'usage',label:'Player trends',icon:Activity},

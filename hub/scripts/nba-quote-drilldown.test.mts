@@ -39,7 +39,7 @@ const stubs: Record<string, string> = {
   '@/components/nba/NbaMatrixButton': `export const NbaMatrixButton=()=>null`,
   '@/components/nba/NbaMatrixContext': `export const NbaMatrixProvider=({children})=>children;export const NbaMatrixResults=()=>null`,
   '@/lib/nbaRefresh': `export const watchNbaRefresh=()=>()=>{}`,
-  './PaintPickActions': `import React from 'react';export const PaintPickActions=({offer,side})=><button data-testid="pick" data-book={offer.vendor} data-side={side} data-type={offer.market.type} data-line={offer.line_value}>Save</button>`,
+  './PaintPickActions': `import React from 'react';export const PaintPickActions=({offer,side})=><button data-testid="pick" data-book={offer.vendor} data-side={side} data-type={offer.market.type} data-line={offer.line_value} data-odds={offer.market.odds??offer.market.over_odds}>Save</button>`,
   './PaintVisuals': `import React from 'react';export const CourtMark=()=>null;export const PlayerAvatar=()=>null;export const TeamLogo=()=>null;export const TrendBars=()=>null;export const ShotCourt=()=>null;export const number=(n)=>n==null?'—':n.toFixed(1);export const marketNumber=number`,
   './PaintMatchup': `export const PaintMatchup=()=>null;export const PaintMatrix=()=>null`,
   './PaintMovement': `export const PaintMovement=()=>null`,
@@ -152,6 +152,28 @@ test('sportsbook quote drilldown keeps exact main, alt, milestone and Under cont
       assert.equal(ui.host.querySelector('[role="dialog"] footer'), null)
       const active = [...ui.host.querySelectorAll('[role="dialog"] button[aria-pressed="true"]')].map(button => button.textContent)
       assert.ok(active.includes(quote.market.type === 'milestone' ? 'Milestones' : 'Alt O/U'))
+    } finally { await ui.close() }
+  }
+})
+
+test('a historical odds board deep link cannot save a withdrawn milestone', async () => {
+  const ui=await harness('research','over',null,false,'points','&contract=milestone&player=434&panel=ladder&line=99&type=milestone')
+  try {
+    const dialog=ui.host.querySelector('[role="dialog"]');assert.ok(dialog)
+    assert.equal(dialog.querySelector('[data-testid="pick"][data-line="99"]'),null)
+    assert.equal(dialog.querySelector('[data-testid="pick"][data-type="milestone"][data-line="99"]'),null)
+  } finally { await ui.close() }
+})
+
+test('a board deep link uses the destination game and its actual current exact quote', async () => {
+  for(const gameId of [123,124]) {
+    const current={...sameBookMilestone,game_id:gameId,market:{type:'milestone' as const,odds:180}}
+    const destination={...board,game:{...board.game,id:gameId},players:board.players.map(player=>({...player,props:[current]}))}
+    const ui=await harness('research','over',null,false,'points',`&contract=milestone&game=${gameId}&player=434&panel=ladder&line=20&type=milestone`,destination)
+    try {
+      const dialog=ui.host.querySelector('[role="dialog"]');assert.ok(dialog)
+      const pick=dialog.querySelector('[data-testid="pick"][data-book="fanduel"][data-type="milestone"][data-line="20"]');assert.ok(pick)
+      assert.equal(pick.getAttribute('data-odds'),'180')
     } finally { await ui.close() }
   }
 })

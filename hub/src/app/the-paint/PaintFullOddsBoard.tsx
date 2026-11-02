@@ -1,0 +1,87 @@
+'use client'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
+import { nbaBinary, nbaOdds, PAINT_MARKETS, type PaintGame, type PaintMarket } from '@/lib/nbaPaint'
+import { nbaBoardMove,nbaBoardMoveLabel,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { PaintBookSelect } from './PaintEntitySelect'
+import styles from './full-odds-board.module.css'
+
+type Comparison='opening'|'previous'
+export function PaintFullOddsBoard({date,games}:{date:string;games:PaintGame[]}) {
+  const mode=useNbaOddsMode(), [market,setMarket]=useState<PaintMarket>('points'), [book,setBook]=useState('fanduel')
+  const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState('name'),[target,setTarget]=useState('all'),[query,setQuery]=useState(''),[comparison,setComparison]=useState<Comparison>('opening')
+  const [clock,setClock]=useState(()=>Date.now()),[data,setData]=useState<{key:string;value:NbaFullOddsBoard}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
+  // Include clocks returned by the phase-safe server, not just the page's
+  // potentially older schedule. Never let a later clock reopen an early tip.
+  const learned=data?.value.date===date?data.value.games:[]
+  const tracked=games.map(item=>{const prior=learned.find(game=>game.id===item.id),starts=[nbaGameStart(item),prior?nbaGameStart(prior):null].filter((value):value is number=>value!=null);return {game:item,start:starts.length?Math.min(...starts):null,open:nbaPregameOpen(item,clock)&&(!prior||nbaPregameOpen(prior,clock))}})
+  const signature=tracked.map(item=>`${item.game.id}:${item.start??'unknown'}:${item.open?'open':'closed'}`).sort().join('|')
+  const hasOpen=tracked.some(item=>item.open)
+  const nextStart=tracked.map(item=>item.start).filter((start):start is number=>start!=null&&start>clock).sort((a,b)=>a-b)[0]
+  const key=`${date}:${mode}:${market}:${book}:${signature}`
+  useEffect(()=>{
+    const check=()=>setClock(Date.now())
+    const timer=nextStart==null?null:window.setTimeout(check,Math.min(2_147_000_000,Math.max(1,nextStart-Date.now()+10)))
+    window.addEventListener('focus',check);document.addEventListener('visibilitychange',check)
+    return()=>{if(timer!=null)window.clearTimeout(timer);window.removeEventListener('focus',check);document.removeEventListener('visibilitychange',check)}
+  },[nextStart,clock])
+  useEffect(()=>{
+    const controller=new AbortController();let pending=false
+    const update=async()=>{if(pending)return;pending=true;try{
+      const response=await fetch(nbaModeHref(`/the-paint/odds-board?${new URLSearchParams({date,market,book})}`,mode),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
+      if(!response.ok)throw new Error('board')
+      const value=nbaUnpackFullBoard(await response.json() as NbaPackedBoard,market)
+      if(value.date!==date||!Array.isArray(value.games)||!Array.isArray(value.players)||!Array.isArray(value.cells))throw new Error('identity')
+      if(!controller.signal.aborted){setData({key,value});setErrorKey(null)}
+    }catch{if(!controller.signal.aborted)setErrorKey(key) }finally{pending=false}}
+    void update()
+    // Fully closed pregame slates are immutable. Open/live users share one
+    // bounded server cache rather than starting source requests per viewer.
+    const timer=mode==='live'||hasOpen?window.setInterval(()=>{if(document.visibilityState==='visible')void update()},mode==='live'?60000:300000):null
+    return()=>{controller.abort();if(timer!=null)window.clearInterval(timer)}
+  },[date,market,book,mode,key,hasOpen])
+  const slate=data?.key===key?data.value:null
+  const error=errorKey===key
+  const books=useMemo(()=>slate?.books??[],[slate])
+  const actualBook=slate?.selectedBook??book
+  const filtered=useMemo(()=>(slate?.cells??[]).filter(cell=>cell.vendor===actualBook&&(game==='all'||String(cell.gameId)===game)),[slate,actualBook,game])
+  const playerIndex=useMemo(()=>new Map((slate?.players??[]).map(player=>[`${player.gameId}:${player.id}`,player])),[slate])
+  const teams=useMemo(()=>[...new Map((slate?.players??[]).map(player=>[player.team.id,player.team])).values()].sort((a,b)=>a.full_name.localeCompare(b.full_name)),[slate])
+  const rows=useMemo(()=>{
+    const groups=new Map<string,typeof filtered>()
+    for(const cell of filtered){const id=`${cell.gameId}:${cell.playerId}`,player=playerIndex.get(id);if(!player||(team!=='all'&&String(player.team.id)!==team)||!`${player.first_name} ${player.last_name} ${player.team.full_name}`.toLowerCase().includes(query.toLowerCase()))continue;const group=groups.get(id)??[];group.push(cell);groups.set(id,group)}
+    return [...groups].map(([id,cells])=>({id,player:playerIndex.get(id)!,cells})).sort((a,b)=>{
+      if(sort!=='name'){
+        const values=(row:typeof a)=>row.cells.filter(cell=>target==='all'||cell.line===Number(target)).map(cell=>nbaBoardMove(cell,comparison)).filter((value):value is number=>value!=null)
+        const av=values(a),bv=values(b),x=av.length?(sort==='lengthened'?Math.min(...av):Math.max(...av)):null,y=bv.length?(sort==='lengthened'?Math.min(...bv):Math.max(...bv)):null
+        if(x==null||y==null){if(x!==y)return x==null?1:-1}else if(x!==y)return sort==='lengthened'?x-y:y-x
+      }
+      return `${a.player.last_name} ${a.player.first_name}`.localeCompare(`${b.player.last_name} ${b.player.first_name}`)||a.player.gameId-b.player.gameId
+    })
+  },[filtered,playerIndex,team,query,sort,target,comparison])
+  const columns=useMemo(()=>[...new Set(rows.flatMap(row=>row.cells.map(cell=>cell.line)))].sort((a,b)=>a-b),[rows])
+  const unavailable=slate?.games.filter(item=>slate.failed.includes(item.id)||slate.unavailable.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
+  const fmtTime=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'})+' ET'
+  return <section className={styles.board}>
+    <h3>Odds Board</h3>
+    <div className={styles.controls}>
+      <select aria-label="Odds board market" value={market} onChange={event=>{setMarket(event.target.value as PaintMarket);setTarget('all')}}>{PAINT_MARKETS.filter(item=>!nbaBinary(item.key)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select>
+      <PaintBookSelect label="Odds board sportsbook" value={actualBook} onChange={setBook} books={books.length?books:[actualBook]} allowAll={false}/>
+      <select aria-label="Odds board game" value={game} onChange={event=>setGame(event.target.value)}><option value="all">All games</option>{(slate?.games??games).map(item=><option key={item.id} value={item.id}>{item.visitor_team.abbreviation} @ {item.home_team.abbreviation}</option>)}</select>
+      <select aria-label="Odds board team" value={team} onChange={event=>setTeam(event.target.value)}><option value="all">All teams</option>{teams.map(item=><option key={item.id} value={item.id}>{item.full_name}</option>)}</select>
+      <select aria-label="Compare odds to" value={comparison} onChange={event=>setComparison(event.target.value as Comparison)}><option value="opening">Opening</option><option value="previous">Previous</option></select>
+      <select aria-label="Sort odds board" value={sort} onChange={event=>setSort(event.target.value)}><option value="name">Player A–Z</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option></select>
+      <select aria-label="Sort by milestone" value={target} onChange={event=>setTarget(event.target.value)}><option value="all">All milestones</option>{target!=='all'&&!columns.includes(Number(target))&&<option value={target}>{target}+ · not posted</option>}{columns.map(line=><option key={line} value={line}>{line}+</option>)}</select>
+      <input aria-label="Find player on odds board" placeholder="Player or team" value={query} onChange={event=>setQuery(event.target.value)}/>
+    </div>
+    {error&&<p role="status">{slate?'Last observed prices shown. ':''}Odds board unavailable.</p>}
+    {!slate?!error&&<p role="status">Loading odds board…</p>:<>
+      {(!slate.complete||slate.stale)&&<p role="status">{slate.stale?'Last observed prices shown. ':''}{unavailable.length?`Unavailable: ${unavailable.join(', ')}.`:!slate.complete?'Some games are unavailable.':''}</p>}
+      <div className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row"><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}</small></th>{columns.map(line=>{const cell=row.cells.find(item=>item.line===line),base=cell?.[comparison],change=cell?nbaBoardMove(cell,comparison):null;return <td key={line}>{cell?<div className={styles.quote}><small>Last</small><Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link><small>{comparison==='opening'?'Open':'Prev'} {base?nbaOdds(base.odds):'—'}</small>{base&&<time dateTime={base.at}>{fmtTime(base.at)}</time>}<span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span><time dateTime={cell.current.at}>{fmtTime(cell.current.at)}</time></div>:<span className={styles.muted}>—</span>}</td>})}</tr>)}</tbody></table></div>
+      {!rows.length&&<p>No milestone prices for these filters.</p>}
+    </>}
+  </section>
+}

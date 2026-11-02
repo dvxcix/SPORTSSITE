@@ -11,7 +11,7 @@ let localBytes = 0
 const maxLocalBytes = 32 * 1024 * 1024
 const inFlight = new Map<string, Promise<CacheResult<unknown>>>()
 const failures = new Map<string, { until: number; error: Error }>()
-const failureBackoffMs = 15_000
+const defaultFailureBackoffMs = 15_000
 // Bounded, private-only categories: do not log cache keys or provider errors,
 // which can contain request URLs, credentials, or customer data.
 const readDiagnostics = new Map<string, number>()
@@ -31,7 +31,8 @@ function reportReadFailure(operation: 'full-read' | 'metadata-read', status: num
   try { console.warn('[The Court] shared cache read failed', { operation, reason }) } catch { /* Diagnostics must not change cache behavior. */ }
 }
 /** A database lease coalesces refreshes across serverless instances, not just a process. */
-export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds = 55): Promise<NbaCached<T>> {
+export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds = 55, failureBackoffSeconds = 15): Promise<NbaCached<T>> {
+  const failureBackoffMs=Number.isFinite(failureBackoffSeconds)?Math.max(defaultFailureBackoffMs,Math.min(300_000,failureBackoffSeconds*1000)):defaultFailureBackoffMs
   // Different freshness policies may share the public source and lease, but
   // never an in-flight stale fallback or a longer-lived memory entry.
   const memoryKey = `${ttl}:${staleSeconds}:${key}`
@@ -54,7 +55,7 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
   const failed = failures.get(memoryKey)
   if (failed && failed.until > Date.now()) { const retained = fallback(); if (retained) return retained; throw failed.error }
   failures.delete(memoryKey)
-  const task = readSharedCache(key, ttl, staleSeconds, load, leaseSeconds)
+  const task = readSharedCache(key, ttl, staleSeconds, load, leaseSeconds, failureBackoffMs)
   inFlight.set(memoryKey, task)
   try {
     const { cached, expires } = await task
@@ -73,14 +74,16 @@ export async function nbaSharedCache<T>(key: string, ttl: number, staleSeconds: 
     }
     return cached
   } catch (error) {
-    failures.set(memoryKey, { until: Date.now() + failureBackoffMs, error: error instanceof Error ? error : new Error('NBA source temporarily unavailable') })
+    // The shared lease owns the full cooldown. A follower can discover it
+    // late; restarting that full interval locally would prolong the outage.
+    failures.set(memoryKey, { until: Date.now() + defaultFailureBackoffMs, error: error instanceof Error ? error : new Error('NBA source temporarily unavailable') })
     while (failures.size > 128) failures.delete(failures.keys().next().value!)
     const retained = fallback()
     if (retained) return retained
     throw error
   } finally { if (inFlight.get(memoryKey) === task) inFlight.delete(memoryKey) }
 }
-async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds: number): Promise<CacheResult<T>> {
+async function readSharedCache<T>(key: string, ttl: number, staleSeconds: number, load: () => Promise<T>, leaseSeconds: number, failureBackoffMs: number): Promise<CacheResult<T>> {
   const admin = createAdminClient()
   const read = async () => {
     // An explicit fresh signal opts this read out of Next's render-pass GET

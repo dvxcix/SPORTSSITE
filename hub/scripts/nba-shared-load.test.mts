@@ -213,6 +213,24 @@ test('shared failure cooldown prevents cross-instance retry storms without servi
   assert.equal(loads, 2)
 })
 
+test('a partial slate has its own cache and a longer bounded cooldown without overwriting the complete slate', async () => {
+  const h=await cacheHarness(),owner=await h.instance(),follower=await h.instance()
+  const original=await owner.nbaSharedCache('board-full',300,60,async()=>({game:1,odds:150}),110,300)
+  h.advance(301_000)
+  let loads=0
+  const partial=async()=>{loads++;await owner.nbaSharedCache('board-partial',300,0,async()=>({game:2,odds:200}),25);throw Error('partial')}
+  const fallback=await owner.nbaSharedCache<{game:number;odds:number}>('board-full',300,60,partial,110,300)
+  assert.equal(fallback.value.odds,150);assert.equal(fallback.fetchedAt,original.fetchedAt);assert.equal(fallback.stale,true)
+  h.advance(60_000)
+  const outcome=await Promise.allSettled([follower.nbaSharedCache('board-full',300,0,partial,110,300)])
+  assert.equal(outcome[0].status,'rejected')
+  const visible=await follower.nbaSharedCache<{game:number;odds:number}>('board-partial',300,0,async()=>{throw Error('missing')},25)
+  assert.equal(visible.value.odds,200);assert.equal(loads,1)
+  h.advance(240_001)
+  const recovered=await follower.nbaSharedCache('board-full',300,0,async()=>({game:1,odds:140}),110,300)
+  assert.equal(recovered.value.odds,140)
+})
+
 test('shorter TTL callers cannot inherit longer freshness from database or memory; strict callers cannot inherit stale fallback', async () => {
   const h = await cacheHarness(), cache = await h.instance()
   let loads = 0
