@@ -1,0 +1,65 @@
+.page:global(.ss-onboarding-page) {
+  background: var(--bg);
+}
+
+.page :global(.ss-onboarding-progress),
+.page :global(.ss-onboarding-stage) {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.page :global(.ss-onboarding-progress-copy span) {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.page :global(.ss-onboarding-progress-copy small),
+.page :global(.ss-onboarding-kicker),
+.page :global(.ss-onboarding-fields label > span) {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.page :global(.ss-onboarding-screen > div > h1),
+.page :global(.ss-onboarding-screen > div > h2),
+.page :global(.ss-onboarding-heading h2) {
+  font-weight: 600;
+}
+
+.page :global(.ss-onboarding-benefit) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+}
+
+.page :global(.ss-onboarding-benefit svg) { color: var(--text-2); }
+.page :global(.ss-onboarding-benefit span) { color: var(--text-2); font-size: 12px; font-weight: 600; }
+.page :global(.ss-onboarding-primary) { box-shadow: none; }
+.page :global(.ss-onboarding-banner) { background: var(--surface-3); }
+.page :global(.ss-onboarding-banner-action) { min-height: 40px; font-size: 11px; }
+.page :global(.ss-onboarding-player-results > button) { min-height: 44px; }
+.page :global(.ss-onboarding-player-results b),
+.page :global(.ss-onboarding-player-chips b),
+.page :global(.ss-onboarding-groups b),
+.page :global(.ss-onboarding-destination b) { font-size: 12px; }
+.page :global(.ss-onboarding-player-results small),
+.page :global(.ss-onboarding-player-results > p),
+.page :global(.ss-onboarding-groups small),
+.page :global(.ss-onboarding-summary small),
+.page :global(.ss-onboarding-destination small) { color: var(--text-2); font-size: 11px; }
+
+@media (max-width: 540px) {
+  .page :global(.ss-onboarding-benefit) { flex-direction: row; text-align: left; }
+  .page :global(.ss-onboarding-stage input),
+  .page :global(.ss-onboarding-stage textarea) { font-size: 16px; }
+}

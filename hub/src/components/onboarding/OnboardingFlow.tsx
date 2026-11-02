@@ -2,31 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { uploadMedia } from "@/lib/uploadMedia";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, ChevronRight, Loader2, Upload } from "lucide-react";
+import { Check, ChevronRight, Loader2, Upload, Users, MessageCircle, ChartNoAxesCombined } from "lucide-react";
 import {
   SuggestedUsers,
   type SuggestedUser,
 } from "@/components/social/SuggestedUsers";
 import { trackProductEvent } from "@/lib/productAnalytics";
 import { Switch } from "@/components/ui/Switch";
-import { Users } from "lucide-react";
 import { FavoritePicker } from "@/components/profile/FavoritePicker";
 import { normalizeFavoritePlayers, type FavoritePlayer } from "@/lib/sportFavorites";
 import { MLB_HIBERNATING } from "@/lib/mlbOffseason";
 import { SafeImage } from "@/components/ui/SafeImage";
-
-// dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
-// onboarding page itself (Next 16), so the Meteors background lives here
-// instead — this component is already 'use client'.
-const Meteors = dynamic(
-  () => import("@/components/ui/meteors").then((m) => m.Meteors),
-  { ssr: false },
-);
 
 const STEPS = [
   "Welcome",
@@ -359,14 +349,11 @@ export function OnboardingFlow({
 
   return (
     <>
-      <div className="ss-onboarding-meteors" aria-hidden="true">
-        <Meteors number={12} className="opacity-60" />
-      </div>
       <div className="ss-onboarding-card">
         {/* Progress */}
         <div className="ss-onboarding-progress">
           <div className="ss-onboarding-progress-copy">
-            <span>ACCOUNT SETUP</span>
+            <span>Account setup</span>
             <strong>{STEPS[step]}</strong>
             <small>
               Step {step + 1} of {STEPS.length}
@@ -418,24 +405,23 @@ export function OnboardingFlow({
             {step === 0 && (
               <div className="ss-onboarding-screen is-centered">
                 <div>
-                  <p className="ss-onboarding-emoji">⚡</p>
                   <h1>
-                    Welcome to <span>SlipSurge</span>
+                    Set up <span>SlipSurge</span>
                   </h1>
                   <p className="ss-onboarding-lead">
                     {accountType === "creator"
-                      ? "You're set up as a Capper. Build your record in the open, share picks, and grow a following."
-                      : "The social hub for sports & picks. Follow real graded records, share your own, and never miss a line move."}
+                      ? "Set up your creator profile and share your picks."
+                      : "Choose your sports and personalize your feed."}
                   </p>
                 </div>
                 <div className="ss-onboarding-benefits">
                   {[
-                    { emoji: "🏆", label: "Follow top cappers" },
-                    { emoji: "🎯", label: "Share your picks" },
-                    { emoji: "💰", label: "Track your wins" },
+                    { icon: Users, label: "Follow members" },
+                    { icon: MessageCircle, label: "Share picks" },
+                    { icon: ChartNoAxesCombined, label: "Track your record" },
                   ].map((f) => (
                     <div key={f.label} className="ss-onboarding-benefit">
-                      <p>{f.emoji}</p>
+                      <f.icon size={20} aria-hidden="true" />
                       <span>{f.label}</span>
                     </div>
                   ))}
@@ -771,8 +757,7 @@ export function OnboardingFlow({
             {step === 7 && (
               <div className="ss-onboarding-screen is-centered">
                 <div>
-                  <p className="ss-onboarding-emoji">🎉</p>
-                  <h2>You&apos;re all set!</h2>
+                  <h2>Your account is ready</h2>
                   <p className="ss-onboarding-lead">
                     {accountType === "creator"
                       ? "Your profile is ready — drop your first pick and start building your record."

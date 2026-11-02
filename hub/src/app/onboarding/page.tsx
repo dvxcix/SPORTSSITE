@@ -2,9 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
-import { Spotlight } from '@/components/ui/spotlight'
 import { visibleFavorites } from '@/lib/visibleFavorites'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import styles from './onboarding.module.css'
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -36,9 +36,7 @@ export default async function OnboardingPage() {
   if (profile?.onboarding_completed_at) redirect('/feed')
 
   return (
-    <div className="ss-onboarding-page">
-      <div className="ss-onboarding-glow" aria-hidden="true" />
-      <Spotlight className="left-0 top-0" fill="#B4FF4D" />
+    <div className={`ss-onboarding-page ${styles.page}`}>
       <div className="ss-onboarding-content">
         <OnboardingFlow
           userId={user.id}
