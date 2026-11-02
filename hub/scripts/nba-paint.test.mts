@@ -774,9 +774,9 @@ test('Pikkit lease release reports RPC failure and keeps a single result without
 })
 
 test('NBA conditional refresh authenticates first, preserves meaningful changes and returns no repeated historical payload',async()=>{
- let denied=true,reads=0
+ let denied=true,reads=0,phaseReads=0
  let board={game:{id:123},fetchedAt:'2026-10-19T07:00:00Z',issues:[] as string[],statsComplete:true,players:[{id:434,injury:null,logs:[stat(20)],props:[offer]}]}
- const route=await compiled('../src/app/the-paint/board/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({},{status:403})}:{userId:'admin'}},'@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>board}})
+ const route=await compiled('../src/app/the-paint/board/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({},{status:403})}:{userId:'admin'}},'@/lib/nbaPaint':{nbaDate:(date:string)=>date},'@/lib/nbaOddsBoardPhaseData':{getNbaOddsBoardPhase:async()=>{phaseReads++;return null}},'@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>board}})
  const get=route.GET as(request:unknown)=>Promise<Response>,request=(etag?:string)=>({nextUrl:new URL('https://test/board?game=123'),headers:new Headers(etag?{'if-none-match':etag}:{})})
  assert.equal((await get(request())).status,403);assert.equal(reads,0)
  denied=false
@@ -793,6 +793,7 @@ test('NBA conditional refresh authenticates first, preserves meaningful changes 
  const priceChange=await get(request(statChange.headers.get('etag')!));assert.equal(priceChange.status,200)
  board={...board,issues:['Quarter coverage incomplete'],statsComplete:false}
  assert.equal((await get(request(statChange.headers.get('etag')!))).status,200)
+ assert.equal(phaseReads,0)
 })
 
 test('cold NBA cache followers wait through a slow healthy owner but respect shorter lease budgets',async()=>{

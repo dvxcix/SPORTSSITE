@@ -72,8 +72,11 @@ test('Matrix missing-resource metadata is stable across asynchronous completion 
 
 test('Board defaults to Pregame and forwards Live explicitly while returning separate economic ETags', async () => {
   const modes: string[] = []
+  let phaseReads = 0
   const api = await route('../src/app/the-paint/board/route.ts', {
     'node:crypto': await import('node:crypto'),
+    '@/lib/nbaPaint': { nbaDate: (date: string) => date },
+    '@/lib/nbaOddsBoardPhaseData': { getNbaOddsBoardPhase: async () => { phaseReads++; return null } },
     '@/lib/nbaPaintData': { getPaintGame: async () => ({id:123}), getPaintBoard: async (_game: unknown, mode: string) => { modes.push(mode); return { game:{id:123},oddsMode:mode,players:[{id:1,props:[{odds:mode==='live'?250:100}]}],fetchedAt:'2026-10-20T12:00:00Z' } } },
   })
   const pre = await api.GET(request('game=123')), live = await api.GET(request('game=123&mode=live')), unknown = await api.GET(request('game=123&mode=anything'))
@@ -82,6 +85,7 @@ test('Board defaults to Pregame and forwards Live explicitly while returning sep
   assert.equal((await live.json()).players[0].props[0].odds,250)
   assert.notEqual(pre.headers.get('etag'),live.headers.get('etag'))
   assert.equal(unknown.headers.get('etag'),pre.headers.get('etag'))
+  assert.equal(phaseReads,0)
 })
 
 test('First Basket slate uses selected-phase prices and the same phase for every movement baseline', async () => {

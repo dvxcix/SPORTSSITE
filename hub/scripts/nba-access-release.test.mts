@@ -94,15 +94,17 @@ test('every NBA customer data endpoint rejects lower tiers before reading resear
 
 test('paid Ultimate board data works while model internals and manual capture remain admin-only', async () => {
   const h = await access({ account_type: 'user', tier: 'ultimate' })
-  let reads = 0
+  let reads = 0, phaseReads = 0
   const board = { game: { id: 123 }, players: [], fetchedAt: '2026-10-20T02:00:00Z' }
   const api = await compiled('../src/app/the-paint/board/route.ts', {
     'node:crypto': await import('node:crypto'), 'next/server': { NextResponse: { json: Response.json } },
+    '@/lib/nbaPaint': { nbaDate: (date: string) => date }, '@/lib/nbaOddsBoardPhaseData': { getNbaOddsBoardPhase: async () => { phaseReads++; return null } },
     '@/lib/paintAccess': { requirePaintAccess: h.gate }, '@/lib/nbaPaintData': { getPaintGame: async () => { reads++; return { id: 123 } }, getPaintBoard: async () => board },
   })
   const request = { nextUrl: new URL('https://test/the-paint/board?game=123'), headers: new Headers() }
   const response = await (api.GET as (request: unknown) => Promise<Response>)(request)
   assert.equal(response.status, 200); assert.equal(reads, 1)
+  assert.equal(phaseReads, 0)
   assert.equal((await response.json()).game.id, 123)
   reads = 0
   const blocked = new Proxy({}, { get: () => () => { reads++; throw new Error('Operational work before admin') } })
