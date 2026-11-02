@@ -1,318 +1,85 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'motion/react'
-import { Check, X, ShieldCheck } from 'lucide-react'
-import type { Tier } from '@slipsurge/core/tiers'
+import { useState } from 'react'
+import { Check, ShieldCheck, X } from 'lucide-react'
+import { ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID, ULTIMATE_CHECKOUT_PLAN_ID, type Tier } from '@slipsurge/core/tiers'
 import { PricingCheckoutButton } from './PricingCheckoutButton'
-import { CometCard } from '@/components/ui/comet-card'
-import { Switch } from '@/components/ui/Switch'
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import styles from './PricingClient.module.css'
 
-type Interval = 'monthly' | 'annual'
-
-type TierDef = {
-  tier: Tier
-  label: string
-  tagline: string
-  monthlyPlanId?: string
-  annualPlanId?: string
-  monthlyPrice?: number
-  annualPrice?: number
-  highlight?: 'premium'
-  // Configured on the Whop plan itself, not tracked anywhere in our own DB
-  // — these two numbers just mirror what's actually set up there. Monthly
-  // only (confirmed): the annual plans for both tiers have no trial.
-  trialDaysMonthly?: number
-}
-
-const TIERS: TierDef[] = [
-  { tier: 'free', label: 'Free', tagline: 'For casual fans just browsing the community.' },
-  {
-    tier: 'basic', label: 'Basic', tagline: 'For bettors ready to dig into real research.',
-    monthlyPlanId: 'plan_C0wvFkX0sqiPm', monthlyPrice: 9.99,
-  },
-  {
-    tier: 'advanced', label: 'Advanced', tagline: 'For following the slate and public market activity.',
-    monthlyPlanId: 'plan_3QSVT9Mr4cxVt', annualPlanId: 'plan_3HbuZZv6vhNu9',
-    monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
-  },
-  {
-    tier: 'ultimate', label: 'Ultimate', tagline: 'The complete NFL and NBA research workspace.',
-    monthlyPlanId: 'plan_tCrVAX62uKyEq', annualPlanId: 'plan_1eWRTXv0XXTrI',
-    monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium', trialDaysMonthly: 3,
-  },
+const FEATURES = [
+  { label: 'Browse the NFL & NBA community feed', free: true },
+  { label: 'View and manage your profile', free: true },
+  { label: 'Choose favorite teams and players', free: true },
+  { label: 'Community leaderboard', free: true },
+  { label: 'Posts, messages, groups and channels', free: false },
+  { label: 'Player research and search', free: false },
+  { label: 'NFL & NBA live scores, box scores and play-by-play', free: false },
+  { label: 'The Sideline · NFL research', free: false },
+  { label: 'The Court · NBA research, odds and ladders', free: false },
 ]
 
-// One consistent row set across every card, so a visitor can scan straight
-// down a column and see exactly where their money stops going — same
-// pattern the reference pricing page used (Starter and Pro share almost the
-// entire checklist, only diverging at the bottom). Row -> minimum tier that
-// unlocks it; drives both the check/x rendering AND keeps this marketing
-// copy impossible to drift from what TierGate/requireTier actually enforce,
-// since it's read off the same Tier rank.
-const TIER_RANK: Record<Tier, number> = { free: 0, basic: 1, advanced: 2, ultimate: 3 }
-const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
-  { label: 'Community access: posts, DMs, groups, channels, and notifications', minTier: 'basic' },
-  { label: 'Community leaderboard', minTier: 'free' },
-  { label: 'Player research & search', minTier: 'basic' },
-  { label: 'NFL & NBA live scores, box scores & play-by-play', minTier: 'basic' },
-  { label: 'TheSideline · NFL research', minTier: 'ultimate' },
-  { label: 'The Court · NBA research, odds and ladders', minTier: 'ultimate' },
-]
-const FREE_ROWS = ['Browse the NFL & NBA community feed', 'View & manage your profile', 'Choose NFL & NBA favorite teams and players']
-
-const PLAN_GUIDE = [
-  { href: '#plan-basic', label: 'Start with Basic', detail: 'Community and live scores' },
-  { href: '#plan-advanced', label: 'Choose Advanced', detail: 'Add full-slate analysis and public market context' },
-  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'The Sideline and The Court' },
-]
-
-export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {
+export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus }: {
   loggedIn: boolean
   currentTier: Tier
-  // The real purchased tier (before the free Discord-Advanced floor is
-  // folded in) plus the claim flag itself — needed to tell "you'd have to
-  // cancel a real Whop subscription to leave this tier" apart from "this
-  // tier is just included free via Discord, there's nothing to cancel."
-  // Optional/defaulted so any other caller of this component doesn't need
-  // to know about the distinction.
   rawTier?: Tier
   discordAdvancedClaimed?: boolean
-  // Same reasoning as discordAdvancedClaimed — a tier granted manually from
-  // /admin/users is also not a real Whop subscription, so it gets the same
-  // "nothing to cancel" treatment instead of the dead-end cancel link.
   adminGrantedTier?: Tier | null
-  // Admins have full access. Beta covers existing tools; NBA requires Ultimate.
   fullAccessReason?: 'admin' | 'beta' | null
   checkoutStatus: string | null
 }) {
-  const [interval, setInterval] = useState<Interval>('monthly')
-  const fullAccess = !!fullAccessReason
+  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
+  const hasUltimate = currentTier === 'ultimate' || fullAccessReason === 'admin'
+  // Existing paid plans must be managed before a new purchase to avoid two
+  // memberships. Preserve their real billing state until migration is agreed.
+  const hasExistingPaidPlan = loggedIn && rawTier !== 'free'
+  const eligibleDiscordOffer = loggedIn && discordAdvancedClaimed && !hasUltimate && !hasExistingPaidPlan
 
-  return (
-    <div className={styles.page}>
-      {(checkoutStatus === 'succeeded' || checkoutStatus === 'success') && (
-        <div className={`${styles.statusBanner} ${styles.statusSuccess}`}>
-          Payment received. Your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
+  return <div className={styles.page}>
+    {(checkoutStatus === 'succeeded' || checkoutStatus === 'success') && <div className={`${styles.statusBanner} ${styles.statusSuccess}`}>Payment received. Your plan updates automatically within a few seconds.</div>}
+    {(['failed', 'canceled', 'error'].includes(checkoutStatus ?? '')) && <div className={`${styles.statusBanner} ${styles.statusError}`}>Checkout didn&apos;t complete. Check your payment status before trying again.</div>}
+    <div className={styles.hero}><div className={styles.heroContent}>
+      <div className={styles.eyebrow}>SlipSurge memberships</div>
+      <h1 className={styles.heroTitle}>Free or <span>Ultimate</span></h1>
+      <p className={styles.heroCopy}>Follow the community for free, or get NFL and NBA research with Ultimate.</p>
+    </div></div>
+    <div className={styles.main}>
+      <div className={styles.billingTrust}><ShieldCheck size={14} /> Secure membership management and billing powered by Whop</div>
+      <div className={styles.intervalWrap}>
+        <div className={styles.intervalControl} role="group" aria-label="Billing period">
+          <button type="button" aria-pressed={interval === 'monthly'} className={interval === 'monthly' ? styles.intervalActive : undefined} onClick={() => setInterval('monthly')}>Monthly</button>
+          <button type="button" aria-pressed={interval === 'annual'} className={interval === 'annual' ? styles.intervalActive : undefined} onClick={() => setInterval('annual')}>Annual</button>
         </div>
-      )}
-      {(['failed', 'canceled', 'error'].includes(checkoutStatus ?? '')) && (
-        <div className={`${styles.statusBanner} ${styles.statusError}`}>
-          Checkout didn&apos;t complete. Check your payment status before trying again.
-        </div>
-      )}
-      <div className={styles.hero}>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className={styles.heroContent}
-        >
-          <div className={styles.eyebrow}>SlipSurge memberships</div>
-          <h1 className={styles.heroTitle}>
-            Find the membership <span>that fits your research.</span>
-          </h1>
-          <p className={styles.heroCopy}>
-            Start with the community, then choose a plan for scores, market movement and research.
-            Monthly Advanced includes a 7-day trial. Monthly Ultimate includes a 3-day trial.
-          </p>
-        </motion.div>
       </div>
-
-      <div className={styles.main}>
-        <nav className={styles.planGuide} aria-label="Choose a membership by goal">
-          {PLAN_GUIDE.map(item => (
-            <a key={item.href} href={item.href}>
-              <strong>{item.label}</strong>
-              <span>{item.detail}</span>
-            </a>
-          ))}
-        </nav>
-
-        <div className={styles.billingTrust}><ShieldCheck size={14} /> Secure membership management and billing powered by Whop</div>
-
-        <div className={styles.intervalWrap}>
-          <div className={styles.intervalControl}>
-            <span className={interval === 'monthly' ? styles.intervalActive : undefined}>Monthly</span>
-            <Switch checked={interval === 'annual'} onChange={v => setInterval(v ? 'annual' : 'monthly')} ariaLabel="Use annual billing" />
-            <span className={interval === 'annual' ? styles.intervalActive : undefined}>
-              Annual
-              <Badge variant="save">Save up to 21%</Badge>
-            </span>
+      {fullAccessReason === 'admin' && <div className={styles.accessBanner}>Admin account — full access</div>}
+      {fullAccessReason === 'beta' && <div className={styles.accessBanner}>Beta access is active for included tools. NBA research requires Ultimate.</div>}
+      {hasExistingPaidPlan && rawTier !== 'ultimate' && <div className={styles.accessBanner}>Your existing {rawTier === 'basic' ? 'Basic' : 'Advanced'} membership: <Link href="/settings/membership">manage billing</Link></div>}
+      <div className={styles.cards}>
+        {(['free', 'ultimate'] as const).map(tier => {
+          const paid = tier === 'ultimate'
+          const current = paid ? hasUltimate : loggedIn && currentTier === 'free' && !fullAccessReason
+          return <div key={tier} id={`plan-${tier}`} className={styles.cardAnchor}>
+            <div className={`${styles.card} ${paid ? styles.cardPremium : ''} ${current ? styles.cardCurrent : ''}`}>
+              <div className={styles.cardHeader}><div className={styles.cardName}><h2>{paid ? 'Ultimate' : 'Free'}</h2></div>{current && <span className={styles.coverageNote}>Current</span>}</div>
+              <div className={styles.price}><span>{paid ? (interval === 'annual' ? '$199.99' : '$19.99') : '$0'}</span><small>{paid ? (interval === 'annual' ? '/365 days' : '/30 days') : ''}</small></div>
+              {paid && <p className={styles.billingDetail}>{interval === 'annual' ? 'Annual' : 'Monthly'} price for new memberships</p>}
+              {paid && interval === 'monthly' && <p className={styles.billingDetail}>3-day free trial, then $19.99 every 30 days</p>}
+              <p className={styles.tagline}>{paid ? 'NFL and NBA research, odds and community tools.' : 'Browse the community and manage your profile.'}</p>
+              {!paid && !loggedIn && <Link href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>Sign up free</Link>}
+              {paid && hasExistingPaidPlan && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>Manage membership</Link>}
+              {paid && eligibleDiscordOffer && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>View Discord member offer</Link>}
+              {paid && !hasUltimate && !hasExistingPaidPlan && (!eligibleDiscordOffer || interval === 'annual') && <PricingCheckoutButton planId={interval === 'annual' ? ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID : ULTIMATE_CHECKOUT_PLAN_ID} label={interval === 'annual' ? 'Get Ultimate' : 'Start 3-day free trial'} loggedIn={loggedIn} highlight />}
+              <ul className={styles.featureList}>{FEATURES.map(feature => {
+                const included = paid || feature.free
+                return <li key={feature.label} className={included ? '' : styles.featureUnavailable}>{included ? <Check size={14} /> : <X size={14} />}<span>{feature.label}</span></li>
+              })}</ul>
+              {paid && <div className={styles.renewal}><span>New memberships renew every {interval === 'annual' ? '365' : '30'} days</span><span>Cancel anytime</span></div>}
+            </div>
           </div>
-        </div>
-
-        {fullAccess && (
-          <div className={styles.accessBanner}>
-            {fullAccessReason === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access is active for included tools. NBA research requires Ultimate.'}
-          </div>
-        )}
-
-        <div className={styles.cards}>
-          {TIERS.map(t => {
-            const fullAccess = fullAccessReason === 'admin' || fullAccessReason === 'beta' && t.tier !== 'ultimate'
-            const isCurrent = t.tier === currentTier
-            const cardRank = TIER_RANK[t.tier]
-            const realRank = TIER_RANK[rawTier]
-            // Whop is the billing system of record — a "downgrade" here can
-            // only ever be a cancellation over there (which then reverts the
-            // account to Free via the webhook), never a second purchase
-            // stacked under an existing one. So a tier below what someone
-            // already has doesn't get a buy button — that would just create
-            // a separate, redundant Whop membership rather than actually
-            // switching them down.
-            const isDowngrade = loggedIn && cardRank < TIER_RANK[currentTier]
-            // A card at or below the free Discord-Advanced floor, but above
-            // what was actually purchased, has nothing behind it to cancel —
-            // sending someone there to /settings/membership's "Manage on
-            // Whop" link would be a dead end (confirmed live: an account
-            // with Advanced only via the Discord claim saw no cancel/manage
-            // option there, because there's no real subscription to manage).
-            // "Cancel to Downgrade" only makes sense when the card is below
-            // what was actually bought.
-            const isClaimCovered = loggedIn && discordAdvancedClaimed && cardRank > realRank && cardRank <= TIER_RANK.advanced
-            // Same reasoning, for a manual /admin/users grant instead of the
-            // Discord claim — capped at whatever tier was actually granted,
-            // not always Advanced.
-            const adminGrantRank = adminGrantedTier ? TIER_RANK[adminGrantedTier] : -1
-            const isGrantCovered = loggedIn && adminGrantedTier != null && cardRank > realRank && cardRank <= adminGrantRank
-            const coverageNote = isGrantCovered ? 'Granted by admin' : isClaimCovered ? 'Included free via Discord' : null
-            // Based on what was actually bought (realRank), not the
-            // claim/grant-inflated floor — someone who's never paid for
-            // anything has no real subscription to cancel just because the
-            // floor sits above this card.
-            const isRealDowngrade = loggedIn && cardRank < realRank
-            const isRealCurrent = isCurrent && !isClaimCovered && !isGrantCovered
-            const hasAnnual = interval === 'annual' && !!t.annualPrice
-            const displayPrice = t.tier === 'free' ? 0 : hasAnnual ? (t.annualPrice! / 12) : t.monthlyPrice
-            const planId = interval === 'annual' && t.annualPlanId ? t.annualPlanId : t.monthlyPlanId
-            const savePct = t.monthlyPrice && t.annualPrice ? Math.round((1 - (t.annualPrice / 12) / t.monthlyPrice) * 100) : null
-
-            return (
-              <div key={t.tier} id={`plan-${t.tier}`} className={styles.cardAnchor}>
-              <CometCard className="w-full h-full">
-                <div className={`${styles.card} ${t.highlight === 'premium' ? styles.cardPremium : ''} ${isCurrent && !fullAccess ? styles.cardCurrent : ''}`}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.cardName}>
-                      <h2>{t.label}</h2>
-                    </div>
-                    {isCurrent && !fullAccess && <Badge variant="upcoming">Current</Badge>}
-                  </div>
-
-                  <div className={styles.price}>
-                    <span>
-                      ${displayPrice === 0 ? '0' : displayPrice!.toFixed(2)}
-                    </span>
-                    <small>/mo</small>
-                  </div>
-                  {hasAnnual ? (
-                    <div className={styles.billingDetail}>
-                      <span>billed ${t.annualPrice!.toFixed(2)}/yr</span>
-                      {savePct && <Badge variant="save">Save {savePct}%</Badge>}
-                    </div>
-                  ) : interval === 'annual' && t.tier !== 'free' && !t.annualPrice ? (
-                    <p className={styles.billingDetail}>No annual plan. Billed monthly.</p>
-                  ) : (
-                    <div className={styles.billingSpacer} />
-                  )}
-
-                  <p className={styles.tagline}>{t.tagline}</p>
-
-                  {/* Monthly-only (confirmed against the actual Whop plan
-                      config) — switching to Annual drops this, since that
-                      plan has no trial behind it. */}
-                  {interval === 'monthly' && t.trialDaysMonthly && (
-                    <div className={styles.trialBadge}>
-                      <Badge variant="save">{t.trialDaysMonthly}-day free trial</Badge>
-                    </div>
-                  )}
-
-                  {!fullAccess && planId && !isCurrent && !isDowngrade && (
-                    <PricingCheckoutButton
-                      planId={planId}
-                      label={interval === 'monthly' && t.trialDaysMonthly ? `Start ${t.trialDaysMonthly}-Day Trial` : `Get ${t.label}`}
-                      loggedIn={loggedIn}
-                      highlight={t.highlight === 'premium'}
-                    />
-                  )}
-                  {/* Covered by the free Discord-Advanced claim or a manual
-                      admin grant, not an actual purchase — nothing to cancel
-                      or manage on Whop for this card, so no button, just the
-                      same explanation /settings/membership itself gives.
-                      Suppressed for full-access accounts too — the page
-                      banner above already covers it, and this card's cause
-                      may not even be the claim/grant (e.g. an admin who also
-                      happens to hold one). */}
-                  {!fullAccess && coverageNote && (
-                    <p className={styles.coverageNote}>
-                      {coverageNote}
-                    </p>
-                  )}
-                  {/* Downgrading (including all the way back to Free) only
-                      happens by cancelling the current plan on Whop — send
-                      them to Membership settings, which has the real
-                      "Manage on Whop" link, instead of a buy button that
-                      would just stack a second plan on top. */}
-                  {!fullAccess && isRealDowngrade && (
-                    <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
-                      Cancel to Downgrade
-                    </Link>
-                  )}
-                  {/* Same reasoning for the plan you're already on — cancelling
-                      is also a Whop action, not something this page can do
-                      directly. */}
-                  {!fullAccess && isRealCurrent && t.tier !== 'free' && (
-                    <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
-                      Manage / Cancel
-                    </Link>
-                  )}
-                  {/* Free's own CTA only matters for a logged-out visitor — a
-                      logged-in user is either already on Free (the "Current"
-                      badge above already says so) or on a paid tier (handled
-                      by the downgrade case above), so no button/label renders
-                      in either logged-in case. */}
-                  {t.tier === 'free' && !loggedIn && (
-                    <a href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
-                      Sign Up Free
-                    </a>
-                  )}
-
-                  <ul className={styles.featureList}>
-                    {t.tier === 'free' && FREE_ROWS.map(f => (
-                      <li key={f}>
-                        <Check size={14} />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                    {FEATURE_ROWS.map(row => {
-                      const included = TIER_RANK[t.tier] >= TIER_RANK[row.minTier]
-                      return (
-                        <li key={row.label} className={included ? '' : styles.featureUnavailable}>
-                          {included
-                            ? <Check size={14} />
-                            : <X size={14} />}
-                          <span>{row.label}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-
-                  {t.tier !== 'free' && (
-                    <div className={styles.renewal}>
-                      <span>Renews {hasAnnual ? 'annually' : 'monthly'}</span>
-                      <span>Cancel anytime</span>
-                    </div>
-                  )}
-                </div>
-              </CometCard>
-              </div>
-            )
-          })}
-        </div>
+        })}
       </div>
     </div>
-  )
+  </div>
 }

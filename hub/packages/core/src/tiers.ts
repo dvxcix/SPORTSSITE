@@ -7,8 +7,8 @@ export function hasTierAccess(userTier: Tier, required: Tier): boolean {
   return TIER_RANK[userTier] >= TIER_RANK[required]
 }
 
-// The 5 real Whop plans backing paid tiers — see plan doc for how these were
-// sourced. Basic has no annual plan (deliberately, per the pricing design).
+// Historical and current Whop plans backing paid tiers. Historical plans stay
+// recognized for existing members even when they are no longer offered.
 // `company` marks which Whop business a plan lives under — 'main' (default,
 // omitted) is the WHOP_API_KEY/WHOP_WEBHOOK_KEY business every normal
 // customer pays into; 'addon' is the entirely separate Whop business the
@@ -22,14 +22,21 @@ export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval:
   plan_3HbuZZv6vhNu9: { tier: 'advanced', interval: 'annual', label: 'Advanced — Annual' },
   plan_tCrVAX62uKyEq: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate — Monthly' },
   plan_1eWRTXv0XXTrI: { tier: 'ultimate', interval: 'annual', label: 'Ultimate — Annual' },
-  // $10/mo add-on for people who already get Advanced free via the Discord
-  // community plan (see effectiveTier/discord_advanced_claimed below) — buying
-  // this on top bumps them to Ultimate through the exact same checkout/webhook
-  // path every other plan uses, just at the discounted add-on price, under the
-  // addon Whop business. Not shown on the public /pricing page — only
-  // surfaced on /settings/membership to accounts that already have the claim,
-  // since it's meaningless without it.
+  plan_2uISqRWL3Re5v: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate — Monthly' },
+  plan_Brp4I5MDssXY0: { tier: 'ultimate', interval: 'annual', label: 'Ultimate — Annual' },
+  // $10/mo Ultimate for eligible Discord community members, billed by the
+  // separate add-on Whop business. The claim alone does not grant access.
   plan_Q1Ey6RMgjS9XQ: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate Add-on — Discord Members', company: 'addon' },
+}
+
+// Existing subscriptions still need all of WHOP_PLANS for reconciliation,
+// webhooks and cancellation. New sales are deliberately a separate policy.
+export const ULTIMATE_CHECKOUT_PLAN_ID = 'plan_2uISqRWL3Re5v'
+export const ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID = 'plan_Brp4I5MDssXY0'
+export const DISCORD_ULTIMATE_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
+
+export function isOfferedWhopPlan(planId: string): boolean {
+  return planId === ULTIMATE_CHECKOUT_PLAN_ID || planId === ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID || planId === DISCORD_ULTIMATE_ADDON_PLAN_ID
 }
 
 // Which WHOP_API_KEY-equivalent env var a checkout session for this plan
@@ -51,24 +58,19 @@ export function checkoutApiKeyEnvFor(planId: string): 'ADDON_WHOP_KEY' | 'WHOP_A
 // Reused by both TierGate (page rendering) and requireTier (API routes) —
 // admin or active beta access bypasses tier requirements entirely, same as
 // FeatureGate's admin-preview treatment.
-// Holding the Discord-community Whop plan bundles Advanced in for free —
-// "claimed" at Whop OAuth login (see auth/whop/callback), re-synced every
-// login since there's no webhook for it. This never lowers a real paid
-// tier — someone who bought Ultimate directly stays Ultimate even without
-// the claim, and someone with the claim who also buys the $10 add-on plan
-// (WHOP_PLANS.plan_Q1Ey6RMgjS9XQ) already has their `tier` column at
-// 'ultimate' from that purchase, so this only ever raises the floor, never
-// substitutes for a real purchase.
+// Discord community membership determines eligibility for the discounted
+// add-on, but no longer grants an access tier by itself. Keep the argument
+// for existing callers; entitlement comes from the purchased or admin tier.
 //
-// adminGrantedTier is the same kind of floor-raise, set from /admin/users
-// (users.admin_granted_tier) instead of a Discord membership — deliberately
+// adminGrantedTier is a floor-raise, set from /admin/users
+// (users.admin_granted_tier) — deliberately
 // a separate column from `tier` (which only the Whop webhook/reconcile
 // crons write) so a manual grant can never be silently overwritten by a
 // real Whop event for that account, and never substitutes for what was
 // actually purchased either.
 export function effectiveTier(rawTier: Tier, discordAdvancedClaimed: boolean | null | undefined, adminGrantedTier?: Tier | null): Tier {
+  void discordAdvancedClaimed
   let t = rawTier
-  if (discordAdvancedClaimed && TIER_RANK[t] < TIER_RANK.advanced) t = 'advanced'
   if (adminGrantedTier && TIER_RANK[adminGrantedTier] > TIER_RANK[t]) t = adminGrantedTier
   return t
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { WHOP_PLANS, checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
+import { DISCORD_ULTIMATE_ADDON_PLAN_ID, isOfferedWhopPlan, checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { PLATFORM_URL } from '@/lib/platform'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
@@ -20,14 +21,10 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null)
   const planId = body?.planId
-  if (typeof planId !== 'string' || !WHOP_PLANS[planId]) {
+  if (typeof planId !== 'string' || !isOfferedWhopPlan(planId)) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }
 
-  // plan_Q1Ey6RMgjS9XQ (the Discord add-on) lives under a completely
-  // separate Whop business from every other plan here — using WHOP_API_KEY
-  // for it 404s ("No such Plan found"), confirmed live, since that key only
-  // sees plans in the main business.
   const apiKeyEnv = checkoutApiKeyEnvFor(planId)
   const apiKey = process.env[apiKeyEnv]
   if (!apiKey) return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
@@ -42,6 +39,22 @@ export async function POST(req: Request) {
       { error: 'Please wait a few minutes before trying checkout again.' },
       { status: 429, headers: { 'Retry-After': '300' } },
     )
+  }
+
+  // Eligibility is read for the calling account; the browser cannot supply
+  // its own claim. This stored claim is refreshed when the user links Whop.
+  if (planId === DISCORD_ULTIMATE_ADDON_PLAN_ID) {
+    try {
+      const admin = createAdminClient()
+      const { data: profile, error } = await admin.from('users')
+        .select('discord_advanced_claimed').eq('id', user.id).single()
+      if (error || !profile) return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
+      if (profile.discord_advanced_claimed !== true) {
+        return NextResponse.json({ error: 'This membership is not available for your account.' }, { status: 403 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
+    }
   }
 
   try {

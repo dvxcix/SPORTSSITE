@@ -38,11 +38,7 @@ export default async function MembershipSettingsPage({
   const rawTier = (profile?.tier as Tier) ?? 'free'
   const adminGrantedTier = (profile?.admin_granted_tier as Tier | null) ?? null
   const tier = effectiveTier(rawTier, profile?.discord_advanced_claimed, adminGrantedTier)
-  const includedViaDiscord = !!profile?.discord_advanced_claimed && !hasTierAccess(rawTier, 'advanced')
-  // A manual grant raises the floor the same way the Discord claim does —
-  // "included" here just means "not the raw purchased tier," same test as
-  // includedViaDiscord but checked against whatever tier was actually
-  // granted instead of always Advanced.
+  // A manual grant may raise the access floor above the purchased tier.
   const includedViaGrant = !!adminGrantedTier && !hasTierAccess(rawTier, adminGrantedTier)
   const plan = profile?.whop_plan_id ? WHOP_PLANS[profile.whop_plan_id] : null
   const isPaid = rawTier !== 'free'
@@ -50,26 +46,20 @@ export default async function MembershipSettingsPage({
   const renewalDate = profile?.tier_current_period_end
     ? new Date(profile.tier_current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null
-  // Admin/beta full access already bypasses every tier gate regardless of
-  // what's actually purchased or claimed — showing "Advanced" here (because
-  // that's all the real tier + Discord claim add up to) undersold what the
-  // account can actually do. Display-only: doesn't touch tier/rawTier, which
-  // stay the real billing state everywhere else on this page.
+  // Keep beta access distinct from a purchased membership. NBA research has
+  // its own Ultimate requirement even for beta accounts.
   const fullAccess = profile?.account_type === 'admin' || !!profile?.beta_access_active
-  const displayTier: Tier = fullAccess ? 'ultimate' : tier
-  // The $10 add-on only makes sense on top of the free Discord-included
-  // Advanced — someone who already bought Ultimate outright has no use for
-  // it, someone without the claim at all can't use it either (it's not sold
-  // standalone on /pricing), and a full-access account already has Ultimate
-  // regardless of any purchase.
-  const showDiscordAddon = !fullAccess && !!profile?.discord_advanced_claimed && !hasTierAccess(tier, 'ultimate')
+  const displayTier: Tier = profile?.account_type === 'admin' ? 'ultimate' : tier
+  // The claim establishes eligibility for the add-on, not an access tier.
+  // Existing paid memberships must be managed first to avoid double billing.
+  const showDiscordAddon = profile?.account_type !== 'admin' && !!profile?.discord_advanced_claimed && !isPaid && !hasTierAccess(tier, 'ultimate')
 
   return (
     <SettingsShell active="/settings/membership" eyebrow="PLAN AND BILLING" title="Your SlipSurge membership" description="Review access, renewal details, connected billing, and available plan options.">
 
       {whop_linked && (
         <div className={styles.notice}>
-          Whop connected{profile?.discord_advanced_claimed ? ' — your free Advanced tier is now active.' : '.'}
+          Whop connected{showDiscordAddon ? ' — your Discord member offer is available below.' : '.'}
         </div>
       )}
       {whop_link_error && (
@@ -82,7 +72,7 @@ export default async function MembershipSettingsPage({
         <div className={styles.card}>
           <h3>Connect Whop</h3>
           <p>
-            If you signed up with X or Discord, connecting your Whop account here checks it for a free Advanced tier through our Discord membership — you don't need to sign in with Whop again, just link it once.
+            Connect your Whop account to check whether your Discord membership qualifies for the Ultimate member offer.
           </p>
           <a href="/auth/whop/login?mode=link&next=/settings/membership"
             className={styles.secondary}>
@@ -93,7 +83,7 @@ export default async function MembershipSettingsPage({
 
       {(profile?.account_type === 'admin' || profile?.beta_access_active) && (
         <div className={styles.notice}>
-          {profile?.account_type === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access — full access to every tier while the beta program is active.'}
+          {profile?.account_type === 'admin' ? 'Admin account — full access.' : 'Beta access is active for included tools. NBA research requires Ultimate.'}
         </div>
       )}
 
@@ -108,19 +98,17 @@ export default async function MembershipSettingsPage({
           )}
         </div>
         <p className={styles.planName}>{TIER_LABEL[displayTier]}</p>
-        {fullAccess
-          ? <p>{profile?.account_type === 'admin' ? 'Full access as an admin account.' : 'Full access during the beta program.'}</p>
-          : includedViaGrant
-            ? <p>Granted by an admin.</p>
-            : includedViaDiscord
-              ? <p>Included free with your Discord membership.</p>
-              : plan && <p>{plan.label}{renewalDate ? ` — renews ${renewalDate}` : ''}</p>}
-        {!isPaid && !includedViaDiscord && !includedViaGrant && !fullAccess && <p>Free forever — upgrade any time for the research tools.</p>}
+        {profile?.account_type === 'admin'
+          ? <p>Full access as an admin account.</p>
+          : plan ? <p>{plan.label}{renewalDate && profile?.tier_cancel_at_period_end ? ` — ends ${renewalDate}` : renewalDate && isActive ? ` — renews ${renewalDate}` : ''}</p>
+            : includedViaGrant ? <p>Granted by an admin.</p>
+              : profile?.beta_access_active ? <p>Beta access is active for included tools.</p> : null}
+        {!isPaid && !includedViaGrant && !fullAccess && <p>Free forever — upgrade any time for the research tools.</p>}
 
-        {!fullAccess && (
+        {profile?.account_type !== 'admin' && !isPaid && !hasTierAccess(tier, 'ultimate') && (
           <div className={styles.actions}>
             <Link href="/pricing" className={styles.primary}>
-              {isPaid ? 'Change Plan' : 'Upgrade'}
+              Upgrade
             </Link>
           </div>
         )}
@@ -130,7 +118,7 @@ export default async function MembershipSettingsPage({
         <div className={`${styles.card} ${styles.cardAccent}`}>
           <h3>Add Ultimate — $10/mo</h3>
           <p>
-            You already get Advanced free through your Discord membership — add every Ultimate tool for just $10/mo on top, instead of the full price. This stays active only as long as your Discord membership does.
+            Qualifying Discord members can add Ultimate for $10/mo.
           </p>
           <PricingCheckoutButton planId={DISCORD_ADDON_PLAN_ID} label="Add Ultimate — $10/mo" loggedIn />
         </div>
@@ -141,14 +129,14 @@ export default async function MembershipSettingsPage({
           <h3>Manage or Cancel</h3>
           {profile?.tier_cancel_at_period_end ? (
             <p>
-              Your subscription is set to cancel{renewalDate ? ` — you'll keep access until ${renewalDate}, then your account moves to Free` : ''}.
+              Your subscription is set to cancel{renewalDate ? ` — your paid membership ends ${renewalDate}` : ''}.
             </p>
           ) : profile?.whop_membership_id ? (
             <>
               <p>
-                Cancel any time — you'll keep your current tier until the end of the billing period, then your account moves to Free.
+                Cancel any time. Trial access may end immediately.
               </p>
-              <CancelMembershipButton renewalDate={renewalDate} />
+              <CancelMembershipButton />
             </>
           ) : (
             <>

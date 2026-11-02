@@ -20,7 +20,7 @@ const features = [
   { icon: FlaskConical, name: 'The Sideline', copy: 'NFL matchup intelligence and market movement in one workspace.', tier: 'Ultimate' },
   { icon: DatabaseZap, name: 'The Court', copy: 'NBA player research, milestones and market comparisons.', tier: 'Ultimate' },
   { icon: Table2, name: 'Matrices', copy: 'Build and organize your research in one place.', tier: 'Ultimate' },
-  { icon: MessageCircle, name: 'Surge Live', copy: 'Real-time rooms, direct messages and community alerts built into desktop.', tier: 'Basic' },
+  { icon: MessageCircle, name: 'Surge Live', copy: 'Real-time rooms, direct messages and community alerts built into desktop.', tier: 'Ultimate' },
 ]
 
 type DesktopNotificationRow = {

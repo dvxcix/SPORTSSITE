@@ -3,12 +3,11 @@ import { Lock } from 'lucide-react'
 import type { Tier } from '@slipsurge/core/tiers'
 import { DesktopUpgradePrompt } from '@/components/desktop/DesktopUpgradePrompt'
 
-const TIER_LABELS: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
-
 export function TierUpsell({ requiredTier, label }: { requiredTier: Tier; label: string }) {
+  const signInOnly = requiredTier === 'free'
   return (
     <>
-    <DesktopUpgradePrompt tier={TIER_LABELS[requiredTier]} feature={label} />
+    {!signInOnly && <DesktopUpgradePrompt tier="Ultimate" feature={label} />}
     <div style={{
       minHeight: '60vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24,
@@ -20,16 +19,16 @@ export function TierUpsell({ requiredTier, label }: { requiredTier: Tier; label:
         <Lock size={24} color="var(--text-3)" />
       </div>
       <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>
-        {label} requires {TIER_LABELS[requiredTier]}
+        {signInOnly ? `Sign in to use ${label}` : `Unlock ${label} with Ultimate`}
       </h1>
       <p style={{ fontSize: 13, color: 'var(--text-3)', maxWidth: 320, lineHeight: 1.5, marginBottom: 20 }}>
-        Upgrade your plan to unlock {label} and everything else included at the {TIER_LABELS[requiredTier]} tier.
+        {signInOnly ? 'Create a free account or sign in to continue.' : `Get Ultimate for ${label} and the rest of the research and community tools.`}
       </p>
-      <Link href="/pricing" style={{
+      <Link href={signInOnly ? '/auth/login' : '/pricing'} style={{
         fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
         padding: '9px 18px', borderRadius: 10, textDecoration: 'none',
       }}>
-        View Plans
+        {signInOnly ? 'Sign in' : 'View membership'}
       </Link>
     </div>
     </>

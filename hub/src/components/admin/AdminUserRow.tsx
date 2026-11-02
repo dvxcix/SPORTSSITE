@@ -149,7 +149,7 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
                 {u.discord_advanced_claimed && (
                   <div>
                     <p className="text-zinc-500 font-bold uppercase tracking-wider text-[10px] mb-1">Discord Claim</p>
-                    <p className="text-white">Advanced included free</p>
+                    <p className="text-white">Eligible for Discord pricing</p>
                   </div>
                 )}
               </div>

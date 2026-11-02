@@ -31,6 +31,47 @@ export async function alertUnexpectedChargeAfterCancel(admin: SupabaseClient, pa
   ])
 }
 
+// Payment webhooks can be delivered after a later cancellation event, so the
+// delivery order alone cannot establish whether a charge followed cancellation.
+export async function alertPaymentOnCancelingMembership(admin: SupabaseClient, params: {
+  userId: string; email: string | null; membershipId: string | null; planTier: string
+}) {
+  console.error('[billing] payment for a canceling membership needs review', { planTier: params.planTier })
+  await Promise.all([
+    sendCancelingMembershipPaymentEmail(admin, params),
+    postAlert(admin, 'pipeline_health', {
+      embeds: [{
+        title: 'Payment on a canceling membership',
+        description: `A payment event for ${params.email ?? params.userId} was received while **${params.planTier}** was marked for cancellation (membership ${params.membershipId ?? 'unknown'}). Review the payment and cancellation times in Whop.`,
+        color: 0xFF4D4D,
+      }],
+    }),
+  ])
+}
+
+async function sendCancelingMembershipPaymentEmail(admin: SupabaseClient, params: {
+  userId: string; email: string | null; membershipId: string | null; planTier: string
+}) {
+  const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
+  const recipients = (admins ?? []).map(a => a.email).filter((email): email is string => Boolean(email))
+  if (!recipients.length) return
+  const text = `A payment event for ${params.email ?? params.userId} was received while the membership was marked for cancellation. Review the payment and cancellation times in Whop. Plan: ${params.planTier}. Membership: ${params.membershipId ?? 'unknown'}.`
+  const sent = await sendEmail({
+    to: recipients,
+    subject: 'Payment on a canceling membership — review timing',
+    text,
+    html: brandedEmailHtml({
+      eyebrow: 'Billing alert',
+      heading: 'Review payment and cancellation times',
+      preheader: 'A payment event arrived for a canceling membership.',
+      bodyHtml: `<p style="margin:0 0 14px;">A payment event was received while this membership was marked for cancellation. Review the payment and cancellation times in Whop.</p><div style="padding:14px 16px;border:1px solid #4A2629;border-radius:12px;color:#FCA5A5;"><strong>${escapeHtml(params.email ?? params.userId)}</strong><br />Plan: ${escapeHtml(params.planTier)}<br />Membership: ${escapeHtml(params.membershipId ?? 'unknown')}</div>`,
+      ctaLabel: 'Open admin panel',
+      ctaUrl: 'https://www.slipsurge.com/admin',
+    }),
+  })
+  if (!sent) console.error('[billing] canceling-membership payment email was not delivered')
+}
+
 async function sendUnexpectedChargeEmail(admin: SupabaseClient, params: {
   userId: string; email: string | null; membershipId: string | null; planTier: string
 }) {

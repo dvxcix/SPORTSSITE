@@ -12,8 +12,8 @@ const STATE_COOKIE = 'whop_oauth_state'
 // The Discord/community product — same Whop company as WHOP_CLIENT_ID's
 // OAuth app (confirmed by the user), just a different product than the
 // original beta pass (WHOP_ACCESS_PASS_ID). Holding this product's plan
-// (plan_XouplTDWLVzUG) bundles SlipSurge's Advanced tier in for free —
-// "claimed" by signing in with Whop, same mechanism as the beta gate below,
+// (plan_XouplTDWLVzUG) makes the account eligible for Discord pricing —
+// checked by signing in with Whop, same mechanism as the beta gate below,
 // just checked against a second product instead of a hardcoded rejection.
 // Hardcoded (not env-configured) since it's stable product config, same as
 // every plan id already hardcoded in tiers.ts's WHOP_PLANS.
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   if (!whopUser || !whopUser.email) return loginFailed('whop_auth_failed')
 
   // Two independent products can let someone through: the original beta
-  // pass, or the Discord-community product (which bundles Advanced tier).
+  // pass, or the Discord-community product (which grants pricing eligibility).
   // Neither write anything yet — betaHasAccess never has (beta access is
   // granted by a one-time manual backfill onto beta_access_active,
   // deliberately decoupled from any live check, see hasFullAccessOverride);
@@ -215,17 +215,17 @@ export async function GET(request: Request) {
   }
 
   // One unified sync regardless of which branch above resolved authUserId —
-  // discordHasAccess is already known from the check up top, just need the
-  // account's real purchased tier to fold it in via effectiveTier() before
+  // discordHasAccess is already known from the check up top; read the
+  // purchased and admin-granted tiers before
   // awarding/stripping the Advanced/Ultimate profile badge. Also records the
   // Whop identity as verified (Settings > Connected Accounts, public profile
   // badge) — merged onto whatever's already in verified_identities rather
   // than overwritten, since discord/x entries live in the same column.
-  const { data: tierRow } = await admin.from('users').select('tier, verified_identities').eq('id', authUserId).maybeSingle()
+  const { data: tierRow } = await admin.from('users').select('tier, admin_granted_tier, verified_identities').eq('id', authUserId).maybeSingle()
   await admin.from('users').update({
     verified_identities: { ...(tierRow?.verified_identities ?? {}), whop: buildWhopVerifiedIdentity(whopUser) },
   }).eq('id', authUserId)
-  await syncTierBadge(admin, authUserId, effectiveTier((tierRow?.tier as Tier) ?? 'free', discordHasAccess))
+  await syncTierBadge(admin, authUserId, effectiveTier((tierRow?.tier as Tier) ?? 'free', discordHasAccess, tierRow?.admin_granted_tier as Tier | null))
 
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
@@ -266,7 +266,7 @@ async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkU
   const { data: existingByWhop } = await admin.from('users').select('id').eq('whop_user_id', whopUser.sub).maybeSingle()
   if (existingByWhop && existingByWhop.id !== linkUserId) return linkFailed('already_linked_elsewhere')
 
-  const { data: current } = await admin.from('users').select('tier, verified_identities').eq('id', linkUserId).maybeSingle()
+  const { data: current } = await admin.from('users').select('tier, admin_granted_tier, verified_identities').eq('id', linkUserId).maybeSingle()
 
   const { data: updated, error } = await admin.from('users').update({
     whop_user_id: whopUser.sub,
@@ -275,7 +275,7 @@ async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkU
   }).eq('id', linkUserId).select('tier').single()
   if (error || !updated) return linkFailed('link_failed')
 
-  await syncTierBadge(admin, linkUserId, effectiveTier((updated.tier as Tier) ?? 'free', discordHasAccess))
+  await syncTierBadge(admin, linkUserId, effectiveTier((updated.tier as Tier) ?? 'free', discordHasAccess, current?.admin_granted_tier as Tier | null))
 
   return redirectTo('whop_linked=1')
 }

@@ -6,7 +6,6 @@ import Image from 'next/image'
 import styles from './LandingPage.module.css'
 import { motion, AnimatePresence } from 'motion/react'
 import { Activity, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { BookLogo } from '@/components/BookLogo'
 
 // Deliberately generic/benefit-level descriptions only — no mention of any
@@ -28,8 +27,8 @@ const STEPS = [
   { n: '3', title: 'Post and track picks', body: 'Share picks and follow your record on the leaderboard.' },
 ]
 
-type TierKey = 'basic' | 'advanced' | 'ultimate'
-const TIER_LABEL: Record<TierKey, string> = { basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
+type TierKey = 'ultimate'
+const TIER_LABEL: Record<TierKey, string> = { ultimate: 'Ultimate' }
 
 function TierPill({ tier }: { tier: TierKey }) {
   return (
@@ -49,12 +48,7 @@ const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: 
 // exposing any real user-posted content on a logged-out marketing page.
 const PRICING_TEASER = [
   { tier: 'free' as const, label: 'Free', price: '$0', period: '', tagline: 'Browse the community & your profile.' },
-  { tier: 'basic' as const, label: 'Basic', price: '$9.99', period: '/mo', tagline: 'Community, research, live scores.' },
-  // trialDays is monthly-plan-only (confirmed against the real Whop plan
-  // config) — this teaser only ever shows the monthly price, so it's always
-  // safe to show here without an interval check like /pricing needs.
-  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'More ways to research and follow the action.', trialDays: 7 },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'NFL and NBA research tools.', popular: true, trialDays: 3 },
+  { tier: 'ultimate' as const, label: 'Ultimate', price: '$19.99', period: '/30 days', tagline: '3-day free trial, then $19.99 every 30 days. NFL and NBA research tools.' },
 ]
 
 const FAQS = [
@@ -251,24 +245,21 @@ export function LandingPage() {
         >
           Start free, then choose the tools you need
         </motion.h2>
-        <p className={styles.sectionCopy}>Cancel anytime. Annual plans save more. See the full breakdown before choosing.</p>
+        <p className={styles.sectionCopy}>Choose a 30-day or 365-day Ultimate membership. Cancel anytime.</p>
         <div className={styles.pricingGrid}>
           {PRICING_TEASER.map(p => (
-            <div key={p.tier} className={`${styles.priceCard} ${p.popular ? styles.priceCardPopular : ''} ss-card`}>
+            <div key={p.tier} className={`${styles.priceCard} ${p.tier === 'ultimate' ? styles.priceCardPopular : ''} ss-card`}>
               <h3>{p.label}</h3>
               <div className={styles.priceValue}>
                 <span>{p.price}</span>
                 <small>{p.period}</small>
               </div>
-              {'trialDays' in p && p.trialDays && (
-                <div className={styles.trialBadge}><Badge variant="save">{p.trialDays}-day free trial</Badge></div>
-              )}
               <p>{p.tagline}</p>
             </div>
           ))}
         </div>
         <div className={styles.pricingAction}>
-          <Link href="/pricing" className={styles.secondaryAction}>See full pricing and annual savings</Link>
+          <Link href="/pricing" className={styles.secondaryAction}>See membership details</Link>
         </div>
       </section>
 

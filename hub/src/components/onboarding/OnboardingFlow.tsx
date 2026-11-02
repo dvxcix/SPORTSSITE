@@ -775,7 +775,7 @@ export function OnboardingFlow({
                     <b>Open my feed</b><small>Start with your personalized home.</small>
                   </button>
                   <button type="button" aria-pressed={destination === "pricing"} className={destination === "pricing" ? "is-selected" : ""} onClick={() => setDestination("pricing")}>
-                    <b>Compare membership</b><small>See plans before entering the app.</small>
+                    <b>Explore membership</b><small>See Free and Ultimate before entering the app.</small>
                   </button>
                   <button type="button" aria-pressed={destination === "connections"} className={destination === "connections" ? "is-selected" : ""} onClick={() => setDestination("connections")}>
                     <b>Connect my accounts</b><small>Link Whop, Discord, or X.</small>
@@ -793,7 +793,7 @@ export function OnboardingFlow({
                     </>
                   ) : (
                     destination === "pricing"
-                      ? "Finish & Compare Plans →"
+                      ? "Finish & See Memberships →"
                       : destination === "connections"
                         ? "Finish & Connect Accounts →"
                         : "Finish & Open My Feed →"

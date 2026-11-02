@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function CancelMembershipButton({ renewalDate }: { renewalDate: string | null }) {
+export function CancelMembershipButton() {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -30,7 +30,7 @@ export function CancelMembershipButton({ renewalDate }: { renewalDate: string | 
     return (
       <div>
         <p className="text-sm text-white mb-3">
-          Cancel your subscription{renewalDate ? ` — you'll keep access until ${renewalDate}, then your account moves to Free` : ''}?
+          Cancel your subscription? Trial access may end immediately.
         </p>
         {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
         <div className="flex gap-2">

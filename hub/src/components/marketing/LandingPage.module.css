@@ -240,7 +240,7 @@
 .stepsTitle { margin-bottom: 28px; }
 
 .pricingSection { width: min(100%, 1048px); margin: 0 auto; padding: 28px 24px 48px; }
-.pricingGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pricingGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 820px; margin-inline: auto; }
 .priceCard { position: relative; min-height: 170px; padding: 21px; border-radius: 15px; }
 .priceCardPopular { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)) !important; }
 .priceCard h4 { margin-bottom: 9px; color: var(--text-1); font-size: 14px; font-weight: 850; }

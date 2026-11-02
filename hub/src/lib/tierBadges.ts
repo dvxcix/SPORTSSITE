@@ -13,8 +13,8 @@ const TIER_BADGE_IDS = [ADVANCED_BADGE_ID, ULTIMATE_BADGE_ID]
 // an account actually has RIGHT NOW — awards the one that matches, strips
 // the other if present (Ultimate replaces Advanced, doesn't stack with it),
 // and strips both if they've dropped to Basic/Free. Called with the
-// EFFECTIVE tier (tiers.ts's effectiveTier(), which folds in the free
-// Discord-plan Advanced grant) everywhere tier can change: the Whop webhook
+// EFFECTIVE tier (purchased tier plus any admin grant) where tier can change:
+// the Whop webhook
 // (real purchase/cancellation) and the Whop OAuth callback (Discord-plan
 // claim/un-claim on login). Awarded/removed by the system, not an admin —
 // awarded_by stays null, same as any other automated grant.

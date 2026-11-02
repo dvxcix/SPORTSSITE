@@ -13,7 +13,7 @@ const STATE_COOKIE = 'whop_oauth_state'
 //
 // ?mode=link is the other entry point: an ALREADY signed-in account (e.g.
 // one that originally signed up via X/Discord) connecting Whop after the
-// fact, so it can claim the free Discord-plan Advanced tier the same way a
+// fact, so it can check Discord pricing eligibility the same way a
 // Whop-first login already does. This doesn't go through Supabase's native
 // identity linking (linkIdentity/unlinkIdentity, see ProfileForm) because
 // Supabase has no built-in Whop provider — this whole OAuth flow is

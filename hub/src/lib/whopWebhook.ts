@@ -5,8 +5,9 @@ import { WHOP_PLANS, effectiveTier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 import { syncDiscordRoleForUser } from '@/lib/discord'
-import { alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
+import { alertPaymentOnCancelingMembership, alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
 import { whopCancellationKeepsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
+import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -217,6 +218,52 @@ export async function handleWhopWebhookRequest(
           break
         }
         const planInfo = planId ? WHOP_PLANS[planId] : undefined
+        if (!planInfo && membershipId && planId) {
+          const { data: linked, error: linkedError } = await supabase.from('users')
+            .select('tier,whop_plan_id,whop_membership_id,tier_current_period_end,tier_cancel_at_period_end,email').eq('id', resolvedInternalUserId).maybeSingle()
+          if (linkedError) throw new Error('Whop linked membership lookup failed')
+          const repriced = await resolveRepricedUltimatePlan({ source, planId, membershipId, stored: linked }, process.env.WHOP_API_KEY)
+          if (repriced) {
+            if (periodEnd && Date.parse(periodEnd) > Date.parse(repriced.periodEnd)) {
+              throw new Error('Whop renewal boundary not yet confirmed')
+            }
+            // Preserve the canonical plan and every cancellation flag. Only
+            // extend a valid paid-through date, guarded against concurrent
+            // membership or date changes. Reconciliation remains authoritative.
+            const previous = linked?.tier_current_period_end
+            const previousMs = typeof previous === 'string' ? Date.parse(previous) : NaN
+            if (!Number.isFinite(previousMs) || Date.parse(repriced.periodEnd) > previousMs) {
+              let update = supabase.from('users').update({ tier_current_period_end: repriced.periodEnd })
+                .eq('id', resolvedInternalUserId).eq('whop_membership_id', membershipId)
+                .eq('whop_plan_id', repriced.canonicalPlanId).eq('tier', 'ultimate')
+              update = previous == null ? update.is('tier_current_period_end', null) : update.eq('tier_current_period_end', previous)
+              update = linked?.tier_cancel_at_period_end == null
+                ? update.is('tier_cancel_at_period_end', null)
+                : update.eq('tier_cancel_at_period_end', linked.tier_cancel_at_period_end)
+              const { data: changed, error } = await update.select('id').maybeSingle()
+              if (error) throw new Error('Whop renewal boundary update failed')
+              if (!changed) throw new Error('Whop renewal boundary changed concurrently')
+            }
+            if (type === 'payment.succeeded') {
+              // A lifecycle event may already have advanced the boundary, and
+              // payment events may omit it. Re-read the linked membership and
+              // cancellation state before preserving the existing charge alert.
+              const { data: current, error: currentError } = await supabase.from('users')
+                .select('tier,whop_plan_id,whop_membership_id,tier_cancel_at_period_end,email')
+                .eq('id', resolvedInternalUserId).maybeSingle()
+              if (currentError || !current || current.tier !== 'ultimate'
+                || current.whop_plan_id !== repriced.canonicalPlanId || current.whop_membership_id !== membershipId) {
+                throw new Error('Whop linked membership changed concurrently')
+              }
+              if (current.tier_cancel_at_period_end === true) {
+                await alertPaymentOnCancelingMembership(supabase, {
+                  userId: resolvedInternalUserId, email: current.email ?? null, membershipId, planTier: 'ultimate',
+                })
+              }
+            }
+            break
+          }
+        }
         if (!planInfo) {
           // Not one of our tier plans — e.g. the separate beta-cohort
           // product, or a Discord-business event unrelated to the add-on.

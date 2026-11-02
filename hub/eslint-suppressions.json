@@ -464,11 +464,6 @@
       "count": 1
     }
   },
-  "src/app/settings/membership/page.tsx": {
-    "react/no-unescaped-entities": {
-      "count": 2
-    }
-  },
   "src/app/settings/privacy/page.tsx": {
     "react/no-unescaped-entities": {
       "count": 1

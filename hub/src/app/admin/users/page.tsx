@@ -11,7 +11,6 @@ function tierSubLabel(u: AdminUserRecord): string | null {
   if (u.beta_access_active) return 'Beta'
   const rawTier: Tier = (u.tier as Tier) ?? 'free'
   if (u.admin_granted_tier && !hasTierAccess(rawTier, u.admin_granted_tier)) return 'Admin grant'
-  if (u.discord_advanced_claimed && !hasTierAccess(rawTier, 'advanced')) return 'via Discord'
   return null
 }
 
@@ -28,8 +27,8 @@ export default async function AdminUsersPage({
   if (q) query = query.or(`username.ilike.%${q}%,display_name.ilike.%${q}%,email.ilike.%${q}%`)
   if (type) query = query.eq('account_type', type)
 
-  // Tier filter operates on the EFFECTIVE tier (real purchase + Discord
-  // claim + admin grant) — not a raw column, so it can't be pushed into the
+  // Tier filter operates on the EFFECTIVE tier (real purchase + admin
+  // grant) — not a raw column, so it can't be pushed into the
   // query itself. Fetch a wider recency-ordered window, fold it in JS with
   // the exact same effectiveTier() used everywhere else, then take the
   // first 50 matches — bounded fetch (not a full table scan), and it stays

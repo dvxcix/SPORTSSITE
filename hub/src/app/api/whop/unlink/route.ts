@@ -18,7 +18,7 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
   const admin = createAdminClient()
-  const { data: current } = await admin.from('users').select('tier, verified_identities').eq('id', user.id).maybeSingle()
+  const { data: current } = await admin.from('users').select('tier, admin_granted_tier, verified_identities').eq('id', user.id).maybeSingle()
   const nextVI = { ...(current?.verified_identities ?? {}) }
   delete nextVI.whop
 
@@ -29,7 +29,7 @@ export async function POST() {
   }).eq('id', user.id)
   if (error) return safeApiError('whop-unlink', error, 'Could not unlink Whop.')
 
-  await syncTierBadge(admin, user.id, effectiveTier((current?.tier as Tier) ?? 'free', false))
+  await syncTierBadge(admin, user.id, effectiveTier((current?.tier as Tier) ?? 'free', false, current?.admin_granted_tier as Tier | null))
 
   return NextResponse.json({ ok: true })
 }
