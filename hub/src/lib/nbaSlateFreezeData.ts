@@ -112,7 +112,7 @@ export function nbaSlatePool(games: PaintGame[], boards: PaintBoard[], complete:
 }
 
 /** Used by the existing research pass and ordinary complete slate reads. */
-export async function captureNbaSlatePools(games: PaintGame[], boards: PaintBoard[], complete: boolean, observedAt = new Date().toISOString(), models: GameModels = []) {
+export async function captureNbaSlatePools(games: PaintGame[], boards: PaintBoard[], complete: boolean, observedAt = new Date().toISOString(), models: GameModels = [], deadlineAt = Date.now() + 40_000) {
   const open = games.filter(game => nbaPregameOpen(game))
   const saved = { full: 0, quarter: 0 }
   if (!open.length) return saved
@@ -124,7 +124,18 @@ export async function captureNbaSlatePools(games: PaintGame[], boards: PaintBoar
     if (Buffer.byteLength(JSON.stringify(pool)) > 8 * 1024 * 1024) throw new Error('NBA slate comparison snapshot exceeds its size limit')
     const packed = encodeNbaSlatePool(pool)
     if (Buffer.byteLength(JSON.stringify(packed)) > 8 * 1024 * 1024) throw new Error('NBA slate comparison snapshot exceeds its size limit')
-    const results = await Promise.all(open.map(game => saveNbaPregameResearch(game, resource(period), { value: packed, observedAt })))
+    const periodDeadline = Math.min(deadlineAt, Date.now() + 20_000)
+    const remaining = periodDeadline - Date.now()
+    if (!Number.isFinite(remaining) || remaining <= 0) throw new Error('NBA slate capture deadline exhausted')
+    // A caller may join an identical already-running save with a longer
+    // deadline. Bound this caller's wait without replaying or cancelling that
+    // other writer; the database remains authoritative for cutoff/order.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('NBA slate capture deadline exhausted')), remaining) })
+    let results: Awaited<ReturnType<typeof saveNbaPregameResearch>>[]
+    try {
+      results = await Promise.race([Promise.all(open.map(game => saveNbaPregameResearch(game, resource(period), { value: packed, observedAt }, { deadlineAt: periodDeadline }))), deadline])
+    } finally { if (timer) clearTimeout(timer) }
     saved[period ? 'quarter' : 'full'] = results.filter(Boolean).length
   }
   return saved

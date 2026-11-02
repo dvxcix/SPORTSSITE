@@ -15,6 +15,7 @@ import { nbaSlateFrozenHeat } from '@/lib/nbaSlateHeat'
 import { nbaSlateFailure, nbaSlateTimer, type NbaSlateStage } from '@/lib/nbaSlateDiagnostics'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
+  const requestDeadline = Date.now() + 100_000
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
   const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   const date = request.nextUrl.searchParams.get('date'), market = request.nextUrl.searchParams.get('market'), book = request.nextUrl.searchParams.get('book') ?? 'all', side = request.nextUrl.searchParams.get('side') ?? 'over'
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
       const pricedBoards=[...pricedMap.values()],reports=[...reportMap].map(([gameId,reports])=>({gameId,reports})),defense=[...defenseMap.values()]
       const fullComplete = schedule.complete && !failed.length && pricedBoards.length === schedule.games.length && pricedBoards.every(board => board.statsComplete)
       enter('archive')
-      if (mode === 'pregame') await captureNbaSlatePools(schedule.games, pricedBoards, fullComplete && !modelMissing.size, undefined, reports)
+      if (mode === 'pregame') await captureNbaSlatePools(schedule.games, pricedBoards, fullComplete && !modelMissing.size, undefined, reports, requestDeadline)
       enter('cache-commit')
       return { date: schedule.date, games: schedule.games.length, loaded: pricedBoards.length, failed, defenseMissing:[...defenseMissing], defenseUnavailable:pricedBoards.filter(board=>!defenseMap.get(board.game.id)?.ready).length, boards: pricedBoards, reports, defense }
     }, 120)

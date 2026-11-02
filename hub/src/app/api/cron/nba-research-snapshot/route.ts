@@ -128,7 +128,7 @@ async function run(request: Request) {
           if(!closing.length)break
           await Promise.all(closing.map(resolveClosed))
         }
-        const captured = await captureNbaSlatePools(slateGames, boards, schedule.complete && boards.length === slateGames.length,undefined,models)
+        const captured = await captureNbaSlatePools(slateGames, boards, schedule.complete && boards.length === slateGames.length,undefined,models,started+160_000)
         slatePools.push({ date: schedule.date, loaded: boards.length, games: slateGames.length, ...captured })
       } catch (failure) {
         slatePools.push({ date: schedule.date, loaded: boards.length, games: slateGames.length, full: 0, quarter: 0, reason: failure instanceof Error ? failure.message : 'NBA slate comparison capture failed' })

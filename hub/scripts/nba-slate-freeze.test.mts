@@ -26,6 +26,7 @@ const boards = (): paint.PaintBoard[] => [
 ]
 async function fixture() {
   let now = tip - 30_000, crossing = false, reads = 0, writes = 0
+  let attempts = 0, hold: Promise<void> | undefined, release: (() => void) | undefined
   const archive = new Map<string, { value: unknown; observedAt: string; source: 'capture'; frozen: boolean }>()
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   const output = ts.transpileModule(await readFile(new URL('../src/lib/nbaSlateFreezeData.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -35,6 +36,7 @@ async function fixture() {
     './nbaPregameResearchData': {
       readNbaPregameResearch: async (g: paint.PaintGame, resource: string) => { reads++; return archive.get(g.id + ':' + resource) ?? null },
       saveNbaPregameResearch: async (g: paint.PaintGame, resource: string, entry: { value: unknown; observedAt: string }) => {
+        attempts++; if (hold) await hold
         if (crossing) now = tip + 1
         const key = g.id + ':' + resource, old = archive.get(key)
         if (!mode.nbaPregameOpen(g, now) || old && old.observedAt >= entry.observedAt) return old ?? null
@@ -44,8 +46,29 @@ async function fixture() {
   }
   const target = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', 'Buffer', output)((key: string) => { assert.ok(key in imports, key); return imports[key] }, target, target.exports, Clock, Buffer)
-  return { api: target.exports as typeof import('../src/lib/nbaSlateFreezeData.ts'), archive, time: (n: number) => { now = n }, cross: () => { crossing = true }, counts: () => ({ reads, writes }) }
+  return { api: target.exports as typeof import('../src/lib/nbaSlateFreezeData.ts'), archive, time: (n: number) => { now = n }, cross: () => { crossing = true }, counts: () => ({ reads, writes }), attempts: () => attempts, holdSaves: () => { hold = new Promise<void>(resolve => { release = resolve }) }, releaseSaves: () => { release?.() } }
 }
+
+test('a spent caller budget starts no slate writes', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game)
+  await assert.rejects(h.api.captureNbaSlatePools(games, b, true, new Date(tip - 30_000).toISOString(), [], tip - 30_000), /deadline exhausted/)
+  assert.equal(h.attempts(), 0)
+  assert.equal(h.counts().writes, 0)
+})
+
+test('a caller deadline stops waiting without replaying an already-running write', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game)
+  h.holdSaves()
+  const capture = h.api.captureNbaSlatePools(games, b, true, new Date(tip - 30_000).toISOString(), [], tip - 30_000 + 20)
+  await assert.rejects(capture, /deadline exhausted/)
+  assert.equal(h.attempts(), 2, 'Q1 must not start while full-period writes are unresolved')
+  h.time(tip + 1); h.releaseSaves()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(h.counts().writes, 1, 'only the later game remains eligible')
+  assert.equal(h.archive.has('101:slate-mm-full:v1'), false, 'the started game rejects the delayed write')
+  assert.equal(h.archive.has('102:slate-mm-full:v1'), true, 'the later game keeps the genuine original observation')
+  assert.equal(h.archive.has('102:slate-mm-q1:v1'), false, 'the timed-out caller does not replay or start Q1')
+})
 
 test('earlier matchup keeps the whole-slate MM pool while a later game refreshes', async () => {
   const h = await fixture(), initial = boards(), games = initial.map(board => board.game)
@@ -259,6 +282,7 @@ test('legacy recovery is exact-filter only and rejects wrong or post-observation
 
 async function routeFixture() {
   const h=await fixture(), initial=boards(), source=boards(), cached=new Map<string,unknown>(), observations=new Map<string,unknown>()
+  const captureDeadlines: number[] = []
   let now=tip-30_000, marker=1, failContext=false, failDefense=false, failModels=false, crossing=false, captures=0, failFinalBoard=false, crossDuringRank=false,priceHook:(()=>void)|undefined
   const time=(n:number)=>{now=n;h.time(n)}
   class Clock extends Date { constructor(value:string|number=now){super(value)} static now(){return now} }
@@ -288,15 +312,21 @@ async function routeFixture() {
     },
     '@/lib/nbaSlate':{nbaSlateRows},
     '@/lib/nbaSlateHeat':slateHeat,
-    '@/lib/nbaSlateFreezeData':{...h.api,captureNbaSlatePools:async(...args:Parameters<typeof h.api.captureNbaSlatePools>)=>{captures++;return h.api.captureNbaSlatePools(...args)},getNbaSlateRanks:async(...args:Parameters<typeof h.api.getNbaSlateRanks>)=>{const result=await h.api.getNbaSlateRanks(...args);if(crossDuringRank){crossDuringRank=false;time(tip+1)}return result}},
+    '@/lib/nbaSlateFreezeData':{...h.api,captureNbaSlatePools:async(...args:Parameters<typeof h.api.captureNbaSlatePools>)=>{captures++;captureDeadlines.push(args[5]!);return h.api.captureNbaSlatePools(...args)},getNbaSlateRanks:async(...args:Parameters<typeof h.api.getNbaSlateRanks>)=>{const result=await h.api.getNbaSlateRanks(...args);if(crossDuringRank){crossDuringRank=false;time(tip+1)}return result}},
     '@/lib/nbaMarketSignal':{...marketSignal,nbaPlayerMarketSignals:({context}:{context:{marker:number}|null})=>({...marketSignal.nbaMarketSupport(),reason:context?'original '+context.marker:'missing'})},
     '@/lib/nbaIntelligence':{nbaContextualScore:(base:number|null,_player:number,_market:string,_date:string,{context}:{context:{marker:number}|null})=>({score:base==null?null:base+(context?.marker??0),marketSupport:{...marketSignal.nbaMarketSupport(),reason:context?'original '+context.marker:'missing'}})},
   }
   const target={exports:{}}
   new Function('require','module','exports','Date',output)((key:string)=>{assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)
   const api=target.exports as {GET:(request:unknown)=>Promise<{status:number;value:any}>}
-  return {...h,source,finalBoards:initial,time,marker:(n:number)=>{marker=n},finalResource:(gameId:number,key:string,value:unknown)=>observations.set(gameId+':'+key,value),fail:(parts:{context?:boolean;defense?:boolean;models?:boolean;board?:boolean})=>{failContext=!!parts.context;failDefense=!!parts.defense;failModels=!!parts.models;failFinalBoard=!!parts.board},cross:()=>{crossing=true},crossInRanks:()=>{crossDuringRank=true},onPrice:(hook:()=>void)=>{priceHook=hook},captures:()=>captures,get:(params='')=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&market=points&book=fanduel&side=over'+params)}),getQuery:(query:string)=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&'+query)})}
+  return {...h,source,finalBoards:initial,time,captureDeadlines,marker:(n:number)=>{marker=n},finalResource:(gameId:number,key:string,value:unknown)=>observations.set(gameId+':'+key,value),fail:(parts:{context?:boolean;defense?:boolean;models?:boolean;board?:boolean})=>{failContext=!!parts.context;failDefense=!!parts.defense;failModels=!!parts.models;failFinalBoard=!!parts.board},cross:()=>{crossing=true},crossInRanks:()=>{crossDuringRank=true},onPrice:(hook:()=>void)=>{priceHook=hook},captures:()=>captures,get:(params='')=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&market=points&book=fanduel&side=over'+params)}),getQuery:(query:string)=>api.GET({nextUrl:new URL('https://example.test/the-paint/slate?date=2026-10-25&'+query)})}
 }
+
+test('the slate cache owner leaves 20 seconds before its route and lease end', async () => {
+  const h = await routeFixture(), result = await h.get()
+  assert.equal(result.status, 200)
+  assert.deepEqual(h.captureDeadlines, [tip - 30_000 + 100_000])
+})
 
 test('mixed book and target requests share one full-slate capture without sharing filtered rows',async()=>{
   const h=await routeFixture()

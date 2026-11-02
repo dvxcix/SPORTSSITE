@@ -19,6 +19,7 @@ async function harness(expiredSignal = false) {
   let writeThrown: Error | null = null
   let failureStatus = 0, failureCode = ''
   const diagnosticLogs: unknown[] = []
+  const timeoutValues: number[] = []
   let rpc: ((args: Record<string, unknown>) => Row | null) | null = null
   let readRpc: (() => Row | null) | null = null
   const calls: Record<string, unknown>[] = []
@@ -66,7 +67,7 @@ async function harness(expiredSignal = false) {
   }
   const output = ts.transpileModule(await readFile(new URL('../src/lib/nbaPregameResearchData.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const compiledModule = { exports: {} }
-  const signals = expiredSignal ? { timeout: () => AbortSignal.abort(new DOMException('private timeout detail', 'TimeoutError')) } : AbortSignal
+  const signals = { timeout: (value: number) => { timeoutValues.push(value); return expiredSignal ? AbortSignal.abort(new DOMException('private timeout detail', 'TimeoutError')) : AbortSignal.timeout(value) } }
   new Function('require', 'module', 'exports', 'Date', 'console', 'AbortSignal', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, compiledModule, compiledModule.exports, Clock, { warn: (...args: unknown[]) => diagnosticLogs.push(args) }, signals)
   return {
     api: compiledModule.exports as typeof import('../src/lib/nbaPregameResearchData.ts'), calls,
@@ -74,7 +75,7 @@ async function harness(expiredSignal = false) {
     setRow(value: Row | null) { row = structuredClone(value) },
     setReadFailure(value = true) { readFailure = value }, setWriteFailure(value = true) { writeFailure = value },
     setWriteThrown(value: Error) { writeThrown = value },
-    setFailureMetadata(status: number, code: string) { failureStatus = status; failureCode = code }, diagnosticLogs,
+    setFailureMetadata(status: number, code: string) { failureStatus = status; failureCode = code }, diagnosticLogs, timeoutValues,
     setRpc(value: (args: Record<string, unknown>) => Row | null) { rpc = value },
     setReadRpc(value: () => Row | null) { readRpc = value },
     metrics: () => ({ reads, writes }),
@@ -102,6 +103,21 @@ test('thrown client failures retain their original error while diagnostic output
   await assert.rejects(h.api.saveNbaPregameResearch(game, 'slate-mm-full:v1', { value: {}, observedAt: new Date(tip - 2000).toISOString() }), error => error === failure)
   assert.deepEqual(h.diagnosticLogs, [['[The Court] research archive failed', { operation: 'capture', scope: 'slate-full', reason: 'transport-or-client' }]])
   assert.doesNotMatch(JSON.stringify(h.diagnosticLogs), /private provider detail/)
+})
+
+test('slate writes use a bounded deadline without changing other archive timeouts', async () => {
+  const h = await harness()
+  const observedAt = new Date(tip - 2000).toISOString()
+  await h.api.saveNbaPregameResearch(game, 'board:v1', { value: {}, observedAt })
+  await h.api.saveNbaPregameResearch(game, 'slate-mm-full:v1', { value: {}, observedAt })
+  await h.api.saveNbaPregameResearch(game, 'slate-mm-q1:v1', { value: {}, observedAt }, { deadlineAt: tip - 1000 + 16_000 })
+  assert.deepEqual(h.timeoutValues, [12_000, 20_000, 16_000])
+})
+
+test('an exhausted slate budget starts no write and never substitutes current data', async () => {
+  const h = await harness()
+  await assert.rejects(h.api.saveNbaPregameResearch(game, 'slate-mm-full:v1', { value: { value: 'new' }, observedAt: new Date(tip - 2000).toISOString() }, { deadlineAt: tip - 1000 }), /deadline exhausted/)
+  assert.equal(h.metrics().writes, 0)
 })
 
 test('closed games return the existing archive without running any current loader', async () => {

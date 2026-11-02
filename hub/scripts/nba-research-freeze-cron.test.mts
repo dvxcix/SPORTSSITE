@@ -25,7 +25,7 @@ async function fixture(incomplete=false) {
     '@/lib/nbaResearchIdentity':{ensureNbaResearchPlayers:async()=>{}},'@/lib/nbaPaint':{...paint,nbaToday:()=>date},
     '@/lib/nbaOddsClockData':{getNbaOddsGame:async(game:unknown)=>game},'@/lib/nbaOddsMode':{...mode,nbaPregameOpen:(game:any)=>mode.nbaPregameOpen(game,now)},
     '@/lib/nbaPregameResearchData':{readNbaPregameResearch:async(game:any,key:string)=>structuredClone(archive.get(game.id+':'+key)??null)},
-    '@/lib/nbaSlateFreezeData':{captureNbaSlatePools:async(games:any[],boards:any[],complete:boolean,_at:unknown,models:any[])=>{poolCalls.push({games,boards,complete,models});return{full:complete&&boards.every(board=>board.statsComplete)?games.length:0,quarter:0}}},
+    '@/lib/nbaSlateFreezeData':{captureNbaSlatePools:async(games:any[],boards:any[],complete:boolean,_at:unknown,models:any[],deadline:number)=>{poolCalls.push({games,boards,complete,models,deadline});return{full:complete&&boards.every(board=>board.statsComplete)?games.length:0,quarter:0}}},
   }
   const output=ts.transpileModule(await readFile(new URL('../src/app/api/cron/nba-research-snapshot/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const target={exports:{}}
@@ -37,6 +37,7 @@ test('existing research pass reuses its boards for the whole-slate capture and w
   const h=await fixture(),response=await h.api.GET(new Request('https://example.test/api/cron/nba-research-snapshot'))
   assert.equal(response.status,200);assert.deepEqual(h.reads,[1,2]);assert.equal(h.poolCalls.length,1)
   assert.equal(h.poolCalls[0].complete,true);assert.equal(h.poolCalls[0].boards.length,2);assert.equal(h.poolCalls[0].games.length,2)
+  assert.equal(h.poolCalls[0].deadline,h.now+160_000, 'capture leaves 15 seconds before the snapshot lease expires')
   assert.equal(h.warms.length,1);assert.equal(h.warms[0].deadline,h.now+160_000)
   assert.deepEqual(h.dates,['2026-10-25','2026-10-26','2026-10-27'])
   assert.equal(h.rpcCalls.filter(name=>name==='claim_nba_source').length,1);assert.equal(h.rpcCalls.filter(name=>name==='prune_nba_source_cache').length,1)

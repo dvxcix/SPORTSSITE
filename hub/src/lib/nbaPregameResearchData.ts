@@ -113,7 +113,7 @@ export async function readNbaPregameResearch<T>(game: PaintGame, resource: strin
 }
 
 /** The database clock, cutoff and observation order decide which writer wins. */
-export async function saveNbaPregameResearch<T>(game: PaintGame, resource: string, entry: { value: T; observedAt: string }): Promise<NbaPregameResearchSnapshot<T> | null> {
+export async function saveNbaPregameResearch<T>(game: PaintGame, resource: string, entry: { value: T; observedAt: string }, options?: { deadlineAt?: number }): Promise<NbaPregameResearchSnapshot<T> | null> {
   validResource(resource)
   game = await getNbaOddsGame(game)
   const observed = Date.parse(entry.observedAt), tip = nbaGameStart(game)
@@ -124,7 +124,13 @@ export async function saveNbaPregameResearch<T>(game: PaintGame, resource: strin
   let pending = saving.get(key)
   if (!pending) {
     pending = (async () => {
-      const signal = AbortSignal.timeout(12_000)
+      const slate = resource === 'slate-mm-full:v1' || resource === 'slate-mm-q1:v1'
+      const remaining = options?.deadlineAt == null ? Infinity : options.deadlineAt - Date.now()
+      if (slate && (!Number.isFinite(remaining) && remaining !== Infinity || remaining <= 0)) throw new Error('NBA slate capture deadline exhausted')
+      // Full-slate payloads have a measured 12-second client deadline failure.
+      // Bound only these writes at 20s and never exceed their caller's budget.
+      const timeout = slate ? Math.min(20_000, Math.floor(remaining)) : 12_000
+      const signal = AbortSignal.timeout(timeout)
       let result: Awaited<ReturnType<ReturnType<typeof createAdminClient>['rpc']>>
       try {
         result = await createAdminClient().rpc('capture_nba_pregame_research', {
