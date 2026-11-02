@@ -29,6 +29,20 @@ test('poller serializes requests, pauses hidden/offline, resumes, and cancels cl
     assert.equal(timers.size,0);win.dispatchEvent(new Event('online'));assert.equal(timers.size,0)
   } finally { for(const [key,descriptor] of Object.entries(originals)) { if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key) } }
 })
+test('odds-board resume waits for the shared token even if an earlier poll is still running',async()=>{
+  const originals=Object.fromEntries(['document','window','navigator','setTimeout','clearTimeout'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
+  const timers=new Map<number,{fn:()=>void;delay:number}>();let id=0
+  const doc=Object.assign(new EventTarget(),{visibilityState:'visible'}),win=new EventTarget(),nav={onLine:true}
+  for(const [key,value] of Object.entries({document:doc,window:win,navigator:nav,setTimeout:(fn:()=>void,delay:number)=>{timers.set(++id,{fn,delay});return id},clearTimeout:(id:number)=>timers.delete(id)}))Object.defineProperty(globalThis,key,{value,configurable:true,writable:true})
+  let finish:()=>void=()=>{},calls=0
+  try{
+    const stop=startNflPolling(async()=>{calls++;await new Promise<void>(resolve=>{finish=resolve})},{immediate:true,resumeDelay:()=>17000})
+    const first=timers.entries().next().value!;timers.delete(first[0]);first[1].fn();await Promise.resolve();assert.equal(calls,1)
+    doc.visibilityState='hidden';doc.dispatchEvent(new Event('visibilitychange'));doc.visibilityState='visible';doc.dispatchEvent(new Event('visibilitychange'))
+    finish();await Promise.resolve();await Promise.resolve();assert.equal([...timers.values()][0]?.delay,17000)
+    stop();assert.equal(timers.size,0)
+  }finally{for(const [key,descriptor] of Object.entries(originals)){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key)}}
+})
 test('NFL private endpoints keep auth outside shared cache and history is opt-in',()=>{
   const read=(p:string)=>readFileSync(p,'utf8')
   const slate=read('src/app/api/the-sideline/slate-edge/route.ts')

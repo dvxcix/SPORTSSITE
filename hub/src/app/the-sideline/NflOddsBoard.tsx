@@ -1,0 +1,108 @@
+'use client'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { BookLogo } from '@/components/BookLogo'
+import { nflOddsBoardMove, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
+import { nflOddsBoardTrust, type NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
+import styles from './nflOddsBoard.module.css'
+
+type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null]
+type Game={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
+type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];phaseToken:string;phaseObservedAt:string;nextStart:string|null}
+type Row={id:string;player:string;team:string;position:string;matchup:string;cells:Map<number,NflOddsBoardQuote>}
+const price=(n:number|null)=>n==null?'—':n>0?`+${n}`:String(n)
+const movement=(n:number)=>n===0?'0.00':`${n>0?'+':'−'}${Math.abs(n)<0.01?'<0.01':Math.abs(n).toFixed(2)}`
+const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bTds?\b/g,'Touchdowns')
+const when=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'
+const unpack=(q:Quote):NflOddsBoardQuote=>({gameId:q[0],playerId:q[1],player:q[2],team:q[3],position:q[4],market:q[5],label:'',vendor:q[6],line:q[7],current:q[8],updatedAt:q[9],previous:q[10],previousAt:q[11]})
+
+export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardPhase|null}){
+  const [market,setMarket]=useState('receiving_yards'),[vendor,setVendor]=useState('fanduel'),[game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState('')
+  const requestKey=JSON.stringify([date,market,vendor])
+  const [saved,setSaved]=useState<{key:string;value:Payload;receivedAt:number}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
+  const [openedAt]=useState(()=>Date.now()),[clock,setClock]=useState(()=>Date.now()),[requireAfter,setRequireAfter]=useState(0)
+  const reload=useRef<()=>void>(()=>{}), scroll=useRef<HTMLDivElement|null>(null), scrollLeft=useRef(0), wasHidden=useRef(false)
+  const raw=saved?.key===requestKey?saved.value:null
+  const now=Math.max(clock,saved?.receivedAt??0,phase?.checkedAt??0)
+  const trust=raw?nflOddsBoardTrust(raw,phase,openedAt,now,requireAfter):null
+  const payload=trust?.safe?raw:null
+  useEffect(()=>{
+    const controller=new AbortController();let timer:ReturnType<typeof setTimeout>,pending=false,queued=false,nextStart:number|null=null,failures=0
+    const load=async()=>{
+      if(controller.signal.aborted)return
+      if(pending){queued=true;return}
+      if(document.visibilityState!=='visible'){timer=setTimeout(load,300000);return}
+      pending=true
+      try{
+        const query=new URLSearchParams({date,market,book:vendor})
+        const response=await fetch(`/api/the-sideline/odds-board?${query}`,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
+        if(!response.ok)throw new Error('unavailable')
+        const value=await response.json() as Payload
+        if(value.date!==date||!Array.isArray(value.games)||!Array.isArray(value.markets)||!Array.isArray(value.books)||!Array.isArray(value.quotes)||value.quotes.length>5000||!value.phaseToken||!value.phaseObservedAt)throw new Error('invalid')
+        if(value.nextStart!=null&&!Number.isFinite(Date.parse(value.nextStart)))throw new Error('invalid')
+        if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);failures=0;nextStart=value.nextStart?Date.parse(value.nextStart):null}
+      }catch{if(!controller.signal.aborted){setErrorKey(requestKey);failures++}}
+      finally{
+        pending=false
+        if(!controller.signal.aborted){
+          if(queued&&document.visibilityState==='visible'){queued=false;queueMicrotask(()=>void load())}
+          else {const delay=failures?Math.min(300000,30000*2**Math.min(failures-1,3))+Math.floor(Math.random()*10000):nextStart==null?null:Math.min(300000+Math.floor(Math.random()*15000),Math.max(250,nextStart-Date.now()+250));if(delay!=null)timer=setTimeout(load,delay)}
+        }
+      }
+    }
+    reload.current=()=>{clearTimeout(timer);void load()}
+    void load()
+    return()=>{controller.abort();clearTimeout(timer);reload.current=()=>{}}
+  },[date,market,vendor,requestKey])
+  useEffect(()=>{if(trust?.reason==='changed'&&phase?.token)reload.current()},[trust?.reason,phase?.token,phase?.observedAt])
+  useEffect(()=>{
+    const invalidate=()=>{const now=Date.now();flushSync(()=>{setClock(now);setRequireAfter(previous=>Math.max(previous,now))})}
+    const visibility=()=>{if(document.visibilityState!=='visible'){wasHidden.current=true;return}if(wasHidden.current){wasHidden.current=false;invalidate()}}
+    const pageShow=(event:PageTransitionEvent)=>{if(event.persisted)invalidate()}
+    const offline=()=>invalidate(),online=()=>invalidate()
+    document.addEventListener('visibilitychange',visibility);window.addEventListener('pageshow',pageShow);window.addEventListener('offline',offline);window.addEventListener('online',online)
+    return()=>{document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pageshow',pageShow);window.removeEventListener('offline',offline);window.removeEventListener('online',online)}
+  },[])
+  useEffect(()=>{
+    if(!trust?.safe)return
+    const delay=trust.until-Date.now()
+    if(delay<=0){const timer=setTimeout(()=>setClock(Date.now()),0);return()=>clearTimeout(timer)}
+    const timer=setTimeout(()=>setClock(Date.now()),Math.min(delay+1,2147000000))
+    return()=>clearTimeout(timer)
+  },[trust?.safe,trust?.until])
+  useLayoutEffect(()=>{if(payload&&scroll.current)scroll.current.scrollLeft=scrollLeft.current},[payload])
+  const catalog=saved?.value.date===date?saved.value:null,shownMarket=payload?.market??market,shownBook=payload?.book??vendor
+  const quotes=useMemo(()=>payload?.quotes.map(unpack)??[],[payload])
+  const teams=useMemo(()=>[...new Set(quotes.filter(q=>game==='all'||q.gameId===game).map(q=>q.team))].sort(),[quotes,game])
+  const filtered=useMemo(()=>quotes.filter(q=>(game==='all'||q.gameId===game)&&(team==='all'||q.team===team)&&q.player.toLowerCase().includes(search.trim().toLowerCase())),[quotes,game,team,search])
+  const {rows,lines}=useMemo(()=>{
+    const groups=new Map<string,Row>(),columns=new Set<number>()
+    for(const q of filtered){
+      const id=`${q.gameId}:${q.playerId}:${q.team}`,matchup=payload?.games.find(g=>g.id===q.gameId),row=groups.get(id)??{id,player:q.player,team:q.team,position:q.position,matchup:matchup?`${matchup.away} @ ${matchup.home}`:'',cells:new Map()}
+      if(!row.cells.has(q.line)){row.cells.set(q.line,q);columns.add(q.line)}
+      groups.set(id,row)
+    }
+    const all=[...groups.values()],selectedLine=columns.has(Number(sortLine))?sortLine:'all'
+    const extreme=(row:Row)=>{const selected=selectedLine==='all'?[...row.cells.values()]:[row.cells.get(Number(selectedLine))].filter((q):q is NflOddsBoardQuote=>!!q);const values=selected.map(q=>nflOddsBoardMove(q.current,q.previous)).filter((x):x is number=>x!=null);return values.length?(sort==='lengthened'?Math.min(...values):Math.max(...values)):null}
+    all.sort((a,b)=>{if(sort==='player')return a.player.localeCompare(b.player)||a.id.localeCompare(b.id);const x=extreme(a),y=extreme(b);return x==null||y==null?x==null&&y==null?a.player.localeCompare(b.player):x==null?1:-1:(sort==='lengthened'?x-y:y-x)||a.player.localeCompare(b.player)})
+    return {rows:all,lines:[...columns].sort((a,b)=>a-b)}
+  },[filtered,payload,sort,sortLine])
+  const incomplete=payload?.games.filter(g=>g.status!=='ready')??[]
+  return <section className={styles.panel} aria-label="NFL odds board">
+    <header><h2>Odds Board</h2><span>{date} · Pregame</span></header>
+    <div className={styles.controls}>
+      <label>Market<select aria-label="Odds board market" value={shownMarket} onChange={e=>{setMarket(e.target.value);setSortLine('all')}}>{(catalog?.markets??[market]).map(item=><option key={item} value={item}>{label(item)}</option>)}</select></label>
+      <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{setVendor(e.target.value);setSortLine('all')}}>{(payload?.books??[vendor]).map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
+      <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(g=><option key={g.id} value={g.id}>{g.away} @ {g.home}{g.status==='ready'?'':' · incomplete'}</option>)}</select></label>
+      <label>Team<select aria-label="Odds board team" value={team} onChange={e=>setTeam(e.target.value)}><option value="all">All teams</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
+      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="shortened">Most shortened</option><option value="lengthened">Most lengthened</option><option value="player">Player A–Z</option></select></label>
+      <label>Sort milestone<select aria-label="Sort odds board milestone" value={lines.some(line=>String(line)===sortLine)?sortLine:'all'} onChange={e=>setSortLine(e.target.value)}><option value="all">Any milestone</option>{lines.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>
+      <label>Player<input aria-label="Find odds board player" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find a player"/></label>
+    </div>
+    {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
+    {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
+    {!!incomplete.length&&<p role="status">Some saved prices unavailable: {incomplete.map(g=>`${g.away} @ ${g.home}`).join(', ')}.</p>}
+    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NFL milestone odds and movement" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row"><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small></th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line}>—</td>;const move=nflOddsBoardMove(q.current,q.previous);return <td key={line}><b>{price(q.current)}</b><small>Earlier {price(q.previous)}</small><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp${move>0?' · Shortened':move<0?' · Lengthened':' · Unchanged'}`}</span><small>Last seen {when(q.updatedAt)}</small>{q.previousAt&&<small>Earlier {when(q.previousAt)}</small>}</td>})}</tr>)}</tbody></table></div>}
+    {payload&&!rows.length&&<p role="status">No milestone prices for these filters.</p>}
+  </section>
+}

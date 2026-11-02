@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
+const NflOddsBoard = dynamic(() => import('./NflOddsBoard').then(module => module.NflOddsBoard))
 import { buildBoardHeat } from './boardHeat'
 import { teamMmHighlights } from './teamHighlights'
 import { nflAvailability } from '@/lib/nflAvailability'
@@ -32,9 +33,9 @@ import styles from './sidelineBoard.module.css'
 
 const NflSlateEdgeOverlay = dynamic(() => import('./NflSlateEdgeOverlay').then(module => module.NflSlateEdgeOverlay), { ssr: false })
 
-type BoardView = 'core' | 'touchdowns' | 'props' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
+type BoardView = 'core' | 'touchdowns' | 'props' | 'odds-board' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
 type RoleFilter = 'all' | 'passing' | 'receiving' | 'rushing' | 'kicking' | 'defense'
-type ColumnGroup = Exclude<BoardView, 'all' | 'custom'>
+type ColumnGroup = Exclude<BoardView, 'all' | 'custom' | 'odds-board'>
 type SortEntry = { id: string; direction: 'asc' | 'desc' }
 type HighlightColor = 'lime' | 'cyan' | 'amber' | 'rose'
 type PlayerRow = SidelinePlayer & {
@@ -99,6 +100,7 @@ const VIEW_OPTIONS: { id: BoardView; label: string }[] = [
   { id: 'core', label: 'Game Day' },
   { id: 'touchdowns', label: 'TDs' },
   { id: 'props', label: 'Props' },
+  { id: 'odds-board', label: 'Odds Board' },
   { id: 'usage', label: 'Usage' },
   { id: 'tracking', label: 'Tracking' },
   { id: 'team', label: 'Team' },
@@ -1670,7 +1672,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
   const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
-  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture)
+  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture, view === 'odds-board')
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -2161,7 +2163,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
         />
       </section>
-      <NflLastSeen board={board} />
+      {view !== 'odds-board' && <NflLastSeen board={board} />}
       {saveMessage ? <p role="status">{saveMessage}</p> : null}
       {matrices.some(matrix => matrix.enabled) ? <div className={styles.matrixLegend} aria-label="Active matrix matches">
         {matrices.filter(matrix => matrix.enabled).map(matrix => <button key={matrix.id} type="button" style={{ borderColor: matrix.color }} onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}>
@@ -2169,7 +2171,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </button>)}
       </div> : null}
 
-      <section className={styles.storyGrid}>
+      {view !== 'odds-board' && <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}>
           <small>STADIUM / CONDITIONS</small>
           <strong>{selected.stadium ?? 'Stadium TBD'}</strong>
@@ -2210,9 +2212,9 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
             {board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}
           </span>
         </article>
-      </section>
+      </section>}
 
-      {board.status !== 'ready' ? (
+      {view !== 'odds-board' && board.status !== 'ready' ? (
         <section className={styles.marketStatus}>
           <div>
             <strong>{board.status === 'not-posted' ? 'Player markets have not posted yet' : 'Sportsbook feed is temporarily unavailable'}</strong>
@@ -2221,12 +2223,12 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </section>
       ) : null}
 
-      <details className={styles.gameLinesDisclosure}>
+      {view !== 'odds-board' && <details className={styles.gameLinesDisclosure}>
         <summary>
           Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span>
         </summary>
         <GameLines game={selected} board={board} />
-      </details>
+      </details>}
 
       {toolsOpen ? (
         <section className={styles.toolsPanel}>
@@ -2288,15 +2290,15 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           </button>
         ))}
       </nav>
-      <nav className={styles.roleTabs} aria-label="NFL position lanes">
+      {view !== 'odds-board' && <nav className={styles.roleTabs} aria-label="NFL position lanes">
         {ROLE_OPTIONS.map(option => (
           <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>
             {option.label}
           </button>
         ))}
-      </nav>
+      </nav>}
 
-      {view === 'props' ? (
+      {view === 'odds-board' ? <NflOddsBoard date={selected.gameday} phase={marketStory.oddsBoardPhase}/> : view === 'props' ? (
         <LadderBoard
           board={board}
           prop={activeProp}

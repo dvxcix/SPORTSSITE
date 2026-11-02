@@ -5,6 +5,7 @@ import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelin
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
+import { nflOddsBoardClockToken, sharedNflOddsBoardClocks } from '@/lib/nflOddsBoardClock'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -44,16 +45,18 @@ export async function GET(request: Request) {
     // Current-board polling also needs the slider index. Returning both in
     // one authenticated response avoids a second Function invocation every
     // 30 seconds for every open Sideline tab.
-    const [bundle, timeline, touchdowns] = await Promise.all([
+    const [bundle, timeline, touchdowns, boardClocks] = await Promise.all([
       getSidelineOddsBundle(game),
       getSidelineTimeline(game),
       getNflTouchdownFeed(game.gameday),
+      params.get('oddsBoardToken')==='1' ? sharedNflOddsBoardClocks(game.gameday,games).catch(()=>null) : Promise.resolve(undefined),
     ])
     const final = beganOpen && !nflPregameOpen(game) ? await getSidelineOddsBundle(game) : bundle
+    const oddsBoardToken=boardClocks===undefined?undefined:boardClocks===null?null:{token:nflOddsBoardClockToken(boardClocks.clocks),observedAt:boardClocks.observedAt}
     return NextResponse.json(
       params.get('packed') === '1'
-        ? { odds: packSidelineBoard(final.odds), gameState: final.gameState, touchdowns, timeline }
-        : { ...final, touchdowns, timeline },
+        ? { odds: packSidelineBoard(final.odds), gameState: final.gameState, touchdowns, timeline, oddsBoardToken }
+        : { ...final, touchdowns, timeline, oddsBoardToken },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {
