@@ -1,13 +1,14 @@
 import { NextResponse, after } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WHOP_PLANS, effectiveTier } from '@slipsurge/core/tiers'
+import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { alertPaymentOnCancelingMembership, alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
 import { whopCancellationKeepsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
+import { verifyConcurrentUpgrade } from '@/lib/whopConcurrentUpgrade'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -218,6 +219,17 @@ export async function handleWhopWebhookRequest(
           break
         }
         const planInfo = planId ? WHOP_PLANS[planId] : undefined
+        const validMembershipId = !!membershipId && /^mem_[A-Za-z0-9]+$/.test(membershipId)
+        if (planInfo && !validMembershipId) throw new Error('Whop membership identity unavailable')
+        // Unrelated provider events without a membership are still ignored;
+        // known plans and plausible repriced memberships must pin ownership.
+        if (validMembershipId && (planInfo || planId)) {
+          const { data: linkedOwner, error: ownerError } = await supabase.from('users')
+            .select('id').eq('whop_membership_id', membershipId).maybeSingle()
+          if (ownerError || (linkedOwner && linkedOwner.id !== resolvedInternalUserId)) {
+            throw new Error('Whop membership ownership unavailable')
+          }
+        }
         if (!planInfo && membershipId && planId) {
           const { data: linked, error: linkedError } = await supabase.from('users')
             .select('tier,whop_plan_id,whop_membership_id,tier_current_period_end,tier_cancel_at_period_end,email').eq('id', resolvedInternalUserId).maybeSingle()
@@ -270,12 +282,42 @@ export async function handleWhopWebhookRequest(
           break
         }
         if ((source === 'addon') !== (planInfo.company === 'addon')) break
+        if (!membershipId || !validMembershipId) throw new Error('Whop membership identity unavailable')
         // This event fires on every recurring renewal payment too, not just
         // the first purchase — only stamp tier_purchased_at when it's
         // currently unset, so it tracks when the CURRENT subscription
         // started, not the most recent renewal. Cleared on cancellation
         // below, so a later resubscribe gets its own fresh start date.
-        const { data: existing } = await supabase.from('users').select('tier_purchased_at, tier_cancel_at_period_end, email').eq('id', resolvedInternalUserId).maybeSingle()
+        const { data: existing, error: existingError } = await supabase.from('users')
+          .select('tier,tier_purchased_at,tier_status,tier_cancel_at_period_end,tier_current_period_end,whop_membership_id,whop_plan_id,whop_user_id,email')
+          .eq('id', resolvedInternalUserId).maybeSingle()
+        if (existingError || !existing || typeof existing.tier !== 'string' || !Object.hasOwn(TIER_RANK, existing.tier)) {
+          throw new Error('Whop current access lookup unavailable')
+        }
+        // One account can have multiple subscriptions. A lower-tier event
+        // cannot decide whether the currently linked higher tier is still
+        // valid, including a cancellation that remains paid through. Keep
+        // the event retryable until reconciliation establishes that state.
+        if (TIER_RANK[existing.tier as Tier] > TIER_RANK[planInfo.tier]) {
+          throw new Error('Whop higher-tier membership requires reconciliation')
+        }
+        if (source === 'main' && existing.tier !== 'free' && existing.whop_membership_id && existing.whop_membership_id !== membershipId
+          && TIER_RANK[existing.tier as Tier] >= TIER_RANK[planInfo.tier]) {
+          throw new Error('Whop overlapping memberships require reconciliation')
+        }
+        let verifiedUpgrade: { periodEnd: string; cancelAtPeriodEnd: boolean } | null = null
+        // The add-on uses a separate Whop account and its response shape has
+        // not been verified. Preserve its existing signed-event grant path;
+        // use the additional provider check only for the main business.
+        if (source === 'main' && existing.tier !== 'free' && existing.whop_membership_id && existing.whop_membership_id !== membershipId) {
+          verifiedUpgrade = await verifyConcurrentUpgrade({
+            membershipId, planId: planId!, userId: resolvedInternalUserId,
+            whopUserId: existing.whop_user_id ?? null, source,
+          }, process.env.WHOP_API_KEY)
+          if (periodEnd && Date.parse(periodEnd) > Date.parse(verifiedUpgrade.periodEnd)) {
+            throw new Error('Whop upgrade boundary not yet confirmed')
+          }
+        }
         const isFirstPurchase = !existing?.tier_purchased_at
         // Real confirmed bug: a payment CAN still land on a membership that
         // was already marked cancel-at-period-end — Whop's own cancellation
@@ -287,19 +329,37 @@ export async function handleWhopWebhookRequest(
         // record of it ever existing. Still grant the tier (the charge is
         // real, they paid), but flag it loudly instead of pretending
         // nothing happened.
-        const wasAlreadyCancelling = existing?.tier_cancel_at_period_end === true
-        const { data: updated } = await supabase.from('users').update({
+        const wasAlreadyCancelling = existing.tier_cancel_at_period_end === true
+          && !!membershipId && existing.whop_membership_id === membershipId
+        const sameMembership = existing.whop_membership_id === membershipId
+        const previousPeriod = existing.tier_current_period_end
+        if (sameMembership && previousPeriod && !Number.isFinite(Date.parse(previousPeriod))) {
+          throw new Error('Whop current access boundary unavailable')
+        }
+        const nextPeriod = verifiedUpgrade?.periodEnd ?? (sameMembership && previousPeriod
+          && (!periodEnd || Date.parse(periodEnd) < Date.parse(previousPeriod)) ? previousPeriod : periodEnd)
+        const nextCancel = verifiedUpgrade?.cancelAtPeriodEnd ?? wasAlreadyCancelling
+        let update = supabase.from('users').update({
           tier: planInfo.tier,
           whop_plan_id: planId,
-          tier_status: 'active',
-          tier_current_period_end: periodEnd,
-          whop_membership_id: membershipId ?? null,
+          tier_status: nextCancel ? 'canceling' : 'active',
+          tier_current_period_end: nextPeriod,
+          whop_membership_id: membershipId,
           tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
-          tier_cancel_at_period_end: false,
-        }).eq('id', resolvedInternalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
+          tier_cancel_at_period_end: nextCancel,
+        }).eq('id', resolvedInternalUserId)
+        // The snapshot must still be current when this event writes. A
+        // concurrent renewal/cancellation or membership switch is retried
+        // instead of allowing an older event to overwrite the new state.
+        for (const field of ['tier', 'tier_purchased_at', 'tier_status', 'tier_cancel_at_period_end', 'tier_current_period_end', 'whop_membership_id', 'whop_plan_id', 'whop_user_id'] as const) {
+          const value = existing[field]
+          update = value == null ? update.is(field, null) : update.eq(field, value)
+        }
+        const { data: updated, error: updateError } = await update.select('discord_advanced_claimed, admin_granted_tier, email').maybeSingle()
+        if (updateError || !updated) throw new Error('Whop membership changed concurrently')
         await syncTierBadge(supabase, resolvedInternalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         await syncDiscordRoleForUser(supabase, resolvedInternalUserId)
-        if (wasAlreadyCancelling) {
+        if (wasAlreadyCancelling && type === 'payment.succeeded') {
           await alertUnexpectedChargeAfterCancel(supabase, {
             userId: resolvedInternalUserId, email: existing?.email ?? updated?.email ?? null, membershipId: membershipId ?? null, planTier: planInfo.tier,
           })
@@ -330,7 +390,10 @@ export async function handleWhopWebhookRequest(
         // success event and this handler reset tier unconditionally. Only
         // downgrade when the event is actually about the membership that's
         // driving the user's current tier.
-        const { data: current } = await supabase.from('users').select('whop_membership_id,whop_plan_id,tier_cancel_at_period_end,tier_current_period_end').eq('id', resolvedInternalUserId).maybeSingle()
+        const { data: current, error: currentError } = await supabase.from('users')
+          .select('tier,tier_purchased_at,tier_status,whop_membership_id,whop_plan_id,tier_cancel_at_period_end,tier_current_period_end')
+          .eq('id', resolvedInternalUserId).maybeSingle()
+        if (currentError) throw new Error('Whop current access lookup unavailable')
         if (!membershipId || current?.whop_membership_id !== membershipId) {
           break
         }
@@ -339,25 +402,39 @@ export async function handleWhopWebhookRequest(
         const storedPeriodEnd = current.tier_current_period_end && Number.isFinite(Date.parse(current.tier_current_period_end))
           ? new Date(current.tier_current_period_end).toISOString()
           : null
-        const cancellationPeriodEnd = periodEnd ?? storedPeriodEnd
+        const cancellationPeriodEnd = periodEnd && storedPeriodEnd
+          ? (Date.parse(periodEnd) >= Date.parse(storedPeriodEnd) ? periodEnd : storedPeriodEnd)
+          : periodEnd ?? storedPeriodEnd
         const scheduledCancellation = type === 'membership.deactivated'
           && cancellationPeriodEnd !== null
           && Date.parse(cancellationPeriodEnd) > Date.now()
           && (data.cancel_at_period_end !== false || current.tier_cancel_at_period_end === true)
         if (scheduledCancellation) {
-          await supabase.from('users').update({
+          let update = supabase.from('users').update({
             tier_status: 'canceling',
             tier_current_period_end: cancellationPeriodEnd,
             tier_cancel_at_period_end: true,
           }).eq('id', resolvedInternalUserId)
+          for (const field of ['tier', 'tier_purchased_at', 'tier_status', 'tier_cancel_at_period_end', 'tier_current_period_end', 'whop_membership_id', 'whop_plan_id'] as const) {
+            const value = current[field]
+            update = value == null ? update.is(field, null) : update.eq(field, value)
+          }
+          const { data: changed, error } = await update.select('id').maybeSingle()
+          if (error || !changed) throw new Error('Whop membership changed concurrently')
           break
         }
-        const { data: updated } = await supabase.from('users').update({
+        let update = supabase.from('users').update({
           tier: 'free',
           tier_status: type,
           tier_purchased_at: null,
           tier_cancel_at_period_end: false,
-        }).eq('id', resolvedInternalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
+        }).eq('id', resolvedInternalUserId)
+        for (const field of ['tier', 'tier_purchased_at', 'tier_status', 'tier_cancel_at_period_end', 'tier_current_period_end', 'whop_membership_id', 'whop_plan_id'] as const) {
+          const value = current[field]
+          update = value == null ? update.is(field, null) : update.eq(field, value)
+        }
+        const { data: updated, error: updateError } = await update.select('discord_advanced_claimed, admin_granted_tier').maybeSingle()
+        if (updateError || !updated) throw new Error('Whop membership changed concurrently')
         // Losing a purchased tier doesn't necessarily mean losing every
         // badge — someone who cancels the $10 add-on drops from Ultimate
         // back to Advanced (still free via the Discord plan or an admin

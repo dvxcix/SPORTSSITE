@@ -17,6 +17,7 @@ async function compile(path, imports = {}, globals = {}) {
 
 const membershipAccess = await compile('../src/lib/whopMembershipAccess.ts')
 const helper = await compile('../src/lib/whopRepricedUltimate.ts', { '@/lib/whopMembershipAccess': membershipAccess })
+const upgradeHelper = await compile('../src/lib/whopConcurrentUpgrade.ts', { '@/lib/whopMembershipAccess': membershipAccess })
 const tiers = await compile('../packages/core/src/tiers.ts')
 const planId = 'plan_changed'
 const membershipId = 'mem_existing'
@@ -86,7 +87,7 @@ test('provider outage and incomplete provider data remain retryable', async () =
   await assert.rejects(helper.resolveRepricedUltimatePlan(input, undefined, provider().fetcher))
 })
 
-function database(initial = stored, conflict = false) {
+function database(initial = stored, conflict = false, otherOwner = null) {
   const user = { ...initial }
   const receipts = new Map()
   const updates = []
@@ -101,6 +102,9 @@ function database(initial = stored, conflict = false) {
       async maybeSingle() {
         if (table === 'provider_webhook_events') return { data: receipts.get(filters.find(([key]) => key === 'provider_event_id')?.[1]) ?? null }
         if (table === 'users') {
+          if (action === 'select' && otherOwner && filters.some(([key, value]) => key === 'whop_membership_id' && value === otherOwner.membershipId)) {
+            return { data: { id: otherOwner.userId }, error: null }
+          }
           const matches = !conflict && filters.every(([key, value]) => (user[key] ?? null) === value)
           if (action === 'update') {
             updates.push({ filters, values })
@@ -132,8 +136,8 @@ function database(initial = stored, conflict = false) {
   return { db, user, receipts, updates }
 }
 
-async function webhook({ providerOptions, owner, source = 'main', eventType = 'payment.succeeded', eventPlan = planId, eventMembership = membershipId, metadataUser = 'member-owner', eventPeriodEnd = later, conflict = false, replay = false } = {}) {
-  const state = database(owner, conflict)
+async function webhook({ providerOptions, owner, source = 'main', eventType = 'payment.succeeded', eventPlan = planId, eventMembership = membershipId, metadataUser = 'member-owner', eventPeriodEnd = later, conflict = false, replay = false, otherOwner = null, upgradeMember = null, upgradeFailure = false } = {}) {
+  const state = database(owner, conflict, otherOwner)
   const remote = provider(providerOptions)
   const alerts = []
   const imports = {
@@ -144,11 +148,16 @@ async function webhook({ providerOptions, owner, source = 'main', eventType = 'p
     '@/lib/tierBadges': { syncTierBadge: async () => {} },
     '@/lib/xConversion': { sendXConversion: async () => {} },
     '@/lib/discord': { syncDiscordRoleForUser: async () => {} },
-    '@/lib/billingAlert': { alertUnexpectedChargeAfterCancel: async () => { throw new Error('wrong alert') }, alertPaymentOnCancelingMembership: async (_db, value) => { alerts.push(value) } },
+    '@/lib/billingAlert': { alertUnexpectedChargeAfterCancel: async (_db, value) => { alerts.push(value) }, alertPaymentOnCancelingMembership: async (_db, value) => { alerts.push(value) } },
     '@/lib/whopMembershipAccess': { whopCancellationKeepsAccess: () => false, whopMembershipPeriodEnd: () => eventPeriodEnd },
     '@/lib/whopRepricedUltimate': { resolveRepricedUltimatePlan: (args, key) => helper.resolveRepricedUltimatePlan(args, key, remote.fetcher) },
+    '@/lib/whopConcurrentUpgrade': { verifyConcurrentUpgrade: (args, key) => upgradeHelper.verifyConcurrentUpgrade(args, key, async () => {
+      if (upgradeFailure) throw new Error('provider unavailable')
+      return Response.json(upgradeMember ?? { id: eventMembership, plan_id: eventPlan, status: 'active', cancel_at_period_end: false,
+        renewal_period_end: later, metadata: { internal_user_id: metadataUser } })
+    }) },
   }
-  const mod = await compile('../src/lib/whopWebhook.ts', imports, { process: { env: { WHOP_API_KEY: 'secret' } } })
+  const mod = await compile('../src/lib/whopWebhook.ts', imports, { process: { env: { WHOP_API_KEY: 'secret', ADDON_WHOP_KEY: 'addon-secret' } } })
   const payload = JSON.stringify({ action: eventType, data: { plan_id: eventPlan, membership: eventMembership, metadata: { internal_user_id: metadataUser } } })
   const timestamp = '12345', id = 'evt_test', secret = 'secret-webhook'
   const signature = createHmac('sha256', secret).update(`${id}.${timestamp}.${payload}`).digest('base64')
@@ -208,9 +217,16 @@ test('same signed event replay is deduplicated before sending another cancellati
 test('signed unknown plan cannot change another owner or cross business boundaries', async () => {
   for (const args of [{ metadataUser: 'other' }, { eventMembership: 'mem_other' }, { source: 'addon' }, { owner: { ...stored, tier: 'basic' } }, { providerOptions: { variant: { ...plan, product: { id: 'prod_other' } } } }]) {
     const result = await webhook(args)
-    assert.equal(result.response.status, 200)
+    assert.equal(result.response.status, args.metadataUser === 'other' ? 500 : 200)
     assert.equal(result.updates.length, 0)
   }
+})
+
+test('an unrelated product event without a membership is acknowledged without changing access', async () => {
+  const result = await webhook({ eventPlan: 'plan_unrelated', eventMembership: '' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.updates.length, 0)
 })
 
 test('signed renewal lookup timeout reports a retryable failure without touching access', async () => {
@@ -265,4 +281,160 @@ test('cancellation still operates on the pinned membership and canonical busines
   assert.equal(result.providerCalls.length, 0)
   const wrongSource = await webhook({ source: 'addon', eventType: 'membership.deactivated', eventPeriodEnd: '2999-01-01T00:00:00.000Z' })
   assert.equal(wrongSource.updates.length, 0)
+})
+
+test('a lower-tier payment cannot replace a linked Ultimate membership, even if canceling or same-id', async () => {
+  for (const args of [
+    { eventMembership: 'mem_other', owner: { ...stored, tier_cancel_at_period_end: false } },
+    { eventMembership: 'mem_other', owner: stored },
+    { eventMembership: membershipId, owner: stored },
+  ]) {
+    const result = await webhook({ ...args, eventPlan: 'plan_C0wvFkX0sqiPm' })
+    assert.equal(result.response.status, 500)
+    assert.equal(result.receipts.get('evt_test').status, 'failed')
+    assert.equal(result.user.tier, 'ultimate')
+    assert.equal(result.user.whop_membership_id, membershipId)
+    assert.equal(result.user.whop_plan_id, stored.whop_plan_id)
+    assert.equal(result.user.tier_cancel_at_period_end, args.owner.tier_cancel_at_period_end)
+    assert.equal(result.updates.length, 0)
+  }
+})
+
+test('a regular same-tier renewal is compare-and-set against the original access state', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const result = await webhook({ owner: original, eventPlan: 'plan_C0wvFkX0sqiPm' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'basic')
+  assert.equal(result.user.whop_membership_id, membershipId)
+  assert.deepEqual(result.updates[0].filters.filter(([key]) => key !== 'id').map(([key]) => key).sort(), [
+    'tier', 'tier_cancel_at_period_end', 'tier_current_period_end', 'tier_purchased_at', 'tier_status', 'whop_membership_id', 'whop_plan_id', 'whop_user_id',
+  ])
+})
+
+test('a concurrent membership change makes a regular positive webhook retry without overwriting access', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const result = await webhook({ owner: original, eventPlan: 'plan_C0wvFkX0sqiPm', conflict: true })
+  assert.equal(result.response.status, 500)
+  assert.equal(result.receipts.get('evt_test').status, 'failed')
+  assert.equal(result.user.tier, 'basic')
+  assert.equal(result.user.whop_membership_id, membershipId)
+  assert.equal(result.user.tier_current_period_end, previous)
+})
+
+test('a same-tier different membership is held rather than overwriting a cancellation', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: true }
+  const result = await webhook({ owner: original, eventPlan: 'plan_C0wvFkX0sqiPm', eventMembership: 'mem_other' })
+  assert.equal(result.response.status, 500)
+  assert.equal(result.user.whop_membership_id, membershipId)
+  assert.equal(result.user.tier_cancel_at_period_end, true)
+  assert.equal(result.alerts.length, 0)
+})
+
+test('a legitimate Basic to Ultimate event for a new membership still grants Ultimate', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const result = await webhook({ owner: original, eventPlan: 'plan_tCrVAX62uKyEq', eventMembership: 'mem_new' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.user.whop_membership_id, 'mem_new')
+  assert.equal(result.alerts.length, 0)
+})
+
+test('a Discord add-on upgrade keeps the existing signed-event path without a new provider read', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const result = await webhook({ owner: original, source: 'addon', eventPlan: 'plan_Q1Ey6RMgjS9XQ', eventMembership: 'mem_new', upgradeFailure: true })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.user.whop_membership_id, 'mem_new')
+})
+
+test('an add-on purchase still grants when a separate Ultimate membership is linked', async () => {
+  const result = await webhook({ owner: stored, source: 'addon', eventPlan: 'plan_Q1Ey6RMgjS9XQ', eventMembership: 'mem_new', upgradeFailure: true })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.user.whop_membership_id, 'mem_new')
+  assert.equal(result.alerts.length, 0)
+})
+
+test('a provider outage leaves a new upgrade retryable and preserves existing access', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const result = await webhook({ owner: original, eventPlan: 'plan_tCrVAX62uKyEq', eventMembership: 'mem_new', upgradeFailure: true })
+  assert.equal(result.response.status, 500)
+  assert.equal(result.user.tier, 'basic')
+  assert.equal(result.user.whop_membership_id, membershipId)
+  assert.equal(result.receipts.get('evt_test').status, 'failed')
+})
+
+test('a stale or conflicting new Ultimate membership is not granted over existing Basic', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const valid = { id: 'mem_new', plan_id: 'plan_tCrVAX62uKyEq', status: 'active', cancel_at_period_end: false, renewal_period_end: later, metadata: { internal_user_id: 'member-owner' } }
+  for (const change of [
+    { status: 'expired' }, { renewal_period_end: '2020-01-01T00:00:00.000Z' }, { id: 'mem_other' },
+    { plan_id: 'plan_C0wvFkX0sqiPm' }, { metadata: { internal_user_id: 'other' } },
+    { metadata: {} }, { cancel_at_period_end: null }, { company: 'biz_other' }, { product: 'prod_other' },
+    { plan: { id: 'plan_other' } }, { valid: false }, { status: 'canceling', cancel_at_period_end: false },
+  ]) {
+    const result = await webhook({ owner: original, eventPlan: 'plan_tCrVAX62uKyEq', eventMembership: 'mem_new', upgradeMember: { ...valid, ...change } })
+    assert.equal(result.response.status, 500)
+    assert.equal(result.user.tier, 'basic')
+    assert.equal(result.user.whop_membership_id, membershipId)
+    assert.equal(result.updates.length, 0)
+  }
+})
+
+test('an authenticated higher-tier cancellation retains its real future boundary and cancellation flag', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  const upgradeMember = { id: 'mem_new', plan_id: 'plan_tCrVAX62uKyEq', status: 'canceling', cancel_at_period_end: true, renewal_period_end: later, metadata: { internal_user_id: 'member-owner' } }
+  const result = await webhook({ owner: original, eventPlan: 'plan_tCrVAX62uKyEq', eventMembership: 'mem_new', upgradeMember })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.user.tier_cancel_at_period_end, true)
+  assert.equal(result.user.tier_status, 'canceling')
+  assert.equal(result.user.tier_current_period_end, later)
+})
+
+test('a same-member canceled renewal preserves cancellation and does not move its boundary backwards', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: true }
+  const result = await webhook({ owner: original, eventPlan: 'plan_C0wvFkX0sqiPm', eventPeriodEnd: '2020-01-01T00:00:00.000Z' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier_status, 'canceling')
+  assert.equal(result.user.tier_cancel_at_period_end, true)
+  assert.equal(result.user.tier_current_period_end, previous)
+  assert.equal(result.alerts.length, 1)
+})
+
+test('activation is not a payment alert for a same-member cancellation', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: true }
+  const result = await webhook({ owner: original, eventPlan: 'plan_C0wvFkX0sqiPm', eventType: 'membership.activated' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier_cancel_at_period_end, true)
+  assert.equal(result.alerts.length, 0)
+})
+
+test('a missing membership ID or a link belonging to another user cannot modify access', async () => {
+  const original = { ...stored, tier: 'basic', whop_plan_id: 'plan_C0wvFkX0sqiPm', tier_cancel_at_period_end: false }
+  for (const input of [
+    { eventMembership: '' },
+    { eventMembership: 'mem_new', otherOwner: { membershipId: 'mem_new', userId: 'other-owner' } },
+  ]) {
+    const result = await webhook({ owner: original, eventPlan: 'plan_tCrVAX62uKyEq', ...input })
+    assert.equal(result.response.status, 500)
+    assert.equal(result.user.tier, 'basic')
+    assert.equal(result.user.whop_membership_id, membershipId)
+    assert.equal(result.updates.length, 0)
+  }
+})
+
+test('a concurrent membership switch prevents a stale deactivation from revoking access', async () => {
+  const result = await webhook({ eventType: 'membership.deactivated', eventPeriodEnd: null, conflict: true })
+  assert.equal(result.response.status, 500)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.receipts.get('evt_test').status, 'failed')
+})
+
+test('an older cancellation event cannot shorten the already stored paid-through date', async () => {
+  const result = await webhook({ eventType: 'membership.deactivated', eventPeriodEnd: '2020-01-01T00:00:00.000Z' })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.user.tier, 'ultimate')
+  assert.equal(result.user.tier_current_period_end, previous)
+  assert.equal(result.user.tier_cancel_at_period_end, true)
 })
