@@ -6,6 +6,7 @@ import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import {nbaValidOdds} from '../src/lib/nbaOddsHistory.ts'
 import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
+import * as lastSeen from '../src/lib/nbaLastSeenBookQuotes.ts'
 import * as bookPropQuotes from '../src/lib/scrapers/nbaBookPropQuotes.ts'
 import * as bookFirstQuotes from '../src/lib/scrapers/nbaFirstBookQuotes.ts'
 import * as policy from '../src/lib/nbaBookCapturePolicy.ts'
@@ -33,7 +34,7 @@ async function fixture(options:Options={}){
   const source=await readFile(new URL('../src/app/api/cron/nba-book-first-capture/route.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const bookSource=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),bookOutput=ts.transpileModule(bookSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,bookModule={exports:{} as typeof import('../src/lib/nbaBookPropsData.ts')}
-  const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint,'./nbaBookCurrent':bookCurrent}
+  const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint,'./nbaBookCurrent':bookCurrent,'./nbaLastSeenBookQuotes':lastSeen}
   new Function('require','module','exports','Date',bookOutput)((name:string)=>{assert.ok(name in bookImports,name);return bookImports[name]},bookModule,bookModule.exports,Clock)
   const imports:Record<string,unknown>={
     'next/server':{NextResponse:{json:(body:unknown,init?:ResponseInit)=>Response.json(body,init)}},
@@ -148,6 +149,26 @@ test('intentional budget denial is deferred425 with no quote write or false sour
   for(const state of h.scheduleState.values())assert.ok(Object.values(state.markets).every(row=>row.status==='deferred'&&row.successAt===null&&row.failures===0))
   assert.ok([...h.circuits.values()].every(row=>row.failures===0&&row.retryAt===0))
   assert.ok(result.body.books.every((book:{errors:unknown[]})=>JSON.stringify(book.errors)==='[{"code":"budget-deferred","budgetReason":"spend-limit"}]'))
+})
+
+test('a serial busy lane advances every due book/game over successive cheap checks',async()=>{
+  let tick=now,admitted=false
+  const h=await fixture({count:15,capture:(book,inputs)=>{
+    if(admitted)return {...deniedCapture(book,inputs),errors:[{code:'budget-deferred',budgetReason:'session-busy'}]}
+    admitted=true
+    return {games:inputs.map(g=>{const item=observation(book,g.id),stamp=new Date(tick).toISOString();return {...item,observedAt:stamp,props:item.props.map(prop=>({...prop,updated_at:stamp}))}})}
+  }})
+  for(let check=0;check<8;check++){
+    tick=now+check*5*60_000;admitted=false;h.advance(tick)
+    const result=await h.run()
+    assert.ok([200,425].includes(result.response.status))
+    assert.equal(result.body.failed,0)
+    assert.ok(h.saves.every(frame=>Date.parse(frame.observedAt)<=tick))
+    if(h.saves.length===30)break
+  }
+  assert.equal(h.saves.length,30)
+  assert.equal(new Set(h.saves.map(frame=>`${frame.book}:${frame.gameId}`)).size,30)
+  for(const state of h.scheduleState.values())assert.equal(state.markets.first.status,'captured')
 })
 
 test('one budget-blocked partition preserves healthy captures and their exact original observations',async()=>{

@@ -406,7 +406,7 @@ test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds an
 
 test('typed admission denials defer before navigation without exposing provider text or inventing market absence',async()=>{
   const code=ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
-  for(const reason of ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable','private-unknown','spoofed']){
+  for(const reason of ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable','session-busy','private-unknown','spoofed']){
     let opens=0,callbacks=0
     const imports:Record<string,unknown>={'server-only':{},'../nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},'../nbaPaint':paint,'../nbaOddsMode':{...modes,nbaPregameOpen:(g:paint.PaintGame)=>modes.nbaPregameOpen(g,now)},'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes,'../browserbase':{openSession:async()=>{opens++;throw reason==='spoofed'?Object.assign(new Error('https://private/?token=secret'),{name:'NbaBrowserBudgetError',code:'spend-limit'}):new BudgetError(reason)}}}
     const target={exports:{} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')}

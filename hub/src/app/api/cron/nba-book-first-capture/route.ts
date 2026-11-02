@@ -16,7 +16,7 @@ import { readNbaBookCaptureSchedule, writeNbaBookCaptureSchedule } from '@/lib/n
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 const bookMarkets=new Set(Object.values(MGM_MILESTONE_PANELS))
-const budgetReasons=new Set(['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable'])
+const budgetReasons=new Set(['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable','session-busy'])
 
 async function beforeDeadline<T>(work: Promise<T>, deadline: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -73,7 +73,7 @@ async function run(request: Request) {
           const outcomes = new Map<number, NbaBookOutcome[]>()
           const outcome = (gameId: number, item: NbaBookOutcome) => outcomes.set(gameId, [...(outcomes.get(gameId) ?? []).filter(prior => prior.family !== item.family), item])
           let saved = 0, failed = 0, deferred = 0, budgetDeferred = 0
-          const budgetDeferredGames=new Set<number>()
+          const budgetDeferredGames=new Map<number,string>()
           let regularSaved=0,regularQuotes=0,regularDeferred=0
           const reports=new Map<number,{gameId:number;status:string;quotes:number;unmatched:number;clockMismatch:boolean;identity?:NbaFirstBookIdentity}>()
           const regularReports=new Map<number,{gameId:number;status:string;contracts:number;quotes:number;unmatched:number;coverageComplete:number;coverageIncomplete:number;incompleteMarkets:string[];saved:number;states:Record<string,number>}>()
@@ -181,7 +181,7 @@ async function run(request: Request) {
                   ||captured.games.length!==allowed.size||new Set(captured.games.map(item=>item.gameId)).size!==allowed.size
                   ||captured.games.some(item=>!allowed.has(item.gameId)||!['budget-deferred','closed'].includes(item.status)||item.status==='closed'&&nbaPregameOpen(expected.get(item.gameId)!.game)||item.complete||item.observedAt!==null||item.props.length||item.unmatched)
                   ||captured.regular?.length||captured.regularCoverage?.length||partition.some(input=>firstAttempts.has(input.game.id)||regularAttempts.has(input.game.id)))throw new Error('Invalid NBA budget deferral')
-                for(const item of captured.games)if(item.status==='budget-deferred')budgetDeferredGames.add(item.gameId)
+                for(const item of captured.games)if(item.status==='budget-deferred')budgetDeferredGames.set(item.gameId,captured.errors[0].budgetReason!)
               }
               failed+=captured.games.filter(item=>!allowed.has(item.gameId)).length+(captured.regular??[]).filter(item=>!allowed.has(item.gameId)).length+(captured.regularCoverage??[]).filter(item=>!allowed.has(item.gameId)).length+(captured.book!==book?1:0)
               return{...captured,book,games:captured.games.filter(item=>allowed.has(item.gameId)),regular:(captured.regular??[]).filter(item=>allowed.has(item.gameId)),regularCoverage:(captured.regularCoverage??[]).filter(item=>allowed.has(item.gameId))}
@@ -211,7 +211,7 @@ async function run(request: Request) {
               if(budgetDeferredGames.has(input.game.id)){
                 budgetDeferred++;deferred++
                 reports.set(input.game.id,{gameId:input.game.id,status:'budget-deferred',quotes:0,unmatched:0,clockMismatch:false})
-                for(const family of planByGame.get(input.game.id)!.families)outcome(input.game.id,{family,status:'budget-deferred'})
+                for(const family of planByGame.get(input.game.id)!.families)outcome(input.game.id,{family,status:'budget-deferred',budgetReason:budgetDeferredGames.get(input.game.id)})
                 return
               }
               const matches=capture.games.filter(item=>item.gameId===input.game.id)

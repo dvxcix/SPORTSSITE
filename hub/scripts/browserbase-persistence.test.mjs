@@ -19,7 +19,7 @@ async function fixture(options, work) {
   process.env.BROWSERBASE_PROJECT_ID = 'fixture-project'
   if (options.configured !== false) process.env.PIKKIT_CONTEXT_ID = 'production-context'
   else delete process.env.PIKKIT_CONTEXT_ID
-  const calls = { sdkOptions: [], create: [], release: [], retrieve: [], contexts: [], navigation: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], scopes: [], timers: [], cleared: [] }
+  const calls = { sdkOptions: [], create: [], release: [], retrieve: [], contexts: [], navigation: [], lifecycle: [], newContext: 0, disconnect: 0, leaseAcquire: 0, leaseRelease: 0, warnings: [], budget: [], workflows: [], scopes: [], timers: [], cleared: [] }
   let released = false
   const page = { goto: async (...args) => { calls.navigation.push(args); if (options.gotoFails) throw Error('navigation failed') } }
   const context = { pages: () => options.noPage ? [] : [page], newPage: async () => { if (options.newPageFails) throw Error('page failed'); return page } }
@@ -48,21 +48,30 @@ async function fixture(options, work) {
   }
   const mocks = {
     '@browserbasehq/sdk': { default: class { constructor(options) { calls.sdkOptions.push(options); return cloud } } },
-    'playwright-core': { chromium: { connectOverCDP: async () => { if (options.connectFails) throw Error('CDP failed'); return browser } } },
+    'playwright-core': { chromium: { connectOverCDP: async () => { if (options.connectWait) await options.connectWait; if (options.connectFails) throw Error('CDP failed'); return browser } } },
     '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => { calls.leaseAcquire++; return options.leaseBusy ? null : { release: async () => { calls.leaseRelease++; return true } } } },
-    '@/lib/nbaBrowserBudget': {
-      reserveNbaBrowserBudget: async input => {
+    '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error { constructor(code) { super('NBA budget ' + code); this.code = code } } },
+    '@/lib/browserbaseAtomicRpc': {
+      reserveBrowserbaseAtomicRpc: async () => {}, checkBrowserbaseAtomicRpc: async () => {},
+      markBrowserbaseCreating: async () => { calls.lifecycle.push('creating'); options.onMark?.(); if (options.creatingFails) throw Error('state unavailable'); return options.createDeadline ?? '9999-12-31T23:59:59.000Z' },
+      markBrowserbaseClosing: async () => { calls.lifecycle.push('closing'); if (options.markFails) throw Error('state unavailable') },
+      resolveBrowserbaseSession: async () => { calls.lifecycle.push('resolved'); if (options.resolveFails) throw Error('state unavailable') },
+      abandonBrowserbaseBeforeCreate: async () => { calls.lifecycle.push('abandoned') },
+    },
+    '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError: class extends Error { constructor(code) { super('browser admission ' + code); this.code = code } } },
+    '@/lib/browserbaseAtomicAdmission': {
+      reserveBrowserbaseAtomicAdmission: async input => {
         calls.budget.push(['reserve', input.timeoutSeconds, calls.create.length])
-        calls.workflows.push(['reserve', input.workflow])
-        calls.scopes.push(['reserve', input.gameIds])
+        calls.workflows.push(['reserve', input.nba?.workflow])
+        calls.scopes.push(['reserve', input.nba?.gameIds])
         if (options.budgetReject) throw Error('NBA browser budget unavailable')
         await input.readUsage()
-        return { id: 'fixture-reservation', ...options.reservation }
+        return { id: 'fixture-reservation', ...(input.nba ? { nba: { ...options.reservation } } : {}) }
       },
-      checkNbaBrowserBudgetUsage: async input => {
+      checkBrowserbaseAtomicUsage: async input => {
         calls.budget.push(['check'])
-        calls.workflows.push(['check', input.workflow])
-        calls.scopes.push(['check', input.gameIds])
+        calls.workflows.push(['check', input.nba?.workflow])
+        calls.scopes.push(['check', input.nba?.gameIds])
         await input.readUsage()
         if (options.watchReject) throw Error('NBA browser usage exceeded')
       },
@@ -103,6 +112,81 @@ test('NBA cannot create a paid session before an accepted durable reservation', 
     assert.deepEqual(calls.budget, [['reserve', 300, 0]])
     assert.equal(calls.create[0].userMetadata.budgetReservation, 'fixture-reservation')
     assert.equal(calls.create[0].browserSettings.solveCaptchas, false)
+  })
+})
+
+test('shared admission denies NFL and untagged sessions before creation', async () => {
+  for (const metadata of [{ sport: 'nfl' }, {}]) await fixture({ budgetReject: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ metadata }), /budget unavailable/)
+    assert.equal(calls.create.length, 0)
+    assert.equal(calls.budget.length, 1)
+  })
+})
+
+test('NFL sessions stop and verify remote release when shared usage cannot be checked', async () => {
+  for (const metadata of [{ sport: 'nfl' }, {}]) await fixture({ fakeTimers: true, watchReject: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata, timeoutSeconds: 450 })
+    const watcher = calls.timers.find(timer => timer.ms === 5000)
+    assert.ok(watcher)
+    watcher.fn()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    await assert.rejects(bb.close(), /usage limit/)
+    assert.equal(calls.release.length, 1)
+    assert.equal(calls.disconnect, 1)
+    assert.equal(calls.create[0].timeout, 450)
+  })
+})
+
+test('unconfirmed shared-budget teardown remains an error', async () => {
+  await fixture({ fakeTimers: true, watchReject: true, releaseFails: true, retrieveFails: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nfl' } })
+    calls.timers.find(timer => timer.ms === 5000).fn()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    await assert.rejects(bb.close(), /release could not be verified/)
+    assert.equal(calls.release.length, 1)
+    assert.deepEqual(calls.lifecycle, ['creating', 'closing'])
+  })
+})
+
+test('state-write trouble never skips remote release and unresolved records remain blocked', async () => {
+  await fixture({ markFails: true, resolveFails: true }, async (api, calls) => {
+    const bb = await api.openSession({ metadata: { sport: 'nfl' } })
+    await assert.rejects(bb.close(), /state unavailable/)
+    assert.equal(calls.release.length, 1)
+    assert.deepEqual(calls.lifecycle, ['creating', 'closing'])
+  })
+})
+
+test('an uncertain creation-state write never attempts the provider POST', async () => {
+  for (const metadata of [{ sport: 'nfl' }, { sport: 'nba' }]) await fixture({ creatingFails: true }, async (api, calls) => {
+    await assert.rejects(api.openSession({ metadata }), /reservation-unavailable/)
+    assert.equal(calls.create.length, 0)
+    assert.deepEqual(calls.lifecycle, ['creating', 'abandoned'])
+  })
+})
+
+test('an expired database launch deadline never attempts a provider POST', async () => {
+  await fixture({ now: () => Date.parse('2026-11-02T12:00:00Z'), createDeadline: '2026-11-02T12:00:00.000Z' }, async (api, calls) => {
+    await assert.rejects(api.openSession({ metadata: { sport: 'nfl' } }), /spend-limit/)
+    assert.equal(calls.create.length, 0)
+    assert.deepEqual(calls.lifecycle, ['creating', 'abandoned'])
+  })
+})
+
+test('shared monitoring can stop a browser while its CDP connection is pending', async () => {
+  let finishConnect
+  const connectWait = new Promise(resolve => { finishConnect = resolve })
+  await fixture({ fakeTimers: true, watchReject: true, connectWait }, async (api, calls) => {
+    const opening = api.openSession({ metadata: { sport: 'nfl' } })
+    for (let i = 0; i < 20 && !calls.timers.length; i++) await Promise.resolve()
+    const watcher = calls.timers.find(timer => timer.ms === 5000)
+    assert.ok(watcher)
+    watcher.fn()
+    for (let i = 0; i < 15; i++) await Promise.resolve()
+    finishConnect()
+    await assert.rejects(opening, /usage limit/)
+    assert.equal(calls.release.length, 1)
+    assert.equal(calls.disconnect, 1)
   })
 })
 
@@ -173,23 +257,33 @@ test('dated public scope reaches admission and monitoring, and expiry closes the
 
 test('a reservation that expires before create cannot open a paid browser', async () => {
   await fixture({ now: () => Date.parse('2026-10-29T00:00:00Z'), reservation: { allowanceExpiresAt: '2026-10-29T00:00:00.000Z' } }, async (api, calls) => {
-    await assert.rejects(api.openPikkitSession('production-context', { sport: 'nba', gameIds: [21717975] }), /expired before browser creation/)
+    await assert.rejects(api.openPikkitSession('production-context', { sport: 'nba', gameIds: [21717975] }), /spend-limit/)
     assert.equal(calls.create.length, 0)
     assert.equal(calls.budget.length, 1)
+    assert.deepEqual(calls.lifecycle, ['abandoned'])
   })
 })
 
-test('normal NBA closure cancels future checks while NFL keeps its existing timeout', async () => {
+test('an allowance that expires during creation-state confirmation never opens a browser', async () => {
+  let now = Date.parse('2026-10-28T23:59:59Z')
+  await fixture({ now: () => now, onMark: () => { now = Date.parse('2026-10-29T00:00:00Z') }, reservation: { allowanceExpiresAt: '2026-10-29T00:00:00.000Z' } }, async (api, calls) => {
+    await assert.rejects(api.openPikkitSession('production-context', { sport: 'nba', gameIds: [21717975] }), /spend-limit/)
+    assert.equal(calls.create.length, 0)
+    assert.deepEqual(calls.lifecycle, ['creating', 'abandoned'])
+  })
+})
+
+test('normal closure cancels future checks and NFL keeps its existing timeout', async () => {
   await fixture({ fakeTimers: true }, async (api, calls) => {
     const bb = await api.openSession({ metadata: { sport: 'nba' } })
     await bb.close()
     assert.ok(calls.cleared.includes(calls.timers.find(timer => timer.ms === 5000)))
     assert.equal(calls.budget.filter(item => item[0] === 'check').length, 0)
   })
-  await fixture({ budgetReject: true }, async (api, calls) => {
+  await fixture({}, async (api, calls) => {
     const bb = await api.openSession({ metadata: { sport: 'nfl' }, timeoutSeconds: 450 })
     await bb.close()
-    assert.equal(calls.budget.length, 0)
+    assert.deepEqual(calls.budget, [['reserve', 450, 0]])
     assert.equal(calls.create[0].timeout, 450)
   })
 })

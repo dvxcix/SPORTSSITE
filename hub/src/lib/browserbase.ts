@@ -1,17 +1,19 @@
 import Browserbase from '@browserbasehq/sdk'
 import { chromium, type Browser, type Page } from 'playwright-core'
 import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
-import { NbaBrowserBudgetError, reserveNbaBrowserBudget, checkNbaBrowserBudgetUsage } from '@/lib/nbaBrowserBudget'
+import { NbaBrowserBudgetError } from '@/lib/nbaBrowserBudget'
+import { reserveBrowserbaseAtomicAdmission, checkBrowserbaseAtomicUsage } from '@/lib/browserbaseAtomicAdmission'
+import { reserveBrowserbaseAtomicRpc, checkBrowserbaseAtomicRpc, markBrowserbaseCreating, markBrowserbaseClosing, resolveBrowserbaseSession, abandonBrowserbaseBeforeCreate } from '@/lib/browserbaseAtomicRpc'
+import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
 
 // Thin wrapper around the Browserbase SDK + Playwright's CDP connection —
 // every scraper (FanDuel/BetMGM/Pikkit) goes through this so session
 // creation/teardown and context persistence (Pikkit's login) only exist in
 // one place.
 
-// The current billing period has exceeded the owner's shared overage limit.
-// Keep every entry point closed until a reviewed shared budget guard is live
-// and a new eligible billing period is confirmed. Existing sessions may still
-// incur charges until they end.
+// Keep every entry point closed until the reviewed shared budget guard and its
+// owner-approved additional-spend baseline are verified in production.
+// Existing sessions may still incur charges until they end.
 function assertBrowserbaseSpendingPause(nba = false): void {
   if (nba) throw new NbaBrowserBudgetError('spend-limit')
   throw new Error('Cloud browser sessions are paused for the spending limit')
@@ -37,6 +39,9 @@ function optionalProjectId(): string | undefined {
 }
 
 const BROWSERBASE_REGION = 'us-east-1' as const
+// This period must be explicitly provisioned against a verified provider
+// baseline; an absent or expired ledger denies every browser launch.
+const BROWSERBASE_BUDGET_PERIOD = '6391f791-c131-436b-9858-6e0de67a2af1'
 const AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 * 60
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
@@ -186,19 +191,40 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   }).map(([key, value]) => [key, String(value)]))
   // Each partition reserves its own durable allowance BEFORE a paid create.
   // Unknown usage or a failed/ambiguous reservation must never allow a launch.
+  const workflow = opts.metadata?.book === 'pikkit' ? 'public' as const : 'direct' as const
   const budgetInput = {
     projectId: pid,
-    workflow: opts.metadata?.book === 'pikkit' ? 'public' as const : 'direct' as const,
-    // Preserve the exact capture scope for admission and every active check.
-    // The database alone decides whether a dated task allowance applies.
-    ...(opts.metadata?.gameIds !== undefined ? { gameIds: opts.metadata.gameIds as readonly number[] } : {}),
+    periodId: BROWSERBASE_BUDGET_PERIOD,
+    timeoutSeconds,
+    ...(nba ? { nba: { workflow, ...(opts.metadata?.gameIds !== undefined ? { gameIds: opts.metadata.gameIds as readonly number[] } : {}) } } : {}),
     readUsage: () => bb.projects.usage(pid, { timeout: 5000, maxRetries: 0 }),
   }
-  const reservation = nba ? await reserveNbaBrowserBudget({ ...budgetInput, timeoutSeconds }) : null
-  if (reservation?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.allowanceExpiresAt)) {
-    throw new Error('NBA public task allowance expired before browser creation')
+  const reservation = await reserveBrowserbaseAtomicAdmission({ ...budgetInput, reserveAtomic: reserveBrowserbaseAtomicRpc })
+  if (reservation.nba?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.nba.allowanceExpiresAt)) {
+    // No SDK create has been attempted, so this exact pending slot is safe to
+    // release. If the write is uncertain the project stays blocked.
+    await abandonBrowserbaseBeforeCreate({ projectId: pid, periodId: BROWSERBASE_BUDGET_PERIOD, id: reservation.id }).catch(() => {})
+    throw new NbaBrowserBudgetError('spend-limit')
   }
-  if (reservation) userMetadata.budgetReservation = reservation.id
+  userMetadata.budgetReservation = reservation.id
+  let createNotAfter: string
+  try {
+    // Once this succeeds the durable slot blocks every other browser. Never
+    // issue the provider POST after a failed or ambiguous state transition.
+    createNotAfter = await markBrowserbaseCreating({ projectId: pid, periodId: BROWSERBASE_BUDGET_PERIOD, id: reservation.id })
+  } catch {
+    // The SDK create call has not been attempted. The exact reservation may
+    // safely be abandoned; uncertainty leaves the project blocked instead.
+    await abandonBrowserbaseBeforeCreate({ projectId: pid, periodId: BROWSERBASE_BUDGET_PERIOD, id: reservation.id }).catch(() => {})
+    if (nba) throw new NbaBrowserBudgetError('reservation-unavailable')
+    throw new BrowserbaseAdmissionError('reservation-unavailable')
+  }
+  if (!Number.isFinite(Date.parse(createNotAfter)) || Date.now() >= Date.parse(createNotAfter)
+    || reservation.nba?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.nba.allowanceExpiresAt)) {
+    await abandonBrowserbaseBeforeCreate({ projectId: pid, periodId: BROWSERBASE_BUDGET_PERIOD, id: reservation.id }).catch(() => {})
+    if (nba) throw new NbaBrowserBudgetError('spend-limit')
+    throw new BrowserbaseAdmissionError('spend-limit')
+  }
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
@@ -213,23 +239,8 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     },
     userMetadata,
   })
+  const sessionKey = { projectId: pid, periodId: BROWSERBASE_BUDGET_PERIOD, id: reservation.id, sessionId: session.id }
   let browser: Browser | undefined
-  let page: Page
-  try {
-    browser = opts.requestTimeoutMs ? await chromium.connectOverCDP(session.connectUrl, { timeout: opts.requestTimeoutMs }) : await chromium.connectOverCDP(session.connectUrl)
-    const existingContext = browser.contexts()[0]
-    if (!existingContext && opts.contextId) throw new Error('The persisted browser context was not restored')
-    const context = existingContext ?? await browser.newContext()
-    page = context.pages()[0] ?? await context.newPage()
-  } catch (failure) {
-    if (opts.contextId || opts.verifyRelease || nba) await releasePersistentSession(bb, session.id, pid, browser, !!opts.contextId)
-    else {
-      await browser?.close().catch(() => {})
-      await bb.sessions.update(session.id, { status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}) }).catch(() => {})
-    }
-    throw failure
-  }
-  const connectedBrowser = browser
   let closing: Promise<void> | undefined
   let monitorStopped = false
   let monitorTimer: ReturnType<typeof setTimeout> | undefined
@@ -238,15 +249,16 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     monitorStopped = true
     if (monitorTimer) clearTimeout(monitorTimer)
     return closing ??= (async () => {
-      if (opts.contextId || opts.verifyRelease || nba) {
-        await releasePersistentSession(bb, session.id, pid, connectedBrowser, !!opts.contextId)
-        if (budgetStopped) throw new Error('NBA browser stopped by its usage limit')
-        return
-      }
-      await connectedBrowser.close().catch(() => {})
-      await bb.sessions.update(session.id, {
-        status: 'REQUEST_RELEASE', ...(pid ? { projectId: pid } : {}),
-      }).catch(() => {})
+      // Request remote release immediately, even if the state write fails or
+      // stalls. Either uncertain result keeps the durable slot unresolved.
+      const [marked, released] = await Promise.allSettled([
+        markBrowserbaseClosing(sessionKey),
+        releasePersistentSession(bb, session.id, pid, browser, !!opts.contextId),
+      ])
+      if (released.status === 'rejected') throw released.reason
+      if (marked.status === 'rejected') throw marked.reason
+      await resolveBrowserbaseSession(sessionKey)
+      if (budgetStopped) throw new Error('Cloud browser stopped by its usage limit')
     })()
   }
   // This stops further activity on unknown/exceeded provider usage. It is not
@@ -254,20 +266,43 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   // cannot be undone. Permanent launch/runtime quotas bound repeated exposure.
   const monitor = async () => {
     try {
-      if (reservation?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.allowanceExpiresAt)) {
+      if (reservation.nba?.allowanceExpiresAt && Date.now() >= Date.parse(reservation.nba.allowanceExpiresAt)) {
         throw new Error('NBA public task allowance expired')
       }
-      await checkNbaBrowserBudgetUsage(budgetInput)
+      await checkBrowserbaseAtomicUsage({ ...budgetInput, reservationId: reservation.id, sessionId: session.id, checkAtomic: checkBrowserbaseAtomicRpc })
     } catch {
       if (!monitorStopped) {
         budgetStopped = true
-        await close().catch(() => { console.warn('[browserbase] NBA usage stop requested; reservation retained') })
+        await close().catch(() => { console.warn('[browserbase] usage stop requested; reservation retained') })
       }
     } finally {
       if (!monitorStopped) monitorTimer = setTimeout(() => { void monitor() }, 5000)
     }
   }
-  if (nba) monitorTimer = setTimeout(() => { void monitor() }, 5000)
+  // Monitoring starts immediately after provider creation, including while
+  // CDP connection or page setup is still pending.
+  monitorTimer = setTimeout(() => { void monitor() }, 5000)
+  let page: Page
+  try {
+    browser = opts.requestTimeoutMs ? await chromium.connectOverCDP(session.connectUrl, { timeout: opts.requestTimeoutMs }) : await chromium.connectOverCDP(session.connectUrl)
+    if (monitorStopped) {
+      await boundedClose(browser).catch(() => {})
+      await close()
+      throw new Error('Cloud browser stopped during connection')
+    }
+    const existingContext = browser.contexts()[0]
+    if (!existingContext && opts.contextId) throw new Error('The persisted browser context was not restored')
+    const context = existingContext ?? await browser.newContext()
+    page = context.pages()[0] ?? await context.newPage()
+    if (monitorStopped) {
+      await boundedClose(browser).catch(() => {})
+      await close()
+      throw new Error('Cloud browser stopped during setup')
+    }
+  } catch (failure) {
+    await close()
+    throw failure
+  }
   return {
     page,
     sessionId: session.id,

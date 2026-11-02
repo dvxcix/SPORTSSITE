@@ -14,7 +14,7 @@ export type NbaBookFamilyState = { attemptedAt: number; successAt: number | null
 export type NbaBookScheduleState = { version: 1; gameId: number; tipoff: number; markets: Record<string, NbaBookFamilyState> }
 export type NbaBookCircuit = { version: 1; failures: number; retryAt: number }
 export type NbaBookCapturePlan = { game: PaintGame; first: boolean; regularMarkets: string[]; families: string[] }
-export type NbaBookOutcome = { family: string; status: 'captured' | 'unavailable' | 'failed' | 'budget-deferred'; observedAt?: string }
+export type NbaBookOutcome = { family: string; status: 'captured' | 'unavailable' | 'failed' | 'budget-deferred'; observedAt?: string; budgetReason?: string }
 export const nbaBookScheduleKey = (book: NbaFirstBook, game: PaintGame) => `book-cadence:v1:${book}:${game.id}:${nbaGameStart(game)}`
 export const nbaBookCircuitKey = (book: NbaFirstBook) => `book-circuit:v1:${book}`
 export const nbaBookFamilies = (book: NbaFirstBook) => book === 'draftkings' ? ['first'] : ['first', ...NBA_BOOK_FAMILIES]
@@ -89,7 +89,9 @@ export function finishNbaBookCapture(plan: NbaBookCapturePlan, reserved: NbaBook
       markets[family] = { ...prior, attemptedAt: now, retryAt: now, failures: 0, status: 'unavailable' }
     } else if (outcome?.status === 'budget-deferred') {
       // Admission denial is not evidence that this market failed or vanished.
-      markets[family] = { ...prior, attemptedAt: now, retryAt: now + 30 * MINUTE, status: 'deferred', checkpointAttempts: Math.max(0, (prior.checkpointAttempts ?? 1) - 1) }
+      // A verified busy lane did not start a browser; the next scheduler check
+      // may try it again. Exhausted or unverifiable budgets retain backoff.
+      markets[family] = { ...prior, attemptedAt: now, retryAt: outcome.budgetReason === 'session-busy' ? now : now + 30 * MINUTE, status: 'deferred', checkpointAttempts: Math.max(0, (prior.checkpointAttempts ?? 1) - 1) }
     } else {
       const failures = Math.min(8, prior.failures + 1)
       markets[family] = { ...prior, attemptedAt: now, retryAt: now + nbaBookFailureBackoff(failures), failures, status: 'failed' }

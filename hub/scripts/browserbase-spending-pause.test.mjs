@@ -18,6 +18,9 @@ test('the spending pause blocks automated and manual sessions before any provide
       NbaBrowserBudgetError: class extends Error { constructor(code) { super('NBA spending limit'); this.code = code } },
       reserveNbaBrowserBudget: async () => { calls.push('reservation') },
     },
+    '@/lib/browserbaseAtomicAdmission': {},
+    '@/lib/browserbaseAtomicRpc': {},
+    '@/lib/browserbaseAdmissionError': {},
   }
   const compiledModule = { exports: {} }
   new Function('require', 'module', 'exports', compiled)(id => {

@@ -18,7 +18,7 @@ type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-fail
 function budgetDenial(error: unknown): NbaBrowserBudgetCode | null {
   if (!(error instanceof NbaBrowserBudgetError)) return null
   const code = error.code
-  return typeof code === 'string' && ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable'].includes(code) ? code as NbaBrowserBudgetCode : null
+  return typeof code === 'string' && ['paused','configuration','project-limit','spend-limit','usage-unavailable','quota-limit','reservation-unavailable','session-busy'].includes(code) ? code as NbaBrowserBudgetCode : null
 }
 export type NbaFirstBookCapture = { book: NbaFirstBook; observedAt: string; complete: boolean; games: NbaFirstBookGame[]; errors: Failure[]; regular?: NbaBookPropCapture[]; regularCoverage?: NbaBookPropCoverage[] }
 export type NbaBookCaptureCallbacks = {

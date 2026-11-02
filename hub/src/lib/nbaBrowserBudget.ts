@@ -2,7 +2,7 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { createAdminClient } from './supabase/admin'
 
-export type NbaBrowserBudgetCode = 'paused' | 'configuration' | 'project-limit' | 'spend-limit' | 'usage-unavailable' | 'quota-limit' | 'reservation-unavailable'
+export type NbaBrowserBudgetCode = 'paused' | 'configuration' | 'project-limit' | 'spend-limit' | 'usage-unavailable' | 'quota-limit' | 'reservation-unavailable' | 'session-busy'
 const messages: Record<NbaBrowserBudgetCode, string> = {
   paused: 'NBA browser captures are paused',
   configuration: 'NBA browser budget is not configured safely',
@@ -10,6 +10,7 @@ const messages: Record<NbaBrowserBudgetCode, string> = {
   'spend-limit': 'NBA browser additional spending limit reached',
   'usage-unavailable': 'NBA browser usage could not be verified',
   'quota-limit': 'NBA browser launch or runtime quota reached',
+  'session-busy': 'Another cloud browser is still in use',
   'reservation-unavailable': 'NBA browser budget reservation could not be verified',
 }
 export class NbaBrowserBudgetError extends Error {
@@ -82,6 +83,14 @@ async function verifiedUsage(input: UsageInput): Promise<NbaBrowserUsage & { obs
 }
 
 type Configuration = ReturnType<typeof configuration>
+/** Preserve the exact existing NBA caps and scope validation for the atomic
+ * shared+NBA admission wrapper. This does not reserve a browser by itself. */
+export function nbaBrowserAtomicConfiguration(input: UsageInput & { timeoutSeconds: number }) {
+  const config = configuration(input.projectId, input.workflow)
+  const gameIds = scopedGameIds(input.gameIds)
+  if (!Number.isInteger(input.timeoutSeconds) || input.timeoutSeconds < 60 || input.timeoutSeconds > 300) throw new NbaBrowserBudgetError('configuration')
+  return { ...config, gameIds }
+}
 async function applyBudget(input: UsageInput, config: Configuration, usage: Awaited<ReturnType<typeof verifiedUsage>>, id: string | null, timeoutSeconds: number | null) {
   try {
     const { data, error } = await createAdminClient().rpc('apply_nba_browser_spend_budget', {
@@ -120,17 +129,11 @@ export async function checkNbaBrowserBudgetUsage(input: UsageInput): Promise<Nba
 /** One permanent debit per attempted create. There is deliberately no refund API.
  * The database serializes day+period quotas across all serverless instances.
  * Provider telemetry cannot guarantee an exact proxy-byte or invoice ceiling. */
-export async function reserveNbaBrowserBudget(input: UsageInput & { timeoutSeconds: number }): Promise<NbaBrowserBudgetReservation> {
-  const config = configuration(input.projectId, input.workflow)
-  scopedGameIds(input.gameIds)
-  if (!Number.isInteger(input.timeoutSeconds) || input.timeoutSeconds < 60 || input.timeoutSeconds > 300) throw new NbaBrowserBudgetError('configuration')
-  const usage = await verifiedUsage(input)
-  const id = randomUUID(), reservedMinutes = Math.ceil(input.timeoutSeconds / 60)
-  const reservedCents = Math.ceil(50 + reservedMinutes / 6)
-  try {
-    const data = await applyBudget(input, config, usage, id, input.timeoutSeconds)
+export function parseNbaBrowserBudgetReservation(raw: unknown, id: string, timeoutSeconds: number, input: Pick<UsageInput, 'workflow' | 'gameIds'>): NbaBrowserBudgetReservation {
+    const data = raw as Record<string, unknown> | null
+    const reservedMinutes = Math.ceil(timeoutSeconds / 60), reservedCents = Math.ceil(50 + reservedMinutes / 6)
     // Repeated/ambiguous reservation tokens must never authorize another create.
-    if (data.allowed !== true || data.reason !== 'reserved' || data.id !== id || data.reservedMinutes !== reservedMinutes || data.reservedCents !== reservedCents
+    if (!data || data.allowed !== true || data.reason !== 'reserved' || data.id !== id || data.reservedMinutes !== reservedMinutes || data.reservedCents !== reservedCents
       || typeof data.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.day)
       || typeof data.periodStart !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.periodStart)
       || !Number.isFinite(Date.parse(data.day)) || !Number.isFinite(Date.parse(data.periodStart))
@@ -138,26 +141,38 @@ export async function reserveNbaBrowserBudget(input: UsageInput & { timeoutSecon
     const hasAllowance = data.allowanceKey !== undefined || data.allowanceExpiresAt !== undefined
     if (hasAllowance) {
       const ids = input.gameIds
-      if (input.workflow !== 'public' || !ids?.length) throw new NbaBrowserBudgetError('reservation-unavailable')
+      const november2 = data.allowanceKey === 'nba-one-day-2026-11-02'
+        && data.day === '2026-11-02' && data.allowanceExpiresAt === '2026-11-02T22:59:00.000Z'
+        && (input.workflow === 'public' || input.workflow === 'direct')
+      if (!november2 && (input.workflow !== 'public' || !ids?.length)) throw new NbaBrowserBudgetError('reservation-unavailable')
       const october28 = data.allowanceKey === 'nba-public-count-recovery-2026-10-28'
         && data.allowanceExpiresAt === '2026-10-29T00:00:00.000Z'
-        && ids.every(game => game >= 21717975 && game <= 21717986)
+        && !!ids?.every(game => game >= 21717975 && game <= 21717986)
       const october29 = data.allowanceKey === 'nba-public-count-recovery-2026-10-29'
         && data.day === '2026-10-29'
         && data.allowanceExpiresAt === '2026-10-30T00:00:00.000Z'
-        && ids.every(game => [21717987, 21717988, 21717989].includes(game))
+        && !!ids?.every(game => [21717987, 21717988, 21717989].includes(game))
       const october30 = data.allowanceKey === 'nba-public-count-recovery-2026-10-30'
         && data.day === '2026-10-30'
         && data.allowanceExpiresAt === '2026-10-30T23:00:00.000Z'
-        && ids.every(game => [21717990,21717992,21717993,21717994,21717995,21717996,21717997,21717998,21717999,21718000].includes(game))
+        && !!ids?.every(game => [21717990,21717992,21717993,21717994,21717995,21717996,21717997,21717998,21717999,21718000].includes(game))
       const october31 = data.allowanceKey === 'nba-public-count-recovery-2026-10-31'
         && data.day === '2026-10-31'
         && data.allowanceExpiresAt === '2026-10-31T19:00:00.000Z'
-        && ids.every(game => [21718001,21718002,21718003,21718004,21718005,21718006,21718007].includes(game))
-      if (!october28 && !october29 && !october30 && !october31) throw new NbaBrowserBudgetError('reservation-unavailable')
+        && !!ids?.every(game => [21718001,21718002,21718003,21718004,21718005,21718006,21718007].includes(game))
+      if (!november2 && !october28 && !october29 && !october30 && !october31) throw new NbaBrowserBudgetError('reservation-unavailable')
     }
     return { id, day: data.day, periodStart: data.periodStart, reservedMinutes, reservedCents,
-      ...(hasAllowance ? { allowanceKey: data.allowanceKey, allowanceExpiresAt: data.allowanceExpiresAt } : {}) }
+      ...(hasAllowance ? { allowanceKey: data.allowanceKey as string, allowanceExpiresAt: data.allowanceExpiresAt as string } : {}) }
+}
+
+export async function reserveNbaBrowserBudget(input: UsageInput & { timeoutSeconds: number }): Promise<NbaBrowserBudgetReservation> {
+  const config = nbaBrowserAtomicConfiguration(input)
+  const usage = await verifiedUsage(input)
+  const id = randomUUID()
+  try {
+    const data = await applyBudget(input, config, usage, id, input.timeoutSeconds)
+    return parseNbaBrowserBudgetReservation(data, id, input.timeoutSeconds, input)
   } catch (error) {
     if (error instanceof NbaBrowserBudgetError) throw error
     throw new NbaBrowserBudgetError('reservation-unavailable')
