@@ -66,6 +66,10 @@ export async function POST(req: Request) {
   const form = await req.formData()
   const file = form.get('file')
   const kind = form.get('kind')
+  const expectedUserId = form.get('expectedUserId')
+  if (expectedUserId !== null && (typeof expectedUserId !== 'string' || expectedUserId !== user.id)) {
+    return NextResponse.json({ error: 'Your account changed. Reopen the share screen and try again.' }, { status: 409 })
+  }
   if (!(file instanceof File) || typeof kind !== 'string' || !ALLOWED_KINDS.has(kind)) {
     return NextResponse.json({ error: 'Invalid upload request.' }, { status: 400 })
   }

@@ -4,6 +4,7 @@ import { ImageResponse } from 'next/og'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { createClient } from '@/lib/supabase/server'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { WATCHLIST_SHARE_PAGE_SIZE } from '@/lib/watchlistSharePages'
 
 export const revalidate = 0
 
@@ -148,8 +149,8 @@ function PlayerCard({ item, origin }: { item: any; origin: string }) {
 export async function GET(req: Request) {
   const origin = new URL(req.url).origin
   const ids = [...new Set((new URL(req.url).searchParams.get('ids') ?? '').split(',').filter(Boolean))]
-  if (!ids.length || ids.length > 100 || ids.some(id => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
-    return new Response('Choose between 1 and 100 visible Watchlist selections to share.', { status: 400 })
+  if (!ids.length || ids.length > WATCHLIST_SHARE_PAGE_SIZE || ids.some(id => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+    return new Response(`Choose between 1 and ${WATCHLIST_SHARE_PAGE_SIZE} visible Watchlist selections per image.`, { status: 400 })
   }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
