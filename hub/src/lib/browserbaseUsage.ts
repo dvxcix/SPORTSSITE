@@ -104,7 +104,11 @@ export const getBrowserbaseUsageSummary = unstable_cache(async (): Promise<Brows
   const cycleStart = new Date()
   cycleStart.setUTCDate(1)
   cycleStart.setUTCHours(0, 0, 0, 0)
-  const cycleSessions = sessions.filter(session => Date.parse(session.createdAt) >= cycleStart.getTime())
+  // The SDK can return sessions from more than one project. Compare only this
+  // project's retained sessions to its project usage; the provider's usage
+  // interval may still differ from our UTC calendar-month session window.
+  const projectSessions = sessions.filter(session => session.projectId === projectId)
+  const cycleSessions = projectSessions.filter(session => Date.parse(session.createdAt) >= cycleStart.getTime())
   const workflows = new Map<string, BrowserbaseWorkflowUsage>()
   const days = new Map<string, BrowserbaseDailyUsage>()
   const byStatus: Record<string, number> = {}
@@ -155,7 +159,7 @@ export const getBrowserbaseUsageSummary = unstable_cache(async (): Promise<Brows
     byRegion[session.region] = (byRegion[session.region] ?? 0) + 1
   }
 
-  const recentSessions = sessions
+  const recentSessions = projectSessions
     .toSorted((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
     .slice(0, 100)
     .map(session => ({
@@ -174,8 +178,8 @@ export const getBrowserbaseUsageSummary = unstable_cache(async (): Promise<Brows
     generatedAt: new Date().toISOString(),
     browserMinutes: usage.browserMinutes,
     proxyBytes: usage.proxyBytes,
-    runningSessions: running.length,
-    retainedSessionCount: sessions.length,
+    runningSessions: running.filter(session => session.projectId === projectId).length,
+    retainedSessionCount: projectSessions.length,
     cycleSessionCount: cycleSessions.length,
     attributedBrowserMinutes,
     attributedProxyBytes,

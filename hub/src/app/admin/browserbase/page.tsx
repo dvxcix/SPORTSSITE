@@ -44,7 +44,6 @@ export default async function BrowserbaseOperationsPage() {
   const browserBlocked = usage.browserMinutes >= browserBudgetMinutes
   const safetyBlocked = proxyBlocked || browserBlocked
   const maxDailyBytes = Math.max(1, ...usage.byDay.map(day => day.proxyBytes))
-  const attributedPct = usage.proxyBytes > 0 ? usage.attributedProxyBytes / usage.proxyBytes * 100 : 100
   const totalFailures = (usage.byStatus.ERROR ?? 0) + (usage.byStatus.TIMED_OUT ?? 0)
 
   return (
@@ -69,11 +68,11 @@ export default async function BrowserbaseOperationsPage() {
             </span>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${safetyBlocked ? 'text-red-300' : 'text-emerald-300'}`}>Spending alerts · Monitoring only</p>
-              <h2 className="mt-1 text-lg font-black text-[var(--text-1)]">{safetyBlocked ? 'Spending threshold exceeded — captures remain enabled' : 'Usage is below the alert thresholds'}</h2>
+              <h2 className="mt-1 text-lg font-black text-[var(--text-1)]">{safetyBlocked ? 'Spending alert threshold exceeded' : 'Usage is below the alert thresholds'}</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-2)]">
                 {proxyBlocked ? 'Proxy transfer crossed the alert threshold. ' : ''}
                 {browserBlocked ? 'Browser time crossed the alert threshold. ' : ''}
-                FanDuel, Pikkit and other captures are not stopped by spending alerts. Additional provider charges may apply.
+                These alerts do not stop browser sessions. Individual workflows may have additional controls; provider charges may apply.
               </p>
             </div>
           </div>
@@ -85,15 +84,15 @@ export default async function BrowserbaseOperationsPage() {
       </section>
 
       <section aria-label="Browserbase cost overview" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <AdminStatCard label="Proxy transfer" value={`${plan.proxyGigabytes.toFixed(2)} GB`} icon={HardDriveDownload} tone="danger" detail={`${plan.proxyPercent.toFixed(0)}% of 5 GB included`} />
-        <AdminStatCard label="Proxy overage" value={usd(plan.proxyOverageUsd)} icon={CircleDollarSign} tone={plan.proxyOverageUsd > 0 ? 'danger' : 'success'} detail={`${plan.proxyOverageGigabytes.toFixed(2)} GB billed at $10/GB`} />
-        <AdminStatCard label="Current estimated bill" value={usd(plan.estimatedCurrentBillUsd)} icon={Gauge} tone={plan.estimatedCurrentBillUsd > 150 ? 'danger' : 'warning'} detail="Plan plus measured overages" />
-        <AdminStatCard label="Pace forecast" value={usd(plan.projectedBillUsd)} icon={Activity} tone={plan.projectedBillUsd > 150 ? 'danger' : 'warning'} detail={`${plan.projectedProxyGigabytes.toFixed(1)} GB if this pace continues`} />
+        <AdminStatCard label="Proxy transfer" value={`${plan.proxyGigabytes.toFixed(2)} GB`} icon={HardDriveDownload} tone="danger" detail={`${plan.proxyPercent.toFixed(0)}% compared with the plan's 5 GB allowance`} />
+        <AdminStatCard label="Estimated proxy overage" value={usd(plan.proxyOverageUsd)} icon={CircleDollarSign} tone={plan.proxyOverageUsd > 0 ? 'danger' : 'success'} detail="Estimate if reported usage falls in one billing period" />
+        <AdminStatCard label="Plan + project scenario" value={usd(plan.estimatedCurrentBillUsd)} icon={Gauge} tone={plan.estimatedCurrentBillUsd > 150 ? 'danger' : 'warning'} detail="Not an invoice; excludes other projects and API charges" />
+        <AdminStatCard label="Retained sessions" value={usage.cycleSessionCount.toLocaleString()} icon={Activity} tone="warning" detail="Sessions retained since the start of the UTC month" />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,.55fr)]">
         <div className={panel}>
-          <PanelHeader eyebrow="Current billing cycle" title="Daily proxy burn" detail={`${plan.averageProxyGigabytesPerCalendarDay.toFixed(2)} GB/day actual · ${plan.includedProxyGigabytesPerCalendarDay.toFixed(2)} GB/day sustainable`} />
+          <PanelHeader eyebrow="Retained sessions" title="Proxy by day" detail="Only retained sessions since the start of the UTC month are shown. The provider billing period may differ." />
           <div className="space-y-3 p-4 sm:p-5">
             {usage.byDay.length > 0 ? usage.byDay.map(day => {
               const width = Math.max(1, day.proxyBytes / maxDailyBytes * 100)
@@ -117,37 +116,32 @@ export default async function BrowserbaseOperationsPage() {
           <h2 className="mt-1 text-base font-black text-[var(--text-1)]">Can every byte be explained?</h2>
           <div className="mt-5 space-y-4">
             <ReconcileRow label="Provider-reported proxy" value={`${plan.proxyGigabytes.toFixed(3)} GB`} icon={Cloud} />
-            <ReconcileRow label="Retained sessions attributed" value={`${formatGb(usage.attributedProxyBytes)} GB`} icon={DatabaseZap} />
-            <ReconcileRow label="Not represented by retained sessions" value={`${formatGb(usage.unaccountedProxyBytes)} GB`} icon={AlertTriangle} danger={usage.unaccountedProxyBytes > 50_000_000} />
+            <ReconcileRow label="Retained sessions since UTC month start" value={`${formatGb(usage.attributedProxyBytes)} GB`} icon={DatabaseZap} />
+            <ReconcileRow label="Reported usage above listed sessions" value={`${formatGb(usage.unaccountedProxyBytes)} GB`} icon={AlertTriangle} danger={usage.unaccountedProxyBytes > 50_000_000} />
             <ReconcileRow label="Untagged sessions" value={usage.untaggedSessions.toLocaleString()} icon={ShieldAlert} danger={usage.untaggedSessions > 0} />
           </div>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--surface-overlay)]">
-            <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.min(100, attributedPct)}%` }} />
-          </div>
-          <p className="mt-2 text-xs text-[var(--text-3)]">{Math.min(100, attributedPct).toFixed(1)}% of provider usage reconciled to sessions retained in this billing cycle.</p>
+          <p className="mt-4 text-xs text-[var(--text-3)]">These totals may cover different time windows. The difference cannot be attributed to a workflow without matching billing-period data.</p>
         </div>
       </section>
 
       <section className={panel}>
-        <PanelHeader eyebrow="Cost attribution" title="Usage by extractor" detail="Sorted by paid proxy transfer. A high cost per run exposes the most expensive workflow even when it runs less often." />
+        <PanelHeader eyebrow="Retained-session usage" title="Usage by extractor" detail="Sorted by proxy transfer from retained sessions since UTC month start. This does not allocate the provider bill." />
         <div className="overflow-x-auto">
           <div className="min-w-[980px]">
-            <div className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px_110px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">
-              <span>Extractor</span><span>Sessions</span><span>Proxy</span><span>Per run</span><span>Browser</span><span>Failures</span><span>Allocated overage</span>
+            <div className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">
+              <span>Extractor</span><span>Sessions</span><span>Proxy</span><span>Per run</span><span>Browser</span><span>Failures</span>
             </div>
             <div className="divide-y divide-[var(--border-subtle)]">
               {usage.byWorkflow.map(workflow => {
                 const failed = workflow.errors + workflow.timedOut
-                const cost = usage.attributedProxyBytes > 0 ? plan.proxyOverageUsd * workflow.proxyBytes / usage.attributedProxyBytes : 0
                 return (
-                  <div key={workflow.name} className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px_110px] items-center gap-3 px-5 py-3 text-xs text-[var(--text-2)]">
+                  <div key={workflow.name} className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px] items-center gap-3 px-5 py-3 text-xs text-[var(--text-2)]">
                     <div className="min-w-0"><p className="truncate font-mono font-bold text-[var(--text-1)]">{workflow.name}</p><p className="mt-0.5 text-[9px] text-[var(--text-3)]">Last seen {dateTime(workflow.lastSeenAt)}</p></div>
                     <span className="tabular-nums">{workflow.sessions.toLocaleString()}</span>
                     <span className="font-black tabular-nums text-[var(--text-1)]">{formatGb(workflow.proxyBytes)} GB</span>
                     <span className="tabular-nums">{formatMb(workflow.proxyBytes / Math.max(1, workflow.sessions))} MB</span>
                     <span className="tabular-nums">{(workflow.browserMinutes / 60).toFixed(2)} h</span>
                     <span className={`font-bold tabular-nums ${failed > 0 ? 'text-amber-300' : 'text-emerald-400'}`}>{failed}</span>
-                    <span className="font-black tabular-nums text-red-300">{usd(cost)}</span>
                   </div>
                 )
               })}
@@ -159,7 +153,7 @@ export default async function BrowserbaseOperationsPage() {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <MiniPanel icon={Clock3} title="Browser time" value={`${plan.browserHours.toFixed(1)} / 500 h`} detail={`${plan.browserOverageHours.toFixed(1)} overage hours · ${usd(plan.browserOverageUsd)} overage`} />
-        <MiniPanel icon={Radio} title="Session state" value={`${usage.runningSessions} running`} detail={`${usage.cycleSessionCount.toLocaleString()} this cycle · ${totalFailures.toLocaleString()} failed or timed out`} danger={usage.runningSessions > 0 || totalFailures > 0} />
+        <MiniPanel icon={Radio} title="Session state" value={`${usage.runningSessions} running`} detail={`${usage.cycleSessionCount.toLocaleString()} since UTC month start · ${totalFailures.toLocaleString()} failed or timed out`} danger={usage.runningSessions > 0 || totalFailures > 0} />
         <MiniPanel icon={ServerCog} title="Retention window" value={`${usage.retainedSessionCount.toLocaleString()} sessions`} detail={`Latest 100 shown · refreshed ${dateTime(usage.generatedAt)}`} />
       </section>
 
