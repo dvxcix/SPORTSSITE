@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
+import { verifyConcurrentUpgrade } from '@/lib/whopConcurrentUpgrade'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store' }
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient()
     const { data: target, error: targetError } = await admin.from('users')
-      .select('tier,whop_plan_id,whop_membership_id').eq('id', targetId).maybeSingle()
+      .select('tier,whop_plan_id,whop_membership_id,whop_user_id').eq('id', targetId).maybeSingle()
     const membershipId = target?.whop_membership_id
     if (targetError || target?.tier !== 'ultimate' || target?.whop_plan_id !== ORIGINAL_MONTHLY_PLAN
       || typeof membershipId !== 'string' || !membershipId.startsWith('mem_') || !PROVIDER_ID.test(membershipId)) return no(404)
@@ -61,6 +62,9 @@ export async function POST(request: Request) {
       membershipBusinessMatches: false, membershipProductMatches: false,
       membershipBusinessMissing: false, membershipBusinessScalar: false, membershipBusinessObject: false,
       membershipProductMissing: false, membershipProductScalar: false, membershipProductObject: false,
+      membershipInternalOwnerPresent: false, membershipInternalOwnerMatches: false,
+      localWhopUserPresent: false, membershipWhopUserPresent: false, membershipWhopUserMatchesLocal: false,
+      membershipValidFalse: false, membershipStatusCompatible: false, upgradeRuntimeWouldAccept: false,
       planRead: false, planIdMatches: false, planAccountMatches: false, planCompanyMatches: false,
       planProductMatches: false, planTypeRenewal: false, planBillingTypeRenewal: false,
       planBillingPeriod30: false, planCurrencyUsd: false, planRenewal1999: false, planHidden: false, runtimeWouldAccept: false,
@@ -96,6 +100,17 @@ export async function POST(request: Request) {
     result.membershipPeriodValid = periodEnd !== null
     result.membershipPeriodFuture = periodEnd !== null && Date.parse(periodEnd) > Date.now()
     result.membershipCancelFlagPresent = typeof membership.cancel_at_period_end === 'boolean'
+    const membershipMetadata = object(membership.metadata)
+    const internalOwner = membershipMetadata?.internal_user_id
+    const providerUser = id(membership.user)
+    result.membershipInternalOwnerPresent = typeof internalOwner === 'string'
+    result.membershipInternalOwnerMatches = internalOwner === targetId
+    result.localWhopUserPresent = typeof target?.whop_user_id === 'string' && target.whop_user_id.length > 0
+    result.membershipWhopUserPresent = typeof providerUser === 'string' && providerUser.length > 0
+    result.membershipWhopUserMatchesLocal = result.localWhopUserPresent && providerUser === target?.whop_user_id
+    result.membershipValidFalse = membership.valid === false
+    result.membershipStatusCompatible = typeof membership.status === 'string'
+      && ['active', 'trialing', 'past_due', 'canceling'].includes(membership.status.trim().toLowerCase())
     result.membershipBusinessMatches = id(membership.company) === MAIN_BUSINESS
     result.membershipProductMatches = id(membership.product) === MAIN_PRODUCT
     result.membershipBusinessMissing = membership.company == null
@@ -107,6 +122,14 @@ export async function POST(request: Request) {
     const planId = id(membership.plan_id) ?? id(membership.plan)
     result.membershipPlanMatchesExpected = planId === expectedPlanId
     if (!result.membershipIdMatches || !result.membershipPlanMatchesExpected || !planId || !planId.startsWith('plan_') || !PROVIDER_ID.test(planId)) return NextResponse.json(result, { headers })
+    try {
+      // Exercise the same predicate planned for overlap protection using the
+      // captured provider response only; this cannot change any account.
+      const capturedFetch: typeof fetch = async () => Response.json(membershipResponse)
+      result.upgradeRuntimeWouldAccept = !!(await verifyConcurrentUpgrade({
+        membershipId, planId, userId: targetId, whopUserId: target.whop_user_id ?? null, source: 'main',
+      }, 'diagnostic', capturedFetch))
+    } catch { /* Return only fixed booleans, never provider or user details. */ }
     const plan = await get(`/api/v1/plans/${encodeURIComponent(planId)}`)
     if (!plan) return NextResponse.json(result, { headers })
     result.planRead = true

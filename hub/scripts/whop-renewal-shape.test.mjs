@@ -16,6 +16,10 @@ const resolverSource = await readFile(new URL('../src/lib/whopRepricedUltimate.t
 const resolverOutput = ts.transpileModule(resolverSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 const resolver = {}
 new Function('require', 'exports', resolverOutput)(name => { assert.equal(name, '@/lib/whopMembershipAccess'); return access }, resolver)
+const upgradeSource = await readFile(new URL('../src/lib/whopConcurrentUpgrade.ts', import.meta.url), 'utf8')
+const upgradeOutput = ts.transpileModule(upgradeSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+const upgrade = {}
+new Function('require', 'exports', upgradeOutput)(name => { assert.equal(name, '@/lib/whopMembershipAccess'); return access }, upgrade)
 const require = createRequire(import.meta.url)
 const targetId = '123e4567-e89b-42d3-a456-426614174000'
 const memberId = 'mem_test'
@@ -39,6 +43,7 @@ function route(options = {}) {
     '@/lib/serverRateLimit': { consumeServerRateLimit: async (...args) => { rates.push(args); return options.rate ?? { allowed: true, available: true } } },
     '@/lib/whopMembershipAccess': access,
     '@/lib/whopRepricedUltimate': resolver,
+    '@/lib/whopConcurrentUpgrade': upgrade,
   }
   const compiled = { exports: {} }
   const fetcher = async (url, init) => {
@@ -169,6 +174,28 @@ test('private diagnostic distinguishes incomplete plan from a confirmed conflict
   assert.equal(conflictingPlan.planBillingTypeConflict, true)
   assert.equal(conflictingPlan.runtimeReturnedNoMatch, true)
   assert.equal(conflictingPlan.runtimeWouldAccept, false)
+})
+
+test('private diagnostic exercises upgrade ownership using captured provider data only', async () => {
+  const cases = [
+    { member: { ...membership, metadata: { internal_user_id: targetId } }, target, expected: true },
+    { member: { ...membership, metadata: {}, user: { id: 'user_test' } }, target: { ...target, whop_user_id: 'user_test' }, expected: true },
+    { member: { ...membership, metadata: {}, user: { id: 'user_test' } }, target, expected: false },
+    { member: { ...membership, metadata: { internal_user_id: 'other' } }, target, expected: false },
+    { member: { ...membership, metadata: { internal_user_id: targetId }, cancel_at_period_end: null }, target, expected: false },
+    { member: { ...membership, metadata: { internal_user_id: targetId }, valid: false }, target, expected: false },
+    { member: { ...membership, metadata: { internal_user_id: targetId }, plan_id: planId, plan: { id: 'plan_other' } }, target, expected: false },
+  ]
+  for (const c of cases) {
+    const { post, calls } = route({ membership: c.member, target: c.target })
+    const result = await (await post()).json()
+    assert.equal(result.upgradeRuntimeWouldAccept, c.expected)
+    assert.ok(Object.values(result).every(value => typeof value === 'boolean'))
+    assert.equal(calls.length, 2)
+    for (const secret of [targetId, memberId, planId, 'user_test', 'private-personal-data']) {
+      assert.equal(JSON.stringify(result).includes(secret), false)
+    }
+  }
 })
 
 test('the unlinked admin page requires an authenticated AAL2 admin', async () => {
