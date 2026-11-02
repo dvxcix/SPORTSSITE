@@ -73,14 +73,6 @@
       "schedule": "10 11,17 * * *"
     },
     {
-      "path": "/api/cron/poll-pikkit-nfl-picks",
-      "schedule": "7,37 * * * *"
-    },
-    {
-      "path": "/api/cron/poll-fanduel-nfl",
-      "schedule": "2,22,42 * * * *"
-    },
-    {
       "path": "/api/cron/whop-addon-reconcile",
       "schedule": "*/15 * * * *"
     },
