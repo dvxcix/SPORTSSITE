@@ -104,7 +104,7 @@ export function DataGrid<Row>({
       <div>
         <button type="button" onClick={toggleDensity} aria-label={`Use ${density === 'comfortable' ? 'compact' : 'comfortable'} row density`}><Rows3 size={14}/><span>{density === 'comfortable' ? 'Comfortable' : 'Compact'}</span></button>
         <details className={styles.columns}>
-          <summary><Columns3 size={14}/><span>Columns</span></summary>
+          <summary aria-label="Columns"><Columns3 size={14}/><span>Columns</span></summary>
           <div>{columns.map(column => <button type="button" key={column.id} aria-pressed={visible.some(item => item.id === column.id)} disabled={column.pinned} onClick={() => toggleColumn(column.id)}><i>{visible.some(item => item.id === column.id) && <Check size={11}/>}</i><span>{column.mobileLabel || column.header}</span></button>)}</div>
         </details>
       </div>

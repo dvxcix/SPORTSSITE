@@ -71,7 +71,7 @@
 .summaryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .summaryGrid article { min-width: 0; }
 .summaryGrid b { overflow: visible; white-space: normal; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; }
-.summaryGrid small { font-size: 9px; }
+.summaryGrid small { font-size: 11px; line-height: 1.35; letter-spacing: 0; color: #a7b8c8; }
 .summaryGrid em { font-size: 14px; }
 .tableWrap { max-height: none; overflow-x: auto; overflow-y: hidden; isolation: isolate; }
 .tableWrap table { font-size: 12px; }
@@ -88,7 +88,7 @@
 .tableWrap th:first-child { background: #121c26; }
 .rank { font-size: 10px; }
 .playerChips b { font-size: 11px; max-width: none; white-space: normal; }
-.playerChips small { font-size: 9px !important; }
+.playerChips small { font-size: 11px !important; }
 .playerChips a { min-height: 44px; max-width: 100%; }
 .playerChips a[aria-disabled=true] { cursor: default; }
 .cards footer, .gapMetrics small, .roleBlock > small { font-size: 10px; line-height: 1.5; }
@@ -110,3 +110,8 @@
   .tableWrap { height: auto; max-height: none; overflow-x: auto; overflow-y: hidden; }
   .views { position: relative; top: auto; }
 }
+
+.root { background: #060a0f; }
+.hero { border-color: #263747; background: #101820; box-shadow: none; }
+.hero:after { content: none; }
+.sectionIntro small, .sectionIntro > span { font-size: 11px; letter-spacing: 0; }
