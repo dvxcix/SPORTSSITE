@@ -8,9 +8,12 @@ function load(file, mocks) {
   const source = fs.readFileSync(new URL('../src/' + file, import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const module = { exports: {} }
-  new Function('require', 'module', 'exports', code)(id => mocks[id] ?? (id === '@/lib/mlbOffseason' ? { MLB_HIBERNATING: false, isMlbCronPaused: () => false } : new Proxy({}, { get: (_, key) => () => { throw Error(`Unexpected dependency ${id}.${String(key)}`) } })), module, module.exports)
+  new Function('require', 'module', 'exports', code)(id => id === '@/lib/nflBrowserCapturePolicy' && mocks[id]
+    ? { nflVerifiedNoCreateDenial: realNflPolicy.nflVerifiedNoCreateDenial, ...mocks[id] }
+    : mocks[id] ?? (id === '@/lib/mlbOffseason' ? { MLB_HIBERNATING: false, isMlbCronPaused: () => false } : new Proxy({}, { get: (_, key) => () => { throw Error(`Unexpected dependency ${id}.${String(key)}`) } })), module, module.exports)
   return module.exports
 }
+const realNflPolicy = load('lib/nflBrowserCapturePolicy.ts', {})
 const next = { NextResponse: { json: (data, init) => Response.json(data, init) } }
 const pipeline = { withPipelineHealth: (_, handler) => handler }
 
@@ -103,8 +106,9 @@ test('NFL Pikkit accepts a flat single-game success and matches batch results by
       'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
       '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},
       '@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>games},
-      '@/lib/pikkitCaptureSchedule':{pikkitCaptureDecision:()=>({due:true})},
-      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+86400000)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async(_admin,_source,game)=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>true},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
       '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select(){return this},in:async()=>({data:[],error:null})})})},
     })
     let response=await route.GET(new Request('https://fixture.test/poll'))
@@ -162,22 +166,29 @@ test('the tracked-pick API forwards a strict spoiler boolean into the atomic tra
   assert.deepEqual(flags,[true,false,false])
 })
 
-test('NFL session override is bounded, other sessions keep five minutes, and teardown releases billing',async()=>{
+test('browser spending pause blocks all session entry points before provider or lease calls',async()=>{
   const oldKey=process.env.BROWSERBASE_API_KEY,oldProject=process.env.BROWSERBASE_PROJECT_ID
   process.env.BROWSERBASE_API_KEY='fixture';process.env.BROWSERBASE_PROJECT_ID='fixture-project'
-  const requests=[],releases=[]
+  const requests=[],releases=[],leases=[]
   try {
     const bb=load('lib/browserbase.ts',{
       '@browserbasehq/sdk':{default:class {sessions={create:async(params)=>{requests.push(params);return{id:'fixture-session',connectUrl:'fixture-connect'}},update:async(...args)=>{releases.push(args)}}}},
       'playwright-core':{chromium:{connectOverCDP:async()=>({contexts:()=>[{pages:()=>[{}]}],close:async()=>{}})}},
+      '@/lib/nbaBrowserBudget':{NbaBrowserBudgetError:class extends Error {constructor(reason){super(reason)}}},
+      '@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>{leases.push(true)}},
     })
-    const regular=await bb.openSession();await regular.close()
-    const nfl=await bb.openSession({timeoutSeconds:450});await nfl.close();await nfl.close()
-    assert.deepEqual(requests.map(r=>r.timeout),[300,450])
-    assert.equal(releases.length,2)
-    assert.equal(releases[1][1].status,'REQUEST_RELEASE')
-    await assert.rejects(bb.openSession({timeoutSeconds:451}),/between 60 and 450/)
-    await assert.rejects(bb.openSession({timeoutSeconds:0}),/between 60 and 450/)
+    await assert.rejects(bb.openSession(),/paused for the spending limit/)
+    await assert.rejects(bb.openSession({timeoutSeconds:450}),/paused for the spending limit/)
+    await assert.rejects(bb.openSession({metadata:{sport:'nba'}}),/spend-limit/)
+    await assert.rejects(bb.openPikkitSession('fixture-context'),/paused for the spending limit/)
+    await assert.rejects(bb.createPersistentContext(),/paused for the spending limit/)
+    assert.deepEqual(requests,[]);assert.deepEqual(releases,[]);assert.deepEqual(leases,[])
+    // Retain a source-level reminder while the spend pause intentionally
+    // prevents exercising the original timeout and release behavior.
+    const source=fs.readFileSync(new URL('../src/lib/browserbase.ts',import.meta.url),'utf8')
+    assert.match(source,/AUTOMATED_SESSION_TIMEOUT_SECONDS\s*=\s*5\s*\*\s*60/)
+    assert.match(source,/between 60 and 450 seconds/)
+    assert.match(source,/REQUEST_RELEASE/)
   } finally {
     if(oldKey===undefined)delete process.env.BROWSERBASE_API_KEY;else process.env.BROWSERBASE_API_KEY=oldKey
     if(oldProject===undefined)delete process.env.BROWSERBASE_PROJECT_ID;else process.env.BROWSERBASE_PROJECT_ID=oldProject
@@ -236,13 +247,162 @@ test('NFL dispatcher excludes games lacking canonical players before assigning c
       '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},
       '@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[{gameId:'sunday'},{gameId:'next-week-unpublished'}]},
       '@/lib/nflCaptureRequest':{requestNflCapture:(url)=>globalThis.fetch(url)},
-      '@/lib/nflCaptureDispatch':{recentNflCaptureAttempts:()=>new Map(),selectNflCaptureCandidates:rows=>rows.slice(0,2),nflCaptureIsIncomplete:()=>false,nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000},
+      '@/lib/nflCaptureDispatch':{nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000,NFL_CAPTURE_BATCH_SIZE:2},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async(_admin,_source,game)=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>true},
       '@/lib/supabase/admin':{createAdminClient:()=>({from(table){return{select(){return this},in(){return this},not(field,operator,value){assert.equal(field,'board->players->0');assert.equal(operator,'is');assert.equal(value,null);return Promise.resolve({data:[{game_id:'sunday'}],error:null})},eq(){return this},gte(){return this},order(){return this},limit(){return table==='pipeline_runs'?Promise.resolve({data:[],error:null}):this},maybeSingle:async()=>({data:null,error:null})}}})},
     })
     const body=await(await route.GET(new Request('https://fixture.test/poll'))).json()
     assert.equal(body.waitingForCanonical,1);assert.equal(body.games,1);assert.equal(body.succeeded,1)
     assert.deepEqual(requested,['https://fixture.test/api/cron/scrape-fanduel-nfl?stream=1&gameId=sunday'])
   }finally{globalThis.fetch=originalFetch}
+})
+
+test('automatic NFL dispatch never launches without a confirmed reservation',async()=>{
+  const originalFetch=globalThis.fetch, events=[]
+  globalThis.fetch=async()=>{events.push('fetch');return Response.json({})}
+  const game={gameId:'fixture',gameDate:'2026-11-08',gameTime:'13:00'}
+  const controls={getNflBrowserScope:async()=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:Date.now()-1000}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async(_admin,_source,scope)=>{events.push('reserve');assert.equal(scope.observed,null);return false}}
+  const common={'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[game]},'@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},'@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},'@/lib/nflBrowserCaptureControls':controls}
+  try {
+    const pub=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{...common,'@/lib/supabase/admin':{createAdminClient:()=>({})}})
+    await pub.GET(new Request('https://fixture.test/poll'))
+    const book=load('app/api/cron/poll-fanduel-nfl/route.ts',{...common,'@/lib/nflCaptureRequest':{requestNflCapture:()=>globalThis.fetch()},'@/lib/nflCaptureDispatch':{nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000,NFL_CAPTURE_BATCH_SIZE:2},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select(){return this},in(){return this},not:async()=>({data:[{game_id:game.gameId}],error:null})})})}})
+    await book.GET(new Request('https://fixture.test/poll'))
+    assert.deepEqual(events,['reserve','reserve'])
+  } finally { globalThis.fetch=originalFetch }
+})
+
+test('a verified NFL browser admission denial is reported as deferred without an invented session',async()=>{
+  const originalFetch=globalThis.fetch
+  let released=0
+  const game={gameId:'fixture',gameDate:'2026-11-08',gameTime:'13:00'}
+  globalThis.fetch=async()=>Response.json({error:'NFL browser capture deferred',budgetCode:'spend-limit',browserSessions:0},{status:425})
+  try {
+    const route=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+      '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[game]},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async()=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>({key:'fixture',fetchedAt:'fixture',reservationId:'fixture'}),releaseNflBrowserAttempt:async()=>{released++;return true}},
+      '@/lib/supabase/admin':{createAdminClient:()=>({})},
+    })
+    const response=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(response.status,425)
+    const body=await response.json()
+    assert.equal(body.browserSessions,0);assert.equal(body.attempted,0);assert.equal(body.deferred,1);assert.equal(body.budgetCode,'spend-limit');assert.equal(released,1)
+  } finally {globalThis.fetch=originalFetch}
+})
+
+test('an NFL sportsbook budget denial stays deferred through the streaming dispatcher',async()=>{
+  const game={gameId:'fixture',gameDate:'2026-11-08',gameTime:'13:00'}
+  let released=0
+  const route=load('app/api/cron/poll-fanduel-nfl/route.ts',{
+    'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+    '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[game]},
+    '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
+    '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+    '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async()=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>({key:'fixture',fetchedAt:'fixture',reservationId:'fixture'}),releaseNflBrowserAttempt:async()=>{released++;return true}},
+    '@/lib/nflCaptureRequest':{requestNflCapture:async()=>Response.json({status:425,body:{error:'NFL browser capture deferred',budgetCode:'spend-limit',browserSessions:0}})},
+    '@/lib/nflCaptureDispatch':{nflCaptureResultStatus:rows=>rows.some(row=>row.deferred)?425:200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000,NFL_CAPTURE_BATCH_SIZE:2},
+    '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select(){return this},in(){return this},not:async()=>({data:[{game_id:game.gameId}],error:null})})})},
+  })
+  const response=await route.GET(new Request('https://fixture.test/poll'))
+  assert.equal(response.status,425)
+  const body=await response.json()
+  assert.equal(body.deferred,1);assert.equal(body.results[0].browserSessions,0);assert.match(body.reason,/spending controls/);assert.equal(released,1)
+})
+
+test('ambiguous public capture failures retain their marker and failed cleanup is reported',async()=>{
+  const originalFetch=globalThis.fetch, game={gameId:'fixture',gameDate:'2026-11-08',gameTime:'13:00'}
+  let released=0, responseStatus=502
+  globalThis.fetch=async()=>Response.json({error:'NFL browser capture deferred',budgetCode:'spend-limit',browserSessions:0},{status:responseStatus})
+  try {
+    const route=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+      '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[game]},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async()=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>({key:'fixture',fetchedAt:'fixture',reservationId:'fixture'}),releaseNflBrowserAttempt:async()=>{released++;return false}},
+      '@/lib/supabase/admin':{createAdminClient:()=>({})},
+    })
+    const uncertain=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(uncertain.status,502);assert.equal(released,0)
+    responseStatus=425
+    const denied=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(denied.status,502);assert.equal((await denied.json()).releaseFailures,1);assert.equal(released,1)
+  } finally {globalThis.fetch=originalFetch}
+})
+
+test('NFL context-busy denial releases only a confirmed no-create checkpoint',async()=>{
+  const originalFetch=globalThis.fetch, game={gameId:'fixture',gameDate:'2026-11-08',gameTime:'13:00'}
+  let released=0, reason='context-busy'
+  globalThis.fetch=async()=>Response.json({error:'NFL browser capture deferred',reason,browserSessions:0},{status:423})
+  try {
+    const route=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+      '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>[game]},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':{getNflBrowserScope:async()=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async()=>({key:'fixture',fetchedAt:'fixture',reservationId:'fixture'}),releaseNflBrowserAttempt:async()=>{released++;return true}},
+      '@/lib/supabase/admin':{createAdminClient:()=>({})},
+    })
+    const busy=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(busy.status,425);assert.equal((await busy.json()).reason,'context-busy');assert.equal(released,1)
+    reason='unknown'
+    const unknown=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(unknown.status,502);assert.equal(released,1)
+  } finally {globalThis.fetch=originalFetch}
+})
+
+test('a later uncertain reservation does not discard an earlier confirmed NFL dispatch',async()=>{
+  const originalFetch=globalThis.fetch, events=[]
+  const games=['a','b'].map(gameId=>({gameId,gameDate:'2026-11-08',gameTime:'13:00'}))
+  const controls={getNflBrowserScope:async(_admin,_source,game)=>({gameId:game.gameId,kickoff:Date.now()+23*3600000,observed:null}),readNflBrowserAttempts:async()=>new Map(),reserveNflBrowserAttempt:async(_admin,_source,scope)=>{events.push(`reserve:${scope.gameId}`);if(scope.gameId==='b')throw Error('unknown');return true}}
+  globalThis.fetch=async url=>{events.push(`fetch:${String(url)}`);return Response.json({gameId:'a',marketCount:1})}
+  const common={'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>games},'@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(Date.now()+23*3600000)},'@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:()=>({due:true,slot:'day-before',attempt:0})},'@/lib/nflBrowserCaptureControls':controls}
+  try {
+    const pub=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{...common,'@/lib/supabase/admin':{createAdminClient:()=>({})}})
+    const result=await pub.GET(new Request('https://fixture.test/poll'))
+    assert.equal(result.status,502);assert.equal((await result.json()).reservationFailures,1)
+    assert.deepEqual(events.slice(0,2),['reserve:a','reserve:b']);assert.match(events[2],/gameIds=a$/);assert.equal(events.length,3)
+    events.length=0
+    const book=load('app/api/cron/poll-fanduel-nfl/route.ts',{...common,'@/lib/nflCaptureRequest':{requestNflCapture:async url=>{events.push(`fetch:${url}`);return Response.json({status:200,body:{incomplete:false}})}},'@/lib/nflCaptureDispatch':{nflCaptureResultStatus:()=>200,NFL_CAPTURE_REQUEST_TIMEOUT_MS:540000,NFL_CAPTURE_BATCH_SIZE:2},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select(){return this},in(){return this},not:async()=>({data:games.map(game=>({game_id:game.gameId})),error:null})})})}})
+    const bookResult=await book.GET(new Request('https://fixture.test/poll'))
+    assert.equal(bookResult.status,502);assert.equal((await bookResult.json()).reservationFailures,1)
+    assert.deepEqual(events.slice(0,2),['reserve:a','reserve:b']);assert.match(events[2],/gameId=a$/);assert.equal(events.length,3)
+  } finally {globalThis.fetch=originalFetch}
+})
+
+test('a truncated NFL public batch reserves only the first four games and leaves the fifth for the next wake-up',async()=>{
+  const originalFetch=globalThis.fetch, reserved=[], requests=[]
+  const kickoff=Date.now()+23*3600000
+  const games=['a','b','c','d','e'].map(gameId=>({gameId,gameDate:'2026-11-08',gameTime:'13:00'}))
+  const controls={
+    getNflBrowserScope:async(_admin,_source,game)=>({gameId:game.gameId,kickoff,observed:null}),
+    readNflBrowserAttempts:async()=>new Map(reserved.map(gameId=>[`${gameId}:day-before`,[{attempt:0,at:Date.now()-1000}]])),
+    reserveNflBrowserAttempt:async(_admin,_source,scope)=>{reserved.push(scope.gameId);return true},
+  }
+  globalThis.fetch=async url=>{
+    requests.push(String(url))
+    return requests.length===1
+      ? Response.json({results:[{gameId:'a',marketCount:1},{gameId:'b',marketCount:1}]},{status:502})
+      : Response.json({gameId:'e',marketCount:1})
+  }
+  try {
+    const route=load('app/api/cron/poll-pikkit-nfl-picks/route.ts',{
+      'next/server':next,'@/lib/pipelineHealth':pipeline,'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},
+      '@/lib/platform':{PLATFORM_URL:'https://fixture.test'},'@/lib/nflPikkitSchedule':{getUpcomingNflPikkitGames:async()=>games},
+      '@/lib/browserbaseRefresh':{easternKickoff:()=>new Date(kickoff)},
+      '@/lib/nflBrowserCapturePolicy':{nflBrowserDecision:(_kickoff,_observed,attempts)=>({due:attempts.length===0,slot:'day-before',attempt:0})},
+      '@/lib/nflBrowserCaptureControls':controls,'@/lib/supabase/admin':{createAdminClient:()=>({})},
+    })
+    const first=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(first.status,502);assert.deepEqual(reserved,['a','b','c','d']);assert.match(requests[0],/gameIds=a%2Cb%2Cc%2Cd$/)
+    const second=await route.GET(new Request('https://fixture.test/poll'))
+    assert.equal(second.status,200);assert.deepEqual(reserved,['a','b','c','d','e']);assert.match(requests[1],/gameIds=e$/)
+  } finally {globalThis.fetch=originalFetch}
 })
 
 

@@ -5,6 +5,7 @@ import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 import { runPikkitScrape } from '../src/lib/scrapers/pikkitScraper.ts'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
+import { BrowserbaseAdmissionError } from '../src/lib/browserbaseAdmissionError.ts'
 
 test('NFL capture keeps league-to-event navigation inside the app and never reopens a stored source URL', async () => {
   const source = await readFile(new URL('../src/app/api/cron/scrape-pikkit-nfl/route.ts', import.meta.url), 'utf8')
@@ -23,6 +24,7 @@ test('NFL capture keeps league-to-event navigation inside the app and never reop
       'next/server': { NextResponse: { json: Response.json } },
       '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null },
       '@/lib/browserbase': { openPikkitSession: async () => ({ page, close: async () => { closes++ } }) },
+      '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError },
       '@/lib/platform': { PLATFORM_URL: 'https://fixture.test' },
       '@/lib/nflPikkitSchedule': { getUpcomingNflPikkitGames: async () => [{ gameId: 'fixture', awayName: 'Away Team', homeName: 'Home Team' }] },
       '@/lib/scrapers/pikkitScraper': { runPikkitScrape: scrape },

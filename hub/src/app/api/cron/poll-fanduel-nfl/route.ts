@@ -5,7 +5,10 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requestNflCapture } from '@/lib/nflCaptureRequest'
-import { recentNflCaptureAttempts, selectNflCaptureCandidates, nflCaptureResultStatus, nflCaptureIsIncomplete, NFL_CAPTURE_REQUEST_TIMEOUT_MS } from '@/lib/nflCaptureDispatch'
+import { nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS, NFL_CAPTURE_BATCH_SIZE } from '@/lib/nflCaptureDispatch'
+import { easternKickoff } from '@/lib/browserbaseRefresh'
+import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
+import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
 export const maxDuration = 600
 export const revalidate = 0
@@ -28,23 +31,32 @@ async function run(req: Request) {
   if (readyError) throw new Error('Canonical capture readiness unavailable')
   const readyIds = new Set((readyRows ?? []).map(row => row.game_id))
   const readyGames = upcoming.filter(game => readyIds.has(game.gameId))
-  const { data: attemptRows, error: attemptError } = await admin.from('pipeline_runs')
-    .select('started_at,details').eq('job_name', 'poll-fanduel-nfl')
-    .gte('started_at', new Date(now.getTime() - 24 * 3600_000).toISOString())
-    .order('started_at', { ascending: false }).limit(100)
-  if (attemptError) throw new Error('Capture attempts unavailable')
-  const attempts = recentNflCaptureAttempts(attemptRows ?? [])
-  const candidates = await Promise.all(readyGames.map(async game => {
-    const { data, error } = await admin.from('nfl_fanduel_capture_history').select('captured_at,raw_tabs').eq('game_id', game.gameId).order('captured_at', { ascending: false }).limit(1).maybeSingle()
-    if (error) throw new Error('Capture status unavailable')
-    const capturedAt = data?.captured_at && !nflCaptureIsIncomplete(data.raw_tabs) ? Date.parse(data.captured_at) : 0
-    return { ...game, capturedAt }
-  }))
-  // One concurrent pair leaves enough time for each bounded six-minute extraction.
-  // Include failed/deferred attempts in rotation so unlisted props cannot
-  // monopolize every run and starve the rest of the slate.
-  const games = selectNflCaptureCandidates(candidates, attempts, now)
-  const results = await inBatches(games, 2, async game => {
+  // Every-20-minute scheduler calls are cheap decision checks; only the two
+  // pregame checkpoints can enter the paid scraper. Existing legacy captures
+  // do not prove every tab was complete, so they cannot suppress the retry.
+  const inWindow=readyGames.filter(game=>{const kickoff=easternKickoff(game.gameDate,game.gameTime)?.getTime();return kickoff!=null&&kickoff>now.getTime()&&kickoff-now.getTime()<=24*3600_000})
+  const scopes=(await Promise.all(inWindow.map(game=>getNflBrowserScope(admin,'fanduel',game)))).map(scope=>({...scope,observed:null}))
+  const attempts=await readNflBrowserAttempts(admin,'fanduel',scopes,now.getTime())
+  const candidates=inWindow.map((game,index)=>{
+    const scope=scopes[index], initial=nflBrowserDecision(scope.kickoff,scope.observed,[],now.getTime())
+    const decision=initial.slot?nflBrowserDecision(scope.kickoff,scope.observed,attempts.get(`${game.gameId}:${initial.slot}`)??[],now.getTime()):initial
+    return {game,scope,decision}
+  }).filter(item=>item.decision.due).sort((a,b)=>
+    Number(b.decision.slot==='two-hours')-Number(a.decision.slot==='two-hours') || a.scope.kickoff-b.scope.kickoff || (a.decision.attempt??0)-(b.decision.attempt??0) || a.game.gameId.localeCompare(b.game.gameId)
+  ).slice(0,NFL_CAPTURE_BATCH_SIZE)
+  const games: {game: typeof inWindow[number]; reservation:NflBrowserReservation}[] = []
+  let reservationFailures = 0
+  for (const {game,scope} of candidates) {
+    try {
+      const reservation=await reserveNflBrowserAttempt(admin,'fanduel',scope,Date.now())
+      if (reservation && Date.now()<scope.kickoff) games.push({game,reservation})
+    } catch {
+      // An ambiguous reservation must not launch, but earlier confirmed
+      // reservations should still be dispatched, never silently discarded.
+      reservationFailures++
+    }
+  }
+  const results = await inBatches(games, 2, async ({game,reservation}) => {
     const requestStarted = Date.now()
     try {
       const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?stream=1&gameId=${encodeURIComponent(game.gameId)}`,
@@ -53,7 +65,9 @@ async function run(req: Request) {
       if (response.ok && (!Number.isInteger(envelope.status) || envelope.status < 100 || envelope.status > 599 || !envelope.body || typeof envelope.body !== 'object')) throw new Error('Invalid capture envelope')
       const status = Number.isInteger(envelope.status) ? envelope.status : response.status
       const body = envelope.body ?? envelope
-      return { ...body, gameId: game.gameId, ok: status >= 200 && status < 300 && body.incomplete !== true, deferred: status === 425, httpStatus: status }
+      const noCreate=response.ok && nflVerifiedNoCreateDenial(status,body,'fanduel')
+      const releaseFailed=noCreate && !(await releaseNflBrowserAttempt(admin,reservation).catch(()=>false))
+      return { ...body, gameId: game.gameId, ok: status >= 200 && status < 300 && body.incomplete !== true, deferred: status === 425 && !releaseFailed, releaseFailed, httpStatus: status }
     } catch (error) {
       // Persist only bounded diagnostic identifiers, never URLs, headers or messages.
       const failure = error as { name?: unknown; code?: unknown; syscall?: unknown; capturePhase?: unknown }
@@ -63,8 +77,10 @@ async function run(req: Request) {
         errorSyscall: identifier(failure?.syscall), requestPhase: identifier(failure?.capturePhase), elapsedMs: Date.now() - requestStarted }
     }
   })
-  const summary = { discovered: upcoming.length, games: games.length, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
+  const summary = { discovered: upcoming.length, games: games.length, reservationFailures, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
   console.info('[poll-fanduel-nfl] complete', { ...summary, results })
-  const status = upcoming.length > 0 && readyGames.length === 0 ? 425 : nflCaptureResultStatus(results)
-  return NextResponse.json({ ...summary, waitingForCanonical: upcoming.length - readyGames.length, results, ...(status === 425 ? { reason: 'Player markets are not ready for one or more games; retry scheduled.' } : {}) }, { status })
+  const status = reservationFailures || results.some(result => result.releaseFailed) ? 502 : upcoming.length > 0 && readyGames.length === 0 ? 425 : nflCaptureResultStatus(results)
+  const budgetDeferred = results.some(result => result.deferred && result.browserSessions === 0 && typeof result.budgetCode === 'string')
+  return NextResponse.json({ ...summary, waitingForCanonical: upcoming.length - readyGames.length, results,
+    ...(status === 425 ? { reason: budgetDeferred ? 'Browser captures deferred by spending controls.' : 'Player markets are not ready for one or more games; retry scheduled.' } : {}) }, { status })
 }

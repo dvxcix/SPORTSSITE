@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openPikkitSession, type BBSession } from '@/lib/browserbase'
+import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
 import { PLATFORM_URL } from '@/lib/platform'
 import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nflPikkitSchedule'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
@@ -102,10 +103,18 @@ async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   if (!games.length) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
 
   lifecycle.started = true
-  const bb = await openPikkitSession(contextId, {
-    sport: 'nfl', mode: games.length > 1 ? 'batch' : 'single-game',
-    gameCount: games.length, gameIds: games.map(game => game.gameId).join(','),
-  })
+  let bb: BBSession
+  try {
+    bb = await openPikkitSession(contextId, {
+      sport: 'nfl', mode: games.length > 1 ? 'batch' : 'single-game',
+      gameCount: games.length, gameIds: games.map(game => game.gameId).join(','),
+    })
+  } catch (error) {
+    // This exact admission error proves no create request was made. Any other
+    // failure remains uncertain, so the lease must stay held until expiry.
+    if (error instanceof BrowserbaseAdmissionError) lifecycle.started = false
+    throw error
+  }
   try {
     const results: Awaited<ReturnType<typeof scrapeGame>>[] = []
     for (let index = 0; index < games.length; index += 4) {
@@ -134,14 +143,21 @@ export async function GET(req: Request) {
   if (authError) return authError
   const lease = await acquirePikkitBrowserLease()
   if (!lease) {
-    return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })
+    // This response is emitted before the scraper can open a browser; the
+    // dispatcher can safely release only its own checkpoint reservations.
+    return NextResponse.json({ error: 'NFL browser capture deferred', reason: 'context-busy', browserSessions: 0 }, { status: 423 })
   }
   const lifecycle = { started: false, closed: false }
+  let response: Response
   try {
-    return await run(req, lifecycle)
-  } catch {
-    return NextResponse.json({ error: 'Pikkit browser capture or release could not be confirmed' }, { status: 502 })
-  } finally {
-    await lease.release(!lifecycle.started || lifecycle.closed)
+    response = await run(req, lifecycle)
+  } catch (error) {
+    response = error instanceof BrowserbaseAdmissionError && !lifecycle.started
+      ? NextResponse.json({ error: 'NFL browser capture deferred', budgetCode: error.code, browserSessions: 0 }, { status: 425 })
+      : NextResponse.json({ error: 'Pikkit browser capture or release could not be confirmed' }, { status: 502 })
   }
+  const confirmedIdle = !lifecycle.started || lifecycle.closed
+  const released = await lease.release(confirmedIdle).catch(() => false)
+  if (confirmedIdle && !released) return NextResponse.json({ error: 'Shared browser lease release could not be confirmed' }, { status: 503 })
+  return response
 }

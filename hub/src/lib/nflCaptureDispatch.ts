@@ -6,7 +6,7 @@ export const NFL_CAPTURE_REQUEST_TIMEOUT_MS = 540_000
 export const NFL_CAPTURE_BATCH_SIZE = 2
 
 export function nflCaptureIsIncomplete(tabs: unknown): boolean {
-  return Array.isArray(tabs) && tabs.some(tab => tab && typeof tab === 'object' && tab.incomplete === true)
+  return !Array.isArray(tabs) || tabs.length === 0 || tabs.some(tab => !tab || typeof tab !== 'object' || tab.incomplete === true)
 }
 
 type AttemptRun = { started_at: string; details: unknown }

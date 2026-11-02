@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { FANDUEL_PROXY_DOMAIN_PATTERN, openSession } from '@/lib/browserbase'
+import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -45,7 +46,16 @@ async function capture(req: Request) {
   const { data, error } = await admin.from('nfl_odds_current').select('board').eq('game_id', gameId).maybeSingle()
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
-  const session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, timeoutSeconds: NFL_CAPTURE_SESSION_TIMEOUT_SECONDS, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
+  let session: Awaited<ReturnType<typeof openSession>>
+  try {
+    session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, timeoutSeconds: NFL_CAPTURE_SESSION_TIMEOUT_SECONDS, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })
+  } catch (error) {
+    // Only the admission class proves that a session-create request was not
+    // sent. An uncertain create remains a failure, not a budget deferral.
+    return error instanceof BrowserbaseAdmissionError
+      ? NextResponse.json({ error: 'NFL browser capture deferred', budgetCode: error.code, browserSessions: 0 }, { status: 425 })
+      : NextResponse.json({ error: 'NFL browser startup could not be confirmed' }, { status: 502 })
+  }
   try {
     await session.page.route('**/*', route => {
       const type = route.request().resourceType()

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import * as crypto from 'node:crypto'
 import ts from 'typescript'
+import { BrowserbaseAdmissionError } from '../src/lib/browserbaseAdmissionError.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>): Promise<T> {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -29,15 +30,15 @@ test('an unconfirmed browser retains its safety lease; an ownership mismatch nev
   }
 })
 
-type Scenario = 'startup' | 'shutdown' | 'navigation' | 'no-game' | 'healthy'
-type FixtureOptions = { cron?: boolean; role?: string | null; authError?: boolean; profileError?: boolean; dest?: string; site?: string; validateStatus?: number | null; validateUrl?: string; url?: string; shell?: boolean }
+type Scenario = 'startup' | 'shutdown' | 'navigation' | 'no-game' | 'healthy' | 'budget-denied' | 'budget-spoof' | 'budget-release-failed'
+type FixtureOptions = { cron?: boolean; role?: string | null; authError?: boolean; profileError?: boolean; dest?: string; site?: string; validateStatus?: number | null; validateUrl?: string; url?: string; shell?: boolean; leaseBusy?: boolean }
 async function fixture(kind: 'mlb' | 'mlb-batch' | 'nfl' | 'auth' | 'admin', scenario: Scenario, options: FixtureOptions = {}) {
   let opens = 0, closes = 0, releases = 0
   let authReads = 0
   const steps: string[] = []
   const listeners = new Map<string, (response: { url: () => string; status: () => number }) => void>()
   const idle: boolean[] = []
-  const lease = { release: async (confirmed = true) => { idle.push(confirmed); if (confirmed) releases++; return confirmed } }
+  const lease = { release: async (confirmed = true) => { idle.push(confirmed); if (confirmed && scenario !== 'budget-release-failed') releases++; return confirmed && scenario !== 'budget-release-failed' } }
   const page = {
     goto: async (url: string) => {
       steps.push(url)
@@ -62,6 +63,8 @@ async function fixture(kind: 'mlb' | 'mlb-batch' | 'nfl' | 'auth' | 'admin', sce
   const open = async () => {
     opens++
     if (scenario === 'startup') throw Error('fixture uncertain startup')
+    if (scenario === 'budget-denied' || scenario === 'budget-release-failed') throw new BrowserbaseAdmissionError('spend-limit')
+    if (scenario === 'budget-spoof') throw Object.assign(new Error('fixture uncertain startup'), { name: 'BrowserbaseAdmissionError', code: 'spend-limit' })
     return { page, close: async () => { closes++; if (scenario === 'shutdown') throw Error('fixture uncertain shutdown') } }
   }
   const common = {
@@ -70,7 +73,9 @@ async function fixture(kind: 'mlb' | 'mlb-batch' | 'nfl' | 'auth' | 'admin', sce
       authReads++
       return { auth: { getUser: async () => ({ data: { user: options.role === null ? null : { id: 'fixture-user' } }, error: options.authError ? Error('auth failure') : null }) }, from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { account_type: options.role ?? 'admin' }, error: options.profileError ? Error('profile failure') : null }) }) }) }) }
     } },
-    '@/lib/browserbase': { openPikkitSession: open }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => lease },
+    '@/lib/browserbase': { openPikkitSession: open }, '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => options.leaseBusy ? null : lease },
+    '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError },
+    '@/lib/mlbOffseason': { MLB_HIBERNATING: false, mlbPausedResponse: () => Response.json({ paused: true }, { status: 425 }) },
     '@/lib/safeApiError': { safeApiError: (_scope: string, _error: unknown, message: string, status: number) => Response.json({ error: message }, { status }) },
   }
   let result: unknown
@@ -115,6 +120,23 @@ test('MLB, NFL and administrative consumers retain the lease after uncertain sta
     assert.deepEqual(result.idle, [false], kind)
     assert.equal(result.result, kind === 'auth' ? 'unknown' : 502, kind)
   }
+})
+
+test('NFL admission denial releases its lease only when no session was created', async () => {
+  const denied = await fixture('nfl', 'budget-denied')
+  assert.equal(denied.result, 425)
+  assert.deepEqual(denied.responseBody, { error: 'NFL browser capture deferred', budgetCode: 'spend-limit', browserSessions: 0 })
+  assert.equal(denied.opens, 1); assert.equal(denied.closes, 0); assert.deepEqual(denied.idle, [true]); assert.equal(denied.releases, 1)
+  const spoofed = await fixture('nfl', 'budget-spoof')
+  assert.equal(spoofed.result, 502); assert.deepEqual(spoofed.idle, [false]); assert.equal(spoofed.releases, 0)
+  const failedRelease = await fixture('nfl', 'budget-release-failed')
+  assert.equal(failedRelease.result, 503); assert.deepEqual(failedRelease.idle, [true]); assert.equal(failedRelease.releases, 0)
+})
+
+test('NFL reports an exact no-create response when another session owns the context', async () => {
+  const busy = await fixture('nfl', 'healthy', { leaseBusy: true })
+  assert.equal(busy.result, 423); assert.equal(busy.opens, 0); assert.equal(busy.releases, 0)
+  assert.deepEqual(busy.responseBody, { error: 'NFL browser capture deferred', reason: 'context-busy', browserSessions: 0 })
 })
 
 test('admin diagnostics require verified admin navigation or cron auth before opening a browser', async () => {
