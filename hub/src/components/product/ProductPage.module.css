@@ -16,22 +16,9 @@
   overflow: hidden;
   margin-bottom: 16px;
   padding: clamp(18px, 3vw, 28px);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 34%),
-    linear-gradient(145deg, color-mix(in srgb, var(--glass-strong) 96%, var(--accent) 4%), var(--glass));
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(24px) saturate(135%);
-}
-
-.hero::after {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: radial-gradient(circle at 86% 18%, rgba(77,158,255,.08), transparent 16rem);
-  content: '';
-  pointer-events: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
 }
 
 .heroIdentity { display: flex; min-width: 0; align-items: center; gap: 15px; }
@@ -41,27 +28,23 @@
   height: 48px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--accent) 11%, var(--surface-2));
-  color: var(--accent);
-  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 0 28px color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 .eyebrow {
   margin: 0 0 3px;
-  color: var(--accent);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: .11em;
-  text-transform: uppercase;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
 }
-.title { margin: 0; color: var(--text-1); font-size: clamp(26px, 3.2vw, 38px); font-weight: 950; letter-spacing: -.05em; line-height: 1.02; }
-.description { max-width: 780px; margin: 7px 0 0; color: var(--text-3); font-size: clamp(12px, 1.4vw, 14px); line-height: 1.55; }
+.title { margin: 0; color: var(--text-1); font-size: clamp(26px, 3.2vw, 38px); font-weight: 600; letter-spacing: -.025em; line-height: 1.1; }
+.description { max-width: 780px; margin: 7px 0 0; color: var(--text-2); font-size: clamp(13px, 1.4vw, 14px); line-height: 1.55; }
 .actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .action {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -72,9 +55,9 @@
   color: var(--text-2);
   font-size: 12px;
   font-weight: 800;
-  transition: border-color 150ms ease, color 150ms ease, transform 150ms ease, background 150ms ease;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
 }
-.action:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: var(--accent-dim); color: var(--accent); transform: translateY(-1px); }
+.action:hover { border-color: var(--border-2); background: var(--surface-3); color: var(--text-1); }
 .status {
   display: inline-flex;
   align-items: center;
@@ -90,7 +73,7 @@
   letter-spacing: .05em;
   text-transform: uppercase;
 }
-.statusDot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.statusDot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
 .dateNav {
   display: grid;
@@ -99,9 +82,7 @@
   margin-bottom: 20px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: var(--glass);
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(20px) saturate(130%);
+  background: var(--surface);
 }
 .dateArrow, .dateCell {
   min-width: 0;
@@ -117,23 +98,21 @@
 .dateCell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 7px 3px; }
 .dateCellSelected { background: var(--accent); color: var(--accent-fg); }
 .dateCellSelected:hover { background: var(--accent); color: var(--accent-fg); }
-.dateDay { font-size: 9px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; opacity: .72; }
-.dateValue { overflow: hidden; max-width: 100%; font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
-.todayDot { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.dateDay { font-size: 11px; font-weight: 600; }
+.dateValue { overflow: hidden; max-width: 100%; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.todayDot { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
 .dateCellSelected .todayDot { background: var(--accent-fg); box-shadow: none; }
 
 .panel {
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 20px;
-  background: linear-gradient(155deg, rgba(255,255,255,.025), transparent 42%), var(--glass);
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(20px) saturate(130%);
+  background: var(--surface);
 }
 .panelPad { padding: clamp(14px, 2vw, 22px); }
 
 .sectionHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 26px 0 12px; }
-.sectionTitle { margin: 0; color: var(--text-1); font-size: 15px; font-weight: 900; letter-spacing: -.02em; }
+.sectionTitle { margin: 0; color: var(--text-1); font-size: 15px; font-weight: 600; }
 .sectionMeta { color: var(--text-3); font-size: 11px; font-weight: 700; }
 
 @media (max-width: 720px) {
@@ -144,16 +123,16 @@
   .title { font-size: 22px; }
   .description { margin-top: 4px; line-height: 1.4; }
   .actions { width: 100%; justify-content: flex-start; }
-  .action { min-height: 36px; flex: 1 1 auto; padding-inline: 10px; }
+  .action { min-height: 44px; flex: 1 1 auto; padding-inline: 10px; }
   .status { padding: 6px 9px; }
-  .dateNav { grid-template-columns: 40px repeat(7, minmax(34px, 1fr)) 40px; margin-bottom: 12px; border-radius: 14px; }
-  .dateValue { font-size: 10px; }
+  .dateNav { grid-template-columns: 44px repeat(7, minmax(48px, 1fr)) 44px; overflow-x: auto; margin-bottom: 12px; border-radius: 14px; }
+  .dateArrow { position: sticky; z-index: 1; background: var(--surface); }
+  .dateArrow:first-child { left: 0; }
+  .dateArrow:last-child { right: 0; }
 }
 
 @media (max-width: 430px) {
   .heroIdentity { gap: 11px; }
   .description { font-size: 12px; }
-  .dateNav { grid-template-columns: 40px repeat(7, minmax(30px, 1fr)) 40px; }
   .dateCell { min-height: 46px; padding-inline: 1px; }
-  .dateValue { font-size: 9px; }
 }

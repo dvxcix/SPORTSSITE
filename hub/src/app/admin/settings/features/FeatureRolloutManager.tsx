@@ -57,7 +57,7 @@ export function FeatureRolloutManager() {
   if (loading) return <div className={styles.loading}><LoaderCircle aria-hidden="true" /> Loading feature controls…</div>
 
   return <div className={styles.shell}>
-    <header><div><span>RELEASE CONTROL</span><h1>Feature rollouts</h1><p>Release features to staff, members, a stable cohort, or everyone.</p></div><ShieldCheck aria-hidden="true" /></header>
+    <header><div><span>Release control</span><h1>Feature rollouts</h1><p>Release features to staff, members, a stable cohort, or everyone.</p></div><ShieldCheck aria-hidden="true" /></header>
     {error ? <div className={styles.error} role="alert">{error}</div> : null}
     <div className={styles.grid}>
       {rows.map(row => <article key={row.feature_key}>

@@ -6,6 +6,7 @@ import { MessageInbox } from '@/components/social/MessageInbox'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 import { GroupConversationInbox } from '@/components/chat/GroupConversationInbox'
+import styles from './messages.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,7 +114,7 @@ export default async function MessagesPage() {
   }
 
   return (
-    <ProductPageShell narrow className="ss-messages-page">
+    <ProductPageShell narrow className={`ss-messages-page ${styles.page}`}>
       <CommunityNav />
       <ProductHero icon={<MessageCircle size={21}/>} eyebrow="Member network" title="Messages" description="Private conversations with people across SlipSurge." actions={<ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction>}/>
 

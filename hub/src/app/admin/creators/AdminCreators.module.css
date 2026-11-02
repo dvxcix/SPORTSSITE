@@ -8,3 +8,17 @@
 .rows{overflow:hidden;border:1px solid var(--border);border-radius:16px;background:var(--surface)}.row{display:grid;grid-template-columns:minmax(240px,1fr) auto minmax(90px,auto);align-items:center;gap:18px;padding:13px 15px;border-bottom:1px solid var(--border)}.row:last-child{border-bottom:0}.row>div:first-child{display:grid;gap:4px}.row>div:first-child>strong{font-size:12px}.row>div:first-child>span{color:var(--text-3);font-size:10px}.row>b{justify-self:end;padding:4px 8px;border-radius:99px;background:var(--surface-3);color:var(--text-2);font-size:9px;text-transform:uppercase}.row>b[data-status=active],.row>b[data-status=trialing],.row>b[data-status=completed],.row>b[data-status=paid]{background:rgba(174,255,80,.09);color:var(--accent)}.row>b[data-status=failed],.row>b[data-status=revoked],.row>b[data-status=past_due]{background:rgba(255,77,106,.09);color:var(--red)}.row button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--border-2);border-radius:9px;background:var(--surface-2);color:var(--text-1);font-size:9px;font-weight:850}.row button:disabled{cursor:not-allowed;opacity:.45}
 .applicationGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.application{display:grid;gap:13px;padding:17px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}.application>p{color:var(--text-2);font-size:11px;line-height:1.55}.empty{padding:26px;color:var(--text-3);font-size:11px;text-align:center}
 @media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.hero,.section>header{align-items:stretch;flex-direction:column}.section header>p{text-align:left}.stats{grid-template-columns:1fr 1fr}.applicationGrid{grid-template-columns:1fr}.row{grid-template-columns:1fr auto}.row>div:last-child{grid-column:1/-1;justify-items:stretch!important}.row button{width:100%}}@media(max-width:460px){.stats{grid-template-columns:1fr}.hero{padding:22px}.hero h1{font-size:27px}}
+
+/* Keep operational status colors, while making the surrounding controls and data legible. */
+.hero{border-color:var(--border);background:var(--surface)}
+.hero>div>span,.section header>div>span{color:var(--text-2);font-family:inherit;font-size:12px;line-height:1.3;font-weight:600;letter-spacing:0}
+.hero h1{font-weight:600;letter-spacing:-.02em}
+.hero p,.section header>p,.application>p{color:var(--text-2);font-size:13px}
+.hero>a{min-height:44px;font-size:12px;font-weight:600}
+.stat span{overflow:visible;color:var(--text-2);font-size:12px;white-space:normal;text-overflow:clip}
+.tableWrap th,.tableWrap td{font-size:12px}
+.tableWrap th{font-weight:600;letter-spacing:0;text-transform:none}
+.person small,.row>div:first-child>span{color:var(--text-2);font-size:12px}
+.ready,.attention,.row>b{font-size:11px;letter-spacing:0;text-transform:none}
+.row button{min-height:44px;font-size:12px;font-weight:600}
+.empty{color:var(--text-2);font-size:12px}

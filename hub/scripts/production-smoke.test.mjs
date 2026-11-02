@@ -1559,7 +1559,7 @@ test('creator commerce shares identity, responsive payout states, and entitlemen
   assert.match(payouts, /CreatorPayouts\.module\.css/)
   assert.doesNotMatch(payouts, /style=\{\{/)
   assert.match(offer, /creator_entitlements/)
-  assert.match(offer, /ACCESS ACTIVE/)
+  assert.match(offer, /entitlement \? 'Access active'/)
   assert.match(checkout, /aria-busy=\{loading\}/)
 })
 

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, BadgeCheck, Compass, LockKeyhole, Sparkles, Users } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Compass, Layers, LockKeyhole, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorsMarketplace.module.css'
 import { pageMetadata } from '@/lib/siteMetadata'
@@ -21,20 +21,19 @@ export default async function CreatorsPage() {
   const creators = (data ?? []) as unknown as CreatorDirectoryItem[]
   return <div className={styles.page}>
     <section className={styles.hero} style={{ gridTemplateColumns: '1fr' }}>
-      <div className={styles.heroGlow} />
       <div>
-        <span className={styles.eyebrow}><Compass size={15} /> CREATOR MARKETPLACE</span>
-        <h1>Find the people behind the edge.</h1>
-        <p>Discover trusted sports creators, compare memberships, preview their work, and unlock content, research, alerts, and private communities in one place.</p>
+        <span className={styles.eyebrow}><Compass size={15} /> Creator marketplace</span>
+        <h1>Find sports creators and memberships</h1>
+        <p>Explore creator profiles, compare memberships, and find their research and communities.</p>
         <div className={styles.actions}><a href="#marketplace">Explore creators <ArrowRight size={16} /></a><Link href="/creators/apply">Build your membership</Link></div>
       </div>
     </section>
 
     <section className={styles.trustRow}>
-      <span><BadgeCheck size={17} /> Reviewed creators</span>
+      <span><BadgeCheck size={17} /> Creator storefronts</span>
       <span><LockKeyhole size={17} /> Secure member access</span>
       <span><Users size={17} /> Private communities</span>
-      <span><Sparkles size={17} /> SlipSurge tools included by tier</span>
+      <span><Layers size={17} /> SlipSurge tools included by tier</span>
     </section>
 
     <CreatorDirectory creators={creators} />

@@ -66,7 +66,7 @@ export function DateLinkNavigator({ date, today, basePath, label = 'Choose slate
           className={`${styles.dateCell} ${item.selected ? styles.dateCellSelected : ''}`}
           href={`${basePath}?date=${item.value}`}
           aria-current={item.selected ? 'date' : undefined}
-          title={item.isToday ? `${item.value}, today` : item.value}
+          aria-label={item.isToday ? `${item.value}, today` : item.value}
         >
           <span className={styles.dateDay}>{item.isToday ? 'Today' : item.day}</span>
           <span className={styles.dateValue}>{item.compact}</span>

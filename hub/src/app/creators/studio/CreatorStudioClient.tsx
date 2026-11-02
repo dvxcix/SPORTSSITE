@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, Rocket, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, ShieldCheck, Users } from 'lucide-react'
 import styles from './CreatorStudio.module.css'
 import { isTrustedSlipSurgeUrl, isTrustedWhopUrl } from '@/lib/whopUrl'
 import { ScheduledPostPlanner, type ScheduledPost } from './ScheduledPostPlanner'
@@ -97,7 +97,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, analytic
 
   return <div className={styles.page}>
     <section className={styles.hero}>
-      <div><span className={styles.kicker}><Radio size={13} /> CREATOR OPERATING CENTER</span><h1>Creator Studio</h1><p>Run memberships, member access, communities, and commerce from one workspace.</p></div>
+      <div><span className={styles.kicker}><Radio size={13} /> Creator tools</span><h1>Creator Studio</h1><p>Manage memberships, member access, and communities.</p></div>
       <div className={styles.heroActions}><Link href={`/creators/${profile.username}`}><Eye size={15} /> View storefront</Link><button type="button" onClick={copyStorefront}><Copy size={15} /> Copy link</button></div>
     </section>
 
@@ -124,7 +124,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, analytic
             <div className={styles.split}><label><span>Price</span><div className={styles.money}><i>$</i><input value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} inputMode="decimal" /></div></label><label><span>Billing</span><select value={form.productType} onChange={event => setForm({ ...form, productType: event.target.value })}><option value="membership">Monthly membership</option><option value="one_time">One-time access</option></select></label></div>
             <label><span>Member promise</span><textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Explain what you cover, how often you publish, and what members can expect." /></label>
             <fieldset><legend>Included with this tier</legend><div className={styles.benefits}>{BENEFITS.map(([key, Icon, label]) => <button aria-pressed={benefits[key]} className={benefits[key] ? styles.selected : ''} onClick={() => setBenefits(current => ({ ...current, [key]: !current[key] }))} type="button" key={key}><Icon size={17} /><span>{label}</span><i>{benefits[key] && <Check size={13} />}</i></button>)}</div></fieldset>
-            <button className={styles.primaryButton} onClick={createProduct} disabled={busy || !profile.whop_connected_company_id || !form.title.trim()}>{busy ? <Loader2 className="animate-spin" size={16} /> : <Rocket size={16} />} Create and publish membership</button>
+            <button className={styles.primaryButton} onClick={createProduct} disabled={busy || !profile.whop_connected_company_id || !form.title.trim()}>{busy ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />} Create and publish</button>
           </div>
         </article>
 
@@ -144,7 +144,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, analytic
           <Link className={styles.textLink} href="/creators/payouts">Open payouts <ArrowRight size={14} /></Link>
         </article>
 
-        <article className={`${styles.panel} ${styles.migration}`}><Rocket size={22} /><span>BRING YOUR AUDIENCE</span><h2>Move without losing momentum.</h2><p>Recreate your current tiers, publish a storefront, invite existing members, and launch private channels before announcing the move.</p><ol><li>Match your current pricing</li><li>Build the member destination</li><li>Share your storefront link</li><li>Welcome and retain members</li></ol></article>
+        <article className={`${styles.panel} ${styles.migration}`}><Users size={22} /><span>Bring your audience</span><h2>Set up your storefront</h2><p>Recreate your tiers, invite members, and set up private channels.</p><ol><li>Match your current pricing</li><li>Build the member destination</li><li>Share your storefront link</li><li>Welcome members</li></ol></article>
 
         <article className={styles.panel}><header><div><span>COMMUNITY</span><h2>Groups and channels</h2></div><MessageSquareText size={21} /></header><div className={styles.quickActions}><Link href="/groups/create"><Plus size={15} /> New group</Link><Link href="/channels"><MessageSquareText size={15} /> Channels</Link></div><div className={styles.groupList}>{groups.length ? groups.map(group => <Link href={`/groups/${group.slug}`} key={group.id}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Paid access' : 'Free access'}</small></span></Link>) : <p>No community created yet.</p>}</div></article>
 

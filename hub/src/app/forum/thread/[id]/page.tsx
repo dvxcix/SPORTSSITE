@@ -50,12 +50,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     <ProductPageShell narrow>
       <CommunityNav />
       <Link href={`/forum/${thread.category?.slug}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 transition hover:text-white"><ArrowLeft size={13} /> {thread.category?.name || 'Discussions'}</Link>
-      <header className="mb-4 rounded-[22px] border border-white/[.08] bg-gradient-to-br from-lime-400/[.07] to-white/[.015] p-5 sm:p-6">
-        <p className="mb-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.16em] text-lime-300"><MessageSquareText size={12}/> Thread</p>
+      <header className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+        <p className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--text-2)]"><MessageSquareText size={14}/> Thread</p>
         <div className="flex items-start gap-2">
           {thread.is_pinned && <Pin size={14} className="text-green-400 mt-1 shrink-0" />}
           {thread.is_locked && <Lock size={14} className="text-zinc-500 mt-1 shrink-0" />}
-          <h1 className="text-2xl font-black leading-tight tracking-[-.035em] text-white sm:text-3xl">{thread.title}</h1>
+          <h1 className="text-2xl font-semibold leading-tight text-[var(--text-1)] sm:text-3xl">{thread.title}</h1>
         </div>
       </header>
 

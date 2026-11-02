@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Search, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Search, Users, X } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import styles from './CreatorsMarketplace.module.css'
 
@@ -25,7 +25,7 @@ export function CreatorDirectory({ creators }: { creators: CreatorDirectoryItem[
   }, [creators, query])
 
   return <section id="marketplace" className={styles.marketplace}>
-    <header><div><span>EXPLORE</span><h2>Creator memberships</h2><p>{query ? `${visible.length} match${visible.length === 1 ? '' : 'es'}` : `${creators.length} available`}</p></div><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} type="search" placeholder="Search creators" aria-label="Search creators" />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14}/></button>}</label></header>
+    <header><div><span>Explore</span><h2>Creator memberships</h2><p>{query ? `${visible.length} match${visible.length === 1 ? '' : 'es'}` : `${creators.length} available`}</p></div><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} type="search" placeholder="Search creators" aria-label="Search creators" />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14}/></button>}</label></header>
     {visible.length ? <div className={styles.grid}>{visible.map(creator => {
       const offer = creator.creator_products?.[0]
       return <Link className={styles.card} href={`/creators/${creator.username}`} key={creator.id}>
@@ -34,6 +34,6 @@ export function CreatorDirectory({ creators }: { creators: CreatorDirectoryItem[
         <div className={styles.offer}><span>{offer?.title || 'Creator membership'}</span><strong>{offer ? `$${Number(offer.price).toFixed(2)}` : 'View offers'}<small>{offer?.product_type === 'membership' ? '/mo' : ''}</small></strong></div>
         <footer><span>{creator.follower_count ?? 0} followers</span><b>View profile <ArrowRight size={14} /></b></footer>
       </Link>
-    })}</div> : <div className={styles.empty}><div><Sparkles size={28} /></div><h3>{query ? 'No creators match that search.' : 'The first storefronts are being prepared.'}</h3>{query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <Link href="/creators/apply">Become a creator <ArrowRight size={15} /></Link>}</div>}
+    })}</div> : <div className={styles.empty}><div><Users size={28} /></div><h3>{query ? 'No creators match that search' : 'No creator storefronts available'}</h3>{query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <Link href="/creators/apply">Become a creator <ArrowRight size={15} /></Link>}</div>}
   </section>
 }

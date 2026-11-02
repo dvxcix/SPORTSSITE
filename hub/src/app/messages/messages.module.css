@@ -1,0 +1,31 @@
+.page :global(.ss-messages-inbox-shell) {
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.page :global(.ss-messages-section-heading > span) {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.page :global(.ss-message-sections button) {
+  min-height: 44px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.page :global(.ss-message-sections button[aria-selected=true]) { color: var(--text-1); }
+
+.page :global(.ss-message-sections b) { font-size: 10px; }
+.page :global(.ss-message-search-input) { min-height: 44px; font-size: 16px; }
+.page :global(.ss-message-request-actions button) { min-height: 44px; font-size: 12px; font-weight: 600; }
+.page :global(.ss-message-request-error) { font-size: 12px; }
+.page :global(.ss-conversation-copy > div span),
+.page :global(.ss-conversation-copy > p),
+.page :global(.ss-conversation-meta span),
+.page :global(.ss-message-inbox-foot) { font-size: 12px; }
+.page :global(.ss-conversation-meta span) { text-transform: none; }
+.page :global(.ss-conversation-row:hover) { transform: none; background: var(--surface-2); }

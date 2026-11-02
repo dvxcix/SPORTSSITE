@@ -1360,3 +1360,14 @@
     touch-action: manipulation;
   }
 }
+
+/* Keep matrix content and creator-selected colors in focus. */
+.hero{border-color:var(--border);border-radius:20px;background:var(--surface);box-shadow:none}
+.heroGlow{display:none}.heroIcon{box-shadow:none}
+.heroCopy>span,.modal header span{font-size:12px;font-weight:600;line-height:1.4;letter-spacing:0}
+.hero h1{font-weight:600;line-height:1.1;letter-spacing:-.025em}
+.publishButton{box-shadow:none;font-weight:600}.sportTabs a{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.sportControls label{font-size:12px;font-weight:600}.sportControls input,.sportControls select,.sportCard button{min-height:44px}
+.sportCard h2{font-weight:600}.sportCard small,.sportCard p,.sportCard ol{font-size:13px;line-height:1.5}
+.card{background:var(--surface);box-shadow:none;transition:border-color .18s ease,background-color .18s ease}
+.card:hover{transform:none;background:var(--surface-2);border-color:var(--border-2);box-shadow:none}
