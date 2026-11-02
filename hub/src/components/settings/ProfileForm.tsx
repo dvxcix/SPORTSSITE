@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AtSign, Check, ChevronRight, Loader2, Upload, Sparkles } from 'lucide-react'
+import { AtSign, Check, ChevronRight, Loader2, Upload } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -151,10 +151,9 @@ export function ProfileForm({ profile }: { profile: any }) {
     <form className="space-y-6" onSubmit={save}>
       {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <section className="rounded-2xl border border-lime-400/20 bg-lime-400/[.055] p-4">
-        <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-black text-white"><Sparkles size={16} className="text-lime-300" /> Profile strength</div><strong className="text-sm text-lime-300">{completion}%</strong></div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/40" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-300 transition-all" style={{ width: `${completion}%` }} /></div>
-        <p className="mt-2 text-xs leading-5 text-zinc-400">Add a photo, banner, bio, links, teams, and players to make your profile easier to recognize and discover.</p>
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-white">Profile completion</h2><strong className="text-sm font-semibold tabular-nums text-white">{completion}%</strong></div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${completion}%` }} /></div>
       </section>
 
       <section className="ss-profile-editor-preview">

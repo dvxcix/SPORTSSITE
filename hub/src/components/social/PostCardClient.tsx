@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
+import { motion } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
@@ -231,19 +231,6 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (typeof payload.new?.comment_count === 'number') setCommentCount(payload.new.comment_count)
     if (typeof payload.new?.bookmark_count === 'number') setBookmarkCount(payload.new.bookmark_count)
   })
-
-  // Mouse-following spotlight glow on hover (adapted from Aceternity's
-  // CardSpotlight technique — same mask-follows-cursor idea, without its
-  // three.js canvas reveal, which isn't worth the bundle weight repeated
-  // across every card in a scrolling feed).
-  const [isHovering, setIsHovering] = useState(false)
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-  function handleCardMouseMove(e: React.MouseEvent<HTMLElement>) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    mouseX.set(e.clientX - rect.left)
-    mouseY.set(e.clientY - rect.top)
-  }
 
   // Clicking anywhere on the card (the content, the pick/parlay card, the
   // poll, blank padding) opens the post's own page — same pattern as
@@ -630,19 +617,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
           position: 'relative',
           cursor: detail ? 'default' : 'pointer',
         }}
-        onClick={handleCardClick}
-        onMouseMove={handleCardMouseMove}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}>
-        <motion.div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 0, borderRadius: 'var(--radius)',
-            pointerEvents: 'none', opacity: isHovering ? 1 : 0, transition: 'opacity 300ms',
-            background: 'radial-gradient(circle, rgba(180,255,77,0.05), transparent 70%)',
-            maskImage: useMotionTemplate`radial-gradient(220px circle at ${mouseX}px ${mouseY}px, white, transparent 80%)`,
-            WebkitMaskImage: useMotionTemplate`radial-gradient(220px circle at ${mouseX}px ${mouseY}px, white, transparent 80%)`,
-          }}
-        />
+        onClick={handleCardClick}>
         {post.reposted_by && (
           <div className="ss-post-repost-label">
             <Link
