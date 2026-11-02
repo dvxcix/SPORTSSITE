@@ -53,7 +53,7 @@ export default async function SettingsPage() {
     },
   ]
 
-  return <SettingsShell active="/settings" title="Make SlipSurge yours" description="Your identity, membership, alerts, privacy, and account controls in one place.">
+  return <SettingsShell active="/settings" title="Settings" description="Manage your profile, membership, alerts and privacy.">
       <DesktopSettingsPanel />
       <div className={styles.grid}>
         {sections.map(section => (

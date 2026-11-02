@@ -164,13 +164,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
-      <div className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[linear-gradient(145deg,rgba(15,18,22,.98),rgba(8,10,13,.98))] shadow-[inset_0_1px_rgba(255,255,255,.04),0_30px_100px_rgba(0,0,0,.42)]">
+      <div className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[var(--surface)]">
       {/* Banner */}
-      <div className="h-44 sm:h-60 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative overflow-hidden">
+      <div className="h-44 sm:h-60 bg-[var(--surface-2)] relative overflow-hidden">
         {profile.banner_url && <SafeImage src={profile.banner_url} alt="" className="h-full w-full object-cover" />}
-        {!profile.banner_url && (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(163,230,53,.22),transparent_42%),linear-gradient(135deg,#172015,#090b0e_65%)]" />
-        )}
       </div>
 
       {/* Profile header */}
@@ -294,9 +291,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       </div>
 
       {isCreatorProfile && (
-        <section className="mx-4 mb-5 overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-br from-lime-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+        <section className="mx-4 mb-5 overflow-hidden rounded-2xl border border-white/[.09] bg-[var(--surface-2)]">
           <div className="flex flex-col gap-4 border-b border-white/[0.07] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Store size={18} /></span><div><p className="text-[10px] font-black tracking-[0.18em] text-lime-300">CREATOR COMMUNITY</p><h2 className="text-base font-black text-white">Join {profile.display_name || profile.username}</h2></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-300"><Store size={18} /></span><div><p className="text-xs text-zinc-400">Creator community</p><h2 className="text-base font-semibold text-white">Join {profile.display_name || profile.username}</h2></div></div>
             <div className="flex gap-2">{isOwnProfile && <Link href="/creators/studio" className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/40 hover:text-white"><Sparkles size={14} /> Creator Studio</Link>}<Link href={`/creators/${profile.username}`} className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-3 py-2 text-xs font-black text-zinc-950 hover:bg-lime-300">View storefront <ArrowRight size={14} /></Link></div>
           </div>
           <div className="grid gap-3 p-4 sm:grid-cols-2">

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, TrendingUp } from 'lucide-react'
+import { ArrowLeft, MapPin, TrendingUp, Tv } from 'lucide-react'
 import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/espn-api'
 import { getGameStatus } from '@slipsurge/core/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -173,11 +173,11 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
       {odds && (
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: 32 }}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Spread</p>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 3 }}>Spread</p>
             <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{odds.details}</p>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>O/U</p>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 3 }}>O/U</p>
             <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{odds.overUnder}</p>
           </div>
         </div>
@@ -187,12 +187,12 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginTop: 10 }}>
         {venue && (
           <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
-            📍 {venue.fullName}{venue.address?.city ? ` · ${venue.address.city}${venue.address.state ? `, ${venue.address.state}` : ''}` : ''}
+            <MapPin size={12} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />{venue.fullName}{venue.address?.city ? ` · ${venue.address.city}${venue.address.state ? `, ${venue.address.state}` : ''}` : ''}
           </p>
         )}
         {(comp as any).broadcasts?.[0]?.names?.[0] && (
           <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
-            📺 {(comp as any).broadcasts[0].names[0]}
+            <Tv size={12} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />{(comp as any).broadcasts[0].names[0]}
           </p>
         )}
       </div>
@@ -213,7 +213,7 @@ function WinProbBar({ summary, teamMap }: { summary: ESPNSummary | null; teamMap
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', marginBottom: 4 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Win Probability</p>
+      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>Win probability</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {away?.logo && <TeamLogo logo={away.logo} name={away.abbr} size={22} />}
@@ -257,7 +257,7 @@ function Leaders({ summary, sport }: { summary: ESPNSummary | null; sport: Sport
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 14 }}>
         Leaders
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>

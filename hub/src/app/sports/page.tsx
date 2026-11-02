@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import styles from './scores.module.css'
 
 export const revalidate = 30
 
@@ -88,13 +89,13 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
   const selectedDateLabel = checkDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 
   return (
-    <div className="ss-scores-page">
+    <div className={`ss-scores-page ${styles.page}`}>
       <ScoreRefresh enabled={date === today || totalLive > 0} />
       <section className="ss-scores-hero">
         <div className="ss-scores-hero-copy">
           <span className="ss-scores-kicker"><Radio size={13} /> Score center</span>
           <h1>Live Scores</h1>
-          <p>Every game, every moment, all in one place.</p>
+          <p>Scores and schedules for {selectedDateLabel}</p>
         </div>
         <div className="ss-scores-summary" aria-label="Scoreboard summary">
           <div><strong>{totalLive}</strong><span>Live now</span></div>

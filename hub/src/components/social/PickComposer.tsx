@@ -5,9 +5,11 @@ import Image from 'next/image'
 import { Check, ChevronDown, Plus, Search, X } from 'lucide-react'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
+import { SafeImage } from '@/components/ui/SafeImage'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PROP_META } from '@/lib/watchlist'
+import { sportLogoUrl } from '@/lib/sportLogos'
 import styles from './PickComposer.module.css'
 
 type Sport = 'MLB' | 'NFL' | 'NBA'
@@ -240,16 +242,16 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
     <section className={styles.composer} aria-label="Add a structured pick">
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{legs.length > 1 ? `${legs.length}-LEG PARLAY` : 'STRUCTURED PICK'}</span>
-          <strong>Build from live market data</strong>
+          <strong>Pick builder</strong>
+          {legs.length > 1 && <span className={styles.eyebrow}>{legs.length}-leg parlay</span>}
         </div>
         <button type="button" onClick={onClose} className={styles.iconButton} aria-label="Close pick builder"><X size={16} /></button>
       </header>
 
       <div className={styles.sportTabs} aria-label="Sport">
         {([...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'] as Sport[]).map(item => (
-          <button key={item} type="button" data-active={sport === item} disabled={!!lockedSport && lockedSport !== item} onClick={() => chooseSport(item)}>
-            {item === 'MLB' ? '⚾' : item === 'NFL' ? '🏈' : '🏀'} {item}
+          <button key={item} type="button" data-active={sport === item} aria-pressed={sport === item} disabled={!!lockedSport && lockedSport !== item} onClick={() => chooseSport(item)}>
+            <SafeImage src={sportLogoUrl(item)} alt="" className={styles.sportLogo} /> {item}
           </button>
         ))}
       </div>

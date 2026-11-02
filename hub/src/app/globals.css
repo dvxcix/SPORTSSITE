@@ -2023,10 +2023,9 @@ html:not([data-platform='desktop']) .ss-desktop-live-layout { display: block; he
 .creator-offer-confirm{max-width:560px;margin:10vh auto;padding:28px;border:1px solid var(--border);border-radius:20px;background:radial-gradient(circle at top right,color-mix(in srgb,var(--accent) 10%,transparent),transparent 45%),var(--surface);box-shadow:0 30px 80px rgba(0,0,0,.35)}.creator-offer-confirm h1{margin:10px 0 8px;font-size:28px}.creator-offer-confirm p{margin:0 0 20px;color:var(--text-3);line-height:1.6}
 /* Premium member profile and settings surfaces */
 .ss-settings-shell{width:min(1180px,100%);margin:0 auto;padding:clamp(16px,3vw,32px)}
-.ss-settings-hero{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:space-between;min-height:178px;padding:clamp(24px,4vw,44px);border:1px solid rgba(163,230,53,.2);border-radius:28px;background:linear-gradient(135deg,rgba(163,230,53,.1),rgba(10,12,15,.96) 42%,rgba(18,22,27,.98));box-shadow:0 30px 90px rgba(0,0,0,.34)}
-.ss-settings-hero-glow{position:absolute;inset:-80% 35% auto -10%;height:260px;background:radial-gradient(circle,rgba(163,230,53,.25),transparent 66%);filter:blur(18px);pointer-events:none}
-.ss-settings-eyebrow{margin-bottom:10px!important;color:#bef264!important;font-size:10px!important;font-weight:900;letter-spacing:.22em}
-.ss-settings-hero h1{font-size:clamp(26px,4vw,42px);font-weight:950;letter-spacing:-.045em;color:#fff;line-height:1.02}
+.ss-settings-hero{display:flex;align-items:center;justify-content:space-between;min-height:178px;padding:clamp(24px,4vw,44px);border:1px solid var(--border);border-radius:28px;background:var(--surface)}
+.ss-settings-eyebrow{margin-bottom:10px!important;color:var(--text-2)!important;font-size:12px!important;font-weight:600}
+.ss-settings-hero h1{font-size:clamp(26px,4vw,42px);font-weight:600;letter-spacing:-.03em;color:var(--text-1);line-height:1.08}
 .ss-settings-hero p:not(.ss-settings-eyebrow){max-width:650px;margin-top:12px;color:#a1a1aa;font-size:14px;line-height:1.65}
 .ss-settings-layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:22px;margin-top:22px}
 .ss-settings-nav{position:sticky;top:86px;align-self:start;display:flex;flex-direction:column;gap:5px;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(12,14,17,.9);box-shadow:0 18px 50px rgba(0,0,0,.25);backdrop-filter:blur(18px)}
