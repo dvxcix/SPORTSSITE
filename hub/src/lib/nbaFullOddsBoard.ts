@@ -15,6 +15,13 @@ export function nbaTimestampNanoseconds(value:string):bigint|null {
   if(!Number.isFinite(base)||base<0)return null
   return BigInt(base)*BigInt(1_000_000)+BigInt((match[3]??'').padEnd(9,'0'))
 }
+/** A cached later cutoff is conservative for Live: an earlier correction may
+ * expose more observations, but cannot make these already-live quotes pregame. */
+export function nbaLiveBoardQuotes<T extends {updated_at:string}>(quotes:T[],frameAt:string,cutoff:string):T[] {
+  const start=nbaTimestampNanoseconds(cutoff),frame=nbaTimestampNanoseconds(frameAt)
+  if(start==null||frame==null||frame<start)throw new Error('Invalid live odds boundary')
+  return quotes.filter(quote=>{const at=nbaTimestampNanoseconds(quote.updated_at);return at!=null&&at>=start&&at<=frame})
+}
 /** The database clock stores microseconds. A strict predecessor must not skip
  * another event in the same millisecond. Unknown formats have no prior. */
 export function nbaBeforeCapture(value:string):string|null {

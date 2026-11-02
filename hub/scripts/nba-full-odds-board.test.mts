@@ -1,12 +1,22 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { nbaBeforeCapture,nbaBoardMove,nbaBoardMoveLabel,nbaFullBoardCells,nbaPackFullBoard,nbaSelectPackedBoard,nbaUnpackFullBoard } from '../src/lib/nbaFullOddsBoard.ts'
+import { nbaBeforeCapture,nbaBoardMove,nbaBoardMoveLabel,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaSelectPackedBoard,nbaUnpackFullBoard } from '../src/lib/nbaFullOddsBoard.ts'
 import type { PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 
 const current:PaintProp={id:1,game_id:12,player_id:4,vendor:'draftkings',prop_type:'points',line_value:'20',market:{type:'milestone',odds:150},updated_at:'2026-10-20T16:00:00Z'}
 const opening:NbaQuoteOpeningRow={game_id:12,player_id:4,vendor:'draftkings',market:'points',market_type:'milestone',line:20,side:'over',odds:200,observed_at:'2026-10-20T14:00:00Z'}
 const old:PaintProp={...current,market:{type:'milestone',odds:175},updated_at:'2026-10-20T15:00:00Z'}
+
+test('Live accepts only actual quotes at or after the conservative cutoff and rejects malformed or early frames',()=>{
+ const cutoff='2026-10-20T15:00:00.000001Z',frame='2026-10-20T16:00:00Z'
+ const quotes=[old,{...old,updated_at:cutoff},{...current,updated_at:'2026-10-20T16:00:00.000001Z'},current]
+ assert.deepEqual(nbaLiveBoardQuotes(quotes,frame,cutoff),[quotes[1],current])
+ assert.deepEqual(nbaLiveBoardQuotes([],frame,cutoff),[],'complete withdrawal must not resurrect a prior quote')
+ assert.throws(()=>nbaLiveBoardQuotes(quotes,'2026-10-20T14:59:59Z',cutoff))
+ assert.throws(()=>nbaLiveBoardQuotes(quotes,frame,'invalid'))
+ assert.deepEqual(nbaFullBoardCells(12,'points',[],[old],[]),[],'a withdrawn latest contract stays absent')
+})
 
 test('opening and previous compare exact same contract and real observation times',()=>{
   const [row]=nbaFullBoardCells(12,'points',[current],[old],[opening])

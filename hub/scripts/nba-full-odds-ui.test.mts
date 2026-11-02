@@ -10,11 +10,12 @@ import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoa
 const require=createRequire(import.meta.url),{JSDOM}=require('jsdom')
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://www.slipsurge.com/the-paint'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
+;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='pregame'
 Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})
 const {createRoot}=await import('react-dom/client')
 const built=await build({stdin:{contents:"export {PaintFullOddsBoard} from './src/app/the-paint/PaintFullOddsBoard'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'odds-ui-fixture.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'odds-ui',setup(builder){
   builder.onResolve({filter:/^(\.\/PaintEntitySelect|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
-  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return 'pregame'}`,loader:'tsx'}))
+  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
 }}]})
 const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null}>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,require)
@@ -106,4 +107,22 @@ test('an expired phase check hides the grid on its timer without starting anothe
   await act(async()=>{await new Promise(done=>setTimeout(done,1350))})
   assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null);assert.equal(calls,1)
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
+})
+
+test('Live displays earlier and last-seen prices, hides openings, and cached pre-resume proof cannot unhide the board',async()=>{
+ const priorFetch=globalThis.fetch,priorNow=Date.now;let now=priorNow();Date.now=()=>now
+ ;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='live'
+ const games=[game,otherGame],host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:now-15000}),'fanduel'))
+ const render=(phaseCheck:NbaOddsBoardPhaseCheck|null)=>root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games,phaseCheck}))
+ try{
+  await act(async()=>{render(null);await new Promise(done=>setTimeout(done,20))})
+  const grid=host.querySelector('[aria-label="NBA milestone odds board"]');assert.ok(grid);assert.match(grid.textContent??'',/Last seen/);assert.match(grid.textContent??'',/Earlier \+175/);assert.doesNotMatch(grid.textContent??'',/Open \+200/);assert.equal(host.querySelector('[aria-label="Compare odds to"]'),null)
+  Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
+  now+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)
+  now+=10;await act(async()=>render({date:data.date,mode:'live',receivedAt:now,phase:{date:data.date,checkedAt:now-15000,signature:nbaOddsBoardPhaseSignature(games)!}}))
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'cached phase proof from before resume cannot restore the grid')
+  now+=10;await act(async()=>render({date:data.date,mode:'live',receivedAt:now,phase:{date:data.date,checkedAt:now,signature:nbaOddsBoardPhaseSignature(games)!}}));assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=priorFetch;Date.now=priorNow;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='pregame';Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})}
 })

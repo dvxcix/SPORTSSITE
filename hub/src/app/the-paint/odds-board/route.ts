@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintRoster, getPaintSchedule } from '@/lib/nbaPaintData'
 import { nbaFullBoardCutoffs } from '@/lib/nbaFullBoardCutoffsData'
+import { getNbaOddsBoardPhase } from '@/lib/nbaOddsBoardPhaseData'
+import { nbaBoardPhaseGames,nbaOddsBoardPhaseSignature,nbaReadOddsBoardPhase } from '@/lib/nbaOddsBoardPhase'
 import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
 import { getNbaPhaseFrames, nbaPhaseBoundary, type NbaPhaseFrame } from '@/lib/nbaOddsPhaseData'
 import { getNbaQuoteOpenings } from '@/lib/nbaOddsHistoryData'
@@ -9,7 +11,7 @@ import { readNbaPregameResearch } from '@/lib/nbaPregameResearchData'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
 import { nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
-import { nbaBeforeCapture,nbaFullBoardCells,nbaPackFullBoard,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 
 export const maxDuration = 120
 
@@ -22,13 +24,21 @@ export async function GET(request:NextRequest) {
     const schedule=await getPaintSchedule(date)
     if(schedule.date!==date)return NextResponse.json(nbaPackFullBoard({date,games:[],players:[],cells:[],failed:[],unavailable:[],complete:schedule.complete}),{headers:{'Cache-Control':'private, no-store'}})
     if(schedule.games.length>16)throw new Error('NBA slate exceeds capacity')
-    const games=await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
+    // Complete slates share one small phase proof instead of one clock-cache
+    // lookup per game per viewer. An incomplete pregame slate retains its
+    // existing per-game resolution and partial reporting.
+    const readPhase=async()=>{
+      const token=await getNbaOddsBoardPhase(date),now=Date.now(),phase=nbaReadOddsBoardPhase(token.header,date,now)
+      if(!phase||!Number.isSafeInteger(token.expiresAt)||token.expiresAt<=now)throw new Error('NBA phase unavailable')
+      return phase
+    }
+    const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
     const key=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
-    const partialKey=`odds-board-partial:v1:${date}:${market}:${key}`
+    const partialKey=`odds-board-partial:v2:${date}:${market}:${key}`
     const interval=mode==='live'?60:300
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
     try{
-      cached=await nbaSharedCache(`odds-board:v1:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{
+      cached=await nbaSharedCache(`odds-board:v2:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{
         const loaded=await loadSlate(date,market!,mode,games,schedule.complete),packed=nbaPackFullBoard(loaded)
         if(packed.identities.length>1024||packed.books.length>64||packed.times.length>36000||Buffer.byteLength(JSON.stringify(packed))>1_048_576)throw new Error('NBA odds board exceeds capacity')
         if(!loaded.complete){
@@ -44,8 +54,17 @@ export async function GET(request:NextRequest) {
     }
     // A phase crossing while a shared result was loading must not use the old
     // slate key. The next request loads the new boundary, never a live fallback.
-    const phaseCheckedAt=Date.now(),check=await nbaFullBoardCutoffs(games)
-    if(check.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')!==key) return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
+    let phaseCheckedAt:number
+    if(mode==='pregame'){
+      phaseCheckedAt=Date.now();const check=await nbaFullBoardCutoffs(games)
+      if(check.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')!==key) return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
+    }else{
+      // Reuse the shared phase proof's original pre-read time, not the time
+      // a cached clock was returned. Mismatched/expired proofs fail closed.
+      const phase=await readPhase()
+      if(phase.signature!==nbaOddsBoardPhaseSignature(games))throw new Error('NBA phase unavailable')
+      phaseCheckedAt=phase.checkedAt
+    }
     return NextResponse.json({...nbaSelectPackedBoard(cached.value,book),stale:cached.stale,phaseCheckedAt},{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503})}
 }
@@ -60,7 +79,7 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     results.push(...await Promise.allSettled(games.slice(offset,offset+3).map(async game=>{
     const [frames,openings,roster]=await Promise.all([
       getNbaPhaseFrames(game,mode,'props',{market,selection:'latest'}),
-      getNbaQuoteOpenings(game.id,mode),
+      mode==='live'?Promise.resolve([]):getNbaQuoteOpenings(game.id,mode),
       nbaPregameOpen(game)?getPaintRoster(game):readNbaPregameResearch<PaintBoard>(game,'board:v1').then(snapshot=>{if(!snapshot)throw new Error('Saved roster unavailable');return snapshot.value.players}),
     ])
     const latest=frames.at(-1), previousAt=latest?nbaBeforeCapture(latest.captured_at):null
@@ -75,7 +94,11 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
       const observed=nbaTimestampNanoseconds(quote.updated_at)
       return observed!=null&&at!=null&&observed<=at
     })
-    const current=latest?quotesAt(latest.quotes,currentAt):[],previous=lastPrior?quotesAt(lastPrior.quotes,priorAt):[]
+    const cutoff=nbaPhaseBoundary(game,mode).tipoff,cutoffAt=nbaTimestampNanoseconds(cutoff)
+    if(cutoffAt==null)throw new Error('Invalid NBA phase cutoff')
+    const currentRaw=latest?quotesAt(latest.quotes,currentAt):[],previousRaw=lastPrior?quotesAt(lastPrior.quotes,priorAt):[]
+    const current=mode==='live'&&latest?nbaLiveBoardQuotes(currentRaw,latest.captured_at,cutoff):currentRaw
+    const previous=mode==='live'&&lastPrior?(priorAt!>=cutoffAt?nbaLiveBoardQuotes(previousRaw,lastPrior.captured_at,cutoff):[]):previousRaw
     if(roster.length>150||current.length>5000||previous.length>5000||openings.length>100000)throw new Error('NBA odds board exceeds capacity')
     const cells=nbaFullBoardCells(game.id,market,current,previous,openings,latest?.captured_at).filter(cell=>known.has(cell.playerId))
     return {game,players,cells,missing:!latest}

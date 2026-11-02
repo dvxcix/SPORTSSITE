@@ -33,3 +33,16 @@ export function nbaReadOddsBoardPhase(header:string|null,date:string,now:number)
   if(entries.join(';')!==[...entries].sort().join(';'))return null
   return {date,checkedAt,signature:parts[3]}
 }
+
+/** Resolve Live against the same shared, verified slate proof used by the
+ * viewer. Never use a later cutoff than the current schedule supplied. */
+export function nbaBoardPhaseGames(games:PaintGame[],phase:NbaOddsBoardPhase):PaintGame[] {
+  const cutoffs=new Map(phase.signature?phase.signature.split(';').map(entry=>{const [id,start]=entry.split(',').map(Number);return [id,start] as const}):[])
+  const resolved=games.map(game=>{
+    const prior=nbaGameStart(game),start=cutoffs.get(game.id)
+    if(prior==null||start==null||!Number.isSafeInteger(start)||start<=0||start>prior)throw new Error('Invalid NBA live slate')
+    return {...game,datetime:new Date(start).toISOString()}
+  })
+  if(nbaOddsBoardPhaseSignature(resolved)!==phase.signature)throw new Error('NBA live slate changed')
+  return resolved
+}
