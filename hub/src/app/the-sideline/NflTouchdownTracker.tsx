@@ -52,7 +52,6 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
           <header>
             <span className={styles.flame}><Flame size={20} /></span>
             <div>
-              <small>LIVE SCORING BOARD</small>
               <h2 id="nfl-touchdown-title">Today&apos;s Touchdowns</h2>
               <p>{events == null ? 'Touchdowns temporarily unavailable' : `${events.length} touchdowns · ${firstCount} first scorers across the slate`}</p>
             </div>
@@ -60,7 +59,7 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
             <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close touchdown tracker"><X size={18} /></button>
           </header>
           <nav aria-label="Touchdown type">
-            {(['all', 'receiving', 'rushing', 'return', 'defense'] as const).map(kind => <button key={kind} type="button" className={filter === kind ? styles.active : ''} onClick={() => setFilter(kind)}>{kind === 'all' ? 'All TDs' : KIND_LABELS[kind]}</button>)}
+            {(['all', 'receiving', 'rushing', 'return', 'defense'] as const).map(kind => <button key={kind} type="button" className={filter === kind ? styles.active : ''} aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{kind === 'all' ? 'All TDs' : KIND_LABELS[kind]}</button>)}
           </nav>
           <div className={styles.list}>
             {events == null ? <div className={styles.empty} role="status">Touchdowns temporarily unavailable</div> : !visible.length ? <div className={styles.empty}>No touchdowns in this view yet.</div> : visible.map(event => {
@@ -86,7 +85,6 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
               </div>
             </article>})}
           </div>
-          <footer>Updates with The Sideline&apos;s live game refresh.</footer>
         </section>
       </div>, document.body) : null}
   </>

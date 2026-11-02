@@ -32,14 +32,14 @@ export function EventRSVPButtons({ userId, eventId, initialRsvp }: {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {([
         { s: 'going' as const, label: "I'm Going", icon: Check, activeColor: 'bg-green-500 text-black' },
         { s: 'interested' as const, label: 'Interested', icon: Star, activeColor: 'bg-yellow-500 text-black' },
         { s: 'not_going' as const, label: "Can't Go", icon: X, activeColor: 'bg-zinc-600 text-white' },
       ]).map(({ s, label, icon: Icon, activeColor }) => (
-        <button key={s} onClick={() => select(s)} disabled={loading}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 border ${
+        <button key={s} type="button" onClick={() => select(s)} disabled={loading} aria-pressed={rsvp === s}
+          className={`flex min-h-11 min-w-[100px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
             rsvp === s ? `${activeColor} border-transparent` : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
           }`}>
           <Icon size={13} /> {label}

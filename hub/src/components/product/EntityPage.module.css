@@ -65,3 +65,8 @@
   .meta { gap:6px; }
   .row { min-height:62px; padding-inline:12px; }
 }
+
+/* Keep team artwork intact while making player and team data easier to scan. */
+.eyebrow,.panelHeading,.metricLabel,.dataTable thead th,.groupLabel{color:var(--text-2);font-size:11px;font-weight:600;letter-spacing:0}
+.sectionTitle{font-weight:600}.sectionMeta{color:var(--text-2);font-size:12px}
+.metricValue{font-weight:600;font-variant-numeric:tabular-nums}

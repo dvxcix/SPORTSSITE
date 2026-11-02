@@ -79,9 +79,9 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
     rows.map(row => ({ id: String(row.player.id), position: row.player.position, score: scores.get(row.player.id)?.score ?? null, mm: scores.get(row.player.id)?.mm ?? null, picks: observedPropPicks(row.player, prop) })),
   )
   const changeSort = (key: LadderSortKey) => setSort({ key, direction: activeSort.key === key ? activeSort.direction === 'asc' ? 'desc' : 'asc' : key === 'player' ? 'asc' : 'desc' })
-  const sortHeader = (key: LadderSortKey, label: string, title?: string) => (
+  const sortHeader = (key: LadderSortKey, label: string) => (
     <th key={key} scope="col" aria-sort={activeSort.key === key ? activeSort.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
-      <button type="button" className={styles.sortButton} onClick={() => changeSort(key)} title={title}>
+      <button type="button" className={styles.sortButton} onClick={() => changeSort(key)}>
         {label}<span aria-hidden="true">{activeSort.key === key ? activeSort.direction === 'asc' ? '↑' : '↓' : '↕'}</span>
       </button>
     </th>
@@ -197,10 +197,10 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
           <thead>
             <tr>
               {sortHeader('player', 'Player')}
-              {sortHeader('score', 'Score', 'Contextual score for this market')}
-              {sortHeader('mm', 'MM', 'Market vs model rank')}
-              {sortHeader('picks', 'Picks', 'Observed picks for this prop; not estimated ladder allocations')}
-              {visible.map(line => sortHeader(line, String(line) + (kind === 'milestone' ? '+' : ''), mode === 'odds' ? 'Sort by implied probability: down = shortest odds first' : 'Sort by displayed ' + mode))}
+              {sortHeader('score', 'Score')}
+              {sortHeader('mm', 'MM')}
+              {sortHeader('picks', 'Picks')}
+              {visible.map(line => sortHeader(line, String(line) + (kind === 'milestone' ? '+' : '')))}
             </tr>
           </thead>
           <tbody>
