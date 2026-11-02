@@ -1,8 +1,9 @@
 'use client'
 import { nbaModeHref } from '@/lib/nbaModeHref'
-import { nbaOddsMode, type NbaOddsMode } from '@/lib/nbaOddsMode'
+import { nbaGameStart, nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
 import { NbaOddsModeProvider } from '@/components/nba/NbaOddsModeContext'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { flushSync } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Activity, ListOrdered, Table2, UsersRound, ArrowDown, ArrowUpRight, Check, CircleHelp, Columns3, Search, SlidersHorizontal, Star, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
@@ -50,9 +51,11 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
   const selectedPlayers=useMemo(()=>nbaSelectedPlayers(board?.players??[],market,{type:contract,...(targetLine==null?{}:{line:targetLine})}),[board,market,contract,targetLine])
   const [query, setQuery] = useState(''); const [team, setTeam] = useState('all'); const [vendor, setVendor] = useState(()=>params.get('book')??'all'); const [position, setPosition] = useState('all'); const [location, setLocation] = useState<'all' | 'home' | 'away'>('all'); const [side, setSide] = useState<'over' | 'under'>(()=>params.get('side')==='under'?'under':'over')
   const [sort, setSort] = useState<Sort>(()=>['mm','average','line','odds','l5','l10','l20','minutes','name'].includes(params.get('sort')??'')?params.get('sort') as Sort:'average'); const [ascending, setAscending] = useState(params.get('order')==='asc'); const [detail, setDetail] = useState<number | null>(()=>initial?.players.some(player=>String(player.id)===params.get('player'))?Number(params.get('player')):null); const [detailTab, setDetailTab] = useState<PaintPlayerTab>(()=>['trends','ladder','movement','tracking','court','markets'].includes(params.get('panel')??'')?params.get('panel') as PaintPlayerTab:'trends'); const [compare, setCompare] = useState<number[]>([]); const [comparing, setComparing] = useState(false); const [filters, setFilters] = useState(false); const [savedOnly, setSavedOnly] = useState(false)
+  const [lastDetail, setLastDetail] = useState<{gameId:number; mode:NbaOddsMode; player:PaintPlayer}|null>(() => { const player=initial?.players.find(item=>String(item.id)===params.get('player')); return player && initial ? {gameId:initial.game.id, mode:oddsMode, player} : null })
   const [detailQuote,setDetailQuote]=useState<{line:number;type:'over_under'|'milestone'}|null>(()=>params.has('line')&&Number.isFinite(Number(params.get('line')))&&['over_under','milestone'].includes(params.get('type')??'')?{line:Number(params.get('line')),type:params.get('type') as 'over_under'|'milestone'}:null)
   const [trackingMetric,setTrackingMetric]=useState(()=>params.get('metric')??'usage_percentage')
   const [refreshing, setRefreshing] = useState(false); const [refreshError, setRefreshError] = useState(''); const refreshLock = useRef(false); const requestRef = useRef<AbortController | null>(null); const watchlist = useWatchlist()
+  const [boundaryNow, setBoundaryNow] = useState(() => Date.now())
   const targetLines=[...new Set(board?.players.flatMap(p=>p.props.filter(q=>q.prop_type===market&&q.market.type===contract&&(vendor==='all'||q.vendor===vendor)).map(q=>Number(q.line_value)))??[])].sort((a,b)=>a-b)
   const gameId = board?.game.id
   const revisionRef=useRef<string|null>(null)
@@ -61,6 +64,7 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
   const activeWorkspace=coreView?'research':trendView?'usage':view
   const workspaceTitle=coreView?'Player board':view==='public'?'ThePublic':PAINT_TOOLS.find(tool=>tool.key===activeWorkspace)?.label??'Player board'
   const openResearch=(id:number,nextMarket?:PaintMarket,nextBook?:string,panel:PaintPlayerTab='trends',quote?:{line:number;type:'over_under'|'milestone'},nextSide?:'over'|'under')=>{
+    const selected=board?.players.find(item=>item.id===id);if(selected&&board)setLastDetail({gameId:board.game.id,mode:oddsMode,player:selected})
     if(nextMarket)setMarket(nextMarket)
     if(nextBook)setVendor(nextBook)
     if(nextSide)setSide(nextSide);else if(nextBook)setSide('over')
@@ -77,23 +81,62 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
     query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));else query.delete('target');const search=`?${query}`
     if(window.location.search!==search)window.history.replaceState(null,'',`${window.location.pathname}${search}`)
   },[date,oddsMode,switchingMode,navigating,market,side,vendor,sort,ascending,gameId,detail,detailTab,trackingMetric,detailQuote,contract,targetLine])
-  const refresh = useCallback(async () => {
-    if (switchingMode || !gameId || refreshLock.current) return
+  const boundaryQueued = useRef(false)
+  const refreshAgain = useRef<() => void>(() => {})
+  const refresh = useCallback(async (boundary = false): Promise<void> => {
+    if (switchingMode || !gameId) return
+    if (refreshLock.current) { if (boundary) boundaryQueued.current = true; return }
     refreshLock.current = true; setRefreshing(true)
     const controller = new AbortController(); requestRef.current = controller
     const timeout = setTimeout(() => controller.abort(), 115_000)
     try {
       const response = await fetch(nbaModeHref(`/the-paint/board?game=${gameId}`, oddsMode), { cache: 'no-store', signal: controller.signal,headers:revisionRef.current?{'If-None-Match':revisionRef.current}:{} })
-      if(response.status===304){const fetchedAt=response.headers.get('X-NBA-Fetched-At');if(fetchedAt&&!controller.signal.aborted){setBoard(previous=>previous?{...previous,fetchedAt}:previous);setRefreshError('')}return}
+      if(response.status===304){if(!controller.signal.aborted){setBoundaryNow(Date.now());setRefreshError('')}return}
       if (!response.ok) throw new Error('refresh')
       const next = await response.json() as PaintBoard
       if (next.game.id !== gameId || nbaOddsMode(next.oddsMode) !== oddsMode || !Array.isArray(next.players)) throw new Error('shape')
-      if(!controller.signal.aborted){revisionRef.current=response.headers.get('ETag');setBoard(next);setRefreshError('')}
+      if(!controller.signal.aborted){setBoundaryNow(Date.now());revisionRef.current=response.headers.get('ETag');setBoard(next);setRefreshError('')}
     }
     catch { if (!controller.signal.aborted) setRefreshError('Refresh failed. Showing your last loaded board.'); else if (requestRef.current === controller) setRefreshError('Refresh timed out. Your board is preserved.') }
-    finally { clearTimeout(timeout); refreshLock.current = false; setRefreshing(false) }
+    finally { clearTimeout(timeout); refreshLock.current = false; setRefreshing(false); if (boundaryQueued.current && requestRef.current === controller) { boundaryQueued.current = false; queueMicrotask(() => refreshAgain.current()) } else boundaryQueued.current = false }
   }, [gameId, oddsMode, switchingMode])
+  useEffect(() => { refreshAgain.current = () => { void refresh() }; return () => { refreshAgain.current = () => {}; boundaryQueued.current = false } }, [refresh])
   useEffect(() => { const stop = watchNbaRefresh(refresh); return () => { stop(); requestRef.current?.abort(); requestRef.current = null } }, [refresh])
+  // A slow or failed background request must never leave an open pregame
+  // board visible after the earliest known start. Do not wait for a poll to
+  // establish the boundary: the timer hides it first, then requests the saved
+  // pregame view. React state above this gate retains the user's filters.
+  const slateGame = games.find(game => game.id === gameId)
+  const boundaryStarts = [board?.game, slateGame].flatMap(game => { const start = game && nbaGameStart(game); return start == null ? [] : [start] })
+  // Once an earlier start has been observed, a later clock correction must
+  // not reopen the pregame view for the same game.
+  const [earliestStarts, setEarliestStarts] = useState<Record<number,number>>({})
+  const rememberedStart = gameId == null ? undefined : earliestStarts[gameId]
+  const knownStarts = [...boundaryStarts, ...(rememberedStart == null ? [] : [rememberedStart])]
+  const boundaryAt = knownStarts.length ? Math.min(...knownStarts) : null
+  if (gameId != null && boundaryAt != null && boundaryAt !== rememberedStart) setEarliestStarts(previous => ({...previous,[gameId]:boundaryAt}))
+  const observedAt = Date.parse(board?.researchSnapshot?.observedAt ?? '')
+  const validFrozen = !!board?.researchSnapshot?.frozen && boundaryAt != null && Number.isFinite(observedAt) && observedAt < boundaryAt && observedAt <= boundaryNow
+  const closedClock = (board != null && !nbaPregameOpen(board.game, boundaryNow)) || (slateGame != null && !nbaPregameOpen(slateGame, boundaryNow))
+  const invalidFrozen = !!board?.researchSnapshot?.frozen && !validFrozen
+  useEffect(() => {
+    if (oddsMode !== 'pregame' || !gameId || validFrozen) return
+    const check = () => flushSync(() => setBoundaryNow(Date.now()))
+    let timer: number | null = null
+    const schedule = () => {
+      if (boundaryAt == null) return
+      const delay = boundaryAt - Date.now()
+      if (delay <= 0) { check(); return }
+      timer = window.setTimeout(schedule, Math.min(delay + 1, 2_147_000_000))
+    }
+    if ((boundaryAt != null && boundaryAt <= Date.now()) || closedClock || invalidFrozen) timer = window.setTimeout(() => { void refresh(true) }, 0)
+    else if (boundaryAt != null) schedule()
+    const resume = () => { if (document.visibilityState !== 'visible') return; check(); if (closedClock || invalidFrozen) void refresh(true) }
+    document.addEventListener('visibilitychange', resume); window.addEventListener('focus', resume)
+    return () => { if (timer != null) window.clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('focus', resume) }
+  }, [oddsMode, gameId, boundaryAt, validFrozen, closedClock, invalidFrozen, refresh])
+  const waitingForFrozen = oddsMode === 'pregame' && !!board && !validFrozen &&
+    (invalidFrozen || (boundaryAt != null && boundaryNow >= boundaryAt) || closedClock)
   const teams = board ? [board.game.visitor_team, board.game.home_team] : []
   const vendors = useMemo(() => { const priority = ['fanduel', 'draftkings', 'caesars', 'betmgm', 'fanatics', 'betrivers', 'betparx']; return [...new Set([...(vendor==='all'?[]:[vendor]),...board?.players.flatMap(p => p.props.filter(o => (view==='cheatsheets'||o.prop_type === market) && nbaPrice(o, side) != null).map(o => o.vendor)) ?? []])].sort((a, b) => (priority.includes(a) ? priority.indexOf(a) : 99) - (priority.includes(b) ? priority.indexOf(b) : 99) || a.localeCompare(b)) }, [board, market, side, vendor, view])
   const ranks = useMemo(() => !board?.statsComplete || nbaPeriod(market) && board.periodStatsComplete === false ? new Map() : nbaMarketRanks(selectedPlayers, market, vendor, location, { gameId: board.game.id, beforeDate: board.game.date }), [board, selectedPlayers, market, vendor, location])
@@ -117,14 +160,17 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
   }
   function sortBy(key: Sort) { if (sort === key) setAscending(v => !v); else { setSort(key); setAscending(key === 'name') } }
   const player = board?.players.find(p => p.id === detail)
+  // Keep the open panel component mounted if a partial refreshed roster omits
+  // its player. The panel itself withholds its content and all pick actions.
+  const panelPlayer = player ?? (lastDetail?.gameId === gameId && lastDetail?.mode === oddsMode && lastDetail.player.id === detail ? lastDetail.player : undefined)
   const comparison = board?.players.filter(p => compare.includes(p.id)) ?? []
   function toggleCompare(id: number) { setCompare(ids => ids.includes(id) ? ids.filter(i => i !== id) : ids.length < 3 ? [...ids, id] : ids) }
   function heat(player: PaintPlayer, count: number) { const offer = nbaReference(player.props, market, vendor, side); const result = offer ? nbaHitRate(nbaSample(nbaMarketLogs(player, market), count, location), market, Number(offer.line_value), side, offer.market.type === 'milestone') : null; return <span className={styles.heat} style={nbaHeatStyle(result?.rate)} data-heat={result?.rate == null ? 'none' : result.rate >= 70 ? 'hot' : result.rate >= 50 ? 'warm' : 'cold'} aria-label={result ? `${result.wins}/${result.games-result.pushes} hits · ${result.pushes} pushes` : 'No current reference line'}>{result?.rate == null ? '—' : `${Math.round(result.rate)}%`}<small>{result?.games ? `${result.wins}/${result.games-result.pushes}${result.pushes ? ` · ${result.pushes}P` : ''}` : '—'}</small></span> }
-  return <NbaOddsModeProvider mode={requestedMode}><NbaMatrixProvider board={switchingMode?null:board} gameIds={!switchingMode&&(view==='slate'||view==='first-basket')?games.map(game=>game.id):undefined}><div className={styles.paint} aria-busy={navigating}>
-    <header className={styles.header}><div className={styles.identity}><span className={styles.mark}><CourtMark/></span><div><h1>The&nbsp;<span>Court</span><i>NBA</i></h1></div></div><div className={styles.headerActions}><NbaMatrixButton gameId={board?.game.id} initialOpen={params.get('matrix')==='1'}/><button className={styles.iconButton} aria-label="Open saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={17}/></button></div></header>
+  return <NbaOddsModeProvider mode={requestedMode}><NbaMatrixProvider board={switchingMode||waitingForFrozen?null:board} gameIds={!switchingMode&&!waitingForFrozen&&(view==='slate'||view==='first-basket')?games.map(game=>game.id):undefined}><div className={styles.paint} aria-busy={navigating}>
+    <header className={styles.header}><div className={styles.identity}><span className={styles.mark}><CourtMark/></span><div><h1>The&nbsp;<span>Court</span><i>NBA</i></h1></div></div><div className={styles.headerActions}>{!waitingForFrozen&&<NbaMatrixButton gameId={board?.game.id} initialOpen={params.get('matrix')==='1'}/>}<button className={styles.iconButton} aria-label="Open saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><Star size={17}/></button></div></header>
     <div className={styles.oddsMode} role="group" aria-label="NBA odds mode"><button type="button" aria-pressed={requestedMode==='pregame'} onClick={()=>changeMode('pregame')}>Pregame</button><button type="button" aria-pressed={requestedMode==='live'} onClick={()=>changeMode('live')}>Live</button></div>
     <PaintSlateHeader date={date} days={days} games={games} gameId={board?.game.id} onChange={go}/>
-    {switchingMode ? <section className={styles.empty} role="status">Loading {requestedMode === 'live' ? 'live' : 'pregame'} markets…</section> : !board ? <section className={styles.empty}><CourtMark/><h2>No NBA games on this slate</h2><p>Choose another date to explore the board.</p></section> : <>
+    {switchingMode ? <section className={styles.empty} role="status">Loading {requestedMode === 'live' ? 'live' : 'pregame'} markets…</section> : waitingForFrozen ? <section className={styles.empty} role="status">Pregame research is unavailable while the saved game snapshot loads.</section> : !board ? <section className={styles.empty}><CourtMark/><h2>No NBA games on this slate</h2><p>Choose another date to explore the board.</p></section> : <>
       <div className={styles.context} data-compact={!coreView&&!trendView}><div><h2>{workspaceTitle}</h2></div><div className={styles.sampleBadge} aria-label={`Statistics season ${nbaSeason(board.sampleSeason)}`}><span>{nbaSeason(board.sampleSeason)}</span>{board.researchSnapshot?.frozen && <small>Frozen pregame baseline · Observed {new Date(board.researchSnapshot.observedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC{board.researchSnapshot.source === 'recovered-cache' ? ' · Recovered observation' : ''}</small>}</div></div>
       {(refreshError || board.issues.length > 0) && <div className={styles.notice} role="status"><CircleHelp size={15}/><span>{refreshError || board.issues.join(' · ')}</span><button onClick={() => void refresh()} disabled={refreshing}>Retry</button></div>}
       <label className={styles.mobileToolPicker}><span>Research workspace</span><select aria-label="NBA research workspace" value={activeWorkspace} onChange={event=>setView(event.target.value as PaintView)}>{PAINT_TOOLS.map(tool=><option key={tool.key} value={tool.key}>{tool.label}</option>)}<option value="public">ThePublic</option></select></label><nav className={styles.toolNav} aria-label="NBA research tools">{PAINT_TOOLS.map(t=><button key={t.key} data-home={t.key==='research'||undefined} aria-pressed={activeWorkspace===t.key} onClick={()=>setView(t.key)}><t.icon size={16}/>{t.label}</button>)}<button aria-pressed={view==='public'} onClick={()=>setView('public')}><Star size={16}/>ThePublic</button></nav>{trendView&&<div className={styles.trendWorkspaceSwitch} role="group" aria-label="Player trend workspace"><button aria-pressed={view==='usage'} onClick={()=>setView('usage')}>Role & minutes</button><button aria-pressed={view==='tracking'} onClick={()=>setView('tracking')}>Game tracking</button></div>}{view!=='game-markets'&&view!=='matchup'&&<PaintMatchup board={board}/>}{(coreView||view==='cheatsheets')&&<div className={styles.viewSwitch}>{coreView && <div className={styles.segment}><button aria-pressed={view === 'research'} onClick={() => setView('research')}><UsersRound size={14}/>Players</button><button aria-pressed={view === 'odds'} onClick={() => setView('odds')}><Table2 size={14}/>Odds</button><button aria-pressed={view === 'ladders'} onClick={() => setView('ladders')}><ListOrdered size={14}/>Ladders</button><button aria-pressed={view === 'movement'} onClick={() => setView('movement')}><Activity size={14}/>Market Story</button></div>}<button className={styles.mmSort} aria-pressed={sort==='mm'&&!ascending} onClick={() => { setSort('mm'); setAscending(false); setView('research') }}>+MM</button><button className={styles.mmSort} aria-pressed={sort==='mm'&&ascending} onClick={() => { setSort('mm'); setAscending(true); setView('research') }}>−MM</button></div>}{coreView&&<div className={styles.marketRail} role="group" aria-label="Player stat market">{PAINT_MARKETS.map(m => <button key={m.key} aria-pressed={market === m.key} onClick={() => setMarket(m.key)}>{m.label}</button>)}</div>}
@@ -137,7 +183,7 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
       {coreView && view!=='ladders' && !visible.length && <div className={styles.empty}><Search size={24}/><h3>No matching players</h3><button onClick={() => { setQuery(''); setTeam('all'); setPosition('all'); setSavedOnly(false) }}>Clear filters</button></div>}
       </section>
 
-      {player && <PaintPlayerPanel selection={selection} key={player.id} player={player} board={board} market={market} side={side} initialTab={detailTab} trackingMetric={trackingMetric} book={vendor} quote={detailQuote} onClearQuote={()=>setDetailQuote(null)} onBookChange={setVendor} onMarketChange={setMarket} onSideChange={setSide} onTabChange={setDetailTab} close={() => {setDetail(null);setDetailTab('trends');setDetailQuote(null)}} compare={() => toggleCompare(player.id)} compared={compare.includes(player.id)} compareDisabled={!compare.includes(player.id) && compare.length >= 3}/>}
+      {panelPlayer && <PaintPlayerPanel available={!!player} selection={selection} key={panelPlayer.id} player={panelPlayer} board={board} market={market} side={side} initialTab={detailTab} trackingMetric={trackingMetric} book={vendor} quote={detailQuote} onClearQuote={()=>setDetailQuote(null)} onBookChange={setVendor} onMarketChange={setMarket} onSideChange={setSide} onTabChange={setDetailTab} close={() => {setDetail(null);setDetailTab('trends');setDetailQuote(null)}} compare={() => toggleCompare(panelPlayer.id)} compared={compare.includes(panelPlayer.id)} compareDisabled={!compare.includes(panelPlayer.id) && compare.length >= 3}/>}
       <ModalSurface open={comparing} onClose={() => setComparing(false)} label="Compare NBA players" backdropClassName={styles.modalBackdrop} panelClassName={styles.comparePanel}><header><h2>Side by side</h2><button className={styles.iconButton} aria-label="Close player comparison" onClick={() => setComparing(false)}><X size={20}/></button></header><div className={styles.comparison} data-count={comparison.length}><table><thead><tr><th>{nbaSeason(board.sampleSeason)}</th>{comparison.map(p => <th key={p.id}><PlayerAvatar player={p}/><strong>{p.first_name} {p.last_name}</strong><small>{p.team.name}</small></th>)}</tr></thead><tbody>{PAINT_MARKETS.slice(0, 5).map(m => <tr key={m.key}><th>{m.label}</th>{comparison.map(p => <td key={p.id}>{number(nbaValue(p.average, m.key))}</td>)}</tr>)}<tr><th>Minutes</th>{comparison.map(p => <td key={p.id}>{number(p.average.min)}</td>)}</tr><tr><th>L10 {chosenMarket.short}</th>{comparison.map(p => <td key={p.id}>{number(nbaAverage(nbaSample(nbaMarketLogs(p, market), 10), market))}</td>)}</tr></tbody></table></div></ModalSurface>
       {compare.length > 0 && <div className={styles.compareDock}><span><Columns3 size={17}/>{compare.length}/3 players</span><button onClick={() => setComparing(true)} disabled={compare.length < 2}>Compare<ArrowUpRight size={15}/></button><button aria-label="Clear player comparison" onClick={() => setCompare([])}><X size={16}/></button></div>}
     </>}

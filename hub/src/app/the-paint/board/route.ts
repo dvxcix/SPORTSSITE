@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
   if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
   try {
     const board=await getPaintBoard(await getPaintGame(Number(id)), mode)
-    // Cosmetic fetch/provider timestamps must not resend unchanged historical
-    // samples. Every economic quote, identity, stat and coverage flag is hashed.
-    const etag='W/"'+createHash('sha256').update(JSON.stringify(board,(key,value)=>key==='fetchedAt'||key==='updated_at'?undefined:value)).digest('hex')+'"'
+    // A changed quote timestamp is a new observation even at the same price.
+    // Only the board fetch time is cosmetic; preserve all source quote times.
+    const etag='W/"'+createHash('sha256').update(JSON.stringify({...board,fetchedAt:undefined})).digest('hex')+'"'
     const headers={'Cache-Control':'private, no-store',ETag:etag,'X-NBA-Fetched-At':board.fetchedAt}
     if(request.headers.get('if-none-match')===etag)return new Response(null,{status:304,headers})
     return NextResponse.json(board,{headers})

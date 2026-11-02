@@ -2,6 +2,7 @@
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
+import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import { nbaAppeared, type PaintPlayer } from '@/lib/nbaPaint'
 import type { NbaShot } from '@/lib/nbaShots'
 import styles from './paint.module.css'
@@ -9,19 +10,28 @@ type ShotResult = { gameId: number; playerId: number; shots: NbaShot[]; boxScore
 export function PaintShotChart({ player, researchGame, researchRevision = '' }: { player: PaintPlayer; researchGame?: number; researchRevision?: string }) {
   const oddsMode = useNbaOddsMode()
   const games = useMemo(() => [...new Map(player.logs.filter(log => (log.game.season ?? 0) >= 2025 && (log.game.status === 'Final' || log.game.status_state === 'final') && nbaAppeared(log)).map(log => [log.game.id, log.game])).values()].sort((a, b) => b.date.localeCompare(a.date)), [player.logs])
-  const [selectedGameId, setGameId] = useState(games[0]?.id ?? 0), [result, setResult] = useState<{ key: string; value: ShotResult } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
+  const [selectedGameId, setGameId] = useState(games[0]?.id ?? 0), [result, setResult] = useState<{ key: string; value: ShotResult } | null>(null), [errorState, setErrorState] = useState<{key: string; message: string} | null>(null), [retry, setRetry] = useState(0)
   const gameId = games.some(game => game.id === selectedGameId) ? selectedGameId : games[0]?.id ?? 0
   const resultKey = `${oddsMode}:${researchGame ?? 'history'}:${gameId}:${player.id}:${researchRevision}`
   const [period, setPeriod] = useState('all'), [outcome, setOutcome] = useState('all'), [points, setPoints] = useState('all'), [selected, setSelected] = useState<number | null>(null), [heat, setHeat] = useState(false)
   useEffect(() => {
     if (!gameId) return
-    const controller = new AbortController(); let timedOut = false
-    const timer = setTimeout(() => { timedOut = true; controller.abort() }, researchGame ? 115000 : 55000)
-    setResult(null); setError('')
-    fetch(nbaModeHref(`/the-paint/shots?game=${gameId}&player=${player.id}${researchGame ? `&researchGame=${researchGame}` : ''}`, oddsMode), { cache: 'no-store', signal: controller.signal }).then(async response => { if (!response.ok) throw new Error('Shot locations unavailable'); return response.json() }).then(data => { if (!controller.signal.aborted) { if (data.gameId !== gameId || data.playerId !== player.id || !Array.isArray(data.shots)) throw new Error('Shot identity mismatch'); setResult({ key: resultKey, value: data }); setError('') } }).catch(() => { if (!controller.signal.aborted || timedOut) setError(timedOut ? 'Shot locations timed out.' : researchGame && oddsMode === 'pregame' ? 'Pregame shot sample unavailable. It may not have been saved before tipoff.' : 'Shot locations could not load.') }).finally(() => clearTimeout(timer))
-    return () => { controller.abort(); clearTimeout(timer) }
-  }, [oddsMode, gameId, player.id, researchGame, resultKey, retry])
+    const controller = new AbortController(); let pending = false
+    const update = async () => { if (pending) return; pending = true
+      const timeout = AbortSignal.timeout(researchGame ? 115000 : 55000)
+      try {
+        const response = await fetch(nbaModeHref(`/the-paint/shots?game=${gameId}&player=${player.id}${researchGame ? `&researchGame=${researchGame}` : ''}`, oddsMode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, timeout]) })
+        if (!response.ok) throw new Error('Shot locations unavailable')
+        const data = await response.json()
+        if (!controller.signal.aborted) { if (data.gameId !== gameId || data.playerId !== player.id || !Array.isArray(data.shots)) throw new Error('Shot identity mismatch'); setResult({ key: resultKey, value: data }); setErrorState(null) }
+      } catch { if (!controller.signal.aborted) setErrorState({key:resultKey,message:timeout.aborted ? 'Shot locations timed out.' : researchGame && oddsMode === 'pregame' ? 'Pregame shot sample unavailable. It may not have been saved before tipoff.' : 'Shot locations could not load.'}) }
+      finally { pending = false }
+    }
+    void update(); const stop = !researchRevision || researchRevision.startsWith('frozen:') ? () => {} : watchNbaRefresh(update)
+    return () => { controller.abort(); stop() }
+  }, [oddsMode, gameId, player.id, researchGame, resultKey, researchRevision, retry])
   const current = result?.key === resultKey ? result.value : null
+  const error = errorState?.key === resultKey ? errorState.message : ''
   const shots = (current?.shots ?? []).filter(shot => (period === 'all' || String(shot.period) === period) && (outcome === 'all' || shot.made === (outcome === 'made')) && (points === 'all' || String(shot.points) === points))
   const located = shots.filter(shot => shot.halfCourt), made = shots.filter(shot => shot.made).length
   const detail = shots.find(shot => shot.order === selected)
@@ -31,8 +41,8 @@ export function PaintShotChart({ player, researchGame, researchRevision = '' }: 
   if (!games.length) return <p className={styles.toolNote}>No completed games with shot data.</p>
   return <section className={styles.shotResearch} aria-label={`${player.first_name} ${player.last_name} interactive shot chart`}>
     <div className={styles.sectionHeading}><h3>Shot chart</h3></div>
-    <div className={styles.toolControls}><select aria-label="Shot chart game" value={gameId} onChange={event => { setGameId(Number(event.target.value)); setSelected(null); setError(''); setPeriod('all') }}>{games.map(game => <option key={game.id} value={game.id}>{game.date.slice(0, 10)} · {player.logs.find(log => log.game.id === game.id)?.team.id === game.home_team_id ? 'Home' : 'Away'}</option>)}</select><select aria-label="Shot period" value={period} onChange={event => setPeriod(event.target.value)}><option value="all">All periods</option>{[...new Set([1,2,3,4,...(current?.shots.map(shot => shot.period) ?? [])])].sort((a, b) => a - b).map(value => <option key={value} value={value}>{value <= 4 ? `Quarter ${value}` : `Overtime ${value - 4}`}</option>)}</select><select aria-label="Shot result" value={outcome} onChange={event => setOutcome(event.target.value)}><option value="all">Made + missed</option><option value="made">Made</option><option value="missed">Missed</option></select><select aria-label="Shot value" value={points} onChange={event => setPoints(event.target.value)}><option value="all">Twos + threes</option><option value="2">Two-pointers</option><option value="3">Three-pointers</option></select><button aria-pressed={heat} onClick={() => setHeat(value => !value)}>{heat ? 'Heatmap' : 'Shot map'}</button></div>
-    {error ? <p role="status" className={styles.toolNote}>{error} <button onClick={() => { setError(''); setRetry(value => value + 1) }}>Retry</button></p> : !current ? <p role="status" className={styles.toolNote}>Loading shots…</p> : <>
+    <div className={styles.toolControls}><select aria-label="Shot chart game" value={gameId} onChange={event => { setGameId(Number(event.target.value)); setSelected(null); setErrorState(null); setPeriod('all') }}>{games.map(game => <option key={game.id} value={game.id}>{game.date.slice(0, 10)} · {player.logs.find(log => log.game.id === game.id)?.team.id === game.home_team_id ? 'Home' : 'Away'}</option>)}</select><select aria-label="Shot period" value={period} onChange={event => setPeriod(event.target.value)}><option value="all">All periods</option>{[...new Set([1,2,3,4,...(current?.shots.map(shot => shot.period) ?? [])])].sort((a, b) => a - b).map(value => <option key={value} value={value}>{value <= 4 ? `Quarter ${value}` : `Overtime ${value - 4}`}</option>)}</select><select aria-label="Shot result" value={outcome} onChange={event => setOutcome(event.target.value)}><option value="all">Made + missed</option><option value="made">Made</option><option value="missed">Missed</option></select><select aria-label="Shot value" value={points} onChange={event => setPoints(event.target.value)}><option value="all">Twos + threes</option><option value="2">Two-pointers</option><option value="3">Three-pointers</option></select><button aria-pressed={heat} onClick={() => setHeat(value => !value)}>{heat ? 'Heatmap' : 'Shot map'}</button></div>
+    {error && !current ? <p role="status" className={styles.toolNote}>{error} <button onClick={() => { setErrorState(null); setRetry(value => value + 1) }}>Retry</button></p> : !current ? <p role="status" className={styles.toolNote}>Loading shots…</p> : <>
       <div className={styles.shotSummary}><strong>{made}/{shots.length}<small>FIELD GOALS</small></strong><strong>{shots.length ? `${Math.round(made / shots.length * 100)}%` : '—'}<small>SHOOTING</small></strong><strong>{located.length}<small>LOCATED</small></strong></div>
       <svg viewBox="0 0 50 47" className={styles.shotMap} role="group" aria-label="Half court. Green dots are makes; orange dots are misses. Select a shot for details.">
         <rect x=".25" y=".25" width="49.5" height="46.5" rx=".5" fill="#101c25" stroke="#52636b" strokeWidth=".2"/>

@@ -50,7 +50,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
     }
     void update(); const stop = watchNbaRefresh(update)
     return () => { controller.abort(); stop() }
-  }, [oddsMode, board.game.id, board.fetchedAt, market, book, side, contextKey, retry, contract, target])
+  }, [oddsMode, board.game.id, market, book, side, contextKey, retry, contract, target])
   const sortBy = (column: string) => {
     const active = mode === 'dvp' && scope === 'league' && !['name', 'position', 'games', 'defense', 'league', 'allowance'].includes(sort) ? 'allowance' : sort
     setSort(column); setAscending(value => active === column ? !value : column === 'name')

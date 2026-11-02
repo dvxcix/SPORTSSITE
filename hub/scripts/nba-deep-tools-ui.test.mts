@@ -36,6 +36,22 @@ new Function('require', 'module', 'exports', bundle.outputFiles.find(file => fil
 
 const team = { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }
 const board = { game: { id: 123, date: '2026-10-20', visitor_team: team, home_team: { ...team, id: 9, abbreviation: 'DET', full_name: 'Detroit Pistons', name: 'Pistons' } }, players: [], sampleSeason: 2025 }
+test('research refresh scope stays stable while open and isolates exact frozen and missing-snapshot boundaries', () => {
+  const now=Date.now
+  const tip=Date.parse('2030-10-20T23:00:00Z')
+  const game={...board.game,datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}
+  const open={...board,game,fetchedAt:'2030-10-20T21:00:00Z',researchSnapshot:{observedAt:'2030-10-20T21:00:00Z',frozen:false}}
+  try {
+    Date.now=()=>tip-1
+    assert.equal(nbaResearchRevision(open as any),nbaResearchRevision({...open,fetchedAt:'2030-10-20T22:00:00Z',researchSnapshot:{...open.researchSnapshot,observedAt:'2030-10-20T22:00:00Z'}} as any))
+    const unknownOpen=nbaResearchRevision({...open,researchSnapshot:undefined} as any)
+    Date.now=()=>tip
+    assert.notEqual(nbaResearchRevision(open as any),'snapshot:open')
+    assert.notEqual(nbaResearchRevision({...open,researchSnapshot:undefined} as any),unknownOpen)
+    assert.notEqual(nbaResearchRevision({...open,researchSnapshot:{...open.researchSnapshot,frozen:true}} as any),nbaResearchRevision(open as any))
+    assert.notEqual(nbaResearchRevision({...open,researchSnapshot:{...open.researchSnapshot,frozen:true}} as any),nbaResearchRevision({...open,researchSnapshot:{...open.researchSnapshot,observedAt:'2030-10-20T20:00:00Z',frozen:true}} as any))
+  } finally { Date.now=now }
+})
 const noop = () => {}
 async function harness(component: string, props: Record<string, unknown>, success: unknown) {
   const originalFetch = globalThis.fetch

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
+import test, { after } from 'node:test'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
@@ -8,6 +8,12 @@ import type { PaintBoard, PaintProp, PaintStat } from '../src/lib/nbaPaint.ts'
 import { nbaReference, nbaSelectionKey, parseNbaSelection } from '../src/lib/nbaPaint.ts'
 import { nbaSelectedProps } from '../src/lib/nbaMarketSelection.ts'
 import { NBA_FIRST_MARKETS } from '../src/lib/nbaFirstBasketMarkets.ts'
+
+// Keep the scheduled board fixture before its own tip regardless of when the
+// suite runs. Explicit final/closed cases still exercise their own status.
+const realNow = Date.now
+Date.now = () => Date.parse('2026-10-20T12:00:00Z')
+after(() => { Date.now = realNow })
 
 const require = createRequire(import.meta.url)
 const { JSDOM } = require('jsdom')
@@ -356,7 +362,7 @@ test('a live NBA deep link initializes Live and requests live scores without swi
 })
 
 test('completed-game mode navigation owns the URL until its response commits and renders only the new prices',async()=>{
-  const completed={...board,game:{...board.game,status:'Final',status_state:'final',period:4}}
+  const completed:PaintBoard={...board,game:{...board.game,status:'Final',status_state:'final',period:4},researchSnapshot:{observedAt:board.fetchedAt,source:'capture',frozen:true}}
   for(const [from,to] of [['pregame','live'],['live','pregame']] as const){
     const ui=await harness('odds','over',null,false,'points',`&mode=${from}`,completed)
     try{
@@ -374,6 +380,16 @@ test('completed-game mode navigation owns the URL until its response commits and
       assert.equal(ui.byLabel('Analyze Test Player, O 24.5, draftkings'),undefined)
     }finally{await ui.close()}
   }
+})
+
+test('a future-dated frozen observation is withheld even when its game has not started', async () => {
+  const future: PaintBoard = { ...board, researchSnapshot: { observedAt: '2026-10-20T12:00:01Z', source: 'capture', frozen: true } }
+  const ui = await harness('odds', 'over', null, false, 'points', '', future)
+  try {
+    assert.match(ui.host.textContent ?? '', /Pregame research is unavailable/)
+    assert.equal(ui.host.querySelector('[aria-label="NBA player research board"]'), null)
+    assert.equal(ui.host.querySelector('[data-testid="pick"]'), null)
+  } finally { await ui.close() }
 })
 
 test('rapid mode reversals dispatch the latest selection without native history writes or mismatched prices',async()=>{

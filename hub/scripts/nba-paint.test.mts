@@ -782,8 +782,11 @@ test('NBA conditional refresh authenticates first, preserves meaningful changes 
  denied=false
  const first=await get(request()),etag=first.headers.get('etag')!
  assert.equal(first.status,200);assert.ok(etag);assert.equal(first.headers.get('cache-control'),'private, no-store')
- board={...board,fetchedAt:'2026-10-19T07:01:00Z',players:board.players.map(player=>({...player,props:player.props.map(prop=>({...prop,updated_at:'2026-10-19T07:01:00Z'}))}))}
+ board={...board,fetchedAt:'2026-10-19T07:01:00Z'}
  const same=await get(request(etag));assert.equal(same.status,304);assert.equal(await same.text(),'');assert.equal(same.headers.get('x-nba-fetched-at'),board.fetchedAt)
+ board={...board,players:board.players.map(player=>({...player,props:player.props.map(prop=>({...prop,updated_at:'2026-10-19T07:01:00Z'}))}))}
+ const observation=await get(request(etag));assert.equal(observation.status,200);assert.notEqual(observation.headers.get('etag'),etag)
+ assert.equal((await observation.json()).players[0].props[0].updated_at,'2026-10-19T07:01:00Z')
  board={...board,players:board.players.map(player=>({...player,logs:[stat(21)]}))}
  const statChange=await get(request(etag));assert.equal(statChange.status,200);assert.notEqual(statChange.headers.get('etag'),etag)
  board={...board,players:board.players.map(player=>({...player,props:player.props.map(prop=>({...prop,market:{...prop.market,over_odds:130}}))}))}
