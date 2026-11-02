@@ -13,9 +13,12 @@ const stored = (value: unknown = { baseline: 4 }, observed = tip - 60000, source
 // The RPC stub is a controllable boundary, not a simulation of PostgreSQL. Tests
 // exercise application behavior when the database rejects a late writer, chooses
 // another writer, fails, or returns an invalid observation.
-async function harness() {
+async function harness(expiredSignal = false) {
   let now = tip - 1000, canonicalTip = tip, reads = 0, writes = 0
   let row: Row | null = null, readFailure = false, writeFailure = false
+  let writeThrown: Error | null = null
+  let failureStatus = 0, failureCode = ''
+  const diagnosticLogs: unknown[] = []
   let rpc: ((args: Record<string, unknown>) => Row | null) | null = null
   let readRpc: (() => Row | null) | null = null
   const calls: Record<string, unknown>[] = []
@@ -30,7 +33,7 @@ async function harness() {
         abortSignal(signal: AbortSignal) { assert.ok(signal instanceof AbortSignal); return query },
         async maybeSingle() {
           assert.equal(filters.game_id, game.id); assert.equal(filters.version, 1); assert.equal(typeof filters.resource, 'string')
-          return { data: structuredClone(readRpc ? readRpc() : row), error: readFailure ? { message: 'private DB detail' } : null }
+          return { data: structuredClone(readRpc ? readRpc() : row), error: readFailure ? { message: 'private DB detail', code: failureCode } : null, status: failureStatus }
         },
       }
       return query
@@ -48,7 +51,8 @@ async function harness() {
       writes++; assert.equal(name, 'capture_nba_pregame_research'); calls.push(args)
       return { async abortSignal(signal: AbortSignal) {
         assert.ok(signal instanceof AbortSignal)
-        if (writeFailure) return { data: null, error: { message: 'private DB detail' } }
+        if (writeThrown) throw writeThrown
+        if (writeFailure) return { data: null, error: { message: 'private DB detail', code: failureCode }, status: failureStatus }
         if (rpc) return { data: structuredClone(rpc(args)), error: null }
         row = { payload: structuredClone(args.p_payload), observed_at: String(args.p_observed_at), tipoff_at: String(args.p_tipoff), source: 'capture' }
         return { data: structuredClone(row), error: null }
@@ -61,18 +65,44 @@ async function harness() {
     './nbaOddsMode': { ...modes, nbaPregameOpen: (input: PaintGame) => modes.nbaPregameOpen(input, now) },
   }
   const output = ts.transpileModule(await readFile(new URL('../src/lib/nbaPregameResearchData.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  const module = { exports: {} }
-  new Function('require', 'module', 'exports', 'Date', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, module, module.exports, Clock)
+  const compiledModule = { exports: {} }
+  const signals = expiredSignal ? { timeout: () => AbortSignal.abort(new DOMException('private timeout detail', 'TimeoutError')) } : AbortSignal
+  new Function('require', 'module', 'exports', 'Date', 'console', 'AbortSignal', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, compiledModule, compiledModule.exports, Clock, { warn: (...args: unknown[]) => diagnosticLogs.push(args) }, signals)
   return {
-    api: module.exports as typeof import('../src/lib/nbaPregameResearchData.ts'), calls,
+    api: compiledModule.exports as typeof import('../src/lib/nbaPregameResearchData.ts'), calls,
     setTime(value: number) { now = value }, setCanonicalTip(value: number) { canonicalTip = value },
     setRow(value: Row | null) { row = structuredClone(value) },
     setReadFailure(value = true) { readFailure = value }, setWriteFailure(value = true) { writeFailure = value },
+    setWriteThrown(value: Error) { writeThrown = value },
+    setFailureMetadata(status: number, code: string) { failureStatus = status; failureCode = code }, diagnosticLogs,
     setRpc(value: (args: Record<string, unknown>) => Row | null) { rpc = value },
     setReadRpc(value: () => Row | null) { readRpc = value },
     metrics: () => ({ reads, writes }),
   }
 }
+
+test('archive diagnostics classify timeouts privately without changing failure behavior', async () => {
+  const h = await harness(true); h.setWriteFailure()
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await assert.rejects(h.api.saveNbaPregameResearch(game, 'slate-mm-q1:v1', { value: { private: 'secret-payload' }, observedAt: new Date(tip - 2000 - attempt).toISOString() }), /Pregame research could not be archived/)
+  }
+  assert.deepEqual(h.diagnosticLogs, [['[The Court] research archive failed', { operation: 'capture', scope: 'slate-q1', reason: 'client-deadline' }]])
+  assert.equal(h.metrics().writes, 2, 'diagnostics do not replay or suppress capture attempts')
+  assert.doesNotMatch(JSON.stringify(h.diagnosticLogs), /secret-payload|private|21717946|slate-mm-q1:v1/)
+})
+
+test('archive diagnostics distinguish database cancellation and redact unknown resources', async () => {
+  const h = await harness(); h.setWriteFailure(); h.setFailureMetadata(500, '57014')
+  await assert.rejects(h.api.saveNbaPregameResearch(game, 'private-resource', { value: {}, observedAt: new Date(tip - 2000).toISOString() }), /Pregame research could not be archived/)
+  assert.deepEqual(h.diagnosticLogs, [['[The Court] research archive failed', { operation: 'capture', scope: 'other', reason: 'database-cancelled' }]])
+})
+
+test('thrown client failures retain their original error while diagnostic output stays private', async () => {
+  const h = await harness(), failure = new Error('private provider detail'); h.setWriteThrown(failure)
+  await assert.rejects(h.api.saveNbaPregameResearch(game, 'slate-mm-full:v1', { value: {}, observedAt: new Date(tip - 2000).toISOString() }), error => error === failure)
+  assert.deepEqual(h.diagnosticLogs, [['[The Court] research archive failed', { operation: 'capture', scope: 'slate-full', reason: 'transport-or-client' }]])
+  assert.doesNotMatch(JSON.stringify(h.diagnosticLogs), /private provider detail/)
+})
 
 test('closed games return the existing archive without running any current loader', async () => {
   const h = await harness(); h.setTime(tip); h.setRow(stored(undefined, tip - 60000, 'recovered-cache'))

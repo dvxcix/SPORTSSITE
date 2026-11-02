@@ -19,6 +19,26 @@ const memory = new Map<string, { row: Stored<unknown>; until: number; bytes: num
 const saving = new Map<string, Promise<Stored<unknown> | null>>()
 const reading = new Map<string, Promise<Stored<unknown> | null>>()
 let memoryBytes = 0
+// Fixed, private diagnostic categories only. Provider messages, payloads,
+// identities, resource keys and request URLs must never be logged here.
+const archiveDiagnostics = new Map<string, number>()
+function reportArchiveFailure(operation: 'read' | 'capture', resource: string, status: number, code: string, signal: AbortSignal) {
+  const scope = resource === 'slate-mm-full:v1' ? 'slate-full'
+    : resource === 'slate-mm-q1:v1' ? 'slate-q1' : 'other'
+  const reason = status === 0 && signal.aborted && signal.reason?.name === 'TimeoutError' ? 'client-deadline'
+    : code === '57014' ? 'database-cancelled'
+    : code === 'PGRST003' ? 'pool-timeout'
+    : ['08000', '08001', '08003', '08006', '57P01', '57P02', '57P03'].includes(code) ? 'database-connection'
+    : ['53100', '53200', '53300'].includes(code) ? 'database-resource'
+    : status === 429 ? 'rate-limited'
+    : status >= 400 && status < 500 ? 'http-client'
+    : status >= 500 && status < 600 ? 'http-server'
+    : status === 0 ? 'transport-or-client' : 'unknown'
+  const category = `${operation}:${scope}:${reason}`, now = Date.now()
+  if (now - (archiveDiagnostics.get(category) ?? -Infinity) < 60_000) return
+  archiveDiagnostics.set(category, now)
+  try { console.warn('[The Court] research archive failed', { operation, scope, reason }) } catch { /* Diagnostics must not change archive behavior. */ }
+}
 const cacheKey = (game: PaintGame, resource: string) => `${game.id}:${resource}:${version}`
 function forget(game: PaintGame, resource: string) {
   const key = cacheKey(game, resource), prior = memory.get(key)
@@ -57,10 +77,18 @@ export async function readNbaPregameResearch<T>(game: PaintGame, resource: strin
   const read = async () => {
     const tip = nbaGameStart(game)
     if (tip == null) return null
-    const { data, error } = await createAdminClient().rpc('read_nba_pregame_research', {
-      p_game_id: game.id, p_resource: resource, p_version: version, p_tipoff: new Date(tip).toISOString(),
-    }).abortSignal(AbortSignal.timeout(12_000))
-    if (error) throw new Error('Pregame research archive unavailable')
+    const signal = AbortSignal.timeout(12_000)
+    let result: Awaited<ReturnType<ReturnType<typeof createAdminClient>['rpc']>>
+    try {
+      result = await createAdminClient().rpc('read_nba_pregame_research', {
+        p_game_id: game.id, p_resource: resource, p_version: version, p_tipoff: new Date(tip).toISOString(),
+      }).abortSignal(signal)
+    } catch (failure) {
+      reportArchiveFailure('read', resource, 0, '', signal)
+      throw failure
+    }
+    const { data, error, status } = result
+    if (error) { reportArchiveFailure('read', resource, status ?? 0, error.code ?? '', signal); throw new Error('Pregame research archive unavailable') }
     return data as Stored<T> | null
   }
   const beganOpen = nbaPregameOpen(game)
@@ -96,11 +124,19 @@ export async function saveNbaPregameResearch<T>(game: PaintGame, resource: strin
   let pending = saving.get(key)
   if (!pending) {
     pending = (async () => {
-      const { data, error } = await createAdminClient().rpc('capture_nba_pregame_research', {
-        p_game_id: game.id, p_resource: resource, p_version: version, p_tipoff: new Date(tip).toISOString(),
-        p_observed_at: entry.observedAt, p_payload: entry.value,
-      }).abortSignal(AbortSignal.timeout(12_000))
-      if (error) throw new Error('Pregame research could not be archived')
+      const signal = AbortSignal.timeout(12_000)
+      let result: Awaited<ReturnType<ReturnType<typeof createAdminClient>['rpc']>>
+      try {
+        result = await createAdminClient().rpc('capture_nba_pregame_research', {
+          p_game_id: game.id, p_resource: resource, p_version: version, p_tipoff: new Date(tip).toISOString(),
+          p_observed_at: entry.observedAt, p_payload: entry.value,
+        }).abortSignal(signal)
+      } catch (failure) {
+        reportArchiveFailure('capture', resource, 0, '', signal)
+        throw failure
+      }
+      const { data, error, status } = result
+      if (error) { reportArchiveFailure('capture', resource, status ?? 0, error.code ?? '', signal); throw new Error('Pregame research could not be archived') }
       // Do not promote a pre-tip response into a long-lived closed-game cache.
       if (nbaPregameOpen(game) && (!data || Date.now() < Date.parse((data as Stored<T>).tipoff_at))) remember(game, resource, data as Stored<T> | null)
       return data as Stored<T> | null
