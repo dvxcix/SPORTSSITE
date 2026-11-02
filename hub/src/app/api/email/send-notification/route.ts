@@ -5,6 +5,7 @@ import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { brandedEmailHtml, sendEmailWithResult } from '@/lib/email'
 import { shouldSuppressNotificationDelivery, type NotificationDeliverySettings } from '@/lib/notificationDelivery'
+import { isVerifiedNotificationRecipient } from '@/lib/verifiedNotificationRecipient'
 
 export const revalidate = 0
 
@@ -109,6 +110,12 @@ export async function POST(request: Request) {
     .or('status.eq.sent,provider_message_id.not.is.null')
   if ((alreadyAccepted ?? 0) > 0) {
     return NextResponse.json({ ok: true, skipped: 'email already accepted by provider' })
+  }
+
+  // Auth is the verified source of the current address. Do not send while
+  // profile and verified Auth state disagree or either read is unavailable.
+  if (!await isVerifiedNotificationRecipient(admin, notification.user_id, recipient.email)) {
+    return NextResponse.json({ error: 'Notification recipient is temporarily unavailable' }, { status: 503 })
   }
 
   const actorValue = notification.actor as unknown as NotificationActor | NotificationActor[] | null
