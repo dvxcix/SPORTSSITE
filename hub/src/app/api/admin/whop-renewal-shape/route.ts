@@ -59,9 +59,19 @@ export async function POST(request: Request) {
       membershipRead: false, membershipIdMatches: false, membershipPlanNested: false, membershipPlanFlat: false, membershipPlanMatchesExpected: false,
       membershipStatusPresent: false, membershipGrantsAccess: false, membershipPeriodPresent: false, membershipPeriodValid: false, membershipPeriodFuture: false, membershipCancelFlagPresent: false,
       membershipBusinessMatches: false, membershipProductMatches: false,
+      membershipBusinessMissing: false, membershipBusinessScalar: false, membershipBusinessObject: false,
+      membershipProductMissing: false, membershipProductScalar: false, membershipProductObject: false,
       planRead: false, planIdMatches: false, planAccountMatches: false, planCompanyMatches: false,
       planProductMatches: false, planTypeRenewal: false, planBillingTypeRenewal: false,
       planBillingPeriod30: false, planCurrencyUsd: false, planRenewal1999: false, planHidden: false, runtimeWouldAccept: false,
+      planAccountMissing: false, planAccountScalar: false, planAccountObject: false,
+      planCompanyMissing: false, planCompanyScalar: false, planCompanyObject: false,
+      planProductMissing: false, planProductScalar: false, planProductObject: false,
+      planTypeConflict: false, planBillingTypeConflict: false,
+      runtimeMembershipIdentityUnavailable: false, runtimeMembershipIncomplete: false,
+      runtimeMembershipPlanUnconfirmed: false, runtimeMembershipStatusUnavailable: false,
+      runtimeMembershipPeriodUnavailable: false, runtimePlanIncomplete: false,
+      runtimeReturnedNoMatch: false, runtimeOtherError: false,
     }
     const get = async (path: string) => {
       try {
@@ -88,6 +98,12 @@ export async function POST(request: Request) {
     result.membershipCancelFlagPresent = typeof membership.cancel_at_period_end === 'boolean'
     result.membershipBusinessMatches = id(membership.company) === MAIN_BUSINESS
     result.membershipProductMatches = id(membership.product) === MAIN_PRODUCT
+    result.membershipBusinessMissing = membership.company == null
+    result.membershipBusinessScalar = typeof membership.company === 'string'
+    result.membershipBusinessObject = object(membership.company) !== null
+    result.membershipProductMissing = membership.product == null
+    result.membershipProductScalar = typeof membership.product === 'string'
+    result.membershipProductObject = object(membership.product) !== null
     const planId = id(membership.plan_id) ?? id(membership.plan)
     result.membershipPlanMatchesExpected = planId === expectedPlanId
     if (!result.membershipIdMatches || !result.membershipPlanMatchesExpected || !planId || !planId.startsWith('plan_') || !PROVIDER_ID.test(planId)) return NextResponse.json(result, { headers })
@@ -104,6 +120,17 @@ export async function POST(request: Request) {
     result.planCurrencyUsd = plan.currency === 'usd'
     result.planRenewal1999 = plan.renewal_price === 19.99
     result.planHidden = plan.visibility === 'hidden'
+    result.planAccountMissing = plan.account == null
+    result.planAccountScalar = typeof plan.account === 'string'
+    result.planAccountObject = object(plan.account) !== null
+    result.planCompanyMissing = plan.company == null
+    result.planCompanyScalar = typeof plan.company === 'string'
+    result.planCompanyObject = object(plan.company) !== null
+    result.planProductMissing = plan.product == null
+    result.planProductScalar = typeof plan.product === 'string'
+    result.planProductObject = object(plan.product) !== null
+    result.planTypeConflict = typeof plan.plan_type === 'string' && plan.plan_type !== 'renewal'
+    result.planBillingTypeConflict = typeof plan.billing_type === 'string' && plan.billing_type !== 'renewal'
     // Exercise the exact production predicate with captured JSON only. This
     // performs no additional provider calls and cannot grant access or write.
     try {
@@ -114,7 +141,21 @@ export async function POST(request: Request) {
         throw new Error('Unexpected captured lookup')
       }
       result.runtimeWouldAccept = !!(await resolveRepricedUltimatePlan({ source: 'main', planId, membershipId, stored: target }, 'diagnostic', capturedFetch))
-    } catch { result.runtimeWouldAccept = false }
+      result.runtimeReturnedNoMatch = !result.runtimeWouldAccept
+    } catch (error) {
+      // Only fixed classifications are returned; provider payloads and raw
+      // error messages never leave this AAL2-protected diagnostic.
+      const message = error instanceof Error ? error.message : ''
+      result.runtimeMembershipIdentityUnavailable = message === 'Whop membership identity unavailable'
+      result.runtimeMembershipIncomplete = message === 'Whop membership lookup returned incomplete data'
+      result.runtimeMembershipPlanUnconfirmed = message === 'Whop membership plan not yet confirmed'
+      result.runtimeMembershipStatusUnavailable = message === 'Whop membership status unavailable'
+      result.runtimeMembershipPeriodUnavailable = message === 'Whop membership period unavailable'
+      result.runtimePlanIncomplete = message === 'Whop plan lookup returned incomplete data'
+      result.runtimeOtherError = !result.runtimeMembershipIdentityUnavailable && !result.runtimeMembershipIncomplete
+        && !result.runtimeMembershipPlanUnconfirmed && !result.runtimeMembershipStatusUnavailable
+        && !result.runtimeMembershipPeriodUnavailable && !result.runtimePlanIncomplete
+    }
     result.ok = result.runtimeWouldAccept
     return NextResponse.json(result, { headers })
   } catch { return no(503) }

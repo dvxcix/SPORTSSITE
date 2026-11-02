@@ -145,6 +145,31 @@ test('runtime compatibility stays false for permissive-looking but unusable data
   }
 })
 
+test('private diagnostic classifies scalar identity and resolver mismatch without exposing data', async () => {
+  const { post } = route({ membership: { ...membership, product: 'prod_7z1xwDKvVgpiE', company: null } })
+  const result = await (await post()).json()
+  assert.equal(result.membershipProductMatches, true)
+  assert.equal(result.membershipProductScalar, true)
+  assert.equal(result.membershipProductObject, false)
+  assert.equal(result.membershipBusinessMissing, true)
+  assert.equal(result.runtimeMembershipIdentityUnavailable, true)
+  assert.equal(result.runtimeWouldAccept, false)
+  assert.equal(result.runtimeOtherError, false)
+  assert.ok(Object.values(result).every(value => typeof value === 'boolean'))
+  assert.equal(JSON.stringify(result).includes('prod_7z1xwDKvVgpiE'), false)
+})
+
+test('private diagnostic distinguishes incomplete plan from a confirmed conflicting plan', async () => {
+  const scalarPlan = await (await route({ plan: { ...plan, account: 'biz_lQsa02bB46YIlL' } }).post()).json()
+  assert.equal(scalarPlan.planAccountScalar, true)
+  assert.equal(scalarPlan.runtimePlanIncomplete, true)
+  assert.equal(scalarPlan.runtimeWouldAccept, false)
+  const conflictingPlan = await (await route({ plan: { ...plan, billing_type: 'one_time' } }).post()).json()
+  assert.equal(conflictingPlan.planBillingTypeConflict, true)
+  assert.equal(conflictingPlan.runtimeReturnedNoMatch, true)
+  assert.equal(conflictingPlan.runtimeWouldAccept, false)
+})
+
 test('the unlinked admin page requires an authenticated AAL2 admin', async () => {
   const pageSource = await readFile(new URL('../src/app/admin/whop-renewal-shape/page.tsx', import.meta.url), 'utf8')
   const pageOutput = ts.transpileModule(pageSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText
