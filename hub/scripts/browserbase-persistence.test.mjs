@@ -5,7 +5,13 @@ import { createRequire } from 'node:module'
 const require = createRequire(new URL('../package.json', import.meta.url))
 const ts = require('typescript')
 const source = fs.readFileSync(new URL('../src/lib/browserbase.ts', import.meta.url), 'utf8')
-const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+const productionCompiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+// This isolated fixture tests the underlying SDK/cleanup logic while the real
+// production entry points remain paused. The separate spending-pause suite
+// tests the unmodified production source. Refuse an unexpected function shape.
+const pauseFunction = /function assertBrowserbaseSpendingPause\(nba = false\) \{\s*if \(nba\)\s*throw new nbaBrowserBudget_1\.NbaBrowserBudgetError\('spend-limit'\);\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
+assert.equal([...productionCompiled.matchAll(pauseFunction)].length, 1, 'expected exactly one production spending pause')
+const compiled = productionCompiled.replace(pauseFunction, 'function assertBrowserbaseSpendingPause() {}')
 
 async function fixture(options, work) {
   const old = Object.fromEntries(['BROWSERBASE_API_KEY', 'BROWSERBASE_PROJECT_ID', 'PIKKIT_CONTEXT_ID'].map(key => [key, process.env[key]]))
