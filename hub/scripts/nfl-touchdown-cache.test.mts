@@ -11,7 +11,7 @@ import type { NflTouchdownEvent } from '../src/lib/nflTouchdownFeed.ts'
 type FeedApi = typeof import('../src/lib/nflTouchdownFeed.ts')
 type CacheApi = typeof import('../src/lib/nbaSharedCache.ts')
 type Entry = { payload?: NflTouchdownEvent[]; fetched_at?: string; expires_at?: string; lease_token?: string | null; lease_until?: string | null }
-const date = '2026-10-25', key = `nfl:touchdown-feed:v5:${date}`
+const date = '2026-10-25', key = `nfl:touchdown-feed:v6:${date}`
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown>) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8'), target = { exports: {} }
@@ -30,7 +30,7 @@ async function harness() {
     const player = { id: i + 10, first_name: `Receiver${i}`, last_name: 'Fixture' }
     return { game_id: row.game_id, fetched_at: `${date}T18:59:00Z`, reconciled: false, payload: { game, stats: [{ player }], plays: [{ id: `play${i}`, game, type_slug: 'passing-touchdown', type_text: 'Touchdown', scoring_play: true, period: 1, clock_display: '8:00', team: { abbreviation: row.away_team }, participants: [{ type: 'receiver', player_id: player.id }], short_text: `${player.first_name} Fixture 20 Yd pass from Passer Fixture`, wallclock: `${date}T17:10:00Z`, away_score: 7, home_score: 0 }] } }
   })
-  const board = (i: number, vendor: string) => ({ game_id: schedule[i].game_id, captured_at: `${date}T16:58:00Z`, board: { players: [{ id: i + 10, name: `Receiver${i} Fixture`, team: schedule[i].away_team, markets: [{ propType: 'anytime_td', label: 'Anytime Touchdown', line: 0.5, offers: [{ vendor, type: 'over_under', line: 0.5, current: { over: vendor === 'fanduel' ? 220 : 200 }, opening: { over: 250 }, updatedAt: `${date}T16:57:00Z` }] }] }] } })
+  const board = (i: number, vendor: string) => ({ game_id: schedule[i].game_id, captured_at: `${date}T16:58:00Z`, board: { bdlGameId:i+100, players: [{ id: i + 10, name: `Receiver${i} Fixture`, team: schedule[i].away_team, markets: [{ key:'anytime_td:0.5', propType: 'anytime_td', label: 'Anytime Touchdown', line: 0.5, offers: [{ vendor, type: 'over_under', line: 0.5, openingLine: 0.5, current: { over: vendor === 'fanduel' ? 220 : 200 }, opening: { over: 250 }, updatedAt: `${date}T16:57:00Z` }] }] }] } })
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   const admin = {
     from(table: string) {
@@ -92,6 +92,7 @@ test('installed Next nested result caches share one complete date feed across ma
   assert.ok(results.every(rows => rows.length === 1)); assert.equal(h.reads.get('nfl_game_feeds'), 1); assert.equal(h.writes(), 1)
   assert.equal(results[0][0].marketQuotes.length, 2); assert.equal(results[0][0].occurredAt, `${date}T17:10:00Z`)
   assert.ok(results[0][0].marketQuotes.every(quote => quote.openingOdds === 250))
+  assert.ok(results[0][0].marketQuotes.every(quote => quote.observedAt === `${date}T16:57:00Z`))
 })
 
 test('six independent server instances and36 callers use one refresh without changing event timestamps', async () => {
@@ -102,6 +103,57 @@ test('six independent server instances and36 callers use one refresh without cha
   const entry = h.entries.get(key)!
   assert.equal(Date.parse(entry.expires_at!) - Date.parse(entry.fetched_at!), 30_000)
   assert.equal(entry.lease_token, null)
+})
+
+test('v5 cache entries without verified contract identity are not reused as new v6 quotes', async () => {
+  const h=await harness(), reader=await h.instance()
+  h.entries.set(`nfl:touchdown-feed:v5:${date}`, {payload:[{id:'legacy',marketQuotes:[{vendor:'fanduel',odds:9999}]} as unknown as NflTouchdownEvent],fetched_at:`${date}T18:59:00Z`,expires_at:`${date}T19:30:00Z`})
+  const result=await reader.getNflTouchdownFeed(date)
+  assert.equal(result.length,2); assert.ok(result.every(event=>event.id!=='legacy'))
+  assert.ok(h.entries.has(key)); assert.ok(result[0].marketQuotes.every(quote=>quote.observedAt===`${date}T16:57:00Z`))
+})
+
+test('quote timestamps and opening status come only from the exact source offer', async () => {
+  const h = await harness(), reader = await h.instance()
+  const base = { vendor:'draftkings',type:'milestone',line:.5,openingLine:.5,current:{odds:220},opening:{odds:250},updatedAt:null,isOpeningOnly:true }
+  h.overrides.set('nfl_odds_current', [{ game_id:'game1',captured_at:`${date}T16:59:00Z`,board:{bdlGameId:100,players:[{id:10,name:'Receiver0 Fixture',team:'KC',markets:[{key:'anytime_td:0.5',propType:'anytime_td',label:'Anytime',line:.5,offers:[base]}]}]} }])
+  h.overrides.set('nfl_fanduel_capture_history', [])
+  const result = await reader.getNflTouchdownFeed(date), quote = result.find(event => event.id === 'play0')!.marketQuotes[0]
+  assert.equal(quote.observedAt, null); assert.equal(quote.isOpeningOnly, true); assert.equal(quote.openingOdds,250)
+  assert.notEqual(quote.observedAt, `${date}T16:59:00Z`, 'board timestamp is not a quote timestamp')
+})
+
+test('wrong player, game, team, line, type, side or future time do not produce a price', async () => {
+  for (const defect of ['wrong-id','wrong-game','wrong-team','wrong-key','wrong-line','wrong-type','under-only','future','after-capture'] as const) {
+    const h = await harness(), reader = await h.instance()
+    const player = { id:10,name:'Receiver0 Fixture',team:'KC',markets:[{key:'anytime_td:0.5',propType:'anytime_td',label:'Anytime',line:.5,offers:[{vendor:'fanduel',type:'over_under',line:.5,openingLine:.5,current:{over:220},opening:{over:250},updatedAt:`${date}T16:57:00Z`}]}] }
+    if (defect === 'wrong-id') player.id = 999
+    if (defect === 'wrong-team') player.team = 'SEA'
+    if (defect === 'wrong-key') player.markets[0].key = 'anytime_td:1'
+    if (defect === 'wrong-line') player.markets[0].offers[0].line = 1
+    if (defect === 'wrong-type') player.markets[0].offers[0].type = 'corrupt'
+    if (defect === 'under-only') player.markets[0].offers[0].current = { under:-200 } as unknown as {over:number}
+    if (defect === 'future') player.markets[0].offers[0].updatedAt = '2099-01-01T00:00:00Z'
+    if (defect === 'after-capture') player.markets[0].offers[0].updatedAt = `${date}T16:59:00Z`
+    h.overrides.set('nfl_odds_current', [{ game_id:'game1',captured_at:`${date}T16:58:00Z`,board:{bdlGameId:defect==='wrong-game'?999:100,players:[player]} }]); h.overrides.set('nfl_fanduel_capture_history', [])
+    const event = (await reader.getNflTouchdownFeed(date)).find(row => row.id === 'play0')!
+    assert.deepEqual(event.marketQuotes, [], defect)
+  }
+})
+
+test('last seen uses the latest exact quote and rejects ambiguous or wrong-game boards', async () => {
+  const source = (price:number,time:string|null,gameId=100) => ({game_id:'game1',board:{bdlGameId:gameId,players:[{id:10,name:'Receiver0 Fixture',team:'KC',markets:[{key:'anytime_td:0.5',propType:'anytime_td',label:'Anytime',line:.5,offers:[{vendor:'fanduel',type:'milestone',line:.5,openingLine:.5,current:{odds:price},opening:{odds:250},updatedAt:time}]}]}]}})
+  for (const [a,b,expected] of [
+    [source(200,`${date}T16:55:00Z`),source(220,`${date}T16:57:00Z`),220],
+    [source(200,`${date}T16:57:00Z`),source(220,`${date}T16:57:00Z`),null],
+    [source(200,null),source(220,`${date}T16:57:00Z`),null],
+    [source(200,`${date}T16:55:00Z`,999),source(220,`${date}T16:57:00Z`),220],
+  ] as const) {
+    const h=await harness(), reader=await h.instance()
+    h.overrides.set('nfl_odds_current',[a]); h.overrides.set('nfl_fanduel_capture_history',[b])
+    const event=(await reader.getNflTouchdownFeed(date)).find(row=>row.id==='play0')!
+    assert.equal(event.marketQuotes[0]?.odds ?? null,expected)
+  }
 })
 
 for (const table of ['nfl_schedule', 'nfl_teams', 'nfl_game_feeds', 'nfl_odds_current', 'nfl_fanduel_capture_history', 'nfl_players']) {
@@ -138,7 +190,7 @@ test('verified absent quotes/identity or no touchdown remain valid, and dates ne
   const rows = await reader.getNflTouchdownFeed(date)
   assert.equal(rows.length, 2); assert.ok(rows.every(event => event.marketQuotes.length === 0 && event.playerId === null && event.bdlPlayerId != null))
   assert.deepEqual(await reader.getNflTouchdownFeed('2026-10-26'), [])
-  assert.ok(h.entries.has('nfl:touchdown-feed:v5:2026-10-26')); assert.equal(h.entries.get(key)?.payload?.length, 2)
+  assert.ok(h.entries.has('nfl:touchdown-feed:v6:2026-10-26')); assert.equal(h.entries.get(key)?.payload?.length, 2)
   const none = await harness(), noTd = await none.instance()
   for (const feed of none.feeds) for (const play of feed.payload.plays) play.scoring_play = false
   assert.deepEqual(await noTd.getNflTouchdownFeed(date), []); assert.equal(none.writes(), 1)

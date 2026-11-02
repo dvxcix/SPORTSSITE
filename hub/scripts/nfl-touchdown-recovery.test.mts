@@ -6,6 +6,7 @@ import { act, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ts from 'typescript'
 import { nflScorerBadge } from '../src/lib/nflScorerBadges.ts'
+import { nflTouchdownQuoteLabel } from '../src/lib/nflTouchdownQuoteLabel.ts'
 import type { NflTouchdownEvent } from '../src/lib/nflTouchdownFeed.ts'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 
@@ -27,7 +28,7 @@ async function compiled<T>(file: string, imports: Record<string, unknown>) {
   return target.exports as T
 }
 const { NflTouchdownTracker } = await compiled<typeof import('../src/app/the-sideline/NflTouchdownTracker.tsx')>('../src/app/the-sideline/NflTouchdownTracker.tsx', {
-  'next/image': { default: noop }, './touchdownTracker.module.css': { default: {} },
+  'next/image': { default: noop }, './touchdownTracker.module.css': { default: {} }, '@/lib/nflTouchdownQuoteLabel': { nflTouchdownQuoteLabel },
 })
 const odds = { players: [], capturedAt: '2026-10-25T16:58:00Z', picksCapturedAt: null } as unknown as SidelineOddsBoard
 const event = {

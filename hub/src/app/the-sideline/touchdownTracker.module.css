@@ -23,7 +23,7 @@
 .live{font-size:11px;font-weight:600;letter-spacing:0}.close{width:44px;height:44px;flex:0 0 44px}
 .sheet>nav button{min-height:44px;font-size:12px;font-weight:600}
 .eventButton{min-height:44px}.avatar{box-shadow:none}
-.identity>span,.identity .marketStrip{flex-wrap:wrap}.identity mark,.marketStrip>span{font-size:11px;font-weight:600}
+.identity>span,.identity .marketStrip{flex-wrap:wrap}.identity mark,.marketStrip>span{font-size:11px;font-weight:600}.marketStrip>span{max-width:100%;overflow-wrap:anywhere}
 .identity small,.identity em,.moment small{color:#b2bfcd;font-size:12px;line-height:1.4}.moment b,.moment em{font-size:12px}
 .replayRow a{min-height:44px;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none}
 .field i{animation:tdReplay .7s ease-out 1 both;box-shadow:none}.field i:after{box-shadow:none}

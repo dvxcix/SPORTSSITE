@@ -9,6 +9,9 @@ export type NflTouchdownMarketQuote = {
   line: number | null
   odds: number
   openingOdds: number | null
+  observedAt?: string | null
+  isOpeningOnly?: boolean
+  marketType?: 'milestone' | 'over_under'
 }
 
 export type NflTouchdownEvent = {
@@ -60,26 +63,42 @@ export function isNflTouchdownPlay(play: Pick<BdlPlay, 'scoring_play' | 'type_sl
 
 function findBoardPlayer(board: SidelineOddsBoard, playerName: string, team: string, bdlPlayerId: number | null) {
   const normalized = normalizeNflPlayerName(playerName)
-  return board.players.find(player => (bdlPlayerId != null && player.id === bdlPlayerId) || (canonicalTeam(player.team) === team && normalizeNflPlayerName(player.name) === normalized))
-    ?? board.players.find(player => normalizeNflPlayerName(player.name) === normalized)
+  if (!team || !normalized) return undefined
+  const candidates = board.players.filter(player => canonicalTeam(player.team) === team && (bdlPlayerId != null ? player.id === bdlPlayerId : normalizeNflPlayerName(player.name) === normalized))
+  return candidates.length === 1 ? candidates[0] : undefined
 }
 
-function touchdownQuotes(boards: SidelineOddsBoard[], playerName: string, team: string, bdlPlayerId: number | null) {
-  const quotes = new Map<string, NflTouchdownMarketQuote>()
+function touchdownQuotes(boards: SidelineOddsBoard[], playerName: string, team: string, bdlPlayerId: number | null, bdlGameId: number) {
+  const quotes = new Map<string, NflTouchdownMarketQuote | null>()
   for (const board of boards) {
+    if (board.bdlGameId !== bdlGameId) continue
     const player: NflOddsPlayer | undefined = findBoardPlayer(board, playerName, team, bdlPlayerId)
     for (const market of player?.markets ?? []) {
       if (!(market.propType === 'first_td' || market.propType.startsWith('anytime_td'))) continue
       for (const offer of market.offers) {
-        const odds = offer.current.odds ?? offer.current.over
-        if (odds == null) continue
-        const key = `${market.propType}:${market.line ?? offer.line ?? ''}:${offer.vendor}`
-        const quote = { propType: market.propType, label: market.label, vendor: offer.vendor, line: market.line ?? offer.line, odds, openingOdds: offer.opening?.odds ?? offer.opening?.over ?? null }
-        if (!quotes.has(key)) quotes.set(key, quote)
+        if (!['milestone', 'over_under'].includes(offer.type) || offer.line !== market.line
+          || ![`${market.propType}:${market.line ?? ''}`, ...(market.line === null ? [`${market.propType}:null`] : [])].includes(market.key)) continue
+        const odds = offer.type === 'milestone' ? offer.current.odds : offer.current.over
+        if (typeof odds !== 'number' || !Number.isFinite(odds) || Math.abs(odds) < 100) continue
+        const key = `${market.propType}:${offer.line ?? ''}:${offer.vendor}:${offer.type}`
+        const opening = offer.openingLine === offer.line ? offer.type === 'milestone' ? offer.opening?.odds : offer.opening?.over : null
+        const observed = offer.updatedAt == null ? NaN : Date.parse(offer.updatedAt)
+        const captured = board.capturedAt == null ? NaN : Date.parse(board.capturedAt)
+        if (Number.isFinite(observed) && (observed > Date.now() || Number.isFinite(captured) && observed > captured)) continue
+        const quote: NflTouchdownMarketQuote = { propType: market.propType, label: market.label, vendor: offer.vendor, line: offer.line, odds,
+          openingOdds: typeof opening === 'number' && Number.isFinite(opening) ? opening : null,
+          observedAt: Number.isFinite(observed) ? offer.updatedAt : null, isOpeningOnly: offer.isOpeningOnly === true, marketType: offer.type }
+        if (!quotes.has(key)) { quotes.set(key, quote); continue }
+        const previous = quotes.get(key)
+        if (!previous) continue
+        if (!previous.observedAt || !quote.observedAt) { quotes.set(key, null); continue }
+        const previousTime = Date.parse(previous.observedAt), quoteTime = Date.parse(quote.observedAt)
+        if (quoteTime > previousTime) quotes.set(key, quote)
+        else if (quoteTime === previousTime && (previous.odds !== quote.odds || previous.isOpeningOnly !== quote.isOpeningOnly)) quotes.set(key, null)
       }
     }
   }
-  return [...quotes.values()]
+  return [...quotes.values()].filter((quote): quote is NflTouchdownMarketQuote => quote !== null)
 }
 
 export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent[]> {
@@ -178,7 +197,7 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
       gameStatus: game.status ?? game.status_state ?? '', occurredAt: play.wallclock ?? null, startYardLine: numberOrNull(play.start_yard_line), endYardLine: numberOrNull(play.end_yard_line),
       startYardsToEndzone: numberOrNull(play.start_yards_to_endzone), endYardsToEndzone: numberOrNull(play.end_yards_to_endzone), teamColor: teamColors.get(team) ?? null,
       opponentLogo: teamLogos.get(team === canonicalTeam(row.away_team) ? canonicalTeam(row.home_team) : canonicalTeam(row.away_team)) ?? null,
-      marketQuotes: touchdownQuotes(boardsByGame.get(row.game_id) ?? [], playerName, team, bdlPlayerId),
+      marketQuotes: touchdownQuotes(boardsByGame.get(row.game_id) ?? [], playerName, team, bdlPlayerId, game.id),
     })
   }
   const clockSeconds = (clock: string) => { const [minutes, seconds] = clock.split(':').map(Number); return Number.isFinite(minutes + seconds) ? minutes * 60 + seconds : 0 }
@@ -200,5 +219,5 @@ export async function getNflTouchdownFeed(date: string): Promise<NflTouchdownEve
   // unstable_cache reads. Share one complete date observation across instances.
   // Delay the server-only helper import so replay's pure parsers remain usable.
   const { nbaSharedCache } = await import('./nbaSharedCache')
-  return (await nbaSharedCache(`nfl:touchdown-feed:v5:${date}`, 30, 30, () => loadNflTouchdowns(date))).value
+  return (await nbaSharedCache(`nfl:touchdown-feed:v6:${date}`, 30, 30, () => loadNflTouchdowns(date))).value
 }

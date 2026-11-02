@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { Download, Flame, Radio, X } from 'lucide-react'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
+import { nflTouchdownQuoteLabel } from '@/lib/nflTouchdownQuoteLabel'
 import styles from './touchdownTracker.module.css'
 
 const KIND_LABELS: Record<NflTouchdownEvent['kind'], string> = {
@@ -14,9 +15,12 @@ const KIND_LABELS: Record<NflTouchdownEvent['kind'], string> = {
 function american(value: number) { return value > 0 ? `+${value}` : String(value) }
 
 function receiptQuotes(event: NflTouchdownEvent) {
-  return event.marketQuotes
+  const eligible = event.marketQuotes
     .filter(quote => quote.vendor === 'fanduel' && (quote.propType === 'first_td' ? event.isFirstTdOfGame : quote.propType === 'anytime_td' && (quote.line ?? .5) <= .5))
-    .slice(0, 2)
+  return ['first_td', 'anytime_td'].flatMap(prop => {
+    const selected = eligible.find(quote => quote.propType === prop)
+    return selected ? [selected] : []
+  })
 }
 
 function Avatar({ event }: { event: NflTouchdownEvent }) {
@@ -65,13 +69,13 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
             {events == null ? <div className={styles.empty} role="status">Touchdowns temporarily unavailable</div> : !visible.length ? <div className={styles.empty}>No touchdowns in this view yet.</div> : visible.map(event => {
               const quotes = receiptQuotes(event)
               return <article key={event.id}>
-              <button type="button" className={styles.eventButton} onClick={() => { onJumpToGame(event.gameId); setOpen(false) }} aria-label={`Open ${event.team} versus ${event.opponent} in The Sideline`}>
+              <button type="button" className={styles.eventButton} onClick={() => { onJumpToGame(event.gameId); setOpen(false) }} aria-label={`${event.playerName}, ${event.team}, ${KIND_LABELS[event.kind]}, ${event.text}. ${quotes.map(quote => `${quote.propType === 'first_td' ? 'First touchdown' : 'Anytime touchdown'}${quote.marketType === 'over_under' && quote.line != null ? ` over ${quote.line}` : ''} ${american(quote.odds)}, ${nflTouchdownQuoteLabel(quote)}.`).join(' ')} Open ${event.team} versus ${event.opponent} in The Sideline`}>
                 <Avatar event={event} />
                 <span className={styles.identity}>
                   <span><strong>{event.playerName}</strong>{event.isFirstTdOfGame ? <mark>1ST</mark> : null}{event.playerTdNumber > 1 ? <mark>{event.playerTdNumber} TD</mark> : null}</span>
                   <small>{event.team} · {KIND_LABELS[event.kind]}{event.yards != null ? ` · ${event.yards} YD` : ''}</small>
                   <em>{event.text}</em>
-                  {quotes.length ? <span className={styles.marketStrip}>{quotes.map(quote => <span key={`${quote.propType}:${quote.line}`}><b>{quote.propType === 'first_td' ? 'FTD' : 'ATD'}</b> {american(quote.odds)}</span>)}</span> : null}
+                  {quotes.length ? <span className={styles.marketStrip}>{quotes.map(quote => <span key={`${quote.propType}:${quote.line}:${quote.marketType ?? 'unknown'}`}><b>{quote.propType === 'first_td' ? 'FTD' : 'ATD'}{quote.marketType === 'over_under' && quote.line != null ? ` O ${quote.line}` : ''}</b> {american(quote.odds)} · {nflTouchdownQuoteLabel(quote)}</span>)}</span> : null}
                 </span>
                 <span className={styles.moment}>
                   <b>Q{event.quarter} · {event.clock}</b>
