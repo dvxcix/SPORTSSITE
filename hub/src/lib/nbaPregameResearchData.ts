@@ -68,6 +68,18 @@ function snapshot<T>(game: PaintGame, row: Stored<T> | null): NbaPregameResearch
 }
 function validResource(resource: string) { if (!/^[a-zA-Z0-9:_-]{1,160}$/.test(resource)) throw new Error('Invalid NBA research resource') }
 
+/** A compressed peer pool must use a fresh durable phase boundary. The caller
+ * shares this read per peer within a slate response; no current data is used. */
+export async function readNbaDurableCutoff(game: PaintGame): Promise<number | null> {
+  const supplied = nbaGameStart(game)
+  if (!Number.isSafeInteger(game.id) || game.id <= 0 || supplied == null) return null
+  const { data, error } = await createAdminClient().rpc('nba_phase_cutoff', {
+    p_game_id: game.id, p_tipoff: new Date(supplied).toISOString(),
+  }).abortSignal(AbortSignal.timeout(12_000))
+  const cutoff = typeof data === 'string' ? Date.parse(data) : NaN
+  return !error && Number.isFinite(cutoff) && cutoff <= supplied ? cutoff : null
+}
+
 /** Durable data, deliberately outside the seven-day ephemeral source cache. */
 export async function readNbaPregameResearch<T>(game: PaintGame, resource: string): Promise<NbaPregameResearchSnapshot<T> | null> {
   validResource(resource)

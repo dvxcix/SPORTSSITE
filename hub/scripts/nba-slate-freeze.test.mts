@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as crypto from 'node:crypto'
+import { gzipSync } from 'node:zlib'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as metrics from '../src/lib/nbaMarketMetrics.ts'
 import * as selection from '../src/lib/nbaMarketSelection.ts'
@@ -11,6 +12,7 @@ import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 import * as marketSignal from '../src/lib/nbaMarketSignal.ts'
 import * as slateHeat from '../src/lib/nbaSlateHeat.ts'
 import * as models from '../src/lib/nbaModel.ts'
+import * as poolCodec from '../src/lib/nbaSlatePoolCodec.ts'
 
 const tip = Date.parse('2026-10-25T23:00:00Z')
 const team = { id: 1, abbreviation: 'A', full_name: 'Team A', name: 'A' }
@@ -25,15 +27,17 @@ const boards = (): paint.PaintBoard[] => [
   { game: game(102, tip + 3_600_000), players: [player(3, 102, 20, 20), player(4, 102, 30, 40)], sampleSeason: 2026, historical: false, sampleEnd: '2026-10-24', fetchedAt: new Date(tip - 60_000).toISOString(), issues: [], statsComplete: true, periodStatsComplete: true },
 ]
 async function fixture() {
-  let now = tip - 30_000, crossing = false, reads = 0, writes = 0
+  let now = tip - 30_000, crossing = false, reads = 0, writes = 0, cutoffReads = 0
   let attempts = 0, hold: Promise<void> | undefined, release: (() => void) | undefined
+  const cutoffs = new Map<number, number | null>()
   const archive = new Map<string, { value: unknown; observedAt: string; source: 'capture'; frozen: boolean }>()
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   const output = ts.transpileModule(await readFile(new URL('../src/lib/nbaSlateFreezeData.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const imports: Record<string, unknown> = {
-    'server-only': {}, 'node:crypto': crypto, './nbaPaint': paint, './nbaMarketMetrics': metrics, './nbaMarketSelection': selection, './nbaModel':models, './nbaSlateHeat':slateHeat,
+    'server-only': {}, 'node:crypto': crypto, './nbaPaint': paint, './nbaMarketMetrics': metrics, './nbaMarketSelection': selection, './nbaModel':models, './nbaSlateHeat':slateHeat, './nbaSlatePoolCodec':poolCodec,
     './nbaOddsMode': { ...mode, nbaPregameOpen: (g: paint.PaintGame) => mode.nbaPregameOpen(g, now) },
     './nbaPregameResearchData': {
+      readNbaDurableCutoff: async (g: paint.PaintGame) => { cutoffReads++; return cutoffs.has(g.id) ? cutoffs.get(g.id)! : mode.nbaGameStart(g) },
       readNbaPregameResearch: async (g: paint.PaintGame, resource: string) => { reads++; return archive.get(g.id + ':' + resource) ?? null },
       saveNbaPregameResearch: async (g: paint.PaintGame, resource: string, entry: { value: unknown; observedAt: string }) => {
         attempts++; if (hold) await hold
@@ -46,7 +50,7 @@ async function fixture() {
   }
   const target = { exports: {} }
   new Function('require', 'module', 'exports', 'Date', 'Buffer', output)((key: string) => { assert.ok(key in imports, key); return imports[key] }, target, target.exports, Clock, Buffer)
-  return { api: target.exports as typeof import('../src/lib/nbaSlateFreezeData.ts'), archive, time: (n: number) => { now = n }, cross: () => { crossing = true }, counts: () => ({ reads, writes }), attempts: () => attempts, holdSaves: () => { hold = new Promise<void>(resolve => { release = resolve }) }, releaseSaves: () => { release?.() } }
+  return { api: target.exports as typeof import('../src/lib/nbaSlateFreezeData.ts'), archive, time: (n: number) => { now = n }, cutoff: (id: number, value: number | null) => { cutoffs.set(id, value) }, cutoffCount: () => cutoffReads, cross: () => { crossing = true }, counts: () => ({ reads, writes }), attempts: () => attempts, holdSaves: () => { hold = new Promise<void>(resolve => { release = resolve }) }, releaseSaves: () => { release?.() } }
 }
 
 test('a spent caller budget starts no slate writes', async () => {
@@ -229,6 +233,11 @@ test('v2 dictionaries reduce a realistic synthetic quote-heavy slate losslessly'
   assert.deepEqual(h.api.nbaSlatePoolPlayers(compact),h.api.nbaSlatePoolPlayers(original))
   assert.ok(after<before*0.75,`quote-heavy pool ${before} -> ${after}`)
   console.log(`Synthetic 12-game pool bytes: ${before} -> ${after}`)
+  const raw=Buffer.from(JSON.stringify(compact)),started=performance.now(),compressed=gzipSync(raw),compressedAt=performance.now()
+  const envelope={version:3,codec:'gzip-base64',uncompressedBytes:raw.length,data:compressed.toString('base64'),capturedTips:games.map(g=>[g.id,new Date(mode.nbaGameStart(g)!).toISOString()])}
+  assert.deepEqual(poolCodec.decodeArchivedNbaSlatePool(envelope),compact)
+  const decodedAt=performance.now()
+  console.log(`Synthetic v3 JSON bytes: ${raw.length} -> ${Buffer.byteLength(JSON.stringify(envelope))}; local gzip ${(compressedAt-started).toFixed(1)}ms, decode plus equality check ${(decodedAt-compressedAt).toFixed(1)}ms`)
 })
 
 test('v2 writer preserves full and quarter observations and the independent game cutoff', async () => {
@@ -509,4 +518,88 @@ test('cold slate capture for a future anchor includes a peer’s final board and
   h.time(tip+3_600_001)
   const frozen=await h.api.getNbaSlateRanks(h.finalBoards.map(board=>board.game),h.finalBoards,'points','fanduel',undefined,'pregame',true)
   assert.equal(frozen.ranks.get('102:3'),metrics.nbaMarketRanks(players,'points','fanduel').get(3)?.mm)
+})
+
+test('a closed game reads lossless gzip v3 with the same frozen ranks and timestamp as v2', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game), observedAt = new Date(tip - 1000).toISOString()
+  const original = h.api.nbaSlatePool(games, b, true, 0, observedAt)!
+  const compact = h.api.encodeNbaSlatePool(original), raw = Buffer.from(JSON.stringify(compact))
+  const envelope = { version: 3, codec: 'gzip-base64', uncompressedBytes: raw.length, data: gzipSync(raw).toString('base64'), capturedTips: games.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) }
+  h.time(tip + 1000)
+  h.archive.set('101:slate-mm-full:v1', { value: compact, observedAt, source: 'capture', frozen: true })
+  const before = await h.api.getNbaSlateRanks(games, b, 'points', 'draftkings', { type: 'milestone', line: 25 }, 'pregame', true)
+  h.archive.set('101:slate-mm-full:v1', { value: envelope, observedAt, source: 'capture', frozen: true })
+  const after = await h.api.getNbaSlateRanks(games, b, 'points', 'draftkings', { type: 'milestone', line: 25 }, 'pregame', true)
+  assert.deepEqual(after.ranks, before.ranks)
+  assert.equal(after.observedAt[101], observedAt)
+  assert.deepEqual(after.unavailable, [])
+})
+
+test('invalid v3 history never substitutes current data for the frozen game', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game), observedAt = new Date(tip - 1000).toISOString()
+  const compact = h.api.encodeNbaSlatePool(h.api.nbaSlatePool(games, b, true, 0, observedAt)!)
+  const make = (value: unknown) => { const raw = Buffer.from(JSON.stringify(value)); return { version: 3, codec: 'gzip-base64', uncompressedBytes: raw.length, data: gzipSync(raw).toString('base64'), capturedTips: games.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) } }
+  const wrongDate = structuredClone(compact); wrongDate.date = '2026-10-24'
+  const wrongGame = structuredClone(compact); wrongGame.gameIds = [102]
+  const lateQuote = structuredClone(compact); lateQuote.dictionary.timestamps = [new Date(tip + 1).toISOString()]
+  const nullAverage = structuredClone(compact); (nullAverage.players[0] as { average: unknown }).average = null
+  const malformedLog = structuredClone(compact); (malformedLog.players[0] as { logs: unknown[] }).logs = [{}]
+  const duplicatePlayer = structuredClone(compact); duplicatePlayer.players.push({ ...structuredClone(duplicatePlayer.players[0]), gameId: 102 })
+  const bytes = Buffer.from(JSON.stringify(compact))
+  const malformed = { version: 3, codec: 'gzip-base64', uncompressedBytes: bytes.length, data: 'bad!', capturedTips: games.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) }
+  h.time(tip + 1000)
+  for (const value of [make(wrongDate), make(wrongGame), make(lateQuote), make(nullAverage), make(malformedLog), make(duplicatePlayer), malformed]) {
+    h.archive.set('101:slate-mm-full:v1', { value, observedAt, source: 'capture', frozen: true })
+    const result = await h.api.getNbaSlateRanks(games, b, 'points', 'fanduel', undefined, 'pregame', true)
+    assert.equal(result.ranks.has('101:1'), false)
+    assert.ok(result.unavailable.includes(101))
+  }
+})
+
+test('v3 frozen later-game pool rejects a peer quote or source after the peer tip', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game)
+  const original = h.api.nbaSlatePool(games, b, true, 0, new Date(tip - 1000).toISOString())!
+  const compact = h.api.encodeNbaSlatePool(original), observedAt = new Date(tip + 1000).toISOString()
+  const make = (value: unknown) => { const raw = Buffer.from(JSON.stringify(value)); return { version: 3, codec: 'gzip-base64', uncompressedBytes: raw.length, data: gzipSync(raw).toString('base64'), capturedTips: games.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) } }
+  const lateQuote = structuredClone(compact)
+  lateQuote.dictionary.timestamps.push(new Date(tip + 500).toISOString())
+  lateQuote.players.find(player => player.gameId === 101)!.props[0][7] = lateQuote.dictionary.timestamps.length - 1
+  const lateSource = structuredClone(compact); lateSource.sources!.find(source => source.gameId === 101)!.observedAt = new Date(tip + 500).toISOString()
+  const missingSource = structuredClone(compact); delete missingSource.sources
+  h.time(tip + 3_600_001)
+  for (const value of [make(lateQuote), make(lateSource), make(missingSource)]) {
+    h.archive.set('102:slate-mm-full:v1', { value, observedAt, source: 'capture', frozen: true })
+    const result = await h.api.getNbaSlateRanks(games, b, 'points', 'fanduel', undefined, 'pregame', true)
+    assert.equal(result.ranks.has('102:3'), false)
+    assert.ok(result.unavailable.includes(102))
+  }
+})
+
+test('v3 uses captured and fresh durable peer cutoffs when a schedule moves later', async () => {
+  const h = await fixture(), b = boards(), originalGames = b.map(board => board.game)
+  const original = h.api.nbaSlatePool(originalGames, b, true, 0, new Date(tip - 1000).toISOString())!
+  const compact = h.api.encodeNbaSlatePool(original), observedAt = new Date(tip + 1000).toISOString()
+  compact.dictionary.timestamps.push(new Date(tip - 20_000).toISOString())
+  compact.players.find(player => player.gameId === 101)!.props[0][7] = compact.dictionary.timestamps.length - 1
+  const moved = originalGames.map(peer => peer.id === 101 ? { ...peer, datetime: new Date(tip + 120_000).toISOString() } : peer)
+  const raw = Buffer.from(JSON.stringify(compact))
+  const envelope = { version: 3, codec: 'gzip-base64', uncompressedBytes: raw.length, data: gzipSync(raw).toString('base64'), capturedTips: moved.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) }
+  h.time(tip + 3_600_001); h.cutoff(101, tip - 30_000)
+  h.archive.set('102:slate-mm-full:v1', { value: envelope, observedAt, source: 'capture', frozen: true })
+  const result = await h.api.getNbaSlateRanks(moved, b, 'points', 'fanduel', undefined, 'pregame', true)
+  assert.equal(result.ranks.has('102:3'), false); assert.ok(result.unavailable.includes(102))
+  h.cutoff(101, null)
+  const unknown = await h.api.getNbaSlateRanks(moved, b, 'points', 'fanduel', undefined, 'pregame', true)
+  assert.ok(unknown.unavailable.includes(102), 'a failed durable boundary does not fall back to current data')
+})
+
+test('v3 shares each fresh durable cutoff across all frozen anchors in a response', async () => {
+  const h = await fixture(), b = boards(), games = b.map(board => board.game), observedAt = new Date(tip - 1000).toISOString()
+  const compact = h.api.encodeNbaSlatePool(h.api.nbaSlatePool(games, b, true, 0, observedAt)!), raw = Buffer.from(JSON.stringify(compact))
+  const value = { version: 3, codec: 'gzip-base64', uncompressedBytes: raw.length, data: gzipSync(raw).toString('base64'), capturedTips: games.map(g => [g.id, new Date(mode.nbaGameStart(g)!).toISOString()]) }
+  h.archive.set('101:slate-mm-full:v1', { value, observedAt, source: 'capture', frozen: true })
+  h.archive.set('102:slate-mm-full:v1', { value, observedAt, source: 'capture', frozen: true })
+  h.time(tip + 3_600_001)
+  const result = await h.api.getNbaSlateRanks(games, b, 'points', 'fanduel', undefined, 'pregame', true)
+  assert.deepEqual(result.unavailable, []); assert.equal(h.cutoffCount(), 2)
 })

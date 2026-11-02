@@ -1,0 +1,76 @@
+NBA slate gzip reader compatibility — November 2, 2026
+
+This change is reader only. The production writer continues to use the existing
+v2 dictionary representation, with no new schema, RPC, writer, source calls or
+capture schedules. It cannot itself reduce load until a separate v3 writer is
+reviewed, tested and explicitly released. No historical values are rewritten.
+
+For the existing full and Q1 slate resources, a version 3 JSON envelope uses
+codec gzip-base64, the original v2 JSON byte length, and the original captured
+cutoff for each peer. The reader bounds
+the envelope and expanded bytes at 8 MiB, requires canonical base64 and strict
+UTF-8, checks the expanded length, valid calendar date, period, positive unique
+game IDs, unique player IDs and structurally valid averages and historical log
+tuples with canonical prior dates and no anchor-game logs. Frozen rank reads
+require exactly one source per game and check a fresh durable nba_phase_cutoff
+once per peer, shared across the anchors in that response. Each peer quote and
+source must predate both its captured tip and its fresh durable cutoff, as well
+as the anchor observation. A failed cutoff lookup makes the result unavailable.
+The recovered v2 pool then passes the existing rank, date,
+period, quote-time and frozen-game checks. A corrupt or
+oversized envelope makes that frozen result unavailable; it cannot use current
+live data to fill in missing historical data. Existing v1 and v2 values pass
+through unchanged. Bounded bytes are not a proven absolute heap bound: JSON
+parsing and concurrent game reads have additional object allocation costs. A
+closed slate can decode one pool per game; measure peak memory/CPU for all
+anchors together before considering v3 writes or implementing safe deduplication.
+
+V3-only resource limits are 1,024 players, 200,000 total quotes, 40,000 total
+logs, 2,048 quotes/player, 256 logs/player, and 128 vendors and markets. They
+bound work on malformed payloads and leave headroom over the inspected samples;
+they are not a guarantee that every future slate fits. A v3 writer must enforce
+the same contract before capture and report an oversized slate as unavailable
+without destroying a valid prior snapshot. Two inspected full pools had 418/523
+players, 38,113/45,936 quotes and 8,656/2,079 logs; these are not historical or
+future maxima.
+
+Repository audit: getNbaSlateRanks in nbaSlateFreezeData is the only in-repo
+live consumer that interprets a slate pool. The slate route and NBA research
+cron share captureNbaSlatePools as writers. Generic read/capture RPCs return the
+JSON payload unchanged. Operational SQL recovery and DB check scripts do read
+or write the underlying archive and must be considered during future recovery.
+Live catalog inspection found no views or user triggers on the table, and only
+capture_nba_pregame_research, read_nba_pregame_research and nba_phase_cutoff
+refer to it among public functions. External service-role readers or archived
+deployments cannot be ruled out from the repository/catalog inventory alone.
+
+The live RPC and table require payload::text <= 8,388,608 bytes. The capture
+RPC also enforces resource identity, observation chronology, per-game advisory
+locks and database-clock cutoff, while read uses the same per-game lock and
+earliest known cutoff. p_version remains 1; envelope version is a distinct
+payload field. Resource names, per-tier redaction and source timestamps remain
+unchanged.
+
+Before a future v3 writer: verify this reader in production and every relevant
+reader, drain all older executions (including the 180s research cron and 120s
+slate route, plus startup/dispatch margin), and prevent old deployments from
+reading new v3 rows. Once any v3 row is written, rollback must retain a v3-
+capable reader. Never rewrite old history or restore live inputs as pregame.
+Review real-data size, memory and CPU, independent write/read and near-tip
+behavior, raw external readers, and lossless full/Q1/contract round trips.
+The future writer must derive capturedTips from verified durable game clocks,
+and prove that a peer cutoff moving earlier between validation and a per-game
+upsert cannot overwrite a prior valid pool with an invalid one. Reader rejection
+alone does not restore an already-overwritten good row. This cross-peer atomicity
+or durable prior-recovery proof is a blocker for v3 writes.
+
+Validation: 122/122 NBA pregame-freeze tests, 7/7 codec tests, 134/134
+production smoke checks, worktree-correct TypeScript, and scoped lint on the
+new codec, changed production file and new tests pass. The existing freeze test
+harness has 24 pre-existing lint errors at both HEAD and modified source; none
+were suppressed. On the existing highly repetitive synthetic 12-game fixture,
+v2 JSON 1,588,574 bytes became a 32,926-byte gzip/base64 envelope; gzip took
+4.0–18.0 ms and decoding plus deep-equality assertion 22.1–38.7 ms locally.
+Those synthetic ratios and timings are not production measurements. Fifteen
+separate database writes and their locks remain; this does not prove a fix for
+the Court timeout, database restarts or observed slow loads.

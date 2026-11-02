@@ -14,7 +14,7 @@ const stored = (value: unknown = { baseline: 4 }, observed = tip - 60000, source
 // exercise application behavior when the database rejects a late writer, chooses
 // another writer, fails, or returns an invalid observation.
 async function harness(expiredSignal = false) {
-  let now = tip - 1000, canonicalTip = tip, reads = 0, writes = 0
+  let now = tip - 1000, canonicalTip = tip, reads = 0, writes = 0, cutoffReads = 0
   let row: Row | null = null, readFailure = false, writeFailure = false
   let writeThrown: Error | null = null
   let failureStatus = 0, failureCode = ''
@@ -22,6 +22,7 @@ async function harness(expiredSignal = false) {
   const timeoutValues: number[] = []
   let rpc: ((args: Record<string, unknown>) => Row | null) | null = null
   let readRpc: (() => Row | null) | null = null
+  let cutoffRpc: ((args: Record<string, unknown>) => string | null) | null = null
   const calls: Record<string, unknown>[] = []
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   const db = {
@@ -40,6 +41,13 @@ async function harness(expiredSignal = false) {
       return query
     },
     rpc(name: string, args: Record<string, unknown>) {
+      if (name === 'nba_phase_cutoff') {
+        cutoffReads++; assert.equal(args.p_game_id, game.id); assert.equal(typeof args.p_tipoff, 'string')
+        return { async abortSignal(signal: AbortSignal) {
+          assert.ok(signal instanceof AbortSignal)
+          return { data: cutoffRpc ? cutoffRpc(args) : new Date(Math.min(Date.parse(String(args.p_tipoff)), canonicalTip)).toISOString(), error: readFailure ? { message: 'private DB detail' } : null }
+        } }
+      }
       if (name === 'read_nba_pregame_research') {
         reads++
         assert.equal(args.p_game_id, game.id); assert.equal(args.p_version, 1)
@@ -78,6 +86,8 @@ async function harness(expiredSignal = false) {
     setFailureMetadata(status: number, code: string) { failureStatus = status; failureCode = code }, diagnosticLogs, timeoutValues,
     setRpc(value: (args: Record<string, unknown>) => Row | null) { rpc = value },
     setReadRpc(value: () => Row | null) { readRpc = value },
+    setCutoffRpc(value: (args: Record<string, unknown>) => string | null) { cutoffRpc = value },
+    cutoffReads: () => cutoffReads,
     metrics: () => ({ reads, writes }),
   }
 }
@@ -118,6 +128,20 @@ test('an exhausted slate budget starts no write and never substitutes current da
   const h = await harness()
   await assert.rejects(h.api.saveNbaPregameResearch(game, 'slate-mm-full:v1', { value: { value: 'new' }, observedAt: new Date(tip - 2000).toISOString() }, { deadlineAt: tip - 1000 }), /deadline exhausted/)
   assert.equal(h.metrics().writes, 0)
+})
+
+test('fresh durable peer cutoff respects the earlier database boundary and rejects uncertain reads', async () => {
+  const h = await harness(); h.setCanonicalTip(tip - 60_000)
+  assert.equal(await h.api.readNbaDurableCutoff(game), tip - 60_000)
+  h.setCutoffRpc(() => new Date(tip + 60_000).toISOString())
+  assert.equal(await h.api.readNbaDurableCutoff(game), null, 'a later DB value cannot reopen the provided cutoff')
+  h.setCutoffRpc(() => 'not a date')
+  assert.equal(await h.api.readNbaDurableCutoff(game), null)
+  h.setReadFailure()
+  assert.equal(await h.api.readNbaDurableCutoff(game), null)
+  const before = h.cutoffReads()
+  assert.equal(await h.api.readNbaDurableCutoff({ ...game, id: -1 }), null)
+  assert.equal(h.cutoffReads(), before, 'invalid identities never reach the database')
 })
 
 test('closed games return the existing archive without running any current loader', async () => {

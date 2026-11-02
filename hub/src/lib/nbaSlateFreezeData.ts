@@ -4,7 +4,8 @@ import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaPeriod, nbaReference, nba
 import { nbaMarketRanks, nbaFormGap } from './nbaMarketMetrics'
 import { nbaSelectedPlayers, type NbaMarketSelection } from './nbaMarketSelection'
 import { nbaGameStart, nbaPregameOpen, type NbaOddsMode } from './nbaOddsMode'
-import { readNbaPregameResearch, saveNbaPregameResearch } from './nbaPregameResearchData'
+import { readNbaDurableCutoff, readNbaPregameResearch, saveNbaPregameResearch } from './nbaPregameResearchData'
+import { decodeArchivedNbaSlatePool, type NbaSlateGzipArchive } from './nbaSlatePoolCodec'
 import type { nbaSlateRows } from './nbaSlate'
 import { nbaValidatedEstimate, type NbaModelReport } from './nbaModel'
 import { nbaSlateHeatDomains, type NbaSlateHeatDomains } from './nbaSlateHeat'
@@ -171,6 +172,12 @@ export async function getNbaLegacySlateRows(game: PaintGame, market: PaintMarket
 /** Re-run at response time: a cached live slate cannot cross an anchor's cutoff. */
 export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[], market: PaintMarket, book: string, selection: NbaMarketSelection | undefined, mode: NbaOddsMode, complete: boolean, side:'over'|'under'='over', models: GameModels = []): Promise<NbaSlateFreeze> {
   const ranks = new Map<string, number>(), unavailable: number[] = [], observedAt: Record<number, string> = {}, heatDomains:Record<number,NbaSlateHeatDomains>={}
+  const durableCutoffs = new Map<number, Promise<number | null>>()
+  const durableCutoff = (peer: PaintGame) => {
+    let pending = durableCutoffs.get(peer.id)
+    if (!pending) { pending = readNbaDurableCutoff(peer).catch(() => null); durableCutoffs.set(peer.id, pending) }
+    return pending
+  }
   const peerBoards = mode === 'live' ? boards : currentSeasonPeers(boards)
   const sourceValid = mode === 'live' || boards.every(board => { const at = Date.parse(board.researchSnapshot?.observedAt ?? board.fetchedAt), tip = nbaGameStart(board.game)
     return Number.isFinite(at) && at <= Date.now() && tip != null && at < tip })
@@ -195,8 +202,12 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
       for (const player of board.players) { const rank = current.get(player.id); if (rank) ranks.set(`${game.id}:${player.id}`, rank.mm) }
       return
     }
-    const snapshot = await readNbaPregameResearch<NbaSlatePool>(game, resource(nbaPeriod(market)))
-    const pool = snapshot?.value
+    const snapshot = await readNbaPregameResearch<unknown>(game, resource(nbaPeriod(market)))
+    const compressed = !!snapshot?.value && typeof snapshot.value === 'object' && !Array.isArray(snapshot.value)
+      && (snapshot.value as { version?: unknown }).version === 3
+    let pool: NbaSlatePool | null
+    try { pool = decodeArchivedNbaSlatePool(snapshot?.value) as NbaSlatePool | null }
+    catch { unavailable.push(game.id); return }
     if (!snapshot || !pool || (pool.version !== 1 && pool.version !== 2) || pool.date !== game.date || pool.period !== nbaPeriod(market)
       || !Array.isArray(pool.gameIds) || !pool.gameIds.includes(game.id) || !Array.isArray(pool.players)) {
       unavailable.push(game.id); return
@@ -212,6 +223,29 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
       const at = Date.parse(quote.updated_at)
       return !Number.isFinite(at) || at > Date.parse(snapshot.observedAt)
     })))) { unavailable.push(game.id); return }
+    if (compressed) {
+      // The anchor may tip after a peer. A peer quote captured after its own
+      // tip must not be admitted merely because it predates the anchor's save.
+      const peers = pool.gameIds.map(id => games.filter(peer => peer.id === id))
+      if (peers.some(matches => matches.length !== 1)) { unavailable.push(game.id); return }
+      const fresh = await Promise.all(peers.map(([peer]) => durableCutoff(peer)))
+      if (fresh.some(cutoff => cutoff == null)) { unavailable.push(game.id); return }
+      const captured = new Map((snapshot.value as NbaSlateGzipArchive).capturedTips.map(([id, tip]) => [id, Date.parse(tip)]))
+      const tips = new Map(pool.gameIds.map((id, index) => [id, Math.min(captured.get(id)!, fresh[index]!)]))
+      const observed = Date.parse(snapshot.observedAt)
+      if (pool.gameIds.some(id => tips.get(id) == null)
+        || allPlayers.some(player => player.props.some(quote => {
+          const peerTip = tips.get(quote.game_id), at = Date.parse(quote.updated_at)
+          return peerTip == null || !Number.isFinite(at) || at >= peerTip || at > observed
+        }))
+        || !Array.isArray(pool.sources) || pool.sources.length !== pool.gameIds.length
+        || new Set(pool.sources.map(source => source?.gameId)).size !== pool.gameIds.length
+        || pool.sources.some(source => {
+          const peerTip = tips.get(source?.gameId), at = Date.parse(source?.observedAt)
+          return !pool.gameIds.includes(source?.gameId) || peerTip == null || !Number.isFinite(at)
+            || at >= peerTip || at > observed || typeof source?.seasonFiltered !== 'boolean'
+        })) { unavailable.push(game.id); return }
+    }
     const players=nbaSelectedPlayers(allPlayers, market, selection), frozen = nbaMarketRanks(players, market, book)
     heatDomains[game.id]=nbaSlateHeatDomains(players.flatMap(player=>{
       const offer=nbaReference(player.props,market,book,side)
