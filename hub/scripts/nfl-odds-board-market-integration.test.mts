@@ -35,13 +35,14 @@ test('market route supplies original proof only for the open board and the clien
   globalThis.fetch=async(input)=>{state.calls++;if(state.failRequest)throw Error('network');const response=await compiled.exports.GET(new Request(new URL(String(input),'https://www.slipsurge.com')));if(!state.missing)return response;const value=await response.json();delete value.oddsBoardToken;return Response.json(value)}
   const render=async(open:boolean)=>{await act(async()=>{root.render(createElement(compiled.exports.Harness,{open,openedAt,proof}));await new Promise(resolve=>setTimeout(resolve,1))})}
   const poll=async()=>{assert.ok(state.poll);await act(async()=>{await state.poll!(new AbortController().signal).catch(()=>{});await new Promise(resolve=>setTimeout(resolve,1))})}
+  const latest=()=>state.latest
   try{
-    await render(false);await poll();assert.equal(state.clockCalls,0);assert.equal(state.latest?.phase,null)
-    await render(true);await poll();assert.equal(state.clockCalls,1);assert.equal(state.latest?.phase?.observedAt,state.observedAt);assert.equal(state.latest?.phase?.token,state.token);assert.equal(state.latest?.safe,true)
-    state.token='b'.repeat(64);state.observedAt=new Date().toISOString();await poll();assert.equal(state.latest?.reason,'changed');assert.equal(state.latest?.safe,false)
-    state.missing=true;await poll();assert.equal(state.latest?.phase?.token,null);assert.equal(state.latest?.safe,false)
-    state.missing=false;state.failClock=true;await poll();assert.equal(state.latest?.phase?.token,null);assert.equal(state.latest?.safe,false)
-    state.failClock=false;state.failRequest=true;await poll();assert.equal(state.latest?.phase?.token,null);assert.equal(state.latest?.safe,false)
+    await render(false);await poll();assert.equal(state.clockCalls,0);assert.equal(latest()?.phase,null)
+    await render(true);await poll();assert.equal(state.clockCalls,1);assert.equal(latest()?.phase?.observedAt,state.observedAt);assert.equal(latest()?.phase?.token,state.token);assert.equal(latest()?.safe,true)
+    state.token='b'.repeat(64);state.observedAt=new Date().toISOString();await poll();assert.equal(latest()?.reason,'changed');assert.equal(latest()?.safe,false)
+    state.missing=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
+    state.missing=false;state.failClock=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
+    state.failClock=false;state.failRequest=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
     assert.equal(state.auth,state.calls-1)
   }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=oldFetch}
 })
