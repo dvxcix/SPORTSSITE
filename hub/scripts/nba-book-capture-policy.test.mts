@@ -15,7 +15,7 @@ const observed=(at:number,families=policy.nbaBookFamilies('betmgm'))=>families.m
 test('direct-book captures use canonical checkpoints and never allow a started or unknown game',()=>{
   assert.equal(policy.nbaBookCheckpoint(game,tip-25*hour),null)
   assert.equal(policy.nbaBookCheckpoint(game,tip-24*hour),tip-24*hour)
-  assert.equal(policy.nbaBookCheckpoint(game,tip-10*hour),tip-12*hour)
+  assert.equal(policy.nbaBookCheckpoint(game,tip-10*hour),tip-24*hour)
   assert.equal(policy.nbaBookCheckpoint(game,tip-3*hour),tip-4*hour)
   assert.equal(policy.nbaBookCheckpoint(game,tip-hour),tip-hour)
   for(const closed of [game,{...game,datetime:null},{...game,status_state:'in_progress' as const,period:1}])assert.deepEqual(policy.planNbaBookCapture(closed,'betmgm',undefined,undefined,tip).families,[])
@@ -24,7 +24,7 @@ test('direct-book captures use canonical checkpoints and never allow a started o
   assert.equal(plan(tip-hour,saved).families.length,12)
 })
 
-test('a 48-hour five-minute trigger simulation launches only four healthy or unavailable checkpoints',()=>{
+test('a 48-hour five-minute trigger simulation launches only three healthy or unavailable checkpoints',()=>{
   for(const outcome of ['captured','unavailable'] as const){
     let state:policy.NbaBookScheduleState|undefined,attempts=0,baseline=0
     for(let at=tip-48*hour;at<tip;at+=5*minute){
@@ -32,7 +32,7 @@ test('a 48-hour five-minute trigger simulation launches only four healthy or una
       if(!due.families.length)continue
       attempts++;state=policy.finishNbaBookCapture(due,policy.reserveNbaBookCapture(due,state,at),due.families.map(family=>({family,status:outcome,observedAt:new Date(at).toISOString()})),at)
     }
-    assert.equal(attempts,4,`${outcome}: ${attempts}/${baseline}`)
+    assert.equal(attempts,3,`${outcome}: ${attempts}/${baseline}`)
     assert.ok(attempts/baseline<0.01)
     assert.equal(plan(tip,state).families.length,0)
   }
@@ -69,6 +69,15 @@ test('each failed checkpoint gets at most one retry; later checkpoints remain av
   assert.ok(policy.nbaValidBookSchedule(second,'betmgm',game))
 })
 
+test('a persisted retired 12-hour checkpoint remains valid and does not trigger extra attempts',()=>{
+  const at=tip-12*hour, due=plan(at), reserved=policy.reserveNbaBookCapture(due,undefined,at)
+  const failed=policy.finishNbaBookCapture(due,reserved,due.families.map(family=>({family,status:'failed' as const})),at)
+  for(const row of Object.values(failed.markets)){row.checkpointAt=at;row.checkpointAttempts=2;row.retryAt=at}
+  assert.ok(policy.nbaValidBookSchedule(failed,'betmgm',game))
+  assert.equal(plan(at+hour,failed).families.length,0)
+  assert.equal(plan(tip-4*hour,failed).families.length,12)
+})
+
 test('a no-browser budget deferral does not spend a checkpoint attempt',()=>{
   const at=tip-4*hour,first=plan(at),reserved=policy.reserveNbaBookCapture(first,undefined,at)
   const deferred=policy.finishNbaBookCapture(first,reserved,first.families.map(family=>({family,status:'budget-deferred' as const})),at)
@@ -83,7 +92,7 @@ test('a direct capture crossing a checkpoint counts its actual observation, not 
   const start=tip-4*hour-minute,finish=tip-4*hour+minute
   const first=plan(start),reserved=policy.reserveNbaBookCapture(first,undefined,start)
   const before=policy.finishNbaBookCapture(first,reserved,observed(start),finish)
-  assert.equal(before.markets.first.checkpointAt,tip-12*hour)
+  assert.equal(before.markets.first.checkpointAt,tip-24*hour)
   assert.equal(plan(finish,before).families.length,12)
   assert.equal(policy.reserveNbaBookCapture(plan(finish,before),before,finish).markets.first.checkpointAttempts,1)
   const after=policy.finishNbaBookCapture(first,reserved,observed(finish),finish)

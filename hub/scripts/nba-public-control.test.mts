@@ -11,7 +11,7 @@ const game={id:123,date:'2026-11-01',datetime:new Date(tip).toISOString(),status
 const parser='nba-public-fixture'
 test('NBA checkpoints require only the latest due slot and retain original observations',()=>{
   assert.equal(control.nbaPublicCaptureDecision(game,null,undefined,tip-25*HOUR).due,false)
-  for(const hours of [24,12,4,1]){
+  for(const hours of [24,4,1]){
     const now=tip-hours*HOUR, observation=new Date(now+1000).toISOString()
     assert.equal(control.nbaPublicCaptureDecision(game,null,undefined,now).slotHours,hours)
     const state=control.nbaNextPublicControl(undefined,'captured',now+2000,tip,observation)
@@ -62,7 +62,7 @@ test('public attempts reset at each checkpoint despite cumulative failure backof
   const first=control.nbaNextPublicControl(undefined,'failed',firstAt,tip)
   const second=control.nbaNextPublicControl(first,'failed',firstAt+HOUR,tip)
   assert.equal(second.checkpointAttempts,2)
-  const nextAt=tip-12*HOUR
+  const nextAt=tip-4*HOUR
   assert.equal(control.nbaPublicCaptureDecision(game,null,second,nextAt).due,true)
   const third=control.nbaNextPublicControl(second,'failed',nextAt,tip)
   assert.equal(third.checkpointAt,nextAt)
@@ -70,7 +70,7 @@ test('public attempts reset at each checkpoint despite cumulative failure backof
   assert.equal(control.nbaPublicCaptureDecision(game,null,third,nextAt+2*HOUR).due,true)
   const fourth=control.nbaNextPublicControl(third,'failed',nextAt+2*HOUR,tip)
   assert.equal(fourth.checkpointAttempts,2)
-  assert.equal(control.nbaPublicCaptureDecision(game,null,fourth,nextAt+5*HOUR).reason,'checkpoint-attempt-limit')
+  assert.equal(control.nbaPublicCaptureDecision(game,null,fourth,tip).due,false)
 })
 test('legacy public controls without checkpoint fields remain valid and conservative',()=>{
   const at=tip-12*HOUR
@@ -83,10 +83,17 @@ test('legacy public controls without checkpoint fields remain valid and conserva
   assert.equal(next.checkpointAt,nextAt)
   assert.equal(next.checkpointAttempts,1)
 })
+test('a retired 12-hour public checkpoint remains valid without a redundant retry',()=>{
+  const at=tip-12*HOUR
+  const prior={version:1 as const,outcome:'failed' as const,attemptedAt:new Date(at).toISOString(),nextAttemptAt:new Date(at).toISOString(),failures:2,successAt:null,checkpointAt:at,checkpointAttempts:2}
+  assert.ok(control.nbaValidPublicControl(prior))
+  assert.equal(control.nbaPublicCaptureDecision(game,null,prior,at+HOUR).reason,'checkpoint-attempt-limit')
+  assert.equal(control.nbaPublicCaptureDecision(game,null,prior,tip-4*HOUR).due,true)
+})
 test('public attempts crossing a checkpoint keep their actual start slot and observation time',()=>{
   const start=tip-4*HOUR-60_000,finish=tip-4*HOUR+60_000
   const failure=control.nbaNextPublicControl(undefined,'failed',finish,tip,undefined,start)
-  assert.equal(failure.checkpointAt,tip-12*HOUR)
+  assert.equal(failure.checkpointAt,tip-24*HOUR)
   assert.equal(control.nbaPublicCaptureDecision(game,null,failure,finish+30*60_000).due,true)
   const before=control.nbaNextPublicControl(undefined,'captured',finish,tip,new Date(start).toISOString(),start)
   assert.equal(control.nbaPublicCaptureDecision(game,null,before,finish).due,true)

@@ -4,7 +4,7 @@ import type { PaintGame } from './nbaPaint'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
-export const NBA_PUBLIC_CHECKPOINT_HOURS = [24, 12, 4, 1] as const
+export const NBA_PUBLIC_CHECKPOINT_HOURS = [24, 4, 1] as const
 /** A bounded admin selection still passes every normal due/lease/budget gate. */
 export function nbaPublicCaptureSelection(value: unknown): number[] | null {
   if (!Array.isArray(value) || value.length < 1 || value.length > 12
@@ -53,7 +53,7 @@ export function nbaPublicCaptureDecision(game: Game, previousSuccess: string | n
   // Persisted repeated failures should not spend a browser on every scheduler
   // tick. A new canonical checkpoint is still eligible; partial observations
   // remain failures and never acquire a fabricated success timestamp.
-  const attempts = control?.checkpointAt === slot.at ? control.checkpointAttempts ?? 0
+  const attempts = control?.checkpointAt !== undefined && control.checkpointAt >= slot.at ? control.checkpointAttempts ?? 0
     : control?.checkpointAt !== undefined ? 0
       : control && Date.parse(control.attemptedAt) >= slot.at ? Math.min(2, control.failures || 1) : 0
   if (control && attempts >= 2 && ['running', 'partial', 'unavailable', 'failed', 'auth'].includes(control.outcome)) {
@@ -91,7 +91,7 @@ export function nbaNextPublicControl(prior: NbaPublicControl | undefined, outcom
           : Math.min(2 * HOUR, 30 * MINUTE * step)
   const checkpoint = tipoff == null ? undefined : NBA_PUBLIC_CHECKPOINT_HOURS.map(hours => tipoff - hours * HOUR).filter(at => at <= attemptStartedAt).at(-1)
   const priorAt = Date.parse(prior?.attemptedAt ?? '')
-  const previousAttempts = checkpoint === undefined ? 0 : prior?.checkpointAt === checkpoint ? prior.checkpointAttempts ?? 0
+  const previousAttempts = checkpoint === undefined ? 0 : prior?.checkpointAt !== undefined && prior.checkpointAt >= checkpoint ? prior.checkpointAttempts ?? 0
     : prior?.checkpointAt !== undefined ? 0 : Number.isFinite(priorAt) && priorAt >= checkpoint ? Math.min(2, prior?.failures || 1) : 0
   return { version: 1, outcome, attemptedAt: new Date(now).toISOString(), nextAttemptAt: new Date(now + delay).toISOString(), failures, successAt: success ?? null,
     ...(checkpoint === undefined ? {} : { checkpointAt: checkpoint, checkpointAttempts: Math.min(2, previousAttempts + 1) }) }

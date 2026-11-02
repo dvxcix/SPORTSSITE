@@ -4,8 +4,10 @@ import type { NbaFirstBook } from './nbaBookFirstData'
 import { MGM_MILESTONE_PANELS } from './scrapers/nbaBookPropQuotes'
 
 const MINUTE = 60_000, HOUR = 60 * MINUTE
-/** Day-before opening, morning update, and two pregame checks. */
-export const NBA_BOOK_CHECKPOINT_HOURS = [24, 12, 4, 1] as const
+/** Day-before opening and two pregame checks. */
+export const NBA_BOOK_CHECKPOINT_HOURS = [24, 4, 1] as const
+// Previously saved 12-hour receipts remain valid when the schedule changes.
+const NBA_BOOK_ACCEPTED_CHECKPOINT_HOURS = [24, 12, 4, 1] as const
 export const NBA_BOOK_FAMILIES = [...new Set(Object.values(MGM_MILESTONE_PANELS))]
 export type NbaBookAttemptStatus = 'attempting' | 'captured' | 'unavailable' | 'failed' | 'deferred'
 export type NbaBookFamilyState = { attemptedAt: number; successAt: number | null; retryAt: number; failures: number; status: NbaBookAttemptStatus; checkpointAt?: number; checkpointAttempts?: number }
@@ -28,7 +30,7 @@ export function nbaValidBookSchedule(value: unknown, book: NbaFirstBook, game: P
     && Number.isSafeInteger(state.retryAt) && Number(state.retryAt) >= Number(state.attemptedAt)
     && Number.isInteger(state.failures) && Number(state.failures) >= 0 && Number(state.failures) <= 8
     && (state.checkpointAt === undefined && state.checkpointAttempts === undefined
-      || Number.isSafeInteger(state.checkpointAt) && NBA_BOOK_CHECKPOINT_HOURS.some(hours => state.checkpointAt === Number(value.tipoff) - hours * HOUR)
+      || Number.isSafeInteger(state.checkpointAt) && NBA_BOOK_ACCEPTED_CHECKPOINT_HOURS.some(hours => state.checkpointAt === Number(value.tipoff) - hours * HOUR)
         && Number(state.checkpointAt) <= Number(state.attemptedAt)
         && Number.isInteger(state.checkpointAttempts) && Number(state.checkpointAttempts) >= 0 && Number(state.checkpointAttempts) <= 2))
 }
@@ -57,7 +59,7 @@ export function planNbaBookCapture(game: PaintGame, book: NbaFirstBook, state?: 
     // Failures get at most one bounded retry; an admission denial was not a
     // browser launch and is not charged against the per-checkpoint attempt cap.
     if (prior.status === 'unavailable') return false
-    const attempts = prior.checkpointAt === checkpoint ? prior.checkpointAttempts ?? 0 : 1
+    const attempts = prior.checkpointAt !== undefined && prior.checkpointAt >= checkpoint ? prior.checkpointAttempts ?? 0 : 1
     return prior.status === 'deferred' || attempts < 2
   })
   return { game, first: families.includes('first'), regularMarkets: families.filter(family => family !== 'first'), families }
@@ -68,7 +70,7 @@ export function reserveNbaBookCapture(plan: NbaBookCapturePlan, prior: NbaBookSc
   if (checkpoint === null) throw new Error('NBA book checkpoint is unavailable')
   for (const family of plan.families) {
     const before = markets[family]
-    const attempts = before?.checkpointAt === checkpoint ? before.checkpointAttempts ?? 0
+    const attempts = before?.checkpointAt !== undefined && before.checkpointAt >= checkpoint ? before.checkpointAttempts ?? 0
       : before?.checkpointAt !== undefined ? 0
         : before?.status === 'captured' && (before.successAt === null || before.successAt < checkpoint) ? 0
           : before && before.attemptedAt >= checkpoint ? 1 : 0
