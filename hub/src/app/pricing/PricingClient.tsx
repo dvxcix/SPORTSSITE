@@ -2,24 +2,16 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { Check, X, ShieldCheck } from 'lucide-react'
 import type { Tier } from '@slipsurge/core/tiers'
 import { PricingCheckoutButton } from './PricingCheckoutButton'
-import { Spotlight } from '@/components/ui/spotlight'
-import { BackgroundBeams } from '@/components/ui/background-beams'
 import { CometCard } from '@/components/ui/comet-card'
 import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import styles from './PricingClient.module.css'
-
-// Meteors' per-mount randomized delays differ between server and client
-// render — same hydration-mismatch fix as every other marketing/auth page
-// in this app (login, register, onboarding, the main LandingPage).
-const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 type Interval = 'monthly' | 'annual'
 
@@ -45,7 +37,7 @@ const TIERS: TierDef[] = [
     monthlyPlanId: 'plan_C0wvFkX0sqiPm', monthlyPrice: 9.99,
   },
   {
-    tier: 'advanced', label: 'Advanced', tagline: 'For sharps who track the market before it moves.',
+    tier: 'advanced', label: 'Advanced', tagline: 'For following the slate and public market activity.',
     monthlyPlanId: 'plan_3QSVT9Mr4cxVt', annualPlanId: 'plan_3HbuZZv6vhNu9',
     monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
   },
@@ -114,25 +106,17 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           Checkout didn&apos;t complete. Check your payment status before trying again.
         </div>
       )}
-      {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}
       <div className={styles.hero}>
-        <div className={styles.heroGlow} aria-hidden="true" />
-        <Spotlight className="left-0 top-0" fill="#B4FF4D" />
-        <BackgroundBeams className="opacity-30" />
-        <div className={styles.heroMeteors} aria-hidden="true">
-          <Meteors number={16} className="opacity-50" />
-        </div>
-
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className={styles.heroContent}
         >
           <div className={styles.eyebrow}>SlipSurge memberships</div>
           <h1 className={styles.heroTitle}>
-            Start free. Upgrade when you need <span>more signal.</span>
+            Find the membership <span>that fits your research.</span>
           </h1>
           <p className={styles.heroCopy}>
-            Free tools to get started. Upgrade for live analytics, line movement, and the deepest breakdown on the slate.
+            Start with the community, then choose a plan for scores, market movement and research.
             Monthly Advanced includes a 7-day trial. Monthly Ultimate includes a 3-day trial.
           </p>
         </motion.div>
@@ -214,7 +198,6 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   <div className={styles.cardHeader}>
                     <div className={styles.cardName}>
                       <h2>{t.label}</h2>
-                      {t.highlight === 'premium' && <Badge variant="popular">Most Popular</Badge>}
                     </div>
                     {isCurrent && !fullAccess && <Badge variant="upcoming">Current</Badge>}
                   </div>

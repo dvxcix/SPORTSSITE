@@ -25,10 +25,7 @@
   overflow-x: clip;
   padding: 12px clamp(10px, 1.2vw, 24px) 110px;
   color: var(--ink);
-  background:
-    radial-gradient(circle at 72% -20%, rgba(53, 215, 255, 0.07), transparent 33%),
-    radial-gradient(circle at 8% 12%, rgba(167, 255, 63, 0.045), transparent 25%),
-    #060a0f;
+  background: #060a0f;
   font-size: 14px;
 }
 
@@ -54,7 +51,7 @@
   border: 1px solid var(--line);
   border-radius: 13px;
   background: rgba(9, 14, 20, 0.96);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 
 .scoreLogo,
@@ -150,7 +147,7 @@
   min-height: 86px;
   padding: 14px 16px;
   border-right: 1px solid var(--line);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.015), transparent);
+  background: transparent;
 }
 
 .storyGrid > article:nth-child(4) { border-right: 0; }
@@ -164,9 +161,8 @@
   color: #7e8a9d;
   font-size: 10px;
   line-height: 1.2;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .storyGrid strong { margin: 5px 0 4px; font-size: 14px; line-height: 1.25; }
@@ -198,7 +194,7 @@
   min-height: 70px !important;
   border-top: 0;
   border-right: 0 !important;
-  background: linear-gradient(90deg, rgba(53, 215, 255, 0.055), rgba(167, 255, 63, 0.025)) !important;
+  background: #0c151c !important;
 }
 
 .marketStory div { display: flex; flex-direction: column; order:1; }
@@ -701,20 +697,20 @@
 .playerCell > button:not(.playerName):hover { color: var(--lime); border-color: rgba(167, 255, 63, 0.5); }
 .playerCell .compareActive { color: #071006 !important; border-color: var(--lime) !important; background: var(--lime) !important; }
 
-.marketValue { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 40px; align-items: center; justify-items: center; gap: 4px 6px; min-width: 0; width: 100%; }
+.marketValue { position: relative; display: grid; grid-template-columns: minmax(max-content, 1fr) 40px; align-items: center; justify-items: center; gap: 4px 6px; min-width: 0; width: 100%; }
 .marketValue b { color: #f4f7fa; font-size: 12px; line-height: 1; }
 .marketValue b i { margin-right: 4px; color: #96a4b6; font-size: 9px; font-style: normal; }
-.marketValue small { color: #8491a4; font-size: 8px; font-weight: 800; letter-spacing: 0.025em; }
+.marketValue small { color: #a8b5c4; font-size: 10px; font-weight: 600; letter-spacing: 0; }
 .marketValue b { display: flex; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; }
 .marketValue small { grid-column: 1; white-space: nowrap; }
-.marketValue em { display: inline-flex; position: static; font-size: 8px; font-style: normal; }
+.marketValue em { display: inline-flex; position: static; font-size: 11px; font-style: normal; }
 .bestMarketValue { position: relative; display: grid; grid-template-columns: 18px 1fr; gap: 3px 5px; align-items: center; justify-content: center; min-width: 74px; text-align: left; }
 .bestMarketValue b { color: #f5f8fb; font-size: 13px; }
-.bestMarketValue small { grid-column: 1 / -1; color: #9ca8b8; font-size: 8px; font-weight: 850; text-align: center; }
+.bestMarketValue small { grid-column: 1 / -1; color: #aebaca; font-size: 11px; font-weight: 600; text-align: center; }
 .bestMarketValue em { position: absolute; top: 1px; right: -2px; }
 .publicPickValue { display: inline-grid; justify-items: center; gap: 3px; min-width: 54px; }
 .publicPickValue b { color: #f4f7fa; font-size: 13px; line-height: 1; font-variant-numeric: tabular-nums; }
-.publicPickValue small { color: #a7ff3f; font-size: 8px; font-weight: 900; letter-spacing: 0.08em; }
+.publicPickValue small { color: #a7ff3f; font-size: 11px; font-weight: 600; letter-spacing: 0; }
 .baselineValue { display: inline-flex; box-sizing: border-box; width: 100%; min-width: 0; flex-direction: column; gap: 5px; padding: 8px 7px; border: 1px solid transparent; border-radius: 8px; }
 .baselineValue b { font-size: 12px; line-height: 1; }
 .baselineValue small { color: #b8c3d1; font-size: 9px; font-weight: 750; white-space: nowrap; }
@@ -1062,10 +1058,10 @@
 .compactBoard .playerName b { font-size: 11px; }
 .compactBoard .marketValue { min-width: 0; gap: 3px; }
 .compactBoard .marketValue b { font-size: 11px; }
-.compactBoard .marketValue small { font-size: 8px; }
+.compactBoard .marketValue small { font-size: 10px; }
 .compactBoard .publicPickValue small { display: none; }
 .roleMarket { display: grid; width: 100%; min-width: 0; justify-items: stretch; gap: 3px; }
-.roleMarket > small { color: #a9b9cc; font-size: 8px; font-weight: 800; }
+.roleMarket > small { color: #a9b9cc; font-size: 11px; font-weight: 600; }
 @media(min-width:1100px) {
   .compactBoard .storyGrid { grid-template-columns: 1fr .7fr 1.3fr .9fr 1.4fr; }
   .compactBoard .marketStory { grid-column: auto; grid-template-columns: minmax(0, 1fr); gap: 4px; border-top: 0; }

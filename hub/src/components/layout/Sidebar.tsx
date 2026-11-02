@@ -8,7 +8,7 @@ import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, Calendar, BookOpen, ShoppingBag,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
-  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History, LockKeyhole,
+  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History, LockKeyhole, Settings,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
@@ -286,7 +286,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         onClick={toggleCollapsed}
         className="hidden md:flex"
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         style={{
           alignItems: 'center', gap: 6,
           justifyContent: isCollapsed ? 'center' : 'flex-end',
@@ -325,8 +324,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               }}>
                 {item.logo
                   ? <SafeImage src={item.logo} alt="" title={isCollapsed && !item.nbaOnly ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
-                  : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
-                {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
+                  : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--text-3)', flexShrink: 0 }} />}
+                {!isCollapsed && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)' }}>{item.section}</span>}
               </div>
             )
           }
@@ -376,8 +375,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
-        <Link href="/settings" prefetch={false} className="ss-sidebar-settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
+        <Link href="/settings" prefetch={false} className="ss-sidebar-settings" aria-label={isCollapsed ? 'Settings & Help' : undefined} style={{
           display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
+          minHeight: 44,
           justifyContent: isCollapsed ? 'center' : 'flex-start',
           padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
           fontSize: 12, fontWeight: 500, color: 'var(--text-3)',
@@ -385,7 +385,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}>
-          <span>⚙</span>
+          <Settings size={16} aria-hidden="true" />
           {!isCollapsed && <span>Settings & Help</span>}
         </Link>
       </div>

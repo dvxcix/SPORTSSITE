@@ -61,7 +61,7 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
       </div>
     </div>
     {games.length > 0 && <div className={styles.gamesRow}>
-      <div className={styles.slateLabel}><span>{games.length} {games.length === 1 ? 'GAME' : 'GAMES'}</span><small>ALL TIMES ET</small></div>
+      <div className={styles.slateLabel}><span>{games.length} {games.length === 1 ? 'game' : 'games'}</span><small>All times ET</small></div>
       <nav className={styles.games} aria-label="NBA matchups">
         {games.map(game => {
           const selected = game.id === gameId

@@ -37,7 +37,7 @@ export function MobileResearchPicker({ path, sport, nflAccess, nbaAccess = false
   const href = (value: string) => researchNavigationHref(value, path, search, nbaAccess)
   return <dialog ref={dialog} className={styles.sheet} aria-labelledby="research-picker-title" onCancel={onClose} onClose={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className={styles.content}>
-      <header className={styles.header}><div><small>YOUR SPORTS</small><h2 id="research-picker-title">Research</h2></div><button type="button" onClick={onClose} aria-label="Close research menu"><X size={20} /></button></header>
+      <header className={styles.header}><div><small>Your sports</small><h2 id="research-picker-title">Research</h2></div><button type="button" onClick={onClose} aria-label="Close research menu"><X size={20} /></button></header>
       <div className={styles.boards} data-count={sports.length}>
         {sports.map(value => <Link key={value} prefetch={false} href={href(researchHome(value, nflAccess, nbaAccess, mlbAccess))} className={styles.board} data-current={researchSportForPath(path) === value && (value !== 'nba' || nbaAccess)} aria-label={value === 'nba' && !nbaAccess ? 'The Court · NBA research · Ultimate required' : undefined} onClick={() => { onSport(value); onClose() }}>
           <SafeImage src={`https://a.espncdn.com/i/teamlogos/leagues/500/${value}.png`} alt="" />

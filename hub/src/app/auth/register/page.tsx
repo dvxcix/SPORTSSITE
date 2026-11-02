@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'motion/react'
+import { MailCheck, UserRoundX } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import Image from 'next/image'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -13,11 +13,6 @@ import { normalizeRegistrationEmail, registrationErrorMessage } from '@/lib/auth
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const SPORTS = [...(!MLB_HIBERNATING ? ['MLB'] : []), 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
-
-const statVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: 0.4 + i * 0.1, duration: 0.35 } }),
-}
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'account' | 'profile'>('account')
@@ -145,17 +140,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthExperience panelWidth="compact" spotlight aside={
+    <AuthExperience panelWidth="compact" aside={
       <>
         <AuthBrand />
-        <h2 className={auth.asideTitle}>Get in early.<br /><span>Build your record.</span></h2>
-        <p className={auth.asideCopy}>Get in before the crowd. Share picks, build a following, and win together.</p>
+        <h2 className={auth.asideTitle}>Share picks.<br /><span>Track your record.</span></h2>
+        <p className={auth.asideCopy}>Follow sports and members, share picks, and see your record as picks are graded.</p>
         <div className={auth.stats}>
-            {[['Real', 'Graded track records'], ['Live', 'Odds & line moves'], ['$0', 'Free to join']].map(([val, lbl], i) => (
-              <motion.div key={lbl} custom={i} initial="hidden" animate="show" variants={statVariants} className={auth.stat}>
+            {[['Graded', 'Pick records'], ['Live', 'Odds & line moves'], ['$0', 'Free to join']].map(([val, lbl]) => (
+              <div key={lbl} className={auth.stat}>
                 <strong>{val}</strong>
                 <span>{lbl}</span>
-              </motion.div>
+              </div>
             ))}
         </div>
       </>
@@ -163,7 +158,7 @@ export default function RegisterPage() {
 
         {registrationOpen === false ? (
           <div className={auth.statusState}>
-            <div className={auth.statusIcon}>🚧</div>
+            <div className={auth.statusIcon}><UserRoundX size={32} aria-hidden="true" /></div>
             <h1>Registration is closed</h1>
             <p>
               New accounts aren&apos;t open right now. Check back soon, or sign in if you already have one.
@@ -172,7 +167,7 @@ export default function RegisterPage() {
           </div>
         ) : confirmationSent ? (
           <div className={auth.statusState}>
-            <div className={auth.statusIcon}>📬</div>
+            <div className={auth.statusIcon}><MailCheck size={32} aria-hidden="true" /></div>
             <h1>Check your email</h1>
             <p>
               We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
@@ -195,7 +190,7 @@ export default function RegisterPage() {
           ))}
         </div>
 
-        <AuthHeading title={step === 'account' ? 'Create account' : 'Set up your profile'} description={step === 'account' ? 'Join the sports social hub' : 'Choose how you appear across SlipSurge'} />
+        <AuthHeading title={step === 'account' ? 'Create account' : 'Set up your profile'} description={step === 'account' ? 'Share picks and follow the games' : 'Choose how you appear across SlipSurge'} />
 
         {step === 'account' && (
           <>
@@ -228,7 +223,7 @@ export default function RegisterPage() {
           ) : (
             <>
               <AuthField label="Username">
-                <input type="text" placeholder="capper_king" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} required minLength={2} maxLength={30} autoCapitalize="none" spellCheck={false} autoComplete="username" className="ss-input" />
+                <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} required minLength={2} maxLength={30} autoCapitalize="none" spellCheck={false} autoComplete="username" className="ss-input" />
               </AuthField>
               <AuthField label="Display name">
                 <input type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} autoComplete="name" className="ss-input" />

@@ -13,10 +13,7 @@
   min-height: 100vh;
   padding: 24px clamp(18px, 2.4vw, 42px) 64px;
   color: var(--text);
-  background:
-    radial-gradient(circle at 78% -10%, rgba(102, 185, 255, .09), transparent 34%),
-    radial-gradient(circle at 18% 0%, rgba(186, 255, 70, .07), transparent 30%),
-    var(--bg);
+  background: var(--bg);
   font-size: 15px;
 }
 /* Film/research lists share the page's vertical scroll on phones and tablets. */
@@ -82,7 +79,6 @@
   border-radius: 15px;
   color: #0b1008;
   background: var(--lime);
-  box-shadow: 0 0 28px rgba(186, 255, 70, .16);
   font: 900 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 

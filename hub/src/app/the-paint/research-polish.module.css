@@ -12,3 +12,9 @@
 .heat small{opacity:1;font-size:10px;color:#bdcbd2}.subtle,.signalEmpty,.signalFoot,.status{color:#a7b9c5}
 .mm{background:linear-gradient(135deg,#a9df7424,transparent),#14211c;color:#d0edb2}.mm[data-direction=negative]{background:linear-gradient(135deg,#e9809124,transparent),#251a22;color:#f1bbc3}.mm[data-direction=flat]{background:#1b2630;color:#b3c1ce}
 @media(max-width:640px){.table th button,.signalButton{min-height:44px}.signalButton{padding:10px}.signalFoot{font-size:10px}}
+
+/* Secondary research values should remain legible at phone sizes. */
+.heat small, .matchup span, .signalFoot, .estimateLabel { font-size: 11px; }
+.matchup span { color: #a7b9c5; }
+.estimateLabel { letter-spacing: 0; }
+@media(max-width:760px){.status,.signalFoot{font-size:11px}}

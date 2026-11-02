@@ -1,32 +1,22 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
-import { BackgroundBeams } from '@/components/ui/background-beams'
-import { Spotlight } from '@/components/ui/spotlight'
 import styles from './AuthExperience.module.css'
-
-const Meteors = dynamic(() => import('@/components/ui/meteors').then(module => module.Meteors), { ssr: false })
 
 export function AuthExperience({
   aside,
   children,
-  spotlight = false,
   panelWidth = 'wide',
 }: {
   aside: ReactNode
   children: ReactNode
-  spotlight?: boolean
   panelWidth?: 'wide' | 'compact'
 }) {
   return (
     <div className={styles.shell}>
       <aside className={styles.aside}>
-        <div className={styles.glow} aria-hidden="true" />
-        {spotlight ? <Spotlight className="left-0 top-0" fill="#B4FF4D" /> : <BackgroundBeams className="opacity-40" />}
-        <div className={styles.meteors} aria-hidden="true"><Meteors number={14} className="opacity-60" /></div>
         <div className={styles.asideContent}>{aside}</div>
       </aside>
       <section className={`${styles.panel} ${panelWidth === 'compact' ? styles.panelCompact : ''}`}>

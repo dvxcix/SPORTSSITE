@@ -4,15 +4,9 @@ import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'motion/react'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import Image from 'next/image'
 import { AuthAlert, AuthBrand, AuthDivider, AuthExperience, AuthField, AuthHeading, AuthSubmit, ProviderButton, authExperienceStyles as auth } from '@/components/auth/AuthExperience'
-
-const featureVariants = {
-  hidden: { opacity: 0, x: -8 },
-  show: (i: number) => ({ opacity: 1, x: 0, transition: { delay: 0.5 + i * 0.09, duration: 0.35 } }),
-}
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   whop_no_access: "That Whop account doesn't have an active subscription for SlipSurge access. Check your subscription on Whop and try again.",
@@ -110,8 +104,8 @@ function LoginForm() {
         </h2>
         <p className={auth.asideCopy}>Drop picks, follow cappers, watch live scores, join channels — all in one place.</p>
         <div className={auth.asideList}>
-          {['Follow top cappers and track public records', 'Share picks with odds and automatic grading', 'Live scores, channels, and community feeds', 'Subscribe to premium creators'].map((feature, index) => (
-            <motion.div key={feature} custom={index} initial="hidden" animate="show" variants={featureVariants}>{feature}</motion.div>
+          {['Follow members and track public records', 'Share picks with odds and automatic grading', 'Live scores, channels, and community feeds', 'Subscribe to premium creators'].map(feature => (
+            <div key={feature}>{feature}</div>
           ))}
         </div>
       </>

@@ -3,19 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import dynamic from 'next/dynamic'
 import styles from './LandingPage.module.css'
 import { motion, AnimatePresence } from 'motion/react'
 import { Activity, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
-import { BackgroundBeams } from '@/components/ui/background-beams'
-import { Spotlight } from '@/components/ui/spotlight'
 import { Badge } from '@/components/ui/badge'
 import { BookLogo } from '@/components/BookLogo'
-
-// Client-only — Meteors' randomized delays differ between server and client
-// render, which React flags as a hydration mismatch otherwise. Same fix
-// already used on the login/register/onboarding pages.
-const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 // Deliberately generic/benefit-level descriptions only — no mention of any
 // internal signal, formula, or threshold (PWR, shade%, Pikkit, etc.).
@@ -31,9 +23,9 @@ const FEATURES: { icon: React.ReactNode; title: string; description: string; lin
 ]
 
 const STEPS = [
-  { n: '1', title: 'Create your account', body: 'Free to join, takes under a minute.' },
+  { n: '1', title: 'Create your account', body: 'Join for free.' },
   { n: '2', title: 'Follow & personalize', body: 'Pick your teams, follow a few cappers, and your feed builds itself.' },
-  { n: '3', title: 'Post, track, win', body: 'Share picks, watch your record build, climb the leaderboard.' },
+  { n: '3', title: 'Post and track picks', body: 'Share picks and follow your record on the leaderboard.' },
 ]
 
 type TierKey = 'basic' | 'advanced' | 'ultimate'
@@ -128,13 +120,6 @@ export function LandingPage() {
       {/* Hero */}
       <div>
       <div className={styles.hero}>
-        <div className={styles.heroGlow} />
-        <Spotlight className="left-0 top-0" fill="#B4FF4D" />
-        <BackgroundBeams className="opacity-30" />
-        <div className={styles.heroMeteors}>
-          <Meteors number={16} className="opacity-50" />
-        </div>
-
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className={styles.heroContent}
@@ -180,7 +165,7 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           className={styles.sectionTitle}
         >
-          Research tools built for bettors, not analysts
+          Research NFL and NBA games
         </motion.h2>
         <p className={styles.sectionCopy}>NFL in The Sideline. NBA in The Court. Research workspaces together in Ultimate.</p>
 
@@ -212,9 +197,9 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           className={styles.sectionTitle}
         >
-          Plus everything a social platform needs
+          Share picks and follow the action
         </motion.h2>
-        <p className={styles.sectionCopy}>No more juggling five different apps to follow the action.</p>
+        <p className={styles.sectionCopy}>Follow other members, share picks and check scores in one place.</p>
         <div className={styles.socialGrid}>
           {FEATURES.map((f, i) => (
             <motion.div
@@ -270,7 +255,6 @@ export function LandingPage() {
         <div className={styles.pricingGrid}>
           {PRICING_TEASER.map(p => (
             <div key={p.tier} className={`${styles.priceCard} ${p.popular ? styles.priceCardPopular : ''} ss-card`}>
-              {p.popular && <div className={styles.popularBadge}><Badge variant="popular">Most Popular</Badge></div>}
               <h3>{p.label}</h3>
               <div className={styles.priceValue}>
                 <span>{p.price}</span>
@@ -308,8 +292,8 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           className={styles.finalCta}
         >
-          <h2>Ready to get in the game?</h2>
-          <p>Free to join. Upgrade whenever you want the deeper tools.</p>
+          <h2>Follow the games with SlipSurge</h2>
+          <p>Create a free account and choose research tools when you need them.</p>
           <Link href="/auth/register" className={styles.primaryAction}>Create free account</Link>
         </motion.div>
       </section>

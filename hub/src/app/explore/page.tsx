@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import Link from 'next/link'
 import {
-  Activity, ArrowRight, BarChart3, Compass, Flame, Gauge, Hash,
+  Activity, ArrowRight, Compass, Flame, Gauge, Hash,
   Radar, Search, Sparkles, Star, TrendingUp, Users, Zap,
 } from 'lucide-react'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
@@ -207,7 +207,7 @@ export default async function ExplorePage() {
 
             {topPosts.length > 0 && (
               <section className="ss-explore-section">
-                <SectionHeader icon={<Sparkles size={16} />} eyebrow="TRENDING" title="Worth opening" href="/feed?filter=top" linkLabel="See the feed" />
+                <SectionHeader icon={<Sparkles size={16} />} eyebrow="TRENDING" title="Trending posts" href="/feed?filter=top" linkLabel="See the feed" />
                 <div className="ss-explore-posts">{topPosts.map((post: any, index: number) => <PostCardClient key={post.id} post={post} index={index} />)}</div>
               </section>
             )}
