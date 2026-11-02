@@ -82,10 +82,11 @@ const session = (overrides = {}) => ({ id: 'older-session', contextId: 'producti
 test('all paid browser sessions disable automatic SDK retries', async () => {
   for (const metadata of [{ sport: 'nfl' }, { sport: 'nba' }, {}]) {
     await fixture({}, async (api, calls) => {
-      const browser = await api.openSession({ metadata })
+      const browser = await api.openSession({ metadata, solveCaptchas: true })
       await browser.close()
       assert.ok(calls.sdkOptions.length > 0)
       assert.ok(calls.sdkOptions.every(options => options.maxRetries === 0))
+      assert.equal(calls.create[0].browserSettings.solveCaptchas, false)
     })
   }
 })

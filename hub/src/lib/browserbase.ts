@@ -206,7 +206,8 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     proxies,
     browserSettings: {
       blockAds: true,
-      ...(nba ? { solveCaptchas: false } : opts.solveCaptchas == null ? {} : { solveCaptchas: opts.solveCaptchas }),
+      // Automated sessions must never invoke the provider's CAPTCHA solver.
+      solveCaptchas: false,
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
