@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaNextPublicControl,nbaPublicCaptureSelection,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -78,8 +78,7 @@ async function run(request:Request){
   const contextCooldown=()=>{const control=controls.get(contextKey);return control&&Date.parse(control.nextAttemptAt)>Date.now()?control:null}
   const cooldownResponse=()=>{const control=contextCooldown();return NextResponse.json({stage:'deferred',reason:control?.outcome==='auth'?'NBA public authentication cooldown':'NBA public browser cooldown',retryAt:control?.nextAttemptAt,browserSessions:0,results:[]},{status:425})}
   if(contextCooldown())return cooldownResponse()
-  const eligible=()=>upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due)
-    .sort((a,b)=>Date.parse(controls.get(gameKey(a))?.attemptedAt??attempted(a.id))-Date.parse(controls.get(gameKey(b))?.attemptedAt??attempted(b.id))||nbaGameStart(a)!-nbaGameStart(b)!)
+  const eligible=()=>nbaPublicPrioritize(upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due),controls,NBA_PUBLIC_VERSION,attempted)
   let due=eligible()
   if(!due.length)return NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current',decisions:upcoming.map(game=>({gameId:game.id,...nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now())}))})
   const lease=await acquirePikkitBrowserLease()
@@ -117,10 +116,11 @@ async function run(request:Request){
         if(!nbaPregameOpen(game,Date.now()))continue
         const controlKey=gameKey(game),prior=controls.get(controlKey)
         let outcome:NbaPublicOutcome='failed',successAt:string|undefined
-        await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,'running',Date.now(),nbaGameStart(game)!))
+        const gameStarted=Date.now()
+        await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,'running',gameStarted,nbaGameStart(game)!))
         const awaySourceName=nbaPublicTeamLabel(game.visitor_team),homeSourceName=nbaPublicTeamLabel(game.home_team)
         let captureExpired=false,emptyShellReloaded=false
-        const gameStarted=Date.now(),gameBudget=Math.min(110000,remaining()-25000)
+        const gameBudget=Math.min(110000,remaining()-25000)
         const identities:NbaPublicEventIdentity[]=[],eventIdentities:NbaPublicEventIdentity[]=[],pending=new Set<Promise<void>>()
         const requests=new Set<BrowserRequest>(),eventRequests=new Set<BrowserRequest>()
         let observing=true,eventNavigation=0,eventResponseReceived=()=>{}
@@ -266,7 +266,7 @@ async function run(request:Request){
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
           observing=false;calendar.dispose();browser.page.off('request',observeRequest);browser.page.off('response',observe)
-          await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,outcome,Date.now(),nbaGameStart(game)!,successAt)).catch(()=>{progressFailed=true;cleanupIssues.push('NBA public attempt progress could not save')})
+          await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,outcome,Date.now(),nbaGameStart(game)!,successAt,gameStarted)).catch(()=>{progressFailed=true;cleanupIssues.push('NBA public attempt progress could not save')})
         }
       }
     }finally{await bounded(browser.close(),15000,'NBA browser close deadline').then(()=>{browserReleased=true}).catch(()=>cleanupIssues.push('Browser release could not be confirmed; automatic 300-second browser expiry remains enabled'))}

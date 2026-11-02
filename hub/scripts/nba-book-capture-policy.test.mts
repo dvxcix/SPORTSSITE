@@ -12,18 +12,19 @@ const game:PaintGame={id:217,date:'2026-10-27',datetime:new Date(tip).toISOStrin
 const plan=(now:number,state?:policy.NbaBookScheduleState,circuit?:policy.NbaBookCircuit)=>policy.planNbaBookCapture(game,'betmgm',state,circuit,now)
 const observed=(at:number,families=policy.nbaBookFamilies('betmgm'))=>families.map(family=>({family,status:'captured' as const,observedAt:new Date(at).toISOString()}))
 
-test('cadence tightens by canonical time to tip without allowing a started or unknown game',()=>{
-  assert.equal(policy.nbaBookCadence(game,tip-25*hour),3*hour)
-  assert.equal(policy.nbaBookCadence(game,tip-10*hour),4*hour)
-  assert.equal(policy.nbaBookCadence(game,tip-3*hour),2*hour)
-  assert.equal(policy.nbaBookCadence(game,tip-hour),30*minute)
+test('direct-book captures use canonical checkpoints and never allow a started or unknown game',()=>{
+  assert.equal(policy.nbaBookCheckpoint(game,tip-25*hour),null)
+  assert.equal(policy.nbaBookCheckpoint(game,tip-24*hour),tip-24*hour)
+  assert.equal(policy.nbaBookCheckpoint(game,tip-10*hour),tip-12*hour)
+  assert.equal(policy.nbaBookCheckpoint(game,tip-3*hour),tip-4*hour)
+  assert.equal(policy.nbaBookCheckpoint(game,tip-hour),tip-hour)
   for(const closed of [game,{...game,datetime:null},{...game,status_state:'in_progress' as const,period:1}])assert.deepEqual(policy.planNbaBookCapture(closed,'betmgm',undefined,undefined,tip).families,[])
   const first=plan(tip-3*hour),saved=policy.finishNbaBookCapture(first,policy.reserveNbaBookCapture(first,undefined,tip-3*hour),observed(tip-3*hour),tip-3*hour)
   assert.equal(plan(tip-91*minute,saved).families.length,0)
-  assert.equal(plan(tip-90*minute,saved).families.length,12)
+  assert.equal(plan(tip-hour,saved).families.length,12)
 })
 
-test('a 48-hour five-minute trigger simulation reduces healthy and unavailable work by over90 percent',()=>{
+test('a 48-hour five-minute trigger simulation launches only four healthy or unavailable checkpoints',()=>{
   for(const outcome of ['captured','unavailable'] as const){
     let state:policy.NbaBookScheduleState|undefined,attempts=0,baseline=0
     for(let at=tip-48*hour;at<tip;at+=5*minute){
@@ -31,8 +32,8 @@ test('a 48-hour five-minute trigger simulation reduces healthy and unavailable w
       if(!due.families.length)continue
       attempts++;state=policy.finishNbaBookCapture(due,policy.reserveNbaBookCapture(due,state,at),due.families.map(family=>({family,status:outcome,observedAt:new Date(at).toISOString()})),at)
     }
-    assert.ok(attempts<=22,`${outcome}: ${attempts}/${baseline}`)
-    assert.ok(attempts/baseline<0.1)
+    assert.equal(attempts,4,`${outcome}: ${attempts}/${baseline}`)
+    assert.ok(attempts/baseline<0.01)
     assert.equal(plan(tip,state).families.length,0)
   }
 })
@@ -52,8 +53,51 @@ test('families schedule independently; failed attempts never restamp a prior gen
   assert.equal(failed.markets.assists.successAt,retryAt)
   failed.markets.points.retryAt=retryAt+hour
   assert.equal(plan(retryAt+30*minute,failed).regularMarkets.includes('points'),false)
-  assert.equal(plan(retryAt+30*minute,failed).regularMarkets.includes('assists'),true)
+  assert.equal(plan(retryAt+30*minute,failed).regularMarkets.includes('assists'),false)
   assert.ok(policy.nbaValidBookSchedule(failed,'betmgm',game))
+})
+
+test('each failed checkpoint gets at most one retry; later checkpoints remain available',()=>{
+  const at=tip-12*hour, first=plan(at), reserved=policy.reserveNbaBookCapture(first,undefined,at)
+  const failed=policy.finishNbaBookCapture(first,reserved,first.families.map(family=>({family,status:'failed' as const})),at)
+  assert.equal(plan(at+29*minute,failed).families.length,0)
+  const retry=plan(at+30*minute,failed)
+  assert.equal(retry.families.length,12)
+  const second=policy.finishNbaBookCapture(retry,policy.reserveNbaBookCapture(retry,failed,at+30*minute),retry.families.map(family=>({family,status:'failed' as const})),at+30*minute)
+  assert.equal(plan(at+2*hour,second).families.length,0)
+  assert.equal(plan(tip-4*hour,second).families.length,12)
+  assert.ok(policy.nbaValidBookSchedule(second,'betmgm',game))
+})
+
+test('a no-browser budget deferral does not spend a checkpoint attempt',()=>{
+  const at=tip-4*hour,first=plan(at),reserved=policy.reserveNbaBookCapture(first,undefined,at)
+  const deferred=policy.finishNbaBookCapture(first,reserved,first.families.map(family=>({family,status:'budget-deferred' as const})),at)
+  assert.equal(deferred.markets.first.checkpointAttempts,0)
+  assert.equal(plan(at+29*minute,deferred).families.length,0)
+  const retry=plan(at+30*minute,deferred)
+  assert.equal(retry.families.length,12)
+  assert.equal(policy.reserveNbaBookCapture(retry,deferred,at+30*minute).markets.first.checkpointAttempts,1)
+})
+
+test('a direct capture crossing a checkpoint counts its actual observation, not finish time',()=>{
+  const start=tip-4*hour-minute,finish=tip-4*hour+minute
+  const first=plan(start),reserved=policy.reserveNbaBookCapture(first,undefined,start)
+  const before=policy.finishNbaBookCapture(first,reserved,observed(start),finish)
+  assert.equal(before.markets.first.checkpointAt,tip-12*hour)
+  assert.equal(plan(finish,before).families.length,12)
+  assert.equal(policy.reserveNbaBookCapture(plan(finish,before),before,finish).markets.first.checkpointAttempts,1)
+  const after=policy.finishNbaBookCapture(first,reserved,observed(finish),finish)
+  assert.equal(plan(finish,after).families.length,0)
+  const legacy=structuredClone(before)
+  for(const value of Object.values(legacy.markets)){delete value.checkpointAt;delete value.checkpointAttempts}
+  assert.ok(policy.nbaValidBookSchedule(legacy,'betmgm',game))
+  assert.equal(plan(finish,legacy).families.length,12,'legacy finish time cannot replace the real read time')
+  const legacyRetry=policy.reserveNbaBookCapture(plan(finish,legacy),legacy,finish)
+  assert.equal(legacyRetry.markets.first.checkpointAttempts,1)
+  const legacyFailure=policy.finishNbaBookCapture(plan(finish,legacy),legacyRetry,first.families.map(family=>({family,status:'failed' as const})),finish)
+  assert.equal(plan(finish+30*minute,legacyFailure).families.length,12)
+  const absent=policy.finishNbaBookCapture(first,reserved,first.families.map(family=>({family,status:'unavailable' as const})),finish)
+  assert.equal(plan(finish,absent).families.length,12)
 })
 
 test('challenge cooldown survives time-band changes and exponential failures cap at6h',()=>{

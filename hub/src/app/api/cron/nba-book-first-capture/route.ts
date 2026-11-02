@@ -10,7 +10,7 @@ import { collectNbaFirstBooks, type NbaFirstBookCapture } from '@/lib/scrapers/n
 import { nbaFirstBookIdentityDiagnostic, nbaBookRevalidationDiagnostic, type NbaFirstBookGame, type NbaFirstBookIdentity, type NbaFirstBookInput } from '@/lib/scrapers/nbaFirstBookQuotes'
 import { MGM_MILESTONE_PANELS } from '@/lib/scrapers/nbaBookPropQuotes'
 import { getNbaBookPropEntries, nbaReconcileBookPropFrames, nbaValidBookPropFrame, saveNbaBookPropFrames, type NbaBookPropObservation, type NbaBookPropCoverage } from '@/lib/nbaBookPropsData'
-import { finishNbaBookCapture, nbaBookFailureBackoff, planNbaBookCapture, reserveNbaBookCapture, type NbaBookOutcome } from '@/lib/nbaBookCapturePolicy'
+import { finishNbaBookCapture, nbaBookCheckpoint, nbaBookFailureBackoff, planNbaBookCapture, reserveNbaBookCapture, type NbaBookOutcome } from '@/lib/nbaBookCapturePolicy'
 import { readNbaBookCaptureSchedule, writeNbaBookCaptureSchedule } from '@/lib/nbaBookCaptureSchedule'
 
 export const maxDuration = 300
@@ -35,7 +35,7 @@ async function run(request: Request) {
   try {
     const schedules = await beforeDeadline(Promise.all(dates.map(date => getPaintSchedule(date))),prepareDeadline)
     if (schedules.some(slate => !slate.complete)) throw new Error('Slate unavailable')
-    const games = [...new Map(schedules.flatMap(slate => slate.games).filter(game => dates.includes(game.date) && nbaPregameOpen(game)).map(game => [game.id, game])).values()]
+    const games = [...new Map(schedules.flatMap(slate => slate.games).filter(game => dates.includes(game.date) && nbaBookCheckpoint(game, started) !== null).map(game => [game.id, game])).values()]
     if (games.length > 30) throw new Error('Slate unavailable')
     const inputs: { game: PaintGame; roster: PaintRoster[] }[] = []
     let failed = 0

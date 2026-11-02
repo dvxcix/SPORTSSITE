@@ -80,6 +80,17 @@ test('cron authentication denies before schedules, leases, browser work or write
   assert.equal(result.response.status,401);assert.deepEqual(h.counts(),{scheduleReads:0,gameReads:0,rosterReads:0,collects:0,maxWrites:0});assert.equal(h.leaseCalls.length,0);assert.equal(h.saves.length,0)
 })
 
+test('games before the day-before checkpoint cause no roster reads or browser sessions',async()=>{
+  const future={...game,datetime:new Date(now+25*60*60_000).toISOString()}
+  const h=await fixture({games:[future]}),result=await h.run()
+  assert.equal(result.response.status,200)
+  assert.equal(result.body.checked,0)
+  assert.equal(h.counts().gameReads,0)
+  assert.equal(h.counts().rosterReads,0)
+  assert.equal(h.counts().collects,0)
+  assert.equal(h.leaseCalls.length,0)
+})
+
 test('durable control read or reservation failure opens no browser and never saves quote rows',async()=>{
   for(const options of [{scheduleReadError:true},{scheduleWriteError:true}]){
     const h=await fixture(options),result=await h.run()
@@ -388,7 +399,9 @@ test('an over-capacity fallback reports any unvisited game deadline instead of t
 })
 
 test('four concurrent MGM partitions share one lease and cover all15 today/tomorrow games exactly once',async()=>{
-  const slate=Array.from({length:15},(_,i)=>({...game,id:123+i,date:i<8?'2026-10-24':'2026-10-25',datetime:i<8?'2026-10-24T23:00:00Z':'2026-10-25T23:00:00Z'})).reverse()
+  // Both dates are inside the new day-before window; games further away are
+  // separately verified to skip browser preparation.
+  const slate=Array.from({length:15},(_,i)=>({...game,id:123+i,date:i<8?'2026-10-24':'2026-10-25',datetime:i<8?'2026-10-24T23:00:00Z':'2026-10-25T11:00:00Z'})).reverse()
   let entered=0,release:()=>void=()=>{}
   const gate=new Promise<void>(resolve=>{release=resolve})
   const h=await fixture({games:slate,stream:async(book)=>{

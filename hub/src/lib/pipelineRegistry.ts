@@ -15,9 +15,9 @@ const daily = 1_560
 export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'bdl-odds', label: 'Live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
   { name: 'nfl-bdl-odds', label: 'NFL live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
-  { name: 'poll-pikkit-nba-picks', label: 'NBA public pick capture', schedule: 'Every 10 minutes; refresh due after 30 minutes inside 48h of tipoff', staleAfterMinutes: 45, area: 'Picks' },
+  { name: 'poll-pikkit-nba-picks', label: 'NBA public pick capture', schedule: 'Checks every 30 minutes; captures at 24h, 12h, 4h and 1h before tip when due', staleAfterMinutes: 75, area: 'Picks' },
   { name: 'nba-market-capture', label: 'NBA market history', schedule: 'Every 5 minutes', staleAfterMinutes: 20, area: 'Odds' },
-  { name: 'nba-book-first-capture', label: 'NBA First Basket book capture', schedule: 'Every 5 minutes', staleAfterMinutes: 20, area: 'Odds' },
+  { name: 'nba-book-first-capture', label: 'NBA First Basket book capture', schedule: 'Checks every 30 minutes; captures at 24h, 12h, 4h and 1h before tip when due', staleAfterMinutes: 75, area: 'Odds' },
   { name: 'dispatch-scrapes', label: 'Lineup scrape dispatcher', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Odds' },
   { name: 'scrape-fanduel', label: 'FanDuel gap markets', schedule: 'Scheduled and lineup-triggered', staleAfterMinutes: 600, area: 'Odds' },
   { name: 'poll-pikkit-picks', label: 'MLB pick import', schedule: 'T-10h, T-4h, then confirmed-lineup final capture', staleAfterMinutes: 12 * 60, area: 'Picks' },
