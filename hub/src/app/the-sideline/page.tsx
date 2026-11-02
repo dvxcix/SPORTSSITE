@@ -18,6 +18,7 @@ import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { NflPregameBoundary } from './NflPregameBoundary'
 import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
+import { NflLastSeen } from './NflLastSeen'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,7 +79,7 @@ export default async function SidelinePage({ searchParams }: {
   if (mode === 'cheatsheets') {
     let lens = await getCachedSidelineCheatsheetLens(selected, sample)
     if (beganOpen && !nflPregameOpen(selected)) [market, lens] = await Promise.all([getSidelineOddsBundle(selected), getCachedSidelineCheatsheetLens(selected, sample)])
-    return <>{navigation}<PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed?.filter(event => event.gameId === selected.id) ?? null}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
+    return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed?.filter(event => event.gameId === selected.id) ?? null}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
   }
   if (mode === 'public' || mode === 'markets') {
     const results = mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null
@@ -101,6 +102,6 @@ export default async function SidelinePage({ searchParams }: {
   if (beganOpen && !nflPregameOpen(selected)) [market, lens, weatherSummary] = await Promise.all([
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
-  if (mode === 'research') return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
+  if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
   return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
 }

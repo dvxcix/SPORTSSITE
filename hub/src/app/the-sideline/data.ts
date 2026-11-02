@@ -8,6 +8,8 @@ import { EMPTY_SIDELINE_ODDS, type SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import { sidelinePublicBoard } from '@/lib/sidelinePublicBoard'
 import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
+import { BROWSERBASE_SPENDING_PAUSED, NFL_PAUSED_PROJECTION_WRITES_ENABLED, NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } from '@/lib/browserbaseSpendingPause'
+import { createNflPausedProjection, packNflPausedProjection, separateNflOpenings, visibleNflObservedOdds, type NflObservedOdds } from '@/lib/nflPausedProjection'
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
 import { defaultNflSample, type NflSample } from '@/lib/nflSample'
@@ -226,6 +228,7 @@ function storedGameState(game: SidelineGame): SidelineGameState | null {
 }
 
 const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
+  if (NFL_PAUSED_PROJECTION_WRITES_ENABLED !== NFL_PAUSED_PROJECTION_ENFORCE_ENABLED) throw new Error('NFL projection rollout configuration mismatch')
   const historical = isPastSlate(game.gameday)
   const [current, baselines, picks, supplement] = await Promise.all([
     (historical ? loadCurrentBoardHistorical : loadCurrentBoardRecent)(game.id),
@@ -233,20 +236,33 @@ const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
     (historical ? loadPikkitCurrentHistorical : loadPikkitCurrentRecent)(game.id),
     loadNflFanduel(game.id),
   ])
-  const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(current, supplement), baselines)])
+  // Save the complete original observation. When the direct browser source is
+  // paused, capture a compact projection of the current feed alongside it.
+  // Both boards share the same batched identity lookup and designation read.
+  const paused = BROWSERBASE_SPENDING_PAUSED
+  const merged = attachNflFanduel(current, supplement)
+  const selected = NFL_PAUSED_PROJECTION_WRITES_ENABLED ? separateNflOpenings(paused && supplement ? attachNflFanduel(current, null) : merged) : null
+  const inputs = [attachNflTdBaselines(merged, baselines)]
+  if (selected && (paused && supplement || selected.openingOnly)) inputs.push(attachNflTdBaselines(selected, baselines))
+  const [identified, identifiedCurrent] = await enrichSidelineOddsBoards(game, inputs)
   const liveBoard = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
   const designations = liveBoard.bdlGameId ? await loadDesignations(game.season, game.week, game.gameType, liveBoard.bdlGameId, liveBoard.players.flatMap(player => player.teamId ? [player.teamId] : [])) : []
-  const value = sidelinePublicBoard(attachDesignations(liveBoard, designations))
+  const original = sidelinePublicBoard(attachDesignations(liveBoard, designations))
+  const currentBoard = identifiedCurrent ? sidelinePublicBoard(attachDesignations(nflMatchupBoard(attachNflPikkitSnapshot(identifiedCurrent, picks), game.away.abbr, game.home.abbr), designations)) : original
+  // An empty marker when unpaused also records that decision at capture time.
+  const value: NflObservedOdds = NFL_PAUSED_PROJECTION_WRITES_ENABLED
+    ? { ...original, pausedProjection: packNflPausedProjection(createNflPausedProjection(original, currentBoard, game.id)) }
+    : original
   if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
   return { value, observedAt: new Date().toISOString() }
-}, ['sideline-enriched-pregame-v2-shared-baselines'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, [`sideline-enriched-pregame-v3-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 // The boundary check must run outside Next's cache: a cached pregame response
 // cannot substitute for another process's final snapshot after kickoff.
 export async function getSidelineOddsBundle(game: SidelineGame) {
   const beganOpen = nflPregameOpen(game)
-  let odds: SidelineOddsBoard
-  try { odds = (await nflPregameResearch(game, 'odds:v1', () => loadEnrichedPregameOdds(game))).value }
+  let odds: NflObservedOdds, cutoff = nflKickoffAt(game)?.getTime() ?? NaN
+  try { const result = await nflPregameResearch(game, 'odds:v1', () => loadEnrichedPregameOdds(game)); odds = result.value; cutoff = Date.parse(result.cutoffAt) }
   catch (error) {
     if (!(error instanceof NflPregameResearchUnavailable)) throw error
     const cutoff = sidelinePregameCutoff(game)
@@ -259,8 +275,14 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
     const final = await readNflPregameResearch<SidelineOddsBoard>(game, 'odds:v1')
     const original = final ? null : await getSidelineCapture(game, sidelinePregameCutoff(game)!)
     odds = final?.value ?? original?.board ?? { ...EMPTY_SIDELINE_ODDS, status: 'unavailable' }
+    if (final) cutoff = Date.parse(final.cutoffAt)
   }
-  return { odds, gameState }
+  // A legacy snapshot's interpretation must not change at kickoff or when
+  // browser access is later resumed. Unknown cutoffs fail closed.
+  // Reader-first deployment understands already marked archives, but keeps
+  // unmarked behavior unchanged until old workers have drained.
+  if (!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection) return { odds, gameState }
+  return { odds: visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff)), gameState }
 }
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
@@ -287,7 +309,8 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
   // team. Ordinary historical roster/season metadata remains as captured.
   const identified = { ...original, players: original.players.map((player, index) => corrected.players[index]?.team !== player.team ? corrected.players[index] : player) }
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
-  return { capturedAt, board: sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr)) }
+  const historical = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
+  return { capturedAt, board: NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { ...historical, legacyUnverified: true } : historical }
 }, ['sideline-selected-capture-v7-original-research'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 const loadPregameBoardLens = unstable_cache(

@@ -7,6 +7,7 @@ import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 export const revalidate = 0
 
 function currentOffers(offer: NflMarketOffer) {
+  if (offer.isOpeningOnly) return []
   if (offer.type === 'milestone') {
     return offer.current.odds == null ? [] : [{ side: 'milestone', odds: offer.current.odds }]
   }

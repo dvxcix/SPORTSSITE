@@ -210,6 +210,7 @@ export function NflSlateEdgeOverlay({ open, date, sample, onClose }: { open: boo
       </section>
       <div className={styles.content}>
         {!!payload?.unavailableGames?.length && <p role="status">Pregame slate snapshot unavailable for {payload.unavailableGames.length} {payload.unavailableGames.length === 1 ? 'game' : 'games'}. Available original market data is preserved.</p>}
+        {!!payload?.legacyUnverifiedGames?.length && <p role="status">Historical prices and scores · unverified</p>}
         {!payload && !error ? <div className={styles.empty}>Building the NFL slate…</div> : error ? <div className={styles.empty}>{error}</div> : <>
           <section className={styles.summary}>
             <div className={`${styles.summaryCard} ${styles.summaryLeader}`}><small>{view === 'signals' ? 'Signal leader' : 'Board leader'}</small><span className={styles.summaryLeaderRow}>{leader ? <Avatar entry={leader} size={31} /> : null}<strong>{leader?.name ?? '—'}</strong>{leader ? <Score value={leader.score[focus]} compact /> : null}</span><em>#1 by {activeSort.label}</em></div>

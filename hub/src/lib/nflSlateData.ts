@@ -6,6 +6,8 @@ import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { nflAvailability } from '@/lib/nflAvailability'
+import { nflUnverifiedScoreInputs } from '@/lib/nflScoreIntegrity'
+import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED } from '@/lib/browserbaseSpendingPause'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { defaultNflSample, nflSampleReference, type NflSample } from '@/lib/nflSample'
@@ -20,7 +22,7 @@ import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getSidelin
 import type { NflMarketOffer, NflOddsPlayer } from '@/lib/nflOddsTypes'
 
 const normalizedTeam = (value: string) => value.trim().toUpperCase()
-const currentOdds = (offer: NflMarketOffer | null) => offer
+const currentOdds = (offer: NflMarketOffer | null) => offer && (!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED || !offer.isOpeningOnly)
   ? offer.type === 'milestone' ? offer.current.odds ?? null : offer.current.over ?? null
   : null
 const openingOdds = (offer: NflMarketOffer | null) => offer?.opening
@@ -30,7 +32,7 @@ const openingOdds = (offer: NflMarketOffer | null) => offer?.opening
 function primaryOffer(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey) {
   const market = nflPrimaryMarket(player, propType, 'fanduel') ?? nflPrimaryMarket(player, propType)
   if (!market) return { market: null, offer: null }
-  const offer = market.offers.find(item => normalizeNflPlayerName(item.vendor) === 'fanduel')
+  const offer = market.offers.find(item => (!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED || !item.isOpeningOnly) && normalizeNflPlayerName(item.vendor) === 'fanduel')
     ?? market.offers.find(item => currentOdds(item) != null)
     ?? null
   return { market, offer }
@@ -46,7 +48,7 @@ function marketSnapshot(player: NflOddsPlayer, propType: NflSlateEdgeMarketKey, 
   })
   const counts = (player.publicPicks ?? []).filter(item => item.propType === propType).map(item => item.picks)
   return {
-    selection: market && offer && currentOdds(offer) != null ? nflWatchlistSelection(player, market, offer, 'over', game) : null,
+    selection: market && offer && !offer.isOpeningOnly && currentOdds(offer) != null ? nflWatchlistSelection(player, market, offer, 'over', game) : null,
     label: market?.label ?? NFL_SLATE_EDGE_MARKETS.find(item => item.key === propType)?.label ?? propType,
     line,
     openingLine: offer?.openingLine ?? null,
@@ -69,8 +71,8 @@ function marketExpectation(market: NflSlateEdgeMarket, propType: NflSlateEdgeMar
 }
 
 
-type GameEntries = { complete: true; entries: NflSlateEdgeEntry[] }
-export type NflSlatePool = { complete: true; date: string; gameIds: string[]; entries: NflSlateEdgeEntry[] }
+type GameEntries = { complete: true; entries: NflSlateEdgeEntry[]; verified?: true; unavailableMarkets?: NflSlateEdgeMarketKey[] }
+export type NflSlatePool = { complete: true; date: string; gameIds: string[]; entries: NflSlateEdgeEntry[]; verified?: true }
 async function gameEntries(game: SidelineGame, sample: NflSample) {
   return nflPregameResearch<GameEntries>(game, `slate-entries:${sample}`, () => loadGameEntries(game, sample))
 }
@@ -90,7 +92,10 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
     const trackedById = new Map(windowData.players.map(player => [player.id, player]))
     const trackedByName = new Map(windowData.players.map(player => [normalizeNflPlayerName(player.name), player]))
     const profiles = new Map(windowData.teams.map(item => [normalizedTeam(item.team.abbr), item]))
-    const gameLine = bundle.odds.gameLines.find(item => normalizeNflPlayerName(item.vendor) === 'fanduel') ?? bundle.odds.gameLines[0]
+    const currentLines = bundle.odds.gameLines.filter(item => !NFL_PAUSED_PROJECTION_ENFORCE_ENABLED || !item.isOpeningOnly)
+    const gameLine = currentLines.find(item => normalizeNflPlayerName(item.vendor) === 'fanduel') ?? currentLines[0]
+    const { environment: unverifiedEnvironment, markets: unverifiedMarkets } = nflUnverifiedScoreInputs(bundle.odds)
+    const unavailableMarkets = NFL_SLATE_EDGE_MARKETS.filter(item => unverifiedMarkets.has(item.key)).map(item => item.key)
     const teams = new Set([normalizedTeam(game.away.abbr), normalizedTeam(game.home.abbr)])
 
     const entries: NflSlateEdgeEntry[] = bundle.odds.players
@@ -106,7 +111,7 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
         const teamMoneyline = team === normalizedTeam(game.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
         const score = Object.fromEntries(NFL_SLATE_EDGE_MARKETS.map(item => [
           item.key,
-          tracked
+          tracked && !unverifiedEnvironment
             ? contextualNflScore({ ...tracked, teamProfile, opponentProfile }, item.key, americanImpliedProbability(teamMoneyline ?? null), gameLine?.total ?? null).score
             : null,
         ])) as Record<NflSlateEdgeMarketKey, number | null>
@@ -142,10 +147,11 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
         }
       })
 
-    return { value: { complete: true as const, entries }, observedAt: new Date().toISOString() }
-}, ['nfl-slate-entries-v1'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
-export function rankNflSlateEntries(entries: NflSlateEdgeEntry[]) {
+    return { value: { complete: true as const, entries, ...(NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { verified: true as const } : {}), unavailableMarkets }, observedAt: new Date().toISOString() }
+}, ['nfl-slate-entries-v2-verified'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
+export function rankNflSlateEntries(entries: NflSlateEdgeEntry[], unavailableMarkets = new Set<NflSlateEdgeMarketKey>()) {
   for (const market of NFL_SLATE_EDGE_MARKETS) {
+    if (unavailableMarkets.has(market.key)) { entries.forEach(entry => { entry.mm[market.key] = null }); continue }
     const performance = entries.filter(entry => entry.score[market.key] != null)
       .sort((a, b) => (b.score[market.key] ?? -1) - (a.score[market.key] ?? -1))
     const sportsbook = entries
@@ -186,12 +192,14 @@ export async function getNflSlatePayload(games: SidelineGame[], date: string, ex
     if (!crossed.length) break
     await Promise.all(crossed.map(async game => { closed.add(game.id); results.set(game.id, await load(game)) }))
   }
-  const entries = rankNflSlateEntries([...results.values()].flatMap(result => result.archived?.value.entries ?? []))
+  const unavailableMarkets = new Set([...results.values()].flatMap(result => result.archived?.value.unavailableMarkets ?? []))
+  const entries = rankNflSlateEntries([...results.values()].flatMap(result => result.archived?.value.entries ?? []), unavailableMarkets)
   const complete = games.length > 0 && games.length <= 24 && new Set(games.map(game => game.id)).size === games.length
     && [...results.values()].every(result => result.archived?.value.complete === true)
   const observedAt = new Date().toISOString()
-  const pool: NflSlatePool = { complete: true, date, gameIds: games.map(game => game.id), entries }
-  const unavailableGames: string[] = [], snapshots: Record<string, string> = {}
+  const verified = [...results.values()].every(result => result.archived?.value.verified === true)
+  const pool: NflSlatePool = { complete: true, ...(verified ? { verified: true } : {}), date, gameIds: games.map(game => game.id), entries }
+  const unavailableGames: string[] = [], legacyUnverifiedGames: string[] = [], snapshots: Record<string, string> = {}
   const resolve = async (game: SidelineGame, capture: boolean) => {
     let frozen = null
     try {
@@ -203,6 +211,7 @@ export async function getNflSlatePayload(games: SidelineGame[], date: string, ex
     catch { /* A missing pool is explicit, never a partial rank. */ }
     if (frozen?.value.complete && frozen.value.date === date && frozen.value.gameIds.includes(game.id)) {
       snapshots[game.id] = frozen.observedAt
+      if (NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && frozen.value.verified !== true && !legacyUnverifiedGames.includes(game.id)) legacyUnverifiedGames.push(game.id)
       const index = unavailableGames.indexOf(game.id); if (index >= 0) unavailableGames.splice(index, 1)
       return frozen.value.entries.filter(entry => entry.gameId === game.id)
     }
@@ -220,7 +229,7 @@ export async function getNflSlatePayload(games: SidelineGame[], date: string, ex
   const sampleLabels = new Set(games.map(game => nflSampleReference(game.season, sampleFor(game)).label))
   return { date, sampleLabel: [...sampleLabels].join(' / '),
     games: games.map(game => ({ id: game.id, label: `${game.away.abbr} at ${game.home.abbr}`, awayAbbr: game.away.abbr, awayLogo: game.away.logo, homeAbbr: game.home.abbr, homeLogo: game.home.logo })),
-    entries: [...final.values()].flat(), unavailableGames, snapshots }
+    entries: [...final.values()].flat(), unavailableGames, legacyUnverifiedGames, snapshots }
 }
 
 /** Existing scheduled odds pass warms one least-recently observed matchup.

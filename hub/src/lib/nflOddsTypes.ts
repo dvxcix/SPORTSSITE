@@ -100,6 +100,15 @@ export type SidelineOddsBoard = {
   gameLines: NflGameLineBook[]
   players: NflOddsPlayer[]
   picksCapturedAt?: string | null
+  legacyUnverified?: boolean
+  lastSeen?: {
+    offers: { playerId: number; name: string; team: string; label: string; propType: string; offer: NflMarketOffer }[]
+    lines: NflGameLineBook[]
+  }
+  openingOnly?: {
+    offers: { playerId: number; name: string; team: string; label: string; propType: string; offer: NflMarketOffer }[]
+    lines: NflGameLineBook[]
+  }
 }
 
 export const EMPTY_SIDELINE_ODDS: SidelineOddsBoard = {

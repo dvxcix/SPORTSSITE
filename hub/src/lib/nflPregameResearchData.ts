@@ -3,7 +3,7 @@ import { createAdminClient } from './supabase/admin'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineGame } from '@/app/the-sideline/types'
 
-export type NflResearchSnapshot<T> = { value: T; observedAt: string; frozen: boolean; source: 'capture' | 'recovered-cache' }
+export type NflResearchSnapshot<T> = { value: T; observedAt: string; cutoffAt: string; frozen: boolean; source: 'capture' | 'recovered-cache' }
 type Stored<T> = { payload: T; observed_at: string; kickoff_at: string; source: NflResearchSnapshot<T>['source'] }
 export class NflPregameResearchUnavailable extends Error {
   constructor() { super('Pregame NFL research snapshot unavailable'); this.name = 'NflPregameResearchUnavailable' }
@@ -20,7 +20,8 @@ function args(game: SidelineGame, resource: string) {
 function decoded<T>(game: SidelineGame, row: Stored<T> | null): NflResearchSnapshot<T> | null {
   const start = nflKickoffAt(game)?.getTime(), stored = Date.parse(row?.kickoff_at ?? ''), observed = Date.parse(row?.observed_at ?? '')
   if (!row || row.payload == null || start == null || !Number.isFinite(stored) || !Number.isFinite(observed) || observed >= Math.min(start, stored) || observed > Date.now() || !['capture', 'recovered-cache'].includes(row.source)) return null
-  return { value: row.payload, observedAt: row.observed_at, frozen: Date.now() >= Math.min(start, stored), source: row.source }
+  const cutoff = Math.min(start, stored)
+  return { value: row.payload, observedAt: row.observed_at, cutoffAt: new Date(cutoff).toISOString(), frozen: Date.now() >= cutoff, source: row.source }
 }
 export async function readNflPregameResearch<T>(game: SidelineGame, resource: string): Promise<NflResearchSnapshot<T> | null> {
   const params = args(game, resource), open = nflPregameOpen(game)

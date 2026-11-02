@@ -1,0 +1,9 @@
+.root { margin: 12px; border: 1px solid var(--border, #334155); border-radius: 10px; background: var(--surface-1, #111827); }
+.history { margin: 12px; color: var(--text-3, #a3b0c2); font-size: .82rem; }
+.root summary { cursor: pointer; padding: 12px 14px; font-weight: 700; }
+.root summary span { margin-left: 6px; color: var(--text-3, #a3b0c2); font-size: .8rem; }
+.rows { max-height: 420px; overflow: auto; padding: 0 14px 8px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto; gap: 8px 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border, #334155); font-size: .82rem; overflow-wrap: anywhere; }
+.row small, .row time { color: var(--text-3, #a3b0c2); }
+.book { display: flex; gap: 5px; align-items: center; }
+@media (max-width: 640px) { .row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }

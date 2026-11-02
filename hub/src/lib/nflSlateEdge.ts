@@ -51,6 +51,7 @@ export type NflSlateEdgeEntry = {
 
 export type NflSlateEdgePayload = {
   unavailableGames?: string[]
+  legacyUnverifiedGames?: string[]
   snapshots?: Record<string, string>
   date: string
   sampleLabel: string

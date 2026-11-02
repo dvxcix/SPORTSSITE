@@ -1,0 +1,51 @@
+NFL paused-source quote projection — staged rollout
+
+Phase 1 installs the compact reader with NFL_PAUSED_PROJECTION_WRITES_ENABLED
+and NFL_PAUSED_PROJECTION_ENFORCE_ENABLED both false. It writes no marker and
+does not change how unmarked odds or frozen slate scores are displayed. It can
+read a marked snapshot if one already exists. Posting/saving a price marked as
+opening-only is independently rejected. Browserbase's unconditional hard pause
+and its budgets are unchanged.
+
+During phase 1, the previously observed stale direct prices can still appear
+as current on an unmarked board. The reader prerequisite does not correct
+that presentation, and is not a claim that source freshness has recovered.
+
+Before phase 2, verify Git production and public aliases, natural application
+reads, and drain all deployments that predate this reader. A phase 2 release
+must enable both switches together, pass the full tests and review, and verify
+an actual new pregame snapshot and its exact quotes through kickoff. A mismatch
+between switches rejects a new load. Phase 2 temporarily treats an unmarked
+post-pause frame as last-seen until a valid marked observation succeeds; the
+original archived board, source times and existing saved pick records remain.
+Old games whose earliest durable cutoff preceded the verified 2026-11-02
+15:04:52.593 UTC production pause keep their original display and are marked
+historical/unverified. Exact legacy Slate Edge quote timestamps, sides and game
+line inputs are absent from those saved pools; do not claim their scores were
+independently certified. The 103 sampled existing game/resource pool rows all
+lack the new marker and remain available, with an unverified label in phase 2.
+
+The marker stores indexed exact player, market, book, type, line, sides and
+source-time references plus any current-source replacement and opening-only
+records. It supplements the original board in the same pregame observation;
+it does not amend the underlying board or reconstruct history. Marked reads
+validate the references and cutoff; corrupted markers fail unavailable. Prices
+without a current exact replacement cannot affect dependent scores or MM.
+
+Do not roll back to code older than this reader after a marked board or a
+verified slate pool has been written: older readers ignore the marker and can
+misrepresent its raw paused-source prices. Roll back to this reader with both
+switches false only after evaluating its treatment of any already marked boards;
+the reader always applies marked boards even while writing is disabled. Keep
+all existing freeze and cutoff guards. No provider calls, collector, job replay,
+schema migration, browser session, or budget change is part of this work.
+
+Synthetic local benchmark: 32 players, 960 markets, 2,880 quotes, 960 direct
+quotes moved to last-seen. Original board JSON 645,860 bytes; board plus
+indexed marker 697,634 bytes (+8.0%); visible board 724,045 bytes. Fifty
+warmed marker-create/read loops measured p50 3.75 ms and p95 5.0 ms. This is
+not a production latency, concurrency, memory or bandwidth measurement.
+The two source boards use one batched directory lookup and one designation
+read; distinct extra names may increase query chunks. Natural production
+measurements are required. Separate touchdown-feed direct quote handling is
+not covered by this patch and remains under independent investigation.

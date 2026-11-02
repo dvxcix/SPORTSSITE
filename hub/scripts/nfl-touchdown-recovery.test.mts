@@ -54,6 +54,7 @@ test('cold touchdown failure keeps the server board available with unknown total
     '@/lib/nflAccess': gate, '@/lib/supabase/authErrors': { AuthTemporarilyUnavailableError: Error },
     './SidelineBoardClient': { SidelineBoardClient: ({ touchdowns }: { touchdowns: NflTouchdownEvent[] | null }) => { boardFeed = touchdowns; return createElement('article', null, 'Current odds +220', createElement(NflTouchdownTracker, { events: touchdowns, onJumpToGame: noop })) } },
     './SidelineResearchClient': { SidelineResearchClient: noop }, './SidelineNavigation': { SidelineNavigation: noop }, './SidelineMatchupLab': { SidelineMatchupLab: noop },
+    './NflLastSeen': { NflLastSeen: noop },
     './SidelineCheatsheets': { SidelineCheatsheets: () => createElement('article', null, 'Cheatsheet odds +220') }, './data': data,
     '@/components/layout/PageState': { PageState: noop }, '@/components/product/ProductPage': { ProductHero: noop, ProductPageShell: noop },
     '@/lib/nflTouchdownFeed': feed, '@/lib/nflPublicResultsServer': { getNflPublicResults: noop },

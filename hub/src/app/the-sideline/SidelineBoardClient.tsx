@@ -17,10 +17,12 @@ import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { NflTouchdownTracker } from './NflTouchdownTracker'
+import { NflLastSeen } from './NflLastSeen'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
+import { nflUnverifiedScoreInputs } from '@/lib/nflScoreIntegrity'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
@@ -1080,7 +1082,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
 }
 
 function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: { team: SidelineTeam; opponent: SidelineTeam; rows: PlayerRow[]; board: SidelineOddsBoard; selectedWindow: SidelineWindow; side: 'away' | 'home'; savedCount: number; collapsed: boolean; onToggle: () => void; onSelectWindow: (window: SidelineWindow) => void }) {
-  const topScore = [...rows].filter(row => row.hasTracking && row.eligible !== false).sort((a, b) => b.index - a.index)[0]
+  const topScore = [...rows].filter(row => row.hasTracking && row.eligible !== false && !row.unavailableMetrics?.includes('index')).sort((a, b) => b.index - a.index)[0]
   const contextLabels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
   const contextLabel = contextLabels.length === 1 ? contextLabels[0]! : 'Role'
   const { advertised, hidden } = teamMmHighlights(rows)
@@ -1345,7 +1347,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
               <div className={styles.modalHero}>
                 <div className={styles.scoreRing}>
                   <Image src="/brand-bolt.png" alt="" width={13} height={18} />
-                  <b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b>
+                  <b>{activePlayer.hasTracking && !activePlayer.unavailableMetrics?.includes('index') ? activePlayer.index : '-'}</b>
                   <span>{activePlayer.contextLabel ?? 'ROLE'} SCORE</span>
                 </div>
                 <div>
@@ -1529,7 +1531,7 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
                   <small>
                     <Image src="/brand-bolt.png" alt="" width={9} height={13} /> {player.contextLabel ?? 'ROLE'} SCORE
                   </small>
-                  <b className={scoreTone(player.index)}>{player.hasTracking ? player.index : '-'}</b>
+                  <b className={scoreTone(player.index)}>{player.hasTracking && !player.unavailableMetrics?.includes('index') ? player.index : '-'}</b>
                 </span>
                 <span>
                   <small>
@@ -1716,7 +1718,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         void removeWatchlist(existing.id).then(() => setSaveMessage('Removed from watchlist.')).catch(() => setSaveMessage('Could not remove selection. Please try again.')).finally(() => saveLocks.current.delete(key))
         return
       }
-      if (!player.market || offerCurrent(offer) == null) { saveLocks.current.delete(key); setSaveMessage('No available price to save.'); return }
+      if (!player.market || offer.isOpeningOnly || offerCurrent(offer) == null) { saveLocks.current.delete(key); setSaveMessage('No available price to save.'); return }
       void addWatchlist(nflWatchlistSelection(player.market, market, offer, 'over', { id: selected.id, gameday: selected.gameday }))
         .then(() => setSaveMessage('Saved. Open Watchlist to review and post your pick.'))
         .catch(() => setSaveMessage('Could not save selection. Check that you are signed in and try again.'))
@@ -1874,6 +1876,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const scoreProp = view === 'core' || view === 'touchdowns' ? 'anytime_td' : view === 'props' ? activeProp : roleFilter === 'passing' ? 'passing_yards' : roleFilter === 'receiving' ? 'receiving_yards' : roleFilter === 'rushing' ? 'rushing_yards' : 'role'
   const rows = useMemo(() => {
     const gameLine = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
+    const { environment: unverifiedEnvironment, markets: affectedMarkets } = nflUnverifiedScoreInputs(board)
     return addNflMmRanks(
       baseRows.map(row => {
         const teamMoneyline = normalizedTeam(row.team) === normalizedTeam(selected.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
@@ -1887,10 +1890,11 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           index: result.score,
           contextLabel: result.context.label,
           contextProp: result.context.propType,
+          unavailableMetrics: unverifiedEnvironment ? [...new Set([...(row.unavailableMetrics ?? []), 'index'])] : row.unavailableMetrics,
         }
       }),
-    )
-  }, [baseRows, board.gameLines, scoreProp, selected.home.abbr, selected.gameday])
+    ).map(row => unverifiedEnvironment || affectedMarkets.has(row.contextProp ?? 'anytime_td') ? { ...row, mm: null, sportsbookRank: null, performanceRank: null } : row)
+  }, [baseRows, board, scoreProp, selected.home.abbr, selected.gameday])
 
   const matrixMatches = useMemo(() => {
     if (!matrices.length) return new Map<string, NflMatrix[]>()
@@ -2064,7 +2068,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
     () =>
       new Map(
         rows.flatMap(row =>
-          row.market && row.eligible !== false
+          row.market && row.eligible !== false && !row.unavailableMetrics?.includes('index')
             ? [
                 [
                   row.market.id,
@@ -2157,6 +2161,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
         />
       </section>
+      <NflLastSeen board={board} />
       {saveMessage ? <p role="status">{saveMessage}</p> : null}
       {matrices.some(matrix => matrix.enabled) ? <div className={styles.matrixLegend} aria-label="Active matrix matches">
         {matrices.filter(matrix => matrix.enabled).map(matrix => <button key={matrix.id} type="button" style={{ borderColor: matrix.color }} onClick={() => window.dispatchEvent(new Event('ss:open-nfl-matrices'))}>

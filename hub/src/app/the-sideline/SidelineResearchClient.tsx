@@ -14,6 +14,7 @@ import type { SidelineTeam } from './types'
 import styles from './sidelineResearch.module.css'
 import { gradeNflPublicProp, type NflPublicResult } from '@/lib/nflPublicResults'
 import { startNflPolling } from '@/lib/nflPolling'
+import { NflLastSeen } from './NflLastSeen'
 
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
 const stamp = (value: string | null | undefined) => value ? value.replace('T', ' ').slice(0, 19) + ' UTC' : 'Time unavailable'
@@ -110,6 +111,7 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
       {marketRefreshFailed ? <p role="status">Market refresh delayed; showing the last captured prices and picks.</p> : null}
       {mode === 'public' ? <p className={styles.resultSummary} role="status">{results?.status === 'final' ? 'Final results' : results?.status === 'in_progress' ? 'Live results · refresh every 30s' : 'Game results'}{results ? ` · Updated ${stamp(results.updatedAt)}` : ' · Awaiting feed'}{refreshFailed ? ' · Refresh delayed; showing last update' : ''}</p> : null}
     </header>
+    {mode === 'markets' ? <NflLastSeen board={board} /> : null}
     <section className={styles.controls} aria-label="Research filters">
       <label>Search<input value={search} placeholder="Player, team or market" onChange={event => { setSearch(event.target.value); setPage(0) }} /></label>
       <label>Team<select value={teamFilter} onChange={event => { setTeamFilter(event.target.value); setPage(0) }}><option value="all">Both teams</option>{teams.map(team => <option key={team.abbr} value={team.abbr}>{team.name}</option>)}</select></label>

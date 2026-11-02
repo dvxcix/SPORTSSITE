@@ -10,6 +10,7 @@ export type NflSavedSelection = {
 }
 
 export function nflWatchlistSelection(player: NflOddsPlayer, market: NflPlayerMarket, offer: NflMarketOffer, side: 'over' | 'under', game: { id: string; gameday: string }): NewWatchlistItem {
+  if (offer.isOpeningOnly) throw new Error('This price is unavailable. Choose another market.')
   const marketSide = offer.type === 'milestone' ? 'milestone' : side
   const odds = marketSide === 'milestone' ? offer.current.odds : offer.current[side]
   if (odds == null) throw new Error('This price is unavailable. Choose another market.')

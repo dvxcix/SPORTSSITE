@@ -8,7 +8,7 @@ export function findNflPickOffer(player: NflOddsPlayer | undefined, selection: {
   for (const market of player?.markets ?? []) {
     if (market.propType !== selection.prop_key) continue
     const offer = market.offers.find(candidate =>
-      candidate.vendor.toLowerCase().replace(/[^a-z0-9]/g, '') === vendor &&
+      !candidate.isOpeningOnly && candidate.vendor.toLowerCase().replace(/[^a-z0-9]/g, '') === vendor &&
       candidate.type === kind && candidate.line === (selection.numeric_line ?? null))
     if (offer) return { market, offer }
   }
