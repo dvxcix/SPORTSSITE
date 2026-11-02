@@ -51,10 +51,15 @@ export async function resolveRepricedUltimatePlan(
   for (const [field, expected] of [['company', SLIPSURGE_BUSINESS], ['product', SLIPSURGE_PRODUCT]] as const) {
     const nested = membership[field]
     if (nested == null) continue
-    if (typeof nested !== 'object' || typeof (nested as Record<string, unknown>).id !== 'string') {
+    // Whop's membership response may return these identities as a scalar ID
+    // or an object containing an ID. Both must exactly match our business or
+    // product; malformed and conflicting identities never grant access.
+    const observed = typeof nested === 'string' ? nested
+      : typeof nested === 'object' && !Array.isArray(nested) ? (nested as Record<string, unknown>).id : undefined
+    if (typeof observed !== 'string' || !observed) {
       throw new Error('Whop membership identity unavailable')
     }
-    if ((nested as Record<string, unknown>).id !== expected) return null
+    if (observed !== expected) return null
   }
   if (typeof membership.status !== 'string' && typeof membership.valid_status !== 'string' && typeof membership.valid !== 'boolean') {
     throw new Error('Whop membership status unavailable')

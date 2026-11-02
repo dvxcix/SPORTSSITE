@@ -145,15 +145,16 @@ test('runtime compatibility stays false for permissive-looking but unusable data
   }
 })
 
-test('private diagnostic classifies scalar identity and resolver mismatch without exposing data', async () => {
+test('private diagnostic confirms verified scalar product identity without exposing data', async () => {
   const { post } = route({ membership: { ...membership, product: 'prod_7z1xwDKvVgpiE', company: null } })
   const result = await (await post()).json()
   assert.equal(result.membershipProductMatches, true)
   assert.equal(result.membershipProductScalar, true)
   assert.equal(result.membershipProductObject, false)
   assert.equal(result.membershipBusinessMissing, true)
-  assert.equal(result.runtimeMembershipIdentityUnavailable, true)
-  assert.equal(result.runtimeWouldAccept, false)
+  assert.equal(result.runtimeMembershipIdentityUnavailable, false)
+  assert.equal(result.runtimeWouldAccept, true)
+  assert.equal(result.ok, true)
   assert.equal(result.runtimeOtherError, false)
   assert.ok(Object.values(result).every(value => typeof value === 'boolean'))
   assert.equal(JSON.stringify(result).includes('prod_7z1xwDKvVgpiE'), false)
