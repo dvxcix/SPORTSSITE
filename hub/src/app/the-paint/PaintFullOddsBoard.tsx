@@ -119,18 +119,26 @@ export function PaintFullOddsBoard({date,games,phaseCheck=null,onResume,selected
   const columns=useMemo(()=>[...new Set(rows.flatMap(row=>row.cells.map(cell=>cell.line)))].sort((a,b)=>a-b),[rows])
   const unavailable=slate?.games.filter(item=>slate.failed.includes(item.id)||slate.unavailable.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const firstUnavailable=slate?.games.filter(item=>slate.firstUnavailable?.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
+  const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(target!=='all')
   const fmtTime=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'})+' ET'
   return <section className={styles.board}>
     <h3>Odds Board</h3>
+    <div className={styles.controlPanel}>
     <div className={styles.controls}>
       <label>Market<select aria-label="Odds board market" value={market} onChange={event=>{setMarket(event.target.value as PaintMarket);setTarget('all')}}>{nbaBinary(market)&&<option value={market}>{PAINT_MARKETS.find(item=>item.key===market)?.label??market} · unavailable</option>}{PAINT_MARKETS.filter(item=>!nbaBinary(item.key)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
       <div className={styles.control}><span>Sportsbook</span><div className={styles.bookSelect}><PaintBookSelect label="Odds board sportsbook" value={actualBook} onChange={setBook} books={books.length?books:[actualBook]} allowAll={false}/><span>{bookName(actualBook)}</span></div></div>
+      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={event=>setSort(event.target.value)}><option value="name">Player A–Z</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option></select></label>
+      <label>Player<input aria-label="Find player on odds board" placeholder="Player or team" value={query} onChange={event=>setQuery(event.target.value)}/></label>
+    </div>
+    <details className={styles.options}>
+      <summary>Filters{filterCount>0&&<span> · {filterCount} active</span>}</summary>
+      <div className={styles.controls}>
       <label>Game<select aria-label="Odds board game" value={game} onChange={event=>setGame(event.target.value)}><option value="all">All games</option>{(slate?.games??games).map(item=><option key={item.id} value={item.id}>{item.visitor_team.abbreviation} @ {item.home_team.abbreviation}</option>)}</select></label>
       <label>Team<select aria-label="Odds board team" value={team} onChange={event=>setTeam(event.target.value)}><option value="all">All teams</option>{teams.map(item=><option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label>
       <label>Compare<select aria-label="Compare odds to" value={comparison} onChange={event=>setComparison(event.target.value as Comparison)}><option value="opening">{mode==='live'?'First seen':'Opening'}</option><option value="previous">Earlier</option></select></label>
-      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={event=>setSort(event.target.value)}><option value="name">Player A–Z</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option></select></label>
       <label>Sort milestone<select aria-label="Sort by milestone" value={target} onChange={event=>setTarget(event.target.value)}><option value="all">All milestones</option>{target!=='all'&&!columns.includes(Number(target))&&<option value={target}>{target}+ · not posted</option>}{columns.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>
-      <label>Player<input aria-label="Find player on odds board" placeholder="Player or team" value={query} onChange={event=>setQuery(event.target.value)}/></label>
+      </div>
+    </details>
     </div>
     {supported&&(error||phaseUnsafe)&&<p role="status">{slate?'Last observed prices shown. ':''}{phaseUnsafe?'Game times unavailable.':'Odds board unavailable.'}</p>}
     {!supported?<p role="status">No milestone prices for this market.</p>:!slate?!error&&!phaseUnsafe&&<p role="status">Loading odds board…</p>:<>

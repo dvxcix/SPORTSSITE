@@ -67,6 +67,8 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
  try{
   await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame]}));await new Promise(done=>setTimeout(done,20))})
   const region=host.querySelector('[aria-label="NBA milestone odds board"]')!;assert.equal(region.getAttribute('tabindex'),'0')
+  const filters=host.querySelector<HTMLDetailsElement>('details')!;assert.ok(filters);assert.equal(filters.open,false);assert.match(filters.querySelector('summary')?.textContent??'',/^Filters$/)
+  filters.open=true
   assert.match(region.textContent??'',/15\+/);assert.match(region.textContent??'',/20\+/);assert.match(region.textContent??'',/Open \+200/);assert.match(region.textContent??'',/\+150/)
   assert.match(host.querySelector('[aria-label="Odds board sportsbook"]')?.parentElement?.textContent??'',/FanDuel/)
   assert.match(region.textContent??'',/Shortened/);assert.match(region.textContent??'',/Lengthened/)
@@ -76,6 +78,8 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   await select('Compare odds to','previous');assert.match(region.textContent??'',/Earlier \+175/)
   await select('Sort odds board','lengthened');assert.match(region.querySelector('tbody tr')?.textContent??'',/Bea Baker/)
   await select('Sort by milestone','20');assert.match(region.querySelector('tbody tr')?.textContent??'',/Amy Adams/)
+  assert.match(filters.querySelector('summary')?.textContent??'',/2 active/);filters.open=false;filters.open=true
+  assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Compare odds to"]')?.value,'previous');assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Sort by milestone"]')?.value,'20')
   assert.equal(host.querySelector('[role="tooltip"]'),null)
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
 })
