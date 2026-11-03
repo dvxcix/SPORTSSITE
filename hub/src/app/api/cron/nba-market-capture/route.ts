@@ -22,7 +22,13 @@ type FirstBasketReceipt = NbaMarketReceipt & {
   diagnostics?: NbaFirstDiagnostics
 }
 type FirstBasketGameReport = FirstBasketReceipt & { gameId: number; mode: 'pregame' | 'live'; cached: boolean }
-type MarketReceipt = NbaMarketReceipt & { coverage?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['coverage'] }
+type MarketReceipt = NbaMarketReceipt & { coverage?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['coverage']; sourceDiagnostics?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['sourceDiagnostics'] }
+function privateSourceDiagnostics(value: MarketReceipt['sourceDiagnostics']): MarketReceipt['sourceDiagnostics'] {
+  if (!value || !['complete', 'unavailable'].includes(value.primary)
+    || !['complete', 'incomplete', 'deferred', 'not-applicable', 'unavailable'].includes(value.supplemental)
+    || !['complete', 'incomplete', 'not-applicable', 'unavailable'].includes(value.direct)) return undefined
+  return { primary: value.primary, supplemental: value.supplemental, direct: value.direct }
+}
 async function run(request: Request) {
   const denied = requireCronAuth(request); if (denied) return denied
   const started = Date.now(), admin = createAdminClient()
@@ -34,7 +40,7 @@ async function run(request: Request) {
   const last=(id:number)=>Math.max(0,...(attempts??[]).filter(row=>row.key.endsWith(':'+id)).map(row=>Date.parse(row.fetched_at??'1970-01-01')))
   games.sort((a,b)=>last(a.id)-last(b.id)||Date.parse(a.datetime??a.status)-Date.parse(b.datetime??b.status))
   const firstEvents = await getNbaFirstEvents(true).catch(() => null)
-  const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number; diagnostics?: NbaSupplementalDiagnostics }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
+  const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number; diagnostics?: NbaSupplementalDiagnostics; sources?: MarketReceipt['sourceDiagnostics']; sourceCached?: boolean; sourceReceiptAt?: string }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
   for (let offset = 0; offset < games.length; offset += 4) {
     if (Date.now() - started > 82_000) { report.deferred += games.length-offset; report.firstBasket.deferred += games.length-offset; break }
     await Promise.all(games.slice(offset,offset+4).map(async scheduled => {
@@ -107,10 +113,11 @@ async function run(request: Request) {
         const attempt=await nbaSharedCache<MarketReceipt>(`market-attempt:v4:${mode}:${game.id}`,240,0,async()=>{
           performed=true
           try{
-            const [propsResult, gameResult] = await Promise.allSettled([getPaintPropSnapshot(game,mode,true), getPaintGameOdds(game.id,true)])
+            const [propsResult, gameResult] = await Promise.allSettled([getPaintPropSnapshot(game,mode,true,true), getPaintGameOdds(game.id,true)])
             if (!phaseOpen())return {status:'deferred'}
             const rawProps = propsResult.status === 'fulfilled' ? propsResult.value.props : []
             const coverage = propsResult.status === 'fulfilled' ? propsResult.value.coverage : undefined
+            const sourceDiagnostics = propsResult.status === 'fulfilled' ? propsResult.value.sourceDiagnostics : undefined
             const props=rawProps.filter(prop=>nbaQuoteInMode(prop,game,mode))
             const rawGameOdds = gameResult.status === 'fulfilled' ? gameResult.value : []
             const gameOdds=rawGameOdds.filter(quote=>nbaQuoteInMode(quote,game,mode))
@@ -124,13 +131,13 @@ async function run(request: Request) {
               propsValid ? admin.rpc('record_nba_phase_capture',{ p_game_id:game.id,p_game_date:game.date,p_mode:mode,p_feed:'props',p_tipoff:tipoff,p_fingerprint:playerFingerprint!,p_quotes:props }).abortSignal(AbortSignal.timeout(12_000)) : Promise.resolve(null),
               gameValid ? admin.rpc('record_nba_phase_capture',{ p_game_id:game.id,p_game_date:game.date,p_mode:mode,p_feed:'game',p_tipoff:tipoff,p_fingerprint:createHash('sha256').update(JSON.stringify(nbaGameEconomicSnapshot(game.id,gameOdds))).digest('hex'),p_quotes:gameOdds }).abortSignal(AbortSignal.timeout(12_000)) : Promise.resolve(null),
             ])
-            if(propsResult.status==='rejected'||propsResult.value.primaryComplete===false||!propsResult.value.complete&&!coverage?.deferred||gameResult.status==='rejected'||captures.some(result=>result?.error))return {status:'failed',coverage}
+            if(propsResult.status==='rejected'||propsResult.value.primaryComplete===false||!propsResult.value.complete&&!coverage?.deferred||gameResult.status==='rejected'||captures.some(result=>result?.error))return {status:'failed',coverage,sourceDiagnostics}
             const status=captures.some(result=>result?.data)?'captured':captures.some(Boolean)?'unchanged':'deferred'
-            return {status,coverage,...(playerFingerprint&&captures[0]?{playerFingerprint,playerObservedAt}:{})}
+            return {status,coverage,sourceDiagnostics,...(playerFingerprint&&captures[0]?{playerFingerprint,playerObservedAt}:{})}
           }catch{return {status:'failed'}}
         },70)
         report[attempt.value.status==='failed'?'failed':performed?attempt.value.status:'deferred']++
-        if(attempt.value.coverage&&report.coverage.length<64){const {complete,accepted,unmatched,stale,diagnostics}=attempt.value.coverage;report.coverage.push({gameId:game.id,mode,complete,accepted,unmatched,stale,...(diagnostics?{diagnostics}:{})})}
+        if(attempt.value.coverage&&report.coverage.length<64){const {complete,accepted,unmatched,stale,diagnostics}=attempt.value.coverage;const sources=privateSourceDiagnostics(attempt.value.sourceDiagnostics);const sourceAt=typeof attempt.fetchedAt==='string'?Date.parse(attempt.fetchedAt):NaN;report.coverage.push({gameId:game.id,mode,complete,accepted,unmatched,stale,...(diagnostics?{diagnostics}:{}),...(sources?{sources,sourceCached:!performed,...(Number.isFinite(sourceAt)&&sourceAt<=Date.now()?{sourceReceiptAt:attempt.fetchedAt}:{})}:{})})}
       } catch { report.failed++ }
       await firstTask
     }))

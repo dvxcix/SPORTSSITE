@@ -98,7 +98,7 @@ async function getPaintPrimaryProps(gameId: number, fresh = false): Promise<Pain
   const json = await response.json(); if (!Array.isArray(json.data)) throw new PaintProviderError('props', 502)
   return nbaNormalizePrimaryProps(json.data)
 }
-export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 'pregame', freshPrimary = false) {
+export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 'pregame', freshPrimary = false, privateDiagnostics = false) {
   const [primary, supplemental, bookEntries] = await Promise.allSettled([getPaintPrimaryProps(game.id, freshPrimary), getNbaSupplementalProps(game, mode),mode==='pregame'?getNbaBookPropEntries(game):Promise.resolve([])])
   const coverage: Pick<NbaSupplementalSnapshot, 'complete' | 'deferred' | 'accepted' | 'unmatched' | 'stale' | 'eventMatched' | 'applicable' | 'observedAt' | 'diagnostics'> = supplemental.status === 'fulfilled'
     ? { complete: supplemental.value.complete, deferred: supplemental.value.deferred, accepted: supplemental.value.accepted, unmatched: supplemental.value.unmatched, stale: supplemental.value.stale, eventMatched: supplemental.value.eventMatched, applicable: supplemental.value.applicable, observedAt: supplemental.value.observedAt, diagnostics: supplemental.value.diagnostics }
@@ -111,9 +111,22 @@ export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 
   const apiComplete = primary.status === 'fulfilled' && (coverage.complete || coverage.deferred === true && !priorSupplement)
   const apiProps=nbaMergePropSources(primary.status==='fulfilled'?primary.value:[],supplemental.status==='fulfilled'?supplemental.value.props:[])
   const book=bookEntries.status==='fulfilled'?nbaBookPropsSupplement(game,apiProps,bookEntries.value):{props:[] as PaintProp[],complete:false}
+  // Only the authenticated capture receipt requests these bounded states.
+  // A complete direct result means the known scopes passed existing checks;
+  // it does not assert that every possible market has been published.
+  const sourceDiagnostics = privateDiagnostics ? {
+    primary: primary.status === 'fulfilled' ? 'complete' as const : 'unavailable' as const,
+    supplemental: supplemental.status === 'rejected' ? 'unavailable' as const
+      : supplemental.value.deferred ? 'deferred' as const
+      : !supplemental.value.applicable ? 'not-applicable' as const
+      : supplemental.value.complete ? 'complete' as const : 'incomplete' as const,
+    direct: mode !== 'pregame' ? 'not-applicable' as const
+      : bookEntries.status === 'rejected' ? 'unavailable' as const
+      : book.complete ? 'complete' as const : 'incomplete' as const,
+  } : undefined
   if(!book.complete){coverage.complete=false;coverage.deferred=false}
   const complete=apiComplete&&book.complete
-  return { props: nbaMergePropSources('retainedPrimary' in book ? book.retainedPrimary ?? apiProps : apiProps,book.props), complete, primaryComplete: primary.status === 'fulfilled', coverage, issues: primary.status === 'fulfilled' && book.complete && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
+  return { props: nbaMergePropSources('retainedPrimary' in book ? book.retainedPrimary ?? apiProps : apiProps,book.props), complete, primaryComplete: primary.status === 'fulfilled', coverage, ...(sourceDiagnostics ? { sourceDiagnostics } : {}), issues: primary.status === 'fulfilled' && book.complete && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
 }
 export async function getPaintProps(gameId: number, fresh = false): Promise<PaintProp[]> {
   const game = await getPaintGame(gameId)
