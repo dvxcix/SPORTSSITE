@@ -81,9 +81,9 @@ async function run(request: Request) {
               if(raw.length&&!props.length)return {status:'deferred', ...counts}
               if (props.some(prop => prop.game_id !== game.id)) return { status: 'failed', ...counts }
               counts.accepted = props.length
-              if (result.captureComplete === false) return { status: 'failed', ...counts }
-              // An unmatched feed is not a verified market withdrawal.
-              if (!props.length && result.unmatched) return { status: 'failed', ...counts }
+              // The phase writer stores one authoritative whole-feed frame.
+              // A rejected sibling must not turn its absence into a withdrawal.
+              if (result.captureComplete === false || counts.unmatched || props.length !== raw.length) return { status: 'failed', ...counts }
               const { data, error } = await admin.rpc('record_nba_phase_capture', {
                 p_mode:mode,p_feed:'first',p_tipoff:tipoff,
                 p_game_id: game.id, p_game_date: game.date,

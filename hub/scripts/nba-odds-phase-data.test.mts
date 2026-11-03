@@ -95,11 +95,11 @@ test('opening history cannot use a pregame first observation as the live baselin
  h.set([{...opening,odds:1000,observed_at:new Date(tip-1000).toISOString()},{...opening,odds:-600,observed_at:new Date(tip+1000).toISOString()}])
  assert.deepEqual((await data.getNbaQuoteOpenings(123)).map(row=>row.odds),[1000]);assert.deepEqual((await data.getNbaQuoteOpenings(123,'live')).map(row=>row.odds),[-600])
 })
-async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string}={}){
+async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string;firstUnmatched?:boolean;firstPartiallyInvalid?:boolean}={}){
  const h=await fixture();h.time(mode==='pregame'?tip-60000:tip+60000)
  const current={...game,status_state:mode==='live'?'in_progress':'scheduled',period:mode==='live'?1:0} as paint.PaintGame
  const at=mode==='pregame'||options.stale?tip-120000:tip+1000
- const props=options.empty?[]:[quote(at,mode==='live'?-600:1000)],first=options.empty?[]:[quote(at,1000,'first_score')]
+ const props=options.empty?[]:[quote(at,mode==='live'?-600:1000)],first=options.empty?[]:[quote(at,1000,'first_score'),...(options.firstPartiallyInvalid?[quote(mode==='pregame'?tip+1000:tip-1000,900,'first_score')]:[])]
  const calls:{name:string;args:Record<string,unknown>}[]=[],keys:string[]=[]
  const route=await compiled<{GET:(request:Request)=>Promise<Response>}>('../src/app/api/cron/nba-market-capture/route.ts',{
  'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},
@@ -107,7 +107,7 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintPropSnapshot:async(_game:unknown,_mode:unknown,_fresh:unknown,privateDiagnostics:unknown)=>{assert.equal(privateDiagnostics,true);if(options.cross)h.time(tip+1000);return {props,complete:!options.directIncomplete,primaryComplete:true,sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:options.badDiagnostic?'private-payload':options.directIncomplete?'incomplete':'complete'},coverage:{complete:!options.directIncomplete,accepted:0,unmatched:0,stale:0,eventMatched:false,applicable:false,observedAt:new Date().toISOString()},issues:[]}},getPaintGameOdds:async()=>[]},
  '@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':h.modes,'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,
  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);if(options.cached&&key.startsWith('market-attempt:'))return{value:{status:'failed',coverage:{complete:false,accepted:0,unmatched:0,stale:0},sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:'incomplete'}},fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false};return{value:await load(),fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false}}},
- '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:0,rows:first.map(offer=>({offer}))})},
+ '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:options.firstUnmatched?1:0,rows:first.map(offer=>({offer}))})},
  },h.Clock)
  const response=await route.GET(new Request('https://test/capture'));return{calls,keys,response,body:await response.json()}
 }
@@ -140,6 +140,17 @@ test('a malformed cached diagnostic cannot disclose arbitrary data in the privat
 test('live stale-only feeds cannot become empty withdrawals while successful empty feeds remain captures',async()=>{
  const stale=await captureFixture('live',{stale:true});assert.deepEqual(stale.calls.map(call=>call.args.p_feed),['game']);assert.equal(stale.body.firstBasket.deferred,1)
  const empty=await captureFixture('live',{empty:true});assert.equal(empty.calls.length,3);assert.ok(empty.calls.every(call=>JSON.stringify(call.args.p_quotes)==='[]'))
+})
+test('partial First Basket feeds cannot replace an authoritative whole-frame capture',async()=>{
+ for(const mode of ['pregame','live'] as const){
+  for(const options of [{firstUnmatched:true},{firstPartiallyInvalid:true}]){
+   const run=await captureFixture(mode,options)
+   assert.equal(run.response.status,503)
+   assert.equal(run.body.firstBasket.failed,1)
+   assert.equal(run.calls.some(call=>call.args.p_feed==='first'),false)
+   assert.deepEqual(run.calls.map(call=>call.args.p_feed).sort(),['game','props'])
+  }
+ }
 })
 test('a response crossing tipoff and an unconfirmed elapsed game cannot create a pregame or live capture',async()=>{
  const crossed=await captureFixture('pregame',{cross:true});assert.equal(crossed.calls.length,0)

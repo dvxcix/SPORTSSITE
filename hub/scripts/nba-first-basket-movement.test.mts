@@ -198,19 +198,19 @@ test('missing events and unmatched or stale first-basket quotes cannot create em
   assert.equal(stale.calls.some(call => call.args.p_feed === 'first'), false)
 })
 
-test('partial First Basket identities preserve verified prices but fail coverage with private counts', async () => {
+test('partial First Basket identities preserve the prior complete frame and fail coverage with private counts', async () => {
   for (const changed of [true, false]) {
     const result = await runCapture(false, false, false, { eventMatched: true, unmatched: 3 }, { changed })
     assert.equal(result.response.status, 503)
     assert.equal(result.body.firstBasket.failed, 1)
     assert.equal(result.body.firstBasket.captured, 0)
     assert.equal(result.body.firstBasket.unchanged, 0)
-    assert.equal(result.body.firstBasket.quotes, 1)
+    assert.equal(result.body.firstBasket.quotes, 0)
     assert.equal(result.body.firstBasket.accepted, 1)
     assert.equal(result.body.firstBasket.unmatched, 3)
-    assert.deepEqual(result.calls.find(call => call.args.p_feed === 'first')?.args.p_quotes, [offer])
+    assert.equal(result.calls.some(call => call.args.p_feed === 'first'), false)
     assert.equal(result.calls.filter(call => call.args.p_feed !== 'first').length, 2)
-    const receipt = { status: 'failed', accepted: 1, unmatched: 3, quotes: 1, capture: changed ? 'captured' : 'unchanged' }
+    const receipt = { status: 'failed', accepted: 1, unmatched: 3, quotes: 0 }
     assert.deepEqual(result.receipts.get('first-basket-attempt:v3:pregame:123'), receipt)
     assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, ...receipt }])
     assert.equal(JSON.stringify(result.body).includes('private provider label'), false)
@@ -224,13 +224,13 @@ test('cached incomplete First Basket receipts remain failed without replaying ca
   assert.equal(cached.calls.length, 0)
   assert.equal(cached.body.firstBasket.failed, 1)
   assert.equal(cached.body.firstBasket.deferred, 0)
-  assert.deepEqual(cached.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: true, status: 'failed', accepted: 1, unmatched: 2, quotes: 1, capture: 'captured' }])
+  assert.deepEqual(cached.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: true, status: 'failed', accepted: 1, unmatched: 2, quotes: 0 }])
 })
 
 test('failed First Basket storage reports accepted rows without claiming saved quotes', async () => {
-  const result = await runCapture(false, false, false, { eventMatched: true, unmatched: 2 }, { failArchive: true })
+  const result = await runCapture(false, false, false, { eventMatched: true, unmatched: 0 }, { failArchive: true })
   assert.equal(result.response.status, 503)
-  assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, status: 'failed', accepted: 1, unmatched: 2, quotes: 0 }])
+  assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, status: 'failed', accepted: 1, unmatched: 0, quotes: 0 }])
 })
 
 test('complete unchanged First Basket captures remain successful and diagnostics stay bounded', async () => {
