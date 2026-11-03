@@ -1,13 +1,14 @@
--- DRAFT: deliberately no production baseline and no automatic rollover.
--- Apply only after review, drain, current provider verification and rollout planning.
+-- Shared NBA/NFL spending guard. Baseline provisioning is a separate,
+-- explicitly reviewed operation; this migration never initializes a baseline
+-- or performs automatic rollover.
 set lock_timeout='2s';
 set statement_timeout='10s';
 do $$ declare f regprocedure := to_regprocedure('public.apply_nba_browser_spend_budget(uuid,text,integer,integer,integer,integer,integer,integer,numeric,bigint,timestamptz,integer,integer,text,bigint[])'); begin
   if f is null or md5(pg_get_functiondef(f)) <> 'ad77f9d78021ee432413281b59d366bf' then raise exception 'NBA budget function changed; inspect before release'; end if;
   if to_regclass('public.browserbase_shared_budget_state') is not null or to_regclass('public.browserbase_shared_budget_reservations') is not null then raise exception 'Shared budget state already exists'; end if;
 end $$;
--- LOCAL REFERENCE ONLY: NOT A PRODUCTION MIGRATION AND NOT AN INVOICE CAP.
--- Configure a verified account/project baseline only with explicit authority.
+-- The guard is not a guaranteed provider invoice cap. Configure a verified
+-- account/project baseline only with explicit authority and live preflight.
 -- Actual provider billing has no proven per-session byte ceiling, and a
 -- delayed observation cannot limit in-flight proxy bytes. No automatic reset.
 create table public.browserbase_shared_budget_state (
@@ -117,9 +118,8 @@ end $$;
 revoke all on function public.apply_browserbase_shared_budget(text,uuid,uuid,integer,numeric,bigint,timestamptz) from public,anon,authenticated,service_role;
 -- Only the reviewed SECURITY DEFINER wrapper owner can call this helper.
 
--- LOCAL REFERENCE ONLY: lock global project first, then the existing NBA
--- ledger. Verify live function signature and security independently before
--- using any equivalent migration. No provider sessions or baselines created.
+-- Lock the global project first, then the existing NBA ledger. The migration
+-- creates no provider sessions or baseline rows.
 create function public.reserve_browserbase_shared_budget(
   p_project text,p_period uuid,p_id uuid,p_timeout integer,p_minutes numeric,p_bytes bigint,p_observed_at timestamptz,
   p_nba boolean,p_daily_sessions integer,p_period_sessions integer,p_daily_minutes integer,p_period_minutes integer,
@@ -291,8 +291,7 @@ grant execute on function public.mark_browserbase_shared_creating(text,uuid,uuid
 -- Force new callers through the combined admission/check wrapper.
 revoke all on function public.apply_nba_browser_spend_budget(uuid,text,integer,integer,integer,integer,integer,integer,numeric,bigint,timestamptz,integer,integer,text,bigint[]) from public,anon,authenticated,service_role;
 
--- REVIEW CANDIDATE ONLY. Apply, if approved and reviewed, as part of the
--- combined shared-guard migration after its original NBA hash preflight.
+-- Revise the existing NBA function only after its original hash preflight.
 -- No historical counter, reservation, timestamp, or price is changed.
 do $allowance$
 declare f regprocedure := 'public.apply_nba_browser_spend_budget(uuid,text,integer,integer,integer,integer,integer,integer,numeric,bigint,timestamptz,integer,integer,text,bigint[])'::regprocedure;
