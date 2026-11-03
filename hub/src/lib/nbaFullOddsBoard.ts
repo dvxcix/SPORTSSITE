@@ -46,7 +46,7 @@ export function nbaPackFullBoard(board:NbaFullOddsBoard):NbaPackedBoard {
 }
 /** Return one book without duplicating the cached slate or unrelated times. */
 export function nbaSelectPackedBoard(board:NbaPackedBoard,book:string):NbaPackedBoard {
-  const selected=board.books.includes(book)?book:board.books[0]??book,index=board.books.indexOf(selected),times:NbaPackedTime[]=[],prefixes:string[]=[],seen=new Map<number,number>(),prefixSeen=new Map<number,number>()
+  const selected=book,index=board.books.indexOf(selected),times:NbaPackedTime[]=[],prefixes:string[]=[],seen=new Map<number,number>(),prefixSeen=new Map<number,number>()
   const time=(old:number|null)=>{if(old==null)return null;if(!Number.isSafeInteger(old)||old<0||old>=board.times.length)throw new Error('Invalid odds timestamp');const pair=board.times[old];if(!Array.isArray(pair)||!Number.isSafeInteger(pair[0])||pair[0]<0||pair[0]>=board.prefixes.length||typeof pair[1]!=='string')throw new Error('Invalid odds timestamp');const hit=seen.get(old);if(hit!=null)return hit;let prefix=prefixSeen.get(pair[0]);if(prefix==null){prefix=prefixes.length;prefixes.push(board.prefixes[pair[0]]);prefixSeen.set(pair[0],prefix)}const next=times.length;times.push([prefix,pair[1]]);seen.set(old,next);return next}
   const quotes=board.quotes.filter(row=>row[1]===index).map((row):NbaPackedCell=>[row[0],row[1],row[2],row[3],time(row[4])!,row[5],time(row[6]),row[7],time(row[8])])
   return {...board,selectedBook:selected,prefixes,times,quotes}

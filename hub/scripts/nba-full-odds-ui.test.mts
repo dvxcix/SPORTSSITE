@@ -3,8 +3,8 @@ import test from 'node:test'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
-import { act,createElement,type ComponentType } from 'react'
-import type { PaintGame } from '../src/lib/nbaPaint.ts'
+import { act,createElement,useState,type ComponentType } from 'react'
+import type { PaintGame,PaintMarket } from '../src/lib/nbaPaint.ts'
 import { nbaPackFullBoard,nbaSelectPackedBoard } from '../src/lib/nbaFullOddsBoard.ts'
 import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '../src/lib/nbaOddsBoardPhase.ts'
 const require=createRequire(import.meta.url),{JSDOM}=require('jsdom')
@@ -15,9 +15,9 @@ Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',con
 const {createRoot}=await import('react-dom/client')
 const built=await build({stdin:{contents:"export {PaintFullOddsBoard} from './src/app/the-paint/PaintFullOddsBoard'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'odds-ui-fixture.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'odds-ui',setup(builder){
   builder.onResolve({filter:/^(\.\/PaintEntitySelect|\.\/PaintVisuals|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
-  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintVisuals')?`export function TeamLogo(){return null}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
+  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintVisuals')?`export function TeamLogo(){return null}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{[...new Set([value,...books])].map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
 }}]})
-const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null}>}}
+const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,require)
 const team={id:1,abbreviation:'AAA',full_name:'Alpha',name:'Alpha'},away={id:2,abbreviation:'BBB',full_name:'Beta',name:'Beta'}
 const game:PaintGame={id:12,date:'2026-11-02',season:2026,status:'Scheduled',status_state:'scheduled',datetime:new Date(Date.now()+3600000).toISOString(),period:0,home_team:team,visitor_team:away,home_team_score:0,visitor_team_score:0}
@@ -25,6 +25,41 @@ const otherGame={...game,id:13}
 const players=[{id:1,gameId:12,first_name:'Amy',last_name:'Adams',position:'G',team},{id:2,gameId:12,first_name:'Bea',last_name:'Baker',position:'F',team:away},{id:3,gameId:13,first_name:'Cam',last_name:'Clark',position:'G',team}]
 const base={gameId:12,vendor:'fanduel',market:'points',opening:{odds:200,at:'2026-11-02T15:00:00Z'},previous:{odds:175,at:'2026-11-02T16:00:00Z'}}
 const data={date:'2026-11-02',games:[game,otherGame],players,failed:[],unavailable:[],complete:true,books:['fanduel'],selectedBook:'fanduel',cells:[{...base,playerId:1,line:15,current:{odds:150,at:'2026-11-02T17:00:00Z'}},{...base,playerId:1,line:20,current:{odds:220,at:'2026-11-02T17:00:00Z'}},{...base,playerId:2,line:15,current:{odds:300,at:'2026-11-02T17:00:00Z'}},{...base,gameId:13,playerId:3,line:15,current:{odds:250,at:'2026-11-02T17:00:00Z'}}]}
+test('Court selections carry into the board and changes carry back',async()=>{
+ const original=globalThis.fetch,requests:string[]=[]
+ globalThis.fetch=async(input)=>{const url=new URL(String(input),'https://www.slipsurge.com');requests.push(`${url.searchParams.get('market')}:${url.searchParams.get('book')}`);return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,cells:[...data.cells,{...data.cells[0],vendor:'draftkings'}],phaseCheckedAt:Date.now()}),url.searchParams.get('book')!))}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ function Court(){const [market,setMarket]=useState<PaintMarket>('rebounds'),[book,setBook]=useState('draftkings');return createElement('div',null,createElement('output',{'data-testid':'selection'},`${market}:${book}`),createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame],selectedMarket:market,selectedBook:book,onMarketChange:setMarket,onBookChange:setBook}))}
+ const select=async(label:string,value:string)=>{const input=host.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;input.value=value;await act(async()=>{input.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await new Promise(done=>setTimeout(done,20))})}
+ try{
+  await act(async()=>{root.render(createElement(Court));await new Promise(done=>setTimeout(done,20))})
+  assert.equal(requests[0],'rebounds:draftkings');assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Odds board sportsbook"]')?.value,'draftkings')
+  await select('Odds board market','points');assert.match(host.querySelector('[data-testid="selection"]')!.textContent! ,/points:draftkings/);assert.ok(requests.includes('points:draftkings'))
+  await select('Odds board sportsbook','fanduel');assert.match(host.querySelector('[data-testid="selection"]')!.textContent!,/points:fanduel/);assert.ok(requests.includes('points:fanduel'))
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
+})
+test('an explicit absent book stays selected, while All chooses a displayed available default',async()=>{
+ const original=globalThis.fetch,requests:string[]=[]
+ globalThis.fetch=async(input)=>{const url=new URL(String(input),'https://www.slipsurge.com'),book=url.searchParams.get('book')!;requests.push(book);return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,cells:data.cells.map(cell=>({...cell,vendor:'draftkings'})),phaseCheckedAt:Date.now()}),book))}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ function Court({initial}:{initial:string}){const [book,setBook]=useState(initial);return createElement('div',null,createElement('output',{'data-testid':'selection'},book),createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame],selectedBook:book,onBookChange:setBook}))}
+ try{
+  await act(async()=>{root.render(createElement(Court,{initial:'fanduel'}));await new Promise(done=>setTimeout(done,20))})
+  assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Odds board sportsbook"]')?.value,'fanduel');assert.match(host.textContent!,/No milestone prices/);assert.deepEqual(requests,['fanduel'])
+  await act(async()=>root.unmount());host.remove()
+  const host2=document.createElement('div');document.body.append(host2);const root2=createRoot(host2);requests.length=0
+  try{
+   await act(async()=>{root2.render(createElement(Court,{initial:'all'}));await new Promise(done=>setTimeout(done,20))})
+   await act(async()=>{await new Promise(done=>setTimeout(done,20))})
+   assert.deepEqual(requests,['fanduel','draftkings']);assert.equal(host2.querySelector<HTMLSelectElement>('[aria-label="Odds board sportsbook"]')?.value,'draftkings');assert.equal(host2.querySelector('[data-testid="selection"]')?.textContent,'all');assert.match(host2.textContent!,/Amy Adams/)
+  }finally{await act(async()=>root2.unmount());host2.remove()}
+ }finally{globalThis.fetch=original}
+})
+test('unsupported selected market is visible and does not fetch a different board',async()=>{
+ const original=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('unexpected fetch')}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ try{await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game],selectedMarket:'double_double'}));await new Promise(done=>setTimeout(done,20))});assert.equal(calls,0);assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Odds board market"]')?.value,'double_double');assert.match(host.textContent!,/No milestone prices for this market/)}finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
+})
 test('full board exposes all posted rungs, exact comparisons, sorting, search and keyboard scroll',async()=>{
  const original=globalThis.fetch;globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:Date.now()}),'fanduel'))
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host)

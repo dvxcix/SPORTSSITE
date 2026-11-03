@@ -65,6 +65,14 @@ test('packed slate keeps exact timestamps and selects a book without copying oth
   assert.equal(expanded.cells.length,1);assert.equal(expanded.cells[0].current.at,'2026-10-20T16:00:00.123456Z');assert.equal(expanded.cells[0].opening?.at,opening.observed_at)
   assert.deepEqual(selected.books,['draftkings','other'])
 })
+test('a requested absent sportsbook does not silently receive another book',()=>{
+  const cells=nbaFullBoardCells(12,'points',[current],[old],[opening])
+  const packed=nbaPackFullBoard({date:'2026-10-20',games:[],players:[],cells,failed:[],unavailable:[],complete:true})
+  const absent=nbaSelectPackedBoard(packed,'fanduel')
+  assert.equal(absent.selectedBook,'fanduel');assert.deepEqual(absent.books,['draftkings']);assert.equal(absent.quotes.length,0)
+  assert.equal(nbaUnpackFullBoard(absent,'points').cells.length,0)
+  assert.equal(nbaSelectPackedBoard(packed,'draftkings').quotes.length,1)
+})
 test('packed responses reject malformed indexes, duplicate contracts and excessive dimensions',()=>{
   const [cell]=nbaFullBoardCells(12,'points',[current],[old],[opening])
   const make=()=>nbaPackFullBoard({date:'2026-10-20',games:[],players:[],cells:[cell],failed:[],unavailable:[],complete:true})
