@@ -98,7 +98,7 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
           const opening=basis==='previous'?quote.movement?.previousOdds:quote.offer.opening?.over?.odds,at=basis==='previous'?quote.movement?.previousAt:quote.offer.opening?.over?.at
           return <td key={vendor} data-best={isBest}><div className={styles.firstBasketQuote}>
             {isBest&&<span className={styles.bestPrice}>Best price</span>}
-            <PaintPriceValue current={nbaPrice(quote.offer)} opening={opening} at={at??undefined} openingLabel={basis==='previous'?'PREV':'OPEN'}/>
+            <PaintPriceValue current={nbaPrice(quote.offer)} opening={opening} at={at??undefined} openingLabel={basis==='previous'?'PREV':'OPEN'} comparable={(basis==='previous'?quote.movement?.previousChange:quote.movement?.change)!=null}/>
             <small className={styles.firstBasketCaptured}>{time(quote.offer.updated_at)} ET</small>
             <PaintPickActions player={quote.player} game={quote.game} offer={quote.offer} side="over"/>
           </div></td>

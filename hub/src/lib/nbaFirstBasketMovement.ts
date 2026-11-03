@@ -36,9 +36,20 @@ export function nbaFirstMovements(rows: FirstBasketRow[], openings: NbaQuoteOpen
     }
     // Do not reach past a withdrawal to claim continuity. When the current
     // price is already captured, compare it with the preceding stored frame.
-    const last = points.at(-1), prior = present && last ? last.at===offer.updated_at && last.odds===nbaPrice(offer) ? points.at(-2) : last : undefined
+    const last = points.at(-1), quoteAt = Date.parse(offer.updated_at)
+    const conflict = points.some(point => Date.parse(point.at) === quoteAt && point.odds !== nbaPrice(offer))
+    // Equal timestamps identify the same source observation, not a repeat.
+    // A conflicting price at that timestamp is ambiguous and has no prior.
+    const candidate = !conflict && present && last && Number.isFinite(quoteAt) && quoteAt <= asOf
+      ? Date.parse(last.at) === quoteAt
+        ? last.odds === nbaPrice(offer) ? points.at(-2) : undefined
+        : Date.parse(last.at) < quoteAt ? last : undefined
+      : undefined
+    const prior = candidate && Date.parse(candidate.at) < quoteAt ? candidate : undefined
     const firstAt = opening?.at ?? null
-    const change = current != null && first != null && firstAt && Date.parse(firstAt) < asOf ? (current - first) * 100 : null
+    const firstTime = firstAt ? Date.parse(firstAt) : NaN
+    const change = !conflict && current != null && first != null && Number.isFinite(quoteAt) && quoteAt <= asOf
+      && Number.isFinite(firstTime) && firstTime < quoteAt ? (current - first) * 100 : null
     return { ...row, offer, movement: {
       change, previousChange: current != null && prior ? (current - impliedProbability(prior.odds)!) * 100 : null,
       previousOdds: prior?.odds ?? null, previousAt: prior?.at ?? null, firstAt,

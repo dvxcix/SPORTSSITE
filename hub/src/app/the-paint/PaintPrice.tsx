@@ -18,13 +18,13 @@ export function PaintPriceDelta({ open, current }: { open?: number | null; curre
 }
 
 /** Spans only: safe inside a quote button without extra controls or network requests. */
-export function PaintPriceValue({ current, opening, at, compact = false, openingLabel = 'OPEN' }: { current?: number | null; opening?: number | null; at?: string; compact?: boolean; openingLabel?: 'OPEN' | 'FIRST' | 'PREV' }) {
+export function PaintPriceValue({ current, opening, at, compact = false, openingLabel = 'OPEN', comparable = true }: { current?: number | null; opening?: number | null; at?: string; compact?: boolean; openingLabel?: 'OPEN' | 'FIRST' | 'PREV'; comparable?: boolean }) {
   const captured = at && Number.isFinite(Date.parse(at)) ? new Date(at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : null
   const validOpening = nbaOddsDelta(opening, current) != null ? opening : null
   return <span className={styles.priceQuote} data-compact={compact || undefined} aria-label={`Now ${nbaOdds(current)}, ${openingLabel.toLowerCase()} ${nbaOdds(validOpening)}`}>
     <span className={styles.priceNow}><small>NOW</small><b>{nbaOdds(current)}</b></span>
     <span className={styles.priceOpen} aria-label={validOpening == null ? 'Comparison price unavailable' : `${openingLabel === 'PREV' ? 'Previous capture' : openingLabel === 'FIRST' ? 'First available' : 'First captured'} ${captured ?? 'quote'}`}><small>{openingLabel}</small><span>{nbaOdds(validOpening)}</span></span>
-    <PaintPriceDelta open={validOpening} current={current}/>
+    <PaintPriceDelta open={comparable ? validOpening : null} current={current}/>
   </span>
 }
 
