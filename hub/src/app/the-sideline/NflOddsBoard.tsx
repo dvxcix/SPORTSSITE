@@ -89,18 +89,24 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     return {rows:all,lines:[...columns].sort((a,b)=>a-b)}
   },[filtered,payload,sort,sortLine,comparison])
   const incomplete=payload?.games.filter(g=>g.status!=='ready')??[]
+  const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(sortLine!=='all'&&lines.some(line=>String(line)===sortLine))
   return <section className={styles.panel} aria-label="NFL odds board">
     <header><h2>Odds Board</h2><span>{date} · Pregame</span></header>
     <div className={styles.controls}>
       <label>Market<select aria-label="Odds board market" value={shownMarket} onChange={e=>{onMarket(e.target.value);setSortLine('all')}}>{[...new Set([market,...(catalog?.markets??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></label>
       <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{onVendor(e.target.value);setSortLine('all')}}>{[...new Set([vendor,...(payload?.books??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
+      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="shortened">Most shortened</option><option value="lengthened">Most lengthened</option><option value="player">Player A–Z</option></select></label>
+      <label>Player<input aria-label="Find odds board player" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find a player"/></label>
+    </div>
+    <details className={styles.options}>
+      <summary>Filters{filterCount>0&&<span> · {filterCount} active</span>}</summary>
+      <div className={styles.controls}>
       <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(g=><option key={g.id} value={g.id}>{g.away} @ {g.home}{g.status==='ready'?'':' · incomplete'}</option>)}</select></label>
       <label>Team<select aria-label="Odds board team" value={team} onChange={e=>setTeam(e.target.value)}><option value="all">All teams</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
       <label>Compare<select aria-label="Compare odds to" value={comparison} onChange={e=>setComparison(e.target.value as typeof comparison)}><option value="opening">Opening</option><option value="earlier">Earlier</option></select></label>
-      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="shortened">Most shortened</option><option value="lengthened">Most lengthened</option><option value="player">Player A–Z</option></select></label>
       <label>Sort milestone<select aria-label="Sort odds board milestone" value={lines.some(line=>String(line)===sortLine)?sortLine:'all'} onChange={e=>setSortLine(e.target.value)}><option value="all">Any milestone</option>{lines.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>
-      <label>Player<input aria-label="Find odds board player" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find a player"/></label>
-    </div>
+      </div>
+    </details>
     {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {!!incomplete.length&&<p role="status">Some saved prices unavailable: {incomplete.map(g=>`${g.away} @ ${g.home}`).join(', ')}.</p>}
