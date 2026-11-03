@@ -41,3 +41,28 @@ test('the spending pause blocks automated and manual sessions before any provide
   }
   assert.deepEqual(calls, [])
 })
+
+test('manual authentication stays paused if the automated pause is removed', async () => {
+  const pauseFunction = /function assertBrowserbaseSpendingPause\(nba = false\) \{\s*if \(nba\)\s*throw new nbaBrowserBudget_1\.NbaBrowserBudgetError\('spend-limit'\);\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
+  assert.equal([...compiled.matchAll(pauseFunction)].length, 1, 'fixture must replace the automated pause only')
+  const automatedEnabled = compiled.replace(pauseFunction, 'function assertBrowserbaseSpendingPause() {}')
+  const calls = []
+  const mocks = {
+    '@browserbasehq/sdk': { default: class { constructor() { calls.push('provider') } } },
+    'playwright-core': { chromium: {} },
+    '@/lib/pikkitBrowserLease': { acquirePikkitBrowserLease: async () => { calls.push('lease') } },
+    '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} },
+    '@/lib/browserbaseAtomicAdmission': {},
+    '@/lib/browserbaseAtomicRpc': {},
+    '@/lib/browserbaseAdmissionError': {},
+  }
+  const isolated = { exports: {} }
+  new Function('require', 'module', 'exports', automatedEnabled)(id => {
+    assert.ok(id in mocks, `unexpected dependency ${id}`)
+    return mocks[id]
+  }, isolated, isolated.exports)
+  for (const fresh of [true, false]) {
+    await assert.rejects(isolated.exports.createPersistentContext(undefined, { fresh }), /paused for the spending limit/)
+  }
+  assert.deepEqual(calls, [], 'manual create and reuse must both fail before provider or lease access')
+})

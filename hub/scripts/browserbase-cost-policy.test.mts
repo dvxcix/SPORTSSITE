@@ -4,13 +4,13 @@ import test from 'node:test'
 
 const source = async (path: string) => readFile(new URL(path, import.meta.url), 'utf8')
 
-test('spending and billing API failures cannot block automated captures', async () => {
+test('admin spending alerts are not presented as an automatic cutoff', async () => {
   const browserbase = await source('../src/lib/browserbase.ts')
-  assert.doesNotMatch(browserbase, /BrowserbaseBudgetExceededError|assertAutomatedUsageBudget|projects\.usage/)
   assert.match(browserbase, /await resolveProjectId\(bb, configuredProjectId\)/)
   assert.match(browserbase, /AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 \* 60/)
   const dashboard = await source('../src/app/admin/browserbase/page.tsx')
-  assert.match(dashboard, /Spending threshold exceeded — captures remain enabled/)
+  assert.match(dashboard, /Spending alerts · Monitoring only/)
+  assert.match(dashboard, /These alerts do not stop browser sessions/)
   assert.match(dashboard, /BROWSERBASE_PROXY_BYTE_BUDGET/)
 })
 

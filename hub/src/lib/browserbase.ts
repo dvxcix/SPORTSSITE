@@ -19,6 +19,14 @@ function assertBrowserbaseSpendingPause(nba = false): void {
   throw new Error('Cloud browser sessions are paused for the spending limit')
 }
 
+// Manual authentication uses keep-alive sessions outside the automated
+// reservation lifecycle. Keep it independently disabled even if guarded
+// automated captures are resumed; its reuse/create paths need their own
+// bounded admission, monitoring and verified release before they can run.
+function assertBrowserbaseManualAuthPaused(): void {
+  throw new Error('Cloud browser sessions are paused for the spending limit')
+}
+
 function client(requestTimeoutMs?: number): Browserbase {
   const apiKey = process.env.BROWSERBASE_API_KEY
   if (!apiKey) throw new Error('BROWSERBASE_API_KEY is not configured')
@@ -411,7 +419,7 @@ export async function createPersistentContext(
   navigateUrl = 'https://app.pikkit.com/leagues/mlb',
   options: { fresh?: boolean } = {},
 ): Promise<PersistentContextSetup> {
-  assertBrowserbaseSpendingPause()
+  assertBrowserbaseManualAuthPaused()
   const lease = await acquirePikkitBrowserLease()
   if (!lease) throw new Error('Shared browser setup is busy; retry after the current session finishes')
   let safeToReleaseLease = true

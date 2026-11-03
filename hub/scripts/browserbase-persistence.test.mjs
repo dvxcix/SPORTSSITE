@@ -10,8 +10,10 @@ const productionCompiled = ts.transpileModule(source, { compilerOptions: { modul
 // production entry points remain paused. The separate spending-pause suite
 // tests the unmodified production source. Refuse an unexpected function shape.
 const pauseFunction = /function assertBrowserbaseSpendingPause\(nba = false\) \{\s*if \(nba\)\s*throw new nbaBrowserBudget_1\.NbaBrowserBudgetError\('spend-limit'\);\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
+const manualPauseFunction = /function assertBrowserbaseManualAuthPaused\(\) \{\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
 assert.equal([...productionCompiled.matchAll(pauseFunction)].length, 1, 'expected exactly one production spending pause')
-const compiled = productionCompiled.replace(pauseFunction, 'function assertBrowserbaseSpendingPause() {}')
+assert.equal([...productionCompiled.matchAll(manualPauseFunction)].length, 1, 'expected exactly one independent manual pause')
+const compiled = productionCompiled.replace(pauseFunction, 'function assertBrowserbaseSpendingPause() {}').replace(manualPauseFunction, 'function assertBrowserbaseManualAuthPaused() {}')
 
 async function fixture(options, work) {
   const old = Object.fromEntries(['BROWSERBASE_API_KEY', 'BROWSERBASE_PROJECT_ID', 'PIKKIT_CONTEXT_ID'].map(key => [key, process.env[key]]))
