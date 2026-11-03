@@ -23,6 +23,17 @@ test('opening and previous compare exact same contract and real observation time
   assert.equal(row.opening?.odds,200);assert.equal(row.previous?.odds,175)
   assert.ok((nbaBoardMove(row,'opening')??0)>0);assert.ok((nbaBoardMove(row,'previous')??0)>0)
 })
+test('a repeated later capture does not hide the actual first-seen Live move',()=>{
+  // A real saved OKC–CLE 10+ contract: an unchanged later frame should not
+  // replace its separate, immutable Live first-observed price.
+  const live:PaintProp={...current,game_id:21718012,player_id:1028027372,vendor:'fanduel',line_value:'10',market:{type:'milestone',odds:1400},updated_at:'2026-11-03T02:30:30.017Z'}
+  const repeated:PaintProp={...live,updated_at:'2026-11-03T02:29:30.017Z'}
+  const first:NbaQuoteOpeningRow={...opening,game_id:21718012,player_id:1028027372,vendor:'fanduel',line:10,odds:-310,observed_at:'2026-11-03T00:15:15.426684Z'}
+  const [row]=nbaFullBoardCells(21718012,'points',[live],[repeated],[first],'2026-11-03T02:30:57.112939Z')
+  assert.equal(nbaBoardMove(row,'previous'),0)
+  assert.ok(Math.abs(nbaBoardMove(row,'opening')! - (-68.9430894308943)) < 1e-9)
+  assert.equal(row.opening?.at,first.observed_at)
+})
 test('different game, player, book, market, rung, type or side cannot supply a baseline',()=>{
   const variants:NbaQuoteOpeningRow[]=[{...opening,game_id:13},{...opening,player_id:5},{...opening,vendor:'other'},{...opening,market:'rebounds'},{...opening,line:25},{...opening,market_type:'over_under'},{...opening,side:'under'}]
   const previous=[{...old,line_value:'25'},{...old,vendor:'other'},{...old,player_id:5},{...old,market:{type:'over_under' as const,over_odds:175}}]

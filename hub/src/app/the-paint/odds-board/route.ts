@@ -7,6 +7,7 @@ import { nbaBoardPhaseGames,nbaOddsBoardPhaseSignature,nbaReadOddsBoardPhase } f
 import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
 import { getNbaPhaseFrames, nbaPhaseBoundary, type NbaPhaseFrame } from '@/lib/nbaOddsPhaseData'
 import { getNbaQuoteOpenings } from '@/lib/nbaOddsHistoryData'
+import { nbaLiveFirstSeenConfident } from '@/lib/nbaLiveFirstSeenData'
 import { readNbaPregameResearch } from '@/lib/nbaPregameResearchData'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
@@ -34,11 +35,14 @@ export async function GET(request:NextRequest) {
     }
     const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
     const key=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
-    const partialKey=`odds-board-partial:v2:${date}:${market}:${key}`
+    // The new first-seen field changes only Live. Reuse the existing verified
+    // Pregame cache rather than reloading its full slate for every market.
+    const version=mode==='live'?'v3':'v2'
+    const partialKey=`odds-board-partial:${version}:${date}:${market}:${key}`
     const interval=mode==='live'?60:300
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
     try{
-      cached=await nbaSharedCache(`odds-board:v2:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{
+      cached=await nbaSharedCache(`odds-board:${version}:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{
         const loaded=await loadSlate(date,market!,mode,games,schedule.complete),packed=nbaPackFullBoard(loaded)
         if(packed.identities.length>1024||packed.books.length>64||packed.times.length>36000||Buffer.byteLength(JSON.stringify(packed))>1_048_576)throw new Error('NBA odds board exceeds capacity')
         if(!loaded.complete){
@@ -70,18 +74,20 @@ export async function GET(request:NextRequest) {
 }
 
 async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintGame[],scheduleComplete:boolean):Promise<NbaFullOddsBoard> {
-  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean}>[]=[]
+  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean;firstUnavailable:boolean;firstFailed:boolean}>[]=[]
   const deadline=Date.now()+100_000
   // Bounded concurrency: at most three games, two scoped frames per game; no
   // 96-frame history scan and no request per cell or subscriber.
   for(let offset=0;offset<games.length;offset+=3){
     if(Date.now()+26_000>=deadline)throw new Error('NBA slate deadline')
     results.push(...await Promise.allSettled(games.slice(offset,offset+3).map(async game=>{
-    const [frames,openings,roster]=await Promise.all([
+    const [frames,openingResult,roster,confidenceResult]=await Promise.all([
       getNbaPhaseFrames(game,mode,'props',{market,selection:'latest'}),
-      mode==='live'?Promise.resolve([]):getNbaQuoteOpenings(game.id,mode),
+      getNbaQuoteOpenings(game.id,mode).then(value=>({value,ok:true as const}),()=>({value:[],ok:false as const})),
       nbaPregameOpen(game)?getPaintRoster(game):readNbaPregameResearch<PaintBoard>(game,'board:v1').then(snapshot=>{if(!snapshot)throw new Error('Saved roster unavailable');return snapshot.value.players}),
+      mode==='live'?nbaLiveFirstSeenConfident(game).then(value=>({value,ok:true as const}),()=>({value:false,ok:false as const})):Promise.resolve({value:true,ok:true as const}),
     ])
+    const openings=openingResult.value,firstSeenConfident=confidenceResult.value
     const latest=frames.at(-1), previousAt=latest?nbaBeforeCapture(latest.captured_at):null
     if(!roster.length)throw new Error('NBA roster unavailable')
     const prior=previousAt?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}):[]
@@ -100,12 +106,20 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     const current=mode==='live'&&latest?nbaLiveBoardQuotes(currentRaw,latest.captured_at,cutoff):currentRaw
     const previous=mode==='live'&&lastPrior?(priorAt!>=cutoffAt?nbaLiveBoardQuotes(previousRaw,lastPrior.captured_at,cutoff):[]):previousRaw
     if(roster.length>150||current.length>5000||previous.length>5000||openings.length>100000)throw new Error('NBA odds board exceeds capacity')
-    const cells=nbaFullBoardCells(game.id,market,current,previous,openings,latest?.captured_at).filter(cell=>known.has(cell.playerId))
-    return {game,players,cells,missing:!latest}
+    // Never borrow a pregame opening in Live, even if an upstream cache or
+    // reader returns a malformed row. First-seen time must satisfy this exact
+    // phase cutoff and the observation must already exist by the saved frame.
+    const eligibleOpenings=firstSeenConfident?openings.filter(row=>{
+      const at=nbaTimestampNanoseconds(row.observed_at)
+      return at!=null && currentAt!=null && at<=currentAt && (mode==='live'?at>=cutoffAt:at<cutoffAt)
+    }):[]
+    const cells=nbaFullBoardCells(game.id,market,current,previous,eligibleOpenings,latest?.captured_at).filter(cell=>known.has(cell.playerId))
+    return {game,players,cells,missing:!latest,firstUnavailable:!openingResult.ok||!confidenceResult.ok||!firstSeenConfident,firstFailed:!openingResult.ok||!confidenceResult.ok}
     })))
   }
   const good=results.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
   if(good.reduce((sum,value)=>sum+value.cells.length,0)>12000)throw new Error('NBA odds board exceeds capacity')
   const failed=results.flatMap((result,index)=>result.status==='rejected'?[games[index].id]:[]),unavailable=good.filter(value=>value.missing).map(value=>value.game.id)
-  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,complete:scheduleComplete&&!failed.length&&!unavailable.length}
+  const firstUnavailable=good.filter(value=>value.firstUnavailable).map(value=>value.game.id)
+  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,firstUnavailable,complete:scheduleComplete&&!failed.length&&!unavailable.length&&!good.some(value=>value.firstFailed)}
 }

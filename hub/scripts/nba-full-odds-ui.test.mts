@@ -14,8 +14,8 @@ Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLEle
 Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})
 const {createRoot}=await import('react-dom/client')
 const built=await build({stdin:{contents:"export {PaintFullOddsBoard} from './src/app/the-paint/PaintFullOddsBoard'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'odds-ui-fixture.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'odds-ui',setup(builder){
-  builder.onResolve({filter:/^(\.\/PaintEntitySelect|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
-  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
+  builder.onResolve({filter:/^(\.\/PaintEntitySelect|\.\/PaintVisuals|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
+  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintVisuals')?`export function TeamLogo(){return null}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{books.map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
 }}]})
 const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null}>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,require)
@@ -36,7 +36,7 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   assert.match(region.textContent??'',/Shortened/);assert.match(region.textContent??'',/Lengthened/)
   const link=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 15+ Points, FanDuel, last seen +150"]')!;const target=new URL(link.href);assert.equal(target.searchParams.get('game'),'12');assert.equal(target.searchParams.get('book'),'fanduel');assert.equal(target.searchParams.get('line'),'15');assert.equal(target.searchParams.get('type'),'milestone');assert.equal(target.searchParams.get('mode'),'pregame');assert.equal(link.dataset.prefetch,'false')
   const other=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Cam Clark 15+ Points, FanDuel, last seen +250"]')!;const otherTarget=new URL(other.href);assert.equal(otherTarget.searchParams.get('game'),'13');assert.equal(otherTarget.searchParams.get('player'),'3');assert.equal(otherTarget.searchParams.get('line'),'15');assert.equal(other.dataset.prefetch,'false')
-  await select('Compare odds to','previous');assert.match(region.textContent??'',/Prev \+175/)
+  await select('Compare odds to','previous');assert.match(region.textContent??'',/Earlier \+175/)
   await select('Sort odds board','lengthened');assert.match(region.querySelector('tbody tr')?.textContent??'',/Bea Baker/)
   await select('Sort by milestone','20');assert.match(region.querySelector('tbody tr')?.textContent??'',/Amy Adams/)
   assert.equal(host.querySelector('[role="tooltip"]'),null)
@@ -109,7 +109,7 @@ test('an expired phase check hides the grid on its timer without starting anothe
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
 })
 
-test('Live displays earlier and last-seen prices, hides openings, and cached pre-resume proof cannot unhide the board',async()=>{
+test('Live defaults to first seen, offers earlier comparison, and cached pre-resume proof cannot unhide the board',async()=>{
  const priorFetch=globalThis.fetch,priorNow=Date.now;let now=priorNow();Date.now=()=>now
  ;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='live'
  const games=[game,otherGame],host=document.createElement('div');document.body.append(host);const root=createRoot(host)
@@ -117,7 +117,8 @@ test('Live displays earlier and last-seen prices, hides openings, and cached pre
  const render=(phaseCheck:NbaOddsBoardPhaseCheck|null)=>root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games,phaseCheck}))
  try{
   await act(async()=>{render(null);await new Promise(done=>setTimeout(done,20))})
-  const grid=host.querySelector('[aria-label="NBA milestone odds board"]');assert.ok(grid);assert.match(grid.textContent??'',/Last seen/);assert.match(grid.textContent??'',/Earlier \+175/);assert.doesNotMatch(grid.textContent??'',/Open \+200/);assert.equal(host.querySelector('[aria-label="Compare odds to"]'),null)
+  const grid=host.querySelector('[aria-label="NBA milestone odds board"]');assert.ok(grid);assert.match(grid.textContent??'',/Last seen/);assert.match(grid.textContent??'',/First seen \+200/)
+  const comparison=host.querySelector<HTMLSelectElement>('[aria-label="Compare odds to"]')!;assert.equal(comparison.value,'opening');comparison.value='previous';await act(async()=>comparison.dispatchEvent(new dom.window.Event('change',{bubbles:true})));assert.match(grid.textContent??'',/Earlier \+175/)
   Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   now+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)

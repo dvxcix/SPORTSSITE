@@ -9,19 +9,20 @@ import { nbaOddsBoardPhaseSignature } from '../src/lib/nbaOddsBoardPhase.ts'
 const game={id:12,date:'2026-11-02',datetime:'2026-11-02T15:00:00Z',status:'Final',status_state:'final',home_team:{id:1,abbreviation:'AAA'},visitor_team:{id:2,abbreviation:'BBB'}}
 const player={id:4,first_name:'Alex',last_name:'Player',position:'G',team:{id:1,abbreviation:'AAA',full_name:'Alpha'}}
 const quote=(at:string,odds:number)=>({id:1,game_id:12,player_id:4,vendor:'draftkings',prop_type:'points',line_value:'20',market:{type:'milestone',odds},updated_at:at})
-const state={openingReads:0,cutoffReads:0,clockReads:0,phaseCalls:0,incomplete:false,partial:null as unknown,latest:{captured_at:'2026-11-02T16:00:00Z',quotes:[quote('2026-11-02T16:00:00Z',150),{...quote('2026-11-02T14:59:59Z',999),player_id:5}]},prior:{captured_at:'2026-11-02T15:30:00Z',quotes:[quote('2026-11-02T15:30:00Z',175)]},badCutoff:false,clockDelay:0,phaseAt:Date.now()-20_000,phaseExpiresAt:Date.now()+15_000,badPhase:false,phaseStart:Date.parse(game.datetime),secondPhaseStart:0}
+const state={openingReads:0,cutoffReads:0,clockReads:0,phaseCalls:0,incomplete:false,partial:null as unknown,firstConfident:true,firstError:false,openingError:false,extraGame:false,failedGame:0,liveOpenings:[] as unknown[],latest:{captured_at:'2026-11-02T16:00:00Z',quotes:[quote('2026-11-02T16:00:00Z',150),{...quote('2026-11-02T14:59:59Z',999),player_id:5}]},prior:{captured_at:'2026-11-02T15:30:00Z',quotes:[quote('2026-11-02T15:30:00Z',175)]},badCutoff:false,clockDelay:0,phaseAt:Date.now()-20_000,phaseExpiresAt:Date.now()+15_000,badPhase:false,phaseStart:Date.parse(game.datetime),secondPhaseStart:0}
 ;(globalThis as typeof globalThis&{fullOddsRoute:typeof state}).fullOddsRoute=state
 const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint/odds-board/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'full-board-fixture',setup(builder){
  const modules:Record<string,string>={
   'next/server':`export const NextResponse={json:(value,options)=>Response.json(value,options)}`,
   '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
-  '@/lib/nbaPaintData':`export async function getPaintSchedule(date){return {date,complete:!globalThis.fullOddsRoute.incomplete,games:[${JSON.stringify(game)}]}};export async function getPaintRoster(){return [${JSON.stringify(player)}]}`,
+  '@/lib/nbaPaintData':`export async function getPaintSchedule(date){const g=${JSON.stringify(game)};return {date,complete:!globalThis.fullOddsRoute.incomplete,games:globalThis.fullOddsRoute.extraGame?[g,{...g,id:13}]:[g]}};export async function getPaintRoster(g){return [{...${JSON.stringify(player)},id:g.id===13?5:4}]}`,
   '@/lib/nbaOddsClockData':`export async function getNbaOddsGame(game){const s=globalThis.fullOddsRoute;s.clockReads++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));return {...game,datetime:s.badCutoff?'invalid':game.datetime}}`,
-  '@/lib/nbaOddsBoardPhaseData':`export async function getNbaOddsBoardPhase(date){const s=globalThis.fullOddsRoute;s.phaseCalls++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));const start=s.secondPhaseStart&&s.phaseCalls>1?s.secondPhaseStart:s.phaseStart;return {header:'v1|'+date+'|'+s.phaseAt+'|12,'+start+','+(s.badPhase?'0':'${nbaOddsBoardPhaseSignature([game as never])!.split(',')[2]}'),expiresAt:s.phaseExpiresAt}}`,
-  '@/lib/nbaOddsPhaseData':`export function nbaPhaseBoundary(game,mode){const start=Date.parse(game.datetime);if(!Number.isFinite(start))throw Error('bad cutoff');return {tipoff:new Date(start).toISOString(),key:mode+':'+game.id+':'+start+':'+(Date.now()>=start?'closed':'open')}};export async function getNbaPhaseFrames(game,mode,feed,scope){return [scope.asOf?globalThis.fullOddsRoute.prior:globalThis.fullOddsRoute.latest]}`,
-  '@/lib/nbaOddsHistoryData':`export async function getNbaQuoteOpenings(){globalThis.fullOddsRoute.openingReads++;return []}`,
+  '@/lib/nbaOddsBoardPhaseData':`export async function getNbaOddsBoardPhase(date){const s=globalThis.fullOddsRoute;s.phaseCalls++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));const start=s.secondPhaseStart&&s.phaseCalls>1?s.secondPhaseStart:s.phaseStart,flag=s.badPhase?'0':'${nbaOddsBoardPhaseSignature([game as never])!.split(',')[2]}';return {header:'v1|'+date+'|'+s.phaseAt+'|12,'+start+','+flag+(s.extraGame?';13,'+start+','+flag:''),expiresAt:s.phaseExpiresAt}}`,
+  '@/lib/nbaOddsPhaseData':`export function nbaPhaseBoundary(game,mode){const start=Date.parse(game.datetime);if(!Number.isFinite(start))throw Error('bad cutoff');return {tipoff:new Date(start).toISOString(),key:mode+':'+game.id+':'+start+':'+(Date.now()>=start?'closed':'open')}};export async function getNbaPhaseFrames(game,mode,feed,scope){const f=scope.asOf?globalThis.fullOddsRoute.prior:globalThis.fullOddsRoute.latest;return [game.id===13?{...f,quotes:f.quotes.map(q=>({...q,game_id:13,player_id:q.player_id===4?5:6}))}:f]}`,
+  '@/lib/nbaOddsHistoryData':`export async function getNbaQuoteOpenings(_game,mode){const s=globalThis.fullOddsRoute;s.openingReads++;if(s.openingError)throw Error('unavailable');return mode==='live'?s.liveOpenings:[]}`,
+  '@/lib/nbaLiveFirstSeenData':`export async function nbaLiveFirstSeenConfident(game){const s=globalThis.fullOddsRoute;if(s.firstError||s.failedGame===game.id)throw Error('unavailable');return s.firstConfident}`,
   '@/lib/nbaFullBoardCutoffsData':`export async function nbaFullBoardCutoffs(games){globalThis.fullOddsRoute.cutoffReads++;return games}`,
-  '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(){return {value:{players:[${JSON.stringify(player)}]}}}`,
+  '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(g){return {value:{players:[{...${JSON.stringify(player)},id:g.id===13?5:4}]}}}`,
   '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
  }
  builder.onResolve({filter:/.*/},args=>args.path in modules?{path:args.path,namespace:'fixture'}:undefined)
@@ -31,19 +32,37 @@ const fixture={exports:{} as {GET:(request:{nextUrl:URL})=>Promise<Response>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,createRequire(import.meta.url))
 const get=(mode:string)=>fixture.exports.GET({nextUrl:new URL(`https://test/odds-board?date=2026-11-02&market=points&book=draftkings&mode=${mode}`)})
 
-test('Live keeps exact last-seen and sparse earlier quotes beyond the old cutoff, without opening data or per-viewer cutoff reads',async()=>{
+test('Live keeps phase-specific first-seen and earlier prices without per-viewer cutoff reads',async()=>{
+ state.firstConfident=true;state.liveOpenings=[{game_id:12,player_id:4,vendor:'draftkings',market:'points',market_type:'milestone',line:20,side:'over',odds:999,observed_at:'2026-11-02T14:59:59Z'},{game_id:12,player_id:4,vendor:'draftkings',market:'points',market_type:'milestone',line:20,side:'over',odds:200,observed_at:'2026-11-02T15:10:00Z'}]
  state.openingReads=0;state.cutoffReads=0;state.clockReads=0;state.phaseCalls=0;const response=await get('live');assert.equal(response.status,200)
  const packed=await response.json(),board=nbaUnpackFullBoard(packed,'points')
- assert.equal(state.openingReads,0);assert.equal(state.cutoffReads,0);assert.equal(state.clockReads,0);assert.equal(board.phaseCheckedAt,state.phaseAt)
- assert.deepEqual(board.cells.map(cell=>[cell.current.odds,cell.previous?.odds,cell.opening]),[[150,175,null]])
+ assert.equal(state.openingReads,1);assert.equal(state.cutoffReads,0);assert.equal(state.clockReads,0);assert.equal(board.phaseCheckedAt,state.phaseAt)
+ assert.deepEqual(board.cells.map(cell=>[cell.current.odds,cell.previous?.odds,cell.opening?.odds]),[[150,175,200]])
  assert.equal(board.cells[0].current.at,'2026-11-02T16:00:00Z');assert.equal(board.cells[0].previous?.at,'2026-11-02T15:30:00Z')
- assert.ok(packed.quotes.every((row:unknown[])=>row[5]===null&&row[6]===null))
+ assert.equal(board.cells[0].opening?.at,'2026-11-02T15:10:00Z')
+ state.firstConfident=false;const uncertain=await get('live'),uncertainBoard=nbaUnpackFullBoard(await uncertain.json(),'points');assert.equal(uncertainBoard.cells[0].opening,null);assert.equal(uncertainBoard.cells[0].current.odds,150);assert.deepEqual(uncertainBoard.firstUnavailable,[12]);assert.equal(uncertainBoard.complete,true);state.firstConfident=true
  // If the canonical cutoff moves earlier, retained >= old-cutoff observations
  // remain live. Earlier newly eligible observations may still be absent.
  assert.ok(Date.parse(board.cells[0].current.at)>=Date.parse('2026-11-02T14:00:00Z'))
  state.phaseStart=Date.parse(game.datetime)-60_000;const corrected=await get('live'),correctedBoard=nbaUnpackFullBoard(await corrected.json(),'points')
  assert.equal(corrected.status,200);assert.equal(correctedBoard.games[0].datetime,new Date(state.phaseStart).toISOString());assert.equal(correctedBoard.cells[0].current.at,'2026-11-02T16:00:00Z')
- state.phaseStart=Date.parse(game.datetime)+60_000;assert.equal((await get('live')).status,503);state.phaseStart=Date.parse(game.datetime)
+ state.phaseStart=Date.parse(game.datetime)+60_000;assert.equal((await get('live')).status,503);state.phaseStart=Date.parse(game.datetime);state.liveOpenings=[]
+})
+test('failed first-seen verification retains current and earlier prices only in the partial view',async()=>{
+ for(const failure of ['firstError','openingError'] as const){
+  state.partial=null;state[failure]=true;const response=await get('live');assert.equal(response.status,200)
+  const board=nbaUnpackFullBoard(await response.json(),'points');assert.equal(board.complete,false);assert.deepEqual(board.firstUnavailable,[12]);assert.deepEqual(board.failed,[])
+  assert.equal(board.cells[0].current.odds,150);assert.equal(board.cells[0].previous?.odds,175);assert.equal(board.cells[0].opening,null)
+  state[failure]=false
+ }
+ state.partial=null
+})
+test('a first-seen failure for one game preserves current prices for every game',async()=>{
+ state.extraGame=true;state.failedGame=13;state.partial=null;state.phaseCalls=0
+ const response=await get('live');assert.equal(response.status,200)
+ const board=nbaUnpackFullBoard(await response.json(),'points')
+ assert.deepEqual(board.cells.map(cell=>cell.gameId).sort(),[12,13]);assert.deepEqual(board.firstUnavailable,[13]);assert.deepEqual(board.failed,[]);assert.equal(board.complete,false)
+ state.extraGame=false;state.failedGame=0;state.partial=null
 })
 test('Live does not borrow an ineligible earlier frame, rejects malformed cutoff, and preserves conservative proof after a slow read',async()=>{
  state.prior={captured_at:'2026-11-02T14:59:59Z',quotes:[quote('2026-11-02T14:59:59Z',175)]};state.clockDelay=25
