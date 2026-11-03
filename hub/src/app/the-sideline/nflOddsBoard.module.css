@@ -63,11 +63,11 @@
   touch-action: pan-x pan-y pinch-zoom;
 }
 .scroll table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; color: #edf4fc; font-size: 12px; }
-.scroll th, .scroll td { padding: 12px 8px; border-right: 1px solid #1b2937; border-bottom: 1px solid #1b2937; text-align: center; vertical-align: middle; }
+.scroll th, .scroll td { box-sizing: border-box; padding: 12px 8px; border-right: 1px solid #1b2937; border-bottom: 1px solid #1b2937; text-align: center; vertical-align: middle; }
 .scroll thead th { position: sticky; top: 0; z-index: 2; background: #101923; color: #b7c6d8; font-size: 12px; font-weight: 600; }
 .scroll tbody th { position: sticky; left: 0; z-index: 1; min-width: 205px; max-width: 240px; background: #0d1620; text-align: left; box-shadow: 1px 0 0 #2a3a4a; }
 .scroll thead th:first-child { position: sticky; left: 0; z-index: 3; min-width: 205px; text-align: left; box-shadow: 1px 0 0 #2a3a4a; }
-.player { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.player { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .player > :first-child { flex-shrink: 0; }
 .playerText { min-width: 0; }
 .scroll tbody th b, .scroll tbody th small, .scroll td b, .scroll td small, .scroll td span { display: block; }
@@ -85,7 +85,7 @@
 .muted { color: #b7c6d8; }
 @media (max-width: 720px) {
   .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .scroll tbody th, .scroll thead th:first-child { min-width: 156px; max-width: 156px; }
+  .scroll tbody th, .scroll thead th:first-child { min-width: 168px; max-width: 168px; }
   .scroll td { min-width: 136px; }
 }
 @media (max-width: 1024px), (any-pointer: coarse) {

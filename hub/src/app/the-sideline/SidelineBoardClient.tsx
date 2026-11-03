@@ -19,6 +19,7 @@ import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { NflTouchdownTracker } from './NflTouchdownTracker'
 import { NflLastSeen } from './NflLastSeen'
+import { SidelinePlayerAvatar as PlayerAvatar } from './SidelinePlayerAvatar'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
@@ -599,34 +600,6 @@ function TeamLogo({ team, size = 28 }: { team: SidelineTeam; size?: number }) {
   return (
     <span className={styles.teamFallback} style={{ width: size, height: size, background: team.color }}>
       {team.abbr.slice(0, 2)}
-    </span>
-  )
-}
-
-function PlayerAvatar({ player, team }: { player: PlayerRow; team: SidelineTeam }) {
-  const sources = useMemo(() => Array.from(new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((source): source is string => Boolean(source)))), [player.headshot, player.headshotFallbacks])
-  const [failedSources, setFailedSources] = useState<string[]>([])
-  const [failedTeamLogo, setFailedTeamLogo] = useState<string | null>(null)
-  const source = sources.find(candidate => !failedSources.includes(candidate)) ?? null
-  return (
-    <span
-      className={styles.avatar}
-      style={{
-        background: `linear-gradient(145deg, ${team.color}, ${team.color2 || '#111820'})`,
-      }}
-    >
-      {source ? (
-        <Image unoptimized={!source.startsWith('https://static.www.nfl.com/')} src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => (current.includes(source) ? current : [...current, source]))} />
-      ) : (
-        <b>
-          {player.name
-            .split(' ')
-            .map(part => part[0])
-            .slice(0, 2)
-            .join('')}
-        </b>
-      )}
-      {team.logo && team.logo !== failedTeamLogo ? <Image unoptimized className={styles.avatarTeam} src={team.logo} alt={`${team.name} logo`} width={17} height={17} onError={() => setFailedTeamLogo(team.logo)} /> : null}
     </span>
   )
 }

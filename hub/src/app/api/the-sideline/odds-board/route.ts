@@ -7,12 +7,13 @@ import { getSidelineGames } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflOddsBoardHash, nflOddsBoardSignature, readNflOddsBoardClocks, sharedNflOddsBoardClocks, type NflOddsBoardClock } from '@/lib/nflOddsBoardClock'
+import { nflBoardIdentities,nflBoardIdentityKey,nflBoardImage,type NflBoardIdentity } from '@/lib/nflOddsBoardIdentity'
 
 export const dynamic='force-dynamic'
 export const maxDuration=120
 type CompactQuote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
-type Pool={date:string;games:GameRow[];quotes:CompactQuote[]}
+type Pool={date:string;games:GameRow[];quotes:CompactQuote[];identities?:NflBoardIdentity[]}
 const tuple=(q:NflOddsBoardQuote):CompactQuote=>[q.gameId,q.playerId,q.player,q.team,q.position,q.market,q.vendor,q.line,q.current,q.updatedAt,q.previous,q.previousAt,q.opening,q.openingConflict]
 const quoteKey=(q:CompactQuote)=>JSON.stringify([q[0],q[1],q[3],q[5],q[6],q[7]])
 
@@ -53,7 +54,16 @@ function mergePartial(candidate:Pool, previous:Pool|null, clocks:NflOddsBoardClo
     output.set(key,[...latest.slice(0,10),ambiguous?null:prev?.value??null,ambiguous?null:prev?.at??null,!openingConflict&&openings.length===1?openings[0]:null,openingConflict] as CompactQuote)
   }
   for(const [key,q] of old){output.set(key,q);incomplete.add(q[0])}
-  const result:Pool={date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete'}:game),quotes:[...output.values()]}
+  const quotes=[...output.values()],wanted=new Set(quotes.map(q=>nflBoardIdentityKey(q[0],q[1],q[3],q[2]))),identities=new Map<string,NflBoardIdentity>()
+  // A partial board may retain an older price and its saved player artwork;
+  // unknown or malformed artwork never changes a valid odds observation.
+  const artwork=(pool:Pool)=>Array.isArray(pool.identities)&&pool.identities.length<=3840?pool.identities:[]
+  for(const item of [...artwork(candidate),...artwork(previous)]){
+    if(!Array.isArray(item)||item.length!==6||typeof item[0]!=='string'||!Number.isSafeInteger(item[1])||typeof item[2]!=='string'||item[2].length>120||typeof item[3]!=='string'||!Array.isArray(item[5])||item[5].length>4)continue
+    const key=nflBoardIdentityKey(item[0],item[1],item[3],item[2]),headshot=nflBoardImage(item[4]),fallbacks=item[5].map(nflBoardImage).filter((value):value is string=>!!value)
+    if(wanted.has(key)&&headshot&&!identities.has(key))identities.set(key,[item[0],item[1],item[2],item[3],headshot,fallbacks])
+  }
+  const result:Pool={date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete'}:game),quotes,identities:[...identities.values()]}
   if(Buffer.byteLength(JSON.stringify(result))>4*1024*1024)throw new Error('Odds board exceeds limit')
   return result
 }
@@ -77,7 +87,7 @@ function compact(board:SidelineOddsBoard, capturedAt:string, cutoff:string, base
       const offers=market.offers.filter(offer=>{const time=Date.parse(offer.updatedAt??''),odds=offer.current?.odds;return offer.type==='milestone'&&!offer.isOpeningOnly&&Number.isFinite(time)&&time<=at&&time<stop&&time<=now&&typeof odds==='number'&&Number.isFinite(odds)&&Math.abs(odds)>=100}).map(offer=>({vendor:offer.vendor,type:offer.type,line:offer.line,openingLine:typedOpeningSource?offer.openingLine:null,current:{odds:offer.current.odds},opening:typedOpeningSource?offer.opening:null,updatedAt:offer.updatedAt}))
       return offers.length?[{key:market.key,propType:market.propType,label:market.label,category:market.category,line:market.line,offers}]:[]
     })
-    return markets.length?[{id:player.id,name:player.name,team:player.team,position:player.position,markets}]:[]
+    return markets.length?[{id:player.id,name:player.name,team:player.team,position:player.position,headshot:nflBoardImage(player.headshot),headshotFallbacks:Array.isArray(player.headshotFallbacks)?player.headshotFallbacks.slice(0,4).map(nflBoardImage).filter((value):value is string=>!!value):[],markets}]:[]
   })
   return {capturedAt,typedOpeningSource,board:{bdlGameId:board.bdlGameId,status:board.status,source:'snapshot',capturedAt,gameLines:[],players}}
 }
@@ -91,9 +101,9 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v4:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v5:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date().toISOString()
-      const entries:Array<{game:GameRow;quotes:CompactQuote[]}|null>=Array(games.length).fill(null)
+      const entries:Array<{game:GameRow;quotes:CompactQuote[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
         const clock=clocks.find(item=>item.id===game.id), row:GameRow={id:game.id,away:game.away.abbr,home:game.home.abbr,status:'ready'}
         if(!clock?.cutoff){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
@@ -119,19 +129,19 @@ export async function GET(request:NextRequest){
         if(observations.some(quote=>quote.openingConflict))row.status='incomplete'
         const quotes=observations.map(tuple)
         if(quotes.length>4000){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
-        entries[offset+relative]={game:row,quotes}
+        entries[offset+relative]={game:row,quotes,identities:nflBoardIdentities(game.id,[game.away.abbr,game.home.abbr],sources.flat(),observations)}
       }))
       const groups=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!=null)
       // Keep games atomic: never silently truncate individual rungs. A game
       // that cannot fit is explicitly unavailable in this observation.
       let remaining=4*1024*1024-Buffer.byteLength(JSON.stringify({date,games:groups.map(entry=>entry.game),quotes:[]}))-4096
-      for(const entry of groups){const bytes=Buffer.byteLength(JSON.stringify(entry.quotes));if(bytes>remaining){entry.game.status='unavailable';entry.quotes=[]}else remaining-=bytes}
-      const pool:Pool={date,games:groups.map(entry=>entry.game),quotes:groups.flatMap(entry=>entry.quotes)}
+      for(const entry of groups){const bytes=Buffer.byteLength(JSON.stringify([entry.quotes,entry.identities??[]]));if(bytes>remaining){entry.game.status='unavailable';entry.quotes=[];entry.identities=[]}else remaining-=bytes}
+      const pool:Pool={date,games:groups.map(entry=>entry.game),quotes:groups.flatMap(entry=>entry.quotes),identities:groups.flatMap(entry=>entry.identities??[])}
       if(groups.length!==games.length||Buffer.byteLength(JSON.stringify(pool))>4*1024*1024)throw new Error('Odds board exceeds limit')
       return pool
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKey=`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`
+    const viewKey=`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{
@@ -140,7 +150,7 @@ export async function GET(request:NextRequest){
       const current=await read(viewKey)
       if(current.error)throw new Error('Saved odds unavailable')
       let prior=current.data
-      if(!prior){const legacy=await read(priorViewKey);if(legacy.error)throw new Error('Saved odds unavailable');prior=legacy.data}
+      for(const key of priorViewKeys)if(!prior){const legacy=await read(key);if(legacy.error)throw new Error('Saved odds unavailable');prior=legacy.data}
       return mergePartial(candidate.value,(prior?.payload??null) as Pool|null,clocks)
     },110)
     // This is deliberately uncached: a newly corrected earlier kickoff or a
@@ -160,7 +170,11 @@ export async function GET(request:NextRequest){
     // An unavailable future game may acquire its first verified baseline;
     // its schedule is used only to decide when to poll, never to admit data.
     const future=fresh.flatMap(item=>{const game=games.find(candidate=>candidate.id===item.id);const time=item.cutoff?Date.parse(item.cutoff):game?nflKickoffAt(game)?.getTime():undefined;return time==null?[]:[time]}).filter(time=>time>Date.now())
-    const response={date,games:pool.games,markets,books,market,book,quotes,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null}
+    const wanted=new Set(quotes.map(q=>nflBoardIdentityKey(q[0],q[1],q[3],q[2])))
+    const identities=(Array.isArray(pool.identities)&&pool.identities.length<=3840?pool.identities:[]).filter(item=>Array.isArray(item)&&item.length===6&&typeof item[0]==='string'&&Number.isSafeInteger(item[1])&&typeof item[2]==='string'&&typeof item[3]==='string'&&Array.isArray(item[5])&&wanted.has(nflBoardIdentityKey(item[0],item[1],item[3],item[2])))
+    const color=(value:string|null|undefined,fallback:string)=>{const clean=typeof value==='string'?value.replace(/^#/,''):'';return /^[\da-f]{6}$/i.test(clean)?`#${clean}`:fallback}
+    const teams=games.flatMap(game=>[game.away,game.home].map(team=>[game.id,team.abbr,color(team.color,'#1b2430'),color(team.color2,'#111820'),nflBoardImage(team.logo)]))
+    const response={date,games:pool.games,markets,books,market,book,quotes,identities,teams,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null}
     if(Buffer.byteLength(JSON.stringify(response))>1024*1024)throw new Error('Odds board selection exceeds limit')
     return NextResponse.json(response,{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}})}
