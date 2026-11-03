@@ -43,10 +43,16 @@ export class NbaDirectSession {
     }
     let page: BBSession['page'] | undefined
     try {
+      this.watchdog ??= setTimeout(() => {
+        this.blocked = true
+        void this.release().catch(() => { console.error('[NBA] cloud session release could not be verified') })
+      }, Math.max(1, deadline - Date.now()))
       this.session ??= await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, verifyRelease: true, geoState: 'NC',
         proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*(betmgm\\.com|draftkings\\.com)$', metadata: { sport: 'nba', book: 'combined-direct', mode: 'first-market-dom' } })
-      this.watchdog ??= setTimeout(() => { this.blocked = true; void this.release().catch(() => {}) }, Math.max(1, deadline - Date.now()))
-      if (deadline - Date.now() < 20_000) throw new NbaDirectDeferred('deadline')
+      if (this.ended || this.blocked || deadline - Date.now() < 20_000) {
+        await this.release()
+        throw new NbaDirectDeferred(this.ended || this.blocked ? 'blocked' : 'deadline')
+      }
       const opening = this.session.page.context().newPage()
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
@@ -55,6 +61,14 @@ export class NbaDirectSession {
         void opening.then(late => late.close()).catch(() => {})
         throw error
       } finally { if (timer) clearTimeout(timer) }
+      if (this.ended || this.blocked || deadline - Date.now() < 20_000) {
+        this.blocked = true
+        // Verify remote release even when a page appeared after teardown.
+        // The page close is best-effort after that stronger confirmation.
+        try { await this.release() }
+        finally { void page.close().catch(() => {}) }
+        throw new NbaDirectDeferred('blocked')
+      }
       const session = this.session
       let released = false
       return { page, sessionId: session.sessionId, close: async () => {

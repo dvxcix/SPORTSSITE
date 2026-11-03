@@ -22,9 +22,13 @@ preserving its original budget retry behavior. A challenge stops reuse; failed
 page cleanup stops reuse; failed session release fails the receipt without
 undoing any already streamed saves. A deadline watchdog requests verified
 session release even if an active task fails to return. A timed-out waiter
-cannot free a lane whose previous task is still active.
+cannot free a lane whose previous task is still active. A session or page
+that arrives after teardown is never handed to a collector; the session is
+released and any late page is closed. A watchdog release failure emits only
+a private fixed-category error. If the host is terminated before a pending
+provider response arrives, an application receipt cannot be guaranteed.
 
-Checks: 144 focused collector, exact-price, cadence, guard, route, coordinator
+Checks: 148 focused collector, exact-price, cadence, guard, route, coordinator
 and policy tests passed. The large-slate fixture exercised both bookmakers in
 the same session, deferred incomplete work without saying no money was spent,
 and completed that work on the next simulated scheduler wake. The challenge,

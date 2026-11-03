@@ -4,11 +4,15 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
 class BudgetError extends Error { constructor(readonly code:string) { super(code) } }
-async function fixture(options:{failOpen?:boolean;failClosePage?:boolean;failCloseSession?:boolean;fakeTimers?:boolean}={}) {
+async function fixture(options:{failOpen?:boolean;failClosePage?:boolean;failCloseSession?:boolean;fakeTimers?:boolean;delayOpen?:boolean;delayPage?:boolean}={}) {
   const source=await readFile(new URL('../src/lib/nbaDirectSession.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   let opens=0,closes=0,created=0,active=0,maxActive=0
   let openOptions:Record<string,unknown>|undefined
+  let finishOpen!:()=>void
+  const opened = new Promise<void>(resolve=>{finishOpen=resolve})
+  let finishPage!:()=>void
+  const pageReady = new Promise<void>(resolve=>{finishPage=resolve})
   const pages = new Set<{close:()=>Promise<void>}>()
   const timers = new Map<number,{fn:()=>void;ms:number}>();let nextTimer=0
   const startTimer = options.fakeTimers ? (fn:()=>void,ms:number)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id} : setTimeout
@@ -16,17 +20,18 @@ async function fixture(options:{failOpen?:boolean;failClosePage?:boolean;failClo
   const fireTimers=(maximum:number)=>{for(const [id,timer] of [...timers])if(timer.ms<=maximum){timers.delete(id);timer.fn()}}
   const context={pages:()=>[root,...pages],newPage:async()=>{
     created++;active++;maxActive=Math.max(maxActive,active)
+    if(options.delayPage)await pageReady
     const page={close:async()=>{if(options.failClosePage)throw new Error('close failed');if(pages.delete(page))active--}}
     pages.add(page);return page
   }}
   const root={context:()=>context}
   const imports:Record<string,unknown>={
     'server-only':{},'./nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},
-    './browserbase':{openSession:async(settings:Record<string,unknown>)=>{opens++;openOptions=settings;if(options.failOpen)throw new BudgetError('session-busy');return{page:root,sessionId:'fixture',close:async()=>{closes++;if(options.failCloseSession)throw new Error('release failed')}}}},
+    './browserbase':{openSession:async(settings:Record<string,unknown>)=>{opens++;openOptions=settings;if(options.failOpen)throw new BudgetError('session-busy');if(options.delayOpen)await opened;return{page:root,sessionId:'fixture',close:async()=>{closes++;if(options.failCloseSession)throw new Error('release failed')}}}},
   }
   const compiled={exports:{} as {NbaDirectSession:new()=>{acquire:(deadline:number,eligible?:()=>boolean)=>Promise<{page:unknown;close:()=>Promise<void>}>;stop:()=>void;deferred:(error:unknown)=>string|null;close:()=>Promise<void>}}}
   new Function('require','module','exports','setTimeout','clearTimeout',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},compiled,compiled.exports,startTimer,stopTimer)
-  return { session:new compiled.exports.NbaDirectSession(), stats:()=>({opens,closes,created,active,maxActive,openOptions}), context, fireTimers }
+  return { session:new compiled.exports.NbaDirectSession(), stats:()=>({opens,closes,created,active,maxActive,openOptions}), context, fireTimers, finishOpen, finishPage }
 }
 
 test('one guarded session serializes five capture partitions and cleans all pages',async()=>{
@@ -104,4 +109,40 @@ test('a hung active lane triggers one verified session release at its browser de
   fireTimers(61_000);await Promise.resolve()
   assert.equal(stats().closes,1)
   await lane.close();await session.close();assert.equal(stats().closes,1)
+})
+
+test('a paid session that opens after close is immediately released without creating a page',async()=>{
+  const {session,stats,finishOpen}=await fixture({delayOpen:true})
+  const lane=session.acquire(Date.now()+60_000)
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(stats().opens,1)
+  await session.close();finishOpen()
+  await assert.rejects(lane,(error:unknown)=>session.deferred(error)==='blocked')
+  assert.equal(stats().closes,1);assert.equal(stats().created,0)
+})
+
+test('a late provider create after the deadline watchdog is released without navigating',async()=>{
+  const {session,stats,fireTimers,finishOpen}=await fixture({delayOpen:true,fakeTimers:true})
+  const lane=session.acquire(Date.now()+60_000)
+  await Promise.resolve();await Promise.resolve();assert.equal(stats().opens,1)
+  fireTimers(61_000);finishOpen()
+  await assert.rejects(lane,(error:unknown)=>session.deferred(error)==='blocked')
+  await session.close();assert.equal(stats().closes,1);assert.equal(stats().created,0)
+})
+
+test('a page that resolves after session close is closed and never given to a collector',async()=>{
+  const {session,stats,finishPage}=await fixture({delayPage:true})
+  const lane=session.acquire(Date.now()+60_000)
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(stats().created,1)
+  await session.close();finishPage()
+  await assert.rejects(lane,(error:unknown)=>session.deferred(error)==='blocked')
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.equal(stats().active,0);assert.equal(stats().closes,1)
+})
+
+test('a failed release cannot be hidden when page creation races session close',async()=>{
+  const {session,finishPage}=await fixture({delayPage:true,failCloseSession:true})
+  const lane=session.acquire(Date.now()+60_000)
+  await new Promise(resolve=>setImmediate(resolve))
+  await assert.rejects(session.close(),/release failed/);finishPage()
+  await assert.rejects(lane,/release failed/)
 })
