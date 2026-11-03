@@ -1,7 +1,7 @@
 NBA direct-book shared-session candidate — 2026-11-03
 
-Status: isolated source and mocked tests only. This is not a release or an
-authorization to start browsers. Both capture jobs must remain paused until
+Status: source reviewed with mocked tests only; the collector is not authorized
+to start browsers. Both capture jobs must remain paused until
 the owner-approved shared spending ledger and its controls are reviewed,
 applied if authorized, and verified. No live capture was triggered here.
 
