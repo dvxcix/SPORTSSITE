@@ -17,8 +17,8 @@ const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpper
 const when=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'
 const unpack=(q:Quote):NflOddsBoardQuote=>({gameId:q[0],playerId:q[1],player:q[2],team:q[3],position:q[4],market:q[5],label:'',vendor:q[6],line:q[7],current:q[8],updatedAt:q[9],previous:q[10],previousAt:q[11],opening:q[12]??null,openingConflict:q[13]===true})
 
-export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardPhase|null}){
-  const [market,setMarket]=useState('receiving_yards'),[vendor,setVendor]=useState('fanduel'),[game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState(''),[comparison,setComparison]=useState<'opening'|'earlier'>('opening')
+export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{date:string;phase?:NflOddsBoardPhase|null;market:string;onMarket:(market:string)=>void;vendor:string;onVendor:(vendor:string)=>void}){
+  const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState(''),[comparison,setComparison]=useState<'opening'|'earlier'>('opening')
   const requestKey=JSON.stringify([date,market,vendor])
   const [saved,setSaved]=useState<{key:string;value:Payload;receivedAt:number}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
   const [openedAt]=useState(()=>Date.now()),[clock,setClock]=useState(()=>Date.now()),[requireAfter,setRequireAfter]=useState(0)
@@ -39,7 +39,7 @@ export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardP
         const response=await fetch(`/api/the-sideline/odds-board?${query}`,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
         if(!response.ok)throw new Error('unavailable')
         const value=await response.json() as Payload
-        if(value.date!==date||!Array.isArray(value.games)||!Array.isArray(value.markets)||!Array.isArray(value.books)||!Array.isArray(value.quotes)||value.quotes.length>5000||!value.phaseToken||!value.phaseObservedAt)throw new Error('invalid')
+        if(value.date!==date||value.market!==market||value.book!==vendor||!Array.isArray(value.games)||!Array.isArray(value.markets)||!Array.isArray(value.books)||!Array.isArray(value.quotes)||value.quotes.length>5000||!value.phaseToken||!value.phaseObservedAt)throw new Error('invalid')
         if(value.nextStart!=null&&!Number.isFinite(Date.parse(value.nextStart)))throw new Error('invalid')
         if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);failures=0;nextStart=value.nextStart?Date.parse(value.nextStart):null}
       }catch{if(!controller.signal.aborted){setErrorKey(requestKey);failures++}}
@@ -92,8 +92,8 @@ export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardP
   return <section className={styles.panel} aria-label="NFL odds board">
     <header><h2>Odds Board</h2><span>{date} · Pregame</span></header>
     <div className={styles.controls}>
-      <label>Market<select aria-label="Odds board market" value={shownMarket} onChange={e=>{setMarket(e.target.value);setSortLine('all')}}>{(catalog?.markets??[market]).map(item=><option key={item} value={item}>{label(item)}</option>)}</select></label>
-      <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{setVendor(e.target.value);setSortLine('all')}}>{(payload?.books??[vendor]).map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
+      <label>Market<select aria-label="Odds board market" value={shownMarket} onChange={e=>{onMarket(e.target.value);setSortLine('all')}}>{[...new Set([market,...(catalog?.markets??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></label>
+      <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{onVendor(e.target.value);setSortLine('all')}}>{[...new Set([vendor,...(payload?.books??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
       <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(g=><option key={g.id} value={g.id}>{g.away} @ {g.home}{g.status==='ready'?'':' · incomplete'}</option>)}</select></label>
       <label>Team<select aria-label="Odds board team" value={team} onChange={e=>setTeam(e.target.value)}><option value="all">All teams</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
       <label>Compare<select aria-label="Compare odds to" value={comparison} onChange={e=>setComparison(e.target.value as typeof comparison)}><option value="opening">Opening</option><option value="earlier">Earlier</option></select></label>

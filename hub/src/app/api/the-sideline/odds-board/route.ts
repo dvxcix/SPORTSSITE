@@ -153,9 +153,9 @@ export async function GET(request:NextRequest){
     // Validate even cached values against the current exact game/cutoff set.
     mergePartial({date,games:pool.games,quotes:[]},pool,clocks)
     const markets=[...new Set(pool.quotes.map(q=>q[5]))].sort()
-    const market=markets.includes(requestedMarket)?requestedMarket:markets[0]??''
+    const market=requestedMarket
     const books=[...new Set(pool.quotes.filter(q=>q[5]===market).map(q=>q[6]))].sort()
-    const book=books.includes(requestedBook)?requestedBook:books[0]??''
+    const book=requestedBook
     const quotes=pool.quotes.filter(q=>q[5]===market&&q[6]===book)
     // An unavailable future game may acquire its first verified baseline;
     // its schedule is used only to decide when to poll, never to admit data.

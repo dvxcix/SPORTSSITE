@@ -1671,6 +1671,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
+  const [activeBook, setActiveBook] = useState('fanduel')
   const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
   const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture, view === 'odds-board')
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
@@ -2298,11 +2299,13 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         ))}
       </nav>}
 
-      {view === 'odds-board' ? <NflOddsBoard date={selected.gameday} phase={marketStory.oddsBoardPhase}/> : view === 'props' ? (
+      {view === 'odds-board' ? <NflOddsBoard date={selected.gameday} phase={marketStory.oddsBoardPhase} market={activeProp} onMarket={setActiveProp} vendor={activeBook} onVendor={setActiveBook}/> : view === 'props' ? (
         <LadderBoard
           board={board}
           prop={activeProp}
           onProp={setActiveProp}
+          vendor={activeBook}
+          onVendor={setActiveBook}
           scores={ladderScores}
           game={selected}
           matrixMatches={new Map(rows.flatMap(row => row.market ? [[row.market.id, matrixMatches.get(row.id) ?? []] as const] : []))}

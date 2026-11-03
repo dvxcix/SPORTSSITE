@@ -17,16 +17,15 @@ const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_t
 const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
 const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
-export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matrixMatches }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>> }) {
-  const [vendor, setVendor] = useState('fanduel')
+export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, matrixMatches }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>> }) {
   const statusFor = (player: SidelineOddsBoard['players'][number]) => nflAvailability(player, game?.gameday)
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
   const [offset, setOffset] = useState(0),
     [mode, setMode] = useState<'odds' | 'move' | 'ratio' | 'picks'>('odds')
   const [sort, setSort] = useState<LadderSort>({ key: 'player', direction: 'asc' })
-  const props = useMemo(() => Array.from(new Set(board.players.flatMap(p => p.markets.map(m => m.propType)))).sort(), [board])
-  const books = useMemo(() => Array.from(new Set(board.players.flatMap(p => p.markets.flatMap(m => m.offers.map(o => o.vendor))))).sort(), [board])
+  const props = useMemo(() => Array.from(new Set([prop, ...board.players.flatMap(p => p.markets.map(m => m.propType))])).sort(), [board, prop])
+  const books = useMemo(() => Array.from(new Set([vendor, ...board.players.flatMap(p => p.markets.flatMap(m => m.offers.map(o => o.vendor)))])).sort(), [board, vendor])
   const rows = useMemo(
     () =>
       board.players
@@ -130,7 +129,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, scores, game, matri
             aria-label="Sportsbook"
             value={vendor}
             onChange={e => {
-              setVendor(e.target.value)
+              onVendor(e.target.value)
               setOffset(0)
               setSort({ key: 'player', direction: 'asc' })
             }}
