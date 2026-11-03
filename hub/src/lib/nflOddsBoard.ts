@@ -1,9 +1,9 @@
 import type { SidelineOddsBoard } from './nflOddsTypes'
 import { americanImpliedProbability } from './nflMarketMath'
 
-export type NflOddsBoardFrame = { capturedAt: string; board: SidelineOddsBoard }
-export type NflOddsBoardQuote = { gameId: string; playerId: number; player: string; team: string; position: string; market: string; label: string; vendor: string; line: number; current: number; updatedAt: string; previous: number | null; previousAt: string | null }
-type Candidate = Omit<NflOddsBoardQuote, 'previous' | 'previousAt'>
+export type NflOddsBoardFrame = { capturedAt: string; board: SidelineOddsBoard; typedOpeningSource?: boolean }
+export type NflOddsBoardQuote = { gameId: string; playerId: number; player: string; team: string; position: string; market: string; label: string; vendor: string; line: number; current: number; updatedAt: string; previous: number | null; previousAt: string | null; opening: number | null; openingConflict: boolean }
+type Candidate = Omit<NflOddsBoardQuote, 'previous' | 'previousAt' | 'openingConflict'>
 const date = (value: string | null | undefined) => { const n = Date.parse(value ?? ''); return Number.isFinite(n) ? n : null }
 const key = (q: Candidate) => JSON.stringify([q.gameId, q.playerId, q.team, q.market, q.vendor, q.line])
 
@@ -30,7 +30,14 @@ export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: stri
         for (const market of player.markets) for (const offer of market.offers ?? []) {
           const observed = date(offer.updatedAt), line = offer.line, value = offer.current?.odds
           if (offer.type !== 'milestone' || offer.isOpeningOnly || line == null || !Number.isSafeInteger(line) || line <= 0 || market.propType === 'first_td' || market.propType.startsWith('anytime_td') || market.line !== line || market.key !== `${market.propType}:${line}` || !offer.vendor || observed == null || observed > frameTime || observed >= stop || observed > now || americanImpliedProbability(value) == null) continue
-          const quote: Candidate = { gameId, playerId: player.id, player: player.name, team, position: player.position ?? '', market: market.propType, label: market.label, vendor: offer.vendor, line, current: value!, updatedAt: offer.updatedAt! }
+          // Only base-feed history has this typed provider opening. Direct
+          // sportsbook archives can synthesize opening=current and are never
+          // evidence of an opening. The opening's original time is not stored.
+          const rawOpening = offer.opening
+          const opening = frame.typedOpeningSource && offer.openingLine === line && rawOpening &&
+            Object.keys(rawOpening).every(key => key === 'odds') && americanImpliedProbability(rawOpening.odds) != null
+            ? rawOpening.odds! : null
+          const quote: Candidate = { gameId, playerId: player.id, player: player.name, team, position: player.position ?? '', market: market.propType, label: market.label, vendor: offer.vendor, line, current: value!, updatedAt: offer.updatedAt!, opening }
           const id = key(quote); frameKeys.set(id, [...(frameKeys.get(id) ?? []), quote])
         }
       }
@@ -52,7 +59,8 @@ export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: stri
     const older = [...sorted.slice(1), ...(prior.get(id) ?? [])].filter(q => Date.parse(q.updatedAt) < t).sort((a,b) => Date.parse(b.updatedAt)-Date.parse(a.updatedAt))
     const p = older[0], pt = p && Date.parse(p.updatedAt)
     const previous = p && !older.some(q => Date.parse(q.updatedAt) === pt && q.current !== p.current) ? p : null
-    result.push({ ...latest, previous: previous?.current ?? null, previousAt: previous?.updatedAt ?? null })
+    const openingPrices = [...new Set([...candidates, ...(prior.get(id) ?? [])].flatMap(q => q.opening == null ? [] : [q.opening]))]
+    result.push({ ...latest, opening: openingPrices.length === 1 ? openingPrices[0] : null, openingConflict: openingPrices.length > 1, previous: previous?.current ?? null, previousAt: previous?.updatedAt ?? null })
   }
   return result
 }

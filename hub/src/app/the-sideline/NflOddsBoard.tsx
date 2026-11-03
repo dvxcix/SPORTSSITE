@@ -2,11 +2,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { BookLogo } from '@/components/BookLogo'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { nflOddsBoardMove, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
 import { nflOddsBoardTrust, type NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
 import styles from './nflOddsBoard.module.css'
 
-type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null]
+type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type Game={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];phaseToken:string;phaseObservedAt:string;nextStart:string|null}
 type Row={id:string;player:string;team:string;position:string;matchup:string;cells:Map<number,NflOddsBoardQuote>}
@@ -14,10 +15,10 @@ const price=(n:number|null)=>n==null?'—':n>0?`+${n}`:String(n)
 const movement=(n:number)=>n===0?'0.00':`${n>0?'+':'−'}${Math.abs(n)<0.01?'<0.01':Math.abs(n).toFixed(2)}`
 const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bTds?\b/g,'Touchdowns')
 const when=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'
-const unpack=(q:Quote):NflOddsBoardQuote=>({gameId:q[0],playerId:q[1],player:q[2],team:q[3],position:q[4],market:q[5],label:'',vendor:q[6],line:q[7],current:q[8],updatedAt:q[9],previous:q[10],previousAt:q[11]})
+const unpack=(q:Quote):NflOddsBoardQuote=>({gameId:q[0],playerId:q[1],player:q[2],team:q[3],position:q[4],market:q[5],label:'',vendor:q[6],line:q[7],current:q[8],updatedAt:q[9],previous:q[10],previousAt:q[11],opening:q[12]??null,openingConflict:q[13]===true})
 
 export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardPhase|null}){
-  const [market,setMarket]=useState('receiving_yards'),[vendor,setVendor]=useState('fanduel'),[game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState('')
+  const [market,setMarket]=useState('receiving_yards'),[vendor,setVendor]=useState('fanduel'),[game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState(''),[comparison,setComparison]=useState<'opening'|'earlier'>('opening')
   const requestKey=JSON.stringify([date,market,vendor])
   const [saved,setSaved]=useState<{key:string;value:Payload;receivedAt:number}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
   const [openedAt]=useState(()=>Date.now()),[clock,setClock]=useState(()=>Date.now()),[requireAfter,setRequireAfter]=useState(0)
@@ -83,10 +84,10 @@ export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardP
       groups.set(id,row)
     }
     const all=[...groups.values()],selectedLine=columns.has(Number(sortLine))?sortLine:'all'
-    const extreme=(row:Row)=>{const selected=selectedLine==='all'?[...row.cells.values()]:[row.cells.get(Number(selectedLine))].filter((q):q is NflOddsBoardQuote=>!!q);const values=selected.map(q=>nflOddsBoardMove(q.current,q.previous)).filter((x):x is number=>x!=null);return values.length?(sort==='lengthened'?Math.min(...values):Math.max(...values)):null}
+    const extreme=(row:Row)=>{const selected=selectedLine==='all'?[...row.cells.values()]:[row.cells.get(Number(selectedLine))].filter((q):q is NflOddsBoardQuote=>!!q);const values=selected.map(q=>nflOddsBoardMove(q.current,comparison==='opening'?q.opening:q.previous)).filter((x):x is number=>x!=null);return values.length?(sort==='lengthened'?Math.min(...values):Math.max(...values)):null}
     all.sort((a,b)=>{if(sort==='player')return a.player.localeCompare(b.player)||a.id.localeCompare(b.id);const x=extreme(a),y=extreme(b);return x==null||y==null?x==null&&y==null?a.player.localeCompare(b.player):x==null?1:-1:(sort==='lengthened'?x-y:y-x)||a.player.localeCompare(b.player)})
     return {rows:all,lines:[...columns].sort((a,b)=>a-b)}
-  },[filtered,payload,sort,sortLine])
+  },[filtered,payload,sort,sortLine,comparison])
   const incomplete=payload?.games.filter(g=>g.status!=='ready')??[]
   return <section className={styles.panel} aria-label="NFL odds board">
     <header><h2>Odds Board</h2><span>{date} · Pregame</span></header>
@@ -95,6 +96,7 @@ export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardP
       <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{setVendor(e.target.value);setSortLine('all')}}>{(payload?.books??[vendor]).map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
       <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(g=><option key={g.id} value={g.id}>{g.away} @ {g.home}{g.status==='ready'?'':' · incomplete'}</option>)}</select></label>
       <label>Team<select aria-label="Odds board team" value={team} onChange={e=>setTeam(e.target.value)}><option value="all">All teams</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
+      <label>Compare<select aria-label="Compare odds to" value={comparison} onChange={e=>setComparison(e.target.value as typeof comparison)}><option value="opening">Opening</option><option value="earlier">Earlier</option></select></label>
       <label>Sort<select aria-label="Sort odds board" value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="shortened">Most shortened</option><option value="lengthened">Most lengthened</option><option value="player">Player A–Z</option></select></label>
       <label>Sort milestone<select aria-label="Sort odds board milestone" value={lines.some(line=>String(line)===sortLine)?sortLine:'all'} onChange={e=>setSortLine(e.target.value)}><option value="all">Any milestone</option>{lines.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>
       <label>Player<input aria-label="Find odds board player" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find a player"/></label>
@@ -102,7 +104,7 @@ export function NflOddsBoard({date,phase=null}:{date:string;phase?:NflOddsBoardP
     {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {!!incomplete.length&&<p role="status">Some saved prices unavailable: {incomplete.map(g=>`${g.away} @ ${g.home}`).join(', ')}.</p>}
-    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NFL milestone odds and movement" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row"><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small></th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line}>—</td>;const move=nflOddsBoardMove(q.current,q.previous);return <td key={line}><b>{price(q.current)}</b><small>Earlier {price(q.previous)}</small><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp${move>0?' · Shortened':move<0?' · Lengthened':' · Unchanged'}`}</span><small>Last seen {when(q.updatedAt)}</small>{q.previousAt&&<small>Earlier {when(q.previousAt)}</small>}</td>})}</tr>)}</tbody></table></div>}
+    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NFL milestone odds and movement" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row"><span className={styles.player}><NflTeamLogo abbr={row.team} size={24}/><span className={styles.playerText}><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small></span></span></th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline);return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><b>{price(q.current)}</b><small>{comparison==='opening'?'Open':'Earlier'} {price(baseline)}</small><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp${move>0?' · Shortened':move<0?' · Lengthened':' · Unchanged'}`}</span><small>Last seen {when(q.updatedAt)}</small>{comparison==='earlier'&&q.previousAt&&<small>Earlier {when(q.previousAt)}</small>}</td>})}</tr>)}</tbody></table></div>}
     {payload&&!rows.length&&<p role="status">No milestone prices for these filters.</p>}
   </section>
 }

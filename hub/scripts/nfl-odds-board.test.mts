@@ -10,6 +10,31 @@ const current=frame('2026-11-02T22:30:00Z',[offer(-140,'2026-11-02T22:29:00Z')])
 const quotes=(sources:NflOddsBoardFrame[][])=>nflOddsBoardQuotes('game',['SEA','CHI'],cutoff,sources,now)
 test('compares exact matching saved milestone observations and retains actual times',()=>{const [q]=quotes([[current,previous]]);assert.equal(q.current,-140);assert.equal(q.previous,-110);assert.equal(q.previousAt,'2026-11-02T21:29:00Z');assert.ok(Math.abs(nflOddsBoardMove(q.current,q.previous)!-5.95238)<0.0001)})
 test('an embedded opening is never treated as a previous observation',()=>{const [q]=quotes([[current]]);assert.equal(q.previous,null);assert.equal(q.previousAt,null);assert.equal(nflOddsBoardMove(q.current,q.previous),null)})
+test('a typed same-line base opening is distinct from unchanged recent observations',()=>{
+  const latest=frame('2026-11-02T22:30:00Z',[offer(-870,'2026-11-02T22:29:00Z',{opening:{odds:-940}})])
+  const older=frame('2026-11-02T21:30:00Z',[offer(-870,'2026-11-02T21:29:00Z',{opening:{odds:-940}})])
+  latest.typedOpeningSource=true;older.typedOpeningSource=true
+  const [q]=quotes([[latest,older]])
+  assert.equal(q.opening,-940);assert.equal(q.previous,-870);assert.equal(nflOddsBoardMove(q.current,q.previous),0)
+  assert.ok(Math.abs(nflOddsBoardMove(q.current,q.opening)!-(-0.6931))<0.01)
+  assert.equal('openingAt' in q,false,'opening time was not recorded')
+})
+test('untyped, different-line, mixed-shape and conflicting openings stay unknown',()=>{
+  const untrusted=frame('2026-11-02T22:30:00Z',[offer(-140,'2026-11-02T22:29:00Z')]);assert.equal(quotes([[untrusted]])[0].opening,null)
+  for(const patch of [{openingLine:20},{opening:{over:-110}},{opening:{odds:-110,over:-110}}]){
+    const invalid=frame('2026-11-02T22:30:00Z',[offer(-140,'2026-11-02T22:29:00Z',patch)]);invalid.typedOpeningSource=true
+    assert.equal(quotes([[invalid]])[0].opening,null)
+  }
+  const a=structuredClone(current),b=structuredClone(previous);a.typedOpeningSource=true;b.typedOpeningSource=true;b.board.players[0].markets[0].offers[0].opening={odds:150}
+  assert.equal(quotes([[a,b]])[0].opening,null)
+})
+test('a newer direct quote can use only an exact typed base opening',()=>{
+  const base=frame('2026-11-02T21:30:00Z',[offer(-120,'2026-11-02T21:29:00Z',{opening:{odds:150}})]);base.typedOpeningSource=true
+  const direct=frame('2026-11-02T22:30:00Z',[offer(-140,'2026-11-02T22:29:00Z',{opening:{odds:-140}})])
+  const [q]=quotes([[base],[direct]]);assert.equal(q.current,-140);assert.equal(q.opening,150);assert.equal(q.previous,-120)
+  base.board.players[0].markets[0].offers[0].openingLine=20;assert.equal(quotes([[base],[direct]])[0].opening,null)
+  base.board.players[0].markets[0].offers[0].openingLine=25;base.capturedAt='2026-11-02T23:00:00Z';assert.equal(quotes([[base],[direct]])[0].opening,null)
+})
 test('later observed unchanged prices correctly report zero',()=>{const before=frame('2026-11-02T21:30:00Z',[offer(-140,'2026-11-02T21:29:00Z')]);assert.equal(nflOddsBoardMove(quotes([[current,before]])[0].current,quotes([[current,before]])[0].previous),0)})
 test('same timestamp is not a previous observation',()=>{const same=frame('2026-11-02T21:30:00Z',[offer(-140,'2026-11-02T22:29:00Z')]);assert.equal(quotes([[current,same]])[0].previous,null)})
 test('different book, player, team, market, type or line cannot become previous',()=>{
