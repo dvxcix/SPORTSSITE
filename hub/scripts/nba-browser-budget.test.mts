@@ -107,47 +107,35 @@ async function rejectsCode(work: Promise<unknown>, code: string) {
   })
 }
 
-test('capture admission defaults closed without explicit enablement or any required quota', async () => {
+
+// Shared SQL tests exercise money enforcement. Legacy sport-limit environment
+// settings cannot impose a hidden, lower NBA spending or session ceiling.
+test('NBA atomic configuration ignores old sport caps and retains scope bounds', async () => {
+  const h = await harness({ env: { NBA_BROWSER_DAILY_CENT_LIMIT: '1', NBA_BROWSER_PERIOD_CENT_LIMIT: '1', NBA_BROWSER_DAILY_SESSION_LIMIT: '1', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '1', NBA_BROWSER_DAILY_MINUTE_LIMIT: '1', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '1' } })
+  const c = h.api.nbaBrowserAtomicConfiguration({ ...h.input, timeoutSeconds: 300, gameIds: [21717988, 21717987] })
+  assert.equal(c.dailySessions, 1000); assert.equal(c.monthlySessions, 10000)
+  assert.equal(c.dailyMinutes, 30000); assert.equal(c.monthlyMinutes, 30000)
+  assert.deepEqual(c.gameIds, [21717987, 21717988]); assert.equal(c.resetDay, 18)
+  assert.equal(h.metrics().reads, 0); assert.equal(h.calls.length, 0)
+})
+
+test('NBA atomic configuration rejects disabled, invalid identity, reset day and timeout', async () => {
   for (const value of [undefined, 'false', 'TRUE', '1', ' true ']) {
     const h = await harness({ env: { NBA_BROWSER_CAPTURE_ENABLED: value } })
-    await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'paused')
-    assert.equal(h.metrics().reads, 0); assert.equal(h.calls.length, 0)
+    assert.throws(() => h.api.nbaBrowserAtomicConfiguration({ ...h.input, timeoutSeconds: 300 }), { code: 'paused' })
   }
-  for (const name of Object.keys(enabled).filter(name => name !== 'NBA_BROWSER_CAPTURE_ENABLED')) {
-    const h = await harness({ env: { [name]: undefined } })
-    await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'configuration')
-    assert.equal(h.metrics().reads, 0); assert.equal(h.calls.length, 0)
+  for (const value of [undefined, '', ' ', '0', '-1', '1e3', '1.5', '12oops', '29', '999999999999999999']) {
+    const h = await harness({ env: { NBA_BROWSER_BUDGET_RESET_DAY: value } })
+    assert.throws(() => h.api.nbaBrowserAtomicConfiguration({ ...h.input, timeoutSeconds: 300 }), { code: 'configuration' })
   }
-})
-
-test('malformed or excessive limits never silently fall back to defaults', async () => {
-  for (const name of Object.keys(enabled).filter(name => name !== 'NBA_BROWSER_CAPTURE_ENABLED')) {
-    for (const value of ['', ' ', '0', '-1', '1e3', '1.5', '12oops', '999999999999999999']) {
-      const h = await harness({ env: { [name]: value } })
-      await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'configuration')
-      assert.equal(h.calls.length, 0)
-    }
-  }
-  for (const timeoutSeconds of [0, 59, 301, 450, NaN, Infinity, 60.5]) {
-    const h = await harness()
-    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds }), 'configuration')
-    assert.equal(h.metrics().reads, 0)
-  }
-})
-
-test('only additional usage is charged, and actual cost plus new reservation controls admission', async () => {
   const h = await harness()
-  let bytes = 112_000_000_000
-  const input = { ...h.input, readUsage: async () => ({ browserMinutes: 100_000, proxyBytes: bytes }) }
-  const first = await h.api.reserveNbaBrowserBudget(input)
-  assert.equal(first.reservedCents, 51)
-  assert.equal(h.db.windows.get('project-fixture:day:2026-10-27')?.floor, 51)
-  bytes += 250_000_000
-  await rejectsCode(h.api.reserveNbaBrowserBudget(input), 'spend-limit')
-  assert.equal(h.db.reservations.size, 1)
-  assert.equal(h.db.windows.get('project-fixture:day:2026-10-27')?.floor, 250)
-  await h.api.checkNbaBrowserBudgetUsage(input)
-  assert.equal(h.db.windows.get('project-fixture:day:2026-10-27')?.floor, 250)
+  for (const timeoutSeconds of [0, 59, 301, 450, NaN, Infinity, 60.5])
+    assert.throws(() => h.api.nbaBrowserAtomicConfiguration({ ...h.input, timeoutSeconds }), { code: 'configuration' })
+  for (const projectId of ['', '../bad', 'a'.repeat(129)])
+    assert.throws(() => h.api.nbaBrowserAtomicConfiguration({ ...h.input, projectId, timeoutSeconds: 300 }), { code: 'configuration' })
+  for (const workflow of [undefined, '', 'PUBLIC', 'pikkit', ['public']])
+    assert.throws(() => h.api.nbaBrowserAtomicConfiguration({ ...h.input, workflow: workflow as never, timeoutSeconds: 300 }), { code: 'configuration' })
+  assert.equal(h.metrics().reads, 0); assert.equal(h.calls.length, 0)
 })
 
 test('provider error, invalid values and a hung callback fail closed without leaking provider text', async () => {
@@ -161,61 +149,6 @@ test('provider error, invalid values and a hung callback fail closed without lea
   await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, readUsage: async () => { throw Error('https://credential:secret@example.test') } }), 'usage-unavailable')
   await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, readUsage: () => new Promise(() => {}) }), 'usage-unavailable')
   assert.equal(h.calls.length, 0); assert.equal(h.metrics().timers, h.metrics().cleared)
-})
-
-test('active usage checks always reread provider state and never reserve or cache success', async () => {
-  const h = await harness()
-  await rejectsCode(h.api.checkNbaBrowserBudgetUsage(h.input), 'reservation-unavailable')
-  await h.api.reserveNbaBrowserBudget(h.input)
-  assert.deepEqual(await h.api.checkNbaBrowserBudgetUsage(h.input), { browserMinutes: 2, proxyBytes: 10 })
-  await h.api.checkNbaBrowserBudgetUsage(h.input)
-  await rejectsCode(h.api.checkNbaBrowserBudgetUsage({ ...h.input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 300_000_010 }) }), 'spend-limit')
-  h.env.NBA_BROWSER_CAPTURE_ENABLED = 'false'
-  await rejectsCode(h.api.checkNbaBrowserBudgetUsage(h.input), 'paused')
-  assert.equal(h.metrics().reads, 4); assert.equal(h.calls.length, 5)
-  assert.equal(h.db.reservations.size, 1)
-})
-
-test('independent instances admit only the atomic daily quota and reserve full runtime per actual session', async () => {
-  const db = ledger(), instances = await Promise.all(Array.from({ length: 20 }, () => harness({ db })))
-  const attempts = await Promise.allSettled(instances.map(h => h.api.reserveNbaBrowserBudget(h.input)))
-  assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 2)
-  assert.equal(db.reservations.size, 2)
-  assert.deepEqual(db.counters.get('project-fixture:day:2026-10-27'), { sessions: 2, minutes: 10 })
-  assert.ok(attempts.filter(result => result.status === 'rejected').every(result => (result as PromiseRejectedResult).reason.code === 'quota-limit'))
-})
-
-test('daily, period and minute quotas are independent, rounded, and never refund old observations', async () => {
-  const h = await harness({ env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '10', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '20', NBA_BROWSER_DAILY_MINUTE_LIMIT: '3', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '4' } })
-  const first = await h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds: 61 })
-  assert.equal(first.reservedMinutes, 2)
-  await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds: 61 }), 'quota-limit')
-  h.db.date('2026-10-28')
-  await h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds: 61 })
-  await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds: 60 }), 'quota-limit')
-  h.db.date('2026-11-18', '2026-11-18')
-  await h.api.reserveNbaBrowserBudget({ ...h.input, timeoutSeconds: 60 })
-  assert.equal(h.db.reservations.size, 3)
-  assert.deepEqual(h.db.counters.get('project-fixture:period:2026-10-18'), { sessions: 2, minutes: 4 })
-})
-
-test('period session cap survives day rollover and reset-day changes cannot manufacture a new budget', async () => {
-  const h = await harness({ env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '10', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '1' } })
-  await h.api.reserveNbaBrowserBudget(h.input)
-  h.db.date('2026-10-28')
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'quota-limit')
-  h.env.NBA_BROWSER_BUDGET_RESET_DAY = '19'
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'reservation-unavailable')
-  assert.equal(h.db.reservations.size, 1)
-})
-
-test('uncertain database commit remains charged and no retry or refund is attempted', async () => {
-  const db = ledger(), h = await harness({ db, env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '1' }, rpc: args => { db.reserve(args); throw Error('https://credential:secret@example.test') } })
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'reservation-unavailable')
-  assert.equal(h.calls.length, 1); assert.equal(db.reservations.size, 1)
-  const next = await harness({ db, env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '1' } })
-  await rejectsCode(next.api.reserveNbaBrowserBudget(next.input), 'quota-limit')
-  assert.equal(db.reservations.size, 1)
 })
 
 test('duplicate reservation tokens cannot authorize another session or double-charge', async () => {
@@ -234,70 +167,6 @@ test('malformed or missing reservation confirmation never authorizes a create', 
   }
 })
 
-test('migration is service-only and locks project before bounded quota reads; ledger is not expiring cache', async () => {
-  const sql = await readFile(new URL('../supabase/migrations/20261027224022_nba_browser_budget_ledger.sql', import.meta.url), 'utf8')
-  assert.ok(sql.indexOf('for update') < sql.indexOf('select * into strict v_daily'))
-  assert.equal((sql.match(/enable row level security/g) ?? []).length, 3)
-  assert.ok(sql.includes('security invoker'))
-  assert.ok(sql.includes('from public,anon,authenticated,service_role'))
-  assert.ok(sql.includes('grant execute on function public.reserve_nba_browser_budget'))
-  assert.ok(sql.includes("at time zone 'UTC'"))
-  assert.doesNotMatch(sql, /delete from|truncate|nba_source_cache|expires_at/i)
-})
-
-test('above-approved cent limits and malformed monetary configuration are rejected', async () => {
-  for (const env of [{ NBA_BROWSER_DAILY_CENT_LIMIT: '301' }, { NBA_BROWSER_PERIOD_CENT_LIMIT: '5001' }]) {
-    const h = await harness({ env })
-    await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'configuration')
-    assert.equal(h.metrics().reads, 0)
-  }
-})
-
-test('scoped recovery admits six further public attempts atomically while preserving prior floors and debits', async () => {
-  const db = ledger(), env = { NBA_BROWSER_DAILY_SESSION_LIMIT: '5', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '98', NBA_BROWSER_DAILY_MINUTE_LIMIT: '25', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '490' }
-  db.date('2026-10-28')
-  const seed = await harness({ db, env })
-  for (let i = 0; i < 5; i++) await seed.api.reserveNbaBrowserBudget(seed.input)
-  await rejectsCode(seed.api.checkNbaBrowserBudgetUsage({ ...seed.input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 }) }), 'spend-limit')
-  const priorIds = [...db.reservations.keys()], baseline = { ...db.windows.get('project-fixture:day:2026-10-28')! }
-  assert.equal(baseline.floor, 624)
-  db.enableRecovery()
-  const instances = await Promise.all(Array.from({ length: 12 }, () => harness({ db, env })))
-  const attempts = await Promise.allSettled(instances.map(h => h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: [21717986, 21717975], readUsage: async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 }) })))
-  assert.equal(attempts.filter(r => r.status === 'fulfilled').length, 6)
-  assert.equal(db.reservations.size, 11)
-  assert.deepEqual(db.counters.get('project-fixture:day:2026-10-28'), { sessions: 11, minutes: 55 })
-  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.floor, 624 + 6 * 51)
-  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.minutes, baseline.minutes)
-  assert.equal(db.windows.get('project-fixture:day:2026-10-28')?.bytes, baseline.bytes)
-  assert.ok(priorIds.every(id => db.reservations.has(id)))
-  assert.deepEqual(instances[0].calls[0].p_game_ids, [21717975, 21717986])
-  const admitted = attempts.find(r => r.status === 'fulfilled') as PromiseFulfilledResult<Awaited<ReturnType<Api['reserveNbaBrowserBudget']>>>
-  assert.equal(admitted.value.allowanceExpiresAt, '2026-10-29T00:00:00.000Z')
-})
-
-test('recovery cannot authorize direct, missing/mixed scope, another project, expired day or period exhaustion', async () => {
-  const h = await harness({ env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '5', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '98', NBA_BROWSER_DAILY_MINUTE_LIMIT: '25', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '490' } })
-  h.db.date('2026-10-28'); h.db.enableRecovery()
-  await h.api.reserveNbaBrowserBudget(h.input)
-  const higherUsage = async () => ({ browserMinutes: 2, proxyBytes: 624_000_010 })
-  for (const extra of [{}, { workflow: 'direct' as const, gameIds: [21717975] }, { gameIds: [21717975, 21717987] }]) {
-    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, ...extra, readUsage: higherUsage }), 'spend-limit')
-  }
-  const input = { ...h.input, gameIds: [21717975], readUsage: higherUsage }
-  await h.api.checkNbaBrowserBudgetUsage(input)
-  assert.deepEqual(h.calls.at(-1)?.p_game_ids, [21717975])
-  await rejectsCode(h.api.checkNbaBrowserBudgetUsage({ ...input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) }), 'spend-limit')
-  // A period guard still wins even though the dated daily allowance is available.
-  const p = await harness({ db: h.db, env: { NBA_BROWSER_PERIOD_CENT_LIMIT: '600' } })
-  await rejectsCode(p.api.reserveNbaBrowserBudget({ ...p.input, gameIds: [21717975], readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) }), 'spend-limit')
-  h.db.date('2026-10-29')
-  const next = await h.api.reserveNbaBrowserBudget({ ...input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 1_200_000_010 }) })
-  assert.equal(next.allowanceKey, undefined)
-  const another = await h.api.reserveNbaBrowserBudget({ ...h.input, projectId: 'other-project', gameIds: [21717975] })
-  assert.equal(another.allowanceKey, undefined)
-})
-
 test('malformed scopes fail before usage/RPC; large ordinary scopes preserve normal budget behavior', async () => {
   for (const gameIds of [[], [21717975, 21717975], [0], [-1], [1.5], [NaN], Array.from({ length: 101 }, (_, i) => i + 1), '21717975']) {
     const h = await harness()
@@ -313,111 +182,6 @@ test('recovery confirmation cannot smuggle another scope or expiry into the brow
   for (const extra of [{ allowanceKey: 'unreviewed', allowanceExpiresAt: '2026-10-29T00:00:00.000Z' }, { allowanceKey: 'nba-public-count-recovery-2026-10-28', allowanceExpiresAt: '2026-10-30T00:00:00.000Z' }, { allowanceKey: 'nba-public-count-recovery-2026-10-28' }]) {
     const h = await harness({ rpc: args => ({ allowed: true, reason: 'reserved', id: args.p_id, day: '2026-10-28', periodStart: '2026-10-18', reservedMinutes: 5, reservedCents: 51, ...extra }) })
     await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, gameIds: [21717975] }), 'reservation-unavailable')
-  }
-})
-
-test('a reserved floor at the cap allows its active session, but actual cost reaching the cap stops it', async () => {
-  const h = await harness({ env: { NBA_BROWSER_DAILY_CENT_LIMIT: '102' } })
-  await h.api.reserveNbaBrowserBudget(h.input)
-  await h.api.reserveNbaBrowserBudget(h.input)
-  assert.equal(h.db.windows.get('project-fixture:day:2026-10-27')?.floor, 102)
-  await h.api.checkNbaBrowserBudgetUsage(h.input)
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'spend-limit')
-  await rejectsCode(h.api.checkNbaBrowserBudgetUsage({ ...h.input, readUsage: async () => ({ browserMinutes: 2, proxyBytes: 102_000_010 }) }), 'spend-limit')
-  assert.equal(h.db.reservations.size, 2)
-})
-
-test('usage decrease/reset and invalid fresh-sample timestamps cannot reopen budget', async () => {
-  const h = await harness()
-  await h.api.reserveNbaBrowserBudget(h.input)
-  await h.api.checkNbaBrowserBudgetUsage({ ...h.input, readUsage: async () => ({ browserMinutes: 20, proxyBytes: 10_000_010 }) })
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'usage-unavailable')
-  h.db.date('2026-11-18', '2026-11-18')
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'usage-unavailable')
-  const before = [...h.db.windows.entries()].map(([key, value]) => [key, { ...value }])
-  for (const observed of [new Date(Date.now() - 31_000).toISOString(), new Date(Date.now() + 1000).toISOString()]) {
-    const result = h.db.reserve({ ...h.calls[0], p_id: randomUUID(), p_observed_at: observed })
-    assert.equal(result.reason, 'usage-stale')
-  }
-  assert.deepEqual([...h.db.windows.entries()], before)
-})
-
-test('concurrent watch/admission shares one nondecreasing monetary floor', async () => {
-  const db = ledger(), first = await harness({ db, env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '10', NBA_BROWSER_DAILY_MINUTE_LIMIT: '50' } })
-  await first.api.reserveNbaBrowserBudget(first.input)
-  const watch = await harness({ db }), attempts = await Promise.all(Array.from({ length: 5 }, () => harness({ db, env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '10', NBA_BROWSER_DAILY_MINUTE_LIMIT: '50' } })))
-  const observed = { browserMinutes: 2, proxyBytes: 200_000_010 }
-  await watch.api.checkNbaBrowserBudgetUsage({ ...watch.input, readUsage: async () => observed })
-  const results = await Promise.allSettled(attempts.map(h => h.api.reserveNbaBrowserBudget({ ...h.input, readUsage: async () => observed })))
-  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
-  assert.equal(db.windows.get('project-fixture:day:2026-10-27')?.floor, 251)
-  assert.equal(db.reservations.size, 2)
-})
-
-test('day rollover has a new baseline but retains the period floor and cannot bypass its cap', async () => {
-  const h = await harness({ env: { NBA_BROWSER_PERIOD_CENT_LIMIT: '102' } })
-  await h.api.reserveNbaBrowserBudget(h.input)
-  h.db.date('2026-10-28')
-  await h.api.reserveNbaBrowserBudget(h.input)
-  h.db.date('2026-10-29')
-  await rejectsCode(h.api.reserveNbaBrowserBudget(h.input), 'spend-limit')
-  assert.equal(h.db.windows.get('project-fixture:period:2026-10-18')?.floor, 102)
-  assert.equal(h.db.windows.has('project-fixture:day:2026-10-29'), false)
-})
-
-test('additional spend migration bounds approved dollars and disables the legacy admission bypass', async () => {
-  const sql = await readFile(new URL('../supabase/migrations/20261027230956_nba_browser_additional_spend_budget.sql', import.meta.url), 'utf8')
-  assert.ok(sql.includes('p_daily_cents not between 1 and 300'))
-  assert.ok(sql.includes('p_period_cents not between 1 and 5000'))
-  assert.ok(sql.indexOf('for update') < sql.indexOf('select * into v_state'))
-  assert.ok(sql.includes('greatest(v_day_spend.cost_floor_cents,v_day_actual)'))
-  assert.ok(sql.includes('revoke all on function public.reserve_nba_browser_budget'))
-  assert.ok(sql.includes('from public,anon,authenticated,service_role'))
-  assert.equal((sql.match(/enable row level security/g) ?? []).length, 2)
-  assert.doesNotMatch(sql, /delete from|truncate|nba_source_cache|expires_at/i)
-})
-
-test('direct-first concurrency preserves one complete public reservation without charging its hold', async () => {
-  const db = ledger(), env = { NBA_BROWSER_DAILY_SESSION_LIMIT: '5', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '80', NBA_BROWSER_DAILY_MINUTE_LIMIT: '25', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '400' }
-  const instances = await Promise.all(Array.from({ length: 10 }, () => harness({ db, env })))
-  const results = await Promise.allSettled(instances.map(h => h.api.reserveNbaBrowserBudget({ ...h.input, workflow: 'direct' })))
-  assert.equal(results.filter(result => result.status === 'fulfilled').length, 4)
-  assert.equal(db.windows.get('project-fixture:day:2026-10-27')?.floor, 204)
-  assert.equal(db.reservations.size, 4)
-  const publicCapture = await harness({ db, env })
-  await publicCapture.api.checkNbaBrowserBudgetUsage({ ...publicCapture.input, workflow: 'direct' })
-  await publicCapture.api.reserveNbaBrowserBudget(publicCapture.input)
-  assert.equal(db.reservations.size, 5)
-  assert.equal(db.windows.get('project-fixture:day:2026-10-27')?.floor, 255)
-})
-
-test('public-first attempt releases protection, and a new day protects it again against period exhaustion', async () => {
-  const h = await harness({ env: { NBA_BROWSER_DAILY_SESSION_LIMIT: '10', NBA_BROWSER_MONTHLY_SESSION_LIMIT: '3', NBA_BROWSER_DAILY_MINUTE_LIMIT: '50', NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '15' } })
-  await h.api.reserveNbaBrowserBudget(h.input)
-  await h.api.reserveNbaBrowserBudget({ ...h.input, workflow: 'direct' })
-  h.db.date('2026-10-28')
-  await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, workflow: 'direct' }), 'quota-limit')
-  await h.api.reserveNbaBrowserBudget(h.input)
-  assert.equal(h.db.reservations.size, 3)
-})
-
-test('each day/period resource independently preserves the public share, and workflow cannot be arbitrary', async () => {
-  for (const env of [
-    { NBA_BROWSER_DAILY_CENT_LIMIT: '101' }, { NBA_BROWSER_PERIOD_CENT_LIMIT: '101' },
-    { NBA_BROWSER_DAILY_SESSION_LIMIT: '1' }, { NBA_BROWSER_MONTHLY_SESSION_LIMIT: '1' },
-    { NBA_BROWSER_DAILY_MINUTE_LIMIT: '9' }, { NBA_BROWSER_MONTHLY_MINUTE_LIMIT: '9' },
-  ]) {
-    const h = await harness({ env })
-    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, workflow: 'direct' }), 'quota-limit')
-    assert.equal(h.db.reservations.size, 0)
-    assert.equal(h.db.windows.size, 0)
-    await h.api.reserveNbaBrowserBudget(h.input)
-    assert.equal(h.db.reservations.size, 1)
-  }
-  for (const workflow of [undefined, '', 'PUBLIC', 'pikkit', ['public']]) {
-    const h = await harness()
-    await rejectsCode(h.api.reserveNbaBrowserBudget({ ...h.input, workflow: workflow as never }), 'configuration')
-    assert.equal(h.metrics().reads, 0)
   }
 })
 

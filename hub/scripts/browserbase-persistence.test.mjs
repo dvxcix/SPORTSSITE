@@ -6,14 +6,11 @@ const require = createRequire(new URL('../package.json', import.meta.url))
 const ts = require('typescript')
 const source = fs.readFileSync(new URL('../src/lib/browserbase.ts', import.meta.url), 'utf8')
 const productionCompiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-// This isolated fixture tests the underlying SDK/cleanup logic while the real
-// production entry points remain paused. The separate spending-pause suite
-// tests the unmodified production source. Refuse an unexpected function shape.
-const pauseFunction = /function assertBrowserbaseSpendingPause\(nba = false\) \{\s*if \(nba\)\s*throw new nbaBrowserBudget_1\.NbaBrowserBudgetError\('spend-limit'\);\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
+// This isolated fixture tests SDK/cleanup internals. The separate admission
+// suite tests the real automated scope and independent manual pause.
 const manualPauseFunction = /function assertBrowserbaseManualAuthPaused\(\) \{\s*throw new Error\('Cloud browser sessions are paused for the spending limit'\);\s*\}/g
-assert.equal([...productionCompiled.matchAll(pauseFunction)].length, 1, 'expected exactly one production spending pause')
 assert.equal([...productionCompiled.matchAll(manualPauseFunction)].length, 1, 'expected exactly one independent manual pause')
-const compiled = productionCompiled.replace(pauseFunction, 'function assertBrowserbaseSpendingPause() {}').replace(manualPauseFunction, 'function assertBrowserbaseManualAuthPaused() {}')
+const compiled = productionCompiled.replace(manualPauseFunction, 'function assertBrowserbaseManualAuthPaused() {}')
 
 async function fixture(options, work) {
   const old = Object.fromEntries(['BROWSERBASE_API_KEY', 'BROWSERBASE_PROJECT_ID', 'PIKKIT_CONTEXT_ID'].map(key => [key, process.env[key]]))
@@ -61,6 +58,7 @@ async function fixture(options, work) {
       abandonBrowserbaseBeforeCreate: async () => { calls.lifecycle.push('abandoned') },
     },
     '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError: class extends Error { constructor(code) { super('browser admission ' + code); this.code = code } } },
+    '@/lib/browserbaseSpendingPause': { browserbaseScheduledScopeAllowed: () => true },
     '@/lib/browserbaseAtomicAdmission': {
       reserveBrowserbaseAtomicAdmission: async input => {
         calls.budget.push(['reserve', input.timeoutSeconds, calls.create.length])

@@ -73,6 +73,14 @@
       "schedule": "10 11,17 * * *"
     },
     {
+      "path": "/api/cron/poll-pikkit-nfl-picks",
+      "schedule": "25 * * * *"
+    },
+    {
+      "path": "/api/cron/poll-fanduel-nfl",
+      "schedule": "8,18,28,38,48,58 * * * *"
+    },
+    {
       "path": "/api/cron/whop-addon-reconcile",
       "schedule": "*/15 * * * *"
     },
@@ -87,6 +95,14 @@
     {
       "path": "/api/cron/nba-market-capture",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/poll-pikkit-nba-picks",
+      "schedule": "6,36 * * * *"
+    },
+    {
+      "path": "/api/cron/nba-book-first-capture",
+      "schedule": "17,47 * * * *"
     }
   ]
 }

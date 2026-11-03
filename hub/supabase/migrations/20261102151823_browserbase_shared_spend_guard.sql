@@ -21,9 +21,9 @@ create table public.browserbase_shared_budget_state (
   last_minutes numeric not null check (last_minutes >= baseline_minutes),
   last_observed_at timestamptz not null,
   reserved_cents bigint not null default 0 check (reserved_cents >= 0),
-  -- $75 internal stop leaves $25 requested overage headroom. Provider lag
-  -- and an unbounded session can still exceed that headroom.
-  ceiling_cents integer not null check (ceiling_cents between 1 and 7500)
+  -- The owner's shared additional-spend limit is $100. Provider lag and an
+  -- unbounded in-flight session mean this is not a guaranteed invoice cap.
+  ceiling_cents integer not null check (ceiling_cents between 1 and 10000)
 );
 create table public.browserbase_shared_budget_reservations (
   reservation_id uuid primary key,
@@ -328,5 +328,58 @@ begin$replace$;
   original:=changed;
   changed:=replace(original,before,after);
   if changed=original then raise exception 'NBA allowance receipt anchor not found'; end if;
+  -- Provider totals may not yet include a previous browser while unrelated
+  -- traffic has already appeared. Preserve each prior floor and add every
+  -- reservation in the window to the observed delta. Double counting is
+  -- deliberate; no usage or uncertain attempt is refunded.
+  before:=$find$    v_day_floor:=greatest(v_day_spend.cost_floor_cents,v_day_actual);$find$;
+  after:=$replace$    select greatest(v_day_spend.cost_floor_cents,v_day_actual+coalesce(sum(reserved_cents),0))
+      into v_day_floor from public.nba_browser_budget_reservations where project_id=p_project_id and day=v_day;$replace$;
+  original:=changed;
+  changed:=replace(original,before,after);
+  if changed=original then raise exception 'NBA daily exposure anchor not found'; end if;
+  before:=$find$    v_period_floor:=greatest(v_period_spend.cost_floor_cents,v_period_actual);$find$;
+  after:=$replace$    select greatest(v_period_spend.cost_floor_cents,v_period_actual+coalesce(sum(reserved_cents),0))
+      into v_period_floor from public.nba_browser_budget_reservations where project_id=p_project_id and period_start=v_period;$replace$;
+  original:=changed;
+  changed:=replace(original,before,after);
+  if changed=original then raise exception 'NBA period exposure anchor not found'; end if;
+  -- Permit the exact reserved ceiling while a session is active, but stop it
+  -- if the conservative observed-plus-reserved amount exceeds the ceiling.
+  before:=$find$  if v_day_actual>=v_daily_cents then return jsonb_build_object('allowed',false,'reason','daily-spend-limit'); end if;$find$;
+  after:=$replace$  if v_day_actual>=v_daily_cents or v_day_floor>v_daily_cents then return jsonb_build_object('allowed',false,'reason','daily-spend-limit'); end if;$replace$;
+  original:=changed;
+  changed:=replace(original,before,after);
+  if changed=original then raise exception 'NBA daily monitoring anchor not found'; end if;
+  before:=$find$  if v_period_actual>=p_period_cents then return jsonb_build_object('allowed',false,'reason','period-spend-limit'); end if;$find$;
+  after:=$replace$  if v_period_actual>=p_period_cents or v_period_floor>p_period_cents then return jsonb_build_object('allowed',false,'reason','period-spend-limit'); end if;$replace$;
+  original:=changed;
+  changed:=replace(original,before,after);
+  if changed=original then raise exception 'NBA period monitoring anchor not found'; end if;
+  -- NBA retains its immutable usage records and bounded counters, but the
+  -- owner removed sport-specific dollar caps. The shared wrapper above is the
+  -- only service-role launch/check path and owns the one monetary limit.
+  before:=$find$  if v_day_actual>=v_daily_cents or v_day_floor>v_daily_cents then return jsonb_build_object('allowed',false,'reason','daily-spend-limit'); end if;$find$;
+  original:=changed;
+  changed:=replace(original,before,'');
+  if changed=original then raise exception 'NBA daily dollar monitor anchor not found'; end if;
+  before:=$find$  if v_period_actual>=p_period_cents or v_period_floor>p_period_cents then return jsonb_build_object('allowed',false,'reason','period-spend-limit'); end if;$find$;
+  original:=changed;
+  changed:=replace(original,before,'');
+  if changed=original then raise exception 'NBA period dollar monitor anchor not found'; end if;
+  before:=$find$  if v_day_floor+v_reserved_cents>v_daily_cents then return jsonb_build_object('allowed',false,'reason','daily-spend-limit'); end if;$find$;
+  original:=changed;
+  changed:=replace(original,before,'');
+  if changed=original then raise exception 'NBA daily dollar reservation anchor not found'; end if;
+  before:=$find$  if v_period_floor+v_reserved_cents>p_period_cents then return jsonb_build_object('allowed',false,'reason','period-spend-limit'); end if;$find$;
+  original:=changed;
+  changed:=replace(original,before,'');
+  if changed=original then raise exception 'NBA period dollar reservation anchor not found'; end if;
+  before:=$find$    v_day_floor+v_reserved_cents+51>v_daily_cents or v_period_floor+v_reserved_cents+51>p_period_cents
+    or coalesce(v_daily.sessions,0)+2>v_daily_sessions$find$;
+  after:=$replace$    coalesce(v_daily.sessions,0)+2>v_daily_sessions$replace$;
+  original:=changed;
+  changed:=replace(original,before,after);
+  if changed=original then raise exception 'NBA protected-share dollar anchor not found'; end if;
   execute changed;
 end $allowance$;

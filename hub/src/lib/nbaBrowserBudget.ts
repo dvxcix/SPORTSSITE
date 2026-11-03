@@ -42,17 +42,20 @@ function configuration(projectId: string, workflow: UsageInput['workflow']) {
   if (typeof projectId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(projectId)) throw new NbaBrowserBudgetError('configuration')
   if (workflow !== 'public' && workflow !== 'direct') throw new NbaBrowserBudgetError('configuration')
   return {
-    dailySessions: positiveInteger('NBA_BROWSER_DAILY_SESSION_LIMIT', 1000),
-    monthlySessions: positiveInteger('NBA_BROWSER_MONTHLY_SESSION_LIMIT', 10_000),
-    dailyMinutes: positiveInteger('NBA_BROWSER_DAILY_MINUTE_LIMIT', 30_000),
-    monthlyMinutes: positiveInteger('NBA_BROWSER_MONTHLY_MINUTE_LIMIT', 30_000),
+    // Schema compatibility limits remain finite but cannot bind a normally
+    // guarded period: the shared per-session reservation exhausts its $100
+    // allowance before any of these ceilings is reached.
+    dailySessions: 1000,
+    monthlySessions: 10_000,
+    dailyMinutes: 30_000,
+    monthlyMinutes: 30_000,
     // Required, UTC. Use18 only when explicitly configured for an18th-to18th
     // period. Day1 is a calendar month; no provider billing-cycle inference.
     resetDay: positiveInteger('NBA_BROWSER_BUDGET_RESET_DAY', 28),
-    // Owner-approved ADDITIONAL spending, never the already-incurred bill.
-    // Missing/malformed or above-approved configuration remains disabled.
-    dailyCents: positiveInteger('NBA_BROWSER_DAILY_CENT_LIMIT', 300),
-    periodCents: positiveInteger('NBA_BROWSER_PERIOD_CENT_LIMIT', 5000),
+    // Retained only for the legacy SQL signature and reservation identity;
+    // the reviewed shared guard is the only dollar limit after rollout.
+    dailyCents: 300,
+    periodCents: 5000,
   }
 }
 
@@ -83,8 +86,8 @@ async function verifiedUsage(input: UsageInput): Promise<NbaBrowserUsage & { obs
 }
 
 type Configuration = ReturnType<typeof configuration>
-/** Preserve the exact existing NBA caps and scope validation for the atomic
- * shared+NBA admission wrapper. This does not reserve a browser by itself. */
+/** Preserve NBA scope validation and compatible bounded counters for the
+ * atomic shared+NBA admission wrapper. This alone reserves no browser. */
 export function nbaBrowserAtomicConfiguration(input: UsageInput & { timeoutSeconds: number }) {
   const config = configuration(input.projectId, input.workflow)
   const gameIds = scopedGameIds(input.gameIds)

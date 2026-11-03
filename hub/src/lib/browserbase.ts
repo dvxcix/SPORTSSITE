@@ -5,19 +5,12 @@ import { NbaBrowserBudgetError } from '@/lib/nbaBrowserBudget'
 import { reserveBrowserbaseAtomicAdmission, checkBrowserbaseAtomicUsage } from '@/lib/browserbaseAtomicAdmission'
 import { reserveBrowserbaseAtomicRpc, checkBrowserbaseAtomicRpc, markBrowserbaseCreating, markBrowserbaseClosing, resolveBrowserbaseSession, abandonBrowserbaseBeforeCreate } from '@/lib/browserbaseAtomicRpc'
 import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
+import { browserbaseScheduledScopeAllowed } from '@/lib/browserbaseSpendingPause'
 
 // Thin wrapper around the Browserbase SDK + Playwright's CDP connection —
 // every scraper (FanDuel/BetMGM/Pikkit) goes through this so session
 // creation/teardown and context persistence (Pikkit's login) only exist in
 // one place.
-
-// Keep every entry point closed until the reviewed shared budget guard and its
-// owner-approved additional-spend baseline are verified in production.
-// Existing sessions may still incur charges until they end.
-function assertBrowserbaseSpendingPause(nba = false): void {
-  if (nba) throw new NbaBrowserBudgetError('spend-limit')
-  throw new Error('Cloud browser sessions are paused for the spending limit')
-}
 
 // Manual authentication uses keep-alive sessions outside the automated
 // reservation lifecycle. Keep it independently disabled even if guarded
@@ -167,7 +160,7 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
 export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
-  assertBrowserbaseSpendingPause(opts.metadata?.sport === 'nba')
+  if (!browserbaseScheduledScopeAllowed(opts.metadata)) throw new Error('Cloud browser capture is unavailable for this workflow')
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   const nba = opts.metadata?.sport === 'nba'
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 450) {
