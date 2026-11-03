@@ -5,7 +5,7 @@ import { nbaValidOdds, type NbaQuoteOpeningRow } from './nbaOddsHistory'
 
 export type NbaBoardObservation = { odds:number; at:string }
 export type NbaBoardCell = { gameId:number; playerId:number; vendor:string; market:string; line:number; current:NbaBoardObservation; opening:NbaBoardObservation|null; previous:NbaBoardObservation|null }
-export type NbaBoardPlayer = Pick<PaintRoster,'id'|'first_name'|'last_name'|'position'|'team'> & { gameId:number }
+export type NbaBoardPlayer = Pick<PaintRoster,'id'|'first_name'|'last_name'|'position'|'team'> & { gameId:number; headshot?:string|null }
 export type NbaFullOddsBoard = { date:string; games:PaintGame[]; players:NbaBoardPlayer[]; cells:NbaBoardCell[]; failed:number[]; unavailable:number[]; firstUnavailable?:number[]; complete:boolean; stale?:boolean; books?:string[]; selectedBook?:string; phaseCheckedAt?:number }
 /** Preserve sub-millisecond quote order; Date.parse alone truncates it. */
 export function nbaTimestampNanoseconds(value:string):bigint|null {

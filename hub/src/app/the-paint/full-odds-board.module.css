@@ -23,7 +23,7 @@
 .player { display:flex; align-items:center; gap:8px; min-width:0; }
 .player > :first-child { flex-shrink:0; }
 .playerText { min-width:0; }
-.scroll tbody th strong { display:block; color:#e5ebf2; font-size:13px; font-weight:600; line-height:1.3; }
+.scroll tbody th strong { display:block; color:#e5ebf2; font-size:13px; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
 .scroll tbody th small { display:block; margin-top:4px; color:#a4b6c6; font-size:11px; line-height:1.35; }
 .scroll td { min-width:144px; background:#101922; }
 .scroll td.shortenedCell { background:#182820; }
@@ -47,7 +47,7 @@
   .board { padding:12px 0; }
   .controls { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px; }
   .controls select, .controls input { font-size:16px; }
-  .scroll tbody th, .scroll thead th:first-child { min-width:128px; max-width:144px; }
+  .scroll tbody th, .scroll thead th:first-child { width:156px; min-width:156px; max-width:156px; }
   .scroll th, .scroll td { padding:8px; }
   .scroll td { min-width:132px; }
   .scroll tbody th strong { font-size:12px; }

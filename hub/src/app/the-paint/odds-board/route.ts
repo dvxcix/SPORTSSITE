@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
-import { getPaintRoster, getPaintSchedule } from '@/lib/nbaPaintData'
+import { artwork, getPaintRoster, getPaintSchedule } from '@/lib/nbaPaintData'
 import { nbaFullBoardCutoffs } from '@/lib/nbaFullBoardCutoffsData'
 import { getNbaOddsBoardPhase } from '@/lib/nbaOddsBoardPhaseData'
 import { nbaBoardPhaseGames,nbaOddsBoardPhaseSignature,nbaReadOddsBoardPhase } from '@/lib/nbaOddsBoardPhase'
@@ -13,6 +13,7 @@ import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
 import { nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
 import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { nbaFullBoardPlayers } from '@/lib/nbaFullBoardPlayers'
 
 export const maxDuration = 120
 
@@ -35,9 +36,9 @@ export async function GET(request:NextRequest) {
     }
     const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
     const key=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
-    // The new first-seen field changes only Live. Reuse the existing verified
-    // Pregame cache rather than reloading its full slate for every market.
-    const version=mode==='live'?'v3':'v2'
+    // Headshots are part of the shared slate, never a per-viewer lookup.
+    // A new key prevents older portrait-free packed boards surviving rollout.
+    const version='v4'
     const partialKey=`odds-board-partial:${version}:${date}:${market}:${key}`
     const interval=mode==='live'?60:300
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
@@ -54,7 +55,17 @@ export async function GET(request:NextRequest) {
         return packed
       },110,interval)
     }catch{
-      cached=await nbaSharedCache(partialKey,interval,0,async()=>{throw new Error('NBA slate unavailable')},25)
+      // During the cache-version transition, keep a still-eligible complete
+      // board from the exact same phase/cutoff. Never call a source loader or
+      // refresh its original quote times; the final cutoff check still applies.
+      const priorVersion=mode==='live'?'v3':'v2'
+      try {
+        const prior=await nbaSharedCache<NbaPackedBoard>(`odds-board:${priorVersion}:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{throw new Error('NBA prior slate unavailable')},25)
+        if(!prior.value.complete)throw new Error('NBA prior slate incomplete')
+        cached={...prior,stale:true}
+      }catch{
+        cached=await nbaSharedCache(partialKey,interval,0,async()=>{throw new Error('NBA slate unavailable')},25)
+      }
     }
     // A phase crossing while a shared result was loading must not use the old
     // slate key. The next request loads the new boundary, never a live fallback.
@@ -81,17 +92,18 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
   for(let offset=0;offset<games.length;offset+=3){
     if(Date.now()+26_000>=deadline)throw new Error('NBA slate deadline')
     results.push(...await Promise.allSettled(games.slice(offset,offset+3).map(async game=>{
+    const open=nbaPregameOpen(game)
     const [frames,openingResult,roster,confidenceResult]=await Promise.all([
       getNbaPhaseFrames(game,mode,'props',{market,selection:'latest'}),
       getNbaQuoteOpenings(game.id,mode).then(value=>({value,ok:true as const}),()=>({value:[],ok:false as const})),
-      nbaPregameOpen(game)?getPaintRoster(game):readNbaPregameResearch<PaintBoard>(game,'board:v1').then(snapshot=>{if(!snapshot)throw new Error('Saved roster unavailable');return snapshot.value.players}),
+      open?getPaintRoster(game):readNbaPregameResearch<PaintBoard>(game,'board:v1').then(snapshot=>{if(!snapshot)throw new Error('Saved roster unavailable');return snapshot.value.players}),
       mode==='live'?nbaLiveFirstSeenConfident(game).then(value=>({value,ok:true as const}),()=>({value:false,ok:false as const})):Promise.resolve({value:true,ok:true as const}),
     ])
     const openings=openingResult.value,firstSeenConfident=confidenceResult.value
     const latest=frames.at(-1), previousAt=latest?nbaBeforeCapture(latest.captured_at):null
     if(!roster.length)throw new Error('NBA roster unavailable')
     const prior=previousAt?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}):[]
-    const players=roster.map(player=>({gameId:game.id,id:player.id,first_name:player.first_name,last_name:player.last_name,position:player.position,team:player.team}))
+    const players=await nbaFullBoardPlayers(game,roster,open,!!latest?.quotes.length,artwork)
     const known=new Set(players.map(player=>player.id))
     const lastPrior=prior.at(-1), currentAt=latest?nbaTimestampNanoseconds(latest.captured_at):null,priorAt=lastPrior?nbaTimestampNanoseconds(lastPrior.captured_at):null,limitAt=previousAt?nbaTimestampNanoseconds(previousAt):null
     if((latest&&currentAt==null)||(lastPrior&&(priorAt==null||limitAt==null||priorAt>limitAt)))throw new Error('Invalid NBA observation time')
