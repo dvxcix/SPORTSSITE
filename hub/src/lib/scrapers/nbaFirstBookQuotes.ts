@@ -14,7 +14,7 @@ export type NbaFirstBookBoard = {
 }
 export type NbaFirstBookGame = {
   gameId: number; props: PaintProp[]; complete: boolean; observedAt: string | null
-  status: 'captured' | 'partial' | 'unlisted' | 'unavailable' | 'identity-mismatch' | 'closed' | 'deadline' | 'error' | 'not-due' | 'budget-deferred'
+  status: 'captured' | 'partial' | 'unlisted' | 'unavailable' | 'identity-mismatch' | 'closed' | 'deadline' | 'error' | 'not-due' | 'budget-deferred' | 'work-deferred'
   unmatched: number; clockMismatch: boolean
   identity?: NbaFirstBookIdentity
 }

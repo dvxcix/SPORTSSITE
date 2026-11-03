@@ -96,6 +96,14 @@ test('a verified busy session leaves the checkpoint eligible at the next schedul
   assert.equal(policy.reserveNbaBookCapture(plan(at+5*minute,deferred),deferred,at+5*minute).markets.first.checkpointAttempts,1)
 })
 
+test('an unvisited work lane stays eligible without fabricating an attempted capture',()=>{
+  const at=tip-4*hour,first=plan(at),reserved=policy.reserveNbaBookCapture(first,undefined,at)
+  const deferred=policy.finishNbaBookCapture(first,reserved,first.families.map(family=>({family,status:'work-deferred' as const})),at)
+  assert.equal(deferred.markets.first.checkpointAttempts,0)
+  assert.equal(deferred.markets.first.status,'deferred')
+  assert.equal(plan(at+5*minute,deferred).families.length,12)
+})
+
 test('a direct capture crossing a checkpoint counts its actual observation, not finish time',()=>{
   const start=tip-4*hour-minute,finish=tip-4*hour+minute
   const first=plan(start),reserved=policy.reserveNbaBookCapture(first,undefined,start)

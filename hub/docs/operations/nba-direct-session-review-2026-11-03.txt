@@ -1,0 +1,47 @@
+NBA direct-book shared-session candidate — 2026-11-03
+
+Status: isolated source and mocked tests only. This is not a release or an
+authorization to start browsers. Both capture jobs must remain paused until
+the owner-approved shared spending ledger and its controls are reviewed,
+applied if authorized, and verified. No live capture was triggered here.
+
+The NBA direct cron shares one lazily opened anonymous Browserbase session
+between its existing DraftKings First Point and BetMGM First Field Goal / NBA
+milestone partitions. Each partition gets a fresh page and the partitions
+take turns; MGM's established maximum of two concurrent event workers remains.
+Session creation still uses the same NBA admission guard, five-minute provider
+limit, disabled CAPTCHA solving, targeted proxy, verified release, and existing
+240/260/300-second browser/save/route deadlines. No Pikkit context is shared.
+
+Games are rechecked before opening a session and after waiting for a lane.
+Unvisited work due to a local queue deadline or a stopped session is reported
+as work-deferred, separately from admission-budget denial. No observation or
+market withdrawal is fabricated, and scheduling leaves unvisited families
+eligible. An actual admission denial is propagated to all waiting partitions,
+preserving its original budget retry behavior. A challenge stops reuse; failed
+page cleanup stops reuse; failed session release fails the receipt without
+undoing any already streamed saves. A deadline watchdog requests verified
+session release even if an active task fails to return. A timed-out waiter
+cannot free a lane whose previous task is still active.
+
+Checks: 144 focused collector, exact-price, cadence, guard, route, coordinator
+and policy tests passed. The large-slate fixture exercised both bookmakers in
+the same session, deferred incomplete work without saying no money was spent,
+and completed that work on the next simulated scheduler wake. The challenge,
+tip, cleanup failure, stuck lane, repeated admission denial and deadline cases
+used mocks only. Scoped lint passed. TypeScript passed with a temporary path
+mapping to this checkout's packages/core; the shared node_modules junction
+otherwise resolves another checkout's stale core exports.
+
+Limitations: a single five-minute session can time out before all due games
+and markets are inspected, and the daily/period allowance may be exhausted
+before a later wake. Simulated fairness does not establish live throughput,
+source availability or complete daily coverage. Different concurrent cron
+invocations do not share a session object; the project-wide admission guard
+must remain effective. The session reservation and runtime usage checks are
+estimates/monitoring; live proxy bytes can accrue between measurements and no
+hard provider invoice cap is claimed. Verify real complete panels, per-book
+receipts, opening and subsequent same-contract observations, phase separation,
+release, session counts and actual provider usage on natural runs after safe
+authorization. Keep CAPTCHA solving off, never replay uncertain writes, and
+retain the real last observation on incomplete or stale captures.

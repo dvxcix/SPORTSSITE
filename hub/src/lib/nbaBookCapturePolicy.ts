@@ -14,7 +14,7 @@ export type NbaBookFamilyState = { attemptedAt: number; successAt: number | null
 export type NbaBookScheduleState = { version: 1; gameId: number; tipoff: number; markets: Record<string, NbaBookFamilyState> }
 export type NbaBookCircuit = { version: 1; failures: number; retryAt: number }
 export type NbaBookCapturePlan = { game: PaintGame; first: boolean; regularMarkets: string[]; families: string[] }
-export type NbaBookOutcome = { family: string; status: 'captured' | 'unavailable' | 'failed' | 'budget-deferred'; observedAt?: string; budgetReason?: string }
+export type NbaBookOutcome = { family: string; status: 'captured' | 'unavailable' | 'failed' | 'budget-deferred' | 'work-deferred'; observedAt?: string; budgetReason?: string }
 export const nbaBookScheduleKey = (book: NbaFirstBook, game: PaintGame) => `book-cadence:v1:${book}:${game.id}:${nbaGameStart(game)}`
 export const nbaBookCircuitKey = (book: NbaFirstBook) => `book-circuit:v1:${book}`
 export const nbaBookFamilies = (book: NbaFirstBook) => book === 'draftkings' ? ['first'] : ['first', ...NBA_BOOK_FAMILIES]
@@ -87,6 +87,9 @@ export function finishNbaBookCapture(plan: NbaBookCapturePlan, reserved: NbaBook
       markets[family] = { ...prior, attemptedAt: now, successAt: observed, retryAt: now, failures: 0, status: 'captured' }
     } else if (outcome?.status === 'unavailable') {
       markets[family] = { ...prior, attemptedAt: now, retryAt: now, failures: 0, status: 'unavailable' }
+    } else if (outcome?.status === 'work-deferred') {
+      // No source inspection was performed in this lane; keep it eligible.
+      markets[family] = { ...prior, attemptedAt: now, retryAt: now, status: 'deferred', checkpointAttempts: Math.max(0, (prior.checkpointAttempts ?? 1) - 1) }
     } else if (outcome?.status === 'budget-deferred') {
       // Admission denial is not evidence that this market failed or vanished.
       // A verified busy lane did not start a browser; the next scheduler check

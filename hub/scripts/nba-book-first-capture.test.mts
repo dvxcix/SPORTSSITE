@@ -20,22 +20,31 @@ const team={id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'}
 const game:PaintGame={id:123,date:'2026-10-24',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-24T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:9},home_team_score:0,visitor_team_score:0}
 const observation=(book:NbaFirstBook,gameId:number):NbaFirstBookGame=>({gameId,complete:true,observedAt:new Date(now).toISOString(),status:'captured',unmatched:0,clockMismatch:false,props:[{id:-123,game_id:gameId,player_id:434,vendor:book,prop_type:book==='draftkings'?'first_score':'first_field_goal',line_value:'0.5',market:{type:'over_under',over_odds:500},updated_at:new Date(now).toISOString()}]})
 type Callbacks={onFirst:(item:NbaFirstBookGame)=>Promise<void>;onRegular:(gameId:number,frames:NbaBookPropObservation[],coverage:NbaBookPropCoverage[],observedAt:string)=>Promise<void>}
-type Options={initialSchedule?:(book:NbaFirstBook,game:PaintGame)=>policy.NbaBookScheduleState|undefined;scheduleReadError?:boolean;scheduleWriteError?:boolean;count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;firstSave?:(frame:NbaBookFirstFrame,advance:(at:number)=>void)=>Promise<void>;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
+type Options={serialSession?:boolean;sessionChallenge?:boolean;sessionReleaseFail?:boolean;initialSchedule?:(book:NbaFirstBook,game:PaintGame)=>policy.NbaBookScheduleState|undefined;scheduleReadError?:boolean;scheduleWriteError?:boolean;count?:number;games?:PaintGame[];scheduleError?:boolean;incompleteSchedule?:boolean;gameError?:number;rosterError?:number;leaseError?:NbaFirstBook;saveError?:NbaFirstBook;advancePreparation?:number;firstSave?:(frame:NbaBookFirstFrame,advance:(at:number)=>void)=>Promise<void>;regularPrevious?:(game:PaintGame)=>NbaBookPropFrame[];capture?:(book:NbaFirstBook,inputs:PaintGame[],advance:(at:number)=>void)=>Promise<Partial<NbaFirstBookCapture>>|Partial<NbaFirstBookCapture>;stream?:(book:NbaFirstBook,inputs:PaintGame[],callbacks:Callbacks,advance:(at:number)=>void,peek:()=>{first:NbaBookFirstFrame[];regular:NbaBookPropFrame[]})=>Promise<Partial<NbaFirstBookCapture>>}
 async function fixture(options:Options={}){
-  let clock=now,scheduleReads=0,gameReads=0,rosterReads=0,collects=0,maxWrites=0
+  let clock=now,scheduleReads=0,gameReads=0,rosterReads=0,collects=0,maxWrites=0,sessionOpens=0,sessionCloses=0
   class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
   const scheduleState=new Map<string,policy.NbaBookScheduleState>(),circuits=new Map<NbaFirstBook,policy.NbaBookCircuit>(),scheduleWrites:{book:NbaFirstBook;entries:{game:PaintGame;state:policy.NbaBookScheduleState}[]}[]=[]
   const regularSaves:NbaBookPropFrame[]=[]
   const writeAttempts:{book:NbaFirstBook;gameId:number;at:number}[]=[]
   const collectorCalls:{book:NbaFirstBook;gameIds:number[];deadline:number;selection:unknown[]}[]=[]
   const saves:NbaBookFirstFrame[]=[],leaseCalls:{key:string;ttl:number;stale:number;seconds:number}[]=[],deadlines:number[]=[],active=new Map<string,number>(),cache=new Map<string,Promise<unknown>>()
+  const sessionIds:{book:NbaFirstBook;id:string}[]=[]
   const games=options.games??Array.from({length:options.count??2},(_,i)=>({...game,id:game.id+i}))
   const source=await readFile(new URL('../src/app/api/cron/nba-book-first-capture/route.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const bookSource=await readFile(new URL('../src/lib/nbaBookPropsData.ts',import.meta.url),'utf8'),bookOutput=ts.transpileModule(bookSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,bookModule={exports:{} as typeof import('../src/lib/nbaBookPropsData.ts')}
   const bookImports:Record<string,unknown>={'server-only':{},'./supabase/admin':{},'./nbaSharedCache':{},'./nbaOddsMode':modes,'./nbaOddsHistory':{nbaValidOdds},'./nbaPaint':paint,'./nbaBookCurrent':bookCurrent,'./nbaLastSeenBookQuotes':{nbaLastSeenBookQuotes:()=>({rows:[],truncated:false})}}
   new Function('require','module','exports','Date',bookOutput)((name:string)=>{assert.ok(name in bookImports,name);return bookImports[name]},bookModule,bookModule.exports,Clock)
+  const coordinatorSource=await readFile(new URL('../src/lib/nbaDirectSession.ts',import.meta.url),'utf8')
+  const coordinatorOutput=ts.transpileModule(coordinatorSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+  class BudgetError extends Error { constructor(readonly code:string){super(code)} }
+  const pageSet=new Set<{close:()=>Promise<void>}>(),rootPage={context:()=>({pages:()=>[rootPage,...pageSet],newPage:async()=>{const page={close:async()=>{pageSet.delete(page)}};pageSet.add(page);return page}})}
+  const coordinatorImports:Record<string,unknown>={'server-only':{},'./nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},'./browserbase':{openSession:async()=>{sessionOpens++;return{page:rootPage,sessionId:'fixture',close:async()=>{sessionCloses++;if(options.sessionReleaseFail)throw new Error('release failed')}}}}}
+  const coordinatorModule={exports:{} as {NbaDirectSession:new()=>{acquire:(deadline:number)=>Promise<{close:()=>Promise<void>}>;deferred:(error:unknown)=>'deadline'|'blocked'|null;close:()=>Promise<void>}}}
+  new Function('require','module','exports','Date',coordinatorOutput)((name:string)=>{assert.ok(name in coordinatorImports,name);return coordinatorImports[name]},coordinatorModule,coordinatorModule.exports,Clock)
   const imports:Record<string,unknown>={
+    '@/lib/nbaDirectSession':coordinatorModule.exports,
     'next/server':{NextResponse:{json:(body:unknown,init?:ResponseInit)=>Response.json(body,init)}},
     '@/lib/cron-auth':{requireCronAuth:(request:Request)=>request.headers.get('authorization')==='Bearer fixture'?null:Response.json({error:'Unauthorized'},{status:401})},
     '@/lib/pipelineHealth':{withPipelineHealth:(name:string,run:unknown)=>{assert.equal(name,'nba-book-first-capture');return run}},
@@ -63,17 +72,54 @@ async function fixture(options:Options={}){
     '@/lib/nbaBookPropsData':{...bookModule.exports,getNbaBookPropEntries:async(g:PaintGame)=>(options.regularPrevious?.(g)??[]).map(frame=>({key:bookModule.exports.nbaBookPropKey(g,frame.contract),payload:frame})),saveNbaBookPropFrames:async(g:PaintGame,frames:NbaBookPropFrame[])=>{assert.ok(frames.every(frame=>bookModule.exports.nbaValidBookPropFrame(frame,g)));regularSaves.push(...frames)}},
     '@/lib/scrapers/nbaBookPropQuotes':bookPropQuotes,
     '@/lib/scrapers/nbaFirstBookQuotes':bookFirstQuotes,
-    '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame;capture:{first:boolean;regularMarkets:string[]}}[],deadline:number,callbacks:Callbacks)=>{
+    '@/lib/scrapers/nbaFirstBooks':{collectNbaFirstBooks:async(book:NbaFirstBook,inputs:{game:PaintGame;capture:{first:boolean;regularMarkets:string[]}}[],deadline:number,callbacks:Callbacks,shared:{acquire:(deadline:number)=>Promise<{sessionId:string;close:()=>Promise<void>}>;deferred:(error:unknown)=>'deadline'|'blocked'|null;stop:()=>void})=>{
       collects++;deadlines.push(deadline)
       collectorCalls.push({book,gameIds:inputs.map(input=>input.game.id),deadline,selection:inputs.map(input=>input.capture)})
-      return{book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>input.capture.first?observation(book,input.game.id):{...observation(book,input.game.id),props:[],status:'not-due',complete:false}),regularCoverage:book==='betmgm'?inputs.flatMap(input=>input.capture.regularMarkets.map(market=>({gameId:input.game.id,market,complete:true,observedAt:new Date(clock).toISOString(),contracts:[]}))):[],errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at}),...await options.stream?.(book,inputs.map(i=>i.game),callbacks,at=>{clock=at},()=>({first:saves,regular:regularSaves}))}
+      let lane:{sessionId:string;close:()=>Promise<void>}|undefined
+      if(options.serialSession)try{lane=await shared.acquire(deadline)}catch(error){const reason=shared.deferred(error);if(!reason)throw error;return{book,observedAt:new Date(clock).toISOString(),complete:false,games:inputs.map(input=>bookFirstQuotes.nbaFirstBookMissing(input.game.id,'work-deferred')),errors:[{code:'work-deferred',deferReason:reason}]}}
+      try {if(lane)sessionIds.push({book,id:lane.sessionId});if(lane&&options.sessionChallenge){await callbacks.onFirst(observation(book,inputs[0].game.id));shared.stop();return{book,observedAt:new Date(clock).toISOString(),complete:false,games:inputs.map(input=>observation(book,input.game.id)),errors:[{code:'challenge'}]}}const result={book,observedAt:new Date(clock).toISOString(),complete:true,games:inputs.map(input=>input.capture.first?observation(book,input.game.id):{...observation(book,input.game.id),props:[],status:'not-due',complete:false}),regularCoverage:book==='betmgm'?inputs.flatMap(input=>input.capture.regularMarkets.map(market=>({gameId:input.game.id,market,complete:true,observedAt:new Date(clock).toISOString(),contracts:[]}))):[],errors:[],...await options.capture?.(book,inputs.map(i=>i.game),at=>{clock=at}),...await options.stream?.(book,inputs.map(i=>i.game),callbacks,at=>{clock=at},()=>({first:saves,regular:regularSaves}))};if(lane)clock+=60_000;return result}finally{await lane?.close()}
     }},
   }
   const compiled={exports:{} as {GET:(request:Request)=>Promise<Response>}}
   new Function('require','module','exports','Date',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},compiled,compiled.exports,Clock)
   const run=async(auth=true)=>{const response=await compiled.exports.GET(new Request('https://www.slipsurge.com/api/cron/nba-book-first-capture',{headers:auth?{authorization:'Bearer fixture'}:{}}));return{response,body:await response.json()}}
-  return{run,saves,regularSaves,scheduleState,circuits,scheduleWrites,advance:(at:number)=>{clock=at;cache.clear()},writeAttempts,collectorCalls,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites})}
+  return{run,saves,regularSaves,scheduleState,circuits,scheduleWrites,advance:(at:number)=>{clock=at;cache.clear()},writeAttempts,collectorCalls,leaseCalls,deadlines,counts:()=>({scheduleReads,gameReads,rosterReads,collects,maxWrites}),sessionCounts:()=>({opens:sessionOpens,closes:sessionCloses,ids:sessionIds})}
 }
+
+test('a large slate shares one guarded session and leaves deadline-limited partitions deferred',async()=>{
+  const f=await fixture({count:15,serialSession:true})
+  const {response,body}=await f.run()
+  assert.equal(response.status,425)
+  assert.equal(f.sessionCounts().opens,1);assert.equal(f.sessionCounts().closes,1)
+  assert.ok(f.sessionCounts().ids.length>1);assert.deepEqual([...new Set(f.sessionCounts().ids.map(item=>item.id))],['fixture'])
+  assert.deepEqual([...new Set(f.sessionCounts().ids.map(item=>item.book))].sort(),['betmgm','draftkings'])
+  assert.ok(body.books.some((book:{workDeferred?:number})=>(book.workDeferred??0)>0))
+  assert.ok(body.books.some((book:{saved:number})=>book.saved>0))
+  assert.ok(body.books.flatMap((book:{games:{status:string}[]})=>book.games).some((game:{status:string})=>game.status==='work-deferred'))
+  assert.equal(body.reason,'NBA browser work deferred')
+  const pending=body.books.flatMap((book:{book:string;games:{gameId:number;status:string}[]})=>book.games.filter(game=>game.status==='work-deferred').map(game=>`${book.book}:${game.gameId}`))
+  f.advance(now+15*60_000)
+  const next=await f.run()
+  assert.equal(next.response.status,200)
+  const captured=next.body.books.flatMap((book:{book:string;games:{gameId:number;status:string}[]})=>book.games.filter(game=>game.status==='captured').map(game=>`${book.book}:${game.gameId}`))
+  assert.ok(pending.every((key:string)=>captured.includes(key)))
+})
+
+test('a session challenge stops queued sibling work after preserving an earlier streamed observation',async()=>{
+  const f=await fixture({count:15,serialSession:true,sessionChallenge:true})
+  const {response,body}=await f.run()
+  assert.equal(response.status,503);assert.equal(f.sessionCounts().opens,1);assert.equal(f.sessionCounts().closes,1)
+  assert.equal(f.sessionCounts().ids.length,1);assert.ok(f.saves.length>0)
+  assert.ok(body.books.some((book:{workDeferred?:number})=>(book.workDeferred??0)>0))
+  assert.ok(body.books.flatMap((book:{errors:{code:string;deferReason?:string}[]})=>book.errors).some((error:{code:string;deferReason?:string})=>error.code==='work-deferred'&&error.deferReason==='blocked'))
+})
+
+test('an unverified session release fails the request without undoing streamed observations',async()=>{
+  const f=await fixture({count:2,serialSession:true,sessionReleaseFail:true,stream:async(book,inputs,callbacks)=>{await callbacks.onFirst(observation(book,inputs[0].id));return{}}})
+  const {response}=await f.run()
+  assert.equal(response.status,503);assert.equal(f.sessionCounts().opens,1);assert.equal(f.sessionCounts().closes,1)
+  assert.ok(f.saves.length>0);assert.ok(f.saves.every(frame=>frame.props.length>0))
+})
 
 test('cron authentication denies before schedules, leases, browser work or writes',async()=>{
   const h=await fixture(),result=await h.run(false)

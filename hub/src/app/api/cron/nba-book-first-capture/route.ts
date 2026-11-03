@@ -12,6 +12,7 @@ import { MGM_MILESTONE_PANELS } from '@/lib/scrapers/nbaBookPropQuotes'
 import { getNbaBookPropEntries, nbaReconcileBookPropFrames, nbaValidBookPropFrame, saveNbaBookPropFrames, type NbaBookPropObservation, type NbaBookPropCoverage } from '@/lib/nbaBookPropsData'
 import { finishNbaBookCapture, nbaBookCheckpoint, nbaBookFailureBackoff, planNbaBookCapture, reserveNbaBookCapture, type NbaBookOutcome } from '@/lib/nbaBookCapturePolicy'
 import { readNbaBookCaptureSchedule, writeNbaBookCaptureSchedule } from '@/lib/nbaBookCaptureSchedule'
+import { NbaDirectSession } from '@/lib/nbaDirectSession'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -53,7 +54,9 @@ async function run(request: Request) {
       }))
     }
     if (!inputs.length) return NextResponse.json({ checked: 0, saved: 0, failed, deferred: games.length, books: [] }, { status: failed ? 503 : 200 })
-    const books = await Promise.all(NBA_FIRST_BOOKS.map(async book => {
+    const shared = new NbaDirectSession()
+    let books: Awaited<ReturnType<typeof collectBooks>>
+    const collectBooks = () => Promise.all(NBA_FIRST_BOOKS.map(async book => {
       try {
         // Only cron owns this lease. A duplicate invocation cannot start a
         // second browser; the source remains absent from all member loaders.
@@ -72,8 +75,9 @@ async function run(request: Request) {
           await writeNbaBookCaptureSchedule(book, reserved)
           const outcomes = new Map<number, NbaBookOutcome[]>()
           const outcome = (gameId: number, item: NbaBookOutcome) => outcomes.set(gameId, [...(outcomes.get(gameId) ?? []).filter(prior => prior.family !== item.family), item])
-          let saved = 0, failed = 0, deferred = 0, budgetDeferred = 0
+          let saved = 0, failed = 0, deferred = 0, budgetDeferred = 0, workDeferred = 0
           const budgetDeferredGames=new Map<number,string>()
+          const workDeferredGames=new Map<number,'deadline'|'blocked'>()
           let regularSaved=0,regularQuotes=0,regularDeferred=0
           const reports=new Map<number,{gameId:number;status:string;quotes:number;unmatched:number;clockMismatch:boolean;identity?:NbaFirstBookIdentity}>()
           const regularReports=new Map<number,{gameId:number;status:string;contracts:number;quotes:number;unmatched:number;coverageComplete:number;coverageIncomplete:number;incompleteMarkets:string[];saved:number;states:Record<string,number>}>()
@@ -161,9 +165,9 @@ async function run(request: Request) {
               }catch{failed++;report.status='save-failed'}
             })
           }
-          // At most four MGM sessions share this one cron lease. Four games
-          // per partition fit the retained-page collector; unusually larger
-          // slates keep every game in the bounded fallback, never truncate it.
+          // The existing four-game retained-page partitions take turns in
+          // one guarded session. Work that cannot start in the remaining
+          // window is deferred rather than presented as complete coverage.
           const sorted=[...selected].sort((a,b)=>(nbaGameStart(a.game)??Infinity)-(nbaGameStart(b.game)??Infinity)||a.game.id-b.game.id)
           const partitionCount=book==='betmgm'?Math.min(4,Math.ceil(sorted.length/4)):1
           const partitions=Array.from({length:partitionCount},(_,partition)=>sorted.filter((_,index)=>index%partitionCount===partition))
@@ -173,7 +177,7 @@ async function run(request: Request) {
               const captured=await collectNbaFirstBooks(book,partition,browserDeadline,{
                 onFirst:item=>{if(!allowed.has(item.gameId)){failed++;return Promise.resolve()}return onFirst(item)},
                 onRegular:(gameId,frames,coverage,observedAt)=>{if(!allowed.has(gameId)){failed++;return Promise.resolve()}return onRegular(gameId,frames,coverage,observedAt)},
-              })
+              },shared)
               if(captured.errors.some(error=>error.code==='budget-deferred')){
                 // Only a coherent pre-launch denial can become deferred. A
                 // malformed/partial collector report remains a real failure.
@@ -182,6 +186,14 @@ async function run(request: Request) {
                   ||captured.games.some(item=>!allowed.has(item.gameId)||!['budget-deferred','closed'].includes(item.status)||item.status==='closed'&&nbaPregameOpen(expected.get(item.gameId)!.game)||item.complete||item.observedAt!==null||item.props.length||item.unmatched)
                   ||captured.regular?.length||captured.regularCoverage?.length||partition.some(input=>firstAttempts.has(input.game.id)||regularAttempts.has(input.game.id)))throw new Error('Invalid NBA budget deferral')
                 for(const item of captured.games)if(item.status==='budget-deferred')budgetDeferredGames.set(item.gameId,captured.errors[0].budgetReason!)
+              }
+              if(captured.errors.some(error=>error.code==='work-deferred')){
+                const reason=captured.errors[0]?.deferReason
+                if(captured.book!==book||captured.errors.length!==1||!['deadline','blocked'].includes(reason??'')
+                  ||captured.games.length!==allowed.size||new Set(captured.games.map(item=>item.gameId)).size!==allowed.size
+                  ||captured.games.some(item=>!allowed.has(item.gameId)||!['work-deferred','closed'].includes(item.status)||item.status==='closed'&&nbaPregameOpen(expected.get(item.gameId)!.game)||item.complete||item.observedAt!==null||item.props.length||item.unmatched)
+                  ||captured.regular?.length||captured.regularCoverage?.length||partition.some(input=>firstAttempts.has(input.game.id)||regularAttempts.has(input.game.id)))throw new Error('Invalid NBA work deferral')
+                for(const item of captured.games)if(item.status==='work-deferred')workDeferredGames.set(item.gameId,reason!)
               }
               failed+=captured.games.filter(item=>!allowed.has(item.gameId)).length+(captured.regular??[]).filter(item=>!allowed.has(item.gameId)).length+(captured.regularCoverage??[]).filter(item=>!allowed.has(item.gameId)).length+(captured.book!==book?1:0)
               return{...captured,book,games:captured.games.filter(item=>allowed.has(item.gameId)),regular:(captured.regular??[]).filter(item=>allowed.has(item.gameId)),regularCoverage:(captured.regularCoverage??[]).filter(item=>allowed.has(item.gameId))}
@@ -194,10 +206,11 @@ async function run(request: Request) {
             }
           }))
           const capture:NbaFirstBookCapture={book,observedAt:new Date().toISOString(),complete:captures.every(partition=>partition.complete),games:captures.flatMap(partition=>partition.games),errors:captures.flatMap(partition=>partition.errors),regular:captures.flatMap(partition=>'regular' in partition?partition.regular??[]:[]),regularCoverage:captures.flatMap(partition=>'regularCoverage' in partition?partition.regularCoverage??[]:[])}
-          failed+=capture.errors.filter(error=>error.code!=='budget-deferred').length
-          const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline','budget-deferred'].includes(error.code)).slice(0,64).map(error=>({
+          failed+=capture.errors.filter(error=>error.code!=='budget-deferred'&&error.code!=='work-deferred').length
+          const errors=capture.errors.filter(error=>['session-unavailable','navigation-failed','challenge','layout-unavailable','deadline','budget-deferred','work-deferred'].includes(error.code)).slice(0,64).map(error=>({
             code:error.code,...(Number.isSafeInteger(error.gameId)?{gameId:error.gameId}:{}),
             ...(error.code==='budget-deferred'&&budgetReasons.has(error.budgetReason??'')?{budgetReason:error.budgetReason}:{}),
+            ...(error.code==='work-deferred'&&['deadline','blocked'].includes(error.deferReason??'')?{deferReason:error.deferReason}:{}),
             ...(['league-navigation','league-events','league-links','event-navigation','event-scoreboard','event-identity','event-all','event-menu','first-accordion','first-panel','first-expand','first-rows','first-revalidate','regular-navigation','regular-capture','observation-save','session-release'].includes(error.stage??'')?{stage:error.stage}:{}),
             ...(['timeout','target-closed','navigation-interrupted','network','evaluation','unknown'].includes(error.reason??'')?{reason:error.reason}:{}),
             ...(error.stage==='first-revalidate'&&nbaBookRevalidationDiagnostic(error.identity)?{identity:nbaBookRevalidationDiagnostic(error.identity)}:{}),
@@ -214,6 +227,12 @@ async function run(request: Request) {
                 for(const family of planByGame.get(input.game.id)!.families)outcome(input.game.id,{family,status:'budget-deferred',budgetReason:budgetDeferredGames.get(input.game.id)})
                 return
               }
+              if(workDeferredGames.has(input.game.id)){
+                workDeferred++;deferred++
+                reports.set(input.game.id,{gameId:input.game.id,status:'work-deferred',quotes:0,unmatched:0,clockMismatch:false})
+                for(const family of planByGame.get(input.game.id)!.families)outcome(input.game.id,{family,status:'work-deferred'})
+                return
+              }
               const matches=capture.games.filter(item=>item.gameId===input.game.id)
               if(matches.length!==1){failed++;reports.set(input.game.id,{gameId:input.game.id,status:'coverage-failed',quotes:0,unmatched:0,clockMismatch:false})}
               else {
@@ -228,14 +247,17 @@ async function run(request: Request) {
           const circuit={version:1 as const,failures:circuitFailures,retryAt:challenged?now+nbaBookFailureBackoff(circuitFailures):0}
           try{await writeNbaBookCaptureSchedule(book,reserved.map(entry=>({game:entry.game,state:finishNbaBookCapture(planByGame.get(entry.game.id)!,entry.state,outcomes.get(entry.game.id)??[],now)})),circuit)}
           catch{failed++} // The saved attempt still prevents immediate retry.
-          return { book, checked: capture.games.length, saved, regularSaved, regularQuotes, regularDeferred, failed, deferred, budgetDeferred, dueFamilies:plans.reduce((sum,plan)=>sum+plan.families.length,0),skippedGames:inputs.length-selected.length,cooldownUntil:circuit.retryAt||null,partitions:partitionCount,maxPartitionGames:Math.max(...partitions.map(partition=>partition.length)),capacityLimited:book==='betmgm'&&sorted.length>16,observedAt: capture.observedAt, games:[...reports.values()], regularGames:[...regularReports.values()], errors }
+          return { book, checked: capture.games.length, saved, regularSaved, regularQuotes, regularDeferred, failed, deferred, budgetDeferred, workDeferred, dueFamilies:plans.reduce((sum,plan)=>sum+plan.families.length,0),skippedGames:inputs.length-selected.length,cooldownUntil:circuit.retryAt||null,partitions:partitionCount,maxPartitionGames:Math.max(...partitions.map(partition=>partition.length)),capacityLimited:book==='betmgm'&&sorted.length>16,observedAt: capture.observedAt, games:[...reports.values()], regularGames:[...regularReports.values()], errors }
         }, 300)
         return result.value
       } catch { return { book, checked: 0, saved: 0, failed: 1, deferred: 0, games: [] } }
     }))
+    try { books = await collectBooks() }
+    finally { await shared.close() }
     failed += books.reduce((sum, book) => sum + book.failed, 0)
     const budgetDeferred=books.reduce((sum,book)=>sum+('budgetDeferred' in book?book.budgetDeferred??0:0),0)
-    return NextResponse.json({ checked: inputs.length, saved: books.reduce((sum, book) => sum + book.saved, 0), failed, deferred: books.reduce((sum, book) => sum + book.deferred, 0),...(budgetDeferred?{stage:'deferred',reason:'NBA browser budget deferred capture'}:{}), books }, { status: failed ? 503 : budgetDeferred ? 425 : 200 })
+    const workDeferred=books.reduce((sum,book)=>sum+('workDeferred' in book?book.workDeferred??0:0),0)
+    return NextResponse.json({ checked: inputs.length, saved: books.reduce((sum, book) => sum + book.saved, 0), failed, deferred: books.reduce((sum, book) => sum + book.deferred, 0),...(budgetDeferred||workDeferred?{stage:'deferred',reason:workDeferred?'NBA browser work deferred':'NBA browser budget deferred capture'}:{}), books }, { status: failed ? 503 : budgetDeferred||workDeferred ? 425 : 200 })
   } catch {
     return NextResponse.json({ error: 'NBA book capture unavailable' }, { status: 503 })
   }

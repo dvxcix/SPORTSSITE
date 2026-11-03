@@ -8,13 +8,14 @@ import { nbaFirstBookMissing, nbaFirstBookMismatch, nbaFirstBookTeam, nbaNormali
 import { collectMgmProps } from './nbaMgmProps'
 import { MGM_MILESTONE_PANELS, nbaUnresolvedBookCoverage, type NbaBookPropCapture, type NbaBookPropCoverage } from './nbaBookPropQuotes'
 import { NbaBrowserBudgetError, type NbaBrowserBudgetCode } from '../nbaBrowserBudget'
+import type { NbaDirectSession } from '../nbaDirectSession'
 
 // The rendered "1st Point" league link includes this exact navigation value.
 const DK_LEAGUE = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=games&subcategory=quick-hits&nav_1=1st-point'
 const MGM_LEAGUE = 'https://www.nc.betmgm.com/en/sports/basketball-7/betting/usa-9/nba-6004'
 type CaptureStage = 'league-navigation' | 'league-events' | 'league-links' | 'event-navigation' | 'event-scoreboard' | 'event-identity' | 'event-all' | 'event-menu' | 'first-accordion' | 'first-panel' | 'first-expand' | 'first-rows' | 'first-revalidate' | 'regular-navigation' | 'regular-capture' | 'observation-save' | 'session-release'
 type CaptureReason = 'timeout' | 'target-closed' | 'navigation-interrupted' | 'network' | 'evaluation' | 'unknown'
-type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline' | 'budget-deferred'; stage?: CaptureStage; reason?: CaptureReason; identity?: NbaBookRevalidation; budgetReason?: NbaBrowserBudgetCode }
+type Failure = { gameId?: number; code: 'session-unavailable' | 'navigation-failed' | 'challenge' | 'layout-unavailable' | 'deadline' | 'budget-deferred' | 'work-deferred'; stage?: CaptureStage; reason?: CaptureReason; identity?: NbaBookRevalidation; budgetReason?: NbaBrowserBudgetCode; deferReason?: 'deadline' | 'blocked' }
 function budgetDenial(error: unknown): NbaBrowserBudgetCode | null {
   if (!(error instanceof NbaBrowserBudgetError)) return null
   const code = error.code
@@ -215,7 +216,7 @@ async function mgmBoard(page: Page, eventUrl: string, deadline: number, input: N
 
 /** Cloud scheduled capture only. It owns one fresh, nonpersistent session and
  * releases it on every path. No collector is created from a member page read. */
-export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstBookInput[], deadlineAt?: number, callbacks: NbaBookCaptureCallbacks = {}): Promise<NbaFirstBookCapture> {
+export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstBookInput[], deadlineAt?: number, callbacks: NbaBookCaptureCallbacks = {}, shared?: NbaDirectSession): Promise<NbaFirstBookCapture> {
   if (inputs.length > 30 || new Set(inputs.map(input => input.game.id)).size !== inputs.length
     || new Set(inputs.map(({ game }) => `${game.date}:${game.visitor_team.id}:${game.home_team.id}`)).size !== inputs.length) throw new Error('Invalid NBA capture slate')
   const result: NbaFirstBookCapture = { book, observedAt: new Date().toISOString(), complete: false, games: [], errors: [] }
@@ -225,7 +226,7 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
     || book === 'draftkings' && input.capture.regularMarkets.length > 0))) throw new Error('Invalid NBA capture families')
   const wantsRegular = (input: NbaFirstBookInput) => book === 'betmgm' && (input.capture?.regularMarkets.length ?? 1) > 0
   const unresolved = (input: NbaFirstBookInput) => nbaUnresolvedBookCoverage(input.game.id).filter(scope => !input.capture || input.capture.regularMarkets.includes(scope.market))
-  const active = inputs.filter(input => nbaPregameOpen(input.game) && (!input.capture || input.capture.first || wantsRegular(input)))
+  let active = inputs.filter(input => nbaPregameOpen(input.game) && (!input.capture || input.capture.first || wantsRegular(input)))
   result.games = inputs.filter(input => !nbaPregameOpen(input.game)).map(input => nbaFirstBookMissing(input.game.id, 'closed'))
   if (!active.length) return result
   let session: Awaited<ReturnType<typeof openSession>> | undefined
@@ -237,8 +238,17 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
   }
   if (deadline - Date.now() < 20_000) return { ...result, games: [...result.games, ...active.map(input => nbaFirstBookMissing(input.game.id, 'deadline'))], errors: [{ code: 'deadline' }] }
   try {
-    session = await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, verifyRelease: true, geoState: 'NC',
+    session = shared ? await shared.acquire(deadline, () => active.some(input => nbaPregameOpen(input.game))) : await openSession({ timeoutSeconds: 300, requestTimeoutMs: 20_000, solveCaptchas: false, verifyRelease: true, geoState: 'NC',
       proxyDomainPattern: book === 'betmgm' ? BETMGM_PROXY_DOMAIN_PATTERN : '^([a-zA-Z0-9-]+\\.)*draftkings\\.com$', metadata: { sport: 'nba', book, mode: 'first-market-dom' } })
+    // A queued partition may have crossed tip while another partition used
+    // this session. It must not navigate or emit fresh pregame observations.
+    const queued = active
+    active = []
+    for (const input of queued) {
+      if (nbaPregameOpen(input.game)) active.push(input)
+      else result.games.push(nbaFirstBookMissing(input.game.id, 'closed'))
+    }
+    if (!active.length) return result
     const page = session.page
     await preparePage(page)
     if (book === 'draftkings') {
@@ -387,13 +397,20 @@ export async function collectNbaFirstBooks(book: NbaFirstBook, inputs: NbaFirstB
       for (const { input } of regularQueue) result.regularCoverage.push(...unresolved(input))
     }
   } catch (error) {
+    const deferred = !session ? shared?.deferred(error) : null
     const denied = !session ? budgetDenial(error) : null
-    if (denied) {
+    if (deferred === 'closed') {
+      result.games.push(...active.map(input => nbaFirstBookMissing(input.game.id, 'closed')))
+    } else if (deferred) {
+      result.errors.push({ code: 'work-deferred', deferReason: deferred })
+      result.games.push(...active.map(input => nbaFirstBookMissing(input.game.id, 'work-deferred')))
+    } else if (denied) {
       result.errors.push({ code: 'budget-deferred', budgetReason: denied })
       result.games.push(...active.map(input => nbaFirstBookMissing(input.game.id, 'budget-deferred')))
     } else result.errors.push(session ? captureFailure(error) : { code: 'session-unavailable' })
   }
   finally {
+    if (result.errors.some(error => error.code === 'challenge')) shared?.stop()
     try { await session?.close() }
     catch {
       // Keep earlier observations and their original capture errors. A release

@@ -402,6 +402,14 @@ test('cloud session is fresh, CAPTCHA solving disabled, capped at 300 seconds an
   assert.equal(opened, 2); assert.equal(expired.games[0].status, 'deadline')
   await assert.rejects(collector.collectNbaFirstBooks('draftkings', [input, { ...input, game: { ...game, id: 999 } }]), /Invalid NBA capture slate/)
   assert.equal(opened, 2)
+
+  let sharedClosed=0,sharedStopped=0
+  const shared={acquire:async(deadline:number)=>{assert.equal(deadline,now+60_000);return{page:{setDefaultTimeout:()=>{},route:async()=>{},goto:async()=>{throw new Error('challenge')}},close:async()=>{sharedClosed++}}},stop:()=>{sharedStopped++}} as unknown as import('../src/lib/nbaDirectSession.ts').NbaDirectSession
+  const challenged=await collector.collectNbaFirstBooks('draftkings',[input],now+60_000,{},shared)
+  assert.equal(opened,2);assert.equal(sharedClosed,1);assert.equal(sharedStopped,1);assert.equal(challenged.errors[0].code,'challenge')
+  const deferredShared={acquire:async()=>{throw new Error('fixture deferred')},deferred:()=> 'deadline'} as unknown as import('../src/lib/nbaDirectSession.ts').NbaDirectSession
+  const deferred=await collector.collectNbaFirstBooks('draftkings',[input],now+60_000,{},deferredShared)
+  assert.deepEqual(deferred.errors,[{code:'work-deferred',deferReason:'deadline'}]);assert.equal(deferred.games[0].status,'work-deferred');assert.equal(deferred.games[0].observedAt,null)
 })
 
 test('typed admission denials defer before navigation without exposing provider text or inventing market absence',async()=>{
@@ -418,6 +426,18 @@ test('typed admission denials defer before navigation without exposing provider 
     if(reason==='private-unknown'||reason==='spoofed'){assert.deepEqual(result.errors,[{code:'session-unavailable'}]);assert.equal(result.games[0].status,'error')}
     else{assert.deepEqual(result.errors,[{code:'budget-deferred',budgetReason:reason}]);assert.equal(result.games[0].status,'budget-deferred')}
   }
+})
+
+test('a partition crossing tip while queued is closed before page navigation',async()=>{
+  let open=true,navigations=0,closes=0
+  const code=ts.transpileModule(readFileSync(new URL('../src/lib/scrapers/nbaFirstBooks.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+  const imports:Record<string,unknown>={'server-only':{},'../nbaBrowserBudget':{NbaBrowserBudgetError:BudgetError},'../nbaPaint':paint,'../nbaOddsMode':{...modes,nbaPregameOpen:()=>open},'./nbaFirstBookQuotes':quotes,'./nbaFirstBookDom':{},'./nbaMgmProps':{},'./nbaBookPropQuotes':propQuotes,'../browserbase':{openSession:()=>{throw new Error('unexpected separate session')}}}
+  const target={exports:{} as typeof import('../src/lib/scrapers/nbaFirstBooks.ts')}
+  class Clock extends Date{constructor(value:string|number=now){super(value)}static now(){return now}}
+  new Function('require','module','exports','Date',code)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock)
+  const shared={acquire:async()=>{open=false;return{page:{goto:()=>{navigations++}},close:async()=>{closes++}}}} as unknown as import('../src/lib/nbaDirectSession.ts').NbaDirectSession
+  const result=await target.exports.collectNbaFirstBooks('betmgm',[input],now+60_000,{},shared)
+  assert.equal(navigations,0);assert.equal(closes,1);assert.equal(result.games[0].status,'closed');assert.equal(result.games[0].observedAt,null)
 })
 
 test('MGM navigation selects All before locating First FG, expands its scoped Show More and fails on absent market layout', async () => {
