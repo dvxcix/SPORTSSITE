@@ -183,6 +183,24 @@ test('unknown/malformed/conflicting outcomes preserve valid siblings but cannot 
   assert.equal(result.complete, false); assert.equal(result.props.length, 0)
 })
 
+test('unmatched outcomes have bounded private categories without exposing source text or altering valid quotes', async () => {
+  const ambiguous = { ...player, id: 999 }
+  const values = [outcome, { ...outcome, price: -450 }, { ...outcome, description: 'Unknown Private Player' },
+    { ...outcome, description: 'Alexandre Sarr' }, { ...outcome, price: 0 }, { ...outcome, name: 'Under', price: 380 }]
+  const h = await fixture({ roster: [player, ambiguous], value: payload([market('player_points_alternate', values)]) })
+  const result = await h.getNbaSupplementalProps(game, 'pregame')
+  assert.equal(result.complete, false); assert.equal(result.unmatched, 4); assert.equal(result.accepted, 1)
+  assert.equal(result.props.length, 1); assert.equal(result.props[0].market.under_odds, 380)
+  assert.deepEqual(result.diagnostics!.unmatchedReasons, { malformed: 1, 'identity-unmatched': 1, 'identity-ambiguous': 1, 'conflicting-duplicate': 1 })
+  assert.equal(Object.values(result.diagnostics!.unmatchedReasons!).reduce((sum, n) => sum + n, 0), result.unmatched)
+  const serialized = JSON.stringify(result.diagnostics!.unmatchedReasons)
+  for (const privateText of ['Sarr', 'Unknown', 'betmgm', 'fixture-secret']) assert.equal(serialized.includes(privateText), false)
+  const again = await h.getNbaSupplementalProps(game, 'pregame')
+  assert.deepEqual(again.diagnostics!.unmatchedReasons, result.diagnostics!.unmatchedReasons)
+  assert.notEqual(again.diagnostics!.unmatchedReasons, result.diagnostics!.unmatchedReasons)
+  assert.equal(h.counts().requests, 1)
+})
+
 test('wrong event, catalog, duplicate books, unbounded responses and upstream errors fail closed without raw URLs', async () => {
   const variants = [{ ...payload(), id: 'wrong' }, { ...payload(), sport_key: 'basketball_wnba' }, { ...payload(), bookmakers: [...payload().bookmakers, ...payload().bookmakers] }, payload([market('player_unknown')]), payload([market('player_points', Array.from({ length: 20_001 }, () => outcome))])]
   for (const value of variants) await assert.rejects((await fixture({ value })).getNbaSupplementalProps(game, 'pregame'), { message: 'Additional sportsbook prices unavailable' })
@@ -210,6 +228,7 @@ test('source merge chooses newest exact side and never mixes game/book/line or t
 
 test('common snapshot normalizes primary on cached and fresh ingress; incomplete source retains healthy sibling prices', async () => {
   const h = await fixture(), secondary = await h.getNbaSupplementalProps(game, 'pregame')
+  secondary.diagnostics!.unmatchedReasons = { 'identity-unmatched': 2 }
   const raw = { id: 1, game_id: game.id, player_id: player.id, vendor: 'betmgm', prop_type: 'points', line_value: '14.5', market: { type: 'milestone', odds: -500 }, updated_at: new Date(now - 1000).toISOString() }
   let fails = false, deferred = false, primaryFails = false, bookFails = false, previous: paint.PaintProp[] = [], bookFrames:NbaCurrentBookFrame[]=[]
   const helper = await compile<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
@@ -223,7 +242,11 @@ test('common snapshot normalizes primary on cached and fresh ingress; incomplete
   bookFrames=[{book:'betmgm',contract:{market:'points',type:'over_under',line:14.5},observedAt:direct.updated_at,complete:true,props:[direct]}]
   const newer=await helper.getPaintPropSnapshot(game,'pregame',true)
   assert.equal('sourceDiagnostics' in newer,false,'ordinary member prices never receive the private diagnostics')
-  assert.deepEqual((await helper.getPaintPropSnapshot(game,'pregame',true,true)).sourceDiagnostics,{primary:'complete',supplemental:'complete',direct:'complete'})
+  assert.equal(newer.coverage.diagnostics, undefined)
+  assert.equal(JSON.stringify(newer).includes('identity-unmatched'), false)
+  const privateSnapshot = await helper.getPaintPropSnapshot(game,'pregame',true,true)
+  assert.deepEqual(privateSnapshot.sourceDiagnostics,{primary:'complete',supplemental:'complete',direct:'complete'})
+  assert.deepEqual(privateSnapshot.coverage.diagnostics?.unmatchedReasons, { 'identity-unmatched': 2 })
   assert.equal(newer.props.filter(p=>p.line_value==='14.5'&&p.market.over_odds!=null).length,1)
   assert.equal(newer.props.find(p=>p.line_value==='14.5'&&p.market.over_odds!=null)!.market.over_odds,-600)
   bookFrames=[{...bookFrames[0],props:[]}]

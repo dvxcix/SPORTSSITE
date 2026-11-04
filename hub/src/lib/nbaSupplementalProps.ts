@@ -20,7 +20,8 @@ const id = (key: string) => -1_000_000_000_000 - parseInt(createHash('sha256').u
 export const nbaSupplementalQuote = (quote: PaintProp) => quote.id <= -1_000_000_000_000
 export class NbaSupplementalUnavailable extends Error { constructor() { super('Additional sportsbook prices unavailable') } }
 type QuoteRejection = NbaQuoteTimeReason
-export type NbaSupplementalDiagnostics = { reasons: Partial<Record<QuoteRejection, number>>; samples: { book: string; market: string; reason: QuoteRejection; quoteAt: string | null; checkedAt: string; tipoff: string | null; ageMs: number | null; outcomes: number; source: 'feed' | 'cache' }[] }
+type UnmatchedReason = 'malformed' | 'identity-unmatched' | 'identity-ambiguous' | 'conflicting-duplicate'
+export type NbaSupplementalDiagnostics = { reasons: Partial<Record<QuoteRejection, number>>; unmatchedReasons?: Partial<Record<UnmatchedReason, number>>; samples: { book: string; market: string; reason: QuoteRejection; quoteAt: string | null; checkedAt: string; tipoff: string | null; ageMs: number | null; outcomes: number; source: 'feed' | 'cache' }[] }
 export type NbaSupplementalSnapshot = { props: PaintProp[]; complete: boolean; deferred?: boolean; observedAt: string; accepted: number; unmatched: number; stale: number; eventMatched: boolean; applicable: boolean; diagnostics?: NbaSupplementalDiagnostics; quota: { used: number | null; remaining: number | null; last: number | null } | null }
 
 export function nbaSupplementalAllowed(game: PaintGame, mode: NbaOddsMode, now = Date.now()) {
@@ -67,7 +68,8 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
   if (!object(payload) || payload.sport_key !== 'basketball_nba' || payload.id !== match.id || payload.home_team !== match.home_team || payload.away_team !== match.away_team
     || typeof payload.commence_time !== 'string' || Date.parse(payload.commence_time) !== Date.parse(match.commence_time) || nbaFirstEvent([payload as FirstOddsEvent], game)?.id !== match.id
     || !Array.isArray(payload.bookmakers) || payload.bookmakers.length > BOOKS.length) throw new NbaSupplementalUnavailable()
-  const result = { ...empty(), applicable: true, eventMatched: true, observedAt: new Date(now).toISOString(), diagnostics: { reasons: {}, samples: [] } as NbaSupplementalDiagnostics }
+  const result = { ...empty(), applicable: true, eventMatched: true, observedAt: new Date(now).toISOString(), diagnostics: { reasons: {}, unmatchedReasons: {}, samples: [] } as NbaSupplementalDiagnostics }
+  const unmatched = (reason: UnmatchedReason) => { result.unmatched++; result.diagnostics.unmatchedReasons![reason] = (result.diagnostics.unmatchedReasons![reason] ?? 0) + 1 }
   const identities = nbaPlayerIdentities(roster.filter(player => [game.home_team.id, game.visitor_team.id].includes(player.team.id)))
   const seenBooks = new Set<string>(), offers = new Map<string, PaintProp>(), conflicts = new Set<string>()
   let count = 0
@@ -85,9 +87,9 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
       const alternate = market.key.endsWith('_alternate'), prop = market.key.replace(/^player_/, '').replace(/_alternate$/, '').replace(/_q1$/, '_1q'), binary = ['double_double', 'triple_double'].includes(prop)
       for (const outcome of market.outcomes) {
         if (!object(outcome) || !text(outcome.description) || !nbaValidOdds(outcome.price) || !(binary ? ['Yes', 'No'] : ['Over', 'Under']).includes(String(outcome.name))
-          || (binary ? outcome.point != null && outcome.point !== .5 : typeof outcome.point !== 'number' || !Number.isFinite(outcome.point) || outcome.point < 0 || outcome.point > 300)) { result.unmatched++; continue }
+          || (binary ? outcome.point != null && outcome.point !== .5 : typeof outcome.point !== 'number' || !Number.isFinite(outcome.point) || outcome.point < 0 || outcome.point > 300)) { unmatched('malformed'); continue }
         const matches = identities.filter(identity => identity.names.includes(nbaName(outcome.description as string)))
-        if (matches.length !== 1) { result.unmatched++; continue }
+        if (matches.length !== 1) { unmatched(matches.length === 0 ? 'identity-unmatched' : 'identity-ambiguous'); continue }
         const threshold = binary ? .5 : outcome.point as number, over = outcome.name === 'Over' || outcome.name === 'Yes'
         // For integer-count stats only, ALT Over14.5 is exactly15+. Integer
         // Over15 has a push and must remain O/U. Under keeps its original line.
@@ -96,7 +98,7 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
         const key = `${game.id}:${matches[0].player.id}:${book.key}:${prop}:${type}:${line}:${field}`
         const quote: PaintProp = { id: id(key), game_id: game.id, player_id: matches[0].player.id, vendor: book.key, prop_type: prop, line_value: String(line), market: { type, [field]: outcome.price }, updated_at: at }
         const prior = offers.get(key)
-        if (prior && Date.parse(prior.updated_at) === Date.parse(at) && prior.market[field] !== outcome.price) { conflicts.add(key); result.unmatched++; continue }
+        if (prior && Date.parse(prior.updated_at) === Date.parse(at) && prior.market[field] !== outcome.price) { conflicts.add(key); unmatched('conflicting-duplicate'); continue }
         if (!prior || Date.parse(at) >= Date.parse(prior.updated_at)) offers.set(key, quote)
       }
     }
@@ -146,7 +148,12 @@ export async function getNbaSupplementalProps(game: PaintGame, mode: NbaOddsMode
     } catch { throw new NbaSupplementalUnavailable() } // Never propagate a credential-bearing fetch URL.
   }, 55)
   if (!nbaSupplementalAllowed(game, mode)) return { ...empty(), complete: false }
-  const now = Date.now(), diagnostics: NbaSupplementalDiagnostics = { reasons: { ...cached.value.diagnostics?.reasons }, samples: [...(cached.value.diagnostics?.samples ?? [])] }
+  const unmatchedReasons: NbaSupplementalDiagnostics['unmatchedReasons'] = {}
+  for (const reason of ['malformed', 'identity-unmatched', 'identity-ambiguous', 'conflicting-duplicate'] as const) {
+    const count = cached.value.diagnostics?.unmatchedReasons?.[reason]
+    if (typeof count === 'number' && Number.isSafeInteger(count) && count > 0 && count <= MAX_OUTCOMES) unmatchedReasons[reason] = count
+  }
+  const now = Date.now(), diagnostics: NbaSupplementalDiagnostics = { reasons: { ...cached.value.diagnostics?.reasons }, unmatchedReasons, samples: [...(cached.value.diagnostics?.samples ?? [])] }
   let expired = 0
   const props = cached.value.props.filter(quote => {
     if (fresh(quote, game, mode, now)) return true

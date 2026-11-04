@@ -95,7 +95,7 @@ test('opening history cannot use a pregame first observation as the live baselin
  h.set([{...opening,odds:1000,observed_at:new Date(tip-1000).toISOString()},{...opening,odds:-600,observed_at:new Date(tip+1000).toISOString()}])
  assert.deepEqual((await data.getNbaQuoteOpenings(123)).map(row=>row.odds),[1000]);assert.deepEqual((await data.getNbaQuoteOpenings(123,'live')).map(row=>row.odds),[-600])
 })
-async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string;firstUnmatched?:boolean;firstPartiallyInvalid?:boolean}={}){
+async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string;firstUnmatched?:boolean;firstPartiallyInvalid?:boolean;unmatchedDiagnostic?:boolean}={}){
  const h=await fixture();h.time(mode==='pregame'?tip-60000:tip+60000)
  const current={...game,status_state:mode==='live'?'in_progress':'scheduled',period:mode==='live'?1:0} as paint.PaintGame
  const at=mode==='pregame'||options.stale?tip-120000:tip+1000
@@ -104,7 +104,7 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  const route=await compiled<{GET:(request:Request)=>Promise<Response>}>('../src/app/api/cron/nba-market-capture/route.ts',{
  'node:crypto':crypto,'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},
  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({in:async()=>({data:[],error:null})})}),rpc:(name:string,args:Record<string,unknown>)=>({abortSignal:async()=>{calls.push({name,args});return{data:true,error:null}}})})},
- '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintPropSnapshot:async(_game:unknown,_mode:unknown,_fresh:unknown,privateDiagnostics:unknown)=>{assert.equal(privateDiagnostics,true);if(options.cross)h.time(tip+1000);return {props,complete:!options.directIncomplete,primaryComplete:true,sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:options.badDiagnostic?'private-payload':options.directIncomplete?'incomplete':'complete'},coverage:{complete:!options.directIncomplete,accepted:0,unmatched:0,stale:0,eventMatched:false,applicable:false,observedAt:new Date().toISOString()},issues:[]}},getPaintGameOdds:async()=>[]},
+ '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintPropSnapshot:async(_game:unknown,_mode:unknown,_fresh:unknown,privateDiagnostics:unknown)=>{assert.equal(privateDiagnostics,true);if(options.cross)h.time(tip+1000);return {props,complete:!options.directIncomplete&&!options.unmatchedDiagnostic,primaryComplete:true,sourceDiagnostics:{primary:'complete',supplemental:options.unmatchedDiagnostic?'incomplete':'complete',direct:options.badDiagnostic?'private-payload':options.directIncomplete?'incomplete':'complete'},coverage:{complete:!options.directIncomplete&&!options.unmatchedDiagnostic,accepted:0,unmatched:options.unmatchedDiagnostic?31:0,stale:0,eventMatched:false,applicable:false,observedAt:new Date().toISOString(),...(options.unmatchedDiagnostic?{diagnostics:{reasons:{},samples:[],unmatchedReasons:{'identity-unmatched':31}}}:{})},issues:[]}},getPaintGameOdds:async()=>[]},
  '@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':h.modes,'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,
  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);if(options.cached&&key.startsWith('market-attempt:'))return{value:{status:'failed',coverage:{complete:false,accepted:0,unmatched:0,stale:0},sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:'incomplete'}},fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false};return{value:await load(),fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false}}},
  '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:options.firstUnmatched?1:0,rows:first.map(offer=>({offer}))})},
@@ -122,6 +122,12 @@ test('a direct-source incomplete result is privately reported without changing i
  assert.equal(run.body.coverage[0].sourceCached,false)
  assert.equal(run.body.coverage[0].sourceReceiptAt,new Date(tip-120000).toISOString())
  assert.equal(run.body.coverage[0].complete,false)
+})
+test('unmatched categories reach the private capture receipt while incomplete props remain unwritten',async()=>{
+ const run=await captureFixture('pregame',{unmatchedDiagnostic:true})
+ assert.equal(run.response.status,503);assert.deepEqual(run.calls.map(call=>call.args.p_feed).sort(),['first','game'])
+ assert.equal(run.body.coverage[0].unmatched,31)
+ assert.deepEqual(run.body.coverage[0].diagnostics.unmatchedReasons,{'identity-unmatched':31})
 })
 test('cached source diagnostics retain their original attempt time and never present invalid or future times as observations',async()=>{
  const original=new Date(tip-200000).toISOString(),cached=await captureFixture('pregame',{cached:true,cacheTime:original})
