@@ -14,6 +14,8 @@ const playerAliases = [
   { id: 17896065, canonical: 'Josh Giddey', alias: 'Joshua Giddey', firstOnly: false },
   // NBA/G League player 1641842 uses Ronald Holland II and Ron Holland.
   { id: 1028026508, canonical: 'Ronald Holland II', alias: 'Ron Holland', firstOnly: false },
+  // NBA's 2021 draft profile identifies Herbert Jones as Herb Jones.
+  { id: 17896024, canonical: 'Herbert Jones', alias: 'Herb Jones', firstOnly: false },
   // NBA player 1630538 is listed as Nah'Shon "Bones" Hyland.
   { id: 17896031, canonical: "Nah'Shon Hyland", alias: 'Bones Hyland', firstOnly: false },
 ] as const

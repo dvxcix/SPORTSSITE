@@ -74,6 +74,24 @@ test('all supported stat combinations, Q1 and exact DD/TD Yes/No use existing Pa
   assert.equal(h.NBA_SUPPLEMENTAL_MARKETS.some(key => key.includes('first3min') || key.includes('first_basket')), false)
 })
 
+test('Herb Jones prices require the exact verified Herbert Jones game-roster identity', async () => {
+  const h=await fixture(), jones={...player,id:17896024,first_name:'Herbert',last_name:'Jones'}
+  // The private production fingerprint represents the normalized source name;
+  // outcomes below are synthetic, not reconstructed historical prices.
+  assert.equal(crypto.createHash('sha256').update(paint.nbaName('Herb Jones')).digest('hex'),'8eca04f14acf4db6aea76c4f135da5586f2c49402f2fd695b28615005762dd97')
+  const selections=Array.from({length:47},(_,index)=>({name:index%2?'Under':'Over',description:'Herb Jones',point:Math.floor(index/2)+.5,price:index%2?-110:120}))
+  const sample=payload([market('player_points_alternate',selections)])
+  const result=h.nbaNormalizeSupplemental(sample,event,game,[jones],'pregame',now)
+  assert.equal(result.complete,true);assert.equal(result.unmatched,0);assert.equal(result.accepted,47)
+  assert.ok(result.props.every(p=>p.game_id===game.id&&p.player_id===jones.id&&p.vendor==='betmgm'&&p.prop_type==='points'&&p.updated_at===new Date(now-1000).toISOString()&&p.opening===undefined))
+  assert.ok(result.props.some(p=>p.market.type==='milestone'&&p.line_value==='1'&&p.market.odds===120))
+  assert.ok(result.props.some(p=>p.market.type==='over_under'&&p.line_value==='0.5'&&p.market.under_odds===-110))
+  for(const roster of [[],[{...jones,id:999}],[{...jones,first_name:'Other'}],[{...jones,team:{...team,id:999}}],[jones,{...jones,id:999,first_name:'Herb'}]]){
+    const rejected=h.nbaNormalizeSupplemental(sample,event,game,roster,'pregame',now)
+    assert.deepEqual(rejected.props,[]);assert.equal(rejected.unmatched,47);assert.equal(rejected.complete,false)
+  }
+})
+
 test('configured regular prices accept the pinned Ron Holland alias without changing exact lines, sides or clocks', async () => {
   const h=await fixture(),holland={...player,id:1028026508,first_name:'Ronald',last_name:'Holland II',team:game.visitor_team}
   for(const name of ['Ron Holland','Ron Holland II']){
