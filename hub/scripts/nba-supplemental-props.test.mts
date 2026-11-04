@@ -30,7 +30,7 @@ async function compile<T>(path: string, imports: Record<string, unknown>, global
   new Function('require', 'module', 'exports', ...Object.keys(globals), output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, ...Object.values(globals))
   return target.exports as T
 }
-async function fixture(options: { value?: unknown; response?: () => Response | Promise<Response>; events?: first.FirstOddsEvent[]; roster?: paint.PaintRoster[]; key?: string; abortAfterMs?: number } = {}) {
+async function fixture(options: { value?: unknown; cacheValue?: unknown; response?: () => Response | Promise<Response>; events?: first.FirstOddsEvent[]; roster?: paint.PaintRoster[]; key?: string; abortAfterMs?: number } = {}) {
   let clock = now, requests = 0, eventReads = 0
   class Clock extends Date { constructor(value: string | number = clock) { super(value) } static now() { return clock } }
   const cache = new Map<string, { until: number; value: Promise<unknown> }>(), calls: { key: string; ttl: number; stale: number }[] = []
@@ -38,7 +38,7 @@ async function fixture(options: { value?: unknown; response?: () => Response | P
     'server-only': {}, 'node:crypto': crypto, './nbaPaint': paint, './nbaOddsMode': modes, './nbaFirstBasketOdds': first, './nbaPlayerIdentity': identity, './nbaOddsHistory': history,
     './nbaPaintData': { getPaintRoster: async () => options.roster ?? [player] },
     './nbaFirstBasketOddsData': { getNbaFirstEvents: async (...args: unknown[]) => { assert.deepEqual(args, []); eventReads++; return options.events ?? [event] } },
-    './nbaSharedCache': { nbaSharedCache: async (key: string, ttl: number, stale: number, load: () => Promise<unknown>) => { calls.push({ key, ttl, stale }); if (!cache.has(key) || cache.get(key)!.until <= clock) cache.set(key, { until: clock + ttl * 1000, value: load() }); return { value: await cache.get(key)!.value } } },
+    './nbaSharedCache': { nbaSharedCache: async (key: string, ttl: number, stale: number, load: () => Promise<unknown>) => { calls.push({ key, ttl, stale }); if ('cacheValue' in options) return { value: options.cacheValue }; if (!cache.has(key) || cache.get(key)!.until <= clock) cache.set(key, { until: clock + ttl * 1000, value: load() }); return { value: await cache.get(key)!.value } } },
   }, {
     Date: Clock, process: { env: { ODDS_API_KEY: options.key ?? 'fixture-secret' } },
     AbortSignal: options.abortAfterMs == null ? AbortSignal : { timeout: () => { const controller = new AbortController(); setTimeout(() => controller.abort(), options.abortAfterMs); return controller.signal } },
@@ -201,6 +201,36 @@ test('unmatched outcomes have bounded private categories without exposing source
   assert.equal(h.counts().requests, 1)
 })
 
+test('private name digests are bounded, aggregated, and cannot contain raw source labels', async () => {
+  const names = Array.from({ length: 15 }, (_, index) => `Unknown ${String.fromCharCode(65 + index)}player`)
+  const invalid = ['https://secret.example/token', 'api key 123456', 'OneToken', 'x'.repeat(80), 'First\nLast', '李 明']
+  const values = [...invalid, ...names, names[0]].map(description => ({ ...outcome, description }))
+  const h = await fixture({ value: payload([market('player_points_alternate', values)]) })
+  const result = await h.getNbaSupplementalProps(game, 'pregame')
+  assert.equal(result.unmatched, values.length); assert.equal(result.complete, false)
+  assert.equal(Object.values(result.diagnostics!.unmatchedReasons!).reduce((sum, count) => sum + count, 0), values.length)
+  const digests = result.diagnostics!.unmatchedNameDigests!
+  assert.equal(digests.length, 12); assert.equal(digests[0].count, 2)
+  assert.equal(digests[0].digest, crypto.createHash('sha256').update(paint.nbaName(names[0])).digest('hex'))
+  assert.ok(digests.every(item => /^[a-f0-9]{64}$/.test(item.digest) && Number.isSafeInteger(item.count)))
+  const serialized = JSON.stringify(digests)
+  for (const privateText of [...names, ...invalid, 'fixture-secret', 'betmgm']) assert.equal(serialized.includes(privateText), false)
+  const again = await h.getNbaSupplementalProps(game, 'pregame')
+  assert.deepEqual(again.diagnostics!.unmatchedNameDigests, digests)
+  assert.notEqual(again.diagnostics!.unmatchedNameDigests, digests)
+  assert.equal(h.counts().requests, 1)
+})
+
+test('cached private digests admit only bounded hexadecimal hashes and numeric counts', async () => {
+  const h = await fixture(), snapshot = h.nbaNormalizeSupplemental(payload(), event, game, [player], 'pregame', now)
+  const valid = { digest: 'a'.repeat(64), count: 3 }
+  const cached = { ...snapshot, diagnostics: { ...snapshot.diagnostics, unmatchedNameDigests: [valid, valid, { digest: 'https://private.invalid/secret', count: 1 }, { digest: 'b'.repeat(64), count: -1 }, { digest: 'c'.repeat(64), count: 20_001 }, { digest: 'd'.repeat(64), count: '1' }] } }
+  const fromCache = await fixture({ cacheValue: cached }), result = await fromCache.getNbaSupplementalProps(game, 'pregame')
+  assert.deepEqual(result.diagnostics!.unmatchedNameDigests, [valid])
+  assert.equal(JSON.stringify(result.diagnostics!.unmatchedNameDigests).includes('private'), false)
+  assert.equal(fromCache.counts().requests, 0)
+})
+
 test('wrong event, catalog, duplicate books, unbounded responses and upstream errors fail closed without raw URLs', async () => {
   const variants = [{ ...payload(), id: 'wrong' }, { ...payload(), sport_key: 'basketball_wnba' }, { ...payload(), bookmakers: [...payload().bookmakers, ...payload().bookmakers] }, payload([market('player_unknown')]), payload([market('player_points', Array.from({ length: 20_001 }, () => outcome))])]
   for (const value of variants) await assert.rejects((await fixture({ value })).getNbaSupplementalProps(game, 'pregame'), { message: 'Additional sportsbook prices unavailable' })
@@ -229,6 +259,7 @@ test('source merge chooses newest exact side and never mixes game/book/line or t
 test('common snapshot normalizes primary on cached and fresh ingress; incomplete source retains healthy sibling prices', async () => {
   const h = await fixture(), secondary = await h.getNbaSupplementalProps(game, 'pregame')
   secondary.diagnostics!.unmatchedReasons = { 'identity-unmatched': 2 }
+  secondary.diagnostics!.unmatchedNameDigests = [{ digest: 'a'.repeat(64), count: 2 }]
   const raw = { id: 1, game_id: game.id, player_id: player.id, vendor: 'betmgm', prop_type: 'points', line_value: '14.5', market: { type: 'milestone', odds: -500 }, updated_at: new Date(now - 1000).toISOString() }
   let fails = false, deferred = false, primaryFails = false, bookFails = false, previous: paint.PaintProp[] = [], bookFrames:NbaCurrentBookFrame[]=[]
   const helper = await compile<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
@@ -244,9 +275,11 @@ test('common snapshot normalizes primary on cached and fresh ingress; incomplete
   assert.equal('sourceDiagnostics' in newer,false,'ordinary member prices never receive the private diagnostics')
   assert.equal(newer.coverage.diagnostics, undefined)
   assert.equal(JSON.stringify(newer).includes('identity-unmatched'), false)
+  assert.equal(JSON.stringify(newer).includes('a'.repeat(64)), false)
   const privateSnapshot = await helper.getPaintPropSnapshot(game,'pregame',true,true)
   assert.deepEqual(privateSnapshot.sourceDiagnostics,{primary:'complete',supplemental:'complete',direct:'complete'})
   assert.deepEqual(privateSnapshot.coverage.diagnostics?.unmatchedReasons, { 'identity-unmatched': 2 })
+  assert.deepEqual(privateSnapshot.coverage.diagnostics?.unmatchedNameDigests, [{ digest: 'a'.repeat(64), count: 2 }])
   assert.equal(newer.props.filter(p=>p.line_value==='14.5'&&p.market.over_odds!=null).length,1)
   assert.equal(newer.props.find(p=>p.line_value==='14.5'&&p.market.over_odds!=null)!.market.over_odds,-600)
   bookFrames=[{...bookFrames[0],props:[]}]

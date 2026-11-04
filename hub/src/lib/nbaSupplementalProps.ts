@@ -21,7 +21,7 @@ export const nbaSupplementalQuote = (quote: PaintProp) => quote.id <= -1_000_000
 export class NbaSupplementalUnavailable extends Error { constructor() { super('Additional sportsbook prices unavailable') } }
 type QuoteRejection = NbaQuoteTimeReason
 type UnmatchedReason = 'malformed' | 'identity-unmatched' | 'identity-ambiguous' | 'conflicting-duplicate'
-export type NbaSupplementalDiagnostics = { reasons: Partial<Record<QuoteRejection, number>>; unmatchedReasons?: Partial<Record<UnmatchedReason, number>>; samples: { book: string; market: string; reason: QuoteRejection; quoteAt: string | null; checkedAt: string; tipoff: string | null; ageMs: number | null; outcomes: number; source: 'feed' | 'cache' }[] }
+export type NbaSupplementalDiagnostics = { reasons: Partial<Record<QuoteRejection, number>>; unmatchedReasons?: Partial<Record<UnmatchedReason, number>>; unmatchedNameDigests?: { digest: string; count: number }[]; samples: { book: string; market: string; reason: QuoteRejection; quoteAt: string | null; checkedAt: string; tipoff: string | null; ageMs: number | null; outcomes: number; source: 'feed' | 'cache' }[] }
 export type NbaSupplementalSnapshot = { props: PaintProp[]; complete: boolean; deferred?: boolean; observedAt: string; accepted: number; unmatched: number; stale: number; eventMatched: boolean; applicable: boolean; diagnostics?: NbaSupplementalDiagnostics; quota: { used: number | null; remaining: number | null; last: number | null } | null }
 
 export function nbaSupplementalAllowed(game: PaintGame, mode: NbaOddsMode, now = Date.now()) {
@@ -33,6 +33,18 @@ export function nbaSupplementalAllowed(game: PaintGame, mode: NbaOddsMode, now =
 const empty = (): NbaSupplementalSnapshot => ({ props: [], complete: true, observedAt: new Date().toISOString(), accepted: 0, unmatched: 0, stale: 0, eventMatched: false, applicable: false, quota: null })
 const fresh = (quote: PaintProp, game: PaintGame, mode: NbaOddsMode, now: number) => nbaQuoteInMode(quote, game, mode, now) && now - Date.parse(quote.updated_at) <= 300_000
 const sides = (quote: PaintProp) => ['odds', 'over_odds', 'under_odds'].filter(field => nbaValidOdds(quote.market[field as keyof PaintProp['market']])).length
+// Aggregate digests only; resolve against an independently held
+// player directory. No source names, URLs, or credentials enter the receipt.
+function unmatchedName(diagnostics: NbaSupplementalDiagnostics, description: unknown) {
+  if (typeof description !== 'string' || description.length > 48 || !/^[\p{L}\p{M}][\p{L}\p{M}'’.-]{0,23}(?: +[\p{L}\p{M}][\p{L}\p{M}'’.-]{0,23}){1,3}$/u.test(description)) return
+  const normalized = nbaName(description)
+  if (normalized.length < 2) return
+  const digest = createHash('sha256').update(normalized).digest('hex')
+  const samples = diagnostics.unmatchedNameDigests ?? (diagnostics.unmatchedNameDigests = [])
+  const sample = samples.find(item => item.digest === digest)
+  if (sample) sample.count++
+  else if (samples.length < 12) samples.push({ digest, count: 1 })
+}
 // Private fixed metadata, never source text or player names. Classify the same
 // rejected observations without relaxing phase, future-time or age checks.
 function rejection(diagnostics: NbaSupplementalDiagnostics, book: string, market: string, at: string, outcomes: number, source: 'feed' | 'cache', game: PaintGame, mode: NbaOddsMode, now: number) {
@@ -89,7 +101,7 @@ export function nbaNormalizeSupplemental(payload: unknown, match: FirstOddsEvent
         if (!object(outcome) || !text(outcome.description) || !nbaValidOdds(outcome.price) || !(binary ? ['Yes', 'No'] : ['Over', 'Under']).includes(String(outcome.name))
           || (binary ? outcome.point != null && outcome.point !== .5 : typeof outcome.point !== 'number' || !Number.isFinite(outcome.point) || outcome.point < 0 || outcome.point > 300)) { unmatched('malformed'); continue }
         const matches = identities.filter(identity => identity.names.includes(nbaName(outcome.description as string)))
-        if (matches.length !== 1) { unmatched(matches.length === 0 ? 'identity-unmatched' : 'identity-ambiguous'); continue }
+        if (matches.length !== 1) { unmatched(matches.length === 0 ? 'identity-unmatched' : 'identity-ambiguous'); if (matches.length === 0) unmatchedName(result.diagnostics, outcome.description); continue }
         const threshold = binary ? .5 : outcome.point as number, over = outcome.name === 'Over' || outcome.name === 'Yes'
         // For integer-count stats only, ALT Over14.5 is exactly15+. Integer
         // Over15 has a push and must remain O/U. Under keeps its original line.
@@ -153,7 +165,12 @@ export async function getNbaSupplementalProps(game: PaintGame, mode: NbaOddsMode
     const count = cached.value.diagnostics?.unmatchedReasons?.[reason]
     if (typeof count === 'number' && Number.isSafeInteger(count) && count > 0 && count <= MAX_OUTCOMES) unmatchedReasons[reason] = count
   }
-  const now = Date.now(), diagnostics: NbaSupplementalDiagnostics = { reasons: { ...cached.value.diagnostics?.reasons }, unmatchedReasons, samples: [...(cached.value.diagnostics?.samples ?? [])] }
+  const unmatchedNameDigests: NonNullable<NbaSupplementalDiagnostics['unmatchedNameDigests']> = []
+  const cachedDigests = cached.value.diagnostics?.unmatchedNameDigests
+  if (Array.isArray(cachedDigests)) for (const sample of cachedDigests.slice(0, 12)) {
+    if (sample && typeof sample.digest === 'string' && /^[a-f0-9]{64}$/.test(sample.digest) && Number.isSafeInteger(sample.count) && sample.count > 0 && sample.count <= MAX_OUTCOMES && !unmatchedNameDigests.some(item => item.digest === sample.digest)) unmatchedNameDigests.push({ digest: sample.digest, count: sample.count })
+  }
+  const now = Date.now(), diagnostics: NbaSupplementalDiagnostics = { reasons: { ...cached.value.diagnostics?.reasons }, unmatchedReasons, unmatchedNameDigests, samples: [...(cached.value.diagnostics?.samples ?? [])] }
   let expired = 0
   const props = cached.value.props.filter(quote => {
     if (fresh(quote, game, mode, now)) return true
