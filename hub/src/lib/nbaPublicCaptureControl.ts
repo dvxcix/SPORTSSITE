@@ -17,7 +17,7 @@ export type NbaPublicControl = {
   version: 1; outcome: NbaPublicOutcome; attemptedAt: string; nextAttemptAt: string
   failures: number; successAt: string | null; checkpointAt?: number; checkpointAttempts?: number
 }
-type Game = Pick<PaintGame, 'id' | 'datetime' | 'status'> & Partial<Pick<PaintGame, 'status_state' | 'period'>>
+type Game = Pick<PaintGame, 'id' | 'datetime' | 'status'> & Partial<Pick<PaintGame, 'status_state' | 'period' | 'date'>>
 export const nbaPublicGameControlKey = (game: Game, parser: string) => `public-control:v1:${parser}:${game.id}:${nbaGameStart(game)}`
 // The persisted browser identity is never written into receipt keys or payloads.
 export const nbaPublicContextControlKey = (context: string) => `public-context-control:v1:${createHash('sha256').update(context).digest('hex')}`
@@ -60,6 +60,39 @@ export function nbaPublicCaptureDecision(game: Game, previousSuccess: string | n
     return { due: false, reason: 'checkpoint-attempt-limit', targetAt: new Date(slot.at).toISOString(), slotHours: slot.slotHours }
   }
   return { due: true, reason: `t-${slot.slotHours}h`, targetAt: new Date(slot.at).toISOString(), slotHours: slot.slotHours }
+}
+
+/** Delay only unattempted day-before work when another game will become due
+ * shortly. The scheduler still rechecks each game's normal capture decision. */
+export function nbaPublicCohortHold<T extends Game>(due: readonly T[], schedule: readonly T[], controls: ReadonlyMap<string, NbaPublicControl>, parser: string, previous: (id: number) => string | null, now: number): number | null {
+  if (!due.length || !Number.isFinite(now)) return null
+  const targets: number[] = []
+  for (const game of due) {
+    const decision = nbaPublicCaptureDecision(game, previous(game.id), controls.get(nbaPublicGameControlKey(game, parser)), now)
+    if (!decision.due || decision.slotHours !== 24 || controls.has(nbaPublicGameControlKey(game, parser)) || previous(game.id)) return null
+    const start = nbaGameStart(game)
+    if (start == null || !game.date || !/^\d{4}-\d{2}-\d{2}$/.test(game.date)) return null
+    targets.push(start - 24 * HOUR)
+  }
+  const first = Math.min(...targets), deadline = first + 30 * MINUTE
+  if (now >= deadline) return null
+  const joins = schedule.filter(game => {
+    const start = nbaGameStart(game)
+    return start != null && ['scheduled', 'unknown', undefined].includes(game.status_state) && nbaPregameOpen(game, now)
+      && start - 24 * HOUR > now && start - 24 * HOUR <= deadline
+  }).map(game => nbaGameStart(game)! - 24 * HOUR)
+  if (!joins.length) return null
+  const release = Math.max(...joins)
+  // Allow for the next 30-minute cron tick and the existing 250-second run.
+  // Never deliberately hold into the game day, including DST changes.
+  const eastern = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' })
+  for (const game of due) {
+    const dayBefore = new Date(`${game.date}T12:00:00Z`)
+    if (!Number.isFinite(dayBefore.getTime()) || dayBefore.toISOString().slice(0, 10) !== game.date) return null
+    dayBefore.setUTCDate(dayBefore.getUTCDate() - 1)
+    if (eastern.format(new Date(release + 35 * MINUTE)) !== dayBefore.toISOString().slice(0, 10)) return null
+  }
+  return release
 }
 
 /** Visit games with the nearest canonical tip first. Within a tip time,

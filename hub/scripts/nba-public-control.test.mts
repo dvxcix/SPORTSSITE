@@ -119,8 +119,8 @@ async function compiled<T>(file:string,imports:Record<string,unknown>,globals:Re
   return fixture.exports as T
 }
 type Row={key:string;payload:unknown;fetched_at?:string}
-async function fixture(){
-  let now=tip-8*HOUR, opens=0,claims=0,releases=0,reads=0,writes=0,failRead=false,failWrite=false,failRelease=false,auth=false,startupFails=false,startupError:Error|undefined,underLease:undefined|(()=>void)
+async function fixture(options:{now?:number;games?:PaintGame[];complete?:boolean;gotoAdvanceMs?:number}={}){
+  let now=options.now??tip-8*HOUR, opens=0,claims=0,releases=0,reads=0,writes=0,failRead=false,failWrite=false,failRelease=false,auth=false,startupFails=false,startupError:Error|undefined,underLease:undefined|(()=>void)
   const rows=new Map<string,Row>()
   const query=()=>{
     let keys:string[]=[],write:Row|undefined
@@ -139,11 +139,11 @@ async function fixture(){
   const invoke=async(params='')=>{
     const route=await compiled<{GET:(request:Request)=>Promise<Response>}>('../src/app/api/cron/poll-pikkit-nba-picks/route.ts',{
       'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},
-      '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[game]})},'@/lib/nbaOddsClockData':{getNbaOddsGame:async(g:PaintGame)=>g},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':mode,
+      '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:options.games??[game],complete:options.complete??true})},'@/lib/nbaOddsClockData':{getNbaOddsGame:async(g:PaintGame)=>g},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':mode,
       '@/lib/nbaPublicCaptureControl':control,'@/lib/nbaPublicCaptureControlData':data,'@/lib/supabase/admin':{createAdminClient:()=>admin},
       '@/lib/nbaBrowserBudget':budget,
       '@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>{claims++;underLease?.();return{release:async()=>{releases++;return !failRelease}}}},
-      '@/lib/browserbase':{openPikkitSession:async()=>{if(startupError)throw startupError;opens++;if(startupFails)throw Error('startup fixture');return{page:{setDefaultTimeout(){},setDefaultNavigationTimeout(){},on(){},off(){},goto:async()=>{},url:()=>auth?'https://app.pikkit.com/login':'https://app.pikkit.com/leagues/nba',waitForFunction:async()=>{},waitForTimeout:async()=>{},evaluate:async(_fn:unknown,arg?:unknown)=>arg?{bodyLength:0,signIn:false,awayTeamMentioned:false,selectCount:0,eventCount:0}:false},close:async()=>{}}}},
+      '@/lib/browserbase':{openPikkitSession:async()=>{if(startupError)throw startupError;opens++;if(startupFails)throw Error('startup fixture');return{page:{setDefaultTimeout(){},setDefaultNavigationTimeout(){},on(){},off(){},goto:async()=>{now+=options.gotoAdvanceMs??0},url:()=>auth?'https://app.pikkit.com/login':'https://app.pikkit.com/leagues/nba',waitForFunction:async()=>{},waitForTimeout:async()=>{},evaluate:async(_fn:unknown,arg?:unknown)=>arg?{bodyLength:0,signIn:false,awayTeamMentioned:false,selectCount:0,eventCount:0}:false},close:async()=>{}}}},
       '@/lib/scrapers/gameMatch':{findAndClickPikkitGame:async()=>false},'@/lib/scrapers/pikkitLeagueDate':{observePikkitLeagueDates:()=>({selectDate:async()=>true,dispose(){}})},'@/lib/scrapers/nbaPikkitScraper':{},'@/lib/nbaPublicServer':{},'@/lib/nbaPublic':{NBA_PUBLIC_VERSION:parser},
       '@/lib/nbaPublicEventIdentity':{nbaPublicTeamLabel:(team:{full_name:string})=>team.full_name,nbaVerifiedPublicEvent:()=>null},'@/lib/nbaSharedCache':{},
     },{Date:Clock,process:{env:{PIKKIT_CONTEXT_ID:'private-context-identity'}}})
@@ -152,6 +152,49 @@ async function fixture(){
   }
   return{rows,invoke,data,metrics:()=>({opens,claims,releases,reads,writes}),advance:(ms:number)=>{now+=ms},clock:()=>now,setReadFailure:(value:boolean)=>{failRead=value},setWriteFailure:(value:boolean)=>{failWrite=value},setAuth:()=>{auth=true},setStartupFailure:()=>{startupFails=true},setBudgetFailure:(code:import('../src/lib/nbaBrowserBudget.ts').NbaBrowserBudgetCode)=>{startupError=new budget.NbaBrowserBudgetError(code)},setSpoofedBudgetFailure:()=>{startupError=Object.assign(new Error('provider secret'),{name:'NbaBrowserBudgetError',code:'spend-limit'})},setReleaseFailure:()=>{failRelease=true},onLease:(fn:()=>void)=>{underLease=fn}}
 }
+test('day-before cohort holds without a paid launch and starts due games on the next tick',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const f=await fixture({now:tip-24*HOUR+6*60_000,games:[game,later]})
+  const held=await f.invoke()
+  assert.equal(held.body.browserSessions,0)
+  assert.equal(f.metrics().opens,0);assert.equal(f.metrics().claims,0);assert.equal(f.metrics().writes,0)
+  f.advance(30*60_000)
+  const run=await f.invoke()
+  assert.equal(f.metrics().opens,1)
+  assert.deepEqual(run.body.results.map((result:{game:number})=>result.game),[123,456])
+  assert.equal(f.metrics().releases,1)
+})
+test('incomplete schedule disables batching and starts the existing due check',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const f=await fixture({now:tip-24*HOUR+6*60_000,games:[game,later],complete:false})
+  await f.invoke()
+  assert.equal(f.metrics().opens,1)
+})
+test('selected requests do not wait for another game',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const f=await fixture({now:tip-24*HOUR+6*60_000,games:[game,later]})
+  await f.invoke('?game=123')
+  assert.equal(f.metrics().opens,1)
+})
+test('a mixed day-before and near-tip cohort never delays urgent work',async()=>{
+  const now=tip-4*HOUR
+  const dayBefore={...game,id:456,datetime:new Date(now+24*HOUR).toISOString()}
+  const soon={...game,id:789,datetime:new Date(now+24*HOUR+30*60_000).toISOString()}
+  const f=await fixture({now,games:[game,dayBefore,soon]})
+  await f.invoke()
+  assert.equal(f.metrics().opens,1)
+})
+test('a slow first game leaves the unvisited game eligible without another cohort hold',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const f=await fixture({now:tip-24*HOUR+36*60_000,games:[game,later],gotoAdvanceMs:220_000})
+  const run=await f.invoke()
+  assert.equal(f.metrics().opens,1)
+  assert.deepEqual(run.body.results.map((result:{game:number})=>result.game),[123])
+  assert.equal(f.rows.has(control.nbaPublicGameControlKey(later,parser)),false)
+  const next=await f.invoke()
+  assert.equal(f.metrics().opens,2)
+  assert.deepEqual(next.body.results.map((result:{game:number})=>result.game),[456])
+})
 test('unlisted game is skipped across separate route instances until its persisted cooldown expires',async()=>{
   const f=await fixture()
   assert.equal((await f.invoke()).status,425);assert.equal(f.metrics().opens,1)

@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -81,6 +81,9 @@ async function run(request:Request){
   const eligible=()=>nbaPublicPrioritize(upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due),controls,NBA_PUBLIC_VERSION,attempted)
   let due=eligible()
   if(!due.length)return NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current',decisions:upcoming.map(game=>({gameId:game.id,...nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now())}))})
+  const cohortHold=()=>selected||schedules.some(slate=>!slate.complete)?null:nbaPublicCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())
+  const hold=cohortHold()
+  if(hold!==null)return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(hold).toISOString()})
   const lease=await acquirePikkitBrowserLease()
   if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length,browserSessions:0},{status:425})
   // A different instance may have finished between preflight and lease claim.
@@ -88,10 +91,11 @@ async function run(request:Request){
   try{
     controls=await readNbaPublicControls(keys)
     due=eligible()
-    if(contextCooldown()||!due.length){
+    const held=due.length?cohortHold():null
+    if(contextCooldown()||!due.length||held!==null){
       const released=await lease.release()
       if(released===false)return NextResponse.json({error:'Shared browser lease release could not be confirmed'},{status:503})
-      return contextCooldown()?cooldownResponse():NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current'})
+      return contextCooldown()?cooldownResponse():held!==null?NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(held).toISOString()}):NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current'})
     }
   }catch{
     await lease.release().catch(()=>false)
