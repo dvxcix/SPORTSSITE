@@ -5,18 +5,18 @@ import { BookLogo } from '@/components/BookLogo'
 import { SidelinePlayerAvatar } from './SidelinePlayerAvatar'
 import { nflBoardIdentityKey,nflBoardImage,type NflBoardIdentity } from '@/lib/nflOddsBoardIdentity'
 import { nflOddsBoardMove, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
+import { nflBoardPickKey, nflUniqueBoardPicks, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { nflOddsBoardTrust, type NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
 import styles from './nflOddsBoard.module.css'
 
 type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type Game={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type TeamVisual=[gameId:string,abbr:string,primary:string,secondary:string,logo:string|null]
-type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];identities?:NflBoardIdentity[];teams?:TeamVisual[];phaseToken:string;phaseObservedAt:string;nextStart:string|null}
+type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];teams?:TeamVisual[];phaseToken:string;phaseObservedAt:string;nextStart:string|null}
 type Row={id:string;gameId:string;playerId:number;player:string;team:string;position:string;matchup:string;cells:Map<number,NflOddsBoardQuote>}
 const price=(n:number|null)=>n==null?'—':n>0?`+${n}`:String(n)
 const movement=(n:number)=>n===0?'0.00':`${n>0?'+':'−'}${Math.abs(n)<0.01?'<0.01':Math.abs(n).toFixed(2)}`
 const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bTds?\b/g,'Touchdowns')
-const when=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'
 const unpack=(q:Quote):NflOddsBoardQuote=>({gameId:q[0],playerId:q[1],player:q[2],team:q[3],position:q[4],market:q[5],label:'',vendor:q[6],line:q[7],current:q[8],updatedAt:q[9],previous:q[10],previousAt:q[11],opening:q[12]??null,openingConflict:q[13]===true})
 
 export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{date:string;phase?:NflOddsBoardPhase|null;market:string;onMarket:(market:string)=>void;vendor:string;onVendor:(vendor:string)=>void}){
@@ -76,6 +76,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   useLayoutEffect(()=>{if(payload&&scroll.current)scroll.current.scrollLeft=scrollLeft.current},[payload])
   const catalog=saved?.value.date===date?saved.value:null,shownMarket=payload?.market??market,shownBook=payload?.book??vendor
   const quotes=useMemo(()=>payload?.quotes.map(unpack)??[],[payload])
+  const picks=useMemo(()=>new Map(nflUniqueBoardPicks(payload?.picks).map(row=>[nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5]),row])),[payload])
   const identities=useMemo(()=>new Map((Array.isArray(payload?.identities)?payload.identities:[]).filter(item=>Array.isArray(item)&&item.length===6&&typeof item[0]==='string'&&Number.isSafeInteger(item[1])&&typeof item[2]==='string'&&typeof item[3]==='string'&&Array.isArray(item[5])).map(item=>[nflBoardIdentityKey(item[0],item[1],item[3],item[2]),item])),[payload])
   const visuals=useMemo(()=>new Map((Array.isArray(payload?.teams)?payload.teams:[]).filter(item=>Array.isArray(item)&&item.length===5&&typeof item[0]==='string'&&typeof item[1]==='string').map(item=>[`${item[0]}:${item[1]}`,item])),[payload])
   const teams=useMemo(()=>[...new Set(quotes.filter(q=>game==='all'||q.gameId===game).map(q=>q.team))].sort(),[quotes,game])
@@ -100,7 +101,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     return <span className={styles.player}><SidelinePlayerAvatar player={{name:row.player,headshot:nflBoardImage(saved?.[4]),headshotFallbacks:(saved?.[5]??[]).map(nflBoardImage).filter((value):value is string=>!!value)}} team={{abbr:row.team,name:row.team,color:color(visual?.[2],'#1b2430'),color2:color(visual?.[3],'#111820'),logo:nflBoardImage(visual?.[4])}}/><span className={styles.playerText}><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small></span></span>
   }
   return <section className={styles.panel} aria-label="NFL odds board">
-    <header><h2>Odds Board</h2><span>{date} · Pregame</span></header>
+    <header><h2>Odds Board</h2><span>Pregame</span></header>
     <div className={styles.controls}>
       <label>Market<select aria-label="Odds board market" value={shownMarket} onChange={e=>{onMarket(e.target.value);setSortLine('all')}}>{[...new Set([market,...(catalog?.markets??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></label>
       <label>Sportsbook<span className={styles.book}><BookLogo vendor={shownBook||'fanduel'} size={20}/><select aria-label="Odds board sportsbook" value={shownBook} onChange={e=>{onVendor(e.target.value);setSortLine('all')}}>{[...new Set([vendor,...(payload?.books??[])])].map(item=><option key={item} value={item}>{label(item)}</option>)}</select></span></label>
@@ -119,7 +120,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {!!incomplete.length&&<p role="status">Some saved prices unavailable: {incomplete.map(g=>`${g.away} @ ${g.home}`).join(', ')}.</p>}
-    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NFL milestone odds and movement" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline);return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><b>{price(q.current)}</b><small>{comparison==='opening'?'Open':'Earlier'} {price(baseline)}</small><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp${move>0?' · Shortened':move<0?' · Lengthened':' · Unchanged'}`}</span><small>Last seen {when(q.updatedAt)}</small>{comparison==='earlier'&&q.previousAt&&<small>Earlier {when(q.previousAt)}</small>}</td>})}</tr>)}</tbody></table></div>}
+    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NFL milestone odds and movement" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line));return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small>Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp · ${move>0?'Shortened':move<0?'Lengthened':'Unchanged'}`}</span><small className={styles.picks}>{count?`${count[7]?'Est. ':''}${count[6].toLocaleString()} picks`:'Picks —'}</small></td>})}</tr>)}</tbody></table></div>}
     {payload&&!rows.length&&<p role="status">No milestone prices for these filters.</p>}
   </section>
 }
