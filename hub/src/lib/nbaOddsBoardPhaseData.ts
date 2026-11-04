@@ -7,7 +7,7 @@ import { nbaOddsBoardPhaseHeader,nbaOddsBoardPhaseSignature,type NbaOddsBoardPha
 /** The existing process-local cache sits in front of the shared 15s lease, so
  * thousands of member polls do not each read the durable cutoff tables. */
 export async function getNbaOddsBoardPhase(date:string):Promise<{header:string;expiresAt:number}> {
-  const schedule=await getPaintSchedule(date)
+  const schedule=await getPaintSchedule(date,true)
   if(schedule.date!==date||!schedule.complete)throw new Error('NBA phase unavailable')
   const scheduleKey=nbaOddsBoardPhaseSignature(schedule.games)
   if(scheduleKey==null)throw new Error('NBA phase unavailable')

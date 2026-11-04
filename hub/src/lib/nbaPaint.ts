@@ -83,6 +83,13 @@ export const nbaMarketLogs = (player: PaintPlayer, market: string) => market.end
 export const nbaPrice = (offer: PaintProp, side: 'over' | 'under' = 'over') => offer.market.type === 'milestone' ? side === 'over' ? offer.market.odds : undefined : side === 'over' ? offer.market.over_odds : offer.market.under_odds
 export function nbaTarget(offer: PaintProp, side: 'over' | 'under' = 'over') { return nbaBinary(offer.prop_type) ? side === 'over' ? 'Yes' : 'No' : offer.market.type === 'milestone' ? `${Number(offer.line_value)}+` : `${side === 'over' ? 'O' : 'U'} ${Number(offer.line_value)}` }
 export const nbaName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g, '').replace(/[^a-z]/g, '')
+/** Court slates can request an exact day; other schedule callers retain their
+ * existing next-up fallback when that day has no games. */
+export function nbaScheduleForDate(date:string,games:PaintGame[],complete:boolean,exact=false) {
+  const ordered=[...games].sort((a,b)=>(a.datetime??a.status).localeCompare(b.datetime??b.status))
+  const selected=exact||ordered.some(game=>game.date===date)?date:ordered[0]?.date??date
+  return {date:selected,requestedDate:date,games:ordered.filter(game=>game.date===selected),days:[...new Set(ordered.map(game=>game.date))],complete}
+}
 export function nbaMinutes(value: string | number | null | undefined) { if (value == null || !/^\d+(?:\.\d+|:[0-5]\d)?$/.test(String(value))) return null; const parts = String(value).split(':').map(Number); return parts[0] + (parts[1] ?? 0) / 60 }
 export function nbaAppeared(row: Partial<PaintStat>) {
   const minutes = nbaMinutes(row.min)

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const timer = nbaSlateTimer()
   const enter = (next: NbaSlateStage) => { timer.enter(next); stage = next }
   try {
-    const rawSchedule = await getPaintSchedule(date)
+    const rawSchedule = await getPaintSchedule(date,true)
     const schedule = { ...rawSchedule, games: await Promise.all(rawSchedule.games.map(game => getNbaOddsGame(game))) }
     const phaseKey = schedule.games.map(game => `${game.id}:${game.datetime ?? game.status}:${nbaPregameOpen(game) ? 'p' : nbaLiveOpen(game) ? 'l' : 'c'}`).sort().join('|')
     // The loader builds the complete, unfiltered research universe. Book,

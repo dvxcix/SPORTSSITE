@@ -50,7 +50,7 @@ const bundled = await build({ stdin: { contents: `export {PaintBoardClient} from
   builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'stub' } : undefined)
   builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ contents: stubs[args.path], loader: 'tsx', resolveDir: resolve('.') }))
 } }] })
-const compiled = { exports: {} as { PaintBoardClient: ComponentType<{ initial: PaintBoard; games: PaintBoard['game'][]; days: string[]; date: string; initialMode?: 'pregame'|'live' }> } }
+const compiled = { exports: {} as { PaintBoardClient: ComponentType<{ initial: PaintBoard|null; games: PaintBoard['game'][]; days: string[]; date: string; initialMode?: 'pregame'|'live'; scheduleComplete?:boolean; selectedGameId?:number }> } }
 new Function('require', 'module', 'exports', bundled.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, compiled, compiled.exports)
 const team = { id: 2, abbreviation: 'BOS', name: 'Celtics', full_name: 'Boston Celtics' }
 const main: PaintProp = { id: 1, game_id: 123, player_id: 434, vendor: 'fanduel', prop_type: 'points', line_value: '20', market: { type: 'over_under', over_odds: -110, under_odds: -110 }, updated_at: '2026-10-19T14:00:00Z' }
@@ -65,6 +65,24 @@ const board: PaintBoard = {
   players: [{ id: 434, first_name: 'Test', last_name: 'Player', position: 'G', team, headshot: null, injury: null, average: { pts: 22, min: 30 }, props: [main, alt, milestone, quarterMilestone, sameBookMilestone, tiedMilestone], logs: [21, 22, 23, 24, 20].map((pts, i) => ({ id: i + 10, pts, reb: 5, ast: 4, fg3m: 2, stl: 1, blk: 0, turnover: 1, fga: 14, fgm: 8, fg3a: 6, fta: 5, ftm: 3, min: '30:00', player: { id: 434 }, team, game: { id: i + 10, date: `2026-04-${String(i + 1).padStart(2, '0')}`, status: 'Final', season: 2025, home_team_id: 2, visitor_team_id: 9 } } satisfies PaintStat)) }],
 }
 const originalFetch = globalThis.fetch
+test('empty dates and unavailable saved research keep date and matchup navigation reachable',async()=>{
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+  try{
+    window.history.replaceState(null,'','/the-paint?date=2026-11-03&mode=pregame')
+    await act(async()=>root.render(createElement(compiled.exports.PaintBoardClient,{initial:null,games:[],days:['2026-11-04'],date:'2026-11-03',scheduleComplete:true})))
+    assert.match(host.textContent??'',/No NBA games on this slate/)
+    assert.ok(host.querySelector('[aria-label="Monday, November 2, 2026"]'))
+    await act(async()=>root.render(createElement(compiled.exports.PaintBoardClient,{initial:null,games:[],days:[],date:'2026-11-03',scheduleComplete:false})))
+    assert.match(host.textContent??'',/NBA schedule unavailable/);assert.doesNotMatch(host.textContent??'',/No NBA games on this slate/)
+    const past={...board.game,date:'2026-10-20',status:'Final',status_state:'final'}
+    await act(async()=>root.render(createElement(compiled.exports.PaintBoardClient,{initial:null,games:[past],days:[past.date],date:past.date,scheduleComplete:true,selectedGameId:past.id})))
+    assert.match(host.textContent??'',/Research unavailable for this matchup/)
+    assert.equal(host.querySelector('[aria-label="NBA matchups"] button')?.getAttribute('aria-pressed'),'true')
+    assert.equal(host.querySelector('[data-testid="full-board"]'),null,'missing research must not bypass phase-safe odds board checks')
+    const previous=host.querySelector<HTMLButtonElement>('[aria-label="Previous day"]')!
+    await act(async()=>previous.click());assert.match(state.navigations.at(-1)??'',/date=2026-10-19/)
+  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
+})
 async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '', initial = board) {
   state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error; state.navigations = []; state.requests = []
   window.history.replaceState(null, '', '/the-paint?' + state.search)

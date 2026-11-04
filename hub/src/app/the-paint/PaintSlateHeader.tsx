@@ -32,7 +32,8 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
 }) {
   const activeDay = useRef<HTMLButtonElement>(null)
   const activeGame = useRef<HTMLButtonElement>(null)
-  const slateDays = [...new Set([...days, date])].sort()
+  // Keep recent dates reachable even when the schedule query starts today.
+  const slateDays = [...new Set([...days, ...Array.from({length:8},(_,index)=>paintSlateDay(date,-index))])].sort()
   useEffect(() => {
     const active = activeDay.current, rail = active?.parentElement
     if (active && rail) rail.scrollLeft = active.offsetLeft - rail.offsetLeft - (rail.clientWidth - active.clientWidth) / 2
@@ -51,13 +52,13 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
         <input type="date" aria-label="Slate date" value={date} onChange={event => { if (event.target.value) onChange(event.target.value) }}/>
       </label>
       <div className={styles.dateNavigation}>
-        <button type="button" className={styles.arrow} aria-label="Previous slate day" onClick={() => onChange(paintSlateDay(date, -1))}><ChevronLeft size={17}/></button>
+        <button type="button" className={styles.arrow} aria-label="Previous day" onClick={() => onChange(paintSlateDay(date, -1))}><ChevronLeft size={17}/></button>
         <nav className={styles.days} aria-label="NBA slate dates">
           {slateDays.map(day => <button type="button" key={day} ref={day === date ? activeDay : undefined} aria-pressed={day === date} aria-label={new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} onClick={() => onChange(day)}>
             <small>{dayFormat.format(new Date(`${day}T12:00:00Z`))}</small><strong>{Number(day.slice(-2))}</strong>
           </button>)}
         </nav>
-        <button type="button" className={styles.arrow} aria-label="Next slate day" onClick={() => onChange(paintSlateDay(date, 1))}><ChevronRight size={17}/></button>
+        <button type="button" className={styles.arrow} aria-label="Next day" onClick={() => onChange(paintSlateDay(date, 1))}><ChevronRight size={17}/></button>
       </div>
     </div>
     {games.length > 0 && <div className={styles.gamesRow}>

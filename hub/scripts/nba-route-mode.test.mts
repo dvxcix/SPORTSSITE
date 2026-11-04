@@ -92,7 +92,7 @@ test('First Basket slate uses selected-phase prices and the same phase for every
   const quotes: string[] = [], histories: string[] = []
   const api = await route('../src/app/the-paint/first-basket/odds/route.ts', {
     '@/lib/nbaPaint': { nbaDate: (value: string) => value },
-    '@/lib/nbaPaintData': { getPaintSchedule: async () => ({date:'2026-10-20',games:[{id:123},{id:456}]}) },
+    '@/lib/nbaPaintData': { getPaintSchedule: async (_date:string,exact:boolean) => {assert.equal(exact,true);return {date:'2026-10-20',games:[{id:123},{id:456}]}} },
     '@/lib/nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async (game: {id:number}, mode: string) => { quotes.push(`${game.id}:${mode}`); return {rows:[{game,offer:{odds:mode==='live'?800:500}}],unmatched:0,observedAt:'2026-10-20T13:00:00Z'} }, NbaFirstOddsUnavailable: class extends Error {} },
     '@/lib/nbaFirstBasketHistoryData': { attachNbaFirstBasketHistory: async (id: number, rows: unknown[], _at: string, mode: string) => { histories.push(`${id}:${mode}`); return rows } },
   })
@@ -103,6 +103,18 @@ test('First Basket slate uses selected-phase prices and the same phase for every
   }
   assert.deepEqual(quotes,['123:pregame','456:pregame','123:live','456:live'])
   assert.deepEqual(histories,quotes)
+})
+
+test('First Basket on an exact no-game day does not read the following slate',async()=>{
+  let quoteReads=0
+  const api=await route('../src/app/the-paint/first-basket/odds/route.ts',{
+    '@/lib/nbaPaint':{nbaDate:(value:string)=>value},
+    '@/lib/nbaPaintData':{getPaintSchedule:async(date:string,exact:boolean)=>{assert.equal(date,'2026-11-03');assert.equal(exact,true);return {date,games:[],complete:true}}},
+    '@/lib/nbaFirstBasketOddsData':{getNbaFirstOddsForMode:async()=>{quoteReads++;throw Error('unexpected')},NbaFirstOddsUnavailable:class extends Error{}},
+    '@/lib/nbaFirstBasketHistoryData':{attachNbaFirstBasketHistory:async()=>{throw Error('unexpected')}},
+  })
+  const response=await api.GET(request('date=2026-11-03&mode=pregame')),body=await response.json()
+  assert.equal(response.status,200);assert.equal(body.date,'2026-11-03');assert.equal(body.games,0);assert.equal(body.status,'not_posted');assert.deepEqual(body.rows,[]);assert.equal(quoteReads,0)
 })
 
 test('Public snapshots retain the recorded tipoff when a provider later reschedules the game', async () => {
@@ -164,7 +176,7 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
     '@/lib/nbaOddsMode': {...oddsMode,nbaPregameOpen:(value:any)=>oddsMode.nbaPregameOpen(value,now),nbaLiveOpen:(value:any)=>oddsMode.nbaLiveOpen(value,now)},
     '@/lib/nbaMarketSelection': {nbaReadSelection:()=>null,nbaSelectedPlayers:(players:unknown)=>players},
     '@/lib/nbaPaint': {nbaDate:(value:string)=>value,PAINT_MARKETS:[{key:'points'}],nbaPeriod:()=>0},
-    '@/lib/nbaPaintData': {getPaintSchedule:async()=>({date:game.date,games:[game],complete:true}),getPaintBoard:async(_game:any,mode:string)=>{assert.equal(_game.datetime,new Date(tip).toISOString());assert.equal(mode,'pregame');builds++;return {game,players:[],statsComplete:true,price:now<tip?110:130}},refreshPaintBoardPrices:async(board:unknown,mode:string)=>{assert.equal(mode,'pregame');return board}},
+    '@/lib/nbaPaintData': {getPaintSchedule:async(_date:string,exact:boolean)=>{assert.equal(exact,true);return {date:game.date,games:[game],complete:true}},getPaintBoard:async(_game:any,mode:string)=>{assert.equal(_game.datetime,new Date(tip).toISOString());assert.equal(mode,'pregame');builds++;return {game,players:[],statsComplete:true,price:now<tip?110:130}},refreshPaintBoardPrices:async(board:unknown,mode:string)=>{assert.equal(mode,'pregame');return board}},
     '@/lib/nbaSharedCache': {nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,await load());return {value:cached.get(key),fetchedAt:new Date(now).toISOString(),stale:false}}},
     '@/lib/nbaResearchResources': {getNbaResearchModels:async()=>[],getNbaResearchDefense:async()=>({ready:false,profiles:[]}),getNbaResearchMarketContext:async()=>({gameId:123})},
     '@/lib/nbaSlateFreezeData': {captureNbaSlatePools:async()=>({full:1,quarter:0}),getNbaSlateRanks:async()=>({ranks:new Map(),unavailable:[],observedAt:{},heatDomains:{}}),getNbaLegacySlateRows:async()=>null},

@@ -25,7 +25,7 @@ export async function GET(request:NextRequest) {
   if(!date||nbaDate(date)!==date||!PAINT_MARKETS.some(item=>item.key===market)||nbaBinary(market!)||!/^[a-z0-9_]{1,30}$/.test(book))return NextResponse.json({error:'Choose a valid date and market'},{status:400})
   const mode=nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   try {
-    const schedule=await getPaintSchedule(date)
+    const schedule=await getPaintSchedule(date,true)
     if(schedule.date!==date)return NextResponse.json(nbaPackFullBoard({date,games:[],players:[],cells:[],failed:[],unavailable:[],complete:schedule.complete}),{headers:{'Cache-Control':'private, no-store'}})
     if(schedule.games.length>16)throw new Error('NBA slate exceeds capacity')
     // Complete slates share one small phase proof instead of one clock-cache

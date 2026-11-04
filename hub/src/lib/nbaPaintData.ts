@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { bdlHeaders } from '@/lib/balldontlie'
-import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
+import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaScheduleForDate, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
 import { nbaSharedCache } from './nbaSharedCache'
 import { nbaAttachOpenings } from './nbaOddsHistory'
@@ -58,12 +58,10 @@ export async function artwork(abbr: string) {
   return { headshots: new Map(cached.value.headshots), logo: cached.value.logo }
 }
 export function paintTeamLogo(abbr: string) { return `https://a.espncdn.com/i/teamlogos/nba/500/${espnCode(abbr)}.png` }
-export async function getPaintSchedule(requestedDate?: string) {
+export async function getPaintSchedule(requestedDate?: string, exact = false) {
   const date = nbaDate(requestedDate); const start = new Date(`${date}T12:00:00Z`); const end = new Date(start); end.setUTCDate(end.getUTCDate() + 7)
   const result = await pages<PaintGame>(`/v1/games?start_date=${date}&end_date=${end.toISOString().slice(0, 10)}&season_type=regular&per_page=100`, 120, 2)
-  const all = result.rows.sort((a, b) => (a.datetime ?? a.status).localeCompare(b.datetime ?? b.status))
-  const selectedDate = all.some(g => g.date === date) ? date : all[0]?.date ?? date
-  return { date: selectedDate, requestedDate: date, games: all.filter(g => g.date === selectedDate), days: [...new Set(all.map(g => g.date))], complete: result.complete }
+  return nbaScheduleForDate(date,result.rows,result.complete,exact)
 }
 export async function getPaintGame(id: number, fresh = false): Promise<PaintGame> {
   const game = fresh ? await loadPaintGame(id) : (await nbaSharedCache(`game:v1:${id}`, 15, 0, () => loadPaintGame(id), 25)).value

@@ -16,14 +16,16 @@ export default async function PaintPage({ searchParams }: { searchParams: Promis
   const mode = nbaOddsMode(params.mode)
   const retry=`/the-paint?${new URLSearchParams(Object.entries(params).filter((entry):entry is [string,string]=>typeof entry[1]==='string'))}`
   const data = await (async () => { try {
-    const schedule = await getPaintSchedule(typeof params.date === 'string' ? params.date : undefined)
+    const schedule = await getPaintSchedule(typeof params.date === 'string' ? params.date : undefined,true)
     const selected = schedule.games.find(g => String(g.id) === params.game) ?? schedule.games[0]
-    const board = selected ? await getPaintBoard(selected, mode) : null
+    // A missing saved matchup must not remove the date and game navigation.
+    // Historical research stays unavailable; it is never rebuilt from today.
+    const board = selected ? await getPaintBoard(selected, mode).catch(() => null) : null
     return { schedule, board, selected }
   } catch(error) { console.error('[The Court] page unavailable',{reason:error instanceof Error&&/^NBA /.test(error.message)?error.message.slice(0,180):'NBA source request failed'});return null } })()
   if (!data) return <section className={styles.empty}><span>NBA</span><h1>The Court</h1><p>NBA data is temporarily unavailable.</p><a href={retry}>Try again</a></section>
   // A global tool link can change the query while keeping the same game.
   // Remount for requested research context so its initial view/quote is respected.
   const contextKey = ['mode','view','market','book','side','player','panel','line','type','metric'].map(key => typeof params[key] === 'string' ? params[key] : '').join(':')
-  return <PaintBoardClient key={`${data.selected?.id ?? data.schedule.date}:${contextKey}`} initial={data.board} initialMode={mode} games={data.schedule.games} days={data.schedule.days} date={data.schedule.date} />
+  return <PaintBoardClient key={`${data.selected?.id ?? data.schedule.date}:${contextKey}`} initial={data.board} initialMode={mode} games={data.schedule.games} days={data.schedule.days} date={data.schedule.date} scheduleComplete={data.schedule.complete} selectedGameId={data.selected?.id} />
 }

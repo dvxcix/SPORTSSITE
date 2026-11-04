@@ -12,7 +12,7 @@ export async function GET(request:NextRequest){
   const date=request.nextUrl.searchParams.get('date')
   if(!date||nbaDate(date)!==date)return NextResponse.json({error:'Choose a valid NBA slate date'},{status:400})
   try{
-    const schedule=await getPaintSchedule(date),games=schedule.games.slice(0,16)
+    const schedule=await getPaintSchedule(date,true),games=schedule.games.slice(0,16)
     const results=[]
     for(let offset=0;offset<games.length;offset+=4)results.push(...await Promise.allSettled(games.slice(offset,offset+4).map(async game=>{
       const result=await getNbaFirstOddsForMode(game, mode)

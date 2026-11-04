@@ -204,7 +204,7 @@ test('6,000 piggybacked slate phase checks share two cutoff reads and a bounded 
   const game={id:123,date:'2026-10-20',season:2026,status:'Scheduled',status_state:'scheduled',datetime:'2026-10-20T23:00:00Z',period:0,home_team:team,visitor_team:{...team,id:2},home_team_score:0,visitor_team_score:0}
   let batches=0
   const instances=await Promise.all(caches.map(cache=>compiled<typeof import('../src/lib/nbaOddsBoardPhaseData.ts')>('../src/lib/nbaOddsBoardPhaseData.ts',{
-    'server-only':{},'./nbaPaintData':{getPaintSchedule:async()=>({date:game.date,games:[game],complete:true})},
+    'server-only':{},'./nbaPaintData':{getPaintSchedule:async(_date:string,exact:boolean)=>{assert.equal(exact,true);return {date:game.date,games:[game],complete:true}}},
     './nbaFullBoardCutoffsData':{nbaFullBoardCutoffs:async()=>{batches++;await Promise.resolve();return [game]}},
     './nbaSharedCache':cache,'./nbaOddsBoardPhase':oddsBoardPhase,
   },{Date:h.Clock})))
