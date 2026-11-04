@@ -17,7 +17,7 @@ const built=await build({stdin:{contents:"export {PaintFullOddsBoard} from './sr
   builder.onResolve({filter:/^(\.\/PaintEntitySelect|\.\/PaintVisuals|@\/components\/nba\/NbaOddsModeContext|next\/link)$/},args=>({path:args.path,namespace:'fixture'}))
   builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return <a {...props} data-prefetch={String(prefetch)}>{children}</a>}`:args.path.includes('PaintVisuals')?`import React from 'react';export function PlayerAvatar({player}){return <span data-avatar={player.id} data-team={player.team.abbreviation} data-headshot={player.headshot??''}/>}`:args.path.includes('PaintEntitySelect')?`import React from 'react';export function PaintBookSelect({value,onChange,books}){return <select aria-label="Odds board sportsbook" value={value} onChange={e=>onChange(e.target.value)}>{[...new Set([value,...books])].map(book=><option key={book} value={book}>{book}</option>)}</select>}`:`export function useNbaOddsMode(){return globalThis.oddsBoardTestMode}`,loader:'tsx'}))
 }}]})
-const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}>}}
+const fixture={exports:{} as {PaintFullOddsBoard:ComponentType<{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;finalOutcomes?:ReadonlyMap<string,{gameId:number;playerId:number;teamId:number;value:number}>;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}>}}
 new Function('module','exports','require',built.outputFiles[0].text)(fixture,fixture.exports,require)
 const team={id:1,abbreviation:'AAA',full_name:'Alpha',name:'Alpha'},away={id:2,abbreviation:'BBB',full_name:'Beta',name:'Beta'}
 const game:PaintGame={id:12,date:'2026-11-02',season:2026,status:'Scheduled',status_state:'scheduled',datetime:new Date(Date.now()+3600000).toISOString(),period:0,home_team:team,visitor_team:away,home_team_score:0,visitor_team_score:0}
@@ -171,4 +171,19 @@ test('Live defaults to first seen, offers earlier comparison, and cached pre-res
   assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'cached phase proof from before resume cannot restore the grid')
   now+=10;await act(async()=>render({date:data.date,mode:'live',receivedAt:now,phase:{date:data.date,checkedAt:now,signature:nbaOddsBoardPhaseSignature(games)!}}));assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=priorFetch;Date.now=priorNow;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='pregame';Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})}
+})
+
+
+test('final results mark only verified exact player/team rungs without replacing the board',async()=>{
+ const original=globalThis.fetch
+ globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:Date.now()}),'fanduel'))
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ const outcomes=new Map([['12:1',{gameId:12,playerId:1,teamId:1,value:17}],['12:2',{gameId:12,playerId:2,teamId:999,value:30}]])
+ try{
+  await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame],selectedBook:'fanduel',finalOutcomes:outcomes}));await new Promise(done=>setTimeout(done,30))})
+  const rows=[...host.querySelectorAll('tbody tr')]
+  assert.match(rows[0].textContent!,/Final 17/);assert.match(rows[0].textContent!,/Hit/);assert.match(rows[0].textContent!,/Miss/)
+  assert.doesNotMatch(rows[1].textContent!,/Final|Hit|Miss/)
+  assert.match(rows[0].textContent!,/Last seen/)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
 })

@@ -7,6 +7,8 @@ import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaBinary, nbaOdds, PAINT_MARKETS, type PaintGame, type PaintMarket } from '@/lib/nbaPaint'
+import type { NbaFinalOutcome } from '@/lib/nbaFinalOutcomes'
+import { nbaFinalValue } from './useNbaFinalOutcomes'
 import { nbaBoardMove,nbaBoardMoveLabel,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaBoardEstimatedPicks } from '@/lib/nbaBoardEstimatedPicks'
 import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
@@ -19,7 +21,7 @@ function trackedGames(games:PaintGame[],learned:PaintGame[],now:number) {
   return games.map(item=>{const prior=learned.find(game=>game.id===item.id),starts=[nbaGameStart(item),prior?nbaGameStart(prior):null].filter((value):value is number=>value!=null);return {game:item,start:starts.length?Math.min(...starts):null,open:nbaPregameOpen(item,now)&&(!prior||nbaPregameOpen(prior,now))}})
 }
 const trackedSignature=(tracked:ReturnType<typeof trackedGames>)=>tracked.map(item=>`${item.game.id}:${item.start??'unknown'}:${item.open?'open':'closed'}`).sort().join('|')
-export function PaintFullOddsBoard({date,games,phaseCheck=null,onResume,selectedMarket,selectedBook,onMarketChange,onBookChange}:{date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;onResume?:(at:number)=>void;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}) {
+export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onResume,selectedMarket,selectedBook,onMarketChange,onBookChange}:{finalOutcomes?:ReadonlyMap<string,NbaFinalOutcome>;date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;onResume?:(at:number)=>void;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}) {
   const mode=useNbaOddsMode(), [localMarket,setLocalMarket]=useState<PaintMarket>('points'), [localBook,setLocalBook]=useState('all'), [defaultBook,setDefaultBook]=useState('fanduel')
   const market=selectedMarket??localMarket, parentBook=selectedBook??localBook, book=parentBook==='all'?defaultBook:parentBook
   const setMarket=(value:PaintMarket)=>{setLocalMarket(value);onMarketChange?.(value)}, setBook=(value:string)=>{setLocalBook(value);onBookChange?.(value)}
@@ -146,13 +148,14 @@ export function PaintFullOddsBoard({date,games,phaseCheck=null,onResume,selected
       {activeComparison==='opening'&&firstUnavailable.length>0&&<p role="status">{mode==='live'?'First seen':'Opening'} unavailable: {firstUnavailable.join(', ')}.</p>}
       {rows.length>0&&rows.every(row=>row.player.publicPicks==null)&&<p role="status">Pick estimates unavailable.</p>}
       <div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=>{
-        const estimates=nbaBoardEstimatedPicks(row.cells,row.player.publicPicks)
-        return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small></span></div></th>{columns.map(line=>{
+        const estimates=nbaBoardEstimatedPicks(row.cells,row.player.publicPicks),actual=mode==='pregame'?nbaFinalValue(finalOutcomes,row.player.gameId,row.player.id,row.player.team.id):null
+        return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small>{actual!=null&&<small>Final {actual}</small>}</span></div></th>{columns.map(line=>{
           const cell=row.cells.find(item=>item.line===line),base=cell?.[activeComparison],change=cell?nbaBoardMove(cell,activeComparison):null,estimate=estimates.get(line)
           return <td key={line} className={!cell||change==null?styles.unknown:change>0?styles.shortenedCell:change<0?styles.lengthenedCell:styles.unchangedCell}>{cell?<div className={styles.quote}>
             <div className={styles.priceLine}><small>Last seen</small><Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link></div>
             <div className={styles.priceLine}><small>{activeComparison==='opening'?(mode==='live'?'First seen':'Open'):'Earlier'}</small><b>{base?nbaOdds(base.odds):'—'}</b></div>
             <span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span>
+            {actual!=null&&<div className={styles.picksLine}><small>Result</small><b>{actual>=line?'Hit':'Miss'}</b></div>}
             <div className={styles.picksLine}><small>Est. picks</small><b>{estimate==null?'—':estimate.toLocaleString()}</b></div>
           </div>:<span className={styles.muted}>—</span>}</td>
         })}</tr>
