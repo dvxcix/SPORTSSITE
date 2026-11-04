@@ -8,6 +8,21 @@ import type { NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 
 const roster=[{id:1,first_name:'Chet',last_name:'Holmgren'},{id:2,first_name:'Wendell',last_name:'Carter Jr.'}] as PaintRoster[]
 
+test('observed Bones Hyland public labels resolve only the verified canonical roster identity',()=>{
+  const hyland={id:17896031,first_name:"Nah'Shon",last_name:'Hyland'} as PaintRoster
+  // Retained 2026-11-04 01:37 UTC public category observations for HOU–MIN.
+  const props={Points:{'Bones Hyland Points':0},Assists:{'Bones Hyland Assists':0},'Three Pointers':{'Bones Hyland Made Threes':0},Combos:{'Bones Hyland PA (Points + Assists)':0,'Bones Hyland PRA (Points + Rebounds + Assists)':0}}
+  const result=normalizeNbaPublic(props,[hyland])
+  assert.equal(result.unmatched,0)
+  assert.deepEqual(result.rows.map(row=>[row.playerId,row.market,row.picks]),['assists','points','points_assists','points_rebounds_assists','threes'].map(market=>[hyland.id,market,0]))
+  for(const other of [{...hyland,id:1},{...hyland,first_name:'Other'},null]){
+    const rejected=normalizeNbaPublic(props,other?[other]:[])
+    assert.equal(rejected.rows.length,0);assert.equal(rejected.unmatched,5)
+  }
+  const ambiguous=normalizeNbaPublic(props,[hyland,{...hyland,id:2,first_name:'Bones'}])
+  assert.equal(ambiguous.rows.length,0);assert.equal(ambiguous.unmatched,5)
+})
+
 test('observed Ron Holland II public labels preserve verified zero counts across all five affected markets',()=>{
   const holland={id:1028026508,first_name:'Ronald',last_name:'Holland II'} as PaintRoster
   // Retained 2026-10-25 22:42 UTC source rows, not invented historical observations.
