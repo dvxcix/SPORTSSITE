@@ -5,7 +5,7 @@ import { nbaValidOdds, type NbaQuoteOpeningRow } from './nbaOddsHistory'
 
 export type NbaBoardObservation = { odds:number; at:string }
 export type NbaBoardCell = { gameId:number; playerId:number; vendor:string; market:string; line:number; current:NbaBoardObservation; opening:NbaBoardObservation|null; previous:NbaBoardObservation|null }
-export type NbaBoardPlayer = Pick<PaintRoster,'id'|'first_name'|'last_name'|'position'|'team'> & { gameId:number; headshot?:string|null }
+export type NbaBoardPlayer = Pick<PaintRoster,'id'|'first_name'|'last_name'|'position'|'team'> & { gameId:number; headshot?:string|null; publicPicks?:number|null }
 export type NbaFullOddsBoard = { date:string; games:PaintGame[]; players:NbaBoardPlayer[]; cells:NbaBoardCell[]; failed:number[]; unavailable:number[]; firstUnavailable?:number[]; complete:boolean; stale?:boolean; books?:string[]; selectedBook?:string; phaseCheckedAt?:number }
 /** Preserve sub-millisecond quote order; Date.parse alone truncates it. */
 export function nbaTimestampNanoseconds(value:string):bigint|null {
@@ -43,6 +43,14 @@ export function nbaPackFullBoard(board:NbaFullOddsBoard):NbaPackedBoard {
   const time=(value:string)=>{const found=timeIndex.get(value);if(found!=null)return found;const prefix=value.slice(0,11);let p=prefixIndex.get(prefix);if(p==null){p=prefixes.length;prefixes.push(prefix);prefixIndex.set(prefix,p)}const index=times.length;times.push([p,value.slice(11)]);timeIndex.set(value,index);return index}
   const quotes=board.cells.map((cell):NbaPackedCell=>[identity(cell.gameId,cell.playerId),bookIndex.get(cell.vendor)!,cell.line,cell.current.odds,time(cell.current.at),cell.opening?.odds??null,cell.opening?time(cell.opening.at):null,cell.previous?.odds??null,cell.previous?time(cell.previous.at):null])
   return {date:board.date,games:board.games,players:board.players,failed:board.failed,unavailable:board.unavailable,firstUnavailable:board.firstUnavailable,complete:board.complete,stale:board.stale,selectedBook:board.selectedBook,phaseCheckedAt:board.phaseCheckedAt,books,identities,prefixes,times,quotes}
+}
+/** Estimates are optional: if they push a valid board over its shared-cache
+ * budget, keep the prices and report estimates unavailable. */
+export function nbaPackFullBoardWithinLimit(board:NbaFullOddsBoard,maxBytes=1_048_576):NbaPackedBoard {
+  const packed=nbaPackFullBoard(board)
+  if(new TextEncoder().encode(JSON.stringify(packed)).byteLength<=maxBytes)return packed
+  const players=board.players.map(player=>({...player,publicPicks:undefined}))
+  return nbaPackFullBoard({...board,players})
 }
 /** Return one book without duplicating the cached slate or unrelated times. */
 export function nbaSelectPackedBoard(board:NbaPackedBoard,book:string):NbaPackedBoard {

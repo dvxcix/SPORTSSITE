@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { nbaBeforeCapture,nbaBoardMove,nbaBoardMoveLabel,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaSelectPackedBoard,nbaUnpackFullBoard } from '../src/lib/nbaFullOddsBoard.ts'
+import { nbaBeforeCapture,nbaBoardMove,nbaBoardMoveLabel,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaPackFullBoardWithinLimit,nbaSelectPackedBoard,nbaUnpackFullBoard } from '../src/lib/nbaFullOddsBoard.ts'
+
+test('optional estimates do not push an otherwise valid packed odds board over its capacity',()=>{
+  const player={gameId:1,id:2,first_name:'A',last_name:'Player',position:'G',team:{id:1,abbreviation:'A',full_name:'Alpha',name:'Alpha'},publicPicks:99}
+  const board={date:'2026-11-04',games:[],players:[player],cells:[],failed:[],unavailable:[],complete:true}
+  const full=nbaPackFullBoard(board),without=nbaPackFullBoard({...board,players:[{...player,publicPicks:undefined}]})
+  const size=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).byteLength
+  assert.ok(size(full)>size(without))
+  assert.equal(nbaPackFullBoardWithinLimit(board,size(full)).players[0].publicPicks,99)
+  const limited=nbaPackFullBoardWithinLimit(board,size(without));assert.equal(limited.players[0].publicPicks,undefined)
+  assert.equal(nbaUnpackFullBoard(limited,'points').players[0].first_name,'A')
+})
 import type { PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 

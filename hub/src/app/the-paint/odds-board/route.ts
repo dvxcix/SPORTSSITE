@@ -7,12 +7,14 @@ import { nbaBoardPhaseGames,nbaOddsBoardPhaseSignature,nbaReadOddsBoardPhase } f
 import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
 import { getNbaPhaseFrames, nbaPhaseBoundary, type NbaPhaseFrame } from '@/lib/nbaOddsPhaseData'
 import { getNbaQuoteOpenings } from '@/lib/nbaOddsHistoryData'
+import { getNbaBoardPublicCaptures } from '@/lib/nbaBoardPublicData'
+import { nbaBoardPublicTotals } from '@/lib/nbaBoardEstimatedPicks'
 import { nbaLiveFirstSeenConfident } from '@/lib/nbaLiveFirstSeenData'
 import { readNbaPregameResearch } from '@/lib/nbaPregameResearchData'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
-import { nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
-import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { nbaGameStart, nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
+import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaPackFullBoardWithinLimit,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaFullBoardPlayers } from '@/lib/nbaFullBoardPlayers'
 
 export const maxDuration = 120
@@ -38,13 +40,13 @@ export async function GET(request:NextRequest) {
     const key=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
     // Headshots are part of the shared slate, never a per-viewer lookup.
     // A new key prevents older portrait-free packed boards surviving rollout.
-    const version='v4'
+    const version='v5'
     const partialKey=`odds-board-partial:${version}:${date}:${market}:${key}`
     const interval=mode==='live'?60:300
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
     try{
       cached=await nbaSharedCache(`odds-board:${version}:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{
-        const loaded=await loadSlate(date,market!,mode,games,schedule.complete),packed=nbaPackFullBoard(loaded)
+        const loaded=await loadSlate(date,market!,mode,games,schedule.complete),packed=nbaPackFullBoardWithinLimit(loaded)
         if(packed.identities.length>1024||packed.books.length>64||packed.times.length>36000||Buffer.byteLength(JSON.stringify(packed))>1_048_576)throw new Error('NBA odds board exceeds capacity')
         if(!loaded.complete){
           // Never overwrite the last verified complete slate with a partial
@@ -103,7 +105,7 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     const latest=frames.at(-1), previousAt=latest?nbaBeforeCapture(latest.captured_at):null
     if(!roster.length)throw new Error('NBA roster unavailable')
     const prior=previousAt?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}):[]
-    const players=await nbaFullBoardPlayers(game,roster,open,!!latest?.quotes.length,artwork)
+    const players=(await nbaFullBoardPlayers(game,roster,open,!!latest?.quotes.length,artwork)).map(player=>({...player,publicPicks:null}))
     const known=new Set(players.map(player=>player.id))
     const lastPrior=prior.at(-1), currentAt=latest?nbaTimestampNanoseconds(latest.captured_at):null,priorAt=lastPrior?nbaTimestampNanoseconds(lastPrior.captured_at):null,limitAt=previousAt?nbaTimestampNanoseconds(previousAt):null
     if((latest&&currentAt==null)||(lastPrior&&(priorAt==null||limitAt==null||priorAt>limitAt)))throw new Error('Invalid NBA observation time')
@@ -130,6 +132,19 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     })))
   }
   const good=results.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
+  // Optional public counts never delay the critical quote/roster work. Reads
+  // run only in the shared slate fill, at most four at once and within the
+  // remaining route budget; each database request aborts after 1.5 seconds.
+  const publicGames=good.filter(value=>value.cells.length>0),publicDeadline=Math.min(Date.now()+3_500,deadline-2_000)
+  for(let offset=0;offset<publicGames.length&&Date.now()+1_750<publicDeadline;offset+=4){
+    await Promise.all(publicGames.slice(offset,offset+4).map(async value=>{
+      try{
+        const captures=await getNbaBoardPublicCaptures(value.game,mode)
+        const totals=nbaBoardPublicTotals(captures,value.game.id,market,mode,nbaGameStart(value.game)??NaN)
+        value.players=value.players.map(player=>({...player,publicPicks:totals.get(player.id)??null}))
+      }catch{/* Prices remain available if public counts cannot load. */}
+    }))
+  }
   if(good.reduce((sum,value)=>sum+value.cells.length,0)>12000)throw new Error('NBA odds board exceeds capacity')
   const failed=results.flatMap((result,index)=>result.status==='rejected'?[games[index].id]:[]),unavailable=good.filter(value=>value.missing).map(value=>value.game.id)
   const firstUnavailable=good.filter(value=>value.firstUnavailable).map(value=>value.game.id)

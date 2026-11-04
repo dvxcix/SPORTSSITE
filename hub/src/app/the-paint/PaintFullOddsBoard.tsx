@@ -8,6 +8,7 @@ import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaBinary, nbaOdds, PAINT_MARKETS, type PaintGame, type PaintMarket } from '@/lib/nbaPaint'
 import { nbaBoardMove,nbaBoardMoveLabel,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { nbaBoardEstimatedPicks } from '@/lib/nbaBoardEstimatedPicks'
 import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
 import { PaintBookSelect } from './PaintEntitySelect'
 import { PlayerAvatar } from './PaintVisuals'
@@ -120,7 +121,6 @@ export function PaintFullOddsBoard({date,games,phaseCheck=null,onResume,selected
   const unavailable=slate?.games.filter(item=>slate.failed.includes(item.id)||slate.unavailable.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const firstUnavailable=slate?.games.filter(item=>slate.firstUnavailable?.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(target!=='all')
-  const fmtTime=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'})+' ET'
   return <section className={styles.board}>
     <h3>Odds Board</h3>
     <div className={styles.controlPanel}>
@@ -144,7 +144,19 @@ export function PaintFullOddsBoard({date,games,phaseCheck=null,onResume,selected
     {!supported?<p role="status">No milestone prices for this market.</p>:!slate?!error&&!phaseUnsafe&&<p role="status">Loading odds board…</p>:<>
       {(slate.stale||unavailable.length>0||(!slate.complete&&!firstUnavailable.length))&&<p role="status">{slate.stale?'Last observed prices shown. ':''}{unavailable.length?`Unavailable: ${unavailable.join(', ')}.`:!slate.complete&&!firstUnavailable.length?'Some games are unavailable.':''}</p>}
       {activeComparison==='opening'&&firstUnavailable.length>0&&<p role="status">{mode==='live'?'First seen':'Opening'} unavailable: {firstUnavailable.join(', ')}.</p>}
-      <div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small></span></div></th>{columns.map(line=>{const cell=row.cells.find(item=>item.line===line),base=cell?.[activeComparison],change=cell?nbaBoardMove(cell,activeComparison):null;return <td key={line} className={!cell||change==null?styles.unknown:change>0?styles.shortenedCell:change<0?styles.lengthenedCell:styles.unchangedCell}>{cell?<div className={styles.quote}><small>Last seen</small><Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link><small>{activeComparison==='opening'?(mode==='live'?'First seen':'Open'):'Earlier'} {base?nbaOdds(base.odds):'—'}</small>{base&&<time dateTime={base.at}>{fmtTime(base.at)}</time>}<span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span><time dateTime={cell.current.at}>{fmtTime(cell.current.at)}</time></div>:<span className={styles.muted}>—</span>}</td>})}</tr>)}</tbody></table></div>
+      {rows.length>0&&rows.every(row=>row.player.publicPicks==null)&&<p role="status">Pick estimates unavailable.</p>}
+      <div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=>{
+        const estimates=nbaBoardEstimatedPicks(row.cells,row.player.publicPicks)
+        return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small></span></div></th>{columns.map(line=>{
+          const cell=row.cells.find(item=>item.line===line),base=cell?.[activeComparison],change=cell?nbaBoardMove(cell,activeComparison):null,estimate=estimates.get(line)
+          return <td key={line} className={!cell||change==null?styles.unknown:change>0?styles.shortenedCell:change<0?styles.lengthenedCell:styles.unchangedCell}>{cell?<div className={styles.quote}>
+            <div className={styles.priceLine}><small>Last seen</small><Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link></div>
+            <div className={styles.priceLine}><small>{activeComparison==='opening'?(mode==='live'?'First seen':'Open'):'Earlier'}</small><b>{base?nbaOdds(base.odds):'—'}</b></div>
+            <span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span>
+            <div className={styles.picksLine}><small>Est. picks</small><b>{estimate==null?'—':estimate.toLocaleString()}</b></div>
+          </div>:<span className={styles.muted}>—</span>}</td>
+        })}</tr>
+      })}</tbody></table></div>
       {!rows.length&&<p>No milestone prices for these filters.</p>}
     </>}
   </section>

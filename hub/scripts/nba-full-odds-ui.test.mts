@@ -22,7 +22,7 @@ new Function('module','exports','require',built.outputFiles[0].text)(fixture,fix
 const team={id:1,abbreviation:'AAA',full_name:'Alpha',name:'Alpha'},away={id:2,abbreviation:'BBB',full_name:'Beta',name:'Beta'}
 const game:PaintGame={id:12,date:'2026-11-02',season:2026,status:'Scheduled',status_state:'scheduled',datetime:new Date(Date.now()+3600000).toISOString(),period:0,home_team:team,visitor_team:away,home_team_score:0,visitor_team_score:0}
 const otherGame={...game,id:13}
-const players=[{id:1,gameId:12,first_name:'Amy',last_name:'Adams',position:'G',team,headshot:'https://images.example/amy.png'},{id:2,gameId:12,first_name:'Bea',last_name:'Baker',position:'F',team:away,headshot:null},{id:3,gameId:13,first_name:'Cam',last_name:'Clark',position:'G',team,headshot:null}]
+const players=[{id:1,gameId:12,first_name:'Amy',last_name:'Adams',position:'G',team,publicPicks:1000,headshot:'https://images.example/amy.png'},{id:2,gameId:12,first_name:'Bea',last_name:'Baker',position:'F',team:away,headshot:null},{id:3,gameId:13,first_name:'Cam',last_name:'Clark',position:'G',team,headshot:null}]
 const base={gameId:12,vendor:'fanduel',market:'points',opening:{odds:200,at:'2026-11-02T15:00:00Z'},previous:{odds:175,at:'2026-11-02T16:00:00Z'}}
 const data={date:'2026-11-02',games:[game,otherGame],players,failed:[],unavailable:[],complete:true,books:['fanduel'],selectedBook:'fanduel',cells:[{...base,playerId:1,line:15,current:{odds:150,at:'2026-11-02T17:00:00Z'}},{...base,playerId:1,line:20,current:{odds:220,at:'2026-11-02T17:00:00Z'}},{...base,playerId:2,line:15,current:{odds:300,at:'2026-11-02T17:00:00Z'}},{...base,gameId:13,playerId:3,line:15,current:{odds:250,at:'2026-11-02T17:00:00Z'}}]}
 test('Court selections carry into the board and changes carry back',async()=>{
@@ -71,13 +71,15 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   assert.equal(region.querySelector('[data-avatar="1"]')?.getAttribute('data-team'),'AAA');assert.match(region.textContent??'',/AAA · G/)
   const filters=host.querySelector<HTMLDetailsElement>('details')!;assert.ok(filters);assert.equal(filters.open,false);assert.match(filters.querySelector('summary')?.textContent??'',/^Filters$/)
   filters.open=true
-  assert.match(region.textContent??'',/15\+/);assert.match(region.textContent??'',/20\+/);assert.match(region.textContent??'',/Open \+200/);assert.match(region.textContent??'',/\+150/)
+  assert.match(region.textContent??'',/15\+/);assert.match(region.textContent??'',/20\+/);assert.match(region.textContent??'',/Open\s*\+200/);assert.match(region.textContent??'',/\+150/)
   assert.match(host.querySelector('[aria-label="Odds board sportsbook"]')?.parentElement?.textContent??'',/FanDuel/)
   assert.match(region.textContent??'',/Shortened/);assert.match(region.textContent??'',/Lengthened/)
   const link=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 15+ Points, FanDuel, last seen +150"]')!;const target=new URL(link.href);assert.equal(target.searchParams.get('game'),'12');assert.equal(target.searchParams.get('book'),'fanduel');assert.equal(target.searchParams.get('line'),'15');assert.equal(target.searchParams.get('type'),'milestone');assert.equal(target.searchParams.get('mode'),'pregame');assert.equal(link.dataset.prefetch,'false')
-  const firstCell=link.closest('td')!;assert.deepEqual([...firstCell.querySelectorAll('time')].map(time=>time.dateTime),['2026-11-02T15:00:00Z','2026-11-02T17:00:00Z'])
+  const firstCell=link.closest('td')!;assert.equal(firstCell.querySelectorAll('time').length,0);assert.match(firstCell.textContent??'',/Est\. picks\s*857/);assert.doesNotMatch(firstCell.textContent??'',/11\/2|2026/)
+  const second=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 20+ Points, FanDuel, last seen +220"]')!.closest('td')!;assert.match(second.textContent??'',/Est\. picks\s*143/)
+  assert.match(region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Bea Baker 15+ Points, FanDuel, last seen +300"]')!.closest('td')!.textContent??'',/Est\. picks\s*—/)
   const other=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Cam Clark 15+ Points, FanDuel, last seen +250"]')!;const otherTarget=new URL(other.href);assert.equal(otherTarget.searchParams.get('game'),'13');assert.equal(otherTarget.searchParams.get('player'),'3');assert.equal(otherTarget.searchParams.get('line'),'15');assert.equal(other.dataset.prefetch,'false')
-  await select('Compare odds to','previous');assert.match(region.textContent??'',/Earlier \+175/)
+  await select('Compare odds to','previous');assert.match(region.textContent??'',/Earlier\s*\+175/)
   await select('Sort odds board','lengthened');assert.match(region.querySelector('tbody tr')?.textContent??'',/Bea Baker/)
   await select('Sort by milestone','20');assert.match(region.querySelector('tbody tr')?.textContent??'',/Amy Adams/)
   assert.match(filters.querySelector('summary')?.textContent??'',/2 active/);filters.open=false;filters.open=true
@@ -160,8 +162,8 @@ test('Live defaults to first seen, offers earlier comparison, and cached pre-res
  const render=(phaseCheck:NbaOddsBoardPhaseCheck|null)=>root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games,phaseCheck}))
  try{
   await act(async()=>{render(null);await new Promise(done=>setTimeout(done,20))})
-  const grid=host.querySelector('[aria-label="NBA milestone odds board"]');assert.ok(grid);assert.match(grid.textContent??'',/Last seen/);assert.match(grid.textContent??'',/First seen \+200/)
-  const comparison=host.querySelector<HTMLSelectElement>('[aria-label="Compare odds to"]')!;assert.equal(comparison.value,'opening');comparison.value='previous';await act(async()=>comparison.dispatchEvent(new dom.window.Event('change',{bubbles:true})));assert.match(grid.textContent??'',/Earlier \+175/)
+  const grid=host.querySelector('[aria-label="NBA milestone odds board"]');assert.ok(grid);assert.match(grid.textContent??'',/Last seen/);assert.match(grid.textContent??'',/First seen\s*\+200/)
+  const comparison=host.querySelector<HTMLSelectElement>('[aria-label="Compare odds to"]')!;assert.equal(comparison.value,'opening');comparison.value='previous';await act(async()=>comparison.dispatchEvent(new dom.window.Event('change',{bubbles:true})));assert.match(grid.textContent??'',/Earlier\s*\+175/)
   Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   now+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)
