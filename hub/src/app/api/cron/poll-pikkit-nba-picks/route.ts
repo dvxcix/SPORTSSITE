@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,nbaPublicFourHourCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -81,7 +81,7 @@ async function run(request:Request){
   const eligible=()=>nbaPublicPrioritize(upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due),controls,NBA_PUBLIC_VERSION,attempted)
   let due=eligible()
   if(!due.length)return NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current',decisions:upcoming.map(game=>({gameId:game.id,...nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now())}))})
-  const cohortHold=()=>selected||schedules.some(slate=>!slate.complete)?null:nbaPublicCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())
+  const cohortHold=()=>selected||schedules.some(slate=>!slate.complete)?null:nbaPublicCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())??nbaPublicFourHourCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())
   const hold=cohortHold()
   if(hold!==null)return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(hold).toISOString()})
   const lease=await acquirePikkitBrowserLease()

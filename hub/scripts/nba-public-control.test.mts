@@ -164,6 +164,75 @@ test('day-before cohort holds without a paid launch and starts due games on the 
   assert.deepEqual(run.body.results.map((result:{game:number})=>result.game),[123,456])
   assert.equal(f.metrics().releases,1)
 })
+test('four-hour cohorts combine only previously captured first attempts and keep near-tip work unchanged',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const now=tip-4*HOUR+6*60_000
+  const f=await fixture({now,games:[game,later]})
+  for(const item of [game,later]){
+    const start=mode.nbaGameStart(item)!,at=start-20*HOUR
+    const state=control.nbaNextPublicControl(undefined,'captured',at,start,new Date(at).toISOString())
+    f.rows.set(control.nbaPublicGameControlKey(item,parser),{key:control.nbaPublicGameControlKey(item,parser),payload:state})
+  }
+  const held=await f.invoke()
+  assert.equal(held.body.browserSessions,0);assert.equal(f.metrics().opens,0);assert.equal(f.metrics().claims,0)
+  f.advance(30*60_000)
+  const run=await f.invoke()
+  assert.equal(f.metrics().opens,1)
+  assert.deepEqual(run.body.results.map((result:{game:number})=>result.game),[123,456])
+  assert.equal(f.metrics().releases,1)
+})
+test('four-hour batching never delays missing baselines, retries, mixed urgent work or oversized groups',()=>{
+  const now=tip-4*HOUR+6*60_000,later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const prior=(item:PaintGame)=>{const start=mode.nbaGameStart(item)!,at=start-20*HOUR;return control.nbaNextPublicControl(undefined,'captured',at,start,new Date(at).toISOString())}
+  const key=(item:PaintGame)=>control.nbaPublicGameControlKey(item,parser)
+  const states=new Map([[key(game),prior(game)],[key(later),prior(later)]])
+  const hold=(due:PaintGame[],schedule:PaintGame[],at=now)=>control.nbaPublicFourHourCohortHold(due,schedule,states,parser,()=>null,at)
+  assert.equal(hold([game],[game,later]),tip-4*HOUR+30*60_000)
+  assert.equal(hold([game],[game,later],tip-4*HOUR+30*60_000),null,'hold ends at its fixed deadline')
+  states.delete(key(game));assert.equal(hold([game],[game,later]),null,'missing baseline')
+  states.set(key(game),control.nbaNextPublicControl(prior(game),'failed',now,tip));assert.equal(hold([game],[game,later],now+31*60_000),null,'retry')
+  states.set(key(game),prior(game))
+  const urgent={...game,id:789,datetime:new Date(now+HOUR).toISOString()}
+  states.set(key(urgent),prior(urgent));assert.equal(hold([game,urgent],[game,later,urgent]),null,'T-1h is never delayed')
+  const extras=Array.from({length:6},(_,i)=>({...later,id:1000+i}))
+  for(const item of extras)states.set(key(item),prior(item))
+  assert.equal(hold([game],[game,...extras]),null,'oversized batches are not held')
+})
+test('a slow grouped four-hour attempt leaves an unvisited game immediately eligible',async()=>{
+  const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
+  const f=await fixture({now:tip-4*HOUR+36*60_000,games:[game,later],gotoAdvanceMs:220_000})
+  for(const item of [game,later]){
+    const start=mode.nbaGameStart(item)!,at=start-20*HOUR,key=control.nbaPublicGameControlKey(item,parser)
+    f.rows.set(key,{key,payload:control.nbaNextPublicControl(undefined,'captured',at,start,new Date(at).toISOString())})
+  }
+  const run=await f.invoke()
+  assert.equal(f.metrics().opens,1)
+  assert.deepEqual(run.body.results.map((result:{game:number})=>result.game),[123])
+  const laterState=f.rows.get(control.nbaPublicGameControlKey(later,parser))!.payload as control.NbaPublicControl
+  assert.ok(Date.parse(laterState.successAt!)<tip-4*HOUR,'unvisited prior stays untouched')
+  const next=await f.invoke()
+  assert.equal(f.metrics().opens,2)
+  assert.deepEqual(next.body.results.map((result:{game:number})=>result.game),[456])
+})
+test('the observed 14-game stagger models five rather than eight public launches under ideal success',()=>{
+  const games=[2,3,3,1,2,1,1,1].flatMap((count,index)=>Array.from({length:count},(_,n)=>({...game,id:2000+index*10+n,datetime:new Date(tip+index*30*60_000).toISOString()})))
+  const run=(group:boolean)=>{
+    const states=new Map<string,control.NbaPublicControl>()
+    for(const item of games){const start=mode.nbaGameStart(item)!,at=start-20*HOUR;states.set(control.nbaPublicGameControlKey(item,parser),control.nbaNextPublicControl(undefined,'captured',at,start,new Date(at).toISOString()))}
+    let launches=0
+    for(let tick=0;tick<8;tick++){
+      const now=tip-4*HOUR+6*60_000+tick*30*60_000
+      const due=games.filter(item=>control.nbaPublicCaptureDecision(item,null,states.get(control.nbaPublicGameControlKey(item,parser)),now).due)
+      if(!due.length||group&&control.nbaPublicFourHourCohortHold(due,games,states,parser,()=>null,now)!==null)continue
+      launches++
+      for(const item of due){const key=control.nbaPublicGameControlKey(item,parser),start=mode.nbaGameStart(item)!;states.set(key,control.nbaNextPublicControl(states.get(key),'captured',now+1000,start,new Date(now+1000).toISOString(),now))}
+    }
+    assert.ok(games.every(item=>Date.parse(states.get(control.nbaPublicGameControlKey(item,parser))!.successAt!)>=mode.nbaGameStart(item)!-4*HOUR))
+    return launches
+  }
+  assert.equal(run(false),8)
+  assert.equal(run(true),5)
+})
 test('incomplete schedule disables batching and starts the existing due check',async()=>{
   const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
   const f=await fixture({now:tip-24*HOUR+6*60_000,games:[game,later],complete:false})

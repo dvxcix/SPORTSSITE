@@ -95,6 +95,37 @@ export function nbaPublicCohortHold<T extends Game>(due: readonly T[], schedule:
   return release
 }
 
+/** Group only first T-4h attempts which already have a successful earlier
+ * capture. Never hold a retry, a first-ever capture or the T-1h checkpoint. */
+export function nbaPublicFourHourCohortHold<T extends Game>(due: readonly T[], schedule: readonly T[], controls: ReadonlyMap<string, NbaPublicControl>, parser: string, previous: (id: number) => string | null, now: number): number | null {
+  if (!due.length || !Number.isFinite(now)) return null
+  const firstAttempt = (game: T, at: number) => {
+    const start = nbaGameStart(game), state = controls.get(nbaPublicGameControlKey(game, parser))
+    if (start === null || !state || state.outcome !== 'captured' || !state.successAt) return false
+    const checkpoint = start - 4 * HOUR, success = Date.parse(state.successAt), attempted = Date.parse(state.attemptedAt)
+    return Number.isFinite(success) && success < checkpoint && Number.isFinite(attempted) && attempted < checkpoint
+      && nbaPublicCaptureDecision(game, previous(game.id), state, at).slotHours === 4
+      && nbaPublicCaptureDecision(game, previous(game.id), state, at).due
+  }
+  if (!due.every(game => firstAttempt(game, now))) return null
+  const first = Math.min(...due.map(game => nbaGameStart(game)! - 4 * HOUR)), deadline = first + 30 * MINUTE
+  if (now >= deadline) return null
+  const joins = schedule.filter(game => {
+    const start = nbaGameStart(game)
+    if (start === null || !['scheduled', 'unknown', undefined].includes(game.status_state) || !nbaPregameOpen(game, now)) return false
+    const target = start - 4 * HOUR
+    return target > now && target <= deadline && firstAttempt(game, target)
+  })
+  // Bound the extra cohort size; a slow or failed game still uses the existing
+  // individual retry and deadline gates.
+  if (!joins.length || due.length + joins.length > 6) return null
+  const release = Math.max(...joins.map(game => nbaGameStart(game)! - 4 * HOUR))
+  // Include the next 30-minute tick plus the bounded browser run and leave at
+  // least two hours before every currently due game's canonical start.
+  if (due.some(game => nbaGameStart(game)! - (release + 35 * MINUTE) < 2 * HOUR)) return null
+  return release
+}
+
 /** Visit games with the nearest canonical tip first. Within a tip time,
  * rotate least-recently attempted games so one failure cannot monopolize
  * a bounded browser session. Existing cooldown and checkpoint rules apply. */
