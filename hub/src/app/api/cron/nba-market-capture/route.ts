@@ -11,6 +11,7 @@ import { nbaGameStart, nbaGameFinal, nbaPregameOpen, nbaLiveOpen, nbaQuoteInMode
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import type { NbaMarketReceipt } from '@/lib/nbaMarketReceipts'
 import { getNbaFirstEvents, getNbaFirstOdds } from '@/lib/nbaFirstBasketOddsData'
+import { nbaFirstEventFailureLog } from '@/lib/nbaFirstEventDiagnostics'
 import type { NbaFirstDiagnostics } from '@/lib/nbaFirstBasketOdds'
 import type { NbaSupplementalDiagnostics } from '@/lib/nbaSupplementalProps'
 export const maxDuration = 120
@@ -39,7 +40,10 @@ async function run(request: Request) {
   if(attemptError)return NextResponse.json({reason:'NBA market progress unavailable'},{status:503})
   const last=(id:number)=>Math.max(0,...(attempts??[]).filter(row=>row.key.endsWith(':'+id)).map(row=>Date.parse(row.fetched_at??'1970-01-01')))
   games.sort((a,b)=>last(a.id)-last(b.id)||Date.parse(a.datetime??a.status)-Date.parse(b.datetime??b.status))
-  const firstEvents = await getNbaFirstEvents(true).catch(() => null)
+  const firstEvents = await getNbaFirstEvents(true, true).catch(error => {
+    console.error(nbaFirstEventFailureLog(error))
+    return null
+  })
   const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number; diagnostics?: NbaSupplementalDiagnostics; sources?: MarketReceipt['sourceDiagnostics']; sourceCached?: boolean; sourceReceiptAt?: string }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
   for (let offset = 0; offset < games.length; offset += 4) {
     if (Date.now() - started > 82_000) { report.deferred += games.length-offset; report.firstBasket.deferred += games.length-offset; break }

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import * as crypto from 'node:crypto'
 import ts from 'typescript'
 import * as mode from '../src/lib/nbaOddsMode.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
@@ -102,7 +103,7 @@ test('First Basket after tipoff renders its saved pregame quote and never reques
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const match={...game,status_state:'in_progress',period:2,home_team:{id:1,abbreviation:'BOS'},visitor_team:{id:2,abbreviation:'NYK'}} as paint.PaintGame
   const imports:Record<string,unknown>={
-    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaSharedCache':{},
+    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaFirstEventDiagnostics':eventDiagnostics,'./nbaSharedCache':{},
     './nbaBookFirstData':{getNbaBookFirstSupplement:async()=>{throw Error('Frozen pregame prices must not read current direct-book observations')}},
     './supabase/admin':{},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>g},

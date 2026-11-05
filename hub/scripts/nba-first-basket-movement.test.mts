@@ -8,6 +8,7 @@ import { nbaEconomicSnapshot } from '../src/lib/nbaMovement.ts'
 import { nbaGameEconomicSnapshot, type NbaQuoteOpeningRow } from '../src/lib/nbaOddsHistory.ts'
 import type { FirstBasketRow } from '../src/lib/nbaFirstBasketOdds.ts'
 import * as modes from '../src/lib/nbaOddsMode.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 
 const at = '2026-10-20T12:00:00Z', priorAt = '2026-10-20T11:55:00Z', openingAt = '2026-10-20T10:00:00Z', now = Date.parse(at)
@@ -79,6 +80,7 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
   const mocks: Record<string, unknown> = {
     'node:crypto': crypto, 'next/server': { NextResponse: { json: (body: unknown, options: ResponseInit) => Response.json(body, options) } },
     '@/lib/cron-auth': { requireCronAuth: () => null },
+    '@/lib/nbaFirstEventDiagnostics': eventDiagnostics,
     '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/nbaPaintData': {

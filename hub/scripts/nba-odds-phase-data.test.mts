@@ -7,6 +7,7 @@ import * as paint from '../src/lib/nbaPaint.ts'
 import * as movement from '../src/lib/nbaMovement.ts'
 import * as history from '../src/lib/nbaOddsHistory.ts'
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as bookHistory from '../src/lib/nbaBookHistory.ts'
 
 async function compiled<T>(file:string,imports:Record<string,unknown>,Clock:unknown):Promise<T>{
@@ -107,6 +108,7 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:[current]}),getPaintGame:async()=>current,getPaintPropSnapshot:async(_game:unknown,_mode:unknown,_fresh:unknown,privateDiagnostics:unknown)=>{assert.equal(privateDiagnostics,true);if(options.cross)h.time(tip+1000);return {props,complete:!options.directIncomplete&&!options.unmatchedDiagnostic,primaryComplete:true,sourceDiagnostics:{primary:'complete',supplemental:options.unmatchedDiagnostic?'incomplete':'complete',direct:options.badDiagnostic?'private-payload':options.directIncomplete?'incomplete':'complete'},coverage:{complete:!options.directIncomplete&&!options.unmatchedDiagnostic,accepted:0,unmatched:options.unmatchedDiagnostic?31:0,stale:0,eventMatched:false,applicable:false,observedAt:new Date().toISOString(),...(options.unmatchedDiagnostic?{diagnostics:{reasons:{},samples:[],unmatchedReasons:{'identity-unmatched':31},unmatchedNameDigests:[{digest:'a'.repeat(64),count:31}]}}:{})},issues:[]}},getPaintGameOdds:async()=>[]},
  '@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':h.modes,'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,
  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);if(options.cached&&key.startsWith('market-attempt:'))return{value:{status:'failed',coverage:{complete:false,accepted:0,unmatched:0,stale:0},sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:'incomplete'}},fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false};return{value:await load(),fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false}}},
+ '@/lib/nbaFirstEventDiagnostics':eventDiagnostics,
  '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:options.firstUnmatched?1:0,rows:first.map(offer=>({offer}))})},
  },h.Clock)
  const response=await route.GET(new Request('https://test/capture'));return{calls,keys,response,body:await response.json()}

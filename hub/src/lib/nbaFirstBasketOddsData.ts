@@ -8,20 +8,19 @@ import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaGameFinal, nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
 import { createAdminClient } from './supabase/admin'
 import { getNbaBookFirstSupplement } from './nbaBookFirstData'
+import { nbaReadFirstOddsResponse, NbaFirstOddsUnavailable } from './nbaFirstEventDiagnostics'
+export { NbaFirstOddsUnavailable } from './nbaFirstEventDiagnostics'
 
 const BASE='https://api.the-odds-api.com/v4/sports/basketball_nba'
-export class NbaFirstOddsUnavailable extends Error {constructor(public reason:'connection'|'authorization'|'quota'|'upstream'){super('First-basket odds unavailable')}}
-async function odds<T>(path:string):Promise<T>{
+async function odds<T>(path:string, classifyEventTransport=false):Promise<T>{
   const key=process.env.ODDS_API_KEY?.trim()
   if(!key)throw new NbaFirstOddsUnavailable('connection')
   const url=new URL(BASE+path);url.searchParams.set('apiKey',key)
-  const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)})
-  if(!response.ok)throw new NbaFirstOddsUnavailable(response.status===401||response.status===403?'authorization':response.status===429?'quota':'upstream')
-  return response.json() as Promise<T>
+  return nbaReadFirstOddsResponse<T>(()=>fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)}),classifyEventTransport)
 }
-export async function getNbaFirstEvents(fresh=false){
+export async function getNbaFirstEvents(fresh=false,classifyEventTransport=false){
   const load=async()=>{
-  const events=await odds<FirstOddsEvent[]>('/events')
+  const events=await odds<FirstOddsEvent[]>('/events',classifyEventTransport)
   if(!Array.isArray(events))throw new NbaFirstOddsUnavailable('upstream')
   return events
   }

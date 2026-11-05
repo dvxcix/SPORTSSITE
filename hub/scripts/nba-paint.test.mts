@@ -1,4 +1,5 @@
 import * as publicControl from '../src/lib/nbaPublicCaptureControl.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import * as milestoneSignals from '../src/lib/nbaMilestoneSignals.ts'
@@ -382,7 +383,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
-  imports = { '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/nbaSlateDiagnostics': { nbaSlateFailure: () => {}, nbaSlateTimer: () => ({ enter: () => {} }) }, '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
+  imports = { '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, '@/lib/nbaSlateDiagnostics': { nbaSlateFailure: () => {}, nbaSlateTimer: () => ({ enter: () => {} }) }, '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   imports = { '@/lib/nbaResearchResources': {}, '@/lib/nbaSlateFreezeData': {}, '@/lib/nbaSlateHeat': {}, '@/lib/nbaPregameResearchData': {}, './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')

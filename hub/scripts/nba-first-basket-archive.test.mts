@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as mode from '../src/lib/nbaOddsMode.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 
 const home={id:1,abbreviation:'BOS',name:'Celtics',full_name:'Boston Celtics'}
 const away={id:2,abbreviation:'NYK',name:'Knicks',full_name:'New York Knicks'}
@@ -17,7 +18,7 @@ async function harness(setup:Setup){
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const identities:number[]=[],queries:number[]=[],snapshots:paint.PaintGame[]=[]
   const imports:Record<string,unknown>={
-    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaOddsMode':mode,
+    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaFirstEventDiagnostics':eventDiagnostics,'./nbaOddsMode':mode,
     './nbaBookFirstData':{getNbaBookFirstSupplement:async()=>{throw Error('Archived prices must not request current direct-book observations')}},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>setup.canonical??g},
     './nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})},

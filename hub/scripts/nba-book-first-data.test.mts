@@ -6,6 +6,7 @@ import * as mode from '../src/lib/nbaOddsMode.ts'
 import { nbaValidOdds } from '../src/lib/nbaOddsHistory.ts'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as firstOdds from '../src/lib/nbaFirstBasketOdds.ts'
+import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as bookCurrent from '../src/lib/nbaBookCurrent.ts'
 import type { PaintGame, PaintProp } from '../src/lib/nbaPaint.ts'
 import type { NbaBookFirstFrame, NbaFirstBook } from '../src/lib/nbaBookFirstData.ts'
@@ -166,7 +167,7 @@ test('aggregate First Basket deduplicates newer direct prices, applies exact wit
     const cached = new Map<string, unknown>()
     let providerReads = 0
     const imports: Record<string, unknown> = {
-      'server-only': {}, './nbaPaint': paint, './nbaFirstBasketOdds': {...firstOdds,nbaNormalizeFirstOdds:(event:firstOdds.FirstOddsEvent,game:PaintGame,players:paint.PaintPlayer[])=>firstOdds.nbaNormalizeFirstOdds(event,game,players,h.now())}, './nbaBookFirstData': h.api,
+      'server-only': {}, './nbaPaint': paint, './nbaFirstEventDiagnostics': eventDiagnostics, './nbaFirstBasketOdds': {...firstOdds,nbaNormalizeFirstOdds:(event:firstOdds.FirstOddsEvent,game:PaintGame,players:paint.PaintPlayer[])=>firstOdds.nbaNormalizeFirstOdds(event,game,players,h.now())}, './nbaBookFirstData': h.api,
       './nbaOddsClockData': { getNbaOddsGame: async (value: PaintGame) => value },
       './nbaOddsMode': { ...mode, nbaPregameOpen: (value: PaintGame) => mode.nbaPregameOpen(value, h.now()), nbaLiveOpen: (value: PaintGame) => mode.nbaLiveOpen(value, h.now()) },
       './nbaOddsPhaseData': { getNbaPhaseSnapshot: async () => { throw Error('No archived result is needed before tip') } }, './supabase/admin': {},
