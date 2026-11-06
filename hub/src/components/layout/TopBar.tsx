@@ -548,7 +548,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 {nbaAccess && quickResults.nbaPlayers.map(player => (
                   <button type="button" key={`nba-player-${player.id}`} onClick={() => goTo(`/nba/players/${player.id}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }} className="notif-dropdown-item">
-                    <PlayerAvatar headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={30}/>
+                    <PlayerAvatar sport="nba" teamAbbr={player.teamAbbr} headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={30}/>
                     <span style={{ minWidth: 0, flex: 1 }}><span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span><span style={{ fontSize: 10, color: 'var(--text-3)' }}>{[player.position, player.teamName].filter(Boolean).join(' · ')}</span></span>
                   </button>
                 ))}

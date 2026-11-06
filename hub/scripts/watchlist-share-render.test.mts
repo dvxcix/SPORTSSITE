@@ -15,7 +15,7 @@ Object.assign(globalThis, { watchlistShareFixture: rows })
 const stubs: Record<string, string> = {
   '@/lib/nbaPaint': 'export const nbaTeamLogo=()=>null',
   '@/lib/mlbViewerAccess': 'export const canViewMlb=async()=>false',
-  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null',
+  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null;export const getTeamColor=()=>null',
   '@/lib/supabase/server': `export const createClient=async()=>({ auth:{getUser:async()=>({data:{user:{id:'fixture'}}})}, from(table){const q={select(){return q},eq(){return q},single:async()=>({data:{username:'fixture'}}),in:async()=>({data:globalThis.watchlistShareFixture,error:null})};return q} })`,
 }
 const bundle = await build({

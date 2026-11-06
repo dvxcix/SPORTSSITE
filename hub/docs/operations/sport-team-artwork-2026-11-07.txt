@@ -1,0 +1,35 @@
+Sport-specific team artwork repair — November 7, 2026
+
+The shared post renderer treated every non-NBA team as MLB. An NFL BAL pick
+therefore showed the Orioles logo and orange background; JAX had no badge.
+Search and generated post images repeated that lookup, while saved-pick previews
+and generated watchlist images explicitly omitted NFL team logos.
+
+Shared artwork now requires a league. A local 32-team NFL directory uses the
+existing primary project's team names, colors and ESPN logo URLs, including
+JAC/JAX, WAS/WSH and existing franchise aliases. All 32 static assets returned
+HTTP 200 image/png during verification. There are no additional database reads
+or provider/collector jobs in the application.
+
+Posts use each leg's explicit sport with the post sport as fallback. Straight
+picks, team picks, search results, composer, saved-pick previews, share images,
+NFL team marks and Slate Edge avatars use the same league-aware lookup. Known
+teams override an incorrectly supplied logo; MLB and NBA retain their own assets.
+Avatar failures are keyed to the failed URL so changing player/team can recover.
+
+Regression coverage renders the actual eight-leg post, mixed leagues, straight
+picks, generated post-image JSX and recycled avatars. Existing sharing tests
+retain privacy, pagination and confirmed-post behavior; a bounded PNG renders.
+Cross-sport, production and affected NBA/NFL artwork tests pass. Full TypeScript
+uses the existing workspace core source mapping. Scoped source lint passes with
+the repository's existing legacy suppressions.
+
+One unrelated NFL freeze test, 'a paused observation archives complete offers,
+projects current, and stays identical across kickoff', failed identically on
+unchanged main 4838f7c7 and this branch: an expected draftkings-only fixture also
+contained a fanduel offer. No quote, projection, freeze or settlement source is
+changed here; do not call that whole suite passing or modify its assertion as
+part of this artwork repair.
+
+Live verification targets existing public post
+060f00a7-8b56-4e7f-8441-018659c0aa11. No post or member data is rewritten.

@@ -1,9 +1,8 @@
-import { nbaTeamLogo } from '@/lib/nbaPaint'
+import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 /* eslint-disable @next/next/no-img-element -- ImageResponse/Satori requires native image elements. */
 import { ImageResponse } from 'next/og'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { createClient } from '@/lib/supabase/server'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { WATCHLIST_SHARE_PAGE_SIZE } from '@/lib/watchlistSharePages'
 
 export const revalidate = 0
@@ -103,7 +102,7 @@ function PlayerCard({ item, origin }: { item: any; origin: string }) {
   const sorted = books.length
     ? books.sort((a, b) => b[1] - a[1]).slice(0, MAX_BOOKS_SHOWN)
     : (item.book && item.odds != null ? [[item.book, item.odds] as [string, number]] : [])
-  const teamLogo = item.sport?.toLowerCase() === 'nfl' ? null : item.sport?.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)
+  const teamLogo = sportTeamLogoUrl(item.sport, item.team)
 
   return (
     <div style={{

@@ -9,7 +9,7 @@ import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { UserBadges } from '@/components/social/UserBadges'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { TeamMark } from '@/components/sports/TeamMark'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
@@ -538,9 +538,7 @@ export function SearchClient() {
                     {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />
-                        {getTeamLogoUrl(p.pick_data.team)
-                          ? <SafeImage src={getTeamLogoUrl(p.pick_data.team)} alt={p.pick_data.team} className="h-4 w-4 shrink-0 object-contain" />
-                          : <span className="font-bold text-white">{p.pick_data.team}</span>}
+                        <TeamMark sport={p.sport} team={p.pick_data.team} size={16} />
                         <span className="text-zinc-500">{p.pick_data.line}</span>
                         <span className="font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
                       </div>

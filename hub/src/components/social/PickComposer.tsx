@@ -10,6 +10,7 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PROP_META } from '@/lib/watchlist'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import styles from './PickComposer.module.css'
 
 type Sport = 'MLB' | 'NFL' | 'NBA'
@@ -281,14 +282,14 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
         </label>
 
         {game && <div className={styles.matchupCard}>
-          <TeamLogo src={game.awayLogo} abbr={game.awayAbbr} /><strong>{game.awayAbbr}</strong><span>@</span>
-          <TeamLogo src={game.homeLogo} abbr={game.homeAbbr} /><strong>{game.homeAbbr}</strong>
+          <TeamLogo src={sportTeamLogoUrl(sport, game.awayAbbr) ?? game.awayLogo} abbr={game.awayAbbr} /><strong>{game.awayAbbr}</strong><span>@</span>
+          <TeamLogo src={sportTeamLogoUrl(sport, game.homeAbbr) ?? game.homeLogo} abbr={game.homeAbbr} /><strong>{game.homeAbbr}</strong>
         </div>}
 
         {game && <div className={styles.field} ref={playerRef}>
           <span>Player</span>
           {player ? <div className={styles.selectedPlayer}>
-            <PlayerAvatar headshot={player.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(player.team) : player.team_logo_url ?? (player.team === game.homeAbbr ? game.homeLogo : game.awayLogo)} teamAbbr={sport === 'MLB' ? player.team : undefined} name={player.name} size={34} />
+            <PlayerAvatar headshot={player.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, player.team) ?? player.team_logo_url} teamAbbr={player.team} name={player.name} size={34} />
             <div><strong>{player.name}</strong><small>{player.team} · {player.position}</small></div>
             <Check size={15} />
             <button type="button" onClick={() => setPlayerId('')} aria-label="Change player"><X size={14} /></button>
@@ -297,7 +298,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
             <input value={playerQuery} onChange={event => { setPlayerQuery(event.target.value); setPlayerOpen(true) }} onFocus={() => setPlayerOpen(true)} placeholder="Search this matchup" />
             {playerOpen && <div className={styles.playerMenu}>
               {filteredPlayers.length ? filteredPlayers.map(item => <button type="button" key={item.player_id ?? item.mlb_id} onClick={() => choosePlayer(item)}>
-                <PlayerAvatar headshot={item.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(item.team) : item.team_logo_url ?? (item.team === game.homeAbbr ? game.homeLogo : game.awayLogo)} teamAbbr={sport === 'MLB' ? item.team : undefined} name={item.name} size={30} />
+                <PlayerAvatar headshot={item.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, item.team) ?? item.team_logo_url} teamAbbr={item.team} name={item.name} size={30} />
                 <span><strong>{item.name}</strong><small>{item.team} · {item.position}</small></span>
               </button>) : <p>No matching players</p>}
             </div>}

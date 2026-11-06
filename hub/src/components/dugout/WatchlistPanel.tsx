@@ -1,12 +1,11 @@
 'use client'
-import { nbaTeamLogo } from '@/lib/nbaPaint'
+import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { type WatchlistItem } from '@/lib/watchlist'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PostBetModal } from './PostBetModal'
 import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
@@ -42,12 +41,12 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
       )}
       <PlayerAvatar
         headshot={item.headshot_url}
-        teamLogo={item.sport.toLowerCase() === 'nfl' ? undefined : item.sport.toLowerCase() === 'nba' ? nbaTeamLogo(item.team) : getTeamLogoUrl(item.team)}
+        teamLogo={sportTeamLogoUrl(item.sport, item.team)}
         teamAbbr={item.team}
         sport={item.sport}
         name={item.player_name}
         size={34}
-        showTeam={item.sport.toLowerCase() === 'nba' ? !!nbaTeamLogo(item.team) : item.sport.toLowerCase() !== 'nfl' && !!getTeamLogoUrl(item.team)}
+        showTeam={!!sportTeamLogoUrl(item.sport, item.team)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         {item.mlb_id ? (

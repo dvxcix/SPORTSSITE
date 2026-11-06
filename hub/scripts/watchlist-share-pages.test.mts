@@ -47,7 +47,7 @@ test('the image endpoint rejects oversized pages before reading an account', asy
     '@/lib/nbaPaint': 'export const nbaTeamLogo=()=>null',
     '@/lib/mlbViewerAccess': 'export const canViewMlb=async()=>false',
     '@/lib/supabase/server': 'export const createClient=()=>{throw new Error("unexpected account read")}',
-    '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null',
+    '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null;export const getTeamColor=()=>null',
   }
   const routeBundle = await build({
     stdin: { contents: 'export {GET} from "./src/app/api/share-image/watchlist/route"', resolveDir: resolve('.'), loader: 'tsx' },

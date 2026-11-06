@@ -75,7 +75,7 @@ function MarketPrice({ market }: { market: NflSlateEdgeMarket }) {
 }
 
 function Avatar({ entry, size = 40 }: { entry: NflSlateEdgeEntry; size?: number }) {
-  return <PlayerAvatar headshot={entry.headshot} teamLogo={entry.teamLogo} teamAbbr={entry.team} name={entry.name} size={size} />
+  return <PlayerAvatar sport="nfl" headshot={entry.headshot} teamLogo={entry.teamLogo} teamAbbr={entry.team} name={entry.name} size={size} />
 }
 
 function GameLogo({ src, name }: { src: string | null; name: string }) {

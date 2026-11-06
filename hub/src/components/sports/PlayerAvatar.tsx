@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { getTeamColor } from '@slipsurge/core/mlbTeamColors'
 import { SafeImage } from '@/components/ui/SafeImage'
-import { nbaTeamGradient } from '@/lib/nbaTeamColors'
+import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 
 interface PlayerAvatarProps {
   /** Player headshot URL */
@@ -40,8 +39,11 @@ export function PlayerAvatar({
   showTeam = true,
   style,
 }: PlayerAvatarProps) {
-  const [headshotFailed, setHeadshotFailed] = useState(false)
-  const [logoFailed, setLogoFailed] = useState(false)
+  const [failedHeadshot, setFailedHeadshot] = useState<string | null>(null)
+  const [failedLogo, setFailedLogo] = useState<string | null>(null)
+  // Legacy league-specific MLB callers omit sport. Shared callers pass it.
+  const league = sport?.trim().toLowerCase() ?? 'mlb'
+  const resolvedLogo = sportTeamLogoUrl(league, teamAbbr) ?? teamLogo
 
   const initials = name
     .split(' ')
@@ -57,9 +59,9 @@ export function PlayerAvatar({
   // ratio scales up every consumer, not just Dugout's — but a proportionally
   // bigger badge reads better everywhere, not worse anywhere.
   const badgeSize = Math.round(size * 0.46)
-  const showHeadshot = headshot && !headshotFailed
-  const showBadge = showTeam && teamLogo && !logoFailed
-  const isNba = sport?.toLowerCase() === 'nba'
+  const showHeadshot = headshot && failedHeadshot !== headshot
+  const showBadge = showTeam && resolvedLogo && failedLogo !== resolvedLogo
+  const isNba = league === 'nba'
 
   return (
     <div
@@ -80,7 +82,7 @@ export function PlayerAvatar({
           height: size,
           borderRadius: '50%',
           overflow: 'hidden',
-          background: isNba ? nbaTeamGradient(teamAbbr) : showHeadshot ? getTeamColor(teamAbbr) : 'var(--accent-dim)',
+          background: isNba || league === 'nfl' || showHeadshot ? sportTeamBackground(league, teamAbbr) : 'var(--accent-dim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -95,7 +97,7 @@ export function PlayerAvatar({
           <SafeImage
             src={headshot!}
             alt={name}
-            onError={() => setHeadshotFailed(true)}
+            onError={() => setFailedHeadshot(headshot!)}
             style={{
               width: isNba ? '100%' : '112%',
               height: isNba ? '100%' : '112%',
@@ -131,9 +133,9 @@ export function PlayerAvatar({
           }}
         >
           <SafeImage
-            src={teamLogo!}
+            src={resolvedLogo!}
             alt=""
-            onError={() => setLogoFailed(true)}
+            onError={() => setFailedLogo(resolvedLogo!)}
             style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 1 }}
           />
         </div>
@@ -154,7 +156,8 @@ export function TeamLogo({
   size?: number
   style?: React.CSSProperties
 }) {
-  const [failed, setFailed] = useState(false)
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  const failed = !!logo && failedSource === logo
   const abbr = name.slice(0, 3).toUpperCase()
 
   return (
@@ -178,7 +181,7 @@ export function TeamLogo({
         <SafeImage
           src={logo}
           alt={name}
-          onError={() => setFailed(true)}
+          onError={() => setFailedSource(logo!)}
           style={{ width: '85%', height: '85%', objectFit: 'contain' }}
         />
       ) : (

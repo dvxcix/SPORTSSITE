@@ -2,7 +2,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 // BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
@@ -62,11 +62,9 @@ function BookMark({ book, origin }: { book?: string | null; origin: string }) {
   return <img src={origin + info.favicon} alt="" width={18} height={18} style={{ borderRadius: 3, objectFit: 'contain' }} />
 }
 
-// Team logo (falling back to the bare abbreviation only for teams with no
-// mlbstatic.com mapping) instead of always showing plain text like "PIT" —
-// matches how team abbreviations render everywhere else on the site.
-function TeamLine({ team, detail, fontSize, color }: { team?: string | null; detail: any; fontSize: number; color: string }) {
-  const logo = getTeamLogoUrl(team)
+// Pick artwork uses the explicit league, including each mixed-parlay leg.
+function TeamLine({ sport, team, detail, fontSize, color }: { sport?: string | null; team?: string | null; detail: any; fontSize: number; color: string }) {
+  const logo = sportTeamLogoUrl(sport, team)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
       {logo
@@ -135,7 +133,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
 
   let bodyH: number
   if (legs) bodyH = legs.length * LEG_H + (legs.length - 1) * LEG_GAP + 50 /* combined-odds footer */
-  else if (pd.mlb_id) bodyH = 60
+  else if (pd.mlb_id || pd.player_id) bodyH = 60
   else bodyH = 44
 
   const hasWager = pd.wager_amount != null || pd.potential_payout != null
@@ -174,7 +172,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
                   <Avatar src={leg.headshot_url} name={leg.player_name} size={44} />
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: C.text1 }}>{leg.player_name}</span>
-                    <TeamLine team={leg.team} detail={leg.prop_label ?? leg.line} fontSize={14} color={C.text3} />
+                    <TeamLine sport={leg.sport ?? post.sport} team={leg.team} detail={leg.prop_label ?? leg.line} fontSize={14} color={C.text3} />
                   </div>
                   <span style={{ fontSize: 17, fontWeight: 800, color: C.text1, fontFamily: 'monospace' }}>{fmtOdds(leg.odds)}</span>
                 </div>
@@ -184,12 +182,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
                 <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: C.accent, fontFamily: 'monospace' }}>{fmtOdds(pd.combined_odds)}</span>
               </div>
             </div>
-          ) : pd.mlb_id ? (
+          ) : pd.mlb_id || pd.player_id ? (
             <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginTop: 14, gap: 14 }}>
               <Avatar src={pd.headshot_url} name={pd.player_name} size={64} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span style={{ fontSize: 22, fontWeight: 800, color: C.text1 }}>{pd.player_name}</span>
-                <TeamLine team={pd.team} detail={pd.prop_label ?? pd.line} fontSize={15} color={C.text2} />
+                <TeamLine sport={post.sport} team={pd.team} detail={pd.prop_label ?? pd.line} fontSize={15} color={C.text2} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: C.text1, fontFamily: 'monospace' }}>{fmtOdds(pd.odds)}</span>
                   <BookMark book={pd.book} origin={origin} />

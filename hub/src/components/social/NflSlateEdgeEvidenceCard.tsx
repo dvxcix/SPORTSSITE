@@ -14,7 +14,7 @@ export function NflSlateEdgeEvidenceCard({ evidence, interactive }: { evidence: 
   const body = <article className={styles.card}>
     <header><span>NFL Slate Edge</span><small>{sampleLabel}</small></header>
     <div className={styles.nflHero}>
-      <span className={styles.player}><PlayerAvatar headshot={entry.headshot} teamLogo={entry.teamLogo} teamAbbr={entry.team} name={entry.name} size={48} /><span><strong>{entry.name}</strong><small>{entry.team} · {entry.position} · {entry.gameLabel}</small></span></span>
+      <span className={styles.player}><PlayerAvatar sport="nfl" headshot={entry.headshot} teamLogo={entry.teamLogo} teamAbbr={entry.team} name={entry.name} size={48} /><span><strong>{entry.name}</strong><small>{entry.team} · {entry.position} · {entry.gameLabel}</small></span></span>
       {entry.score[focus] != null && <MechanicsScoreRing score={entry.score[focus]!} label="SlipSurge Score" size="small" />}
       <span className={styles.nflMm}><small>MM</small><strong>{price(entry.mm[focus])}</strong></span>
     </div>

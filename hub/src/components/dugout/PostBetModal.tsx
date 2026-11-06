@@ -1,10 +1,9 @@
 'use client'
-import { nbaTeamLogo } from '@/lib/nbaPaint'
+import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { combineOdds, calcPayout, formatOdds, fmtUsd } from '@slipsurge/core/parlayCalc'
 import { type WatchlistItem } from '@/lib/watchlist'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -55,7 +54,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
           {legs.map(l => (
             <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
-              <PlayerAvatar sport={l.sport} headshot={l.headshot_url} teamLogo={l.sport.toLowerCase() === 'nfl' ? undefined : l.sport.toLowerCase() === 'nba' ? nbaTeamLogo(l.team) : getTeamLogoUrl(l.team)} teamAbbr={l.team} name={l.player_name} size={28} />
+              <PlayerAvatar sport={l.sport} headshot={l.headshot_url} teamLogo={sportTeamLogoUrl(l.sport, l.team)} teamAbbr={l.team} name={l.player_name} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{l.player_name}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.prop_label}</div>
