@@ -3,12 +3,13 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as modes from '../src/lib/nbaOddsMode.ts'
+import * as display from '../src/lib/nbaSeasonDisplay.ts'
 import type { PaintBoard } from '../src/lib/nbaPaint.ts'
 
 const tip = Date.parse('2026-10-24T22:00:00Z')
-const game = { id: 123, date: '2026-10-24', datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: { id: 1 }, visitor_team: { id: 2 } }
+const game = { id: 123, season: 2026, date: '2026-10-24', datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: { id: 1 }, visitor_team: { id: 2 } }
 function board(frozen = false): PaintBoard {
-  return { game, fetchedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), sampleSeason: 2026, statsComplete: true, teams: [], players: [{ id: 7, first_name: 'Test', last_name: 'Player', position: 'G', team: { id: 1, abbreviation: 'BOS' }, average: { pts: frozen ? 7 : 1 }, props: [], logs: [{ pts: frozen ? 7 : 1, game: { date: '2026-10-23', status: 'Final' } }] }], researchSnapshot: { observedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), source: 'capture', frozen } } as unknown as PaintBoard
+  return { game, fetchedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), sampleSeason: 2026, baselineSeasons: [2026], statsComplete: true, teams: [], players: [{ id: 7, first_name: 'Test', last_name: 'Player', position: 'G', team: { id: 1, abbreviation: 'BOS' }, averageSeason: 2026, average: { pts: frozen ? 7 : 1 }, props: [], logs: [{ pts: frozen ? 7 : 1, player:{id:7}, team:{id:1}, game: { id:99,season:2026,date: '2026-10-23', status: 'Final',home_team_id:1,visitor_team_id:2 } }] }], researchSnapshot: { observedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), source: 'capture', frozen } } as unknown as PaintBoard
 }
 async function compiled(file: string, imports: Record<string, unknown>) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -78,10 +79,11 @@ test('intelligence route scores and ranks final baseline with final defense and 
   const h = await harness()
   const api = await compiled('../src/app/the-paint/intelligence/route.ts', {
     ...basic, '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: h.resolve },
+    '@/lib/nbaSeasonDisplay':display,
     '@/lib/nbaPaintData': { getPaintGame: async () => game, getPaintBoard: async () => h.initial },
     '@/lib/nbaMarketSelection': { nbaReadSelection: () => null, nbaSelectedPlayers: (players: unknown) => players },
     '@/lib/nbaResearchResources': {
-      getNbaResearchDefense: async (value: PaintBoard) => { h.setTime(tip); return { profiles: [{ teamId: 2, position: 'G', market: 'points', marker: value.players[0].average!.pts }] } },
+      getNbaResearchDefense: async (value: PaintBoard) => { h.setTime(tip); return { season:2026,before:'2026-10-24',profiles: [{ teamId: 2, position: 'G', market: 'points', marker: value.players[0].average!.pts }] } },
       getNbaResearchMarketContext: async (value: PaintBoard) => ({ marker: value.players[0].average!.pts }),
     },
     '@/lib/nbaMarketSignal': { nbaEmptyMarketContext: () => ({}), nbaMarketSupportView: (value: unknown) => value, nbaPlayerMarketSignals: () => null },

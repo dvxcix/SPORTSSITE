@@ -24,7 +24,7 @@ import styles from './paint.module.css'
 import polish from './research-polish.module.css'
 import dials from './research-dials.module.css'
 
-type ScoreView = { playerId: number; score: number | null; mm: number | null; offer: PaintProp | null; minutes: number | null; production: number | null; newTeam: boolean; marketSignals: NbaMarketSupportView }
+type ScoreView = { playerId: number; score: number | null; mm: number | null; offer: PaintProp | null; minutes: number | null; production: number | null; newTeam: boolean | null; marketSignals: NbaMarketSupportView }
 type Context = { teams?: PaintTeam[]; season: number; ready: boolean; profiles: NbaDvp[]; games: number; fetchedAt: string | null; stale: boolean; scores: ScoreView[]; unavailable?: string[] }
 export function PaintIntelligence({ selection, board, market, book, side, mode, open, onMarketChange, onBookChange, onSideChange }: { selection?: NbaMarketSelection; board: PaintBoard; market: PaintMarket; book: string; side: 'over' | 'under'; mode: 'score' | 'dvp'; open: (id: number, market?: PaintMarket, book?: string, panel?: 'trends' | 'ladder' | 'movement' | 'tracking' | 'court' | 'markets', quote?: { line: number; type: 'over_under' | 'milestone' }, side?: 'over' | 'under') => void; onMarketChange: (market: PaintMarket) => void; onBookChange: (book: string) => void; onSideChange: (side: 'over' | 'under') => void }) {
   const oddsMode = useNbaOddsMode()
@@ -93,7 +93,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
       <select aria-label="Research position" value={position} onChange={event => setPosition(event.target.value)}><option value="all">All positions</option><option value="G">Guards</option><option value="F">Forwards</option><option value="C">Centers</option></select>
     </div>
     {error && <p role="status" className={polish.status}>{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></p>}
-    {!!context?.unavailable?.length && <p role="status" className={polish.status}>{oddsMode === 'pregame' ? 'Saved pregame inputs unavailable' : 'Research inputs unavailable'}: {context.unavailable.join(', ')}. MM and captured player history remain available.</p>}
+    {!!context?.unavailable?.length && <p role="status" className={polish.status}>{oddsMode === 'pregame' ? 'Saved pregame inputs unavailable' : 'Research inputs unavailable'}: {context.unavailable.join(', ')}. Available prices and market signals are shown below.</p>}
     <div className={polish.status}><span>{nbaSeason(context?.season ?? board.sampleSeason)}</span>{context?.stale && <span>Last available matchup data</span>}{context && !context.ready && <span>Position sample incomplete</span>}{!context && !error && <span>Loading matchup context…</span>}{mode === 'score' && (side === 'under' ? <span>Under-side public counts unavailable</span> : !!context?.scores?.length && context.scores.every(row => row.marketSignals.status === 'unavailable') && <span>Market context unavailable</span>)}</div>
     {mode === 'dvp' && <div className={styles.segment}><button aria-pressed={scope === 'league'} onClick={() => setScope('league')}>League defenses</button><button aria-pressed={scope === 'matchup'} onClick={() => setScope('matchup')}>Matchup players</button></div>}
     {mode === 'dvp' && <div className={dials.legendRow}><PaintHeatLegend tone="performance" low={scope === 'matchup' && side === 'under' ? 'More allowed' : 'Less allowed'} high={scope === 'matchup' && side === 'under' ? 'Less allowed' : 'More allowed'}/></div>}

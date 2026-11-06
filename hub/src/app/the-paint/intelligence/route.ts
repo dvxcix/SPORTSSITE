@@ -10,6 +10,7 @@ import { nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSig
 import { nbaGamePace,nbaPosition,nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaReference,nbaPeriod,PAINT_MARKETS,type PaintMarket } from '@/lib/nbaPaint'
 import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
+import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
@@ -30,16 +31,36 @@ export async function GET(request: NextRequest) {
       return { defense, marketContext, unavailable: unavailable.sort() }
     })
     const board = {...rawBoard,players:nbaSelectedPlayers(rawBoard.players,market,nbaReadSelection(request.nextUrl.searchParams))}
-    const ranks=nbaMarketRanks(board.players,market as PaintMarket,book,'all',{gameId:board.game.id,beforeDate:board.game.date})
+    // A frozen legacy defense can be an authentic observation yet belong to a
+    // different season. Do not replace it with today's data or re-score using
+    // a reduced set of inputs; withhold only that defense and dependent score.
+    const validDay=(value:unknown):value is string=>{if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const at=Date.parse(`${value}T00:00:00Z`);return Number.isFinite(at)&&new Date(at).toISOString().slice(0,10)===value}
+    const season=board.game.season
+    const defenseSeasonValid=Number.isSafeInteger(season)&&season>=2000&&season<=2200&&defense.season===season&&Array.isArray(defense.profiles)&&validDay(board.game.date)&&validDay(defense.before)
+      &&board.game.date>=`${season}-07-01`&&board.game.date<`${season+1}-07-01`&&defense.before>=`${season}-07-01`&&defense.before<=board.game.date
+    if(!defenseSeasonValid) unavailable.push('Selected-season defense')
+    // Inspect the original bundle before calculating anything. The display
+    // view's unchanged identity means its whole captured board passed the
+    // deployed season checks; never calculate a new rank on filtered players.
+    let playerSeasonValid=false
+    try { playerSeasonValid=nbaSeasonDisplayBoard(rawBoard)===rawBoard
+      &&(!nbaPeriod(market)||rawBoard.periodStatsComplete===true)
+      &&rawBoard.players.every(player=>[...player.logs,...(player.periodLogs??[])].every(log=>
+        (log.game.status_state==null||log.game.status_state==='final')&&Number.isSafeInteger(log.team?.id)&&log.team.id>0
+          &&(log.team.id===log.game.home_team_id||log.team.id===log.game.visitor_team_id)))
+    } catch { playerSeasonValid=false }
+    if(!playerSeasonValid) unavailable.push('Selected-season player history')
+    const ranks=playerSeasonValid?nbaMarketRanks(board.players,market as PaintMarket,book,'all',{gameId:board.game.id,beforeDate:board.game.date}):new Map()
     const scores=board.players.map(player=>{
       const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id
-      const matchup=defense.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market)
+      const matchup=defenseSeasonValid?defense.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market):undefined
       const offer=nbaReference(player.props,market,book,side as 'over'|'under')
-      const score=nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined)
-      const mm=board.statsComplete&&(!nbaPeriod(market)||board.periodStatsComplete!==false)?ranks.get(player.id)?.mm??null:null
+      const score=playerSeasonValid?nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined):null
+      const mm=playerSeasonValid&&board.statsComplete&&(!nbaPeriod(market)||board.periodStatsComplete!==false)?ranks.get(player.id)?.mm??null:null
       const marketSignals=nbaPlayerMarketSignals({playerId:player.id,gameId:board.game.id,market:market as PaintMarket,book,side:side as 'over'|'under',props:player.props,context:marketContext})
-      return {playerId:player.id,score:unavailable.length?null:score.score,offer:offer??null,mm,minutes:score.minutes,production:score.production,newTeam:score.newTeam,marketSupport:nbaMarketSupportView(score.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
+      return {playerId:player.id,score:unavailable.length?null:score?.score??null,offer:offer??null,mm,minutes:score?.minutes??null,production:score?.production??null,newTeam:score?.newTeam??null,marketSupport:defenseSeasonValid&&score?nbaMarketSupportView(score.marketSupport):null,marketSignals:nbaMarketSupportView(marketSignals)}
     })
-    return NextResponse.json({...defense,scores,market,book,side,mode,unavailable}, { headers: { 'Cache-Control': 'private, no-store' } })
+    const visibleDefense=defenseSeasonValid?defense:{season:board.game.season,before:board.game.date,ready:false,profiles:[],teams:[],games:null,rows:null,quarterRows:null,fetchedAt:defense.fetchedAt,stale:defense.stale,researchSnapshot:'researchSnapshot' in defense?defense.researchSnapshot:undefined}
+    return NextResponse.json({...visibleDefense,scores,market,book,side,mode,unavailable:unavailable.sort()}, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Defense research could not load. Try again shortly.' }, { status: 503 }) }
 }
