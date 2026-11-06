@@ -101,6 +101,7 @@ test('matrix route re-evaluates final board and every requested resource, retain
   const query = { select: () => query, eq: (key: string, value: unknown) => { if (key === 'user_id') ownership.push(value); return query }, order: () => query, then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: [{ id: 'm', name: 'Saved', definition: { factors } }], error: null })) }
   const api = await compiled('../src/app/api/nba-matrices/evaluate/route.ts', {
     ...basic, '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: h.resolve },
+    '@/lib/nbaMatrixSeason': { nbaMatrixSeasonGuard: () => () => true, nbaMatrixUnsafePipelineStep: () => false },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => query }) },
     '@/lib/nbaPaintData': { getPaintGame: async () => game, getPaintBoard: async () => h.initial },
     '@/lib/nbaResearchResources': {

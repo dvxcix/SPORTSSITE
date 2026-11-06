@@ -9,7 +9,7 @@ async function route(file: string, imports: Record<string, unknown>) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} as Record<string, (...args: any[]) => Promise<any>> }
-  const deps = { '@/lib/nbaSeasonDisplay': {nbaSeasonDisplayBoard:(board:unknown)=>board}, '@/lib/nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, './nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, '@/lib/nbaOddsMode': oddsMode, './nbaOddsMode': oddsMode, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'member' }) }, ...imports }
+  const deps = { '@/lib/nbaMatrixSeason': { nbaMatrixSeasonGuard: () => () => true, nbaMatrixUnsafePipelineStep: () => false }, '@/lib/nbaSeasonDisplay': {nbaSeasonDisplayBoard:(board:unknown)=>board}, '@/lib/nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, './nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, '@/lib/nbaOddsMode': oddsMode, './nbaOddsMode': oddsMode, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'member' }) }, ...imports }
   new Function('require','module','exports',output)((name: string) => { assert.ok(name in deps,name); return deps[name as keyof typeof deps] },target,target.exports)
   return target.exports
 }
@@ -22,7 +22,7 @@ const failedResource = (delay: number) => async () => {
 
 test('Intelligence missing-resource metadata is stable when failures finish in opposite orders', async () => {
   const offer = { id: 7, player_id: 1, game_id: 123, prop_type: 'threes', vendor: 'fanduel', line_value: '5', market: { type: 'milestone', odds: 410 } }
-  const board = { game: { id: 123, date: '2026-10-24', datetime: '2026-10-25T00:00:00Z', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, teams: [], fetchedAt: '2026-10-24T20:00:00Z', statsComplete: true, players: [{ id: 1, team: { id: 1 }, position: 'F', props: [offer] }] }
+  const board = { game: { id: 123, season: 2026, date: '2026-10-24', datetime: '2026-10-25T00:00:00Z', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, teams: [], fetchedAt: '2026-10-24T20:00:00Z', statsComplete: true, players: [{ id: 1, team: { id: 1 }, position: 'F', props: [offer], logs: [], periodLogs: [] }] }
   const read = async (reverse: boolean) => {
     const api = await route('../src/app/the-paint/intelligence/route.ts', {
       '@/lib/nbaPaintData': { getPaintGame: async () => board.game, getPaintBoard: async () => board },

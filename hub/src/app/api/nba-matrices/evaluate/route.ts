@@ -7,6 +7,7 @@ import { getNbaResearchDefense, getNbaResearchTracking, getNbaResearchMarketCont
 import { resolveNbaResearchBundle } from '@/lib/nbaResearchBundle'
 import { evaluateNbaMatrix, nbaMatrixCandidates, type NbaMatrix } from '@/lib/nbaMatrix'
 import { getNbaPublicCaptures } from '@/lib/nbaPublicData'
+import { nbaMatrixSeasonGuard, nbaMatrixUnsafePipelineStep } from '@/lib/nbaMatrixSeason'
 
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
@@ -33,20 +34,32 @@ export async function GET(request: NextRequest) {
       ])
       return { defense, market, tracking, picks, unavailable: unavailable.sort() }
     })
+    const needsScoreDetails = factors.some(factor => factor.category === 'score' && factor.field !== 'mm')
+    if (needsScoreDetails && market == null) unavailable.push('Market signals')
     const scoreUnavailable = unavailable.includes('Defense context') || unavailable.includes('Market signals')
+    const seasonProven = nbaMatrixSeasonGuard(board, defense, tracking)
+    const proven = (id: string, factor: Parameters<typeof seasonProven>[1]) => seasonProven(id, factor)
+      && !(scoreUnavailable && factor.category === 'score' && factor.field !== 'mm')
     const candidates = nbaMatrixCandidates(board, { defense: defense?.profiles, market, tracking: tracking?.rows, publicPicks: picks }).map(candidate => ({
       ...candidate,
-      values: (factor: Parameters<typeof candidate.values>[0]) => scoreUnavailable && factor.category === 'score' && factor.field !== 'mm' ? null : candidate.values(factor),
+      values: (factor: Parameters<typeof candidate.values>[0]) => !proven(candidate.id, factor) ? null : candidate.values(factor),
     }))
     const matches = matrices.map(matrix => {
-      const ids = evaluateNbaMatrix(matrix, candidates)
       const rows = matrix.definition.factors ?? matrix.definition.steps ?? []
+      const unproven = rows.some(factor => candidates.some(candidate => !seasonProven(candidate.id, factor)))
+      if (unproven) unavailable.push('Some saved matrix factors are unavailable for the selected season')
+      // Ranking a smaller population or treating an unknown unless-factor as
+      // false can create a different historical result. Withhold that matrix.
+      const unsafePipeline = matrix.matrix_type === 'pipeline' && nbaMatrixUnsafePipelineStep(matrix.definition.steps ?? [], candidates, proven)
+      if (unsafePipeline) unavailable.push('Some matrix results are unavailable because a required input is missing')
+      const ids = unsafePipeline ? new Set<string>() : evaluateNbaMatrix(matrix, candidates)
       return { id: matrix.id, name: matrix.name, color: matrix.color, playerIds: [...ids].map(Number),
         readings: candidates.filter(c => ids.has(c.id)).map(c => ({ playerId: Number(c.id), values: rows.map(f => ({ id: f.id, value: c.values(f) })) })),
-        missing: candidates.reduce((total, c) => total + rows.filter(f => c.values(f) == null).length, 0) }
+        missing: candidates.reduce((total, c) => total + rows.filter(f => c.values(f) == null).length, 0),
+        ...(unsafePipeline ? { unavailable: 'Required input unavailable' } : {}) }
     })
     const matchedIds = new Set(matches.flatMap(m => m.playerIds))
     const players = board.players.filter(p => matchedIds.has(p.id)).map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`, gameId: board.game.id, team: p.team.abbreviation }))
-    return NextResponse.json({ gameId: board.game.id, mode, matrices, matches, players, unavailable, fetchedAt: board.fetchedAt }, { headers: { 'Cache-Control': 'private, no-store' } })
+    return NextResponse.json({ gameId: board.game.id, mode, matrices, matches, players, unavailable: [...new Set(unavailable)].sort(), fetchedAt: board.fetchedAt }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'NBA Matrix results could not refresh.' }, { status: 503 }) }
 }
