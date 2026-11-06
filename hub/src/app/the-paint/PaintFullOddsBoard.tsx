@@ -122,6 +122,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
   const columns=useMemo(()=>[...new Set(rows.flatMap(row=>row.cells.map(cell=>cell.line)))].sort((a,b)=>a-b),[rows])
   const unavailable=slate?.games.filter(item=>slate.failed.includes(item.id)||slate.unavailable.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const firstUnavailable=slate?.games.filter(item=>slate.firstUnavailable?.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
+  const captureWarning=slate?.games.filter(item=>slate.captureWarning?.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(target!=='all')
   return <section className={styles.board}>
     <h3>Odds Board</h3>
@@ -146,6 +147,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
     {!supported?<p role="status">No milestone prices for this market.</p>:!slate?!error&&!phaseUnsafe&&<p role="status">Loading odds board…</p>:<>
       {(slate.stale||unavailable.length>0||(!slate.complete&&!firstUnavailable.length))&&<p role="status">{slate.stale?'Last observed prices shown. ':''}{unavailable.length?`Unavailable: ${unavailable.join(', ')}.`:!slate.complete&&!firstUnavailable.length?'Some games are unavailable.':''}</p>}
       {activeComparison==='opening'&&firstUnavailable.length>0&&<p role="status">{mode==='live'?'First seen':'Opening'} unavailable: {firstUnavailable.join(', ')}.</p>}
+      {captureWarning.length>0&&<p role="status">Prices may be out of date: {captureWarning.join(', ')}.</p>}
       {rows.length>0&&rows.every(row=>row.player.publicPicks==null)&&<p role="status">Pick estimates unavailable.</p>}
       <div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=>{
         const estimates=nbaBoardEstimatedPicks(row.cells,row.player.publicPicks),actual=mode==='pregame'?nbaFinalValue(finalOutcomes,row.player.gameId,row.player.id,row.player.team.id):null

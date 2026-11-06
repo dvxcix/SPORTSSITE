@@ -13,11 +13,20 @@ import { nbaLiveFirstSeenConfident } from '@/lib/nbaLiveFirstSeenData'
 import { readNbaPregameResearch } from '@/lib/nbaPregameResearchData'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
-import { nbaGameStart, nbaOddsMode, nbaPregameOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
+import { nbaGameFinal, nbaGameStart, nbaOddsMode, nbaPregameOpen, nbaLiveOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
 import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaPackFullBoardWithinLimit,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaFullBoardPlayers } from '@/lib/nbaFullBoardPlayers'
+import { nbaBoardCaptureWarnings } from '@/lib/nbaBoardCaptureWarning'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const maxDuration = 120
+const phaseKeys=(games:PaintGame[],mode:NbaOddsMode)=>{
+  const boundary=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
+  // A game may start early or finish without changing its scheduled tip.
+  // Never carry a cache filled in one state into the other.
+  const status=games.map(game=>`${game.id}:${nbaGameFinal(game)?'final':nbaLiveOpen(game)?'live':nbaPregameOpen(game)?'pregame':'closed'}`).sort().join('|')
+  return { boundary, key:boundary+':statuses:'+status }
+}
 
 export async function GET(request:NextRequest) {
   const gate=await requirePaintAccess();if(gate.error)return gate.error
@@ -37,10 +46,10 @@ export async function GET(request:NextRequest) {
       return phase
     }
     const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
-    const key=games.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')
+    const {boundary,key}=phaseKeys(games,mode)
     // Headshots are part of the shared slate, never a per-viewer lookup.
     // A new key prevents older portrait-free packed boards surviving rollout.
-    const version='v5'
+    const version='v6'
     const partialKey=`odds-board-partial:${version}:${date}:${market}:${key}`
     const interval=mode==='live'?60:300
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
@@ -60,21 +69,26 @@ export async function GET(request:NextRequest) {
       // During the cache-version transition, keep a still-eligible complete
       // board from the exact same phase/cutoff. Never call a source loader or
       // refresh its original quote times; the final cutoff check still applies.
-      const priorVersion=mode==='live'?'v3':'v2'
-      try {
-        const prior=await nbaSharedCache<NbaPackedBoard>(`odds-board:${priorVersion}:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{throw new Error('NBA prior slate unavailable')},25)
-        if(!prior.value.complete)throw new Error('NBA prior slate incomplete')
-        cached={...prior,stale:true}
-      }catch{
-        cached=await nbaSharedCache(partialKey,interval,0,async()=>{throw new Error('NBA slate unavailable')},25)
+      let prior:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>|null=null
+      // Older keys did not encode actual started/final state.
+      const legacySafe=!games.some(game=>{const tip=nbaGameStart(game);return tip!=null&&!nbaPregameOpen(game)&&Date.now()<tip || mode==='live'&&nbaGameFinal(game)})
+      for(const priorVersion of legacySafe?['v5',mode==='live'?'v3':'v2']:[]){
+        try {
+          const candidate=await nbaSharedCache<NbaPackedBoard>(`odds-board:${priorVersion}:${date}:${market}:${boundary}`,interval,mode==='live'?0:60,async()=>{throw new Error('NBA prior slate unavailable')},25)
+          if(candidate.value.complete){prior=candidate;break}
+        }catch{/* Try the older exact-phase cache. */}
       }
+      cached=prior?{...prior,stale:true}:await nbaSharedCache(partialKey,interval,0,async()=>{throw new Error('NBA slate unavailable')},25)
     }
     // A phase crossing while a shared result was loading must not use the old
     // slate key. The next request loads the new boundary, never a live fallback.
     let phaseCheckedAt:number
     if(mode==='pregame'){
       phaseCheckedAt=Date.now();const check=await nbaFullBoardCutoffs(games)
-      if(check.map(game=>nbaPhaseBoundary(game,mode).key).sort().join('|')!==key) return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
+      if(phaseKeys(check,mode).key!==key) return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
+      // The durable clock reader cannot report an early status transition.
+      // Recheck the existing bounded shared phase proof before returning.
+      if(schedule.complete && cached.value.captureWarning?.length && (await readPhase()).signature!==nbaOddsBoardPhaseSignature(check))return NextResponse.json({error:'Slate changed; please wait for the saved board.'},{status:503})
     }else{
       // Reuse the shared phase proof's original pre-read time, not the time
       // a cached clock was returned. Mismatched/expired proofs fail closed.
@@ -87,7 +101,7 @@ export async function GET(request:NextRequest) {
 }
 
 async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintGame[],scheduleComplete:boolean):Promise<NbaFullOddsBoard> {
-  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean;firstUnavailable:boolean;firstFailed:boolean}>[]=[]
+  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean;firstUnavailable:boolean;firstFailed:boolean;capturedAt:string|null;fingerprint:string|null}>[]=[]
   const deadline=Date.now()+100_000
   // Bounded concurrency: at most three games, two scoped frames per game; no
   // 96-frame history scan and no request per cell or subscriber.
@@ -128,10 +142,23 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
       return at!=null && currentAt!=null && at<=currentAt && (mode==='live'?at>=cutoffAt:at<cutoffAt)
     }):[]
     const cells=nbaFullBoardCells(game.id,market,current,previous,eligibleOpenings,latest?.captured_at).filter(cell=>known.has(cell.playerId))
-    return {game,players,cells,missing:!latest,firstUnavailable:!openingResult.ok||!confidenceResult.ok||!firstSeenConfident,firstFailed:!openingResult.ok||!confidenceResult.ok}
+    return {game,players,cells,missing:!latest,firstUnavailable:!openingResult.ok||!confidenceResult.ok||!firstSeenConfident,firstFailed:!openingResult.ok||!confidenceResult.ok,capturedAt:latest?.captured_at??null,fingerprint:latest?.fingerprint??null}
     })))
   }
   const good=results.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
+  // One bounded, service-only read per shared fill. Never consult mutable
+  // receipt state to describe a closed pregame game.
+  // The existing shared phase proof does not distinguish Live from Final.
+  // Avoid attaching mutable receipt state to a Live board until it can.
+  const openScopes=mode==='pregame'&&scheduleComplete?good.filter(value=>!!value.capturedAt&&nbaPregameOpen(value.game)):[]
+  let captureWarning:number[]=[]
+  if(openScopes.length){
+    try {
+      const keys=openScopes.map(value=>`market-attempt:v4:${mode}:${value.game.id}`)
+      const receipt=await createAdminClient().from('nba_source_cache').select('key,payload,fetched_at').in('key',keys).abortSignal(AbortSignal.timeout(1500))
+      captureWarning=nbaBoardCaptureWarnings(openScopes,mode,receipt.error||!Array.isArray(receipt.data)?null:receipt.data,Date.now())
+    } catch { captureWarning=nbaBoardCaptureWarnings(openScopes,mode,null,Date.now()) }
+  }
   // Optional public counts never delay the critical quote/roster work. Reads
   // run only in the shared slate fill, at most four at once and within the
   // remaining route budget; each database request aborts after 1.5 seconds.
@@ -148,5 +175,5 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
   if(good.reduce((sum,value)=>sum+value.cells.length,0)>12000)throw new Error('NBA odds board exceeds capacity')
   const failed=results.flatMap((result,index)=>result.status==='rejected'?[games[index].id]:[]),unavailable=good.filter(value=>value.missing).map(value=>value.game.id)
   const firstUnavailable=good.filter(value=>value.firstUnavailable).map(value=>value.game.id)
-  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,firstUnavailable,complete:scheduleComplete&&!failed.length&&!unavailable.length&&!good.some(value=>value.firstFailed)}
+  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,firstUnavailable,captureWarning,complete:scheduleComplete&&!failed.length&&!unavailable.length&&!good.some(value=>value.firstFailed)}
 }

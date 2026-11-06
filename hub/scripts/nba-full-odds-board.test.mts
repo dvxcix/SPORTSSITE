@@ -94,6 +94,8 @@ test('packed responses reject malformed indexes, duplicate contracts and excessi
   const duplicate=make();duplicate.quotes.push([...duplicate.quotes[0]]);assert.throws(()=>nbaUnpackFullBoard(duplicate,'points'))
   const excessive=make();excessive.quotes=Array.from({length:12001},()=>[...excessive.quotes[0]]);assert.throws(()=>nbaUnpackFullBoard(excessive,'points'))
   const badChronology=make();badChronology.quotes[0][8]=badChronology.quotes[0][4];assert.throws(()=>nbaUnpackFullBoard(badChronology,'points'))
+  const badWarning=make();badWarning.captureWarning=[-1];assert.throws(()=>nbaUnpackFullBoard(badWarning,'points'))
+  const excessiveWarnings=make();excessiveWarnings.captureWarning=Array.from({length:17},(_,i)=>i+1);assert.throws(()=>nbaUnpackFullBoard(excessiveWarnings,'points'))
 })
 test('same-millisecond observations keep their exact predecessor and compare correctly',()=>{
   assert.equal(nbaBeforeCapture('2026-10-20T16:00:00.123456+00:00'),'2026-10-20T16:00:00.123455Z')

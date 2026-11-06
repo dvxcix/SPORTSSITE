@@ -25,6 +25,19 @@ const otherGame={...game,id:13}
 const players=[{id:1,gameId:12,first_name:'Amy',last_name:'Adams',position:'G',team,publicPicks:1000,headshot:'https://images.example/amy.png'},{id:2,gameId:12,first_name:'Bea',last_name:'Baker',position:'F',team:away,headshot:null},{id:3,gameId:13,first_name:'Cam',last_name:'Clark',position:'G',team,headshot:null}]
 const base={gameId:12,vendor:'fanduel',market:'points',opening:{odds:200,at:'2026-11-02T15:00:00Z'},previous:{odds:175,at:'2026-11-02T16:00:00Z'}}
 const data={date:'2026-11-02',games:[game,otherGame],players,failed:[],unavailable:[],complete:true,books:['fanduel'],selectedBook:'fanduel',cells:[{...base,playerId:1,line:15,current:{odds:150,at:'2026-11-02T17:00:00Z'}},{...base,playerId:1,line:20,current:{odds:220,at:'2026-11-02T17:00:00Z'}},{...base,playerId:2,line:15,current:{odds:300,at:'2026-11-02T17:00:00Z'}},{...base,gameId:13,playerId:3,line:15,current:{odds:250,at:'2026-11-02T17:00:00Z'}}]}
+test('a failed game capture shows one concise warning without hiding prices',async()=>{
+ const original=globalThis.fetch
+ globalThis.fetch=async()=>Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,captureWarning:[12],phaseCheckedAt:Date.now()}),'fanduel'))
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ try{
+  await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame]}));await new Promise(done=>setTimeout(done,30))})
+  const statuses=[...host.querySelectorAll('[role="status"]')].map(item=>item.textContent)
+  assert.ok(statuses.includes('Prices may be out of date: BBB @ AAA.'))
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
+  assert.match(host.querySelector('[aria-label="NBA milestone odds board"]')!.textContent!,/\+150/)
+  assert.equal(host.querySelector('[role="tooltip"]'),null)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
+})
 test('Court selections carry into the board and changes carry back',async()=>{
  const original=globalThis.fetch,requests:string[]=[]
  globalThis.fetch=async(input)=>{const url=new URL(String(input),'https://www.slipsurge.com');requests.push(`${url.searchParams.get('market')}:${url.searchParams.get('book')}`);return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,cells:[...data.cells,{...data.cells[0],vendor:'draftkings'}],phaseCheckedAt:Date.now()}),url.searchParams.get('book')!))}

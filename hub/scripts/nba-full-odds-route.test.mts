@@ -24,7 +24,8 @@ const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint
   '@/lib/nbaLiveFirstSeenData':`export async function nbaLiveFirstSeenConfident(game){const s=globalThis.fullOddsRoute;if(s.firstError||s.failedGame===game.id)throw Error('unavailable');return s.firstConfident}`,
   '@/lib/nbaFullBoardCutoffsData':`export async function nbaFullBoardCutoffs(games){globalThis.fullOddsRoute.cutoffReads++;return games}`,
   '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(g){return {value:{players:[{...${JSON.stringify(player)},id:g.id===13?5:4,headshot:'https://images.example/saved.png'}]}}}`,
-  '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;s.cacheKeys.push(key);if(key.startsWith('odds-board:v5:')&&s.failFull)throw Error('refresh failed');if(key===s.legacyKey&&s.legacy)return {value:s.legacy,stale:false};if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
+  '@/lib/supabase/admin':`export function createAdminClient(){throw Error('Closed games must not read capture status')}`,
+  '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;s.cacheKeys.push(key);if(key.startsWith('odds-board:v6:')&&s.failFull)throw Error('refresh failed');if(key===s.legacyKey&&s.legacy)return {value:s.legacy,stale:false};if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
  }
  builder.onResolve({filter:/.*/},args=>args.path in modules?{path:args.path,namespace:'fixture'}:undefined)
  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:modules[args.path],loader:'js'}))
@@ -94,11 +95,14 @@ test('an exact off-day returns an empty board for that day instead of a later sl
 test('a cold cache failure uses only a complete prior board for the exact phase and still checks cutoffs',async()=>{
  state.cacheKeys=[];state.partial=null;state.failFull=false;state.legacy=null;state.legacyKey='';state.phaseCalls=0
  const fresh=await get('pregame');assert.equal(fresh.status,200);const old=await fresh.json()
- state.legacyKey=state.cacheKeys.find(key=>key.startsWith('odds-board:v5:'))!.replace('odds-board:v5:','odds-board:v2:')
+ const legacyBase=state.cacheKeys.find(key=>key.startsWith('odds-board:v6:'))!.split(':statuses:')[0]
+ state.legacyKey=legacyBase.replace('odds-board:v6:','odds-board:v5:')
  state.legacy=old;state.failFull=true;state.cutoffReads=0;state.openingReads=0
  try{
   const response=await get('pregame');assert.equal(response.status,200);const board=nbaUnpackFullBoard(await response.json(),'points')
   assert.equal(board.stale,true);assert.equal(board.players[0]?.headshot,'https://images.example/saved.png');assert.equal(state.cutoffReads,1);assert.equal(state.openingReads,0)
+  state.legacyKey=legacyBase.replace('odds-board:v6:','odds-board:v2:')
+  assert.equal((await get('pregame')).status,200,'legacy fallback remains available after the v5 miss')
   state.phaseStart-=60_000;assert.equal((await get('pregame')).status,503,'changed cutoff must not use an older phase key')
   state.phaseStart+=60_000;state.legacy={...old,complete:false};assert.equal((await get('pregame')).status,503,'incomplete prior board is not a complete fallback')
  }finally{state.failFull=false;state.legacy=null;state.legacyKey='';state.partial=null}
