@@ -67,7 +67,7 @@ test('estimate route uses final board logs and the model loaded for that same fr
     '@/lib/nbaPaintData': { getPaintGame: async () => game, getPaintBoard: async () => h.initial },
     '@/lib/nbaResearchResources': { getNbaResearchModels: async (value: PaintBoard) => { seen.push(value.fetchedAt); h.setTime(tip); return [{ market: 'points', validationThrough: '2026-10-23', marker: value.players[0].average!.pts }] } },
     '@/lib/nbaPaint': { PAINT_MARKETS: [{ key: 'points' }], nbaMarketLogs: (player: any) => player.logs, nbaValue: (log: any) => log.pts, nbaSample: (logs: unknown[]) => logs },
-    '@/lib/nbaModel': { nbaValidatedEstimate: (logs: any[], _market: string, _date: string, report: any) => logs[0].pts + report.marker },
+    '@/lib/nbaModel': { nbaSelectedSeasonEstimate: (logs: any[], _market: string, _date: string, _season: number, report: any) => logs[0].pts + report.marker },
   })
   const result = await api.GET(request('game=123&player=7&market=points'))
   assert.equal(result.status, 200); assert.equal(result.body.estimate, 14); assert.equal(result.body.fetchedAt, h.final.fetchedAt)

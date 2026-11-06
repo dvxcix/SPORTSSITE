@@ -1,6 +1,6 @@
 import { nbaMarketLogs, nbaAverage, nbaHitRate, nbaReference, nbaSample, type PaintBoard, type PaintMarket, type PaintPlayer } from './nbaPaint'
 import { nbaFormGap, nbaMarketRanks } from './nbaMarketMetrics'
-import { nbaValidatedEstimate, type NbaModelReport } from './nbaModel'
+import { nbaSelectedSeasonEstimate, type NbaModelReport } from './nbaModel'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore, type NbaDvp } from './nbaIntelligence'
 import type { NbaMarketContext,NbaMarketSupportView } from './nbaMarketSignal'
 import type { NbaSlateHeat } from './nbaSlateHeat'
@@ -16,7 +16,7 @@ export function nbaSlateRows(boards: PaintBoard[], market: PaintMarket, book: st
     const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id,matchup=defense.find(context=>context.gameId===board.game.id)?.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market)
     const signal = nbaSlipSurgeScore(player, market, board.game.date, matchup, nbaGamePace(board), {offer,side,context:markets.find(context=>context.gameId===board.game.id)??null}), hit = nbaHitRate(logs, market, Number(offer.line_value), side, offer.market.type === 'milestone')
     const eligibleReports = frozen?.reports?.find(item => item.gameId === board.game.id)?.reports ?? reports
-    const report = eligibleReports.find(report=>report.market===market&&report.validationThrough<board.game.date), estimate = nbaValidatedEstimate(nbaMarketLogs(player,market),market,board.game.date,report)
+    const report = eligibleReports.find(report=>report.market===market&&report.validationThrough<board.game.date), estimate = nbaSelectedSeasonEstimate(nbaMarketLogs(player,market),market,board.game.date,board.game.season,report)
     const identity: NbaPlayerIdentity = { id: player.id, first_name: player.first_name, last_name: player.last_name, position: player.position, team: player.team, headshot: player.headshot }
     return [{ player: identity, game: board.game, market, offer, signalOffers:player.props, estimate, modelError: estimate==null?null:report?.criterion==='brier'?report.validationBrier:report?.validationMae, modelMetric: report?.criterion??'mae', score: signal.score, baseScore:signal.baseScore,marketSupport:signal.marketSupport,coverage: signal.coverage, mm: frozen ? frozen.ranks.get(`${board.game.id}:${player.id}`) ?? null : complete ? ranks.get(player.id)?.mm ?? null : null, average, hit, gap: nbaFormGap(average, offer, side), fetchedAt: board.fetchedAt, issues: board.issues }]
   })).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || (b.mm ?? 0) - (a.mm ?? 0))

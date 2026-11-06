@@ -18,7 +18,7 @@ const tip = Date.parse('2026-10-25T23:00:00Z')
 const team = { id: 1, abbreviation: 'A', full_name: 'Team A', name: 'A' }
 const game = (id: number, start = tip): paint.PaintGame => ({ id, date: '2026-10-25', season: 2026, datetime: new Date(start).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: team, visitor_team: { ...team, id: 2 }, home_team_score: 0, visitor_team_score: 0 })
 function player(id: number, gameId: number, performance: number, line: number): paint.PaintPlayer {
-  const logs = Array.from({ length: 10 }, (_, i): paint.PaintStat => ({ id: id * 100 + i, player: { id }, team: { id: 1 }, game: { id: 900 + i, date: '2026-10-01', status: 'Final', status_state: 'final', home_team_id: 1, visitor_team_id: 2 }, min: '30', pts: performance, reb: 5, ast: 5, fg3m: 2, stl: 0, blk: 0, turnover: 1, fga: 10, fgm: 5, fg3a: 3, fta: 2, ftm: 2 }))
+  const logs = Array.from({ length: 10 }, (_, i): paint.PaintStat => ({ id: id * 100 + i, player: { id }, team: { id: 1 }, game: { id: 900 + i, date: '2026-10-01', season: 2026, postseason: false, status: 'Final', status_state: 'final', home_team_id: 1, visitor_team_id: 2 }, min: '30', pts: performance, reb: 5, ast: 5, fg3m: 2, stl: 0, blk: 0, turnover: 1, fga: 10, fgm: 5, fg3a: 3, fta: 2, ftm: 2 }))
   const quote = (vendor: string, market: string, target: number, odds = 100): paint.PaintProp => ({ id, game_id: gameId, player_id: id, vendor, prop_type: market, line_value: String(target), market: { type: 'milestone', odds }, updated_at: new Date(tip - 60_000).toISOString() })
   return { id, first_name: 'Player', last_name: String(id), position: 'G', team, headshot: null, injury: null, averageSeason: 2026, average: { pts: performance, points_1q: performance / 4 }, logs, periodLogs: logs.map(log => ({ ...log, period: 1, pts: performance / 4 })), props: [quote('fanduel', 'points', line), quote('draftkings', 'points', 25, id === 1 ? 300 : 100), quote('fanduel', 'points_1q', line / 4)] }
 }
@@ -447,13 +447,14 @@ test('slate warm response crossing tip resolves frozen ranks, while Live skips c
   assert.equal(live.status,200);assert.equal(h.captures(),captures);assert.equal(live.value.rows.find((item:any)=>item.player.id===1).researchObservedAt,undefined)
 })
 
-test('recovered exact-filter row retains its original contract and metrics without missing extras',async()=>{
+test('recovered exact-filter row retains contract, MM and score but withholds unproven estimate',async()=>{
   const h=await routeFixture(),b=boards(),g=b[0].game,raw=nbaSlateRows([b[0]],'points','fanduel','over',true)
   raw[0].score=77;raw[0].estimate=33;raw[0].mm=6
   h.archive.set('101:'+h.api.nbaLegacySlateResource(g.date,'points','fanduel','over'),{value:{date:g.date,market:'points',book:'fanduel',side:'over',type:'auto',target:'auto',complete:true,gameIds:[101,102],rows:raw},observedAt:new Date(tip-30_000).toISOString(),source:'capture',frozen:true})
   h.time(tip+1);h.fail({context:true,defense:true,models:true})
   const response=await h.get(),row=response.value.rows.find((item:any)=>item.player.id===raw[0].player.id)
-  assert.equal(response.status,200);assert.equal(row.score,77);assert.equal(row.estimate,33);assert.equal(row.mm,6);assert.deepEqual(row.offer,raw[0].offer)
+  assert.equal(response.status,200);assert.equal(row.score,77);assert.equal(row.estimate,null);assert.equal(row.mm,6);assert.deepEqual(row.offer,raw[0].offer)
+  assert.equal(raw[0].estimate,33,'the original archived row remains unchanged')
   assert.deepEqual(response.value.recoveredSlateGames,[101]);assert.deepEqual(response.value.frozenMmUnavailable,[])
   assert.equal(row.marketSignals.status,'unavailable');assert.ok(row.marketSignals.reason.includes('not captured'))
   assert.deepEqual(row.frozenHeat,{average:null,estimate:null,gap:null},'missing original column domain stays neutral')
@@ -473,6 +474,31 @@ test('all original heat domains, including validated projections, stay tied to t
   const levels=slateHeat.nbaSlateFrozenHeat({average:20,estimate:20,gap:-5.25},frozen.heatDomains[101])
   assert.ok(Math.abs(levels.average!-100/3)<1e-12);assert.ok(Math.abs(levels.estimate!-100/3)<1e-12);assert.equal(levels.gap,25)
   assert.deepEqual(slateHeat.nbaSlateHeatDomains([{average:1,estimate:null,gap:0},{average:1,estimate:NaN,gap:0}]),{average:null,estimate:null,gap:null})
+})
+
+test('mixed or unknown seasons withhold frozen projection heat without changing MM or other domains',async()=>{
+  for (const market of ['points','points_1q'] as const) for (const version of [1,2,3] as const) for (const season of [2025,null] as const) {
+    const h=await fixture(),b=boards(),games=b.map(board=>board.game),period=market==='points'?0:1
+    const report={ready:true,market,version:'nba-rolling-v1',trainingGames:1000,validationGames:200,trainedThrough:'2025-04-01',validationThrough:'2026-04-01',method:'last10'} as models.NbaModelReport
+    const raw=h.api.nbaSlatePool(games,b,true,period,new Date(tip-30_000).toISOString(),games.map(game=>({gameId:game.id,reports:[report]})))!
+    const unmarked=version===1?raw:h.api.encodeNbaSlatePool(raw)
+    const snapshot=(value:unknown)=>({value,observedAt:new Date(tip-30_000).toISOString(),source:'capture' as const,frozen:true})
+    h.archive.set(`101:slate-mm-${period?'q1':'full'}:v1`,snapshot(unmarked));h.time(tip+1)
+    const baseline=await h.api.getNbaSlateRanks(games,b,market,'fanduel',undefined,'pregame',true)
+    assert.ok(baseline.heatDomains[101]?.estimate,`${market} v${version} baseline projection domain`)
+    const contaminated=structuredClone(unmarked)
+    contaminated.players[0].logs[0][6]=season
+    if(season===2025)contaminated.players[0].logs[0][2]='2026-04-01'
+    let archive:unknown=contaminated
+    if(version===3){const bytes=Buffer.from(JSON.stringify(contaminated));archive={version:3,codec:'gzip-base64',uncompressedBytes:bytes.length,data:gzipSync(bytes).toString('base64'),capturedTips:games.map(game=>[game.id,game.datetime])}}
+    h.archive.set(`101:slate-mm-${period?'q1':'full'}:v1`,snapshot(archive))
+    const redacted=await h.api.getNbaSlateRanks(games,b,market,'fanduel',undefined,'pregame',true)
+    assert.equal(redacted.heatDomains[101].estimate,null,`${market} v${version} season ${season}`)
+    assert.deepEqual(redacted.heatDomains[101].average,baseline.heatDomains[101].average)
+    assert.deepEqual(redacted.heatDomains[101].gap,baseline.heatDomains[101].gap)
+    assert.equal(redacted.ranks.get('101:1'),baseline.ranks.get('101:1'))
+    assert.equal((contaminated.players[0].logs[0][6]),season,'the stored pool is not rewritten')
+  }
 })
 
 test('a warm slate crossing tip uses another writer’s final board, model and defense together with its final MM',async()=>{

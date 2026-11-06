@@ -7,7 +7,7 @@ import { nbaGameStart, nbaPregameOpen, type NbaOddsMode } from './nbaOddsMode'
 import { readNbaDurableCutoff, readNbaPregameResearch, saveNbaPregameResearch } from './nbaPregameResearchData'
 import { decodeArchivedNbaSlatePool, type NbaSlateGzipArchive } from './nbaSlatePoolCodec'
 import type { nbaSlateRows } from './nbaSlate'
-import { nbaValidatedEstimate, type NbaModelReport } from './nbaModel'
+import { nbaSelectedSeasonEstimate, nbaValidatedEstimate, type NbaModelReport } from './nbaModel'
 import { nbaSlateHeatDomains, type NbaSlateHeatDomains } from './nbaSlateHeat'
 
 type PoolQuote = [string, string, string, 'milestone' | 'over_under', number | null, number | null, number | null, string]
@@ -23,6 +23,13 @@ type GameModels = { gameId: number; reports: NbaModelReport[] }[]
 const resource = (period: number) => period ? 'slate-mm-q1:v1' : 'slate-mm-full:v1'
 const markets = new Set<string>(PAINT_MARKETS.map(market => market.key))
 const statFields = ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm'] as const
+function seasonalHeatDomains(rows: { average: number | null; estimate: number | null; gap: number | null; redacted: boolean }[]) {
+  const domains = nbaSlateHeatDomains(rows)
+  // Retain the captured full comparison universe. If it contains an estimate
+  // that must be withheld, hide that one heat domain instead of reranking a
+  // smaller universe; MM, average and form domains remain as captured.
+  return rows.some(row => row.redacted) ? { ...domains, estimate: null } : domains
+}
 /** Produce an ephemeral 2026-only peer view from captured facts, never rewrite
  * an earlier game's own frozen board or rank. The original data completeness
  * flags still govern whether a whole-slate comparison is allowed. */
@@ -182,12 +189,13 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
   const sourceValid = mode === 'live' || boards.every(board => { const at = Date.parse(board.researchSnapshot?.observedAt ?? board.fetchedAt), tip = nbaGameStart(board.game)
     return Number.isFinite(at) && at <= Date.now() && tip != null && at < tip })
   const current = complete && sourceValid ? nbaMarketRanks(nbaSelectedPlayers(peerBoards.flatMap(board => board.players), market, selection), market, book) : new Map()
-  const currentDomains = complete && sourceValid ? nbaSlateHeatDomains(peerBoards.flatMap(board => nbaSelectedPlayers(board.players, market, selection).flatMap(player => {
+  const currentDomains = complete && sourceValid ? seasonalHeatDomains(peerBoards.flatMap(board => nbaSelectedPlayers(board.players, market, selection).flatMap(player => {
     const offer = nbaReference(player.props, market, book, side)
     if (!offer) return []
     const report = models.find(item => item.gameId === board.game.id)?.reports.find(item => item.market === market && item.validationThrough < board.game.date)
     const logs = nbaMarketLogs(player, market), average = nbaAverage(nbaSample(logs, 10), market)
-    return [{ average, estimate: nbaValidatedEstimate(logs, market, board.game.date, report), gap: nbaFormGap(average, offer, side) }]
+    const estimate = nbaValidatedEstimate(logs, market, board.game.date, report)
+    return [{ average, estimate, redacted: estimate != null && nbaSelectedSeasonEstimate(logs, market, board.game.date, board.game.season, report) == null, gap: nbaFormGap(average, offer, side) }]
   }))) : undefined
   if (mode === 'live') {
     for (const board of boards) for (const player of board.players) { const rank = current.get(player.id); if (rank) ranks.set(`${board.game.id}:${player.id}`, rank.mm) }
@@ -247,14 +255,15 @@ export async function getNbaSlateRanks(games: PaintGame[], boards: PaintBoard[],
         })) { unavailable.push(game.id); return }
     }
     const players=nbaSelectedPlayers(allPlayers, market, selection), frozen = nbaMarketRanks(players, market, book)
-    heatDomains[game.id]=nbaSlateHeatDomains(players.flatMap(player=>{
+    heatDomains[game.id]=seasonalHeatDomains(players.flatMap(player=>{
       const offer=nbaReference(player.props,market,book,side)
       if(!offer)return []
       const owner=pool.players.find(candidate=>candidate.id===player.id)?.gameId
       const reports=pool.models?.games.find(candidate=>candidate.gameId===owner)?.indexes.map(index=>pool.models!.reports[index])??[]
       const report=reports.find(report=>report?.market===market&&report.validationThrough<game.date)
       const logs=nbaMarketLogs(player,market),average=nbaAverage(nbaSample(logs,10),market)
-      return [{average,estimate:nbaValidatedEstimate(logs,market,game.date,report),gap:nbaFormGap(average,offer,side)}]
+      const estimate=nbaValidatedEstimate(logs,market,game.date,report), season=games.find(peer=>peer.id===owner)?.season
+      return [{average,estimate,redacted:estimate!=null&&(season==null||nbaSelectedSeasonEstimate(logs,market,game.date,season,report)==null),gap:nbaFormGap(average,offer,side)}]
     }))
     observedAt[game.id] = snapshot.observedAt
     for (const player of board.players) {

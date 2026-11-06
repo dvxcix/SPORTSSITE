@@ -141,11 +141,15 @@ export async function GET(request: NextRequest) {
       return {...safe,score:missingScore?null:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
     })
     for (const entry of legacy) for (const row of entry.saved.value.rows) {
-      const {player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,score}=row
+      const {player,game,market:rowMarket,offer,mm,average,hit,gap,fetchedAt,score}=row
       // These exact rows were computed before this anchor tipped. Preserve all
       // original metrics, including the original contract; never retrofit a
       // missing historical context with today's receipts or model reports.
-      rows.push({player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,score,researchObservedAt:entry.saved.observedAt,frozenHeat:nbaSlateFrozenHeat(row,entry.saved.value.heatDomains),issues:[...row.issues,'Recovered original pregame slate snapshot'],marketSupport:nbaMarketSupportView(row.marketSupport??nbaMarketSupport()),marketSignals:nbaMarketSupportView({...nbaMarketSupport(),reason:'Market signals were not captured with this original slate snapshot'})})
+      const frozenHeat = nbaSlateFrozenHeat(row,entry.saved.value.heatDomains)
+      // Exact-filter legacy rows retain no model sample provenance. Withhold
+      // only the unverifiable projection and its heat; preserve captured MM,
+      // score, price and all other archived values without recalculation.
+      rows.push({player,game,market:rowMarket,offer,estimate:null,mm,average,hit,gap,fetchedAt,score,researchObservedAt:entry.saved.observedAt,frozenHeat:{...frozenHeat,estimate:null},issues:[...row.issues,'Recovered original pregame slate snapshot'],marketSupport:nbaMarketSupportView(row.marketSupport??nbaMarketSupport()),marketSignals:nbaMarketSupportView({...nbaMarketSupport(),reason:'Market signals were not captured with this original slate snapshot'})})
     }
     rows.sort((a,b)=>(b.score??-1)-(a.score??-1)||(b.mm??0)-(a.mm??0))
     const { boards: _boards, reports: _reports, defense: _defense, ...summary } = cached.value

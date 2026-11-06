@@ -28,7 +28,7 @@ import { nbaShots,type NbaPlay } from '../src/lib/nbaShots.ts'
 import { nbaDivergences } from '../src/lib/nbaDivergence.ts'
 import { nbaSlateRows } from '../src/lib/nbaSlate.ts'
 import {nbaTrackingRow,nbaTrackingSample,nbaTrackingField} from '../src/lib/nbaTracking.ts'
-import { nbaValidatedEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
+import { nbaValidatedEstimate,nbaSelectedSeasonEstimate,type NbaModelReport } from '../src/lib/nbaModel.ts'
 const cachePassthrough={nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load(),fetchedAt:new Date().toISOString(),stale:false})}
 const unpostedFirstBasket={getNbaFirstOddsForMode:async()=>({rows:[],unmatched:0,eventMatched:false}),getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({rows:[],unmatched:0,eventMatched:false})}
 const emptyOpeningImports={'./nbaOddsHistory':{nbaAttachOpenings},'./nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>[]}}
@@ -865,14 +865,14 @@ test('NBA cache post-commit and follower reads bypass render-pass memoized initi
 test('NBA customer projections authenticate first and return results without model internals',async()=>{
   let reads=0, denied=true
   const model={ready:true,version:'nba-rolling-v1',market:'points',method:'blend',recentWeight:.35,modelKey:'internal-method',trainingSeasons:[2023,2024],trainingGames:20000,trainingPlayers:500,trainingMae:4,trainedThrough:'2025-04-13',validationSeason:2025,validationGames:10000,validationPlayers:500,validationMae:4,validationRmse:6,validationBias:0,baselineMae:4.2,validationFrom:'2025-10-20',validationThrough:'2026-04-13'} satisfies NbaModelReport
-  const logs=Array.from({length:20},(_,i)=>({...stat(10+i,`2026-03-${String(i+1).padStart(2,'0')}`),id:i+1}))
+  const logs=Array.from({length:20},(_,i)=>{const row=stat(10+i,`2026-10-${String(i+1).padStart(2,'0')}`);return {...row,id:i+1,game:{...row.game,season:2026,postseason:false}}})
   const query={select:()=>query,eq:()=>query,order:()=>query,limit:()=>query,abortSignal:async()=>({data:[{report:model}],error:null})}
   const imports={
     'next/server':{NextResponse:{json:Response.json}},
     '@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({},{status:403})}:{}},
-    '@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>({game:{id:123,date:'2026-10-20'},players:[{id:434,logs}],fetchedAt:'2026-10-19T12:00:00Z'})},
+    '@/lib/nbaPaintData':{getPaintGame:async()=>{reads++;return{id:123}},getPaintBoard:async()=>({game:{id:123,date:'2026-10-22',season:2026},players:[{id:434,logs}],fetchedAt:'2026-10-19T12:00:00Z'})},
     '@/lib/nbaPaint':await import('../src/lib/nbaPaint.ts'),
-    '@/lib/nbaModel':{nbaValidatedEstimate},
+    '@/lib/nbaModel':{nbaSelectedSeasonEstimate},
     '@/lib/nbaResearchResources':{getNbaResearchModels:async()=>{reads++;return[model]}},
     '@/lib/nbaSharedCache':cachePassthrough,
     '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>{reads++;return query}})},

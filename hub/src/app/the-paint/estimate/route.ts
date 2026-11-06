@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
 import { nbaMarketLogs, nbaSample, nbaValue, PAINT_MARKETS, type PaintMarket } from '@/lib/nbaPaint'
-import { nbaValidatedEstimate } from '@/lib/nbaModel'
+import { nbaSelectedSeasonEstimate } from '@/lib/nbaModel'
 import { getNbaResearchModels } from '@/lib/nbaResearchResources'
 import { resolveNbaResearchBundle } from '@/lib/nbaResearchBundle'
 
@@ -21,6 +21,6 @@ export async function GET(request: NextRequest) {
     const logs = nbaMarketLogs(selected, market!).filter(log => log.game.date.slice(0, 10) < board.game.date)
     const report = reports.find(item => item.market === market && item.validationThrough < board.game.date)
     const games = nbaSample(logs.filter(log => (log.game.status_state === 'final' || log.game.status === 'Final') && nbaValue(log, market!) != null), report?.method === 'last10' ? 10 : 20).length
-    return NextResponse.json({ gameId: board.game.id, playerId: selected.id, market, estimate: nbaValidatedEstimate(logs, market as PaintMarket, board.game.date, report), games, fetchedAt: board.fetchedAt }, { headers: { 'Cache-Control': 'private, no-store' } })
+    return NextResponse.json({ gameId: board.game.id, playerId: selected.id, market, estimate: nbaSelectedSeasonEstimate(logs, market as PaintMarket, board.game.date, board.game.season, report), games, fetchedAt: board.fetchedAt }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Projection unavailable' }, { status: 503 }) }
 }
