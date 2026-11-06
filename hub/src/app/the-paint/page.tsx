@@ -3,6 +3,7 @@ import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintSchedule } from '@/lib/nbaPaintData'
+import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 import { PaintBoardClient } from './PaintBoardClient'
 import styles from './paint.module.css'
 
@@ -20,7 +21,7 @@ export default async function PaintPage({ searchParams }: { searchParams: Promis
     const selected = schedule.games.find(g => String(g.id) === params.game) ?? schedule.games[0]
     // A missing saved matchup must not remove the date and game navigation.
     // Historical research stays unavailable; it is never rebuilt from today.
-    const board = selected ? await getPaintBoard(selected, mode).catch(() => null) : null
+    const board = selected ? await getPaintBoard(selected, mode).then(nbaSeasonDisplayBoard).catch(() => null) : null
     return { schedule, board, selected }
   } catch(error) { console.error('[The Court] page unavailable',{reason:error instanceof Error&&/^NBA /.test(error.message)?error.message.slice(0,180):'NBA source request failed'});return null } })()
   if (!data) return <section className={styles.empty}><span>NBA</span><h1>The Court</h1><p>NBA data is temporarily unavailable.</p><a href={retry}>Try again</a></section>

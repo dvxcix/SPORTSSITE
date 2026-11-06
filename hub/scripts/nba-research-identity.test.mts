@@ -132,7 +132,7 @@ test('normal scheduled research capture establishes missing identity before stri
       '@/lib/nbaPregameResearchData':{readNbaPregameResearch:async()=>null},'@/lib/nbaSlateFreezeData':{captureNbaSlatePools:async(games:PaintGame[],boards:{game:PaintGame}[])=>{assert.equal(games[0].id,game.id);assert.equal(boards[0].game.id,game.id);return{full:0,quarter:0}}},
       '@/lib/nbaMarketSignal': { nbaMarketSupportIdentity: () => null },
       '@/lib/nbaIntelligence': { nbaPosition: () => 'F', nbaGamePace: () => null, nbaSlipSurgeScore: () => ({ version: 'test', score: 55, games: 24 }) },
-      '@/lib/nbaModel': { nbaValidatedEstimate: () => null }, '@/lib/nbaMovement': {},
+      '@/lib/nbaModel': { nbaSelectedSeasonEstimate: () => null }, '@/lib/nbaMovement': {},
       '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
       '@/lib/nbaPaint': { nbaToday: () => '2026-10-19', nbaPeriod: () => 0, nbaMarketLogs: (p: { logs: unknown[] }) => p.logs, nbaReference: () => null, PAINT_MARKETS: [{ key: 'points' }] },
     }, Clock as unknown as DateConstructor)

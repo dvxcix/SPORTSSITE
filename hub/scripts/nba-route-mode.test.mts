@@ -9,7 +9,7 @@ async function route(file: string, imports: Record<string, unknown>) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} as Record<string, (...args: any[]) => Promise<any>> }
-  const deps = { '@/lib/nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, './nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, '@/lib/nbaOddsMode': oddsMode, './nbaOddsMode': oddsMode, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'member' }) }, ...imports }
+  const deps = { '@/lib/nbaSeasonDisplay': {nbaSeasonDisplayBoard:(board:unknown)=>board}, '@/lib/nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, './nbaOddsClockData': {getNbaOddsGame:async(game:unknown)=>game}, '@/lib/nbaOddsMode': oddsMode, './nbaOddsMode': oddsMode, 'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ userId: 'member' }) }, ...imports }
   new Function('require','module','exports',output)((name: string) => { assert.ok(name in deps,name); return deps[name as keyof typeof deps] },target,target.exports)
   return target.exports
 }

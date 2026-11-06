@@ -97,6 +97,7 @@ test('paid Ultimate board data works while model internals and manual capture re
   let reads = 0, phaseReads = 0
   const board = { game: { id: 123 }, players: [], fetchedAt: '2026-10-20T02:00:00Z' }
   const api = await compiled('../src/app/the-paint/board/route.ts', {
+    '@/lib/nbaSeasonDisplay': { nbaSeasonDisplayBoard: (value:unknown) => value },
     'node:crypto': await import('node:crypto'), 'next/server': { NextResponse: { json: Response.json } },
     '@/lib/nbaPaint': { nbaDate: (date: string) => date }, '@/lib/nbaOddsBoardPhaseData': { getNbaOddsBoardPhase: async () => { phaseReads++; return null } },
     '@/lib/paintAccess': { requirePaintAccess: h.gate }, '@/lib/nbaPaintData': { getPaintGame: async () => { reads++; return { id: 123 } }, getPaintBoard: async () => board },

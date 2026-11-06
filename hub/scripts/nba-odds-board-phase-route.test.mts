@@ -8,6 +8,7 @@ const bundled=await build({stdin:{contents:"export {GET} from './src/app/the-pai
   const modules:Record<string,string>={
     'next/server':`export const NextResponse={json:(data,options)=>Response.json(data,options)}`,
     '@/lib/paintAccess':`export async function requirePaintAccess(){return globalThis.phaseRouteFixture.denied?{error:new Response('denied',{status:403})}:{userId:'fixture'}}`,
+    '@/lib/nbaSeasonDisplay':`export const nbaSeasonDisplayBoard=board=>board`,
     '@/lib/nbaPaintData':`export async function getPaintGame(id){return {id,date:'2026-11-02'}};export async function getPaintBoard(game,mode){globalThis.phaseRouteFixture.boardCalls++;return {game,oddsMode:mode,fetchedAt:'2026-11-02T20:00:00Z',players:[]}}`,
     '@/lib/nbaOddsBoardPhaseData':`export async function getNbaOddsBoardPhase(){const s=globalThis.phaseRouteFixture;s.phaseCalls++;if(s.phaseFails)throw Error('unavailable');return {header:'v1|2026-11-02|1793650000000|12,1793656800000,0',expiresAt:1793650015000}}`,
   }

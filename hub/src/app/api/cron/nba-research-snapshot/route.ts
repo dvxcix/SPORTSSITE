@@ -7,7 +7,7 @@ import { getPaintBoard, getPaintSchedule, refreshPaintBoardPrices } from '@/lib/
 import { getNbaResearchDefense, getNbaResearchModels, getNbaResearchMarketContext, warmNbaResearchResources } from '@/lib/nbaResearchResources'
 import { nbaMarketSupportIdentity } from '@/lib/nbaMarketSignal'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
-import { nbaValidatedEstimate, type NbaModelReport } from '@/lib/nbaModel'
+import { nbaSelectedSeasonEstimate, type NbaModelReport } from '@/lib/nbaModel'
 import { nbaEconomicSnapshot } from '@/lib/nbaMovement'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { ensureNbaResearchPlayers } from '@/lib/nbaResearchIdentity'
@@ -72,7 +72,7 @@ async function run(request: Request) {
             const sampleThrough = logs.map(log => log.game.date.slice(0, 10)).filter(date => date < game.date).sort().at(-1)
             if (!sampleThrough) return []
             const report = models.find(report => report.market === market.key && report.validationThrough < game.date)
-            const estimate = nbaValidatedEstimate(logs, market.key, game.date, report)
+            const estimate = nbaSelectedSeasonEstimate(logs, market.key, game.date, game.season, report)
             const model = estimate == null ? null : { key: report!.modelKey, method: report!.method, recentWeight: report!.recentWeight, trainedThrough: report!.trainedThrough, validationThrough: report!.validationThrough, estimate }
             const features = { signal, model, logIds: logs.map(log => log.id), teamId: player.team.id, position: player.position, injury: player.injury, matchup: matchup ?? null, matchupSeason: context.ready ? context.season : null }
             const economicFeatures={...features,signal:{...signal,marketSupport:nbaMarketSupportIdentity(signal.marketSupport)}}

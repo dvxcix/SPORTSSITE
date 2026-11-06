@@ -5,6 +5,7 @@ import { getNbaPlays } from '@/lib/nbaShotsData'
 import { nbaShots } from '@/lib/nbaShots'
 import { nbaOddsMode } from '@/lib/nbaOddsMode'
 import { getNbaResearchShots } from '@/lib/nbaResearchResources'
+import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
   try {
     if (researchGame) {
       const board = await getPaintBoard(await getPaintGame(Number(researchGame)), mode)
+      const visible=nbaSeasonDisplayBoard(board).players.find(row=>row.id===Number(player))
+      if(!visible?.logs.some(log=>log.game.id===Number(game)))return NextResponse.json({error:'No saved shot sample for the selected season'},{status:404})
       return NextResponse.json(await getNbaResearchShots(board, Number(game), Number(player), mode), { headers: { 'Cache-Control': 'private, no-store' } })
     }
     // Standalone player-history charts have no matchup anchor. They remain

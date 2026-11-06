@@ -383,6 +383,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { '@/lib/nbaSeasonDisplay': { nbaSeasonDisplayBoard: (board:unknown) => board }, ...imports }
   imports = { '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, '@/lib/nbaSlateDiagnostics': { nbaSlateFailure: () => {}, nbaSlateTimer: () => ({ enter: () => {} }) }, '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   imports = { '@/lib/nbaResearchResources': {}, '@/lib/nbaSlateFreezeData': {}, '@/lib/nbaSlateHeat': {}, '@/lib/nbaPregameResearchData': {}, './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }

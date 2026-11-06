@@ -9,6 +9,7 @@ const state={date:'2026-11-02',game:{id:7,date:'2026-11-02'},fail:true,exact:fal
 const built=await build({stdin:{contents:"export {default} from './src/app/the-paint/page'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'nba-past-page.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'past-page',setup(builder){
   const modules:Record<string,string>={
     '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
+    '@/lib/nbaSeasonDisplay':`export const nbaSeasonDisplayBoard=board=>board`,
     '@/components/nba/NbaAccessFallback':`export function NbaAccessFallback(){return null}`,
     '@/lib/nbaOddsMode':`export const nbaOddsMode=value=>value==='live'?'live':'pregame'`,
     '@/lib/nbaPaintData':`export async function getPaintSchedule(date,exact){const s=globalThis.nbaPastPage;s.exact=exact;return {date:date??s.date,days:[s.date],complete:true,games:date===s.date?[s.game]:[]}};export async function getPaintBoard(game,mode){if(globalThis.nbaPastPage.fail)throw Error('Saved research unavailable');return {game}}`,

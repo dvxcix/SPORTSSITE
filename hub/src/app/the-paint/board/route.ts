@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
 import { nbaDate } from '@/lib/nbaPaint'
+import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 import { getNbaOddsBoardPhase } from '@/lib/nbaOddsBoardPhaseData'
 import { createHash } from 'node:crypto'
 export const maxDuration = 120
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     // The lightweight phase check runs only for an open Odds Board. It is
     // shared across instances and applies even when the board returns 304.
     const phasePromise=slateDate?getNbaOddsBoardPhase(slateDate).catch(()=>null):Promise.resolve(null)
-    const board=await getPaintBoard(await getPaintGame(Number(id)), mode),phase=await phasePromise
+    const board=nbaSeasonDisplayBoard(await getPaintBoard(await getPaintGame(Number(id)), mode)),phase=await phasePromise
     if(slateDate&&board.game.date!==slateDate)return NextResponse.json({error:'Choose a valid date'},{status:400})
     // A changed quote timestamp is a new observation even at the same price.
     // Only the board fetch time is cosmetic; preserve all source quote times.

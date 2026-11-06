@@ -13,6 +13,9 @@ export async function GET(request: NextRequest) {
     const board = await getPaintBoard(await getPaintGame(Number(game)), mode)
     if (!board.players.some(player => player.id === Number(id))) return NextResponse.json({ error: 'Player not in this matchup' }, { status: 404 })
     const profile = await getNbaResearchProfile(board, Number(id), mode)
-    return NextResponse.json({ ...profile.profile, gameId: board.game.id, playerId: Number(id), fetchedAt: profile.fetchedAt, researchSnapshot: profile.researchSnapshot }, { headers: { 'Cache-Control': 'private, no-store' } })
+    // Preserve the saved profile internally, but never label a different or
+    // unproven season as the selected matchup's statistics.
+    const value=profile.profile.season===board.game.season?profile.profile:{season:board.game.season,shooting:null,advanced:null}
+    return NextResponse.json({ ...value, gameId: board.game.id, playerId: Number(id), fetchedAt: profile.fetchedAt, researchSnapshot: profile.researchSnapshot }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'No saved profile available for this matchup' }, { status: 503 }) }
 }

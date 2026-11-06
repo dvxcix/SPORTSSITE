@@ -9,6 +9,7 @@ import { requirePaintAccess } from '@/lib/paintAccess'
 import { NbaAccessFallback } from '@/components/nba/NbaAccessFallback'
 import { getNbaTeamEntity } from '@/lib/nbaDirectory'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
+import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 import { NbaMatchupTeam, NbaMatchupUnavailable } from '@/components/nba/NbaMatchupEntity'
 import { nbaEntityId, nbaResearchHref } from '@/lib/nbaEntities'
 import { nbaSeason, type PaintGame } from '@/lib/nbaPaint'
@@ -34,8 +35,8 @@ export default async function NbaTeamPage({ params, searchParams }: { params: Pr
   if (query?.game !== undefined) {
     const gameId = typeof query.game === 'string' ? nbaEntityId(query.game) : null
     if (!gameId) notFound()
-    try { return <NbaMatchupTeam board={await getPaintBoard(await getPaintGame(gameId), oddsMode)} teamId={id} mode={oddsMode}/> }
-    catch { return <NbaMatchupUnavailable game={gameId} mode={oddsMode}/> }
+    const board=await getPaintGame(gameId).then(game=>getPaintBoard(game,oddsMode)).then(nbaSeasonDisplayBoard).catch(()=>null)
+    return board?<NbaMatchupTeam board={board} teamId={id} mode={oddsMode}/>:<NbaMatchupUnavailable game={gameId} mode={oddsMode}/>
   }
   const data = await getNbaTeamEntity(id); if (!data) notFound()
   const { team, games, recent, roster, season, record } = data
