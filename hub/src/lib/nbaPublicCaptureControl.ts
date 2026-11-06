@@ -4,7 +4,7 @@ import type { PaintGame } from './nbaPaint'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
-export const NBA_PUBLIC_CHECKPOINT_HOURS = [24, 4, 1] as const
+export const NBA_PUBLIC_CHECKPOINT_HOURS = [24, 12, 4, 1] as const
 /** A bounded admin selection still passes every normal due/lease/budget gate. */
 export function nbaPublicCaptureSelection(value: unknown): number[] | null {
   if (!Array.isArray(value) || value.length < 1 || value.length > 12
@@ -50,6 +50,15 @@ export function nbaPublicCaptureDecision(game: Game, previousSuccess: string | n
   if (Number.isFinite(success) && success >= slot.at && success < start && success <= now + MINUTE) {
     return { due: false, reason: 'fresh-for-current-slot', targetAt: new Date(slot.at).toISOString(), slotHours: slot.slotHours }
   }
+  // A newly introduced or long-overdue intermediate checkpoint should not
+  // launch another browser just before the existing four-hour capture. Do not
+  // delay a missing baseline or a retry that has already started this slot.
+  const attemptedThisSlot = control?.checkpointAt !== undefined ? control.checkpointAt >= slot.at
+    : !!control && Date.parse(control.attemptedAt) >= slot.at
+  if (slot.slotHours === 12 && now >= start - 5 * HOUR && Number.isFinite(success)
+    && success < slot.at && success < start && success <= now + MINUTE && !attemptedThisSlot) {
+    return { due: false, reason: 'next-checkpoint-near', targetAt: new Date(start - 4 * HOUR).toISOString(), slotHours: 4 }
+  }
   // Persisted repeated failures should not spend a browser on every scheduler
   // tick. A new canonical checkpoint is still eligible; partial observations
   // remain failures and never acquire a fabricated success timestamp.
@@ -60,6 +69,35 @@ export function nbaPublicCaptureDecision(game: Game, previousSuccess: string | n
     return { due: false, reason: 'checkpoint-attempt-limit', targetAt: new Date(slot.at).toISOString(), slotHours: slot.slotHours }
   }
   return { due: true, reason: `t-${slot.slotHours}h`, targetAt: new Date(slot.at).toISOString(), slotHours: slot.slotHours }
+}
+
+/** Group only first T−12h attempts with a verified earlier success. This is
+ * bounded to one hour/six games and never holds retries or urgent work. */
+export function nbaPublicIntermediateCohortHold<T extends Game>(due: readonly T[], schedule: readonly T[], controls: ReadonlyMap<string, NbaPublicControl>, parser: string, previous: (id: number) => string | null, now: number): number | null {
+  if (!due.length || !Number.isFinite(now)) return null
+  const firstAttempt = (game: T, at: number) => {
+    const start = nbaGameStart(game), state = controls.get(nbaPublicGameControlKey(game, parser))
+    if (start === null || !state || state.outcome !== 'captured' || !state.successAt) return false
+    const checkpoint = start - 12 * HOUR, success = Date.parse(state.successAt), attempted = Date.parse(state.attemptedAt)
+    const decision = nbaPublicCaptureDecision(game, previous(game.id), state, at)
+    return Number.isFinite(success) && success < checkpoint && Number.isFinite(attempted) && attempted < checkpoint
+      && decision.slotHours === 12 && decision.due
+  }
+  if (!due.every(game => firstAttempt(game, now))) return null
+  const first = Math.min(...due.map(game => nbaGameStart(game)! - 12 * HOUR)), deadline = first + HOUR
+  if (now >= deadline) return null
+  const joins = schedule.filter(game => {
+    const start = nbaGameStart(game)
+    if (start === null || !['scheduled', 'unknown', undefined].includes(game.status_state) || !nbaPregameOpen(game, now)) return false
+    const target = start - 12 * HOUR
+    return target > now && target <= deadline && firstAttempt(game, target)
+  })
+  if (!joins.length || due.length + joins.length > 6) return null
+  const release = Math.max(...joins.map(game => nbaGameStart(game)! - 12 * HOUR))
+  // Account for the next cron tick and bounded browser run; keep this well
+  // before the unchanged T−4h and T−1h checkpoints.
+  if (due.some(game => nbaGameStart(game)! - (release + 35 * MINUTE) < 6 * HOUR)) return null
+  return release
 }
 
 /** Delay only unattempted day-before work when another game will become due

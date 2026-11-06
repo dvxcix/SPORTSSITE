@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,nbaPublicFourHourCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,nbaPublicIntermediateCohortHold,nbaPublicFourHourCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -79,13 +79,28 @@ async function run(request:Request){
   const cooldownResponse=()=>{const control=contextCooldown();return NextResponse.json({stage:'deferred',reason:control?.outcome==='auth'?'NBA public authentication cooldown':'NBA public browser cooldown',retryAt:control?.nextAttemptAt,browserSessions:0,results:[]},{status:425})}
   if(contextCooldown())return cooldownResponse()
   const eligible=()=>nbaPublicPrioritize(upcoming.filter(game=>nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now()).due),controls,NBA_PUBLIC_VERSION,attempted)
+  const boundedIntermediate=(games:typeof upcoming)=>{
+    const now=Date.now()
+    // Limit only fresh first-attempt intermediate work. Never hide an already
+    // due retry, missing baseline or near-tip game behind the new batching.
+    const safe=games.every(game=>{
+      const state=controls.get(gameKey(game)),start=nbaGameStart(game)
+      return start!==null&&state?.outcome==='captured'&&!!state.successAt
+        &&Date.parse(state.successAt)<start-12*3600000&&Date.parse(state.attemptedAt)<start-12*3600000
+        &&nbaPublicCaptureDecision(game,last(game.id),state,now).slotHours===12
+    })
+    return games.length>6&&safe?games.slice(0,6):games
+  }
   let due=eligible()
   if(!due.length)return NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current',decisions:upcoming.map(game=>({gameId:game.id,...nbaPublicCaptureDecision(game,last(game.id),controls.get(gameKey(game)),Date.now())}))})
-  const cohortHold=()=>selected||schedules.some(slate=>!slate.complete)?null:nbaPublicCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())??nbaPublicFourHourCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())
+  const cohortHold=()=>selected||schedules.some(slate=>!slate.complete)?null:nbaPublicCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())??nbaPublicIntermediateCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())??nbaPublicFourHourCohortHold(due,schedule.games,controls,NBA_PUBLIC_VERSION,last,Date.now())
   const hold=cohortHold()
   if(hold!==null)return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(hold).toISOString()})
+  let deferredForCap=0
+  const limitIntermediate=()=>{const bounded=boundedIntermediate(due);deferredForCap=due.length-bounded.length;due=bounded}
+  limitIntermediate()
   const lease=await acquirePikkitBrowserLease()
-  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length,deferred:due.length,browserSessions:0},{status:425})
+  if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length+deferredForCap,deferred:due.length+deferredForCap,browserSessions:0},{status:425})
   // A different instance may have finished between preflight and lease claim.
   // Re-read under the existing shared-context lease before any paid launch.
   try{
@@ -97,6 +112,7 @@ async function run(request:Request){
       if(released===false)return NextResponse.json({error:'Shared browser lease release could not be confirmed'},{status:503})
       return contextCooldown()?cooldownResponse():held!==null?NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(held).toISOString()}):NextResponse.json({games:upcoming.length,due:0,browserSessions:0,skipped:'Captures are current'})
     }
+    limitIntermediate()
   }catch{
     await lease.release().catch(()=>false)
     return NextResponse.json({error:'Public capture controls unavailable'},{status:503})
@@ -284,10 +300,10 @@ async function run(request:Request){
     if(!budgetDenied&&(!browserOpened||!browserReleased))cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
     else await bounded(lease.release(),10000,'NBA browser lease release deadline').then(released=>{if(released===false)cleanupIssues.push('Shared browser lease release could not be confirmed; automatic lease expiry remains enabled')}).catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
   }
-  if(budgetDenied&&!cleanupIssues.length)return NextResponse.json({stage:'deferred',reason:budgetDenied.message,budgetCode:budgetDenied.code,games:upcoming.length,due:due.length,browserSessions:0,attempted:0,failed:0,deferred:due.length,results:[]},{status:425})
+  if(budgetDenied&&!cleanupIssues.length)return NextResponse.json({stage:'deferred',reason:budgetDenied.message,budgetCode:budgetDenied.code,games:upcoming.length,due:due.length+deferredForCap,browserSessions:0,attempted:0,failed:0,deferred:due.length+deferredForCap,results:[]},{status:425})
   const unavailableReasons=new Set(['NBA event is not listed','NBA public markets are not available yet'])
   const unavailable=results.filter(result=>!result.ok&&unavailableReasons.has(result.reason??'')).length
-  const failed=results.filter(result=>!result.ok&&!unavailableReasons.has(result.reason??'')).length,deferred=due.length-results.length+unavailable
-  return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:browserOpened?1:0,attempted:results.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
+  const failed=results.filter(result=>!result.ok&&!unavailableReasons.has(result.reason??'')).length,deferred=due.length-results.length+unavailable+deferredForCap
+  return NextResponse.json({games:upcoming.length,due:due.length+deferredForCap,browserSessions:browserOpened?1:0,attempted:results.length,failed,unavailable,deferred,results,reason:runError??(deferred?'NBA public coverage is incomplete; deferred to the next run':null),cleanupIssues},{status:runError||cleanupIssues.length?503:failed?502:deferred?425:200})
 }
 export const GET=withPipelineHealth('poll-pikkit-nba-picks',run,{allowSecondarySecret:true})
