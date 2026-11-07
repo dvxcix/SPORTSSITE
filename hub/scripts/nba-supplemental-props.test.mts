@@ -1,3 +1,4 @@
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {nbaCurrentBookQuotes,type NbaCurrentBookFrame} from '../src/lib/nbaBookCurrent.ts'
@@ -27,7 +28,7 @@ async function compile<T>(path: string, imports: Record<string, unknown>, global
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
-  new Function('require', 'module', 'exports', ...Object.keys(globals), output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, ...Object.values(globals))
+  new Function('require', 'module', 'exports', ...Object.keys(globals), output)((name: string) => { if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports, name); return imports[name] }, target, target.exports, ...Object.values(globals))
   return target.exports as T
 }
 async function fixture(options: { value?: unknown; cacheValue?: unknown; response?: () => Response | Promise<Response>; events?: first.FirstOddsEvent[]; roster?: paint.PaintRoster[]; key?: string; abortAfterMs?: number } = {}) {

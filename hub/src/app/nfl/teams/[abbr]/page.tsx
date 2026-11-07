@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronRight, Shield } from 'lucide-react'
+import { nflPlayerPortrait } from '@/lib/nflPlayerPortrait'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TierGate } from '@/components/layout/TierGate'
 import styles from '@/components/product/EntityPage.module.css'
@@ -21,12 +22,12 @@ async function getTeamData(abbr: string) {
   if (!team) return null
   const { data: roster } = await admin
     .from('nfl_players')
-    .select('gsis_id, display_name, position, position_group, jersey_number, headshot, status, years_of_experience, college_name')
+    .select('gsis_id, display_name, position, position_group, jersey_number, headshot, espn_id, status, years_of_experience, college_name')
     .eq('latest_team', team.team_abbr)
     .gte('last_season', currentNflSeason())
     .order('position_group', { ascending: true })
     .order('display_name', { ascending: true })
-  return { team, roster: roster ?? [] }
+  return { team, roster: (roster ?? []).map(player => ({ ...player, headshot: nflPlayerPortrait(player) })) }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ abbr: string }> }): Promise<Metadata> {

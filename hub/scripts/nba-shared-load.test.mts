@@ -1,3 +1,4 @@
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -15,7 +16,7 @@ async function compiled<T>(file: string, imports: Record<string, unknown>, globa
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
-  new Function('require', 'module', 'exports', ...Object.keys(globals), output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, ...Object.values(globals))
+  new Function('require', 'module', 'exports', ...Object.keys(globals), output)((name: string) => { if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports, name); return imports[name] }, target, target.exports, ...Object.values(globals))
   return target.exports as T
 }
 type Entry = { payload?: unknown; fetched_at?: string; expires_at?: string; lease_token?: string | null; lease_until?: string | null }

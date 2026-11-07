@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
+import { nbaPortraitFallback } from '@/lib/nbaPlayerPortraits'
 
 interface PlayerAvatarProps {
   /** Player headshot URL */
@@ -14,6 +15,8 @@ interface PlayerAvatarProps {
   teamAbbr?: string | null
   /** Explicit league identity prevents shared abbreviations from using MLB colors. */
   sport?: string
+  /** League-specific provider ID; never inferred from a player's name. */
+  playerId?: number | string | null
   /** Player/team name for initials fallback */
   name?: string
   /** Avatar diameter in px */
@@ -34,16 +37,19 @@ export function PlayerAvatar({
   teamLogo,
   teamAbbr,
   sport,
+  playerId,
   name = '',
   size = 44,
   showTeam = true,
   style,
 }: PlayerAvatarProps) {
-  const [failedHeadshot, setFailedHeadshot] = useState<string | null>(null)
+  const [failedHeadshots, setFailedHeadshots] = useState<string[]>([])
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
   // Legacy league-specific MLB callers omit sport. Shared callers pass it.
   const league = sport?.trim().toLowerCase() ?? 'mlb'
   const resolvedLogo = sportTeamLogoUrl(league, teamAbbr) ?? teamLogo
+  const sources = [...new Set([headshot, league === 'nba' ? nbaPortraitFallback(playerId) : null].filter((src): src is string => !!src))]
+  const resolvedHeadshot = sources.find(src => !failedHeadshots.includes(src))
 
   const initials = name
     .split(' ')
@@ -59,7 +65,7 @@ export function PlayerAvatar({
   // ratio scales up every consumer, not just Dugout's — but a proportionally
   // bigger badge reads better everywhere, not worse anywhere.
   const badgeSize = Math.round(size * 0.46)
-  const showHeadshot = headshot && failedHeadshot !== headshot
+  const showHeadshot = !!resolvedHeadshot
   const showBadge = showTeam && resolvedLogo && failedLogo !== resolvedLogo
   const isNba = league === 'nba'
 
@@ -95,9 +101,9 @@ export function PlayerAvatar({
       >
         {showHeadshot ? (
           <SafeImage
-            src={headshot!}
+            src={resolvedHeadshot!}
             alt={name}
-            onError={() => setFailedHeadshot(headshot!)}
+            onError={() => setFailedHeadshots(previous => [...new Set([...previous, resolvedHeadshot!])])}
             style={{
               width: isNba ? '100%' : '112%',
               height: isNba ? '100%' : '112%',

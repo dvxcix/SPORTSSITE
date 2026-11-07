@@ -2,7 +2,8 @@ import 'server-only'
 import { createAdminClient } from './supabase/admin'
 import { nbaSharedCache } from './nbaSharedCache'
 import { artwork } from './nbaPaintData'
-import { nbaCompactStat, nbaName, nbaTeamLogo, nbaToday, type PaintGame, type PaintStat } from './nbaPaint'
+import { nbaRosterPortraits } from './nbaPlayerPortraits'
+import { nbaCompactStat, nbaTeamLogo, nbaToday, type PaintGame, type PaintStat } from './nbaPaint'
 import { nbaPlayerName, nbaPlayerSeasons, searchNbaEntities, nbaSearchTeam, type NbaDirectory, type NbaDirectoryPlayer, type NbaDirectoryTeam, type NbaSearchPlayer } from './nbaEntities'
 
 export async function getNbaDirectory(): Promise<NbaDirectory> {
@@ -30,7 +31,8 @@ async function playerImages(abbreviation: string) {
 export async function hydrateNbaPlayers(players: NbaDirectoryPlayer[]): Promise<NbaSearchPlayer[]> {
   const teams = [...new Set(players.map(player => player.team.abbreviation))]
   const images = new Map(await Promise.all(teams.map(async team => [team, await playerImages(team)] as const)))
-  return players.map(player => ({ id: player.id, name: nbaPlayerName(player), position: player.position, teamId: player.team.id, teamName: player.team.full_name, teamAbbr: player.team.abbreviation, headshot: images.get(player.team.abbreviation)?.[nbaName(nbaPlayerName(player))] ?? null, teamLogo: nbaTeamLogo(player.team.abbreviation) }))
+  const portraits = new Map(teams.map(team => [team, nbaRosterPortraits(players.filter(player=>player.team.abbreviation===team), new Map(Object.entries(images.get(team) ?? {})))]))
+  return players.map(player => ({ id: player.id, name: nbaPlayerName(player), position: player.position, teamId: player.team.id, teamName: player.team.full_name, teamAbbr: player.team.abbreviation, headshot: portraits.get(player.team.abbreviation)?.get(player.id) ?? null, teamLogo: nbaTeamLogo(player.team.abbreviation) }))
 }
 
 export async function searchNbaDirectory(query: string) {
@@ -47,7 +49,7 @@ async function nextTeamGames(team: number) {
 export async function getNbaPlayerEntity(id: number) {
   const directory = await getNbaDirectory(), player = directory.players.find(candidate => candidate.id === id)
   if (!player) return null
-  const data = await nbaSharedCache(`entity-player:v1:${id}:${player.team.id}:${nbaToday()}`, 300, 3600, async () => {
+  const data = await nbaSharedCache(`entity-player:v2:${id}:${player.team.id}:${nbaToday()}`, 300, 3600, async () => {
     const [history, games, portraits] = await Promise.all([
       createAdminClient().from('nba_player_game_stats').select('payload').eq('player_id', id).eq('postseason', false).order('game_date', { ascending: false }).limit(500),
       nextTeamGames(player.team.id), hydrateNbaPlayers([player]),
@@ -62,7 +64,7 @@ export async function getNbaPlayerEntity(id: number) {
 export async function getNbaTeamEntity(id: number) {
   const directory = await getNbaDirectory(), team = directory.teams.find(candidate => candidate.id === id)
   if (!team) return null
-  const data = await nbaSharedCache(`entity-team:v1:${id}:${nbaToday()}`, 300, 3600, async () => {
+  const data = await nbaSharedCache(`entity-team:v2:${id}:${nbaToday()}`, 300, 3600, async () => {
     const [games, history, roster] = await Promise.all([
       nextTeamGames(id),
       createAdminClient().from('nba_games').select('payload').or(`home_team_id.eq.${id},visitor_team_id.eq.${id}`).eq('postseason', false).lte('game_date', nbaToday()).order('game_date', { ascending: false }).limit(180),

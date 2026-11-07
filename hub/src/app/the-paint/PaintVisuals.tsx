@@ -3,6 +3,7 @@ import { Shield, UserRound } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { nbaBinary, gradeNbaValue, nbaValue, type PaintPlayer, type PaintStat } from '@/lib/nbaPaint'
 import { nbaTeamGradient } from '@/lib/nbaTeamColors'
+import { nbaPortraitFallback } from '@/lib/nbaPlayerPortraits'
 import { useNbaMatrixMatches } from '@/components/nba/NbaMatrixContext'
 import styles from './paint.module.css'
 
@@ -11,8 +12,11 @@ const code = (abbr: string) => ({ GSW: 'gs', NOP: 'no', NYK: 'ny', SAS: 'sa', UT
 export function TeamLogo({ abbr, size = 28 }: { abbr: string; size?: number }) { return <SafeImage src={`https://a.espncdn.com/i/teamlogos/nba/500/${code(abbr)}.png`} alt="" width={size} height={size} className={styles.teamLogo} fallback={<span className={styles.teamFallback} style={{ width: size, height: size }}><Shield size={Math.max(10,size*.65)} aria-hidden="true"/></span>} /> }
 export function PlayerAvatar({ player, large = false }: { player: Pick<PaintPlayer,'headshot'|'team'> & Partial<Pick<PaintPlayer,'id'>>; large?: boolean }) {
   const matches = useNbaMatrixMatches(player.id ?? 0)
+  const portrait = nbaPortraitFallback(player.id)
+  const missing = <span className={styles.initials}><UserRound size={large ? 85 : 27} aria-hidden="true"/></span>
+  const fallback = player.headshot && portrait && portrait !== player.headshot ? <SafeImage src={portrait} alt="" width={large ? 180 : 46} height={large ? 148 : 46} fallback={missing}/> : missing
   return <span className={large ? styles.portrait : styles.avatar} style={{ background: nbaTeamGradient(player.team.abbreviation) }} role={matches.length ? 'img' : undefined} aria-label={matches.length ? `Matrix matches: ${matches.map(match=>match.name).join(', ')}` : undefined}>
-    <span className={styles.avatarFrame}><SafeImage src={player.headshot} alt="" width={large ? 180 : 46} height={large ? 148 : 46} fallback={<span className={styles.initials}><UserRound size={large ? 85 : 27} aria-hidden="true"/></span>}/></span>
+    <span className={styles.avatarFrame}><SafeImage src={player.headshot || portrait} alt="" width={large ? 180 : 46} height={large ? 148 : 46} fallback={fallback}/></span>
     {!large && <span className={styles.avatarTeam}><TeamLogo abbr={player.team.abbreviation} size={15}/></span>}
     {matches.length>0&&<span className={styles.avatarMatrix} aria-hidden="true" style={{borderColor:matches[0].color}}/>}
   </span>

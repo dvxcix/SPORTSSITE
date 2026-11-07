@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { nflPlayerPortrait } from '@/lib/nflPlayerPortrait'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { TierGate } from '@/components/layout/TierGate'
@@ -11,8 +12,9 @@ export const revalidate = 0
 
 async function getPlayerData(id: string) {
   const admin = createAdminClient()
-  const { data: player } = await admin.from('nfl_players').select('*').eq('gsis_id', id).maybeSingle()
-  if (!player) return null
+  const { data: storedPlayer } = await admin.from('nfl_players').select('*').eq('gsis_id', id).maybeSingle()
+  if (!storedPlayer) return null
+  const player = { ...storedPlayer, headshot: nflPlayerPortrait(storedPlayer) }
   const { data: team } = player.latest_team
     ? await admin.from('nfl_teams').select('team_abbr, team_name, team_color, team_logo_espn').eq('team_abbr', player.latest_team).maybeSingle()
     : { data: null }

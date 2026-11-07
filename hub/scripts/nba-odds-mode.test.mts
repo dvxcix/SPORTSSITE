@@ -1,3 +1,4 @@
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -32,7 +33,7 @@ async function harness(initialTime:number, current:paint.PaintProp[], frozen= [q
   }
   const target={exports:{}}
   const fetch=async(url:string)=>{fetches++;if(crossBoundary)now=tip+10;return Response.json({data:url.includes('player_props')?current:[]})}
-  new Function('require','module','exports','Date','fetch',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock,fetch)
+  new Function('require','module','exports','Date','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock,fetch)
   return {api:target.exports as typeof import('../src/lib/nbaPaintData.ts'),keys,advance:(time:number)=>{now=time},cross:()=>{crossBoundary=true},counts:()=>({fetches,snapshots})}
 }
 
@@ -112,7 +113,7 @@ test('First Basket after tipoff renders its saved pregame quote and never reques
     './nbaPaintData':{getPaintRoster:async()=>[{id:434,first_name:'Real',last_name:'Player',team:match.home_team,position:'G'}],artwork:async()=>({headshots:new Map()})},
   }
   const target={exports:{}}
-  new Function('require','module','exports','fetch',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Current provider must not run')})
+  new Function('require','module','exports','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Current provider must not run')})
   const result=await (target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts')).getNbaFirstOddsForMode(match,'pregame')
   assert.equal(result.rows[0].offer.market.odds,700);assert.equal(result.rows[0].player.first_name,'Real')
 })

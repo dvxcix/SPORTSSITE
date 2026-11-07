@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { nflPlayerPortrait } from '@/lib/nflPlayerPortrait'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
   const admin = createAdminClient()
   const [{ data: players }, { data: teams }, { data: allTeams }] = await Promise.all([
     admin.from('nfl_players')
-      .select('gsis_id, display_name, position, latest_team, headshot')
+      .select('gsis_id, display_name, position, latest_team, headshot, espn_id')
       .ilike('display_name', `%${q}%`)
       .not('latest_team', 'is', null)
       .order('last_season', { ascending: false })
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
   // Players don't carry their own logo — the UI shows a team logo next to
   // every player result (not the bare team abbreviation), so merge it in here.
   const logoByAbbr = new Map((allTeams ?? []).map(t => [t.team_abbr, t.team_logo_espn]))
-  const playersWithLogo = (players ?? []).map(p => ({ ...p, team_logo_espn: p.latest_team ? logoByAbbr.get(p.latest_team) ?? null : null }))
+  const playersWithLogo = (players ?? []).map(p => ({ ...p, headshot: nflPlayerPortrait(p), team_logo_espn: p.latest_team ? logoByAbbr.get(p.latest_team) ?? null : null }))
 
   return NextResponse.json({ players: playersWithLogo, teams: teams ?? [] }, {
     headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },

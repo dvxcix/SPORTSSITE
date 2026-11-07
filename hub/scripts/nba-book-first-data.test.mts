@@ -1,3 +1,4 @@
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -46,7 +47,7 @@ async function harness() {
   const source = await readFile(new URL('../src/lib/nbaBookFirstData.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
-  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, `Unexpected dependency: ${name}`); return imports[name] }, target, target.exports, Clock, () => { throw Error('Member reads must never open a browser or fetch a sportsbook') })
+  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports, `Unexpected dependency: ${name}`); return imports[name] }, target, target.exports, Clock, () => { throw Error('Member reads must never open a browser or fetch a sportsbook') })
   return { api: target.exports as typeof import('../src/lib/nbaBookFirstData.ts'), entries, cacheCalls, Clock, now: () => clock, time: (at: number) => { clock = at }, errors: (read: boolean, write = false) => { readError = read; writeError = write },receipt:(value:unknown)=>{receipt=value}, metrics: () => ({ reads, writes }) }
 }
 
@@ -177,7 +178,7 @@ test('aggregate First Basket deduplicates newer direct prices, applies exact wit
     const source = await readFile(new URL('../src/lib/nbaFirstBasketOddsData.ts', import.meta.url), 'utf8')
     const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
     const target = { exports: {} }
-    new Function('require', 'module', 'exports', 'Date', 'fetch', 'process', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, target, target.exports, h.Clock,
+    new Function('require', 'module', 'exports', 'Date', 'fetch', 'process', output)((name: string) => { if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports, name); return imports[name] }, target, target.exports, h.Clock,
       async (url: URL) => { providerReads++; return Response.json(url.pathname.endsWith('/events') ? [event] : event) }, { env: { ODDS_API_KEY: 'fixture-only' } })
     const api = target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts')
     const load = () => phaseWrapper ? api.getNbaFirstOddsForMode(match) : api.getNbaFirstOdds(match)

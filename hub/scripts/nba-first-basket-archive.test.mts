@@ -1,3 +1,4 @@
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -27,7 +28,7 @@ async function harness(setup:Setup){
       getPaintRoster:async()=>{if(setup.failRosters)throw Error('Roster unavailable');return setup.active??[]},
       getPaintFinalStats:async()=>{if(setup.failRosters)throw Error('Stats unavailable');return {rows:setup.stats??[]}},
       getPaintIdentity:async(id:number)=>{identities.push(id);const identity=setup.identities?.get(id);if(!identity)throw Error('Identity unavailable');return identity},
-      artwork:async(team:string)=>({headshots:new Map([1,2,3,4].map(id=>[paint.nbaName(`Player ${String.fromCharCode(64+id)}`),`${team}-${id}.png`]))}),
+      artwork:async(team:string)=>({headshots:new Map([1,2,3,4].map(id=>[paint.nbaName(`Player ${String.fromCharCode(64+id)}`),`https://example.test/${team}-${id}.png`]))}),
     },
     './supabase/admin':{createAdminClient:()=>({from:(table:string)=>{
       assert.equal(table,'nba_research_snapshots');let id=0
@@ -36,7 +37,7 @@ async function harness(setup:Setup){
     }})},
   }
   const target={exports:{}}
-  new Function('require','module','exports','fetch',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Archived prices must not request live odds')})
+  new Function('require','module','exports','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Archived prices must not request live odds')})
   return {api:target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts'),identities,queries,snapshots}
 }
 
@@ -52,7 +53,7 @@ test('archived First Basket retains DNP players, resolves each missing identity 
   assert.equal(result.rows[0].player.team.id,home.id,'game box score outranks the current roster team')
   assert.equal(result.rows[1].player.id,2,'DNP player remains despite having no box-score row')
   assert.equal(result.rows[2].player.team.id,away.id,'transferred player retains the verified matchup team')
-  assert.equal(result.rows[2].player.headshot,'NYK-3.png')
+  assert.equal(result.rows[2].player.headshot,'https://example.test/NYK-3.png')
   assert.deepEqual(h.identities.sort(),[3,4],'duplicate book offers share one identity lookup')
   assert.deepEqual(h.queries.sort(),[2,3,4])
   assert.equal(result.unmatched,1,'unknown historical team is not invented')

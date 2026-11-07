@@ -1,3 +1,4 @@
+import * as seasonDisplay from '../src/lib/nbaSeasonDisplay.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import assert from 'node:assert/strict'
@@ -135,9 +136,10 @@ test('only fingerprint-bound successful player receipts can freshen unchanged ec
   assert.equal(support(nbaBuildMarketContext({...old,marketVerifiedAt:nbaSuccessfulMarketReceipt({...row,payload:{status:'captured'}},123,'prices')})).adjustment,0,'successful game-only archive must not freshen old player prices')
 })
 
-const logs:PaintStat[]=Array.from({length:20},(_,i)=>({id:i+1,player:{id:434},team:{id:2},game:{id:i+1,date:`2026-04-${String(i+1).padStart(2,'0')}`,status:'Final',status_state:'final',home_team_id:2,visitor_team_id:9,season:2025},min:'32:00',pts:22,reb:7,ast:6,fg3m:3,stl:1,blk:1,turnover:2,fga:18,fgm:8,fg3a:7,fta:4,ftm:3}))
-const player:PaintPlayer={id:434,first_name:'Test',last_name:'Player',position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},headshot:null,injury:null,average:{pts:22},logs,props:[target,other]}
-const board:PaintBoard={game:{id:123,date:'2026-10-20',season:2026,status:'Scheduled',status_state:'scheduled',datetime:tipAt,period:0,home_team:player.team,visitor_team:{...player.team,id:9},home_team_score:0,visitor_team_score:0},players:[player],sampleSeason:2025,historical:false,sampleEnd:'2026-04-20',fetchedAt:asOf,issues:[],statsComplete:true}
+// Match the real response view: the synthetic baseline belongs to the selected season.
+const logs:PaintStat[]=Array.from({length:20},(_,i)=>({id:i+1,player:{id:434},team:{id:2},game:{id:i+1,date:`2026-09-${String(i+1).padStart(2,'0')}`,status:'Final',status_state:'final',home_team_id:2,visitor_team_id:9,season:2026},min:'32:00',pts:22,reb:7,ast:6,fg3m:3,stl:1,blk:1,turnover:2,fga:18,fgm:8,fg3a:7,fta:4,ftm:3}))
+const player:PaintPlayer={id:434,first_name:'Test',last_name:'Player',position:'G',team:{id:2,abbreviation:'BOS',full_name:'Boston Celtics',name:'Celtics'},headshot:null,injury:null,averageSeason:2026,average:{pts:22},logs,props:[target,other]}
+const board:PaintBoard={game:{id:123,date:'2026-10-20',season:2026,status:'Scheduled',status_state:'scheduled',datetime:tipAt,period:0,home_team:player.team,visitor_team:{...player.team,id:9},home_team_score:0,visitor_team_score:0},players:[player],sampleSeason:2026,baselineSeasons:[2026],historical:false,sampleEnd:'2026-09-20',fetchedAt:asOf,issues:[],statsComplete:true}
 
 test('board, slate and snapshot use one score and retain production floor, sample requirements and date boundary',()=>{
   const context=nbaBuildMarketContext(input()),base=nbaSlipSurgeScore(player,'points',board.game.date),enhanced=nbaSlipSurgeScore(player,'points',board.game.date,undefined,null,{offer:target,side:'over',context})
@@ -172,7 +174,7 @@ test('unchanged successful polling times do not generate new research archive id
 })
 
 async function compiled(path:string,imports:Record<string,unknown>,clock:DateConstructor=Date){
-  imports = { '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, ...imports }
+  imports = { '@/lib/nbaSeasonDisplay': seasonDisplay, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, ...imports }
   const source=await readFile(new URL(path,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
@@ -209,7 +211,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   const paint=await import('../src/lib/nbaPaint.ts'),intelligence=await import('../src/lib/nbaIntelligence.ts'),metrics=await import('../src/lib/nbaMarketMetrics.ts')
   type Reply={body:Record<string,unknown>;status:number}
   const response={NextResponse:{json:(body:Record<string,unknown>,init?:{status?:number}):Reply=>({body,status:init?.status??200})}}
-  const defense={ready:false,season:2025,profiles:[],games:0,fetchedAt:null,stale:false}
+  const defense={ready:false,season:2026,before:board.game.date,profiles:[],games:0,fetchedAt:null,stale:false}
   let now=asOf,boardReads=0,contextReads=0,defenseFailed=false
   const gameData={refreshPaintBoardPrices:async(value:unknown)=>value,getPaintGame:async()=>board.game,getPaintBoard:async()=>{boardReads++;return board},getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true})}
   const common={'@/lib/nbaMarketSelection':await import('../src/lib/nbaMarketSelection.ts'),'next/server':response,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:null})},'@/lib/nbaPaintData':gameData,

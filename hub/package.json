@@ -18,7 +18,7 @@
     "test:security-dependencies": "node --test scripts/security-dependency-guards.test.mjs",
     "test:member-settlement": "node --import tsx --test scripts/mlb-pick-grading.test.mts scripts/nfl-pick-grading.test.mts scripts/member-settlement.test.mjs scripts/nba-settlement-health.test.mjs",
     "test:archive-progress": "node --test scripts/market-dna-archive-progress.test.mjs",
-    "test:cross-sport": "node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts scripts/sport-team-artwork.test.mts",
+    "test:cross-sport": "node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts scripts/sport-team-artwork.test.mts scripts/player-portraits.test.mts",
     "test:context-handoff": "node --test scripts/context-handoff.test.mjs",
     "test:operations-readiness": "node --test scripts/operations-readiness.test.mjs",
     "test:pikkit-persistence": "node --import tsx --test scripts/browserbase-persistence.test.mjs scripts/pikkit-session-lease.test.mts scripts/pikkit-game-navigation.test.mts scripts/pikkit-league-date.test.mts scripts/nba-public-event-identity.test.mts scripts/nba-public-control.test.mts scripts/nba-pikkit-recovery.test.mjs scripts/mlb-capture-health.test.mjs scripts/mlb-public-movement.test.mts scripts/mlb-public-capture.test.mjs scripts/nba-public-markets.test.mts scripts/nba-public-extractor.test.mjs scripts/nba-public-continuity.test.mts",

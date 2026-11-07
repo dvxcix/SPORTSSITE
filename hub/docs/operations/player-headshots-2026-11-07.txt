@@ -1,0 +1,71 @@
+Player portrait identity repair — November 7, 2026 (CET)
+
+Preflight
+Git origin/main c52edc4606f1cfbe7cef92dc610621c9e27c3865 matched READY
+production dpl_EeS2zo5o6aFs7v6ZqvmsBcpTDdQn before editing and was refreshed
+again before release. Isolated codex/player-headshot-identities worktree.
+Required recovered NFL ancestry retained; unrelated original work preserved.
+
+Proven cause and scope
+The player directory calls BDL 1028028405 Alexandre Sarr; the existing cached
+ESPN team roster calls him Alex Sarr and supplies portrait 5160992. Exact-name
+artwork lookups dropped the photo despite the odds identity already supporting
+that alias. A bounded cached-directory audit found 13 missing/unmatched NBA
+portrait records. Seven had verified alternate names: Sarr, Bub/Carlton
+Carrington, Nic/Nicolas Claxton, Bones/Nah'Shon Hyland, Yang Hansen/Hansen Yang,
+David Jones Garcia/David Jones and Ace/Airious Bailey. Six more were missing
+from the cached team artwork: Chris Cenac Jr., Khalifa Diop, Riley Minix,
+Norchad Omier, Nae'Qwan Tomlin and Bruce Thornton.
+
+All 13 now have ID-pinned artwork metadata. Seven existing ESPN portrait URLs
+returned image/png HTTP 200. Six official NBA player-profile portraits returned
+image/png HTTP 200 and were visually inspected as actual photos, not silhouettes.
+Official NBA identities: 1643416,1631215,1642434,1641807,1641772,1643570.
+Source references include nba.com/player/<id> and the already cached ESPN team
+rosters. These IDs are artwork metadata only; no sportsbook identity aliases
+were broadened or guessed.
+
+Implementation
+Shared exact-team lookup accepts only exact names or verified ID/name aliases,
+rejects duplicate roster IDs, ambiguous names and conflicting photo candidates.
+No surname/fuzzy matching. Court, full board, First Basket and NBA directory
+hydration use it. Directory entity image caches move to v2; existing team
+artwork caches, source TTLs, leases and schedules are unchanged.
+Shared avatars and Court avatars can display verified static portrait fallback
+by player ID, including frozen/saved presentation, without reloading current
+research or rewriting an archive. Failed sources are attempted finitely; a new
+player/source can recover. Favorites, search, roster, composer, social posts
+and generated post images carry existing player IDs into that presentation.
+Old watchlists without any player ID cannot safely be rematched by name; new
+board saves receive the corrected image. No storage schema change.
+
+NFL search/team/player pages now use the directory's own numeric ESPN ID when
+headshot is absent. No added queries/provider requests. Read-only audit found
+78 current-season NFL directory rows with no primary photo, 17 with ESPN IDs;
+the other 61 have neither an ESPN ID nor any stored stat portrait. That does
+not establish that no external photo exists. Their identity/image mapping is
+still unavailable; do not substitute another athlete or call universal photo
+coverage verified. Existing Sideline photo fallbacks remain intact.
+
+Invariants and usage
+No capture jobs, source requests, Browserbase sessions, budget changes, database
+mutations, migrations, or historical replay. Closed full-board API keeps its
+original archived photo field and makes no artwork read; pure client artwork
+fallback does not alter original odds, observations, stats, hashes or cutoffs.
+Exact odds/openings/movements and sportsbook matching logic are unchanged.
+MLB remains hibernated. Unknown/conflicting portrait identity stays unavailable.
+
+Verification
+200/200 focused portrait, First Basket, shared-load and NBA freeze regressions.
+58/58 initial affected portrait/directory/search/selector/odds-UI/route checks.
+134/134 production checks. Cross-sport suite includes the new portrait tests.
+TypeScript passed with existing workspace core path mappings. Scoped ESLint:
+zero errors; one existing no-unused-expressions warning in nba-shared-load test.
+Review checked image-failure exhaustion, league/ID isolation, unchanged source
+query count, archive immutability and request cutoff rejection.
+Dynamic test loaders now explicitly load the real new helper. An unrelated
+old market-signal fixture was updated to use complete 2026 provenance and its
+original assertions retained; no production scoring behavior was changed.
+Full NBA suite 701/701 and dedicated NBA pregame freeze suite 123/123 pass.
+Final live verification is recorded in the adjacent release evidence. Prior unrelated NFL freeze assertion discrepancy is
+not claimed fixed or certified by this portrait change.

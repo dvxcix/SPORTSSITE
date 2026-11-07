@@ -3,6 +3,7 @@ import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
+import { nbaPortraitFallback } from '@/lib/nbaPlayerPortraits'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 // BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
@@ -169,7 +170,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: 14, gap: LEG_GAP }}>
               {legs.map((leg: any, i: number) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', width: '100%', height: LEG_H - LEG_GAP, gap: 12 }}>
-                  <Avatar src={leg.headshot_url} name={leg.player_name} size={44} />
+                  <Avatar src={leg.headshot_url || ((leg.sport ?? post.sport)?.toLowerCase() === 'nba' ? nbaPortraitFallback(leg.player_id) : null)} name={leg.player_name} size={44} />
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: C.text1 }}>{leg.player_name}</span>
                     <TeamLine sport={leg.sport ?? post.sport} team={leg.team} detail={leg.prop_label ?? leg.line} fontSize={14} color={C.text3} />
@@ -184,7 +185,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
             </div>
           ) : pd.mlb_id || pd.player_id ? (
             <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginTop: 14, gap: 14 }}>
-              <Avatar src={pd.headshot_url} name={pd.player_name} size={64} />
+              <Avatar src={pd.headshot_url || (post.sport?.toLowerCase() === 'nba' ? nbaPortraitFallback(pd.player_id) : null)} name={pd.player_name} size={64} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span style={{ fontSize: 22, fontWeight: 800, color: C.text1 }}>{pd.player_name}</span>
                 <TeamLine sport={post.sport} team={pd.team} detail={pd.prop_label ?? pd.line} fontSize={15} color={C.text2} />

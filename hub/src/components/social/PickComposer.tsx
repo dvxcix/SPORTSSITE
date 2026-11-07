@@ -289,7 +289,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
         {game && <div className={styles.field} ref={playerRef}>
           <span>Player</span>
           {player ? <div className={styles.selectedPlayer}>
-            <PlayerAvatar headshot={player.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, player.team) ?? player.team_logo_url} teamAbbr={player.team} name={player.name} size={34} />
+            <PlayerAvatar playerId={player.player_id} headshot={player.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, player.team) ?? player.team_logo_url} teamAbbr={player.team} name={player.name} size={34} />
             <div><strong>{player.name}</strong><small>{player.team} · {player.position}</small></div>
             <Check size={15} />
             <button type="button" onClick={() => setPlayerId('')} aria-label="Change player"><X size={14} /></button>
@@ -298,7 +298,7 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose, initialSpor
             <input value={playerQuery} onChange={event => { setPlayerQuery(event.target.value); setPlayerOpen(true) }} onFocus={() => setPlayerOpen(true)} placeholder="Search this matchup" />
             {playerOpen && <div className={styles.playerMenu}>
               {filteredPlayers.length ? filteredPlayers.map(item => <button type="button" key={item.player_id ?? item.mlb_id} onClick={() => choosePlayer(item)}>
-                <PlayerAvatar headshot={item.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, item.team) ?? item.team_logo_url} teamAbbr={item.team} name={item.name} size={30} />
+                <PlayerAvatar playerId={item.player_id} headshot={item.headshot_url} sport={sport} teamLogo={sportTeamLogoUrl(sport, item.team) ?? item.team_logo_url} teamAbbr={item.team} name={item.name} size={30} />
                 <span><strong>{item.name}</strong><small>{item.team} · {item.position}</small></span>
               </button>) : <p>No matching players</p>}
             </div>}

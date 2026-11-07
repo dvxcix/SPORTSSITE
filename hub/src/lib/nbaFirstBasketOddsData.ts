@@ -1,6 +1,7 @@
 import 'server-only'
+import { nbaRosterPortraits } from './nbaPlayerPortraits'
 import { artwork, getPaintRoster, getPaintFinalStats, getPaintIdentity } from './nbaPaintData'
-import { nbaName, type PaintGame, type PaintPlayer, type PaintRoster } from './nbaPaint'
+import { type PaintGame, type PaintPlayer, type PaintRoster } from './nbaPaint'
 import { nbaFirstEvent, nbaNormalizeFirstOdds, type FirstOddsEvent, type FirstBasketRow } from './nbaFirstBasketOdds'
 import { nbaSharedCache } from './nbaSharedCache'
 import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
@@ -49,9 +50,10 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
       getFrozenFirstRoster(game,[...new Set(snapshot.firstBasket.map(offer=>offer.player_id))]),
       Promise.all(teams.map(team=>artwork(team.abbreviation).catch(()=>({headshots:new Map<string,string|null>()})))),
     ])
+    const portraits=new Map(teams.map((team,index)=>[team.id,nbaRosterPortraits(roster.filter(player=>player.team.id===team.id),images[index]?.headshots??new Map())]))
     const rows=snapshot.firstBasket.flatMap(offer=>{
       const player=roster.find(player=>player.id===offer.player_id)
-      return player?[{game,offer,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:images[teams.findIndex(team=>team.id===player.team.id)]?.headshots.get(nbaName(`${player.first_name} ${player.last_name}`))??null}}]:[]
+      return player?[{game,offer,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:portraits.get(player.team.id)?.get(player.id)??null}}]:[]
     })
     return {rows,unmatched:snapshot.firstBasket.length-rows.length,eventMatched:snapshot.available.firstBasket,observedAt:snapshot.capturedAt.firstBasket??new Date().toISOString()}
   }
@@ -109,7 +111,8 @@ async function loadNbaFirstOdds(game:PaintGame,fresh:boolean,slateEvents?:FirstO
     fresh?Promise.resolve([]):Promise.all(teams.map(team=>artwork(team.abbreviation).catch(()=>({headshots:new Map<string,string|null>()})))),
   ])
   if(event&&event.id!==match?.id)throw new NbaFirstOddsUnavailable('upstream')
-  const players=roster.map(p=>({...p,headshot:images[teams.findIndex(team=>team.id===p.team.id)]?.headshots.get(nbaName(`${p.first_name} ${p.last_name}`))??null,average:{},logs:[],props:[],injury:null})) as PaintPlayer[]
+  const portraits=new Map(teams.map((team,index)=>[team.id,nbaRosterPortraits(roster.filter(player=>player.team.id===team.id),images[index]?.headshots??new Map())]))
+  const players=roster.map(p=>({...p,headshot:portraits.get(p.team.id)?.get(p.id)??null,average:{},logs:[],props:[],injury:null})) as PaintPlayer[]
   const result = event?nbaNormalizeFirstOdds(event,game,players):{rows:[],unmatched:0}
   const supplement = await getNbaBookFirstSupplement(game,result.rows.map(row=>row.offer),fresh)
   const retained = supplement.retainedPrimary ? new Set(supplement.retainedPrimary) : null

@@ -6,6 +6,7 @@ import ts from 'typescript'
 import * as paint from '../src/lib/nbaPaint.ts'
 import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as primary from '../src/lib/nbaPrimaryProps.ts'
+import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaSelectedPlayers } from '../src/lib/nbaMarketSelection.ts'
@@ -33,7 +34,7 @@ async function harness() {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => new Clock().toISOString().slice(0, 10) },
     './nbaOddsMode': { ...modes, nbaPregameOpen: (g: paint.PaintGame) => modes.nbaPregameOpen(g, now), nbaLiveOpen: (g: paint.PaintGame) => modes.nbaLiveOpen(g, now) },
     './nbaOddsClockData': { getNbaOddsGame: async (g: paint.PaintGame) => ({ ...g, ...(now >= tip ? { status: 'Final', status_state: 'final', period: 4, home_team_score: 110 } : {}) }) },
-    './nbaOddsHistory': { nbaAttachOpenings }, './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaPrimaryProps': primary,
+    './nbaPlayerPortraits': portraits, './nbaOddsHistory': { nbaAttachOpenings }, './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaPrimaryProps': primary,
     './nbaFirstBasketOddsData': {}, './nbaBookPropsData': {}, './nbaSupplementalProps': { nbaSupplementalQuote: () => false },
     './nbaOddsPhaseData': { getNbaPhaseSnapshot: async () => { phaseReads++; return { props: quotes, gameOdds: [], firstBasket: [], capturedAt: { props: new Date(tip - 60000).toISOString() } } } },
     './nbaSharedCache': { nbaSharedCache: async (key: string) => {
@@ -53,9 +54,9 @@ async function harness() {
   }
   const source = await readFile(new URL('../src/lib/nbaPaintData.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  const module = { exports: {} }
-  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, module, module.exports, Clock, () => { throw Error('Unexpected provider fetch') })
-  return { api: module.exports as typeof import('../src/lib/nbaPaintData.ts'), research, scouting, snapshots, setTime: (value: number) => { now = value }, onPriceRead: (callback: () => void) => { onPriceRead = callback }, metrics: () => ({ researchReads, phaseReads, wrapperReads }) }
+  const fixtureModule = { exports: {} }
+  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, fixtureModule, fixtureModule.exports, Clock, () => { throw Error('Unexpected provider fetch') })
+  return { api: fixtureModule.exports as typeof import('../src/lib/nbaPaintData.ts'), research, scouting, snapshots, setTime: (value: number) => { now = value }, onPriceRead: (callback: () => void) => { onPriceRead = callback }, metrics: () => ({ researchReads, phaseReads, wrapperReads }) }
 }
 
 test('pregame board keeps roster, season baseline, full-game and Q1 MM through tip and the next date', async () => {

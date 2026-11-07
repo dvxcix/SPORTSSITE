@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { nflPlayerPortrait } from '@/lib/nflPlayerPortrait'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 
@@ -15,12 +16,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
   const admin = createAdminClient()
 
-  const { data: player } = await admin.from('nfl_players')
+  const { data: storedPlayer } = await admin.from('nfl_players')
     .select('gsis_id,display_name,first_name,last_name,short_name,football_name,position_group,position,height,weight,headshot,college_name,jersey_number,birth_date,rookie_season,last_season,latest_team,status,years_of_experience,draft_year,draft_round,draft_pick,draft_team,espn_id,pfr_id,nfl_id,updated_at')
     .eq('gsis_id', id)
     .maybeSingle()
-  if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+  if (!storedPlayer) return NextResponse.json({ error: 'Player not found' }, { status: 404 })
 
+  const player = { ...storedPlayer, headshot: nflPlayerPortrait(storedPlayer) }
   const { data: team } = player.latest_team
     ? await admin.from('nfl_teams').select('team_abbr, team_name, team_nick, team_conf, team_division, team_color, team_logo_espn').eq('team_abbr', player.latest_team).maybeSingle()
     : { data: null }

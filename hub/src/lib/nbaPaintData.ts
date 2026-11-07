@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { bdlHeaders } from '@/lib/balldontlie'
 import { nbaBoardUsesSeason, nbaCurrentSeasonBoard, nbaCompactStat, nbaAverage, nbaDate, nbaMinutes, nbaName, nbaSample, nbaScheduleForDate, nbaToday, type PaintBoard, type PaintGame, type PaintGameOdds, type PaintPlayer, type PaintProp, type PaintRoster, type PaintStat, type PaintTeam } from './nbaPaint'
 import type { PaintScouting } from './nbaResearch'
+import { nbaRosterPortraits } from './nbaPlayerPortraits'
 import { nbaSharedCache } from './nbaSharedCache'
 import { nbaAttachOpenings } from './nbaOddsHistory'
 import { getNbaQuoteOpenings } from './nbaOddsHistoryData'
@@ -293,9 +294,10 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     optional('First-quarter logs unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason}&season_type=regular&start_date=${sampleStart.toISOString().slice(0, 10)}&end_date=${sampleEnd}&period=1&per_page=100`, 3600, 24, deadline), { rows: [], complete: false }),
   ])
   if (!stats.complete) issues.push('Game-log coverage incomplete; rates use returned games only')
-  let teamProfiles = teamStats.data, teamStatsSeason = sampleSeason
+  const teamProfiles = teamStats.data, teamStatsSeason = sampleSeason
   if (!injuries.complete) issues.push('Injury coverage incomplete')
   const avgMap = new Map<number, Record<string, number | null>>(seasonAverages.data.map(a => [a.player.id, { ...a.stats, turnover: a.stats.turnover ?? a.stats.tov ?? null }]))
+  const portraits = new Map(teams.map((team,index) => [team.id, nbaRosterPortraits(roster.rows.filter(player => player.team.id === team.id), images[index].headshots)]))
   const players: PaintPlayer[] = roster.rows.map(player => {
     const valid = (row: PaintStat, season: number) => row.player.id === player.id && row.game.date.slice(0, 10) < game.date && row.game.date.slice(0, 10) >= `${season}-07-01` && row.game.date.slice(0, 10) < `${season + 1}-07-01` && (row.game.season == null || row.game.season === season) && row.game.postseason !== true && (row.game.status_state === 'final' || row.game.status === 'Final')
     const currentLogs = stats.rows.filter(row => valid(row, sampleSeason) && row.game.date.slice(0, 10) <= sampleEnd)
@@ -306,7 +308,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     for (const key of ['pts', 'reb', 'ast', 'fg3m', 'stl', 'blk', 'turnover', 'fga', 'fgm', 'fg3a', 'fta', 'ftm']) { const values = logs.map(s => (s as unknown as Record<string, number | null>)[key]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)); sampleAvg[key] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null }
     for (const market of ['double_double','triple_double']) sampleAvg[market] = nbaAverage(logs, market)
     const mins = logs.map(s => nbaMinutes(s.min)).filter((v): v is number => v != null); sampleAvg.min = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null
-    return { ...player, headshot: images[teams.findIndex(t => t.id === player.team.id)]?.headshots.get(nbaName(`${player.first_name} ${player.last_name}`)) ?? null,
+    return { ...player, headshot: portraits.get(player.team.id)?.get(player.id) ?? null,
       injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
       averageSeason: sampleSeason,
       periodLogs, logs, props: quotes.props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
