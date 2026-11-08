@@ -45,7 +45,29 @@ test('rungs show estimated counts, actual zero and unavailable picks independent
 test('saved player face, team logo and matching team gradient appear once per player',async()=>{const ui=await mount();try{const face=ui.host.querySelector<HTMLImageElement>('img[alt="Alpha headshot"]');assert.ok(face);const avatar=face.parentElement!;assert.match(avatar.style.background,/linear-gradient/);assert.match(avatar.style.background,/rgb\(0, 34, 68\)/);assert.ok(avatar.querySelector('img[alt="SEA logo"]'));assert.equal(ui.host.querySelectorAll('img[alt="Alpha headshot"]').length,1);assert.equal(ui.host.querySelectorAll('img[alt="Beta headshot"]').length,0)}finally{await ui.close()}})
 test('sorting by a chosen milestone ranks the requested direction, not another rung',async()=>{const ui=await mount();try{await select(ui.host,'Sort odds board milestone','50');await select(ui.host,'Sort odds board','lengthened');assert.match(ui.host.querySelector('tbody tr th')?.textContent??'',/Beta/)}finally{await ui.close()}})
 test('primary controls stay visible while optional filters show their active count',async()=>{const ui=await mount();try{const details=ui.host.querySelector('details');assert.ok(details);assert.equal(details.open,false);assert.ok(ui.host.querySelector('select[aria-label="Sort odds board"]')?.closest('details')==null);assert.ok(ui.host.querySelector('input[aria-label="Find odds board player"]')?.closest('details')==null);await act(async()=>{details.open=true});await select(ui.host,'Odds board team','SEA');await select(ui.host,'Compare odds to','earlier');assert.match(details.querySelector('summary')?.textContent??'',/2 active/);assert.match(ui.host.querySelector('tbody')?.textContent??'',/Alpha/);assert.doesNotMatch(ui.host.querySelector('tbody')?.textContent??'',/Beta/)}finally{await ui.close()}})
-test('game filter works and partial games stay explicitly visible',async()=>{const value={...payload,games:[payload.games[0],{...payload.games[1],status:'incomplete'}]};const ui=await mount(value);try{assert.match(ui.host.textContent??'',/Some saved prices unavailable: MIA @ NYJ/);await select(ui.host,'Odds board game','one');assert.match(ui.host.textContent??'',/Alpha/);assert.doesNotMatch(ui.host.querySelector('tbody')?.textContent??'',/Beta/)}finally{await ui.close()}})
+test('the board distinguishes partial source coverage from missing selected prices', async () => {
+  const value = { ...payload, games: [
+    payload.games[0], { ...payload.games[1], status: 'incomplete' },
+    { id: 'three', away: 'BUF', home: 'NE', status: 'unavailable' },
+  ] }
+  const ui = await mount(value)
+  try {
+    const status = () => [...ui.host.querySelectorAll('[role="status"]')].map(node => node.textContent).join(' ')
+    assert.match(status(), /No saved prices for this market and sportsbook in BUF @ NE/)
+    assert.doesNotMatch(status(), /MIA @ NYJ/)
+    assert.match(ui.host.querySelector('option[value="two"]')?.textContent ?? '', /partial source coverage/)
+    await select(ui.host, 'Odds board game', 'two')
+    assert.match(status(), /Showing saved prices/)
+    assert.match(ui.host.querySelector('tbody')?.textContent ?? '', /Beta/)
+    assert.doesNotMatch(ui.host.querySelector('tbody')?.textContent ?? '', /Alpha/)
+    assert.doesNotMatch(status(), /BUF @ NE/)
+    await select(ui.host, 'Odds board game', 'three')
+    assert.equal(ui.host.querySelector('tbody'), null)
+    assert.match(status(), /No milestone prices for these filters/)
+  } finally {
+    await ui.close()
+  }
+})
 test('missing opening or earlier observations do not appear as zero movement',async()=>{const value={...payload,quotes:[quote('one',1,'Alpha','SEA',25,150,null)]};const ui=await mount(value);try{assert.match(ui.host.textContent??'',/Open —/);assert.doesNotMatch(ui.host.textContent??'',/Unchanged/);await select(ui.host,'Compare odds to','earlier');assert.match(ui.host.textContent??'',/Earlier —/);assert.doesNotMatch(ui.host.textContent??'',/Unchanged/)}finally{await ui.close()}})
 test('opening and earlier compare different recorded baselines without inventing zeroes',async()=>{const value={...payload,quotes:[quote('one',1,'Alpha','SEA',25,-870,-870,-940)]};const ui=await mount(value);try{assert.match(ui.host.textContent??'',/Open -940/);assert.match(ui.host.textContent??'',/Lengthened/);assert.doesNotMatch(ui.host.textContent??'',/Unchanged/);await select(ui.host,'Compare odds to','earlier');assert.match(ui.host.textContent??'',/Earlier -870/);assert.match(ui.host.textContent??'',/0\.00 pp · Unchanged/)}finally{await ui.close()}})
 test('a changed phase hides old prices while loading and restores filters and scroll',async()=>{

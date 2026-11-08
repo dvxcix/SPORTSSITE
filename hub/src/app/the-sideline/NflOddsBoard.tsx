@@ -95,7 +95,12 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     all.sort((a,b)=>{if(sort==='player')return a.player.localeCompare(b.player)||a.id.localeCompare(b.id);const x=extreme(a),y=extreme(b);return x==null||y==null?x==null&&y==null?a.player.localeCompare(b.player):x==null?1:-1:(sort==='lengthened'?x-y:y-x)||a.player.localeCompare(b.player)})
     return {rows:all,lines:[...columns].sort((a,b)=>a-b)}
   },[filtered,payload,sort,sortLine,comparison])
-  const incomplete=payload?.games.filter(g=>g.status!=='ready')??[]
+  const pricedGames = new Set(quotes.map(quote => quote.gameId))
+  const selectedGames = (payload?.games ?? []).filter(item =>
+    (game === 'all' || item.id === game) && (team === 'all' || item.away === team || item.home === team))
+  const gamesWithoutPrices = selectedGames.filter(item => !pricedGames.has(item.id))
+  const selectedGameHasPartialCoverage = game !== 'all' && selectedGames.some(item =>
+    item.status !== 'ready' && pricedGames.has(item.id))
   const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(sortLine!=='all'&&lines.some(line=>String(line)===sortLine))
   const playerCard=(row:Row)=>{
     const saved=identities.get(nflBoardIdentityKey(row.gameId,row.playerId,row.team,row.player)),visual=visuals.get(`${row.gameId}:${row.team}`)
@@ -113,7 +118,10 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     <details className={styles.options}>
       <summary>Filters{filterCount>0&&<span> · {filterCount} active</span>}</summary>
       <div className={styles.controls}>
-      <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(g=><option key={g.id} value={g.id}>{g.away} @ {g.home}{g.status==='ready'?'':' · incomplete'}</option>)}</select></label>
+      <label>Game<select aria-label="Odds board game" value={game} onChange={e=>{setGame(e.target.value);setTeam('all')}}><option value="all">All games</option>{payload?.games.map(item => {
+        const coverage = !pricedGames.has(item.id) ? ' · no saved prices' : item.status !== 'ready' ? ' · partial source coverage' : ''
+        return <option key={item.id} value={item.id}>{item.away} @ {item.home}{coverage}</option>
+      })}</select></label>
       <label>Team<select aria-label="Odds board team" value={team} onChange={e=>setTeam(e.target.value)}><option value="all">All teams</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
       <label>Compare<select aria-label="Compare odds to" value={comparison} onChange={e=>setComparison(e.target.value as typeof comparison)}><option value="opening">Opening</option><option value="earlier">Earlier</option></select></label>
       {!scorerLabel && <label>Sort milestone<select aria-label="Sort odds board milestone" value={lines.some(line=>String(line)===sortLine)?sortLine:'all'} onChange={e=>setSortLine(e.target.value)}><option value="all">Any milestone</option>{lines.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>}
@@ -121,7 +129,8 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     </details>
     {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
-    {!!incomplete.length&&<p role="status">Some saved prices unavailable: {incomplete.map(g=>`${g.away} @ ${g.home}`).join(', ')}.</p>}
+    {selectedGameHasPartialCoverage && <p role="status">Showing saved prices. Additional source coverage is incomplete for this game.</p>}
+    {!!rows.length && !!gamesWithoutPrices.length && <p role="status">No saved prices for this market and sportsbook in {gamesWithoutPrices.map(item => `${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label={scorerLabel ? `${scorerLabel} odds and movement` : "NFL milestone odds and movement"} tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{scorerLabel ?? `${line}+`}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line));return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small>Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp · ${move>0?'Shortened':move<0?'Lengthened':'Unchanged'}`}</span><small className={styles.picks}>{count?`${count[7]?'Est. ':''}${count[6].toLocaleString()} picks`:'Picks —'}</small></td>})}</tr>)}</tbody></table></div>}
     {payload&&!rows.length&&<p role="status">{scorerLabel ? `No saved ${scorerLabel.toLowerCase()} prices for these filters.` : 'No milestone prices for these filters.'}</p>}
   </section>
