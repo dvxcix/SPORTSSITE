@@ -33,6 +33,21 @@ test('duplicate cached rung identities are omitted, never silently chosen',()=>{
  const row:NflBoardPick=['game',1,'SEA','receptions','fanduel',5,10,true]
  assert.deepEqual(nflUniqueBoardPicks([row,[...row],['game',1,'SEA','receptions','fanduel',6,0,false]]),[['game',1,'SEA','receptions','fanduel',6,0,false]])
 })
+test('only a unique named scorer count can populate a scorer row', () => {
+  const p = player()
+  const scorer = { propType: 'anytime_td', label: 'Anytime touchdown', rawMarket: 'Anytime TD Scorer', picks: 18, capturedAt }
+  p.markets = [{
+    key: 'anytime_td:0.5', propType: 'anytime_td', category: 'touchdowns', label: scorer.label, line: 0.5,
+    offers: [{ vendor: 'fanduel', type: 'milestone', line: 0.5, openingLine: 0.5, current: { odds: 200 }, opening: null, updatedAt: capturedAt }],
+  }]
+  p.publicPicks = [{ ...scorer, rawMarket: 'TDs', picks: 30 }]
+  const counts = () => nflOddsBoardPicks('game', ['SEA', 'CHI'], board(p), cutoff, now)
+  assert.deepEqual(counts(), [])
+  p.publicPicks.push(scorer)
+  assert.deepEqual(counts(), [['game', 1, 'SEA', 'anytime_td', 'fanduel', 0.5, 18, false]])
+  p.publicPicks.push({ ...scorer, picks: 22 })
+  assert.deepEqual(counts(), [])
+})
 test('a quote later than its source frame cannot influence the Props ladder anchor',()=>{
  const p=player(), altered={...p,markets:p.markets.map(m=>m.line===4?{...m,offers:m.offers.map(o=>({...o,updatedAt:'2026-11-04T20:31:00.000Z'}))}:m)}
  const safe=nflFilterPickLadder(board(altered),'2026-11-04T20:30:00.000Z',cutoff,now)!

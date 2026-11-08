@@ -67,16 +67,25 @@ export function nflOddsBoardPicks(game: string, teams: string[], board: Sideline
         const key = JSON.stringify([item.line, item.side, item.kind]); if (exactKeys.has(key)) ambiguous = true; else exactKeys.add(key)
       }
       if (ambiguous) continue
-      const estimated = nflOddsBoardScorerLabel(prop) ? null : estimateLadderPicks(clean, prop, book)
+      const scorerLabel = nflOddsBoardScorerLabel(prop)
+      const scorerPattern = prop === 'anytime_td' ? /^anytime\s+(?:td|touchdown)\s+scorer$/i : /^first\s+(?:td|touchdown)\s+scorer$/i
+      // The public feed records named scorer contracts without a numeric line.
+      // A generic touchdown total or conflicting duplicate is not that count.
+      const namedCounts = scorerLabel ? items.filter(item =>
+        item.propType === prop && item.line == null && item.side == null && item.kind == null
+        && typeof item.rawMarket === 'string' && scorerPattern.test(item.rawMarket.trim())) : []
+      const namedCount = namedCounts.length === 1 ? namedCounts[0].picks : null
+      const estimated = scorerLabel ? null : estimateLadderPicks(clean, prop, book)
       for (const market of clean.markets.filter(item => item.propType === prop)) for (const offer of market.offers) {
         const line = nflOddsBoardOfferLine(market, offer)
         if (offer.vendor !== book || line == null) continue
         const exact = offer.line == null ? null : contractPicks(clean, prop, offer.line, 'over', 'milestone')
-        const value = exact ?? estimated?.get(market.key)
+        const observed = exact ?? namedCount
+        const value = observed ?? estimated?.get(market.key)
         if (!Number.isSafeInteger(value) || value! < 0) continue
         const key = nflBoardPickKey(game, player.id, team, prop, book, line)
         if (seen.has(key)) { conflicts.add(key); continue }
-        seen.add(key); rows.push([game, player.id, team, prop, book, line, value!, exact == null])
+        seen.add(key); rows.push([game, player.id, team, prop, book, line, value!, observed == null])
       }
     }
   }
