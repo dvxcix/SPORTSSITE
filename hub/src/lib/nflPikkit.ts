@@ -1,3 +1,4 @@
+import { nflMatchupTeam } from './nflMatchupBoard'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { normalizeNflPlayerName } from './nflPlayerName'
 
@@ -142,8 +143,11 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
   return slug(rawLabel || rawKey) || 'unknown'
 }
 
+const nflPickTeam = (team: string) => normalizeNflPikkitName(nflMatchupTeam(team))
+
 export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflPikkitSnapshot | null): SidelineOddsBoard {
   if (!snapshot) return { ...board, picksCapturedAt: null, players: board.players.map(player => ({ ...player, publicPicks: [] })) }
+  const gameTeams = [snapshot.awayTeam, snapshot.homeTeam].map(nflPickTeam)
   const picksByPlayer = new Map<string, NonNullable<NflOddsPlayer['publicPicks']>>()
   const boardNameCounts = new Map<string, number>()
   for (const player of board.players) {
@@ -157,14 +161,13 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
     if (snapshot.invalidMarkets?.includes(propType)) continue
     for (const player of market.players) {
       const name = normalizeNflPlayerName(player.playerName || player.playerKey)
-      const suppliedTeam = normalizeNflPikkitName(player.team ?? '')
-      const gameTeams = [snapshot.awayTeam, snapshot.homeTeam].map(normalizeNflPikkitName)
+      const suppliedTeam = nflPickTeam(player.team ?? '')
       const candidates = board.players.filter(candidate => normalizeNflPlayerName(candidate.name) === name
-        && Boolean(candidate.gsisId) && gameTeams.includes(normalizeNflPikkitName(candidate.team)))
+        && Boolean(candidate.gsisId) && gameTeams.includes(nflPickTeam(candidate.team)))
       // Old captures may inherit a same-name player's unrelated team from odds.
       // Repair only against a unique, canonically identified player in this game.
       const repairedTeam = suppliedTeam && !gameTeams.includes(suppliedTeam) && candidates.length === 1
-        ? normalizeNflPikkitName(candidates[0].team) : suppliedTeam
+        ? nflPickTeam(candidates[0].team) : suppliedTeam
       const key = `${repairedTeam}:${name}`
       const pick = { propType, label: market.label, rawMarket: market.rawLabel, picks: player.picks, capturedAt: snapshot.capturedAt }
       picksByPlayer.set(key, [...(picksByPlayer.get(key) ?? []), pick])
@@ -175,7 +178,7 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
     picksCapturedAt: snapshot.capturedAt,
     players: board.players.map(player => {
       const name = normalizeNflPlayerName(player.name)
-      const exact = picksByPlayer.get(`${normalizeNflPikkitName(player.team)}:${name}`)
+      const exact = picksByPlayer.get(`${nflPickTeam(player.team)}:${name}`)
       return { ...player, publicPicks: exact ?? (boardNameCounts.get(name) === 1 ? picksByPlayer.get(`:${name}`) : undefined) ?? [] }
     }),
   }

@@ -138,7 +138,7 @@ test('existing scheduled warmer rotates successful games and only reads peers fo
   assert.deepEqual([a.gameId,b.gameId],['g1','g2']);assert.deepEqual(h.sources,['g1','g2'])
 })
 
-async function dataHarness(writesEnabled = true) {
+async function dataHarness(writesEnabled = true, spendingPaused = false) {
   const h=await archiveHarness(), tables:string[]=[], cutoffs:string[]=[]
   let original:any=null, gameStateHook:null|(()=>void)=null, analyses=0, supplement:any=null, currentFailure=false
   const board={...EMPTY_SIDELINE_ODDS,status:'ready',source:'snapshot',bdlGameId:9,capturedAt:new Date(start-5000).toISOString(),players:[{id:1,name:'Captured Name',team:'A',position:'WR',jersey:7,markets:[],tdBaselines:[{averageOdds:333}]}]}
@@ -149,7 +149,7 @@ async function dataHarness(writesEnabled = true) {
   const api=await compiled('src/app/the-sideline/data.ts',{'server-only':{},'next/cache':{unstable_cache:(fn:any)=>fn},'@/lib/supabase/admin':{createAdminClient:()=>db},
     '@/lib/nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{tables.push('nba_source_cache');return {value:await load()}}},
     '@/lib/nflMarketArchive':{attachNflTdBaselines:(b:any)=>b},'@/lib/nflOddsTypes':{EMPTY_SIDELINE_ODDS},'@/lib/nflPikkit':{attachNflPikkitSnapshot:(b:any)=>b},'@/lib/sidelinePublicBoard':{sidelinePublicBoard:(b:any)=>b},'@/lib/nflFanduel':{attachNflFanduel:(b:any,s:any)=>s??b,loadNflFanduel:async(_id:string,at:string)=>{if(at)cutoffs.push(at);return supplement}},
-    '@/lib/browserbaseSpendingPause':{...spendingPause,NFL_PAUSED_PROJECTION_WRITES_ENABLED:writesEnabled,NFL_PAUSED_PROJECTION_ENFORCE_ENABLED:writesEnabled},'@/lib/nflPausedProjection':pausedProjection,
+    '@/lib/browserbaseSpendingPause':{...spendingPause,BROWSERBASE_SPENDING_PAUSED:spendingPaused,NFL_PAUSED_PROJECTION_WRITES_ENABLED:writesEnabled,NFL_PAUSED_PROJECTION_ENFORCE_ENABLED:writesEnabled},'@/lib/nflPausedProjection':pausedProjection,
     './analysis':{getSidelineLens:async()=>{analyses++;return {status:'calculated'}}},'./boardAnalysis':{getSidelineBoardLens:async()=>{analyses++;return {status:'calculated'}}},'@/lib/nflSample':samples,'@/lib/nflPregameResearchData':h.api,'@/lib/nflResearchUnavailable':unavailable,'@/lib/nflWeatherServer':{getNflWeather:async()=>''},
     './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b},'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:'In Progress',status_state:'in_progress'}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
   return {...h,api,tables,cutoffs,board,setCurrent:(value:any)=>{currentBoard=value},setCurrentFailure:(value:boolean)=>{currentFailure=value},setSupplement:(value:any)=>{supplement=value},setOriginal:(value:any)=>{original=value},setGameStateHook:(f:()=>void)=>{gameStateHook=f},analyses:()=>analyses}
@@ -176,7 +176,7 @@ test('a live score await crossing kickoff refreshes the final research board',as
   assert.equal(result.odds.players[0].jersey,12)
 })
 test('a paused observation archives complete offers, projects current, and stays identical across kickoff',async()=>{
-  const h=await dataHarness(), oldTime=new Date(start-6000).toISOString(), freshTime=new Date(start-3000).toISOString()
+  const h=await dataHarness(true,true), oldTime=new Date(start-6000).toISOString(), freshTime=new Date(start-3000).toISOString()
   const quote=(vendor:string,odds:number,updatedAt:string)=>({vendor,line:1,openingLine:1,type:'milestone',current:{odds},opening:null,updatedAt})
   const direct=quote('fanduel',400,oldTime), fresh=quote('draftkings',350,freshTime)
   const market=(offers:any[])=>({key:'first_td:1',propType:'first_td',label:'First TD',category:'touchdowns',line:1,offers})

@@ -1,6 +1,6 @@
 import type { NflOddsPlayer, SidelineOddsBoard } from './nflOddsTypes'
 import { contractPicks, estimateLadderPicks } from './nflLadders'
-import { isNflOddsBoardLine, nflOddsBoardOfferLine, nflOddsBoardScorerLabel } from './nflOddsBoard'
+import { isNflOddsBoardLine, nflOddsBoardOfferLine, nflOddsBoardScorerLabel, nflOddsBoardTeam } from './nflOddsBoard'
 import { americanImpliedProbability } from './nflMarketMath'
 
 export type NflBoardPick = [game: string, player: number, team: string, market: string, book: string, line: number, picks: number, estimated: boolean]
@@ -40,12 +40,13 @@ export function nflUniqueBoardPicks(value: unknown): NflBoardPick[] {
 export function nflOddsBoardPicks(game: string, teams: string[], board: SidelineOddsBoard, cutoff: string, now = Date.now()): NflBoardPick[] {
   const stop = Date.parse(cutoff), pickedAt = Date.parse(board.picksCapturedAt ?? '')
   if (!Number.isFinite(stop) || !Number.isFinite(pickedAt) || pickedAt >= stop || pickedAt > now || !Array.isArray(board.players) || board.players.length > 160) return []
-  const validTeams = new Set(teams.map(team => team.toUpperCase())), ids = new Map<number, number>()
+  const ids = new Map<number, number>()
   for (const player of board.players) ids.set(player.id, (ids.get(player.id) ?? 0) + 1)
   const rows: NflBoardPick[] = [], seen = new Set<string>(), conflicts = new Set<string>()
   for (const player of board.players) {
-    if (!Number.isSafeInteger(player.id) || player.id <= 0 || ids.get(player.id) !== 1 || typeof player.team !== 'string' || !validTeams.has(player.team.toUpperCase()) || !Array.isArray(player.markets) || player.markets.length > 500) continue
-    const team = player.team.toUpperCase()
+    if (!Number.isSafeInteger(player.id) || player.id <= 0 || ids.get(player.id) !== 1 || typeof player.team !== 'string' || !Array.isArray(player.markets) || player.markets.length > 500) continue
+    const team = nflOddsBoardTeam(teams, player.team)
+    if (!team) continue
     // All inputs must be the same actual pregame pick observation. Invalid
     // sibling counts or quote times cannot silently become a partial model.
     const items = player.publicPicks ?? []

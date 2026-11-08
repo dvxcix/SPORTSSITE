@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
-import { isNflOddsBoardLine, nflOddsBoardQuotes, type NflOddsBoardFrame, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
+import { isNflOddsBoardLine, nflOddsBoardQuotes, nflOddsBoardTeam, type NflOddsBoardFrame, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
 import { getSidelineGames } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, nflUniqueBoardPicks, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { fitNflGamePicks, fitNflResponsePicks } from '@/lib/nflOddsBoardBudget'
+import { nflMatchupTeam } from '@/lib/nflMatchupBoard'
 import { attachNflFanduel } from '@/lib/nflFanduel'
-import { attachNflPikkitSnapshot, normalizeNflPikkitName, type NflPikkitSnapshot } from '@/lib/nflPikkit'
+import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } from '@/lib/browserbaseSpendingPause'
 import { visibleNflObservedOdds, type NflObservedOdds } from '@/lib/nflPausedProjection'
 import { nflOddsBoardHash, nflOddsBoardSignature, readNflOddsBoardClocks, sharedNflOddsBoardClocks, type NflOddsBoardClock } from '@/lib/nflOddsBoardClock'
@@ -108,7 +109,7 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v8:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v9:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
@@ -161,11 +162,11 @@ export async function GET(request:NextRequest){
             const snapshot=pickInput.snapshot as NflPikkitSnapshot,storedAt=pickInput.captured_at
             const baseRows=(results[0].data??[]) as unknown as Array<{board:SidelineOddsBoard;captured_at:string}>,fdRows=(results[1].data??[]) as unknown as Array<{board:SidelineOddsBoard;captured_at:string;raw_tabs?:unknown}>
             const base=baseRows.find(item=>item.captured_at===sources[0][0].capturedAt),fd=fdRows.find(item=>item.captured_at===sources[1][0]?.capturedAt)
-            const expected=[game.away.abbr,game.home.abbr].map(normalizeNflPikkitName).sort(),actual=[snapshot?.awayTeam,snapshot?.homeTeam].map(value=>typeof value==='string'?normalizeNflPikkitName(value):'').sort()
+            const expected=[game.away.abbr,game.home.abbr].map(nflMatchupTeam).sort(),actual=[snapshot?.awayTeam,snapshot?.homeTeam].map(value=>typeof value==='string'?nflMatchupTeam(value):'').sort()
             if(base&&snapshot?.gameId===game.id&&snapshot.gameDate===game.gameday&&actual.every((value,index)=>value===expected[index])&&Array.isArray(snapshot.markets)&&snapshot.markets.length<=200&&Buffer.byteLength(JSON.stringify(snapshot))<=1024*1024&&Number.isFinite(Date.parse(storedAt))&&Date.parse(storedAt)<Date.parse(cutoff)&&Date.parse(storedAt)<=Date.parse(capturedNow)){
-              const allowed=new Set([game.away.abbr,game.home.abbr]),safeBase=nflFilterPickLadder(base.board,base.captured_at,cutoff,Date.parse(capturedNow))
+              const teams=[game.away.abbr,game.home.abbr],safeBase=nflFilterPickLadder(base.board,base.captured_at,cutoff,Date.parse(capturedNow))
               const safeDirect=fd&&Array.isArray(fd.raw_tabs)&&fd.raw_tabs.length>0&&fd.raw_tabs.length<=32&&fd.raw_tabs.every(tab=>tab&&typeof tab==='object'&&(tab as {incomplete?:boolean}).incomplete===false)?nflFilterPickLadder(fd.board,fd.captured_at,cutoff,Date.parse(capturedNow)):null
-              if(safeBase){const baseBoard={...safeBase,players:safeBase.players.filter(player=>allowed.has(player.team))};board=attachNflPikkitSnapshot(attachNflFanduel(baseBoard,safeDirect),{...snapshot,capturedAt:storedAt})}
+              if(safeBase){const baseBoard={...safeBase,players:safeBase.players.filter(player=>nflOddsBoardTeam(teams,player.team))};board=attachNflPikkitSnapshot(attachNflFanduel(baseBoard,safeDirect),{...snapshot,capturedAt:storedAt})}
             }
           }
           if(board)picks=nflOddsBoardPicks(game.id,[game.away.abbr,game.home.abbr],board,cutoff,Date.parse(capturedNow))
@@ -181,8 +182,8 @@ export async function GET(request:NextRequest){
       if(groups.length!==games.length||Buffer.byteLength(JSON.stringify(pool))>4*1024*1024)throw new Error('Odds board exceeds limit')
       return pool
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKeys=[`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
+    const viewKey=`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{

@@ -1,4 +1,5 @@
 import type { NflMarketOffer, NflPlayerMarket, SidelineOddsBoard } from './nflOddsTypes'
+import { nflMatchupTeam } from './nflMatchupBoard'
 import { americanImpliedProbability } from './nflMarketMath'
 
 export type NflOddsBoardFrame = { capturedAt: string; board: SidelineOddsBoard; typedOpeningSource?: boolean }
@@ -11,6 +12,13 @@ export const NFL_ODDS_BOARD_SCORER_MARKETS = {
   anytime_td: 'Anytime Touchdown',
   first_td: 'First Touchdown',
 } as const
+
+/** The schedule abbreviation is the display key; accept only one exact NFL team identity. */
+export function nflOddsBoardTeam(teams: readonly string[], playerTeam: string) {
+  const identity = nflMatchupTeam(playerTeam)
+  const matches = teams.filter(team => nflMatchupTeam(team) === identity)
+  return matches.length === 1 ? matches[0] : null
+}
 
 export function nflOddsBoardScorerLabel(market: string): string | undefined {
   if (market === 'anytime_td' || market === 'first_td') return NFL_ODDS_BOARD_SCORER_MARKETS[market]
@@ -40,7 +48,6 @@ export function nflOddsBoardMove(current: number | null, previous: number | null
 export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: string, sources: NflOddsBoardFrame[][], now = Date.now(), carryLastSeen = false): NflOddsBoardQuote[] {
   const stop = date(cutoff)
   if (stop == null) return []
-  const validTeams = new Set(teams.map(t => t.toUpperCase()))
   const current = new Map<string, Candidate[]>(), prior = new Map<string, Candidate[]>()
   for (const frames of sources) {
     const validFrames = frames.filter(f => { const t = date(f.capturedAt); return t != null && t < stop && t <= now && Array.isArray(f.board?.players) }).sort((a,b) => Date.parse(b.capturedAt)-Date.parse(a.capturedAt)).slice(0,2)
@@ -48,8 +55,8 @@ export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: stri
       const frameTime = date(frame.capturedAt)!
       const frameKeys = new Map<string, Candidate[]>()
       for (const player of frame.board.players) {
-        const team = player.team?.toUpperCase()
-        if (!Number.isSafeInteger(player.id) || player.id <= 0 || !team || !validTeams.has(team) || !player.name || !Array.isArray(player.markets)) continue
+        const team = typeof player.team === 'string' ? nflOddsBoardTeam(teams, player.team) : null
+        if (!Number.isSafeInteger(player.id) || player.id <= 0 || !team || !player.name || !Array.isArray(player.markets)) continue
         for (const market of player.markets) for (const offer of market.offers ?? []) {
           const observed = date(offer.updatedAt), line = nflOddsBoardOfferLine(market, offer), value = offer.current?.odds
           if (line == null || !offer.vendor || observed == null || observed > frameTime || observed >= stop || observed > now || americanImpliedProbability(value) == null) continue

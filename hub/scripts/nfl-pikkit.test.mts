@@ -25,6 +25,7 @@ test('NFL capture keeps league-to-event navigation inside the app and never reop
       '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null },
       '@/lib/browserbase': { openPikkitSession: async () => ({ page, close: async () => { closes++ } }) },
       '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError },
+      '@/lib/nflNov8BrowserRecovery': { nflRecoveryReservation: () => assert.fail('Unscoped capture cannot use recovery') },
       '@/lib/platform': { PLATFORM_URL: 'https://fixture.test' },
       '@/lib/nflPikkitSchedule': { getUpcomingNflPikkitGames: async () => [{ gameId: 'fixture', awayName: 'Away Team', homeName: 'Home Team' }] },
       '@/lib/scrapers/pikkitScraper': { runPikkitScrape: scrape },
