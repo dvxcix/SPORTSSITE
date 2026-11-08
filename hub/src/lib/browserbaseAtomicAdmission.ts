@@ -10,6 +10,7 @@ export type BrowserbaseAtomicRequest = {
 }
 type AtomicInput = {
   projectId: string; periodId: string; timeoutSeconds: number
+  reservationId?: string
   readUsage: () => Promise<{ browserMinutes: number; proxyBytes: number }>
   reserveAtomic: (input: BrowserbaseAtomicRequest) => Promise<unknown>
   nba?: NbaScope

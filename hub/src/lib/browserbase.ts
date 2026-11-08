@@ -159,7 +159,7 @@ async function releasePersistentSession(bb: Browserbase, sessionId: string, proj
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; timeoutSeconds?: number; requestTimeoutMs?: number; solveCaptchas?: boolean; verifyRelease?: boolean; reservationId?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   if (!browserbaseScheduledScopeAllowed(opts.metadata)) throw new Error('Cloud browser capture is unavailable for this workflow')
   const timeoutSeconds = opts.timeoutSeconds ?? AUTOMATED_SESSION_TIMEOUT_SECONDS
   const nba = opts.metadata?.sport === 'nba'
@@ -197,6 +197,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     projectId: pid,
     periodId: BROWSERBASE_BUDGET_PERIOD,
     timeoutSeconds,
+    reservationId: opts.reservationId,
     ...(nba ? { nba: { workflow, ...(opts.metadata?.gameIds !== undefined ? { gameIds: opts.metadata.gameIds as readonly number[] } : {}) } } : {}),
     readUsage: () => bb.projects.usage(pid, { timeout: 5000, maxRetries: 0 }),
   }
@@ -319,10 +320,11 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // Set PIKKIT_BROWSER_GEO_STATE to a two-letter state code only when a stable
 // state is important; otherwise both setup and reuse use Browserbase's
 // managed proxy in us-east-1.
-export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}, options: { requestTimeoutMs?: number } = {}): Promise<BBSession> {
+export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}, options: { requestTimeoutMs?: number; reservationId?: string } = {}): Promise<BBSession> {
   return openSession({
     contextId,
     requestTimeoutMs: options.requestTimeoutMs,
+    reservationId: options.reservationId,
     geoState: pikkitGeoState(),
     // Preserve one proxied identity for Pikkit and its Cloudflare challenge,
     // while analytics/CDN traffic bypasses the metered residential proxy.

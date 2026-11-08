@@ -5,6 +5,7 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
+import { nextNflRecoveryBatch, NFL_RECOVERY_QUERY } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
 import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
@@ -32,11 +33,12 @@ async function run(req: Request) {
   })
   // The existing scraper opens at most four pages together. Reserve only one
   // such group: a timeout cannot consume attempts for later, unvisited groups.
-  const candidates = decisions.filter(item => item.decision.due).sort((a,b)=>a.scope.kickoff-b.scope.kickoff||(a.decision.attempt??0)-(b.decision.attempt??0)||a.game.gameId.localeCompare(b.game.gameId)).slice(0,4)
+  const recovery = await nextNflRecoveryBatch(admin, 'public', now.getTime())
+  const candidates = decisions.filter(item => item.decision.due && (!recovery || recovery.includes(item.game.gameId))).sort((a,b)=>a.scope.kickoff-b.scope.kickoff||(a.decision.attempt??0)-(b.decision.attempt??0)||a.game.gameId.localeCompare(b.game.gameId)).slice(0,4)
   const selected: typeof games = []
   const reservations: NflBrowserReservation[] = []
   let reservationFailures = 0
-  for (const {game,scope} of candidates) {
+  for (const {game,scope} of recovery && candidates.length !== recovery.length ? [] : candidates) {
     try {
       const reservation = await reserveNflBrowserAttempt(admin,'public',scope,Date.now())
       if (reservation && Date.now()<scope.kickoff) { selected.push(game); reservations.push(reservation) }
@@ -44,6 +46,11 @@ async function run(req: Request) {
       // Never replay an uncertain reservation; dispatch earlier confirmed ones.
       reservationFailures++
     }
+  }
+  if (recovery && selected.length !== recovery.length) {
+    const released = await Promise.all(reservations.map(reservation => releaseNflBrowserAttempt(admin, reservation).catch(() => false)))
+    if (released.some(value => !value)) reservationFailures++
+    selected.length = 0
   }
   if (!selected.length) {
     return NextResponse.json({
@@ -56,7 +63,7 @@ async function run(req: Request) {
   let response: Response
   let body: { results?: Array<Record<string, unknown>>; gameId?: string; marketCount?: number; error?: string; skipped?: boolean; browserSessions?:number; budgetCode?:string; reason?:string } | null = null
   try {
-    response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}`, {
+    response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}${recovery ? `&${NFL_RECOVERY_QUERY}` : ''}`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
       signal: AbortSignal.timeout(260_000),
     })

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openPikkitSession, type BBSession } from '@/lib/browserbase'
+import { nflRecoveryReservation } from '@/lib/nflNov8BrowserRecovery'
 import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
 import { PLATFORM_URL } from '@/lib/platform'
 import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nflPikkitSchedule'
@@ -102,13 +103,17 @@ async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   const games = upcoming.filter(game => requested.has(game.gameId))
   if (!games.length) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
 
+  const recovery = params.has('recovery')
+  const reservationId = recovery && params.get('recovery') === '20261108' && requested.size === games.length
+    ? nflRecoveryReservation('public', games.map(game => game.gameId)) : undefined
+  if (recovery && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
   lifecycle.started = true
   let bb: BBSession
   try {
     bb = await openPikkitSession(contextId, {
       sport: 'nfl', mode: games.length > 1 ? 'batch' : 'single-game',
       gameCount: games.length, gameIds: games.map(game => game.gameId).join(','),
-    })
+    }, { reservationId })
   } catch (error) {
     // This exact admission error proves no create request was made. Any other
     // failure remains uncertain, so the lease must stay held until expiry.

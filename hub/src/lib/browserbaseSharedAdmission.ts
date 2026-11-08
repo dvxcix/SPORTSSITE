@@ -16,6 +16,7 @@ type AdmissionInput = {
   /** A period ID is accepted only after independently provisioning its baseline. */
   periodId: string
   timeoutSeconds: number
+  reservationId?: string
   readUsage: () => Promise<Usage>
   reserve: (input: Reservation) => Promise<unknown>
 }
@@ -30,7 +31,10 @@ export async function reserveBrowserbaseSharedAdmission(input: AdmissionInput): 
     || !Number.isInteger(input.timeoutSeconds) || input.timeoutSeconds < 60 || input.timeoutSeconds > 450) {
     throw new BrowserbaseAdmissionError('configuration')
   }
-  const id = randomUUID()
+  const id = input.reservationId ?? randomUUID()
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    throw new BrowserbaseAdmissionError('configuration')
+  }
   const expectedCents = 50 + Math.ceil(input.timeoutSeconds / 360)
   // Only a positively confirmed no-debit reorder may be retried. The ID stays
   // fixed, and no session-create or ambiguous database response is retried.
