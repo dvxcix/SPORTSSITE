@@ -3,7 +3,6 @@ import type { NflBrowserSource } from './nflBrowserCapturePolicy'
 
 const START = Date.parse('2026-11-08T17:30:00Z')
 const END = Date.parse('2026-11-09T01:20:00Z')
-export const NFL_RECOVERY_QUERY = 'recovery=20261108'
 
 type Plan = { source: NflBrowserSource; id: string; games: readonly string[] }
 const afternoon = ['2026_09_HOU_LAC', '2026_09_LV_SF', '2026_09_ARI_SEA', '2026_09_GB_NE'] as const
@@ -16,6 +15,7 @@ const plans: readonly Plan[] = [
   { source: 'fanduel', id: '7f3f6aa7-f2b6-4c6e-9e43-2fa73d991250', games: [evening] },
   { source: 'public', id: 'a65480bc-958b-4098-a905-55850e0cc11f', games: afternoon },
   { source: 'public', id: '5eedef24-a209-4f46-a25f-462d75e9eaba', games: [evening] },
+  { source: 'fanduel', id: '12baecb9-7146-42ed-98a6-ac5963070f57', games: [afternoon[1]] },
 ]
 
 function active(now: number) {
@@ -23,9 +23,9 @@ function active(now: number) {
 }
 
 /** Only an exact authorized route and game set can select a one-use reservation. */
-export function nflRecoveryReservation(source: NflBrowserSource, games: readonly string[], now = Date.now()) {
+export function nflRecoveryReservation(source: NflBrowserSource, games: readonly string[], now = Date.now(), requestedId?: string) {
   if (!active(now) || new Set(games).size !== games.length) return undefined
-  return plans.find(plan => plan.source === source && plan.games.length === games.length
+  return plans.find(plan => (!requestedId || plan.id === requestedId) && plan.source === source && plan.games.length === games.length
     && plan.games.every(game => games.includes(game)))?.id
 }
 
@@ -38,5 +38,5 @@ export async function nextNflRecoveryBatch(admin: SupabaseClient, source: NflBro
     console.warn('[nfl-browser-recovery] Pending allowances unavailable')
     return undefined
   }
-  return plans.find(plan => plan.source === source && data.includes(plan.id))?.games
+  return plans.find(plan => plan.source === source && data.includes(plan.id))
 }

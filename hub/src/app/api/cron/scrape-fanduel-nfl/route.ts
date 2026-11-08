@@ -47,10 +47,10 @@ async function capture(req: Request) {
   const { data, error } = await admin.from('nfl_odds_current').select('board').eq('game_id', gameId).maybeSingle()
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
-  const recovery = url.searchParams.has('recovery')
-  const reservationId = recovery && !auth && url.searchParams.get('recovery') === '20261108'
-    ? nflRecoveryReservation('fanduel', [gameId]) : undefined
-  if (recovery && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
+  const recovery = url.searchParams.get('recovery')
+  const reservationId = recovery && !auth
+    ? nflRecoveryReservation('fanduel', [gameId], Date.now(), recovery === '20261108' ? undefined : recovery) : undefined
+  if (recovery !== null && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
   let session: Awaited<ReturnType<typeof openSession>>
   try {
     session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, timeoutSeconds: NFL_CAPTURE_SESSION_TIMEOUT_SECONDS, reservationId, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })

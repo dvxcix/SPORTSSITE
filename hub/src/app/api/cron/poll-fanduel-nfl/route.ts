@@ -7,7 +7,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requestNflCapture } from '@/lib/nflCaptureRequest'
 import { nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS, NFL_CAPTURE_BATCH_SIZE } from '@/lib/nflCaptureDispatch'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
-import { nextNflRecoveryBatch, NFL_RECOVERY_QUERY } from '@/lib/nflNov8BrowserRecovery'
+import { nextNflRecoveryBatch } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
 import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
@@ -43,7 +43,7 @@ async function run(req: Request) {
     const scope=scopes[index], initial=nflBrowserDecision(scope.kickoff,scope.observed,[],now.getTime())
     const decision=initial.slot?nflBrowserDecision(scope.kickoff,scope.observed,attempts.get(`${game.gameId}:${initial.slot}`)??[],now.getTime()):initial
     return {game,scope,decision}
-  }).filter(item=>item.decision.due && (!recovery || recovery.includes(item.game.gameId))).sort((a,b)=>
+  }).filter(item=>item.decision.due && (!recovery || recovery.games.includes(item.game.gameId))).sort((a,b)=>
     Number(b.decision.slot==='two-hours')-Number(a.decision.slot==='two-hours') || a.scope.kickoff-b.scope.kickoff || (a.decision.attempt??0)-(b.decision.attempt??0) || a.game.gameId.localeCompare(b.game.gameId)
   ).slice(0,recovery ? 1 : NFL_CAPTURE_BATCH_SIZE)
   const games: {game: typeof inWindow[number]; reservation:NflBrowserReservation}[] = []
@@ -61,7 +61,7 @@ async function run(req: Request) {
   const results = await inBatches(games, 2, async ({game,reservation}) => {
     const requestStarted = Date.now()
     try {
-      const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?stream=1&gameId=${encodeURIComponent(game.gameId)}${recovery ? `&${NFL_RECOVERY_QUERY}` : ''}`,
+      const response = await requestNflCapture(`${PLATFORM_URL}/api/cron/scrape-fanduel-nfl?stream=1&gameId=${encodeURIComponent(game.gameId)}${recovery ? `&recovery=${recovery.id}` : ''}`,
         { authorization: `Bearer ${process.env.CRON_SECRET}` }, NFL_CAPTURE_REQUEST_TIMEOUT_MS)
       const envelope = await response.json()
       if (response.ok && (!Number.isInteger(envelope.status) || envelope.status < 100 || envelope.status > 599 || !envelope.body || typeof envelope.body !== 'object')) throw new Error('Invalid capture envelope')

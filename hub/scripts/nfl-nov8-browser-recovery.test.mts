@@ -33,8 +33,12 @@ test('schedulers select only unused database-approved slots in order', async () 
       return { abortSignal: async () => ({ data: [late, group, direct], error: null }) }
     },
   } as unknown as SupabaseClient
-  assert.deepEqual(await nextNflRecoveryBatch(admin, 'fanduel', now), [batch[1]])
-  assert.deepEqual(await nextNflRecoveryBatch(admin, 'public', now), batch)
+  assert.deepEqual((await nextNflRecoveryBatch(admin, 'fanduel', now))?.games, [batch[1]])
+  assert.deepEqual((await nextNflRecoveryBatch(admin, 'public', now))?.games, batch)
   assert.equal(await nextNflRecoveryBatch(admin, 'public', Date.parse('2026-11-09T01:20:00Z')), undefined)
   assert.equal(reads, 2)
+  const retry = '12baecb9-7146-42ed-98a6-ac5963070f57'
+  assert.equal(nflRecoveryReservation('fanduel', [batch[1]], now, retry), retry)
+  assert.equal(nflRecoveryReservation('fanduel', [batch[0]], now, retry), undefined)
+  assert.equal(nflRecoveryReservation('public', batch, now, retry), undefined)
 })

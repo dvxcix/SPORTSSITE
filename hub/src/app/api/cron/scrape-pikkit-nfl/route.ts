@@ -103,10 +103,10 @@ async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   const games = upcoming.filter(game => requested.has(game.gameId))
   if (!games.length) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
 
-  const recovery = params.has('recovery')
-  const reservationId = recovery && params.get('recovery') === '20261108' && requested.size === games.length
-    ? nflRecoveryReservation('public', games.map(game => game.gameId)) : undefined
-  if (recovery && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
+  const recovery = params.get('recovery')
+  const reservationId = recovery && requested.size === games.length
+    ? nflRecoveryReservation('public', games.map(game => game.gameId), Date.now(), recovery === '20261108' ? undefined : recovery) : undefined
+  if (recovery !== null && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
   lifecycle.started = true
   let bb: BBSession
   try {
