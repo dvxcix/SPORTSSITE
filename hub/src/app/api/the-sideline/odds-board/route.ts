@@ -22,9 +22,21 @@ type CompactQuote=[string,number,string,string,string,string,string,number,numbe
 type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}
 const MAX_POOL_BYTES=4*1024*1024
-type PickInput={board:NflObservedOdds;observedAt:string;cutoffAt:number}|{snapshot:NflPikkitSnapshot;captured_at:string}|null
+type PickSnapshotRow={snapshot:NflPikkitSnapshot;captured_at:string}
+type PickInput={board:NflObservedOdds;observedAt:string;cutoffAt:number}|PickSnapshotRow|null
 const tuple=(q:NflOddsBoardQuote):CompactQuote=>[q.gameId,q.playerId,q.player,q.team,q.position,q.market,q.vendor,q.line,q.current,q.updatedAt,q.previous,q.previousAt,q.opening,q.openingConflict]
 const quoteKey=(q:CompactQuote)=>JSON.stringify([q[0],q[1],q[3],q[5],q[6],q[7]])
+
+function verifiedPublicSnapshot(row: PickSnapshotRow, game: {id:string;gameday:string;away:{abbr:string};home:{abbr:string}}, cutoff: string, latest: string) {
+  const { snapshot, captured_at: capturedAt } = row
+  const time = Date.parse(capturedAt)
+  if (snapshot?.gameId !== game.id || snapshot.gameDate !== game.gameday || !Number.isFinite(time)
+    || time >= Date.parse(cutoff) || time > Date.parse(latest) || !Array.isArray(snapshot.markets)
+    || snapshot.markets.length > 200 || Buffer.byteLength(JSON.stringify(snapshot)) > 1024 * 1024) return null
+  const expected = [game.away.abbr, game.home.abbr].map(nflMatchupTeam).sort()
+  const actual = [snapshot.awayTeam, snapshot.homeTeam].map(value => typeof value === 'string' ? nflMatchupTeam(value) : '').sort()
+  return actual.every((team, index) => team === expected[index]) ? { ...snapshot, capturedAt } : null
+}
 
 /** A partial view is separate from any verified baseline. Every carried
  * value retains its exact observation time and is labelled Last seen. */
@@ -108,7 +120,7 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v10:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v11:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
@@ -127,7 +139,7 @@ export async function GET(request:NextRequest){
               const stop=Math.min(storedTip,kickoff.getTime(),Date.parse(cutoff))
               return stored.payload&&Number.isFinite(observed)&&Number.isFinite(storedTip)&&observed<stop&&observed<=Date.parse(capturedNow)&&['capture','recovered-cache'].includes(stored.source)?{board:stored.payload,observedAt:stored.observed_at,cutoffAt:stop}:null
             })().catch(()=>null)
-          : Promise.resolve(admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(1200)).maybeSingle()).then(result=>result.error?null:result.data as {snapshot:NflPikkitSnapshot;captured_at:string}|null).catch(()=>null)
+          : Promise.resolve(admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(1200)).maybeSingle()).then(result=>result.error?null:result.data as PickSnapshotRow|null).catch(()=>null)
         const [results,pickInput]=await Promise.all([Promise.all(['nfl_odds_snapshot_history','nfl_fanduel_capture_history'].map((table,index)=>admin.from(table).select(index===1?'board,captured_at,raw_tabs':'board,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(2).abortSignal(AbortSignal.timeout(12000)))),picksTask])
         if(results.every(result=>result.error)){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
         if(results.some(result=>result.error))row.status='incomplete'
@@ -155,17 +167,29 @@ export async function GET(request:NextRequest){
           if(pickInput&&'board' in pickInput){
             const value=pickInput.board,at=pickInput.observedAt
             const visible=!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED&&!value.pausedProjection?value:visibleNflObservedOdds(value,game.id,nflLegacyPauseNeedsLastSeen(pickInput.cutoffAt))
-            if(Date.parse(visible.picksCapturedAt??'')<=Date.parse(at))board=nflFilterPickLadder(visible,at,cutoff,Date.parse(capturedNow))
+            const stamp=visible.picksCapturedAt
+            if(stamp&&Date.parse(stamp)<=Date.parse(at)){
+              board=nflFilterPickLadder(visible,at,cutoff,Date.parse(capturedNow))
+              // Some frozen boards recorded the public observation but lost every
+              // count to team aliases. Recover that exact observation only.
+              if(board&&!board.players.some(player=>player.publicPicks?.length)){
+                const saved=await admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at')
+                  .eq('game_id',game.id).eq('captured_at',stamp).abortSignal(AbortSignal.timeout(1200)).maybeSingle()
+                const exact=saved.data as PickSnapshotRow|null
+                const snapshot=!saved.error&&exact&&Date.parse(exact.captured_at)===Date.parse(stamp)
+                  ? verifiedPublicSnapshot(exact,game,cutoff,at) : null
+                if(snapshot)board=attachNflPikkitSnapshot(board,snapshot)
+              }
+            }
           }
           else if(pickInput&&'snapshot' in pickInput&&sources[0][0]){
-            const snapshot=pickInput.snapshot as NflPikkitSnapshot,storedAt=pickInput.captured_at
+            const snapshot=verifiedPublicSnapshot(pickInput,game,cutoff,capturedNow)
             const baseRows=(results[0].data??[]) as unknown as Array<{board:SidelineOddsBoard;captured_at:string}>,fdRows=(results[1].data??[]) as unknown as Array<{board:SidelineOddsBoard;captured_at:string;raw_tabs?:unknown}>
             const base=baseRows.find(item=>item.captured_at===sources[0][0].capturedAt),fd=fdRows.find(item=>item.captured_at===sources[1][0]?.capturedAt)
-            const expected=[game.away.abbr,game.home.abbr].map(nflMatchupTeam).sort(),actual=[snapshot?.awayTeam,snapshot?.homeTeam].map(value=>typeof value==='string'?nflMatchupTeam(value):'').sort()
-            if(base&&snapshot?.gameId===game.id&&snapshot.gameDate===game.gameday&&actual.every((value,index)=>value===expected[index])&&Array.isArray(snapshot.markets)&&snapshot.markets.length<=200&&Buffer.byteLength(JSON.stringify(snapshot))<=1024*1024&&Number.isFinite(Date.parse(storedAt))&&Date.parse(storedAt)<Date.parse(cutoff)&&Date.parse(storedAt)<=Date.parse(capturedNow)){
+            if(base&&snapshot){
               const teams=[game.away.abbr,game.home.abbr],safeBase=nflFilterPickLadder(base.board,base.captured_at,cutoff,Date.parse(capturedNow))
               const safeDirect=fd&&Array.isArray(fd.raw_tabs)&&fd.raw_tabs.length>0&&fd.raw_tabs.length<=32&&fd.raw_tabs.every(tab=>tab&&typeof tab==='object'&&(tab as {incomplete?:boolean}).incomplete===false)?nflFilterPickLadder(fd.board,fd.captured_at,cutoff,Date.parse(capturedNow)):null
-              if(safeBase){const baseBoard={...safeBase,players:safeBase.players.filter(player=>nflOddsBoardTeam(teams,player.team))};board=attachNflPikkitSnapshot(attachNflFanduel(baseBoard,safeDirect),{...snapshot,capturedAt:storedAt})}
+              if(safeBase){const baseBoard={...safeBase,players:safeBase.players.filter(player=>nflOddsBoardTeam(teams,player.team))};board=attachNflPikkitSnapshot(attachNflFanduel(baseBoard,safeDirect),snapshot)}
             }
           }
           if(board)picks=nflOddsBoardPicks(game.id,[game.away.abbr,game.home.abbr],board,cutoff,Date.parse(capturedNow))
@@ -186,8 +210,8 @@ export async function GET(request:NextRequest){
       if(groups.length!==games.length)throw new Error('Odds board games missing')
       return packNflBoardPicks(pool,MAX_POOL_BYTES)
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v10:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKeys=[`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
+    const viewKey=`nfl:odds-board-partial-view:v11:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v10:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{
