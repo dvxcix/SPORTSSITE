@@ -1,5 +1,6 @@
 import type { NflOddsPlayer, SidelineOddsBoard } from './nflOddsTypes'
 import { contractPicks, estimateLadderPicks } from './nflLadders'
+import { isNflOddsBoardLine, nflOddsBoardOfferLine, nflOddsBoardScorerLabel } from './nflOddsBoard'
 import { americanImpliedProbability } from './nflMarketMath'
 
 export type NflBoardPick = [game: string, player: number, team: string, market: string, book: string, line: number, picks: number, estimated: boolean]
@@ -26,7 +27,7 @@ export function nflUniqueBoardPicks(value: unknown): NflBoardPick[] {
   if (!Array.isArray(value) || value.length > 96000) return []
   const rows = new Map<string, NflBoardPick>(), duplicates = new Set<string>()
   for (const row of value) {
-    if (!Array.isArray(row) || row.length !== 8 || typeof row[0] !== 'string' || !Number.isSafeInteger(row[1]) || row[1] <= 0 || typeof row[2] !== 'string' || typeof row[3] !== 'string' || typeof row[4] !== 'string' || !Number.isSafeInteger(row[5]) || row[5] <= 0 || !Number.isSafeInteger(row[6]) || row[6] < 0 || row[6] > 10_000_000 || typeof row[7] !== 'boolean') continue
+    if (!Array.isArray(row) || row.length !== 8 || typeof row[0] !== 'string' || !Number.isSafeInteger(row[1]) || row[1] <= 0 || typeof row[2] !== 'string' || typeof row[3] !== 'string' || typeof row[4] !== 'string' || !isNflOddsBoardLine(row[3], row[5]) || !Number.isSafeInteger(row[6]) || row[6] < 0 || row[6] > 10_000_000 || typeof row[7] !== 'boolean') continue
     const key = nflBoardPickKey(row[0], row[1], row[2], row[3], row[4], row[5])
     if (rows.has(key)) duplicates.add(key)
     else rows.set(key, row as NflBoardPick)
@@ -59,17 +60,19 @@ export function nflOddsBoardPicks(game: string, teams: string[], board: Sideline
     })
     const clean: NflOddsPlayer = { ...player, markets, publicPicks: items }
     const groups = new Map<string, { prop: string; book: string }>()
-    for (const market of clean.markets) if (typeof market.propType === 'string' && Array.isArray(market.offers)) for (const offer of market.offers) if (offer.type === 'milestone' && typeof offer.vendor === 'string' && Number.isSafeInteger(offer.line) && (offer.line ?? 0) > 0 && offer.current?.odds != null) groups.set(JSON.stringify([market.propType, offer.vendor]), { prop: market.propType, book: offer.vendor })
+    for (const market of clean.markets) if (typeof market.propType === 'string' && Array.isArray(market.offers)) for (const offer of market.offers) if (typeof offer.vendor === 'string' && nflOddsBoardOfferLine(market, offer) != null && offer.current?.odds != null) groups.set(JSON.stringify([market.propType, offer.vendor]), { prop: market.propType, book: offer.vendor })
     for (const { prop, book } of groups.values()) {
       const exactKeys = new Set<string>(); let ambiguous = false
       for (const item of items.filter(item => item.propType === prop && item.line != null)) {
         const key = JSON.stringify([item.line, item.side, item.kind]); if (exactKeys.has(key)) ambiguous = true; else exactKeys.add(key)
       }
       if (ambiguous) continue
-      const estimated = estimateLadderPicks(clean, prop, book)
+      const estimated = nflOddsBoardScorerLabel(prop) ? null : estimateLadderPicks(clean, prop, book)
       for (const market of clean.markets.filter(item => item.propType === prop)) for (const offer of market.offers) {
-        if (offer.vendor !== book || offer.type !== 'milestone' || !Number.isSafeInteger(offer.line) || (offer.line ?? 0) <= 0 || offer.line !== market.line || market.key !== `${prop}:${offer.line}`) continue
-        const line = offer.line!, exact = contractPicks(clean, prop, line, 'over', 'milestone'), value = exact ?? estimated.get(market.key)
+        const line = nflOddsBoardOfferLine(market, offer)
+        if (offer.vendor !== book || line == null) continue
+        const exact = offer.line == null ? null : contractPicks(clean, prop, offer.line, 'over', 'milestone')
+        const value = exact ?? estimated?.get(market.key)
         if (!Number.isSafeInteger(value) || value! < 0) continue
         const key = nflBoardPickKey(game, player.id, team, prop, book, line)
         if (seen.has(key)) { conflicts.add(key); continue }

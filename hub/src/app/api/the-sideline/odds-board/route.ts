@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
-import { nflOddsBoardQuotes, type NflOddsBoardFrame, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
+import { isNflOddsBoardLine, nflOddsBoardQuotes, type NflOddsBoardFrame, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
 import { getSidelineGames } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
@@ -36,7 +36,7 @@ function mergePartial(candidate:Pool, previous:Pool|null, clocks:NflOddsBoardClo
     // Retain that baseline during the versioned-cache rollout.
     const q=(Array.isArray(raw)&&raw.length===12?[...raw,null,false]:raw) as CompactQuote
     const stop=cutoff.get(q?.[0]),at=Date.parse(q?.[9]??'')
-    if(!Array.isArray(q)||q.length!==14||!stop||!Number.isFinite(at)||at>=Date.parse(stop)||at>Date.now()||!Number.isSafeInteger(q[1])||q[1]<=0||typeof q[2]!=='string'||q[2].length>120||typeof q[3]!=='string'||q[3].length>12||![games.get(q[0])?.away,games.get(q[0])?.home].includes(q[3])||typeof q[4]!=='string'||q[4].length>12||typeof q[5]!=='string'||q[5].length>80||typeof q[6]!=='string'||q[6].length>40||!Number.isSafeInteger(q[7])||q[7]<=0||typeof q[8]!=='number'||!Number.isFinite(q[8])||Math.abs(q[8])<100||((q[10]==null)!==(q[11]==null))||(q[10]!=null&&(typeof q[10]!=='number'||!Number.isFinite(q[10])||Math.abs(q[10])<100||!q[11]||!Number.isFinite(Date.parse(q[11]))||Date.parse(q[11])>=at))||(q[12]!=null&&(typeof q[12]!=='number'||!Number.isFinite(q[12])||Math.abs(q[12])<100))||typeof q[13]!=='boolean'||(q[13]&&q[12]!=null))throw new Error('Invalid saved odds board')
+    if(!Array.isArray(q)||q.length!==14||!stop||!Number.isFinite(at)||at>=Date.parse(stop)||at>Date.now()||!Number.isSafeInteger(q[1])||q[1]<=0||typeof q[2]!=='string'||q[2].length>120||typeof q[3]!=='string'||q[3].length>12||![games.get(q[0])?.away,games.get(q[0])?.home].includes(q[3])||typeof q[4]!=='string'||q[4].length>12||typeof q[5]!=='string'||q[5].length>80||typeof q[6]!=='string'||q[6].length>40||!isNflOddsBoardLine(q[5],q[7])||typeof q[8]!=='number'||!Number.isFinite(q[8])||Math.abs(q[8])<100||((q[10]==null)!==(q[11]==null))||(q[10]!=null&&(typeof q[10]!=='number'||!Number.isFinite(q[10])||Math.abs(q[10])<100||!q[11]||!Number.isFinite(Date.parse(q[11]))||Date.parse(q[11])>=at))||(q[12]!=null&&(typeof q[12]!=='number'||!Number.isFinite(q[12])||Math.abs(q[12])<100))||typeof q[13]!=='boolean'||(q[13]&&q[12]!=null))throw new Error('Invalid saved odds board')
     const key=quoteKey(q);if(old.has(key))throw new Error('Ambiguous saved odds board');old.set(key,q)
   }
   const output=new Map<string,CompactQuote>(), incomplete=new Set<string>()
@@ -108,7 +108,7 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v6:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v7:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
@@ -181,8 +181,8 @@ export async function GET(request:NextRequest){
       if(groups.length!==games.length||Buffer.byteLength(JSON.stringify(pool))>4*1024*1024)throw new Error('Odds board exceeds limit')
       return pool
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKeys=[`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
+    const viewKey=`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{

@@ -1,4 +1,4 @@
-import type { SidelineOddsBoard } from './nflOddsTypes'
+import type { NflMarketOffer, NflPlayerMarket, SidelineOddsBoard } from './nflOddsTypes'
 import { americanImpliedProbability } from './nflMarketMath'
 
 export type NflOddsBoardFrame = { capturedAt: string; board: SidelineOddsBoard; typedOpeningSource?: boolean }
@@ -7,13 +7,36 @@ type Candidate = Omit<NflOddsBoardQuote, 'previous' | 'previousAt' | 'openingCon
 const date = (value: string | null | undefined) => { const n = Date.parse(value ?? ''); return Number.isFinite(n) ? n : null }
 const key = (q: Candidate) => JSON.stringify([q.gameId, q.playerId, q.team, q.market, q.vendor, q.line])
 
+export const NFL_ODDS_BOARD_SCORER_MARKETS = {
+  anytime_td: 'Anytime Touchdown',
+  first_td: 'First Touchdown',
+} as const
+
+export function nflOddsBoardScorerLabel(market: string): string | undefined {
+  if (market === 'anytime_td' || market === 'first_td') return NFL_ODDS_BOARD_SCORER_MARKETS[market]
+}
+
+export function isNflOddsBoardLine(market: string, line: unknown): line is number {
+  if (nflOddsBoardScorerLabel(market)) return line === 0.5
+  return !market.startsWith('anytime_td') && typeof line === 'number' && Number.isSafeInteger(line) && line > 0
+}
+
+export function nflOddsBoardOfferLine(market: NflPlayerMarket, offer: NflMarketOffer): number | null {
+  const { line } = offer
+  if (offer.type !== 'milestone' || offer.isOpeningOnly || market.line !== line
+    || (market.key !== `${market.propType}:${line ?? ''}` && !(line === null && market.key === `${market.propType}:null`))) return null
+  // Older one-sided scorer records encode the same Yes outcome as 1 or no line.
+  if (nflOddsBoardScorerLabel(market.propType) && (line === null || line === 1)) return 0.5
+  return isNflOddsBoardLine(market.propType, line) ? line : null
+}
+
 export function nflOddsBoardMove(current: number | null, previous: number | null): number | null {
   const now = americanImpliedProbability(current), before = americanImpliedProbability(previous)
   return now == null || before == null ? null : (now - before) * 100
 }
 
 /** Uses only the latest frame per source for visible prices. A second frame
- * can supply a previous observation only for the identical milestone side. */
+ * can supply a previous observation only for the identical outcome. */
 export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: string, sources: NflOddsBoardFrame[][], now = Date.now(), carryLastSeen = false): NflOddsBoardQuote[] {
   const stop = date(cutoff)
   if (stop == null) return []
@@ -28,13 +51,13 @@ export function nflOddsBoardQuotes(gameId: string, teams: string[], cutoff: stri
         const team = player.team?.toUpperCase()
         if (!Number.isSafeInteger(player.id) || player.id <= 0 || !team || !validTeams.has(team) || !player.name || !Array.isArray(player.markets)) continue
         for (const market of player.markets) for (const offer of market.offers ?? []) {
-          const observed = date(offer.updatedAt), line = offer.line, value = offer.current?.odds
-          if (offer.type !== 'milestone' || offer.isOpeningOnly || line == null || !Number.isSafeInteger(line) || line <= 0 || market.propType === 'first_td' || market.propType.startsWith('anytime_td') || market.line !== line || market.key !== `${market.propType}:${line}` || !offer.vendor || observed == null || observed > frameTime || observed >= stop || observed > now || americanImpliedProbability(value) == null) continue
+          const observed = date(offer.updatedAt), line = nflOddsBoardOfferLine(market, offer), value = offer.current?.odds
+          if (line == null || !offer.vendor || observed == null || observed > frameTime || observed >= stop || observed > now || americanImpliedProbability(value) == null) continue
           // Only base-feed history has this typed provider opening. Direct
           // sportsbook archives can synthesize opening=current and are never
           // evidence of an opening. The opening's original time is not stored.
           const rawOpening = offer.opening
-          const opening = frame.typedOpeningSource && offer.openingLine === line && rawOpening &&
+          const opening = frame.typedOpeningSource && offer.openingLine === offer.line && rawOpening &&
             Object.keys(rawOpening).every(key => key === 'odds') && americanImpliedProbability(rawOpening.odds) != null
             ? rawOpening.odds! : null
           const quote: Candidate = { gameId, playerId: player.id, player: player.name, team, position: player.position ?? '', market: market.propType, label: market.label, vendor: offer.vendor, line, current: value!, updatedAt: offer.updatedAt!, opening }
