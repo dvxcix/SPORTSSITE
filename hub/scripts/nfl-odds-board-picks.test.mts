@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { nflOddsBoardPicks, nflFilterPickLadder, nflUniqueBoardPicks, type NflBoardPick } from '../src/lib/nflOddsBoardPicks'
-import { fitNflGamePicks, fitNflResponsePicks } from '../src/lib/nflOddsBoardBudget'
+import { fitNflResponsePicks, packNflBoardPicks, unpackNflBoardPicks } from '../src/lib/nflOddsBoardBudget'
 import { estimateLadderPicks } from '../src/lib/nflLadders'
 import type { NflOddsPlayer, SidelineOddsBoard } from '../src/lib/nflOddsTypes'
 
@@ -55,10 +55,29 @@ test('a quote later than its source frame cannot influence the Props ladder anch
  assert.deepEqual(nflOddsBoardPicks('game',['SEA','CHI'],safe,cutoff,now).map(row=>[row[5],row[6]]),[...estimateLadderPicks(safe.players[0],'receptions','fanduel')].map(([key,count])=>[Number(key.split(':')[1]),count]))
  assert.equal(nflFilterPickLadder(board(altered),cutoff,cutoff,now),null)
 })
-test('optional picks are shed before prices at both game and response size boundaries',()=>{
- const quote=['saved-price'], identities=['saved-player'], picks:NflBoardPick[]=[['game',1,'SEA','receptions','fanduel',5,100,true]]
- const without=Buffer.byteLength(JSON.stringify([quote,[],identities])), withPicks=Buffer.byteLength(JSON.stringify([quote,picks,identities]))
- assert.ok(withPicks>without);const game=fitNflGamePicks(quote,picks,identities,without);assert.deepEqual(game.picks,[]);assert.equal(game.bytes,without)
- const response={quotes:quote,picks}, limit=Buffer.byteLength(JSON.stringify({...response,picks:[]}))
- assert.deepEqual(fitNflResponsePicks(response,limit),{quotes:quote,picks:[]});assert.deepEqual(fitNflResponsePicks(response,withPicks+100),response)
+test('full-slate cache keeps all game prices, with exact and estimated counts keyed to the saved quote', () => {
+  const quotes = Array.from({ length: 13 }, (_, game) => Array.from({ length: 1800 }, (_, index) => [
+    `2026_09_GAME_${game}`, index + 1, 'Saved Player', 'SEA', 'WR', 'receiving_yards', 'fanduel', 25,
+    -140, '2026-11-08T17:59:00.000Z', -110, '2026-11-08T17:55:00.000Z', 150, false,
+  ] as const)).flat()
+  const picks: NflBoardPick[] = quotes.map(q => [q[0], q[1], q[3], q[5], q[6], q[7], 42, q[1] !== 1])
+  const pool = { quotes, picks, identities: [] }
+  const limit = 4 * 1024 * 1024
+  assert.ok(Buffer.byteLength(JSON.stringify(pool)) > limit)
+  const packed = packNflBoardPicks(pool, limit)
+  assert.equal(packed.quotes, quotes)
+  assert.ok(Buffer.byteLength(JSON.stringify(packed)) <= limit)
+  const restored = unpackNflBoardPicks(packed.quotes, packed.pickCounts)
+  assert.equal(restored.length, picks.length)
+  assert.deepEqual(restored, picks)
+  assert.deepEqual(unpackNflBoardPicks(quotes, [[quotes.length, 9, false]]), [])
+  const onlyExact = picks.filter(pick => !pick[7])
+  const exactLimit = Buffer.byteLength(JSON.stringify(packNflBoardPicks({ ...pool, picks: onlyExact }, limit)))
+  assert.deepEqual(unpackNflBoardPicks(quotes, packNflBoardPicks(pool, exactLimit).pickCounts), onlyExact)
+})
+test('the final response size guard sheds optional counts before saved prices', () => {
+  const response = { quotes: ['saved-price'], picks: [['game',1,'SEA','receptions','fanduel',5,100,true]] as NflBoardPick[] }
+  const limit = Buffer.byteLength(JSON.stringify({ ...response, picks: [] }))
+  assert.deepEqual(fitNflResponsePicks(response, limit), { ...response, picks: [] })
+  assert.deepEqual(fitNflResponsePicks(response, limit + 100), response)
 })

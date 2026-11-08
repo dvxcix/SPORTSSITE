@@ -6,8 +6,8 @@ import { isNflOddsBoardLine, nflOddsBoardQuotes, nflOddsBoardTeam, type NflOddsB
 import { getSidelineGames } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, nflUniqueBoardPicks, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
-import { fitNflGamePicks, fitNflResponsePicks } from '@/lib/nflOddsBoardBudget'
+import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
+import { fitNflResponsePicks, packNflBoardPicks, unpackNflBoardPicks } from '@/lib/nflOddsBoardBudget'
 import { nflMatchupTeam } from '@/lib/nflMatchupBoard'
 import { attachNflFanduel } from '@/lib/nflFanduel'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
@@ -21,6 +21,7 @@ export const maxDuration=120
 type CompactQuote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}
+const MAX_POOL_BYTES=4*1024*1024
 type PickInput={board:NflObservedOdds;observedAt:string;cutoffAt:number}|{snapshot:NflPikkitSnapshot;captured_at:string}|null
 const tuple=(q:NflOddsBoardQuote):CompactQuote=>[q.gameId,q.playerId,q.player,q.team,q.position,q.market,q.vendor,q.line,q.current,q.updatedAt,q.previous,q.previousAt,q.opening,q.openingConflict]
 const quoteKey=(q:CompactQuote)=>JSON.stringify([q[0],q[1],q[3],q[5],q[6],q[7]])
@@ -71,9 +72,7 @@ function mergePartial(candidate:Pool, previous:Pool|null, clocks:NflOddsBoardClo
     const key=nflBoardIdentityKey(item[0],item[1],item[3],item[2]),headshot=nflBoardImage(item[4]),fallbacks=item[5].map(nflBoardImage).filter((value):value is string=>!!value)
     if(wanted.has(key)&&headshot&&!identities.has(key))identities.set(key,[item[0],item[1],item[2],item[3],headshot,fallbacks])
   }
-  const result:Pool=fitNflResponsePicks({date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete' as const}:game),quotes,picks:candidate.picks??[],identities:[...identities.values()]},4*1024*1024)
-  if(Buffer.byteLength(JSON.stringify(result))>4*1024*1024)throw new Error('Odds board exceeds limit')
-  return result
+  return {date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete' as const}:game),quotes,picks:candidate.picks??[],identities:[...identities.values()]}
 }
 
 /** Only the exact fields the comparison needs are retained, with strict size
@@ -109,7 +108,7 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v9:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v10:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
@@ -176,14 +175,19 @@ export async function GET(request:NextRequest){
       const groups=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!=null)
       // Keep games atomic: never silently truncate individual rungs. A game
       // that cannot fit is explicitly unavailable in this observation.
-      let remaining=4*1024*1024-Buffer.byteLength(JSON.stringify({date,games:groups.map(entry=>entry.game),quotes:[]}))-4096
-      for(const entry of groups){const fitted=fitNflGamePicks(entry.quotes,entry.picks??[],entry.identities??[],remaining);entry.picks=fitted.picks;if(fitted.bytes>remaining){entry.game.status='unavailable';entry.quotes=[];entry.picks=[];entry.identities=[]}else remaining-=fitted.bytes}
+      // Reserve space for every game's prices before adding any pick counts.
+      let remaining=MAX_POOL_BYTES-Buffer.byteLength(JSON.stringify({date,games:groups.map(entry=>entry.game),quotes:[]}))-4096
+      for(const entry of groups){
+        const bytes=Buffer.byteLength(JSON.stringify([entry.quotes,entry.identities??[]]))
+        if(bytes>remaining){entry.game.status='unavailable';entry.quotes=[];entry.picks=[];entry.identities=[]}
+        else remaining-=bytes
+      }
       const pool:Pool={date,games:groups.map(entry=>entry.game),quotes:groups.flatMap(entry=>entry.quotes),picks:groups.flatMap(entry=>entry.picks??[]),identities:groups.flatMap(entry=>entry.identities??[])}
-      if(groups.length!==games.length||Buffer.byteLength(JSON.stringify(pool))>4*1024*1024)throw new Error('Odds board exceeds limit')
-      return pool
+      if(groups.length!==games.length)throw new Error('Odds board games missing')
+      return packNflBoardPicks(pool,MAX_POOL_BYTES)
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKeys=[`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
+    const viewKey=`nfl:odds-board-partial-view:v10:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{
@@ -193,7 +197,8 @@ export async function GET(request:NextRequest){
       if(current.error)throw new Error('Saved odds unavailable')
       let prior=current.data
       for(const key of priorViewKeys)if(!prior){const legacy=await read(key);if(legacy.error)throw new Error('Saved odds unavailable');prior=legacy.data}
-      return mergePartial(candidate.value,(prior?.payload??null) as Pool|null,clocks)
+      const observed={...candidate.value,picks:unpackNflBoardPicks(candidate.value.quotes,candidate.value.pickCounts)}
+      return packNflBoardPicks(mergePartial(observed,(prior?.payload??null) as Pool|null,clocks),MAX_POOL_BYTES)
     },110)
     // This is deliberately uncached: a newly corrected earlier kickoff or a
     // crossed boundary must invalidate the shared payload before it is sent.
@@ -210,7 +215,7 @@ export async function GET(request:NextRequest){
     const book=requestedBook
     const quotes=pool.quotes.filter(q=>q[5]===market&&q[6]===book)
     const quoteKeys=new Set(quotes.map(q=>nflBoardPickKey(q[0],q[1],q[3],q[5],q[6],q[7])))
-    const picks=nflUniqueBoardPicks(pool.picks).filter(row=>quoteKeys.has(nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5])))
+    const picks=unpackNflBoardPicks(pool.quotes,pool.pickCounts).filter(row=>quoteKeys.has(nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5])))
     // An unavailable future game may acquire its first verified baseline;
     // its schedule is used only to decide when to poll, never to admit data.
     const future=fresh.flatMap(item=>{const game=games.find(candidate=>candidate.id===item.id);const time=item.cutoff?Date.parse(item.cutoff):game?nflKickoffAt(game)?.getTime():undefined;return time==null?[]:[time]}).filter(time=>time>Date.now())
