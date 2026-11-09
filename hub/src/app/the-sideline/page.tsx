@@ -18,6 +18,7 @@ import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { NflPregameBoundary } from './NflPregameBoundary'
 import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
+import { readPreviewContext } from '@/lib/publicResearchPreview'
 import { NflLastSeen } from './NflLastSeen'
 
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,7 @@ function PregameResearchNotice({ lens }: { lens: { status: string; headline: str
 }
 
 export default async function SidelinePage({ searchParams }: {
-  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[] }>
+  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[]; preview?: string | string[]; player?: string | string[]; line?: string | string[] }>
 }) {
   const gate = await requireNflAccess()
   if (gate.error?.status === 503) throw new AuthTemporarilyUnavailableError()
@@ -57,6 +58,8 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
+  const context = readPreviewContext(params)
+  const preview = context?.sport === 'nfl' && context.game === selected.id && context.date === selected.gameday ? context : null
   const beganOpen = nflPregameOpen(selected)
   const sample = requestedSample
     ? parseNflSample(requestedSample)
@@ -103,5 +106,5 @@ export default async function SidelinePage({ searchParams }: {
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
   if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} /></>
+  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} initialPreview={preview} /></>
 }

@@ -37,3 +37,5 @@
 .unavailableRow .player small {
   color: #fda4af;
 }
+
+.panel tr[data-preview-player] td:first-child { box-shadow: inset 3px 0 #b4ff4d, 1px 0 #2a3a4a; }

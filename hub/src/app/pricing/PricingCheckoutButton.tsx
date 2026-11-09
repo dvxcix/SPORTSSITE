@@ -8,12 +8,14 @@ import { loadWhop } from '@whop/elements'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { trackProductEvent } from '@/lib/productAnalytics'
+import { previewPricingPath, type PreviewContext } from '@/lib/publicResearchPreview'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
 
 // The server authors account-linking metadata in a checkout configuration.
 // Elements creates its own session; fulfillment stays in the signed webhooks.
-export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { planId: string; label: string; loggedIn: boolean; highlight?: boolean }) {
+export function PricingCheckoutButton({ planId, label, loggedIn, highlight, preview }: { planId: string; label: string; loggedIn: boolean; highlight?: boolean; preview?: PreviewContext | null }) {
   const router = useRouter()
+  const returnPath = previewPricingPath(preview ?? null)
   const [checkoutConfigurationId, setCheckoutConfigurationId] = useState<string | null>(null)
   const [purchaseUrl, setPurchaseUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -46,9 +48,9 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   }, [checkoutConfigurationId])
 
   async function startCheckout() {
-    trackProductEvent('pricing_checkout_clicked', { plan_id: planId, logged_in: loggedIn })
+    trackProductEvent('pricing_checkout_clicked', { plan_id: planId, logged_in: loggedIn, preview_sport: preview?.sport ?? null })
     if (!loggedIn) {
-      router.push('/auth/login?next=/pricing')
+      router.push('/auth/login?next=' + encodeURIComponent(returnPath))
       return
     }
     setLoading(true)
@@ -57,14 +59,14 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
       const res = await fetch('/api/whop/checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, ...(preview && { preview: Object.fromEntries(new URLSearchParams(returnPath.split('?')[1])) }) }),
         signal: AbortSignal.timeout(25_000),
       })
       const data = await res.json()
       if (!res.ok || typeof data?.checkoutConfigurationId !== 'string' || !data.checkoutConfigurationId.startsWith('ch_') || !isTrustedWhopUrl(data.purchaseUrl)) throw new Error('checkout_session_failed')
       setPurchaseUrl(data.purchaseUrl)
       setCheckoutConfigurationId(data.checkoutConfigurationId)
-      trackProductEvent('pricing_checkout_opened', { plan_id: planId })
+      trackProductEvent('pricing_checkout_opened', { plan_id: planId, preview_sport: preview?.sport ?? null })
     } catch {
       setError('Checkout could not be opened. Please try again.')
     } finally {
@@ -168,10 +170,10 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
                 <Checkout
                   key={checkoutConfigurationId}
                   checkoutConfiguration={checkoutConfigurationId}
-                  returnUrl={`${window.location.origin}/pricing`}
+                  returnUrl={window.location.origin + returnPath}
                   onComplete={result => {
                     if (result.result === 'payment') {
-                      trackProductEvent('pricing_checkout_completed', { plan_id: planId })
+                      trackProductEvent('pricing_checkout_completed', { plan_id: planId, preview_sport: preview?.sport ?? null })
                     }
                   }}
                 >

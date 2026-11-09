@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PLATFORM_URL } from '@/lib/platform'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
+import { previewPricingPath, readPreviewContext } from '@/lib/publicResearchPreview'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
 
 export const revalidate = 0
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null)
   const planId = body?.planId
+  const preview = body?.preview && typeof body.preview === 'object' ? readPreviewContext(body.preview) : null
   if (typeof planId !== 'string' || !isOfferedWhopPlan(planId)) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
       plan_id: planId,
       metadata: { internal_user_id: user.id },
       // No ?status= of our own — Whop appends the real outcome itself.
-      redirect_url: `${PLATFORM_URL}/pricing`,
+      redirect_url: PLATFORM_URL + previewPricingPath(preview),
       }),
       signal: AbortSignal.timeout(20_000),
     })

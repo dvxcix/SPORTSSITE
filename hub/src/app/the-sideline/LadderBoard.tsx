@@ -17,11 +17,11 @@ const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_t
 const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
 const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
-export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, matrixMatches }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>> }) {
+export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, matrixMatches, initialPreview }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>>; initialPreview?: { player?: number; line?: number } | null }) {
   const statusFor = (player: SidelineOddsBoard['players'][number]) => nflAvailability(player, game?.gameday)
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
-  const [offset, setOffset] = useState(0),
+  const [offset, setOffset] = useState<number | null>(null),
     [mode, setMode] = useState<'odds' | 'move' | 'ratio' | 'picks'>('odds')
   const [sort, setSort] = useState<LadderSort>({ key: 'player', direction: 'asc' })
   const props = useMemo(() => Array.from(new Set([prop, ...board.players.flatMap(p => p.markets.map(m => m.propType))])).sort(), [board, prop])
@@ -38,7 +38,9 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
     [board, prop, vendor, side, kind],
   )
   const thresholds = [...new Set(rows.flatMap(r => r.entries.map(e => e.line).filter((v): v is number => v != null)))].sort((a, b) => a - b)
-  const start = Math.min(offset, Math.max(0, Math.ceil(thresholds.length / 6) - 1) * 6),
+  const previewLine = initialPreview?.line == null ? -1 : thresholds.indexOf(initialPreview.line)
+  const firstPage = Math.floor(Math.max(0, previewLine) / 6) * 6
+  const start = Math.min(offset ?? firstPage, Math.max(0, Math.ceil(thresholds.length / 6) - 1) * 6),
     visible = thresholds.slice(start, start + 6)
   const entryValue = (row: (typeof rows)[number], line: number) => {
     const e = row.entries.find(e => e.line === line)
@@ -68,7 +70,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
     if (activeSort.key === 'picks') return observedPropPicks(row.player, prop)
     return scores.get(row.player.id)?.[activeSort.key] ?? null
   }
-  const ordered = [...rows].sort((a, b) => Number(statusFor(b.player).eligible) - Number(statusFor(a.player).eligible) || compareLadderValues(sortValue(a), sortValue(b), activeSort.direction) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id)
+  const ordered = [...rows].sort((a, b) => Number(b.player.id === initialPreview?.player) - Number(a.player.id === initialPreview?.player) || Number(statusFor(b.player).eligible) - Number(statusFor(a.player).eligible) || compareLadderValues(sortValue(a), sortValue(b), activeSort.direction) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id)
   const metricHeat = buildBoardHeat(
     [
       { id: 'score', heat: 'high' as const, value: (row: { score: number | null }) => row.score },
@@ -204,7 +206,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
           </thead>
           <tbody>
             {ordered.map(row => (
-              <tr key={row.player.id} className={!statusFor(row.player).eligible ? styles.unavailableRow : undefined}>
+              <tr key={row.player.id} data-preview-player={row.player.id === initialPreview?.player ? 'true' : undefined} className={!statusFor(row.player).eligible ? styles.unavailableRow : undefined}>
                 <td>
                   <button className={styles.player} onClick={() => onPlayer(row.player.id)}>
                     {row.player.headshot ? <Image src={row.player.headshot} unoptimized={!row.player.headshot.startsWith('https://static.www.nfl.com/')} width={32} height={32} alt="" /> : null}

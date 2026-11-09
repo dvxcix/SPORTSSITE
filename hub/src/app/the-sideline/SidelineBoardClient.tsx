@@ -1636,12 +1636,12 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null }) {
+export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture, initialPreview }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null; initialPreview?: { player?: number; line?: number } | null }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
-  const [view, setView] = useState<BoardView>('core')
+  const [view, setView] = useState<BoardView>(initialPreview ? 'props' : 'core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
   const [activeBook, setActiveBook] = useState('fanduel')
@@ -2281,6 +2281,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onVendor={setActiveBook}
           scores={ladderScores}
           game={selected}
+          initialPreview={initialPreview}
           matrixMatches={new Map(rows.flatMap(row => row.market ? [[row.market.id, matrixMatches.get(row.id) ?? []] as const] : []))}
           onPlayer={id => {
             const row = rows.find(row => row.market?.id === id)

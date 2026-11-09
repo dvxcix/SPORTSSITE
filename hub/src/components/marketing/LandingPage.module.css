@@ -200,7 +200,7 @@
 .featureCopy { margin-bottom: 16px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
 .mockupWrap { width: 100%; }
 
-.tierPill { display: inline-flex; width: fit-content; border: 1px solid; border-radius: 999px; padding: 4px 9px; font-size: 9px; font-weight: 850; letter-spacing: .07em; line-height: 1; text-transform: uppercase; }
+.tierPill { color: #d0ffa8; background: #253722; border-color: #4b6840; display: inline-flex; width: fit-content; border: 1px solid; border-radius: 999px; padding: 4px 9px; font-size: 9px; font-weight: 850; letter-spacing: .07em; line-height: 1; text-transform: uppercase; }
 .tier_basic { color: #68adff; border-color: rgba(77,158,255,.3); background: rgba(77,158,255,.11); }
 .tier_advanced { color: #ff7188; border-color: rgba(255,77,106,.3); background: rgba(255,77,106,.11); }
 .tier_ultimate { color: #53e1ff; border-color: rgba(57,217,255,.32); background: rgba(57,217,255,.11); }

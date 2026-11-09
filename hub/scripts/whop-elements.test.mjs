@@ -10,6 +10,9 @@ const tiersSource = await readFile(new URL('../packages/core/src/tiers.ts', impo
 const tiersOutput = ts.transpileModule(tiersSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 const tiers = {}
 new Function('exports', tiersOutput)(tiers)
+const previewSource = await readFile(new URL('../src/lib/publicResearchPreview.ts', import.meta.url), 'utf8')
+const previewModule = {}
+new Function('exports', ts.transpileModule(previewSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(previewModule)
 const ultimate = 'plan_2uISqRWL3Re5v'
 const annual = 'plan_Brp4I5MDssXY0'
 const addon = 'plan_Q1Ey6RMgjS9XQ'
@@ -30,6 +33,7 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
       return { data: profile, error: profileError }
     } }) }) }) }) },
     '@slipsurge/core/tiers': tiers,
+    '@/lib/publicResearchPreview': previewModule,
     '@/lib/platform': { PLATFORM_URL: 'https://www.slipsurge.com' },
     '@/lib/serverRateLimit': { consumeServerRateLimit: async () => ({ allowed, available }) },
     '@/lib/safeApiError': { safeApiError: (_tag, _error, message, status) => Response.json({ error: message }, { status }) },
@@ -45,7 +49,7 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
       return response ?? Response.json({ id: 'ch_test', purchase_url: 'https://whop.com/checkout/test' })
     },
   )
-  return { calls, profileQueries, post: planId => compiled.exports.POST(new Request('https://www.slipsurge.com/api/whop/checkout-session', { method: 'POST', body: JSON.stringify({ planId, metadata: { internal_user_id: 'attacker' }, discord_advanced_claimed: true }) })) }
+  return { calls, profileQueries, post: (planId, preview) => compiled.exports.POST(new Request('https://www.slipsurge.com/api/whop/checkout-session', { method: 'POST', body: JSON.stringify({ planId, preview, metadata: { internal_user_id: 'attacker' }, discord_advanced_claimed: true }) })) }
 }
 
 test('Elements configuration preserves server-authored membership attribution', async () => {
@@ -62,6 +66,16 @@ test('Elements configuration preserves server-authored membership attribution', 
     assert.equal(calls[0].headers.Authorization, 'Bearer test-main-key')
     assert.ok(calls[0].signal instanceof AbortSignal)
   }
+})
+
+test('checkout preserves the validated preview and cannot redirect off-site', async () => {
+  const { post, calls } = route()
+  const preview = { preview: 'nfl', game: '2026_09_TB_CHI', date: '2026-11-08', player: '278135', line: '50', redirect: 'https://elsewhere.test' }
+  assert.equal((await post(ultimate, preview)).status, 200)
+  assert.equal(calls[0].body.redirect_url, 'https://www.slipsurge.com/pricing?game=2026_09_TB_CHI&date=2026-11-08&player=278135&line=50&preview=nfl')
+  assert.deepEqual(calls[0].body.metadata, { internal_user_id: 'member-123' })
+  assert.equal((await post(ultimate, { ...preview, game: 'https://elsewhere.test' })).status, 200)
+  assert.equal(calls[1].body.redirect_url, 'https://www.slipsurge.com/pricing')
 })
 
 test('anonymous, unknown-plan and rate-limited requests never reach Whop', async () => {

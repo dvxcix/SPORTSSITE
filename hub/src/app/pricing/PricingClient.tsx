@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Check, ShieldCheck, X } from 'lucide-react'
 import { ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID, ULTIMATE_CHECKOUT_PLAN_ID, type Tier } from '@slipsurge/core/tiers'
+import { PREVIEW_CONFIG, previewPagePath, previewWorkspacePath, type PreviewContext } from '@/lib/publicResearchPreview'
 import { PricingCheckoutButton } from './PricingCheckoutButton'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import styles from './PricingClient.module.css'
 
 const FEATURES = [
+  { label: 'Free NBA & NFL research previews', free: true },
   { label: 'Browse the NFL & NBA community feed', free: true },
   { label: 'View and manage your profile', free: true },
   { label: 'Choose favorite teams and players', free: true },
@@ -21,7 +23,7 @@ const FEATURES = [
   { label: 'The Court · NBA research, odds and ladders', free: false },
 ]
 
-export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus }: {
+export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus, preview }: {
   loggedIn: boolean
   currentTier: Tier
   rawTier?: Tier
@@ -29,6 +31,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   adminGrantedTier?: Tier | null
   fullAccessReason?: 'admin' | 'beta' | null
   checkoutStatus: string | null
+  preview?: PreviewContext | null
 }) {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
   const hasUltimate = currentTier === 'ultimate' || fullAccessReason === 'admin'
@@ -46,6 +49,12 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
       <p className={styles.heroCopy}>Follow the community for free, or get NFL and NBA research with Ultimate.</p>
     </div></div>
     <div className={styles.main}>
+      <div className={styles.previewLinks} aria-label="Explore research before subscribing">
+        {preview ? <Link href={hasUltimate ? previewWorkspacePath(preview) : previewPagePath(preview)}>{hasUltimate ? 'Open ' + PREVIEW_CONFIG[preview.sport].workspace : 'Return to your free preview'}</Link> : <>
+          <Link href="/preview/nba">Try NBA research</Link>
+          <Link href="/preview/nfl">Try NFL research</Link>
+        </>}
+      </div>
       <div className={styles.billingTrust}><ShieldCheck size={14} /> Secure membership management and billing powered by Whop</div>
       <div className={styles.intervalWrap}>
         <div className={styles.intervalControl} role="group" aria-label="Billing period">
@@ -70,7 +79,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
               {!paid && !loggedIn && <Link href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>Sign up free</Link>}
               {paid && hasExistingPaidPlan && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>Manage membership</Link>}
               {paid && eligibleDiscordOffer && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>View Discord member offer</Link>}
-              {paid && !hasUltimate && !hasExistingPaidPlan && (!eligibleDiscordOffer || interval === 'annual') && <PricingCheckoutButton planId={interval === 'annual' ? ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID : ULTIMATE_CHECKOUT_PLAN_ID} label={interval === 'annual' ? 'Get Ultimate' : 'Start 3-day free trial'} loggedIn={loggedIn} highlight />}
+              {paid && !hasUltimate && !hasExistingPaidPlan && (!eligibleDiscordOffer || interval === 'annual') && <PricingCheckoutButton planId={interval === 'annual' ? ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID : ULTIMATE_CHECKOUT_PLAN_ID} label={interval === 'annual' ? 'Get Ultimate' : 'Start 3-day free trial'} loggedIn={loggedIn} preview={preview} highlight />}
               <ul className={styles.featureList}>{FEATURES.map(feature => {
                 const included = paid || feature.free
                 return <li key={feature.label} className={included ? '' : styles.featureUnavailable}>{included ? <Check size={14} /> : <X size={14} />}<span>{feature.label}</span></li>

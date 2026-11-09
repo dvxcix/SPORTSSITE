@@ -20,6 +20,7 @@ import { MfaGate } from '@/components/security/MfaGate'
 import { GlobalCommandPalette } from './GlobalCommandPalette'
 import { ContextHandoff } from './ContextHandoff'
 import { ProductTelemetry } from './ProductTelemetry'
+import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { getProductArea } from './navigationConfig'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
@@ -45,7 +46,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
     return <><NetworkStatus /><ProductTelemetry />{children}</>
   }
 
-  if (isAuthPage || isLandingPage) {
+  if (isAuthPage || isLandingPage || isPublicPreviewPath(path)) {
     return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main></>
   }
 

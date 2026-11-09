@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { readPreviewContext } from '@/lib/publicResearchPreview'
 import { PricingClient } from './PricingClient'
 
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { status } = await searchParams
+  const query = await searchParams
+  const status = typeof query.status === 'string' ? query.status : null
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -41,7 +43,8 @@ export default async function PricingPage({
       discordAdvancedClaimed={discordAdvancedClaimed}
       adminGrantedTier={adminGrantedTier}
       fullAccessReason={fullAccessReason}
-      checkoutStatus={status ?? null}
+      checkoutStatus={status}
+      preview={readPreviewContext(query)}
     />
   )
 }

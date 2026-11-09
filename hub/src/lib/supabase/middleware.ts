@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './authErrors'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { isMlbOnlyPath, isMlbPullPath } from '@/lib/mlbOffseasonAccess'
+import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { ownOnboardingComplete } from './ownOnboarding'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
@@ -29,6 +30,9 @@ function mlbProviderPaused(request: NextRequest) {
 }
 
 export async function updateSession(request: NextRequest) {
+  // These two routes only render a bounded public projection and never use
+  // account cookies. An auth outage should not hide the product preview.
+  if (isPublicPreviewPath(request.nextUrl.pathname)) return NextResponse.next({ request })
   const isAuthRoute = request.nextUrl.pathname === '/auth' || request.nextUrl.pathname.startsWith('/auth/')
   // Login and token-exchange handlers authenticate themselves. A stale cookie
   // must not trigger a second proxy refresh or delete a newer browser session.

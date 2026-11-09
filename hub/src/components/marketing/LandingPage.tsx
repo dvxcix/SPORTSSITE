@@ -27,18 +27,9 @@ const STEPS = [
   { n: '3', title: 'Post and track picks', body: 'Share picks and follow your record on the leaderboard.' },
 ]
 
-type TierKey = 'ultimate'
-const TIER_LABEL: Record<TierKey, string> = { ultimate: 'Ultimate' }
-
-function TierPill({ tier }: { tier: TierKey }) {
-  return (
-    <span className={`${styles.tierPill} ${styles[`tier_${tier}`]}`}>{TIER_LABEL[tier]}</span>
-  )
-}
-
-const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: TierKey; link: string }[] = [
-  { icon: <Activity size={18}/>, title: 'The Sideline · NFL', description: 'Player props, ladders, matchup research and market movement.', tier: 'ultimate', link: '/the-sideline' },
-  { icon: <TrendingUp size={18}/>, title: 'The Court · NBA', description: 'Odds comparisons, player trends, defense by position and alternate lines.', tier: 'ultimate', link: '/the-paint' },
+const TOOLS: { icon: React.ReactNode; title: string; description: string; link: string }[] = [
+  { icon: <Activity size={18}/>, title: 'The Sideline · NFL', description: 'Explore a receiving-yards ladder and see how saved prices moved.', link: '/preview/nfl' },
+  { icon: <TrendingUp size={18}/>, title: 'The Court · NBA', description: 'Explore an NBA points ladder and compare real prices with their openings.', link: '/preview/nba' },
 ]
 
 // Illustrative mockup only — not a live screenshot. Team pairs and numbers
@@ -55,7 +46,7 @@ const FAQS = [
   { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks. We never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
   { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile. Their picks land in your feed automatically, and their record updates when each pick grades. No screenshots or self-reported win rates.' },
   { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded. Any single loss fails the whole slip, while an all-push result is graded as a push.' },
-  { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. Community features and live scores are available with paid plans; NFL and NBA research tools are included with Ultimate.' },
+  { q: 'What\'s free vs. what requires a paid tier?', a: 'Anyone can open a free NBA or NFL research preview. Free accounts can follow the feed and set favorites. Ultimate unlocks the full boards and research tools.' },
 ]
 
 function FaqAccordion() {
@@ -126,7 +117,7 @@ export function LandingPage() {
             Follow live markets, compare the full slate, publish picks, and see public records update automatically.
           </p>
           <div className={styles.heroActions}>
-            <Link href="/auth/register" className={styles.heroPrimary}>Create free account <ArrowRight size={16} /></Link>
+            <Link href="/preview/nba" className={styles.heroPrimary}>Explore free research <ArrowRight size={16} /></Link>
             <Link href="/pricing" className={styles.heroSecondary}>Compare memberships</Link>
           </div>
           <div className={styles.heroProof} role="group" aria-label="Platform highlights">
@@ -161,7 +152,7 @@ export function LandingPage() {
         >
           Research NFL and NBA games
         </motion.h2>
-        <p className={styles.sectionCopy}>NFL in The Sideline. NBA in The Court. Research workspaces together in Ultimate.</p>
+        <p className={styles.sectionCopy}>Open a real odds board for free. Ultimate unlocks both research workspaces.</p>
 
         <div className={styles.toolGrid}>
           {TOOLS.map((t, i) => (
@@ -174,7 +165,7 @@ export function LandingPage() {
                 <div className={`${styles.featureCard} ss-card`}>
                   <div className={styles.cardTopline}>
                     <div className={styles.cardIcon}>{t.icon}</div>
-                    <TierPill tier={t.tier} />
+                    <span className={styles.tierPill}>Free preview</span>
                   </div>
                   <h3 className={styles.cardTitle}>{t.title}</h3>
                   <p className={styles.cardCopy}>{t.description}</p>
