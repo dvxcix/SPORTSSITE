@@ -9,22 +9,23 @@ import { nbaOddsBoardPhaseSignature } from '../src/lib/nbaOddsBoardPhase.ts'
 const game={id:12,date:'2026-11-02',datetime:'2026-11-02T15:00:00Z',status:'Final',status_state:'final',home_team:{id:1,abbreviation:'AAA'},visitor_team:{id:2,abbreviation:'BBB'}}
 const player={id:4,first_name:'Alex',last_name:'Player',position:'G',team:{id:1,abbreviation:'AAA',full_name:'Alpha'}}
 const quote=(at:string,odds:number)=>({id:1,game_id:12,player_id:4,vendor:'draftkings',prop_type:'points',line_value:'20',market:{type:'milestone',odds},updated_at:at})
-const state={openingReads:0,cutoffReads:0,clockReads:0,phaseCalls:0,publicReads:0,publicError:false,noGames:false,incomplete:false,partial:null as unknown,failFull:false,legacy:null as unknown,legacyKey:'',cacheKeys:[] as string[],firstConfident:true,firstError:false,openingError:false,extraGame:false,failedGame:0,liveOpenings:[] as unknown[],latest:{captured_at:'2026-11-02T16:00:00Z',quotes:[quote('2026-11-02T16:00:00Z',150),{...quote('2026-11-02T14:59:59Z',999),player_id:5}]},prior:{captured_at:'2026-11-02T15:30:00Z',quotes:[quote('2026-11-02T15:30:00Z',175)]},badCutoff:false,clockDelay:0,phaseAt:Date.now()-20_000,phaseExpiresAt:Date.now()+15_000,badPhase:false,phaseStart:Date.parse(game.datetime),secondPhaseStart:0}
+const state={openingReads:0,priorError:false,latestError:false,liveGame:false,cachePayload:null as unknown,cacheReads:0,cutoffReads:0,clockReads:0,phaseCalls:0,publicReads:0,publicError:false,noGames:false,incomplete:false,partial:null as unknown,failFull:false,legacy:null as unknown,legacyKey:'',cacheKeys:[] as string[],firstConfident:true,firstError:false,openingError:false,extraGame:false,failedGame:0,liveOpenings:[] as unknown[],latest:{captured_at:'2026-11-02T16:00:00Z',quotes:[quote('2026-11-02T16:00:00Z',150),{...quote('2026-11-02T14:59:59Z',999),player_id:5}]},prior:{captured_at:'2026-11-02T15:30:00Z',quotes:[quote('2026-11-02T15:30:00Z',175)]},badCutoff:false,clockDelay:0,phaseAt:Date.now()-20_000,phaseExpiresAt:Date.now()+15_000,badPhase:false,phaseStart:Date.parse(game.datetime),secondPhaseStart:0}
 ;(globalThis as typeof globalThis&{fullOddsRoute:typeof state}).fullOddsRoute=state
 const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint/odds-board/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'full-board-fixture',setup(builder){
  const modules:Record<string,string>={
   'next/server':`export const NextResponse={json:(value,options)=>Response.json(value,options)}`,
   '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
-  '@/lib/nbaPaintData':`export async function getPaintSchedule(date,exact){if(exact!==true)throw Error('date must be exact');const g=${JSON.stringify(game)},s=globalThis.fullOddsRoute;return {date,complete:!s.incomplete,games:s.noGames?[]:s.extraGame?[g,{...g,id:13}]:[g]}};export async function getPaintRoster(g){return [{...${JSON.stringify(player)},id:g.id===13?5:4}]};export async function artwork(){throw Error('Closed games must not read current artwork')}`,
+  '@/lib/nbaPaintData':`export async function getPaintSchedule(date,exact){if(exact!==true)throw Error('date must be exact');const s=globalThis.fullOddsRoute,g={...${JSON.stringify(game)},...(s.liveGame?{status:'In progress',status_state:'in_progress'}:{})};return {date,complete:!s.incomplete,games:s.noGames?[]:s.extraGame?[g,{...g,id:13}]:[g]}};export async function getPaintRoster(g){return [{...${JSON.stringify(player)},id:g.id===13?5:4}]};export async function artwork(){throw Error('Closed games must not read current artwork')}`,
   '@/lib/nbaOddsClockData':`export async function getNbaOddsGame(game){const s=globalThis.fullOddsRoute;s.clockReads++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));return {...game,datetime:s.badCutoff?'invalid':game.datetime}}`,
   '@/lib/nbaOddsBoardPhaseData':`export async function getNbaOddsBoardPhase(date){const s=globalThis.fullOddsRoute;s.phaseCalls++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));const start=s.secondPhaseStart&&s.phaseCalls>1?s.secondPhaseStart:s.phaseStart,flag=s.badPhase?'0':'${nbaOddsBoardPhaseSignature([game as never])!.split(',')[2]}';return {header:'v1|'+date+'|'+s.phaseAt+'|'+(s.noGames?'':'12,'+start+','+flag+(s.extraGame?';13,'+start+','+flag:'')),expiresAt:s.phaseExpiresAt}}`,
-  '@/lib/nbaOddsPhaseData':`export function nbaPhaseBoundary(game,mode){const start=Date.parse(game.datetime);if(!Number.isFinite(start))throw Error('bad cutoff');return {tipoff:new Date(start).toISOString(),key:mode+':'+game.id+':'+start+':'+(Date.now()>=start?'closed':'open')}};export async function getNbaPhaseFrames(game,mode,feed,scope){const f=scope.asOf?globalThis.fullOddsRoute.prior:globalThis.fullOddsRoute.latest;return [game.id===13?{...f,quotes:f.quotes.map(q=>({...q,game_id:13,player_id:q.player_id===4?5:6}))}:f]}`,
+  '@/lib/nbaOddsPhaseData':`export function nbaPhaseBoundary(game,mode){const start=Date.parse(game.datetime);if(!Number.isFinite(start))throw Error('bad cutoff');return {tipoff:new Date(start).toISOString(),key:mode+':'+game.id+':'+start+':'+(Date.now()>=start?'closed':'open')}};export async function getNbaPhaseFrames(game,mode,feed,scope){if(!scope.asOf&&globalThis.fullOddsRoute.latestError)throw Error('Tape unavailable');if(scope.asOf&&globalThis.fullOddsRoute.priorError)throw Error('Earlier prices unavailable');const f=scope.asOf?globalThis.fullOddsRoute.prior:globalThis.fullOddsRoute.latest;return [game.id===13?{...f,quotes:f.quotes.map(q=>({...q,game_id:13,player_id:q.player_id===4?5:6}))}:f]}`,
   '@/lib/nbaOddsHistoryData':`export async function getNbaQuoteOpenings(_game,mode){const s=globalThis.fullOddsRoute;s.openingReads++;if(s.openingError)throw Error('unavailable');return mode==='live'?s.liveOpenings:[]}`,
   '@/lib/nbaBoardPublicData':`export async function getNbaBoardPublicCaptures(game,mode){const s=globalThis.fullOddsRoute;s.publicReads++;if(s.publicError)throw Error('unavailable');const at=mode==='live'?'2026-11-02T15:01:00Z':'2026-11-02T14:59:00Z';return [{captured_at:at,snapshot:{gameId:game.id,complete:true,normalizationVersion:'nba-public-v5',rows:[{playerId:game.id===13?5:4,market:'points',picks:mode==='live'?7:42,capturedAt:at}]}}]}`,
   '@/lib/nbaLiveFirstSeenData':`export async function nbaLiveFirstSeenConfident(game){const s=globalThis.fullOddsRoute;if(s.firstError||s.failedGame===game.id)throw Error('unavailable');return s.firstConfident}`,
   '@/lib/nbaFullBoardCutoffsData':`export async function nbaFullBoardCutoffs(games){globalThis.fullOddsRoute.cutoffReads++;return games}`,
   '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(g){return {value:{players:[{...${JSON.stringify(player)},id:g.id===13?5:4,headshot:'https://images.example/saved.png'}]}}}`,
-  '@/lib/supabase/admin':`export function createAdminClient(){throw Error('Closed games must not read capture status')}`,
+  '@/lib/nbaSupplementalProps':`export const nbaSupplementalQuote=quote=>quote.id<=-1000000000000`,
+  '@/lib/supabase/admin':`export function createAdminClient(){return {from(){const s=globalThis.fullOddsRoute;const read={select(){return read},eq(k,key){if(!key.startsWith('phase-prices:v5:live:12:'))throw Error('wrong cache key');return read},abortSignal(){return read},async maybeSingle(){s.cacheReads++;return {data:s.cachePayload,error:null}}};return read}}}`,
   '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;s.cacheKeys.push(key);if(key.startsWith('odds-board:v6:')&&s.failFull)throw Error('refresh failed');if(key===s.legacyKey&&s.legacy)return {value:s.legacy,stale:false};if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
  }
  builder.onResolve({filter:/.*/},args=>args.path in modules?{path:args.path,namespace:'fixture'}:undefined)
@@ -106,4 +107,28 @@ test('a cold cache failure uses only a complete prior board for the exact phase 
   state.phaseStart-=60_000;assert.equal((await get('pregame')).status,503,'changed cutoff must not use an older phase key')
   state.phaseStart+=60_000;state.legacy={...old,complete:false};assert.equal((await get('pregame')).status,503,'incomplete prior board is not a complete fallback')
  }finally{state.failFull=false;state.legacy=null;state.legacyKey='';state.partial=null}
+})
+
+test('an earlier-frame outage leaves the current price and eligible opening in Live',async()=>{
+  state.priorError=true;state.phaseAt=Date.now()-20_000;state.phaseExpiresAt=Date.now()+15_000
+  try{
+    const response=await get('live');assert.equal(response.status,200)
+    const board=nbaUnpackFullBoard(await response.json(),'points')
+    assert.equal(board.cells[0].current.odds,150);assert.equal(board.cells[0].previous,null)
+  }finally{state.priorError=false}
+})
+
+test('a missing live tape can use an exact existing Research cache without importing pregame prices',async()=>{
+  state.latestError=true;state.liveGame=true;state.cacheReads=0;state.phaseAt=Date.now()-2000;state.phaseExpiresAt=Date.now()+15000
+  const observedAt=new Date(Date.now()-1000).toISOString(), quoteAt=new Date(Date.now()-1500).toISOString()
+  state.cachePayload={expires_at:new Date(Date.now()+10000).toISOString(),payload:{observedAt,props:[quote(quoteAt,125),{...quote('2026-11-02T14:59:00Z',999),line_value:25}]}}
+  try{
+    const response=await get('live');assert.equal(response.status,200)
+    const board=nbaUnpackFullBoard(await response.json(),'points')
+    assert.deepEqual(board.cells.map(cell=>[cell.current.odds,cell.current.at,cell.previous]),[[125,quoteAt,null]])
+    assert.equal(board.complete,false);assert.equal(board.stale,true);assert.equal(state.cacheReads,1)
+    state.partial=null;state.cacheReads=0
+    const pregame=await get('pregame');assert.equal(pregame.status,200)
+    assert.deepEqual(nbaUnpackFullBoard(await pregame.json(),'points').cells,[]);assert.equal(state.cacheReads,0)
+  }finally{state.latestError=false;state.liveGame=false;state.cachePayload=null;state.partial=null}
 })

@@ -27,6 +27,7 @@ const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint
   '@/lib/nbaLiveFirstSeenData':`export async function nbaLiveFirstSeenConfident(){return true}`,
   '@/lib/nbaFullBoardCutoffsData':`export async function nbaFullBoardCutoffs(games){return globalThis.captureWarningRoute.correct?games.map(game=>({...game,datetime:new Date(Date.parse(game.datetime)-60000).toISOString()})):games}`,
   '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(){return {value:{players:[globalThis.captureWarningRoute.player]}}}`,
+  '@/lib/nbaSupplementalProps':`export const nbaSupplementalQuote=()=>false`,
   '@/lib/supabase/admin':`export function createAdminClient(){return {from(table){if(table!=='nba_source_cache')throw Error('table');return {select(fields){if(fields!=='key,payload,fetched_at')throw Error('fields');return {in(field,keys){const s=globalThis.captureWarningRoute;s.keys=keys;return {async abortSignal(){s.reads++;if(s.crossTip)Date.now=()=>s.tip+1;return s.fail?{error:'offline'}:{data:s.rows,error:null}}}}}}}}}}`,
   '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.captureWarningRoute;if(s.cache.has(key))return {value:s.cache.get(key),stale:false};const value=await load();s.cache.set(key,value);return {value,stale:false}}`,
  }

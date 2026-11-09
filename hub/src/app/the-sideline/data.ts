@@ -222,7 +222,7 @@ function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[])
   }
 }
 
-function storedGameState(game: SidelineGame): SidelineGameState | null {
+export function storedGameState(game: SidelineGame): SidelineGameState | null {
   if (game.awayScore == null || game.homeScore == null) return null
   return { status: 'Final', statusState: 'final', awayScore: game.awayScore, homeScore: game.homeScore, awayByPeriod: [], homeByPeriod: [], summary: null }
 }

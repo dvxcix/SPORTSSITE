@@ -10,13 +10,13 @@ const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://ww
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
 Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true})
 const {createRoot}=await import('react-dom/client')
-const state={calls:0,auth:0,clockCalls:0,failClock:false,missing:false,failRequest:false,token:'a'.repeat(64),observedAt:new Date(Date.now()-1000).toISOString(),poll:null as null|((signal:AbortSignal)=>Promise<void>),latest:null as null|{phase:{gameId:string;token:string|null;observedAt:string|null;checkedAt:number}|null;safe:boolean;reason:string}}
+const state={calls:0,bundleCalls:0,auth:0,clockCalls:0,failClock:false,missing:false,failRequest:false,token:'a'.repeat(64),observedAt:new Date(Date.now()-1000).toISOString(),poll:null as null|((signal:AbortSignal)=>Promise<void>),latest:null as null|{phase:{gameId:string;token:string|null;observedAt:string|null;checkedAt:number}|null;safe:boolean;reason:string}}
 ;(globalThis as typeof globalThis&{marketFixture:typeof state}).marketFixture=state
 const stubs:Record<string,string>={
   'next/server':`export class NextResponse extends Response{static json(v,o={}){return new Response(JSON.stringify(v),{...o,headers:{'Content-Type':'application/json',...o.headers}})}}`,
   '@/lib/nflAccess':`export async function requireNflAccess(){globalThis.marketFixture.auth++;return {userId:'member'}}`,
   '@/app/the-sideline/data':``,
-  '../data':`export const getSidelineGames=async()=>({games:[{id:'game',gameday:'2020-11-02'}]});export const getSidelineOddsBundle=async()=>({odds:{players:[],capturedAt:null},gameState:null});export const getSidelineTimeline=async()=>[];export const getSidelineCapture=async()=>null`,
+  '../data':`export const getSidelineGames=async()=>({games:[{id:'game',gameday:'2020-11-02'}]});export const getSidelineOddsBundle=async()=>{globalThis.marketFixture.bundleCalls++;return {odds:{players:[],capturedAt:null},gameState:null}};export const getSidelineTimeline=async()=>[];export const getSidelineCapture=async()=>null;export const storedGameState=()=>null`,
   '@/lib/nflTouchdownFeed':`export const getNflTouchdownFeed=async()=>[]`,
   '@/lib/nflPublicResultsServer':`export const getNflPublicResults=async()=>null`,
   '@/lib/nflPregameResearchData':`export const nflPregameOpen=()=>true`,
@@ -43,6 +43,6 @@ test('market route supplies original proof only for the open board and the clien
     state.missing=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
     state.missing=false;state.failClock=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
     state.failClock=false;state.failRequest=true;await poll();assert.equal(latest()?.phase?.token,null);assert.equal(latest()?.safe,false)
-    assert.equal(state.auth,state.calls-1)
+    assert.equal(state.auth,state.calls-1);assert.equal(state.bundleCalls,1,'the token-only path must not reload matchup research')
   }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=oldFetch}
 })

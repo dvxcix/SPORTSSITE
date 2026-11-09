@@ -2,6 +2,9 @@ import type { PaintGame } from './nbaPaint'
 
 export type NbaOddsMode = 'pregame' | 'live'
 export const nbaOddsMode = (value: unknown): NbaOddsMode => value === 'live' ? 'live' : 'pregame'
+export function nbaPhasePricesKey(game:Pick<PaintGame,'id'|'datetime'|'status'>,mode:NbaOddsMode) {
+  return ['phase-prices','v5',mode,game.id,String(nbaGameStart(game))].join(':')
+}
 export type NbaQuoteTimeReason = 'invalid-clock' | 'future' | 'wrong-phase' | 'expired'
 type GameClock = Pick<PaintGame, 'datetime' | 'status'> & Partial<Pick<PaintGame, 'status_state' | 'period'>>
 

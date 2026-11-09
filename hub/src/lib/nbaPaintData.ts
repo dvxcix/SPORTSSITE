@@ -8,7 +8,7 @@ import { nbaSharedCache } from './nbaSharedCache'
 import { nbaAttachOpenings } from './nbaOddsHistory'
 import { getNbaQuoteOpenings } from './nbaOddsHistoryData'
 import { getNbaFirstOddsForMode } from './nbaFirstBasketOddsData'
-import { nbaGameFinal, nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
+import { nbaGameFinal, nbaLiveOpen, nbaPhasePricesKey, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
 import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
 import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaNormalizePrimaryProps } from './nbaPrimaryProps'
@@ -229,7 +229,7 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
   }
   if (mode === 'pregame' && !nbaPregameOpen(game)) return frozen()
   if (mode === 'live' && !nbaLiveOpen(game)) return nbaGameFinal(game) ? frozen() : empty
-  const cached = await nbaSharedCache(`phase-prices:v5:${mode}:${game.id}:${nbaGameStart(game)}`, 30, 0, async () => {
+  const cached = await nbaSharedCache(nbaPhasePricesKey(game,mode), 30, 0, async () => {
     // Phase-specific leases ensure thousands of members share one refresh.
     const issues: string[] = []
     const optional = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => { try { return await promise } catch { issues.push(label); return fallback } }

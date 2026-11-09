@@ -28,3 +28,12 @@ test('ordinary board reads do not fetch a token; failures and denied access do n
  shared.phaseFails=true;const failed=await fixture.exports.GET(req('game=12&slate_date=2026-11-02'));assert.equal(failed.headers.get('x-nba-slate-phase'),'unavailable')
  shared.denied=true;const denied=await fixture.exports.GET(req('game=12&slate_date=2026-11-02'));assert.equal(denied.status,403);assert.equal(shared.phaseCalls,1);shared.denied=false
 })
+
+test('the Odds Board can verify the slate without loading a matchup research board',async()=>{
+  shared.denied=false;shared.phaseFails=false;shared.boardCalls=0;shared.phaseCalls=0
+  const result=await fixture.exports.GET(req('slate_date=2026-11-02&phase_only=1'))
+  assert.equal(result.status,204);assert.equal(shared.phaseCalls,1);assert.equal(shared.boardCalls,0)
+  assert.match(result.headers.get('x-nba-slate-phase')??'',/^v1\|/);assert.equal(await result.text(),'')
+  shared.phaseFails=true;assert.equal((await fixture.exports.GET(req('slate_date=2026-11-02&phase_only=1'))).status,503);assert.equal(shared.boardCalls,0)
+  shared.phaseFails=false
+})

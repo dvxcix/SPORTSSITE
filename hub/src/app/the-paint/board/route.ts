@@ -12,8 +12,15 @@ export async function GET(request: NextRequest) {
   const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   const id = request.nextUrl.searchParams.get('game')
   const slateDate=request.nextUrl.searchParams.get('slate_date')
-  if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
+  const phaseOnly=request.nextUrl.searchParams.get('phase_only')==='1'
   if(slateDate!=null&&nbaDate(slateDate)!==slateDate)return NextResponse.json({error:'Choose a valid date'},{status:400})
+  if(phaseOnly){
+    if(!slateDate)return NextResponse.json({error:'Choose a valid date'},{status:400})
+    const phase=await getNbaOddsBoardPhase(slateDate).catch(()=>null)
+    if(!phase)return NextResponse.json({error:'Game times unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}})
+    return new Response(null,{status:204,headers:{'Cache-Control':'private, no-store','X-NBA-Slate-Phase':phase.header,'X-NBA-Slate-Phase-Expires':String(phase.expiresAt)}})
+  }
+  if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
   try {
     // The lightweight phase check runs only for an open Odds Board. It is
     // shared across instances and applies even when the board returns 304.

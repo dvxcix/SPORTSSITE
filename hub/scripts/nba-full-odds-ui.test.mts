@@ -101,7 +101,7 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
 })
 
-test('piggybacked phase checks preserve an unchanged grid, hide corrections, and fail closed on missing token and resume',async()=>{
+test('phase checks preserve the grid across failed refresh and resume, but hide a corrected phase',async()=>{
  const originalFetch=globalThis.fetch,originalNow=Date.now;let clock=originalNow(),calls=0,release:((response:Response)=>void)|undefined
  Date.now=()=>clock
  const games=[game,otherGame],corrected={...game,datetime:new Date(Date.parse(game.datetime!)-60000).toISOString()},revised=[corrected,otherGame]
@@ -121,15 +121,16 @@ test('piggybacked phase checks preserve an unchanged grid, hide corrections, and
   clock+=10;await act(async()=>{release!(result(revised,clock));await new Promise(done=>setTimeout(done,20))})
   assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2,'correction must not cause a duplicate full fetch')
   clock+=10;await act(async()=>render({date:data.date,mode:'pregame',phase:null,receivedAt:clock}))
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'));assert.match(host.textContent??'',/Showing last verified prices/)
+  assert.equal(host.querySelector('table a'),null,'unverified game time disables the quote drilldown')
   clock+=10;await act(async()=>render(token(revised,clock)))
   assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2)
   Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   clock+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'resume hides prior prices until a later successful phase check')
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'));assert.match(host.textContent??'',/Showing last verified prices/)
   const beforeResume=clock-5;clock+=5
   await act(async()=>render({date:data.date,mode:'pregame',receivedAt:clock,phase:{date:data.date,checkedAt:beforeResume,signature:nbaOddsBoardPhaseSignature(revised)!}}))
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'a request arriving after resume cannot reuse a pre-resume check')
+  assert.match(host.textContent??'',/Showing last verified prices/,'a cached check before resume cannot restore the verified state')
   clock+=10;await act(async()=>render(token(revised,clock)));assert.equal(host.querySelector<HTMLElement>('[aria-label="NBA milestone odds board"]')?.scrollLeft,117);assert.equal(calls,2)
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch;Date.now=originalNow;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})}
 })
@@ -154,7 +155,7 @@ test('an in-flight old grid is hidden and replaced when a newer token corrects t
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch;Date.now=originalNow}
 })
 
-test('an expired phase check hides the grid on its timer without starting another request',async()=>{
+test('an expired phase check labels the existing grid without starting another request',async()=>{
  const originalFetch=globalThis.fetch;let calls=0
  const checkedAt=Date.now()-NBA_ODDS_BOARD_PHASE_MAX_AGE+1200
  globalThis.fetch=async()=>{calls++;return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,phaseCheckedAt:checkedAt}),'fanduel'))}
@@ -163,11 +164,11 @@ test('an expired phase check hides the grid on its timer without starting anothe
   await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame]}));await new Promise(done=>setTimeout(done,30))})
   assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
   await act(async()=>{await new Promise(done=>setTimeout(done,1350))})
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null);assert.equal(calls,1)
+  assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'));assert.match(host.textContent??'',/Showing last verified prices/);assert.equal(calls,1)
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
 })
 
-test('Live defaults to first seen, offers earlier comparison, and cached pre-resume proof cannot unhide the board',async()=>{
+test('Live keeps its own prices and cached pre-resume proof cannot mark them verified again',async()=>{
  const priorFetch=globalThis.fetch,priorNow=Date.now;let now=priorNow();Date.now=()=>now
  ;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='live'
  const games=[game,otherGame],host=document.createElement('div');document.body.append(host);const root=createRoot(host)
@@ -179,9 +180,9 @@ test('Live defaults to first seen, offers earlier comparison, and cached pre-res
   const comparison=host.querySelector<HTMLSelectElement>('[aria-label="Compare odds to"]')!;assert.equal(comparison.value,'opening');comparison.value='previous';await act(async()=>comparison.dispatchEvent(new dom.window.Event('change',{bubbles:true})));assert.match(grid.textContent??'',/Earlier\s*\+175/)
   Object.defineProperty(dom.window.document,'visibilityState',{value:'hidden',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
   now+=10;Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true});await act(async()=>dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange')))
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null)
+  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),grid);assert.match(host.textContent??'',/Showing last verified prices/)
   now+=10;await act(async()=>render({date:data.date,mode:'live',receivedAt:now,phase:{date:data.date,checkedAt:now-15000,signature:nbaOddsBoardPhaseSignature(games)!}}))
-  assert.equal(host.querySelector('[aria-label="NBA milestone odds board"]'),null,'cached phase proof from before resume cannot restore the grid')
+  assert.match(host.textContent??'',/Showing last verified prices/,'cached proof cannot certify the resumed Live prices')
   now+=10;await act(async()=>render({date:data.date,mode:'live',receivedAt:now,phase:{date:data.date,checkedAt:now,signature:nbaOddsBoardPhaseSignature(games)!}}));assert.ok(host.querySelector('[aria-label="NBA milestone odds board"]'))
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=priorFetch;Date.now=priorNow;(globalThis as typeof globalThis&{oddsBoardTestMode:string}).oddsBoardTestMode='pregame';Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})}
 })

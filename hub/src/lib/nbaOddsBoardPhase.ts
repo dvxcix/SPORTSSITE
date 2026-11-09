@@ -2,7 +2,7 @@ import { nbaGameFinal,nbaGameStart } from './nbaOddsMode'
 import type { PaintGame } from './nbaPaint'
 
 export type NbaOddsBoardPhase = { date:string; checkedAt:number; signature:string }
-export type NbaOddsBoardPhaseCheck = { date:string; mode:'pregame'|'live'; phase:NbaOddsBoardPhase|null; receivedAt:number; expiresAt?:number|null }
+export type NbaOddsBoardPhaseCheck = { date:string; mode:'pregame'|'live'; phase:NbaOddsBoardPhase|null; receivedAt:number; expiresAt?:number|null; accessDenied?:boolean }
 export const NBA_ODDS_BOARD_PHASE_MAX_AGE=81_000
 
 /** Canonical slate identity plus the earliest resolved clock and started flag. */

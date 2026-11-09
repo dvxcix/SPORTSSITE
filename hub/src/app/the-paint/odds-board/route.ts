@@ -13,10 +13,11 @@ import { nbaLiveFirstSeenConfident } from '@/lib/nbaLiveFirstSeenData'
 import { readNbaPregameResearch } from '@/lib/nbaPregameResearchData'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDate, nbaBinary, PAINT_MARKETS, type PaintBoard, type PaintGame, type PaintProp } from '@/lib/nbaPaint'
-import { nbaGameFinal, nbaGameStart, nbaOddsMode, nbaPregameOpen, nbaLiveOpen, type NbaOddsMode } from '@/lib/nbaOddsMode'
+import { nbaGameFinal, nbaGameStart, nbaOddsMode, nbaPregameOpen, nbaLiveOpen, nbaPhasePricesKey, nbaQuoteInMode, type NbaOddsMode } from '@/lib/nbaOddsMode'
 import { nbaBeforeCapture,nbaFullBoardCells,nbaLiveBoardQuotes,nbaPackFullBoard,nbaPackFullBoardWithinLimit,nbaSelectPackedBoard,nbaTimestampNanoseconds, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaFullBoardPlayers } from '@/lib/nbaFullBoardPlayers'
 import { nbaBoardCaptureWarnings } from '@/lib/nbaBoardCaptureWarning'
+import { nbaSupplementalQuote } from '@/lib/nbaSupplementalProps'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const maxDuration = 120
@@ -96,12 +97,32 @@ export async function GET(request:NextRequest) {
       if(phase.signature!==nbaOddsBoardPhaseSignature(games))throw new Error('NBA phase unavailable')
       phaseCheckedAt=phase.checkedAt
     }
-    return NextResponse.json({...nbaSelectPackedBoard(cached.value,book),stale:cached.stale,phaseCheckedAt},{headers:{'Cache-Control':'private, no-store'}})
+    return NextResponse.json({...nbaSelectPackedBoard(cached.value,book),stale:cached.stale||cached.value.stale,phaseCheckedAt},{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503})}
 }
 
+// Research already has a shared, short-lived price snapshot for active
+// games. Read it only when the tape has no prices for this market. A
+// cache miss never starts a collector or a provider refresh.
+async function readActiveCachedPrices(game:PaintGame,mode:NbaOddsMode,market:string):Promise<Pick<NbaPhaseFrame,'captured_at'|'quotes'>|null> {
+  const active=()=>mode==='pregame'?nbaPregameOpen(game):nbaLiveOpen(game)
+  if(!active())return null
+  try{
+    const {data,error}=await createAdminClient().from('nba_source_cache').select('payload,expires_at')
+      .eq('key',nbaPhasePricesKey(game,mode)).abortSignal(AbortSignal.timeout(1500)).maybeSingle()
+    const now=Date.now(),payload=data?.payload as {observedAt?:unknown;props?:unknown}|null|undefined
+    if(error||!data||!(Date.parse(data.expires_at)>now)||!active()||typeof payload?.observedAt!=='string'
+      ||!nbaQuoteInMode({updated_at:payload.observedAt},game,mode,now)||!Array.isArray(payload.props)||payload.props.length>5000)return null
+    const capturedAt=payload.observedAt,observed=Date.parse(capturedAt)
+    const quotes=(payload.props as PaintProp[]).filter(quote=>quote?.game_id===game.id&&quote.prop_type===market
+      &&quote.market?.type==='milestone'&&nbaQuoteInMode(quote,game,mode,observed)
+      &&(!nbaSupplementalQuote(quote)||now-Date.parse(quote.updated_at)<=300_000))
+    return quotes.length?{captured_at:capturedAt,quotes}:null
+  }catch{return null}
+}
+
 async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintGame[],scheduleComplete:boolean):Promise<NbaFullOddsBoard> {
-  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean;firstUnavailable:boolean;firstFailed:boolean;capturedAt:string|null;fingerprint:string|null}>[]=[]
+  const results:PromiseSettledResult<{game:PaintGame;players:NbaFullOddsBoard['players'];cells:NbaFullOddsBoard['cells'];missing:boolean;firstUnavailable:boolean;firstFailed:boolean;fallbackUsed:boolean;capturedAt:string|null;fingerprint:string|null}>[]=[]
   const deadline=Date.now()+100_000
   // Bounded concurrency: at most three games, two scoped frames per game; no
   // 96-frame history scan and no request per cell or subscriber.
@@ -110,15 +131,20 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     results.push(...await Promise.allSettled(games.slice(offset,offset+3).map(async game=>{
     const open=nbaPregameOpen(game)
     const [frames,openingResult,roster,confidenceResult]=await Promise.all([
-      getNbaPhaseFrames(game,mode,'props',{market,selection:'latest'}),
+      getNbaPhaseFrames(game,mode,'props',{market,selection:'latest'}).catch(()=>null),
       getNbaQuoteOpenings(game.id,mode).then(value=>({value,ok:true as const}),()=>({value:[],ok:false as const})),
       open?getPaintRoster(game):readNbaPregameResearch<PaintBoard>(game,'board:v1').then(snapshot=>{if(!snapshot)throw new Error('Saved roster unavailable');return snapshot.value.players}),
       mode==='live'?nbaLiveFirstSeenConfident(game).then(value=>({value,ok:true as const}),()=>({value:false,ok:false as const})):Promise.resolve({value:true,ok:true as const}),
     ])
     const openings=openingResult.value,firstSeenConfident=confidenceResult.value
-    const latest=frames.at(-1), previousAt=latest?nbaBeforeCapture(latest.captured_at):null
+    const tape=frames?.at(-1)
+    const cachedPrices=tape?.quotes.some(quote=>'prop_type' in quote&&quote.market?.type==='milestone')?null:await readActiveCachedPrices(game,mode,market)
+    const fallback=cachedPrices&&(!tape||Date.parse(cachedPrices.captured_at)>Date.parse(tape.captured_at))?cachedPrices:null
+    if(!frames&&!fallback)throw new Error('NBA current odds unavailable')
+    const latest=fallback??tape, previousAt=latest?nbaBeforeCapture(latest.captured_at):null
     if(!roster.length)throw new Error('NBA roster unavailable')
-    const prior=previousAt?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}):[]
+    // An unavailable comparison must not hide otherwise valid current prices.
+    const prior=previousAt&&!fallback?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}).catch(()=>[]):[]
     const players=(await nbaFullBoardPlayers(game,roster,open,!!latest?.quotes.length,artwork)).map(player=>({...player,publicPicks:null}))
     const known=new Set(players.map(player=>player.id))
     const lastPrior=prior.at(-1), currentAt=latest?nbaTimestampNanoseconds(latest.captured_at):null,priorAt=lastPrior?nbaTimestampNanoseconds(lastPrior.captured_at):null,limitAt=previousAt?nbaTimestampNanoseconds(previousAt):null
@@ -142,7 +168,7 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
       return at!=null && currentAt!=null && at<=currentAt && (mode==='live'?at>=cutoffAt:at<cutoffAt)
     }):[]
     const cells=nbaFullBoardCells(game.id,market,current,previous,eligibleOpenings,latest?.captured_at).filter(cell=>known.has(cell.playerId))
-    return {game,players,cells,missing:!latest,firstUnavailable:!openingResult.ok||!confidenceResult.ok||!firstSeenConfident,firstFailed:!openingResult.ok||!confidenceResult.ok,capturedAt:latest?.captured_at??null,fingerprint:latest?.fingerprint??null}
+    return {game,players,cells,missing:!latest,firstUnavailable:!openingResult.ok||!confidenceResult.ok||!firstSeenConfident,firstFailed:!openingResult.ok||!confidenceResult.ok,fallbackUsed:!!fallback,capturedAt:latest?.captured_at??null,fingerprint:fallback?null:tape?.fingerprint??null}
     })))
   }
   const good=results.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
@@ -175,5 +201,5 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
   if(good.reduce((sum,value)=>sum+value.cells.length,0)>12000)throw new Error('NBA odds board exceeds capacity')
   const failed=results.flatMap((result,index)=>result.status==='rejected'?[games[index].id]:[]),unavailable=good.filter(value=>value.missing).map(value=>value.game.id)
   const firstUnavailable=good.filter(value=>value.firstUnavailable).map(value=>value.game.id)
-  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,firstUnavailable,captureWarning,complete:scheduleComplete&&!failed.length&&!unavailable.length&&!good.some(value=>value.firstFailed)}
+  return {date,games,players:good.flatMap(value=>value.players),cells:good.flatMap(value=>value.cells),failed,unavailable,firstUnavailable,captureWarning,stale:good.some(value=>value.fallbackUsed),complete:scheduleComplete&&!failed.length&&!unavailable.length&&!good.some(value=>value.firstFailed||value.fallbackUsed)}
 }

@@ -180,3 +180,16 @@ test('a frozen board recovers only the exact public snapshot it already referenc
   assert.deepEqual(exact.picks, [['game', 4, 'LA', 'first_td', 'fanduel', 0.5, 613, false]])
   assert.equal(player.publicPicks, undefined)
 })
+
+test('frozen Props quotes cover a history gap without manufacturing opening or earlier prices',async()=>{
+  reset();state.tables.nfl_odds_snapshot_history=[]
+  const frozen=sample('2020-11-02T21:30:00.000Z','2020-11-02T21:29:00.000Z',-145)
+  state.archive={value:frozen.board,observedAt:frozen.captured_at}
+  const response=await request();assert.equal(response.status,200)
+  const board=await response.json();assert.equal(board.games[0].status,'incomplete')
+  assert.equal(board.quotes.length,1)
+  assert.deepEqual(board.quotes[0].slice(8),[-145,'2020-11-02T21:29:00.000Z',null,null,null,false])
+  reset();state.tables.nfl_odds_snapshot_history=[]
+  state.archive={value:frozen.board,observedAt:cutoff}
+  const invalid=await(await request()).json();assert.deepEqual(invalid.quotes,[])
+})

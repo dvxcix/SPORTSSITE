@@ -7,6 +7,7 @@ import { nflBoardIdentityKey,nflBoardImage,type NflBoardIdentity } from '@/lib/n
 import { NFL_ODDS_BOARD_SCORER_MARKETS, nflOddsBoardMove, nflOddsBoardScorerLabel, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
 import { nflBoardPickKey, nflUniqueBoardPicks, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { nflOddsBoardTrust, type NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
+import { canShowLastSeenOdds, ODDS_BOARD_LAST_SEEN_MS } from '@/lib/oddsBoardContinuity'
 import styles from './nflOddsBoard.module.css'
 
 type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
@@ -23,12 +24,24 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState<'player'|'shortened'|'lengthened'>('shortened'),[sortLine,setSortLine]=useState('all'),[search,setSearch]=useState(''),[comparison,setComparison]=useState<'opening'|'earlier'>('opening')
   const requestKey=JSON.stringify([date,market,vendor])
   const [saved,setSaved]=useState<{key:string;value:Payload;receivedAt:number}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
+  const [deniedKey,setDeniedKey]=useState<string|null>(null)
   const [openedAt]=useState(()=>Date.now()),[clock,setClock]=useState(()=>Date.now()),[requireAfter,setRequireAfter]=useState(0)
   const reload=useRef<()=>void>(()=>{}), scroll=useRef<HTMLDivElement|null>(null), scrollLeft=useRef(0), wasHidden=useRef(false)
+  const [invalidated,setInvalidated]=useState<Payload|null>(null)
+  const [verified,setVerified]=useState<{value:Payload;at:number}|null>(null)
   const raw=saved?.key===requestKey?saved.value:null
   const now=Math.max(clock,saved?.receivedAt??0,phase?.checkedAt??0)
   const trust=raw?nflOddsBoardTrust(raw,phase,openedAt,now,requireAfter):null
-  const payload=trust?.safe?raw:null
+  const confirmedPhaseChange=trust?.reason==='changed'||trust?.reason==='boundary'||trust?.reason==='invalid'
+  const observedAt=raw?Date.parse(raw.phaseObservedAt):0
+  const phaseAt=phase&&raw&&phase.token===raw.phaseToken&&phase.checkedAt>=openedAt?Date.parse(phase.observedAt??''):0
+  const verifiedAt=Math.max(observedAt,Number.isFinite(phaseAt)?phaseAt:0)
+  if(raw&&confirmedPhaseChange&&raw!==invalidated)setInvalidated(raw)
+  const rejected=confirmedPhaseChange||raw===invalidated
+  if(raw&&trust?.safe&&!rejected&&(verified?.value!==raw||verified.at!==verifiedAt))setVerified({value:raw,at:verifiedAt})
+  const accessDenied=deniedKey===requestKey||trust?.reason==='denied'||phase?.accessDenied===true&&phase.checkedAt>=openedAt
+  const lastSeen=!accessDenied&&!!raw&&!trust?.safe&&verified?.value===raw&&canShowLastSeenOdds(now,verified.at,rejected)
+  const payload=!accessDenied&&((trust?.safe&&!rejected)||lastSeen)?raw:null
   useEffect(()=>{
     const controller=new AbortController();let timer:ReturnType<typeof setTimeout>,pending=false,queued=false,nextStart:number|null=null,failures=0
     const load=async()=>{
@@ -39,11 +52,12 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
       try{
         const query=new URLSearchParams({date,market,book:vendor})
         const response=await fetch(`/api/the-sideline/odds-board?${query}`,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
+        if(response.status===401||response.status===403){if(!controller.signal.aborted)setDeniedKey(requestKey);throw new Error('access denied')}
         if(!response.ok)throw new Error('unavailable')
         const value=await response.json() as Payload
         if(value.date!==date||value.market!==market||value.book!==vendor||!Array.isArray(value.games)||!Array.isArray(value.markets)||!Array.isArray(value.books)||!Array.isArray(value.quotes)||value.quotes.length>5000||!value.phaseToken||!value.phaseObservedAt)throw new Error('invalid')
         if(value.nextStart!=null&&!Number.isFinite(Date.parse(value.nextStart)))throw new Error('invalid')
-        if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);failures=0;nextStart=value.nextStart?Date.parse(value.nextStart):null}
+        if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);setDeniedKey(null);failures=0;nextStart=value.nextStart?Date.parse(value.nextStart):null}
       }catch{if(!controller.signal.aborted){setErrorKey(requestKey);failures++}}
       finally{
         pending=false
@@ -73,6 +87,11 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     const timer=setTimeout(()=>setClock(Date.now()),Math.min(delay+1,2147000000))
     return()=>clearTimeout(timer)
   },[trust?.safe,trust?.until])
+  useEffect(()=>{
+    if(!lastSeen||!verified)return
+    const timer=setTimeout(()=>setClock(Date.now()),Math.max(1,verified.at+ODDS_BOARD_LAST_SEEN_MS-Date.now()))
+    return()=>clearTimeout(timer)
+  },[lastSeen,verified])
   useLayoutEffect(()=>{if(payload&&scroll.current)scroll.current.scrollLeft=scrollLeft.current},[payload])
   const catalog=saved?.value.date===date?saved.value:null,shownMarket=payload?.market??market,shownBook=payload?.book??vendor
   const scorerLabel = nflOddsBoardScorerLabel(shownMarket)
@@ -127,8 +146,10 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
       {!scorerLabel && <label>Sort milestone<select aria-label="Sort odds board milestone" value={lines.some(line=>String(line)===sortLine)?sortLine:'all'} onChange={e=>setSortLine(e.target.value)}><option value="all">Any milestone</option>{lines.map(line=><option key={line} value={line}>{line}+</option>)}</select></label>}
       </div>
     </details>
-    {errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
-    {!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
+    {accessDenied&&<p role="status">Odds Board access unavailable.</p>}
+    {lastSeen&&<p role="status">Showing last verified prices while game times are checked.</p>}
+    {!accessDenied&&!lastSeen&&errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
+    {!accessDenied&&!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {selectedGameHasPartialCoverage && <p role="status">Showing saved prices. Additional source coverage is incomplete for this game.</p>}
     {!!rows.length && !!gamesWithoutPrices.length && <p role="status">No saved prices for this market and sportsbook in {gamesWithoutPrices.map(item => `${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label={scorerLabel ? `${scorerLabel} odds and movement` : "NFL milestone odds and movement"} tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{scorerLabel ?? `${line}+`}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line));return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small>Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><span className={move==null?styles.muted:move>0?styles.shortened:move<0?styles.lengthened:styles.muted}>{move==null?'—':`${movement(move)} pp · ${move>0?'Shortened':move<0?'Lengthened':'Unchanged'}`}</span><small className={styles.picks}>{count?`${count[7]?'Est. ':''}${count[6].toLocaleString()} picks`:'Picks —'}</small></td>})}</tr>)}</tbody></table></div>}

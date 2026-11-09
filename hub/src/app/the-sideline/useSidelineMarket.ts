@@ -6,6 +6,7 @@ import type { SidelineOddsFrame } from './types'
 import type { SidelineGameState } from './types'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
+import type { NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
 import { startNflPolling } from '@/lib/nflPolling'
 import { withGameAvailability } from '@/lib/nflAvailability'
 
@@ -26,7 +27,7 @@ export function useSidelineMarket(
   const [frame, setFrame] = useState<SidelineOddsFrame | null>(null)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [oddsBoardPhase, setOddsBoardPhase] = useState<{gameId:string;token:string|null;observedAt:string|null;checkedAt:number}|null>(null)
+  const [oddsBoardPhase, setOddsBoardPhase] = useState<NflOddsBoardPhase|null>(null)
   const cache = useRef(new Map<string, SidelineOddsFrame>())
   const inFlight = useRef(new Map<string, Promise<SidelineOddsFrame>>())
   const slots = useRef({ active: 0, waiting: [] as (() => void)[] })
@@ -72,8 +73,12 @@ export function useSidelineMarket(
     const update = async (pollSignal: AbortSignal) => {
       try {
         const signal = AbortSignal.any([controller.signal, pollSignal])
-        const base = '/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId) + (oddsBoardOpen?'&oddsBoardToken=1':'')
+        const base = '/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId) + (oddsBoardOpen?'&oddsBoardToken=only':'')
         const currentResponse = await fetch(base, { signal })
+        if(oddsBoardOpen&&(currentResponse.status===401||currentResponse.status===403)){
+          if(!controller.signal.aborted)setOddsBoardPhase({gameId,token:null,observedAt:null,checkedAt:Date.now(),accessDenied:true})
+          return
+        }
         if (!currentResponse.ok) throw new Error('Refresh unavailable')
         const currentData = await currentResponse.json()
         if (controller.signal.aborted) return
@@ -81,6 +86,8 @@ export function useSidelineMarket(
           const phase=currentData.oddsBoardToken,observed=typeof phase?.observedAt==='string'?Date.parse(phase.observedAt):NaN
           const valid=typeof phase?.token==='string'&&/^[a-f0-9]{64}$/.test(phase.token)&&Number.isFinite(observed)&&observed<=Date.now()
           setOddsBoardPhase({gameId,token:valid?phase.token:null,observedAt:valid?phase.observedAt:null,checkedAt:Date.now()})
+          if(currentData.gameState)setGameState(currentData.gameState)
+          return
         }
         setError(previous => previous === 'Refresh unavailable. Showing the last loaded capture.' ? '' : previous)
         setTimes(previous => { const next: string[]=currentData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
@@ -88,7 +95,10 @@ export function useSidelineMarket(
         if ('gameState' in currentData) setGameState(currentData.gameState ?? null)
         if (Array.isArray(currentData.touchdowns)) setTouchdowns(currentData.touchdowns)
       } catch {
-        if (!controller.signal.aborted) { setError('Refresh unavailable. Showing the last loaded capture.'); if(oddsBoardOpen)setOddsBoardPhase({gameId,token:null,observedAt:null,checkedAt:Date.now()}) }
+        if (!controller.signal.aborted) {
+          if(oddsBoardOpen)setOddsBoardPhase(previous=>({gameId,token:null,observedAt:null,checkedAt:Date.now(),accessDenied:previous?.gameId===gameId&&previous.accessDenied}))
+          else setError('Refresh unavailable. Showing the last loaded capture.')
+        }
         throw new Error('Market refresh failed')
       }
     }

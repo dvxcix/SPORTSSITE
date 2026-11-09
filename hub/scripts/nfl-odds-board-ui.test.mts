@@ -10,7 +10,7 @@ const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://ww
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,HTMLSelectElement:dom.window.HTMLSelectElement,IS_REACT_ACT_ENVIRONMENT:true})
 Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true})
 const {createRoot}=await import('react-dom/client')
-type Phase={gameId:string;token:string|null;observedAt:string|null;checkedAt:number}
+type Phase={gameId:string;token:string|null;observedAt:string|null;checkedAt:number;accessDenied?:boolean}
 const compiled={exports:{} as {BoardHarness:ComponentType<{date:string;phase?:Phase|null}>}}
 const bundled=await build({stdin:{contents:"import {useState} from 'react'; import {NflOddsBoard} from './src/app/the-sideline/NflOddsBoard'; export function BoardHarness(props){const [market,onMarket]=useState('receiving_yards');const [vendor,onVendor]=useState('draftkings');return <NflOddsBoard {...props} market={market} onMarket={onMarket} vendor={vendor} onVendor={onVendor}/>}",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'nfl-board-ui.cjs',platform:'node',format:'cjs',jsx:'automatic',tsconfig:'tsconfig.json',external:['react','react-dom'],loader:{'.css':'empty'},plugins:[{name:'logo',setup(builder){builder.onResolve({filter:/^next\/image$/},()=>({path:'image',namespace:'stub'}));builder.onResolve({filter:/^@\/components\/BookLogo$/},()=>({path:'logo',namespace:'stub'}));builder.onLoad({filter:/^logo$/,namespace:'stub'},()=>({contents:'export const BookLogo=()=>null',loader:'tsx'}));builder.onLoad({filter:/^image$/,namespace:'stub'},()=>({contents:'export default function Image({src,alt}) { return <img src={src} alt={alt}/> }',loader:'tsx'}))}}]})
 new Function('module','exports','require',bundled.outputFiles[0].text)(compiled,compiled.exports,require)
@@ -85,18 +85,19 @@ test('a changed phase hides old prices while loading and restores filters and sc
     assert.equal(ui.host.querySelector<HTMLElement>('[aria-label="NFL milestone odds and movement"]')?.scrollLeft,73)
   }finally{await ui.close()}
 })
-test('a failed phase check immediately hides old prices',async()=>{const ui=await mount();try{await new Promise(resolve=>setTimeout(resolve,5));await ui.phase({gameId:'one',token:null,observedAt:null,checkedAt:Date.now()});assert.equal(ui.host.querySelector('table'),null);assert.match(ui.host.textContent??'',/Checking pregame prices/)}finally{await ui.close()}})
-test('resuming a throttled tab hides expired proof synchronously',async()=>{
+test('a failed phase check keeps the same table explicitly marked last verified',async()=>{const ui=await mount();try{const table=ui.host.querySelector('table');assert.ok(table);await new Promise(resolve=>setTimeout(resolve,5));await ui.phase({gameId:'one',token:null,observedAt:null,checkedAt:Date.now()});assert.equal(ui.host.querySelector('table'),table);assert.match(ui.host.textContent??'',/Showing last verified prices/)}finally{await ui.close()}})
+test('resuming a throttled tab labels the last verified table and bounds its age',async()=>{
   const original=Date.now;let now=original();Date.now=()=>now
   const ui=await mount(payload,async()=>Response.json({...payload,phaseObservedAt:new Date(now).toISOString()}))
   try{
     assert.ok(ui.host.querySelector('table'))
     Object.defineProperty(document,'visibilityState',{value:'hidden',configurable:true});document.dispatchEvent(new dom.window.Event('visibilitychange'));now+=49000
     await act(async()=>{Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true});document.dispatchEvent(new dom.window.Event('visibilitychange'))})
-    assert.equal(ui.host.querySelector('table'),null);assert.match(ui.host.textContent??'',/Checking pregame prices/)
+    assert.ok(ui.host.querySelector('table'));assert.match(ui.host.textContent??'',/Showing last verified prices/)
+    now+=300000;await ui.phase({gameId:'one',token:null,observedAt:null,checkedAt:now});assert.equal(ui.host.querySelector('table'),null)
   }finally{await ui.close();Date.now=original;Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true})}
 })
-test('resume hides even an unexpired proof until a fresh server observation arrives',async()=>{
+test('resume retains the filter and marks prices last verified until a fresh observation arrives',async()=>{
   let count=0
   const fetcher=async()=>{count++;return Response.json({...payload,phaseObservedAt:new Date().toISOString()})}
   const ui=await mount(payload,fetcher)
@@ -105,7 +106,7 @@ test('resume hides even an unexpired proof until a fresh server observation arri
     Object.defineProperty(document,'visibilityState',{value:'hidden',configurable:true});document.dispatchEvent(new dom.window.Event('visibilitychange'))
     await new Promise(resolve=>setTimeout(resolve,5))
     await act(async()=>{Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true});document.dispatchEvent(new dom.window.Event('visibilitychange'));await new Promise(resolve=>setTimeout(resolve,10))})
-    assert.equal(ui.host.querySelector('table'),null);assert.equal(count,1)
+    assert.ok(ui.host.querySelector('table'));assert.match(ui.host.textContent??'',/Showing last verified prices/);assert.equal(count,1)
     await new Promise(resolve=>setTimeout(resolve,5));await ui.phase({gameId:'one',token:'a'.repeat(64),observedAt:new Date().toISOString(),checkedAt:Date.now()})
     assert.equal(ui.host.querySelector<HTMLSelectElement>('[aria-label="Odds board team"]')?.value,'SEA');assert.ok(ui.host.querySelector('table'))
   }finally{await ui.close();Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true})}
@@ -135,14 +136,14 @@ test('a pre-resume response arriving late cannot satisfy the new proof requireme
     await new Promise(resolve=>setTimeout(resolve,5));await ui.phase({gameId:'one',token:'a'.repeat(64),observedAt:new Date().toISOString(),checkedAt:Date.now()});assert.ok(ui.host.querySelector('table'))
   }finally{await ui.close();Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true})}
 })
-test('offline hides prices and reconnect waits for a newly verified board',async()=>{
+test('offline and reconnect preserve last verified prices with a status',async()=>{
   let count=0
   const fetcher=async()=>{count++;return Response.json({...payload,phaseObservedAt:new Date().toISOString()})}
   const ui=await mount(payload,fetcher)
   try{
-    await act(async()=>{window.dispatchEvent(new dom.window.Event('offline'))});assert.equal(ui.host.querySelector('table'),null)
+    await act(async()=>{window.dispatchEvent(new dom.window.Event('offline'))});assert.ok(ui.host.querySelector('table'));assert.match(ui.host.textContent??'',/Showing last verified prices/)
     await new Promise(resolve=>setTimeout(resolve,5));await act(async()=>{window.dispatchEvent(new dom.window.Event('online'));await new Promise(resolve=>setTimeout(resolve,10))})
-    assert.equal(ui.host.querySelector('table'),null);assert.equal(count,1)
+    assert.ok(ui.host.querySelector('table'));assert.match(ui.host.textContent??'',/Showing last verified prices/);assert.equal(count,1)
     await new Promise(resolve=>setTimeout(resolve,5));await ui.phase({gameId:'one',token:'a'.repeat(64),observedAt:new Date().toISOString(),checkedAt:Date.now()});assert.ok(ui.host.querySelector('table'))
   }finally{await ui.close()}
 })
@@ -156,5 +157,14 @@ test('changing market cancels a queued old-market refresh',async()=>{
     await ui.phase({gameId:'one',token:'c'.repeat(64),observedAt:new Date().toISOString(),checkedAt:Date.now()})
     await select(ui.host,'Odds board market','rushing_yards');assert.equal(count,3);assert.ok(finish)
     await act(async()=>{finish!(Response.json({...initial,phaseObservedAt:new Date().toISOString()}));await new Promise(resolve=>setTimeout(resolve,20))});assert.equal(count,3)
+  }finally{await ui.close()}
+})
+
+test('denied membership clears the table rather than using the last-seen view',async()=>{
+  const ui=await mount()
+  try{
+    assert.ok(ui.host.querySelector('table'))
+    await ui.phase({gameId:'one',token:null,observedAt:null,checkedAt:Date.now(),accessDenied:true})
+    assert.equal(ui.host.querySelector('table'),null);assert.match(ui.host.textContent??'',/Odds Board access unavailable/)
   }finally{await ui.close()}
 })

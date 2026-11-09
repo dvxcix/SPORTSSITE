@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { requireNflAccess } from '@/lib/nflAccess'
-import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
+import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline, storedGameState } from '../data'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
@@ -22,6 +22,10 @@ export async function GET(request: Request) {
     const { games } = await getSidelineGames(undefined, id)
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+    if (params.get('oddsBoardToken') === 'only' && !at) {
+      const proof = await sharedNflOddsBoardClocks(game.gameday, games)
+      return NextResponse.json({ oddsBoardToken: { token: nflOddsBoardClockToken(proof.clocks), observedAt: proof.observedAt }, gameState: storedGameState(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
     const beganOpen = nflPregameOpen(game)
     if (params.get('touchdowns') === '1' && !at) {
       const touchdowns = (await getNflTouchdownFeed(game.gameday)).filter(event => event.gameId === game.id)

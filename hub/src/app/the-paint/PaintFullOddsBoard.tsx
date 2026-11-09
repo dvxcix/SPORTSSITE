@@ -12,6 +12,7 @@ import { nbaFinalValue } from './useNbaFinalOutcomes'
 import { nbaBoardMove,nbaBoardMoveLabel,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaBoardEstimatedPicks } from '@/lib/nbaBoardEstimatedPicks'
 import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
+import { canShowLastSeenOdds, ODDS_BOARD_LAST_SEEN_MS } from '@/lib/oddsBoardContinuity'
 import { PaintBookSelect } from './PaintEntitySelect'
 import { PlayerAvatar } from './PaintVisuals'
 import styles from './full-odds-board.module.css'
@@ -29,7 +30,10 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
   const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[sort,setSort]=useState('name'),[target,setTarget]=useState('all'),[query,setQuery]=useState(''),[comparison,setComparison]=useState<Comparison>('opening')
   const activeComparison:Comparison=comparison
   const [clock,setClock]=useState(()=>Date.now()),[data,setData]=useState<{key:string;value:NbaFullOddsBoard}|null>(null),[errorKey,setErrorKey]=useState<string|null>(null)
+  const [deniedKey,setDeniedKey]=useState<string|null>(null)
   const [resumeAfter,setResumeAfter]=useState(0)
+  const [invalidated,setInvalidated]=useState<NbaFullOddsBoard|null>(null)
+  const [verified,setVerified]=useState<{value:NbaFullOddsBoard;at:number}|null>(null)
   const pending=useRef<AbortSignal|null>(null),active=useRef<AbortController|null>(null),retryAfter=useRef<(()=>void)|null>(null),attempted=useRef(''),hidden=useRef(false),lastLoadedKey=useRef('')
   const scroll=useRef<HTMLDivElement|null>(null),scrollLeft=useRef(0)
   const scopedCheck=phaseCheck?.date===date&&phaseCheck.mode===mode?phaseCheck:null
@@ -49,7 +53,13 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
   // Returning from a background/offline page needs one successful later
   // phase check. The existing board poll supplies it; this adds no polling.
   const awaitingResume=resumeAfter>0&&dataAt<=resumeAfter&&(!scopedCheck?.phase||scopedCheck.phase.checkedAt<=resumeAfter)
-  const phaseUnsafe=phaseFailed||mismatch||expired||awaitingResume
+  const rejected=!!candidate&&(mismatch||candidate===invalidated)
+  const accessDenied=scopedCheck?.accessDenied===true||deniedKey===key
+  const phaseUnsafe=accessDenied||phaseFailed||rejected||expired||awaitingResume
+  // Only a board that was already safe to display can become Last seen.
+  if(mismatch&&candidate!==invalidated)setInvalidated(candidate)
+  if(candidate&&!phaseUnsafe&&(verified?.value!==candidate||verified.at!==verifiedAt))setVerified({value:candidate,at:verifiedAt})
+  const lastSeen=!!candidate&&phaseUnsafe&&verified?.value===candidate&&!accessDenied&&canShowLastSeenOdds(now,verified.at,rejected)
   const retryKey=mismatch&&scopedCheck?.phase?`${scopedCheck.receivedAt}:${scopedCheck.phase.signature}`:''
   useEffect(()=>{
     const check=()=>flushSync(()=>setClock(Date.now()))
@@ -68,6 +78,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
   },[candidate,verifiedAt])
   const update=useCallback(async(signal:AbortSignal)=>{if(signal.aborted||pending.current===signal)return;pending.current=signal;try{
       const response=await fetch(nbaModeHref(`/the-paint/odds-board?${new URLSearchParams({date,market,book})}`,mode),{cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(115000)])})
+      if(response.status===401||response.status===403){if(!signal.aborted)setDeniedKey(key);return}
       if(!response.ok)throw new Error('board')
       const value=nbaUnpackFullBoard(await response.json() as NbaPackedBoard,market)
       if(value.date!==date||value.selectedBook!==book||!Array.isArray(value.games)||!Array.isArray(value.players)||!Array.isArray(value.cells)||!Number.isSafeInteger(value.phaseCheckedAt)||value.phaseCheckedAt!>Date.now()+5000||Date.now()-value.phaseCheckedAt!>NBA_ODDS_BOARD_PHASE_MAX_AGE)throw new Error('identity')
@@ -79,7 +90,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
         if(mode==='pregame'&&value.games.some(game=>{const start=nbaGameStart(game);return start!=null&&start>value.phaseCheckedAt!&&start<=responseAt}))throw new Error('phase changed')
         const availableBooks=value.books??[]
         if(parentBook==='all'&&availableBooks.length&&!availableBooks.includes(book)){setDefaultBook(availableBooks[0]);return}
-        lastLoadedKey.current=resultKey;setData({key:resultKey,value});setErrorKey(null)
+        lastLoadedKey.current=resultKey;setData({key:resultKey,value});setErrorKey(null);setDeniedKey(null)
       }
     }catch{if(!signal.aborted)setErrorKey(key) }finally{if(pending.current===signal){pending.current=null;const retry=retryAfter.current;retryAfter.current=null;if(retry)queueMicrotask(retry)}}
   },[date,market,book,parentBook,mode,key,games])
@@ -95,7 +106,12 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
     const signal=active.current.signal,run=()=>{if(signal.aborted)return;attempted.current=retryKey;void update(signal)}
     if(pending.current===signal)retryAfter.current=run;else run()
   },[retryKey,update])
-  const slate=phaseUnsafe?null:candidate
+  useEffect(()=>{
+    if(!lastSeen||!verified)return
+    const timer=window.setTimeout(()=>setClock(Date.now()),Math.max(1,verified.at+ODDS_BOARD_LAST_SEEN_MS-Date.now()))
+    return()=>window.clearTimeout(timer)
+  },[lastSeen,verified])
+  const slate=phaseUnsafe&&!lastSeen?null:candidate
   useLayoutEffect(()=>{
     const node=scroll.current;if(!slate||!node)return
     node.scrollLeft=scrollLeft.current
@@ -143,7 +159,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
       </div>
     </details>
     </div>
-    {supported&&(error||phaseUnsafe)&&<p role="status">{slate?'Last observed prices shown. ':''}{phaseUnsafe?'Game times unavailable.':'Odds board unavailable.'}</p>}
+    {supported&&(error||phaseUnsafe)&&<p role="status">{accessDenied?'Odds Board access unavailable.':lastSeen?'Showing last verified prices while game times are checked.':phaseUnsafe?'Game times unavailable.':slate?'Latest refresh unavailable. Showing last observed prices.':'Odds board unavailable.'}</p>}
     {!supported?<p role="status">No milestone prices for this market.</p>:!slate?!error&&!phaseUnsafe&&<p role="status">Loading odds board…</p>:<>
       {(slate.stale||unavailable.length>0||(!slate.complete&&!firstUnavailable.length))&&<p role="status">{slate.stale?'Last observed prices shown. ':''}{unavailable.length?`Unavailable: ${unavailable.join(', ')}.`:!slate.complete&&!firstUnavailable.length?'Some games are unavailable.':''}</p>}
       {activeComparison==='opening'&&firstUnavailable.length>0&&<p role="status">{mode==='live'?'First seen':'Opening'} unavailable: {firstUnavailable.join(', ')}.</p>}
@@ -154,7 +170,7 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
         return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small>{actual!=null&&<small>Final {actual}</small>}</span></div></th>{columns.map(line=>{
           const cell=row.cells.find(item=>item.line===line),base=cell?.[activeComparison],change=cell?nbaBoardMove(cell,activeComparison):null,estimate=estimates.get(line)
           return <td key={line} className={!cell||change==null?styles.unknown:change>0?styles.shortenedCell:change<0?styles.lengthenedCell:styles.unchangedCell}>{cell?<div className={styles.quote}>
-            <div className={styles.priceLine}><small>Last seen</small><Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link></div>
+            <div className={styles.priceLine}><small>Last seen</small>{lastSeen?<strong>{nbaOdds(cell.current.odds)}</strong>:<Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link>}</div>
             <div className={styles.priceLine}><small>{activeComparison==='opening'?(mode==='live'?'First seen':'Open'):'Earlier'}</small><b>{base?nbaOdds(base.odds):'—'}</b></div>
             <span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span>
             {actual!=null&&<div className={styles.picksLine}><small>Result</small><b>{actual>=line?'Hit':'Miss'}</b></div>}

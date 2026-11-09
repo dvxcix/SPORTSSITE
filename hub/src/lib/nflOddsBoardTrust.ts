@@ -1,6 +1,6 @@
-export type NflOddsBoardPhase={gameId:string;token:string|null;observedAt:string|null;checkedAt:number}
+export type NflOddsBoardPhase={gameId:string;token:string|null;observedAt:string|null;checkedAt:number;accessDenied?:boolean}
 export type NflOddsBoardProof={phaseToken:string;phaseObservedAt:string;nextStart:string|null}
-export type NflOddsBoardTrust={safe:boolean;reason:'safe'|'invalid'|'failed'|'changed'|'expired'|'boundary'|'resync';until:number}
+export type NflOddsBoardTrust={safe:boolean;reason:'safe'|'invalid'|'failed'|'changed'|'expired'|'boundary'|'resync'|'denied';until:number}
 
 /** A receipt time must never extend a cached clock's original observation. */
 export function nflOddsBoardTrust(proof:NflOddsBoardProof,phase:NflOddsBoardPhase|null,openedAt:number,now:number,requireAfter=0):NflOddsBoardTrust {
@@ -8,6 +8,7 @@ export function nflOddsBoardTrust(proof:NflOddsBoardProof,phase:NflOddsBoardPhas
   if(!/^[a-f0-9]{64}$/.test(proof.phaseToken)||!Number.isFinite(observed)||observed>now||(start!=null&&!Number.isFinite(start)))return {safe:false,reason:'invalid',until:now}
   if(start!=null&&now>=start)return {safe:false,reason:'boundary',until:start}
   const relevant=phase&&phase.checkedAt>=openedAt?phase:null
+  if(relevant?.accessDenied)return {safe:false,reason:'denied',until:now}
   if(relevant&&!relevant.token&&relevant.checkedAt>=observed)return {safe:false,reason:'failed',until:now}
   const phaseAt=Date.parse(relevant?.observedAt??'')
   if(relevant?.token&&(!Number.isFinite(phaseAt)||phaseAt>now))return {safe:false,reason:'invalid',until:now}

@@ -78,7 +78,9 @@ test('empty dates and unavailable saved research keep date and matchup navigatio
     await act(async()=>root.render(createElement(compiled.exports.PaintBoardClient,{initial:null,games:[past],days:[past.date],date:past.date,scheduleComplete:true,selectedGameId:past.id})))
     assert.match(host.textContent??'',/Research unavailable for this matchup/)
     assert.equal(host.querySelector('[aria-label="NBA matchups"] button')?.getAttribute('aria-pressed'),'true')
-    assert.equal(host.querySelector('[data-testid="full-board"]'),null,'missing research must not bypass phase-safe odds board checks')
+    assert.equal(host.querySelector('[data-testid="full-board"]'),null,'the research view still reports an unavailable matchup')
+    await act(async()=>window.history.replaceState(null,'','/the-paint?view=odds-board&mode=pregame'))
+    assert.ok(host.querySelector('[data-testid="full-board"]'),'a missing matchup snapshot must not unmount the independently verified slate board')
     const previous=host.querySelector<HTMLButtonElement>('[aria-label="Previous day"]')!
     await act(async()=>previous.click());assert.match(state.navigations.at(-1)??'',/date=2026-10-19/)
   }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch}
@@ -144,14 +146,14 @@ test('background board checks keep the studied player, filters and nested scroll
   } finally { await ui.close() }
 })
 
-test('only the open Odds Board piggybacks its phase check on the existing 200/304 poll',async()=>{
+test('only the open Odds Board replaces its matchup poll with a small slate phase check',async()=>{
   const preTipBoard={...board,game:{...board.game,datetime:new Date(Date.now()+86400000).toISOString()}},ui=await harness('odds-board','over',null,false,'points','',preTipBoard)
   try {
     let call=0
     globalThis.fetch=async input=>{
-      const url=new URL(String(input),'https://slipsurge.com');assert.equal(url.searchParams.get('slate_date'),preTipBoard.game.date);assert.equal(url.searchParams.get('mode'),'pregame')
+      const url=new URL(String(input),'https://slipsurge.com');assert.equal(url.searchParams.get('slate_date'),preTipBoard.game.date);assert.equal(url.searchParams.get('mode'),'pregame');assert.equal(url.searchParams.get('phase_only'),'1');assert.equal(url.searchParams.get('game'),null)
       call++;const token=`v1|${preTipBoard.game.date}|${Date.now()}|123,${Date.parse(preTipBoard.game.datetime!)},0`
-      return call===1?Response.json({...preTipBoard,oddsMode:'pregame'},{headers:{ETag:'W/"one"','X-NBA-Slate-Phase':token}}):call===2?new Response(null,{status:304,headers:{'X-NBA-Slate-Phase':token}}):call===3?new Response(null,{status:304}):Response.json({...preTipBoard,game:{...preTipBoard.game,id:999},oddsMode:'pregame'},{headers:{'X-NBA-Slate-Phase':token}})
+      return call<=2?new Response(null,{status:204,headers:{'X-NBA-Slate-Phase':token}}):call===3?new Response(null,{status:204}):new Response(null,{status:503})
     }
     for(let i=0;i<4;i++){
       await act(async()=>{window.dispatchEvent(new dom.window.Event('fixture:board-poll'));await new Promise(resolve=>setTimeout(resolve,0))})

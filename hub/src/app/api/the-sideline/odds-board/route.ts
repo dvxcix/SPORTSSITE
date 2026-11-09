@@ -23,7 +23,10 @@ type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'una
 type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}
 const MAX_POOL_BYTES=4*1024*1024
 type PickSnapshotRow={snapshot:NflPikkitSnapshot;captured_at:string}
-type PickInput={board:NflObservedOdds;observedAt:string;cutoffAt:number}|PickSnapshotRow|null
+type FrozenOdds={board:NflObservedOdds;observedAt:string;cutoffAt:number}
+type PickInput=FrozenOdds|PickSnapshotRow|null
+const visibleFrozenOdds=(input:FrozenOdds,gameId:string)=>!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED&&!input.board.pausedProjection
+  ? input.board : visibleNflObservedOdds(input.board,gameId,nflLegacyPauseNeedsLastSeen(input.cutoffAt))
 const tuple=(q:NflOddsBoardQuote):CompactQuote=>[q.gameId,q.playerId,q.player,q.team,q.position,q.market,q.vendor,q.line,q.current,q.updatedAt,q.previous,q.previousAt,q.opening,q.openingConflict]
 const quoteKey=(q:CompactQuote)=>JSON.stringify([q[0],q[1],q[3],q[5],q[6],q[7]])
 
@@ -141,7 +144,6 @@ export async function GET(request:NextRequest){
             })().catch(()=>null)
           : Promise.resolve(admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(1200)).maybeSingle()).then(result=>result.error?null:result.data as PickSnapshotRow|null).catch(()=>null)
         const [results,pickInput]=await Promise.all([Promise.all(['nfl_odds_snapshot_history','nfl_fanduel_capture_history'].map((table,index)=>admin.from(table).select(index===1?'board,captured_at,raw_tabs':'board,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(2).abortSignal(AbortSignal.timeout(12000)))),picksTask])
-        if(results.every(result=>result.error)){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
         if(results.some(result=>result.error))row.status='incomplete'
         const sources=results.map((result,index)=>{
           if(result.error)return []
@@ -157,7 +159,19 @@ export async function GET(request:NextRequest){
           })
         })
         if(!sources.some(source=>source.length))row.status='unavailable'
-        const observations=nflOddsBoardQuotes(game.id,[game.away.abbr,game.home.abbr],cutoff,sources,Date.parse(capturedNow),true)
+        let fallback:NflOddsBoardFrame|null=null
+        // Props can still read a validated frozen matchup when a source
+        // history read is incomplete. Keep its original last-seen quotes.
+        if(row.status!=='ready'&&pickInput&&'board' in pickInput){
+          try{
+            fallback=compact(visibleFrozenOdds(pickInput,game.id),pickInput.observedAt,new Date(pickInput.cutoffAt).toISOString())
+          }catch{/* A broken fallback cannot hide verified source history. */}
+        }
+        const teams=[game.away.abbr,game.home.abbr], now=Date.parse(capturedNow)
+        const observed=(frames:NflOddsBoardFrame[][])=>nflOddsBoardQuotes(game.id,teams,cutoff,frames,now,true)
+        const combined=fallback?observed([...sources,[fallback]]):null
+        const observations=combined&&combined.length<=4000?combined:observed(sources)
+        if(row.status==='unavailable'&&observations.length)row.status='incomplete'
         if(observations.some(quote=>quote.openingConflict))row.status='incomplete'
         const quotes=observations.map(tuple)
         if(quotes.length>4000){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
@@ -165,8 +179,7 @@ export async function GET(request:NextRequest){
         try{
           let board:SidelineOddsBoard|null=null
           if(pickInput&&'board' in pickInput){
-            const value=pickInput.board,at=pickInput.observedAt
-            const visible=!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED&&!value.pausedProjection?value:visibleNflObservedOdds(value,game.id,nflLegacyPauseNeedsLastSeen(pickInput.cutoffAt))
+            const at=pickInput.observedAt,visible=visibleFrozenOdds(pickInput,game.id)
             const stamp=visible.picksCapturedAt
             if(stamp&&Date.parse(stamp)<=Date.parse(at)){
               board=nflFilterPickLadder(visible,at,cutoff,Date.parse(capturedNow))
@@ -194,7 +207,7 @@ export async function GET(request:NextRequest){
           }
           if(board)picks=nflOddsBoardPicks(game.id,[game.away.abbr,game.home.abbr],board,cutoff,Date.parse(capturedNow))
         }catch{/* optional picks never hide otherwise valid prices */}
-        entries[offset+relative]={game:row,quotes,picks,identities:nflBoardIdentities(game.id,[game.away.abbr,game.home.abbr],sources.flat(),observations)}
+        entries[offset+relative]={game:row,quotes,picks,identities:nflBoardIdentities(game.id,[game.away.abbr,game.home.abbr],[...sources.flat(),...(fallback?[fallback]:[])],observations)}
       }))
       const groups=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!=null)
       // Keep games atomic: never silently truncate individual rungs. A game
