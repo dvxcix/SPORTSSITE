@@ -5,8 +5,8 @@ import { pageMetadata } from '@/lib/siteMetadata'
 
 export const dynamic = 'force-dynamic'
 export const metadata = pageMetadata({
-  title: 'SlipSurge | Sports Research, Picks and Community',
-  description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
+  title: 'SlipSurge | NBA and NFL Odds Research',
+  description: 'Compare saved NBA and NFL prop odds, see how prices moved before game time, and try a free research board without an account.',
   path: '/',
 })
 

@@ -1,300 +1,202 @@
-'use client'
-
-import { useState } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
-import styles from './LandingPage.module.css'
-import { motion, AnimatePresence } from 'motion/react'
-import { Activity, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, ArrowUpRight, Check, ChevronDown } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
+import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
+import { PREVIEW_CONFIG } from '@/lib/publicResearchPreview'
+import { ResearchShowcase } from './ResearchShowcase'
+import styles from './LandingPage.module.css'
 
-// Deliberately generic/benefit-level descriptions only — no mention of any
-// internal signal, formula, or threshold (PWR, shade%, Pikkit, etc.).
-// Same rule already applied to member-facing tooltips. Icons + a fixed
-// 4-column grid (not HoverEffect's 3-col breakpoint, which split these 4
-// into an awkward 3-then-1 row) keep this visually even with the tool bento
-// grid above it instead of reading as a leftover plain-text list.
-const FEATURES: { icon: React.ReactNode; title: string; description: string; link: string }[] = [
-  { icon: <Layers size={18} />, title: 'Post picks & parlays', description: 'Build parlays with live odds and payout math calculated automatically as you compose.', link: '/auth/register?utm_feature=picks' },
-  { icon: <Radio size={18} />, title: 'Live scores', description: 'Every game and every update in real time, without leaving the app.', link: '/auth/register?utm_feature=scores' },
-  { icon: <Trophy size={18} />, title: 'Leaderboard', description: 'Rankings by public record, streaks, and sport so strong performance is easy to verify.', link: '/leaderboard' },
-  { icon: <Users size={18} />, title: 'Real community', description: 'Channels, groups, and a feed built around sports conversation, not noise.', link: '/auth/register?utm_feature=community' },
+const portraits = [
+  { sport: 'nfl', team: 'TB', name: 'Cade Otton', portrait: 'https://static.www.nfl.com/image/upload/t_player_profile_landscape/f_auto/league/yanr6h9aplae3jyzimf7', value: '25', unit: 'receiving yards' },
+  { sport: 'nba', team: 'LAL', name: 'Austin Reaves', portrait: 'https://cdn.nba.com/headshots/nba/latest/1040x760/1630559.png', value: '43', unit: 'points' },
+] as const
+
+const community = [
+  { title: 'Post picks and parlays', copy: 'Build a slip with saved prices and see each leg grade against the result.', href: '/auth/register?utm_feature=picks' },
+  { title: 'Follow the scores', copy: 'Keep up with games and box scores alongside your research.', href: '/auth/register?utm_feature=scores' },
+  { title: 'Check public records', copy: 'Browse the leaderboard by sport, record and streak.', href: '/leaderboard' },
+  { title: 'Follow the community', copy: 'Find people to follow and join the conversation in groups and channels.', href: '/auth/register?utm_feature=community' },
 ]
 
-const STEPS = [
-  { n: '1', title: 'Create your account', body: 'Join for free.' },
-  { n: '2', title: 'Follow & personalize', body: 'Pick your teams, follow a few cappers, and your feed builds itself.' },
-  { n: '3', title: 'Post and track picks', body: 'Share picks and follow your record on the leaderboard.' },
+const faqs = [
+  { q: 'Can I try the boards without an account?', a: 'Yes. The NBA and NFL previews each have a featured matchup, one market and FanDuel prices. You can change the player and line and compare each saved price with its opening.' },
+  { q: 'What comes with Ultimate?', a: 'Both research workspaces come with one membership. You get the full available odds boards, more markets and sportsbooks, saved pregame history, NBA projections and defense by position, and NFL matchup research and public pick counts where available.' },
+  { q: 'How do picks and parlays grade?', a: 'Each leg grades against the final box score. A parlay wins when all legs win or push and at least one leg wins. A losing leg loses the parlay, and an all-push parlay grades as a push.' },
+  { q: 'Can I place a bet on SlipSurge?', a: 'SlipSurge is a research and community platform. It does not accept wagers or hold betting funds.' },
 ]
 
-const TOOLS: { icon: React.ReactNode; title: string; description: string; link: string }[] = [
-  { icon: <Activity size={18}/>, title: 'The Sideline · NFL', description: 'Explore a receiving-yards ladder and see how saved prices moved.', link: '/preview/nfl' },
-  { icon: <TrendingUp size={18}/>, title: 'The Court · NBA', description: 'Explore an NBA points ladder and compare real prices with their openings.', link: '/preview/nba' },
-]
-
-// Illustrative mockup only — not a live screenshot. Team pairs and numbers
-// below are placeholders (no real player names or live data), built to show
-// the shape of the real Dugout table (matchup rows, heat-mapped odds
-// columns) without depending on there being live games right now or
-// exposing any real user-posted content on a logged-out marketing page.
-const PRICING_TEASER = [
-  { tier: 'free' as const, label: 'Free', price: '$0', period: '', tagline: 'Browse the community & your profile.' },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$19.99', period: '/30 days', tagline: '3-day free trial, then $19.99 every 30 days. NFL and NBA research tools.' },
-]
-
-const FAQS = [
-  { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks. We never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
-  { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile. Their picks land in your feed automatically, and their record updates when each pick grades. No screenshots or self-reported win rates.' },
-  { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded. Any single loss fails the whole slip, while an all-push result is graded as a push.' },
-  { q: 'What\'s free vs. what requires a paid tier?', a: 'Anyone can open a free NBA or NFL research preview. Free accounts can follow the feed and set favorites. Ultimate unlocks the full boards and research tools.' },
-]
-
-function FaqAccordion() {
-  const [open, setOpen] = useState<number | null>(0)
+function PlayerCards() {
   return (
-    <div className={styles.faqList}>
-      {FAQS.map((f, i) => (
-        <div key={f.q} className={`${styles.faqItem} ${open === i ? styles.faqItemOpen : ''}`}>
-          <button
-            onClick={() => setOpen(open === i ? null : i)}
-            className={styles.faqButton}
-            aria-expanded={open === i}
-          >
-            <span>{f.q}</span>
-            <motion.span animate={{ rotate: open === i ? 180 : 0 }} transition={{ duration: 0.2 }} className={styles.faqChevron}>
-              <ChevronDown size={16} />
-            </motion.span>
-          </button>
-          <AnimatePresence initial={false}>
-            {open === i && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }} className={styles.faqAnswerWrap}
-              >
-                <p className={styles.faqAnswer}>{f.a}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      ))}
-    </div>
+    <figure className={styles.playerFigure}>
+      <div className={styles.playerStage}>
+        <svg className={styles.courtLines} viewBox="0 0 560 410" fill="none" aria-hidden="true">
+          <path d="M-48 202 267 24l340 160-318 183L-48 202Z M103 116l340 162 M55 144l79-45 88 43-78 45L55 144Z M390 244l78-44 86 40-76 45-88-41Z" />
+          <ellipse cx="273" cy="194" rx="80" ry="38" transform="rotate(25 273 194)" />
+        </svg>
+        {portraits.map(({ sport, team, name, portrait, value, unit }) => {
+          const logo = sportTeamLogoUrl(sport, team)
+          return (
+            <div key={sport} className={sport === 'nba' ? styles.nbaCard : styles.nflCard}>
+              <div className={styles.playerCard} style={{ background: sportTeamBackground(sport, team) }}>
+                <div className={styles.cardHeader}>
+                  <span>{PREVIEW_CONFIG[sport].workspace}</span>
+                  {logo && <Image src={logo} width={29} height={29} alt="" unoptimized />}
+                </div>
+                <Image className={styles.portrait} src={portrait} alt="" width={400} height={300} sizes="(max-width: 600px) 42vw, 260px" unoptimized />
+                <div className={styles.cardInfo}>
+                  <span>{name}</span>
+                  <div><strong>{value}</strong> <span>{unit}</span></div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <figcaption>Nov 8, 2026 · Final box scores</figcaption>
+    </figure>
   )
 }
 
 export function LandingPage() {
   return (
     <div className={styles.page}>
-      {/* Nav */}
-      <header className={styles.nav}>
-        <Link href="/" className={styles.brand} aria-label="SlipSurge home">
-          <Image src="/logo.png" alt="" aria-hidden="true" width={32} height={32} priority className={styles.brandLogo} />
-          <span className={styles.brandWordmark}>Slip<span>Surge</span></span>
-        </Link>
-        <nav className={styles.primaryNav} aria-label="Product navigation">
-          <a href="#research">Research</a>
-          <a href="#community">Community</a>
-          <a href="#how-it-works">How it works</a>
-        </nav>
-        <nav className={styles.actions} aria-label="Public navigation">
-          <Link href="/pricing" className={`${styles.link} ${styles.pricing}`}>Pricing</Link>
-          <Link href="/auth/login" className={styles.link}>Sign in</Link>
-          <Link href="/auth/register" className={styles.cta}>Get started</Link>
-        </nav>
+      <header className={styles.header}>
+        <div className={styles.nav}>
+          <Link href="/" className={styles.brand} aria-label="SlipSurge home">
+            <Image src="/logo.png" alt="" width={30} height={30} preload />
+            <span>Slip<span>Surge</span></span>
+          </Link>
+          <nav className={styles.primaryNav} aria-label="Product navigation">
+            <a href="#research">Research</a>
+            <a href="#community">Community</a>
+            <a href="#membership">Membership</a>
+          </nav>
+          <nav className={styles.navActions} aria-label="Account">
+            <Link href="/auth/login" className={styles.textLink}>Sign in</Link>
+            <Link href="/pricing" className={styles.secondaryButton}>View plans</Link>
+          </nav>
+        </div>
       </header>
 
-      {/* Hero */}
-      <div>
-      <div className={styles.hero}>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className={styles.heroContent}
-        >
-          <div className={styles.eyebrow}><span /> Sports research and community, connected</div>
-          <h1 className={styles.heroTitle}>
-            One place to research,<br /><span className={styles.heroAccent}>track, and talk sports.</span>
-          </h1>
-          <p className={styles.heroCopy}>
-            Follow live markets, compare the full slate, publish picks, and see public records update automatically.
-          </p>
-          <div className={styles.heroActions}>
-            <Link href="/preview/nba" className={styles.heroPrimary}>Explore free research <ArrowRight size={16} /></Link>
-            <Link href="/pricing" className={styles.heroSecondary}>Compare memberships</Link>
+      <section className={styles.hero} aria-labelledby="landing-title">
+        <div className={styles.heroCopy}>
+          <p className={styles.kicker}>NBA and NFL research</p>
+          <h1 id="landing-title">See how the odds moved</h1>
+          <p className={styles.lede}>Compare opening and saved prices, research the matchup, then check what the player actually did.</p>
+          <div className={styles.actions}>
+            <a href="#research" className={styles.primaryButton}>Try a free board <ArrowRight size={17} /></a>
+            <a href="#membership" className={styles.textLink}>What’s in Ultimate</a>
           </div>
-          <div className={styles.heroProof} role="group" aria-label="Platform highlights">
-            <span><CheckCircle2 size={14} /> Free account</span>
-            <span><CheckCircle2 size={14} /> Automatic grading</span>
-            <span><ShieldCheck size={14} /> Whop-powered memberships</span>
-          </div>
-        </motion.div>
+          <p className={styles.note}>Free previews open without an account.</p>
+        </div>
+        <PlayerCards />
+      </section>
 
-        {/* Real sportsbooks trust row — same book set/logos used throughout
-            the app (BookLogo), not a fabricated "as seen on" claim. */}
-        <motion.div
-          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.15 }}
-          className={styles.booksRow}
-        >
-          <span className={styles.booksLabel}>Post picks from</span>
-          <div className={styles.bookLogos}>
-            {['fanduel', 'draftkings', 'betmgm', 'caesars'].map(b => (
-              <div key={b} className={styles.bookLogo}>
-                <BookLogo vendor={b} size={16} />
-              </div>
+      <section id="research" className={styles.section} aria-labelledby="research-title">
+        <div className={styles.sectionIntro}>
+          <p className={styles.kicker}>The research desk</p>
+          <h2 id="research-title">Try a saved pregame board</h2>
+          <p>Pick a sport and a milestone to see how each player’s FanDuel price changed before tip or kickoff.</p>
+        </div>
+        <ResearchShowcase />
+      </section>
+
+      <section id="how-it-works" className={styles.section} aria-labelledby="workflow-title">
+        <div className={styles.sectionIntro}>
+          <h2 id="workflow-title">From the opening line to the box score</h2>
+        </div>
+        <ol className={styles.workflow}>
+          <li><span>01</span><h3>See the move</h3><p>Compare the same player, book and milestone against its opening price across the available slate.</p></li>
+          <li><span>02</span><h3>Research the matchup</h3><p>Check projections, player trends and defense by position in The Court. In The Sideline, look at usage, matchup splits and public picks.</p></li>
+          <li><span>03</span><h3>Review the result</h3><p>Reopen saved pregame boards and compare the prices you saw before the game with the final result.</p></li>
+        </ol>
+      </section>
+
+      <section id="membership" className={styles.section} aria-labelledby="membership-title">
+        <div className={styles.sectionIntro}>
+          <h2 id="membership-title">One membership for both sports</h2>
+          <p>Try a matchup in each sport first. Ultimate gives you both research workspaces.</p>
+        </div>
+        <div className={styles.plans}>
+          <div className={styles.plan}>
+            <h3>Free</h3>
+            <p className={styles.price}>$0</p>
+            <ul className={styles.planFeatures}>
+              <li><Check size={16} /> One featured game per preview</li>
+              <li><Check size={16} /> NBA points and NFL receiving yards</li>
+              <li><Check size={16} /> Feed, favorites and public records with an account</li>
+            </ul>
+            <a href="#research" className={styles.secondaryButton}>Try the free boards <ArrowRight size={16} /></a>
+          </div>
+          <div className={styles.plan}>
+            <h3>Ultimate</h3>
+            <p className={styles.price}>$19.99 <span>every 30 days</span></p>
+            <p className={styles.terms}>3-day free trial on the 30-day plan. Annual plan available for $199.99.</p>
+            <ul className={styles.planFeatures}>
+              <li><Check size={16} /> Full slate, more markets and sportsbooks</li>
+              <li><Check size={16} /> NBA projections, defense by position and player trends</li>
+              <li><Check size={16} /> NFL Matchup Lab, player usage and The Public</li>
+              <li><Check size={16} /> Saved pregame boards and historical results</li>
+            </ul>
+            <Link href="/pricing" className={styles.primaryButton}>See Ultimate plans <ArrowRight size={16} /></Link>
+          </div>
+        </div>
+      </section>
+
+      <section id="community" className={styles.section} aria-labelledby="community-title">
+        <div className={styles.sectionIntro}>
+          <h2 id="community-title">Share picks and follow the games</h2>
+        </div>
+        <div className={styles.communityGrid}>
+          {community.map(({ title, copy, href }) => (
+            <Link href={href} key={title} className={styles.communityLink}>
+              <div><h3>{title}</h3><p>{copy}</p></div><ArrowUpRight size={17} />
+            </Link>
+          ))}
+        </div>
+        <div className={styles.books}>
+          <span>Post picks from</span>
+          {['fanduel', 'draftkings', 'betmgm', 'caesars'].map(book => <BookLogo key={book} vendor={book} size={18} />)}
+        </div>
+      </section>
+
+      <section className={styles.section} aria-labelledby="faq-title">
+        <div className={styles.faqLayout}>
+          <div className={styles.sectionIntro}>
+            <h2 id="faq-title">Common questions</h2>
+            <Link href="/faq" className={styles.textLink}>Read the full FAQ <ArrowRight size={16} /></Link>
+          </div>
+          <div className={styles.faqList}>
+            {faqs.map(({ q, a }) => (
+              <details key={q}><summary>{q}<ChevronDown size={16} /></summary><p>{a}</p></details>
             ))}
           </div>
-        </motion.div>
-      </div>
-
-      {/* Flagship tool showcase */}
-      <section id="research" className={styles.section}>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={styles.sectionTitle}
-        >
-          Research NFL and NBA games
-        </motion.h2>
-        <p className={styles.sectionCopy}>Open a real odds board for free. Ultimate unlocks both research workspaces.</p>
-
-        <div className={styles.toolGrid}>
-          {TOOLS.map((t, i) => (
-            <motion.div
-              key={t.title}
-              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.06 }}
-            >
-              <Link href={t.link} className={styles.cardLink}>
-                <div className={`${styles.featureCard} ss-card`}>
-                  <div className={styles.cardTopline}>
-                    <div className={styles.cardIcon}>{t.icon}</div>
-                    <span className={styles.tierPill}>Free preview</span>
-                  </div>
-                  <h3 className={styles.cardTitle}>{t.title}</h3>
-                  <p className={styles.cardCopy}>{t.description}</p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
         </div>
       </section>
 
-      {/* Everything else */}
-      <section id="community" className={styles.section}>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={styles.sectionTitle}
-        >
-          Share picks and follow the action
-        </motion.h2>
-        <p className={styles.sectionCopy}>Follow other members, share picks and check scores in one place.</p>
-        <div className={styles.socialGrid}>
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.06 }}
-            >
-              <Link href={f.link} className={styles.cardLink}>
-                <div className={`${styles.featureCard} ss-card`}>
-                  <div className={styles.cardIcon}>{f.icon}</div>
-                  <h3 className={styles.cardTitle}>{f.title}</h3>
-                  <p className={styles.cardCopy}>{f.description}</p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+      <section className={styles.finalCta} aria-labelledby="final-title">
+        <div>
+          <h2 id="final-title">Start with a matchup</h2>
+          <p>Open the board for either sport and see what moved before game time.</p>
+        </div>
+        <div className={styles.actions}>
+          <Link href="/preview/nba" className={styles.primaryButton}>NBA preview <ArrowRight size={16} /></Link>
+          <Link href="/preview/nfl" className={styles.secondaryButton}>NFL preview <ArrowRight size={16} /></Link>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className={`${styles.section} ${styles.stepsSection}`}>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={`${styles.sectionTitle} ${styles.stepsTitle}`}
-        >
-          How it works
-        </motion.h2>
-        <div className={styles.stepsGrid}>
-          {STEPS.map((s, i) => (
-            <motion.div
-              key={s.n}
-              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              className={styles.step}
-            >
-              <div className={styles.stepNumber}>{s.n}</div>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Pricing teaser */}
-      <section className={styles.pricingSection}>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={styles.sectionTitle}
-        >
-          Start free, then choose the tools you need
-        </motion.h2>
-        <p className={styles.sectionCopy}>Choose a 30-day or 365-day Ultimate membership. Cancel anytime.</p>
-        <div className={styles.pricingGrid}>
-          {PRICING_TEASER.map(p => (
-            <div key={p.tier} className={`${styles.priceCard} ${p.tier === 'ultimate' ? styles.priceCardPopular : ''} ss-card`}>
-              <h3>{p.label}</h3>
-              <div className={styles.priceValue}>
-                <span>{p.price}</span>
-                <small>{p.period}</small>
-              </div>
-              <p>{p.tagline}</p>
-            </div>
-          ))}
-        </div>
-        <div className={styles.pricingAction}>
-          <Link href="/pricing" className={styles.secondaryAction}>See membership details</Link>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className={styles.faqSection}>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={`${styles.sectionTitle} ${styles.faqTitle}`}
-        >
-          Frequently asked questions
-        </motion.h2>
-        <FaqAccordion />
-        <p className={styles.faqMore}>
-          <Link href="/faq" className={styles.inlineLink}>See the full FAQ <ArrowRight size={14} /></Link>
-        </p>
-      </section>
-
-      {/* Final CTA */}
-      <section className={styles.finalCtaSection}>
-        <motion.div
-          initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
-          className={styles.finalCta}
-        >
-          <h2>Follow the games with SlipSurge</h2>
-          <p>Create a free account and choose research tools when you need them.</p>
-          <Link href="/auth/register" className={styles.primaryAction}>Create free account</Link>
-        </motion.div>
-      </section>
-
-      </div>
-
-      {/* Footer */}
       <footer className={styles.footer}>
-        <div className={styles.footerInner}>
-          <span>© {new Date().getFullYear()} SlipSurge</span>
-          <div className={styles.footerLinks}>
-            <Link href="/about">About</Link>
-            <Link href="/faq">FAQ</Link>
-            <Link href="/support">Support</Link>
-            <Link href="/responsible-gambling">Responsible Gambling</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/privacy">Privacy</Link>
-          </div>
-        </div>
+        <span>© {new Date().getFullYear()} SlipSurge</span>
+        <nav aria-label="Footer">
+          <Link href="/about">About</Link>
+          <Link href="/faq">FAQ</Link>
+          <Link href="/support">Support</Link>
+          <Link href="/responsible-gambling">Responsible Gambling</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/auth/register">Create an account</Link>
+        </nav>
       </footer>
     </div>
   )
