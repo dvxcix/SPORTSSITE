@@ -3,6 +3,9 @@ import type { NflBrowserSource } from './nflBrowserCapturePolicy'
 
 const START = Date.parse('2026-11-08T17:30:00Z')
 const END = Date.parse('2026-11-09T01:20:00Z')
+const MNF_START = Date.parse('2026-11-09T23:20:00Z')
+const MNF_END = Date.parse('2026-11-10T01:15:00Z')
+const MNF_ID = '8e50f012-0ed0-4592-aaa3-cdb977a1c0d9'
 
 type Plan = { source: NflBrowserSource; id: string; games: readonly string[] }
 const afternoon = ['2026_09_HOU_LAC', '2026_09_LV_SF', '2026_09_ARI_SEA', '2026_09_GB_NE'] as const
@@ -16,21 +19,25 @@ const plans: readonly Plan[] = [
   { source: 'public', id: 'a65480bc-958b-4098-a905-55850e0cc11f', games: afternoon },
   { source: 'public', id: '5eedef24-a209-4f46-a25f-462d75e9eaba', games: [evening] },
   { source: 'fanduel', id: '12baecb9-7146-42ed-98a6-ac5963070f57', games: [afternoon[1]] },
+  { source: 'public', id: MNF_ID, games: ['2026_09_BUF_MIN'] },
 ]
 
-function active(now: number) {
-  return now >= START && now < END
+function active(plan: Plan, now: number) {
+  return plan.id === MNF_ID
+    ? now >= MNF_START && now < MNF_END
+    : now >= START && now < END
 }
 
 /** Only an exact authorized route and game set can select a one-use reservation. */
 export function nflRecoveryReservation(source: NflBrowserSource, games: readonly string[], now = Date.now(), requestedId?: string) {
-  if (!active(now) || new Set(games).size !== games.length) return undefined
-  return plans.find(plan => (!requestedId || plan.id === requestedId) && plan.source === source && plan.games.length === games.length
+  if (new Set(games).size !== games.length) return undefined
+  return plans.find(plan => active(plan, now) && (!requestedId || plan.id === requestedId) && plan.source === source && plan.games.length === games.length
     && plan.games.every(game => games.includes(game)))?.id
 }
 
 export async function nextNflRecoveryBatch(admin: SupabaseClient, source: NflBrowserSource, now: number) {
-  if (!active(now)) return undefined
+  const currentPlans = plans.filter(plan => active(plan, now))
+  if (!currentPlans.length) return undefined
   const { data, error } = await admin.rpc('pending_nfl_nov8_browserbase_recovery')
     .abortSignal(AbortSignal.timeout(5_000))
   if (error || !Array.isArray(data) || data.some(id => !plans.some(plan => plan.id === id))) {
@@ -38,5 +45,5 @@ export async function nextNflRecoveryBatch(admin: SupabaseClient, source: NflBro
     console.warn('[nfl-browser-recovery] Pending allowances unavailable')
     return undefined
   }
-  return plans.find(plan => plan.source === source && data.includes(plan.id))
+  return currentPlans.find(plan => plan.source === source && data.includes(plan.id))
 }
