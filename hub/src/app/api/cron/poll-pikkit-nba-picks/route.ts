@@ -125,7 +125,7 @@ async function run(request:Request){
   try{
     // Persist even a terminated startup, so the next instance cannot hot-loop.
     await saveNbaPublicControl(contextKey,nbaNextPublicControl(contextPrior,'running',Date.now()))
-    const opening=openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length,...(due.length<=12?{gameIds:due.map(game=>game.id)}:{})},{requestTimeoutMs:15000})
+    const opening=openPikkitSession(context,{sport:'nba',mode:'daily-public',gameCount:due.length,gameIds:due.map(game=>game.id)},{requestTimeoutMs:15000})
     void opening.then(browser=>{if(timedOut)void bounded(browser.close(),15000,'Late browser release deadline').catch(()=>undefined)}).catch(()=>undefined)
     const browser=await bounded(opening,Math.min(75000,remaining()),'Pikkit browser startup deadline')
     browserOpened=true
