@@ -88,6 +88,8 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   assert.match(host.querySelector('[aria-label="Odds board sportsbook"]')?.parentElement?.textContent??'',/FanDuel/)
   assert.match(region.textContent??'',/Shortened/);assert.match(region.textContent??'',/Lengthened/)
   const link=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 15+ Points, FanDuel, last seen +150"]')!;const target=new URL(link.href);assert.equal(target.searchParams.get('game'),'12');assert.equal(target.searchParams.get('book'),'fanduel');assert.equal(target.searchParams.get('line'),'15');assert.equal(target.searchParams.get('type'),'milestone');assert.equal(target.searchParams.get('mode'),'pregame');assert.equal(link.dataset.prefetch,'false')
+  assert.match(link.closest('tr')!.querySelector('th')!.textContent??'',/1,000 observed market picks/)
+  assert.doesNotMatch(region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Bea Baker 15+ Points, FanDuel, last seen +300"]')!.closest('tr')!.querySelector('th')!.textContent??'',/observed market picks/)
   const firstCell=link.closest('td')!;assert.equal(firstCell.querySelectorAll('time').length,0);assert.match(firstCell.textContent??'',/Est\. picks\s*857/);assert.doesNotMatch(firstCell.textContent??'',/11\/2|2026/)
   const second=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 20+ Points, FanDuel, last seen +220"]')!.closest('td')!;assert.match(second.textContent??'',/Est\. picks\s*143/)
   assert.match(region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Bea Baker 15+ Points, FanDuel, last seen +300"]')!.closest('td')!.textContent??'',/Est\. picks\s*—/)
