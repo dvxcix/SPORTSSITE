@@ -148,6 +148,7 @@ async function capture(scenario: string) {
     '@/lib/scrapers/pikkitLeagueDate': { observePikkitLeagueDates: () => ({ selectDate: async (date: string) => { assert.equal(date, game.date); return true }, dispose() {} }) },
     '@/lib/scrapers/nbaPikkitScraper': { runNbaPikkitScrape: scrape }, '@/lib/nbaPublicServer': { importNbaPublic: async (value: paint.PaintGame) => { captured++; capturedIds.push(value.id); return { markets: 1, rows:1, available:true, complete:true, coverage:{observed:1,captured:1} } } },
     '@/lib/nbaPublic': { NBA_PUBLIC_VERSION: 'nba-public-v2' }, '@/lib/nbaPublicEventIdentity': actualIdentity,
+    '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) },
     '@/lib/nbaSharedCache': { nbaSharedCache: async (_key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => ({ value: await load() }) },
   }, { Date: Clock, process: { env: { PIKKIT_CONTEXT_ID: 'fixture-only' } }, setTimeout: (fn: () => void, ms: number) => setTimeout(() => { if (scenario === 'auth-event-metadata' && ms === 15000) current = 'https://app.pikkit.com/login'; fn() }, ms === 15000 ? 5 : 100), clearTimeout })
   const response = await route.GET(new Request('https://fixture.test/capture'))

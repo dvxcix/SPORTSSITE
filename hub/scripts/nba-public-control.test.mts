@@ -171,6 +171,7 @@ async function fixture(options:{now?:number;games?:PaintGame[];complete?:boolean
       'next/server':{NextResponse:{json:Response.json}},'@/lib/cron-auth':{requireBrowserbaseCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},
       '@/lib/nbaPaintData':{getPaintSchedule:async()=>({games:options.games??[game],complete:options.complete??true})},'@/lib/nbaOddsClockData':{getNbaOddsGame:async(g:PaintGame)=>g},'@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':mode,
       '@/lib/nbaPublicCaptureControl':control,'@/lib/nbaPublicCaptureControlData':data,'@/lib/supabase/admin':{createAdminClient:()=>admin},
+      '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) },
       '@/lib/nbaBrowserBudget':budget,
       '@/lib/pikkitBrowserLease':{acquirePikkitBrowserLease:async()=>{claims++;underLease?.();return leaseBusy?null:{release:async()=>{releases++;return !failRelease}}}},
       '@/lib/browserbase':{openPikkitSession:async()=>{if(startupError)throw startupError;opens++;if(startupFails)throw Error('startup fixture');return{page:{setDefaultTimeout(){},setDefaultNavigationTimeout(){},on(){},off(){},goto:async()=>{now+=options.gotoAdvanceMs??0},url:()=>auth?'https://app.pikkit.com/login':'https://app.pikkit.com/leagues/nba',waitForFunction:async()=>{},waitForTimeout:async()=>{},evaluate:async(_fn:unknown,arg?:unknown)=>arg?{bodyLength:0,signIn:false,awayTeamMentioned:false,selectCount:0,eventCount:0}:false},close:async()=>{}}}},

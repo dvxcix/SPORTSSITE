@@ -7,6 +7,8 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nflPikkitSchedule'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
+import { nflKickoffAt } from '@/app/the-sideline/kickoff'
+import { observePikkitGameOverview, savePikkitGameOverview } from '@/lib/pikkitGameOverviewServer'
 import { acquirePikkitBrowserLease, type PikkitBrowserLifecycle } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
@@ -28,6 +30,15 @@ async function clickPlayerProps(page: Awaited<ReturnType<typeof openPikkitSessio
 
 async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
   const gameId = game.gameId
+  const kickoff = nflKickoffAt({ gameday: game.gameDate, gametime: game.gameTime })?.getTime()
+  const overview = kickoff === undefined ? null : observePikkitGameOverview(session.page, 'nfl')
+  let overviewWrite: Promise<void> | undefined
+  const archiveOverview = () => {
+    if (!overview || overviewWrite || kickoff === undefined) return
+    const identity = overview.nflIdentity(game.awayName, game.homeName, kickoff)
+    const observed = identity && overview.find(identity)
+    if (identity && observed) overviewWrite = savePikkitGameOverview('nfl', gameId, identity, observed)
+  }
   try {
     await session.page.goto('https://app.pikkit.com/leagues/nfl', { waitUntil: 'domcontentloaded' })
     await session.page.waitForTimeout(1800)
@@ -49,6 +60,7 @@ async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
     if (!new RegExp(away, 'i').test(pageText) || !new RegExp(home, 'i').test(pageText)) {
       return { gameId, error: 'Pikkit navigation landed on the wrong NFL game' }
     }
+    archiveOverview()
     await clickTabByText(session.page, 'Odds').catch(() => false)
     await session.page.waitForTimeout(1600)
     let propsFound = await clickPlayerProps(session.page)
@@ -87,6 +99,10 @@ async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
   } catch (error) {
     console.error('[scrape-pikkit-nfl] failed', { gameId, type: error instanceof Error ? error.name : typeof error })
     return { gameId, error: 'NFL Pikkit scrape failed' }
+  } finally {
+    archiveOverview()
+    overview?.dispose()
+    await overviewWrite
   }
 }
 

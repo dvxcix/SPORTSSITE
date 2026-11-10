@@ -22,6 +22,8 @@ test('NFL capture keeps league-to-event navigation inside the app and never reop
     }
     const mocks: Record<string, unknown> = {
       'next/server': { NextResponse: { json: Response.json } },
+      '@/app/the-sideline/kickoff': { nflKickoffAt: () => null },
+      '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) },
       '@/lib/cron-auth': { requireBrowserbaseCronAuth: () => null },
       '@/lib/browserbase': { openPikkitSession: async () => ({ page, close: async () => { closes++ } }) },
       '@/lib/browserbaseAdmissionError': { BrowserbaseAdmissionError },

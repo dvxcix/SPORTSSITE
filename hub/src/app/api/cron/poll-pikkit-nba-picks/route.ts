@@ -17,6 +17,7 @@ import {runNbaPikkitScrape} from '@/lib/scrapers/nbaPikkitScraper'
 import {importNbaPublic} from '@/lib/nbaPublicServer'
 import {NBA_PUBLIC_VERSION} from '@/lib/nbaPublic'
 import {nbaPublicResponseKind,nbaPublicEventIdentities,nbaVerifiedPublicEvent,nbaPublicEventUrl,nbaPublicEventPageMatches,nbaPublicTeamLabel,type NbaPublicEventIdentity} from '@/lib/nbaPublicEventIdentity'
+import {observePikkitGameOverview,savePikkitGameOverview} from '@/lib/pikkitGameOverviewServer'
 import {nbaSharedCache} from '@/lib/nbaSharedCache'
 import type {Response as BrowserResponse,Request as BrowserRequest} from 'playwright-core'
 export const maxDuration=300
@@ -119,6 +120,7 @@ async function run(request:Request){
   }
   const contextPrior=controls.get(contextKey)
   const results:{game:number;ok:boolean;reason?:string;markets?:number;rows?:number;saved?:boolean;coverage?:Record<string,number>;diagnostic?:unknown;emptyShellReloaded?:boolean}[]=[]
+  const overviewWrites:Promise<void>[]=[]
   let timedOut=false,browserOpened=false,browserReleased=false,authenticationRequired=false,progressFailed=false,runError:string|null=null
   let budgetDenied:NbaBrowserBudgetError|null=null
   const cleanupIssues:string[]=[],remaining=()=>250000-(Date.now()-started)
@@ -177,6 +179,15 @@ async function run(request:Request){
         }
         browser.page.on('request',observeRequest);browser.page.on('response',observe)
         const calendar=observePikkitLeagueDates(browser.page)
+        const overview=observePikkitGameOverview(browser.page,'nba')
+        let overviewIdentity:NbaPublicEventIdentity|null=null,overviewQueued=false
+        const archiveOverview=()=>{
+          if(!overviewIdentity||overviewQueued)return
+          const observed=overview.find(overviewIdentity)
+          if(!observed)return
+          overviewQueued=true
+          overviewWrites.push(savePikkitGameOverview('nba',String(game.id),overviewIdentity,observed))
+        }
         const pendingMetadata=()=>bounded(Promise.all([...pending]),4000,'NBA event metadata read deadline')
         try{
           await bounded((async()=>{
@@ -241,6 +252,8 @@ async function run(request:Request){
           await browser.page.waitForFunction(({names})=>{const text=document.body.innerText,normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');return names.every(name=>normalize(text).includes(normalize(name)))},{names:[identity.away.full,identity.home.full]},{timeout:15000}).catch(()=>undefined)
           const text=await browser.page.evaluate(()=>document.body.innerText)
           if(!nbaPublicEventPageMatches(game,identity,browser.page.url(),text))throw new Error('NBA event page could not be verified')
+          overviewIdentity=identity
+          archiveOverview()
           await browser.page.getByText('Odds',{exact:true}).filter({visible:true}).first().click({timeout:15000})
           // Responsive event navigation contains repeated tab labels. The
           // shared helper chooses the first match and swallows click errors;
@@ -285,6 +298,8 @@ async function run(request:Request){
           if(error instanceof Error&&error.message==='NBA event is not listed')outcome='unavailable'
           if(error instanceof NbaCaptureDeadline){captureExpired=true;timedOut=true;break}
         }finally{
+          archiveOverview()
+          overview.dispose()
           observing=false;calendar.dispose();browser.page.off('request',observeRequest);browser.page.off('response',observe)
           await saveNbaPublicControl(controlKey,nbaNextPublicControl(prior,outcome,Date.now(),nbaGameStart(game)!,successAt,gameStarted)).catch(()=>{progressFailed=true;cleanupIssues.push('NBA public attempt progress could not save')})
         }
@@ -300,6 +315,7 @@ async function run(request:Request){
     if(!budgetDenied&&(!browserOpened||!browserReleased))cleanupIssues.push('The shared context lease is retained until its safety expiry because browser shutdown could not be confirmed')
     else await bounded(lease.release(),10000,'NBA browser lease release deadline').then(released=>{if(released===false)cleanupIssues.push('Shared browser lease release could not be confirmed; automatic lease expiry remains enabled')}).catch(()=>cleanupIssues.push('Shared browser lease release could not be confirmed'))
   }
+  await Promise.all(overviewWrites)
   if(budgetDenied&&!cleanupIssues.length)return NextResponse.json({stage:'deferred',reason:budgetDenied.message,budgetCode:budgetDenied.code,games:upcoming.length,due:due.length+deferredForCap,browserSessions:0,attempted:0,failed:0,deferred:due.length+deferredForCap,results:[]},{status:425})
   const unavailableReasons=new Set(['NBA event is not listed','NBA public markets are not available yet'])
   const unavailable=results.filter(result=>!result.ok&&unavailableReasons.has(result.reason??'')).length

@@ -24,7 +24,7 @@ export function nbaPublicResponseKind(value: string): 'listing' | 'event' | null
   } catch { return null }
 }
 
-export function nbaPublicEventIdentities(url: string, payload: unknown): NbaPublicEventIdentity[] {
+export function nbaPublicEventIdentities(url: string, payload: unknown, sport: 'NBA' | 'NFL' = 'NBA'): NbaPublicEventIdentity[] {
   const kind = nbaPublicResponseKind(url)
   if (!kind) return []
   const expectedId = kind === 'event' ? new URL(url).pathname.split('/').at(-1) : null
@@ -38,7 +38,7 @@ export function nbaPublicEventIdentities(url: string, payload: unknown): NbaPubl
     const info = object(row.event_info), league = object(info?.league), away = object(info?.away), home = object(info?.home)
     const team = (value: Record<string, unknown> | null) => typeof value?.full === 'string' && value.full.length > 0 && value.full.length <= 120 && typeof value.short === 'string' && /^[A-Z0-9]{2,4}$/.test(value.short) ? { full: value.full, short: value.short } : null
     const awayTeam = team(away), homeTeam = team(home), start = typeof row.start_time === 'string' ? Date.parse(row.start_time) : NaN
-    if (league?.short === 'NBA' && typeof row._id === 'string' && eventId.test(row._id) && (!expectedId || row._id === expectedId) && awayTeam && homeTeam && Number.isFinite(start)) {
+    if (league?.short === sport && typeof row._id === 'string' && eventId.test(row._id) && (!expectedId || row._id === expectedId) && awayTeam && homeTeam && Number.isFinite(start)) {
       found.push({ id: row._id, start: new Date(start).toISOString(), away: awayTeam, home: homeTeam })
     }
     for (const item of Object.values(row)) if (item && typeof item === 'object') visit(item, depth + 1)
