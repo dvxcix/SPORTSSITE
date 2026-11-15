@@ -184,6 +184,19 @@ async function run(req: Request) {
       const fetched = await getLiveNflOddsBoard(ref, gamePools.get(`${game.season}:${game.week}`))
       const board = nflMatchupBoard(mergeNflOddsBoards(previous.get(game.game_id)?.board ?? null, fetched), game.away_team, game.home_team)
       if (!board.bdlGameId || board.status !== 'ready') return { gameId: game.game_id, status: board.status }
+      const observedAt = board.capturedAt ? Date.parse(board.capturedAt) : NaN
+      const scheduled = nflKickoffAt(game)
+      if (!scheduled || !Number.isFinite(observedAt)) {
+        throw new Error('NFL odds observation time unavailable')
+      }
+      const { data: cutoffAt, error: cutoffError } = await admin.rpc('nfl_research_kickoff', {
+        p_game_id: game.game_id, p_kickoff: scheduled.toISOString(),
+      }).abortSignal(AbortSignal.timeout(5000))
+      const cutoff = typeof cutoffAt === 'string' ? Date.parse(cutoffAt) : NaN
+      if (cutoffError || !Number.isFinite(cutoff) || cutoff > scheduled.getTime()) {
+        throw new Error('NFL odds kickoff could not be confirmed')
+      }
+      if (observedAt >= cutoff) return { gameId: game.game_id, status: 'kickoff-reached' }
       await ingestNflMarketBoard(admin, game as NflMarketScheduleGame, board)
       const payloadHash = nflOddsPayloadHash(board)
       return {
