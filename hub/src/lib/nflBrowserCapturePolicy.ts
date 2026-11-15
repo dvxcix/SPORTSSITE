@@ -6,7 +6,7 @@ const HOUR = 3_600_000
 export const NFL_LATE_CAPTURE_HOURS = 3
 export type NflBrowserSource = 'public' | 'fanduel'
 export type NflBrowserSlot = 'day-before' | 'two-hours'
-export type NflBrowserAttempt = { attempt: 0 | 1; at: number }
+export type NflBrowserAttempt = { attempt: 0 | 1; at: number; sourceEmpty?: boolean }
 export type NflBrowserDecision = { due: boolean; slot: NflBrowserSlot | null; attempt: 0 | 1 | null; reason: string }
 
 /** Only these private collector responses prove no create request was sent.
@@ -43,6 +43,9 @@ export function nflBrowserDecision(kickoff: number, observed: number | null, att
   const first = attempts.find(row => row.attempt === 0)
   if (!first) return { due:true, slot, attempt:0, reason:'initial' }
   if (attempts.some(row => row.attempt === 1)) return no('attempt-limit', slot)
-  if (now - first.at < 90 * 60_000) return no('retry-cooldown', slot)
+  // A completed source read with no markets may retry sooner. Missing or
+  // uncertain receipts keep the ordinary cooldown.
+  const retryMinutes = first.sourceEmpty ? 10 : 90
+  if (now - first.at < retryMinutes * 60_000) return no('retry-cooldown', slot)
   return { due:true, slot, attempt:1, reason:'bounded-retry' }
 }

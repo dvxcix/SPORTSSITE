@@ -7,7 +7,7 @@ import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
 import { nextNflRecoveryBatch } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
-import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, registerNflPublicBatch, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
+import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, registerNflPublicBatch, recordNflPublicSourceEmpty, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -111,6 +111,11 @@ async function run(req: Request) {
       status: response.status, markets: Number(result?.marketCount ?? 0), error,
     }
   })
+  const receipts = await Promise.allSettled(results.flatMap((result, index) =>
+    result.skipped && result.error === 'No NFL public-pick markets found'
+      ? [recordNflPublicSourceEmpty(admin, reservations[index])]
+      : []))
+  if (receipts.some(receipt => receipt.status === 'rejected')) console.warn('[poll-pikkit-nfl-picks] Source receipt unavailable')
   const failed = results.filter(result => !result.ok)
   const allSkipped = results.length > 0 && results.every(result => result.skipped)
   const summary = { games: games.length, due: selected.length, attempted: selected.length, browserSessions: body ? body.browserSessions === 0 ? 0 : 1 : null, reservationFailures, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }

@@ -9,7 +9,12 @@ export type NflBrowserScope = { gameId: string; kickoff: number; observed: numbe
 type Scope = NflBrowserScope
 type Game = {gameId:string;gameDate:string;gameTime:string|null}
 type Stored = { key: string; fetched_at: string | null; payload: unknown }
-export type NflBrowserReservation = { key: string; fetchedAt: string; reservationId: string }
+export type NflBrowserReservation = {
+  key: string
+  fetchedAt: string
+  reservationId: string
+  payload: { version: 1; source: NflBrowserSource; gameId: string; slot: 'day-before' | 'two-hours'; attempt: 0 | 1; reservationId: string }
+}
 
 /** Resolve the same monotonic cutoff used by NFL research before any paid
  * browser launch. A failed or ambiguous cutoff/observation is unavailable. */
@@ -50,14 +55,14 @@ export async function readNflBrowserAttempts(admin: SupabaseClient, source: NflB
   for(const raw of data as Stored[]){
     if(!raw || !requested.includes(raw.key) || unique.has(raw.key) || typeof raw.fetched_at!=='string') throw new Error('Invalid NFL browser reservation')
     unique.add(raw.key)
-    const payload=raw.payload as {version?:unknown;slot?:unknown;attempt?:unknown;gameId?:unknown;source?:unknown}|null
+    const payload=raw.payload as {version?:unknown;slot?:unknown;attempt?:unknown;gameId?:unknown;source?:unknown;sourceEmpty?:unknown}|null
     if(!payload || payload.version!==1 || payload.source!==source || typeof payload.gameId!=='string'
       || !['day-before','two-hours'].includes(String(payload.slot)) || ![0,1].includes(Number(payload.attempt))
       || raw.key!==nflBrowserReservationKey(source,payload.gameId,payload.slot as 'day-before'|'two-hours',payload.attempt as 0|1)) throw new Error('Invalid NFL browser reservation')
     const at=Date.parse(raw.fetched_at)
     if(!Number.isFinite(at)||at>now) throw new Error('Invalid NFL browser reservation time')
     const key=`${payload.gameId}:${payload.slot}`, items=rows.get(key)??[]
-    items.push({attempt:payload.attempt as 0|1,at});rows.set(key,items)
+    items.push({attempt:payload.attempt as 0|1,at,sourceEmpty:source==='public' && payload.sourceEmpty===true});rows.set(key,items)
   }
   return rows
 }
@@ -71,10 +76,11 @@ export async function reserveNflBrowserAttempt(admin: SupabaseClient, source: Nf
   const key=nflBrowserReservationKey(source,scope.gameId,decision.slot,decision.attempt)
   const stamp=new Date(now).toISOString()
   const reservationId=randomUUID()
-  const {data,error}=await admin.from('nba_source_cache').insert({key,payload:{version:1,source,gameId:scope.gameId,slot:decision.slot,attempt:decision.attempt,reservationId},fetched_at:stamp,expires_at:new Date(now+7*86_400_000).toISOString()}).select('key').abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
+  const payload = { version: 1, source, gameId: scope.gameId, slot: decision.slot, attempt: decision.attempt, reservationId } as const
+  const {data,error}=await admin.from('nba_source_cache').insert({key,payload,fetched_at:stamp,expires_at:new Date(now+7*86_400_000).toISOString()}).select('key').abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
   if(error?.code==='23505') return null
   if(error || !data || data.key!==key) throw new Error('NFL browser reservation could not be confirmed')
-  return {key,fetchedAt:stamp,reservationId}
+  return {key,fetchedAt:stamp,reservationId,payload}
 }
 
 /** Remove only this caller's exact marker after its own verified no-create
@@ -118,4 +124,14 @@ export async function matchesNflPublicBatch(admin: SupabaseClient, id: string, g
   return Array.isArray(stored) && stored.length === gameIds.length
     && new Set(stored.map(game => game?.gameId)).size === gameIds.length
     && stored.every(game => gameIds.includes(game?.gameId))
+}
+
+export async function recordNflPublicSourceEmpty(admin: SupabaseClient, reservation: NflBrowserReservation) {
+  if (reservation.payload.source !== 'public' || reservation.payload.attempt !== 0) return
+  const { error } = await admin.from('nba_source_cache').update({
+    payload: { ...reservation.payload, sourceEmpty: true },
+  }).eq('key', reservation.key).eq('fetched_at', reservation.fetchedAt)
+    .contains('payload', { reservationId: reservation.reservationId })
+    .abortSignal(AbortSignal.timeout(5000))
+  if (error) throw new Error('NFL public source receipt could not be recorded')
 }
