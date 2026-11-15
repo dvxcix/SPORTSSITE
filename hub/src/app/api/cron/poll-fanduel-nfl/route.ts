@@ -5,7 +5,7 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requestNflCapture } from '@/lib/nflCaptureRequest'
-import { nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS, NFL_CAPTURE_BATCH_SIZE } from '@/lib/nflCaptureDispatch'
+import { nflCaptureResultStatus, NFL_CAPTURE_REQUEST_TIMEOUT_MS } from '@/lib/nflCaptureDispatch'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
 import { nextNflRecoveryBatch } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
@@ -14,11 +14,6 @@ import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, r
 export const maxDuration = 600
 export const revalidate = 0
 export const GET = withPipelineHealth('poll-fanduel-nfl', run, { allowSecondarySecret: true })
-async function inBatches<T, R>(items: T[], size: number, worker: (item: T) => Promise<R>) {
-  const output: R[] = []
-  for (let index = 0; index < items.length; index += size) output.push(...await Promise.all(items.slice(index, index + size).map(worker)))
-  return output
-}
 async function run(req: Request) {
   const auth = requireBrowserbaseCronAuth(req)
   if (auth) return auth
@@ -46,7 +41,7 @@ async function run(req: Request) {
     return {game,scope,decision,missing:scopes[index].observed===null}
   }).filter(item=>item.decision.due && (!recovery || recovery.games.includes(item.game.gameId))).sort((a,b)=>
     Number(b.decision.slot==='two-hours')-Number(a.decision.slot==='two-hours') || a.scope.kickoff-b.scope.kickoff || Number(b.missing)-Number(a.missing) || (a.decision.attempt??0)-(b.decision.attempt??0) || a.game.gameId.localeCompare(b.game.gameId)
-  ).slice(0,recovery ? 1 : NFL_CAPTURE_BATCH_SIZE)
+  ).slice(0,1)
   const games: {game: typeof inWindow[number]; reservation:NflBrowserReservation}[] = []
   let reservationFailures = 0
   for (const {game,scope} of candidates) {
@@ -59,7 +54,7 @@ async function run(req: Request) {
       reservationFailures++
     }
   }
-  const results = await inBatches(games, 2, async ({game,reservation}) => {
+  const results = await Promise.all(games.map(async ({game,reservation}) => {
     let batchId: string | undefined
     if (!recovery) {
       try {
@@ -88,7 +83,7 @@ async function run(req: Request) {
         errorName: identifier(failure?.name), errorCode: identifier(failure?.code),
         errorSyscall: identifier(failure?.syscall), requestPhase: identifier(failure?.capturePhase), elapsedMs: Date.now() - requestStarted }
     }
-  })
+  }))
   const summary = { discovered: upcoming.length, games: games.length, reservationFailures, succeeded: results.filter(result => result.ok).length, deferred: results.filter(result => 'deferred' in result && result.deferred).length, failed: results.filter(result => !result.ok && !('deferred' in result && result.deferred)).length }
   console.info('[poll-fanduel-nfl] complete', { ...summary, results })
   const status = reservationFailures || results.some(result => result.releaseFailed) ? 502 : upcoming.length > 0 && readyGames.length === 0 ? 425 : nflCaptureResultStatus(results)
