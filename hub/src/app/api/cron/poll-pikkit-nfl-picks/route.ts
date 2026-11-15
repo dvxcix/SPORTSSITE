@@ -7,7 +7,7 @@ import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
 import { nextNflRecoveryBatch } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
-import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
+import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, registerNflPublicBatch, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -24,17 +24,26 @@ async function run(req: Request) {
   const window=games.filter(game=>{const kickoff=easternKickoff(game.gameDate,game.gameTime)?.getTime();return kickoff!=null&&kickoff>now.getTime()&&kickoff-now.getTime()<=24*3600_000})
   // Existing public frames lack completeness receipts; do not let a partial
   // frame suppress the one bounded retry.
-  const scopes=(await Promise.all(window.map(game=>getNflBrowserScope(admin,'public',game)))).map(scope=>({...scope,observed:null}))
+  const scopes=(await Promise.all(window.map(game=>getNflBrowserScope(admin,'public',game))))
   const attempts=await readNflBrowserAttempts(admin,'public',scopes,now.getTime())
   const decisions=window.map((game,index)=>{
-    const scope=scopes[index],initial=nflBrowserDecision(scope.kickoff,scope.observed,[],now.getTime())
+    const scope = { ...scopes[index], observed: null }
+    const initial = nflBrowserDecision(scope.kickoff, null, [], now.getTime())
     const decision=initial.slot?nflBrowserDecision(scope.kickoff,scope.observed,attempts.get(`${game.gameId}:${initial.slot}`)??[],now.getTime()):initial
-    return {game,scope,decision}
+    return { game, scope, decision, missing: scopes[index].observed === null }
   })
   // The existing scraper opens at most four pages together. Reserve only one
   // such group: a timeout cannot consume attempts for later, unvisited groups.
   const recovery = await nextNflRecoveryBatch(admin, 'public', now.getTime())
-  const candidates = decisions.filter(item => item.decision.due && (!recovery || recovery.games.includes(item.game.gameId))).sort((a,b)=>a.scope.kickoff-b.scope.kickoff||(a.decision.attempt??0)-(b.decision.attempt??0)||a.game.gameId.localeCompare(b.game.gameId)).slice(0,4)
+  const due = decisions.filter(item => item.decision.due && (!recovery || recovery.games.includes(item.game.gameId)))
+  // Drain the nearest kickoff on its own when it is already in the late
+  // checkpoint. Within a kickoff, missing games precede attempts to refresh.
+  const earliest = Math.min(...due.map(item => item.scope.kickoff))
+  const candidates = due
+    .filter(item => recovery || earliest - now.getTime() > 3 * 3600_000 || item.scope.kickoff === earliest)
+    .sort((a, b) => Number(b.missing) - Number(a.missing) || a.scope.kickoff - b.scope.kickoff
+      || (a.decision.attempt ?? 0) - (b.decision.attempt ?? 0) || a.game.gameId.localeCompare(b.game.gameId))
+    .slice(0, 4)
   const selected: typeof games = []
   const reservations: NflBrowserReservation[] = []
   let reservationFailures = 0
@@ -60,10 +69,20 @@ async function run(req: Request) {
     }, { status: reservationFailures ? 502 : 200 })
   }
 
+  let batchId: string | undefined
+  if (!recovery) {
+    try {
+      batchId = await registerNflPublicBatch(admin, selected.map(game => game.gameId), reservations)
+    } catch {
+      // No dispatch was sent. A receipt with no owned game markers cannot admit a session.
+      await Promise.allSettled(reservations.map(reservation => releaseNflBrowserAttempt(admin, reservation)))
+      return NextResponse.json({ error: 'NFL public batch could not be registered' }, { status: 502 })
+    }
+  }
   let response: Response
   let body: { results?: Array<Record<string, unknown>>; gameId?: string; marketCount?: number; error?: string; skipped?: boolean; browserSessions?:number; budgetCode?:string; reason?:string } | null = null
   try {
-    response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}${recovery ? `&recovery=${recovery.id}` : ''}`, {
+    response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}${recovery ? `&recovery=${recovery.id}` : `&batch=${batchId}`}`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
       signal: AbortSignal.timeout(260_000),
     })
