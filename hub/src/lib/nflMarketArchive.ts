@@ -61,7 +61,7 @@ export async function ingestNflMarketBoard(
 
 export async function refreshNflTdBaselines(admin: SupabaseClient, dates: string[]) {
   if (!dates.length) return 0
-  const { data, error } = await admin.rpc('refresh_nfl_td_baselines', { p_dates: dates })
+  const { data, error } = await admin.rpc('refresh_nfl_td_baselines', { p_dates: dates }).abortSignal(AbortSignal.timeout(12000))
   if (error) throw new Error(`NFL touchdown baseline refresh failed: ${error.message}`)
   return Number(data ?? 0)
 }

@@ -212,33 +212,45 @@ async function run(req: Request) {
 
   const capturedDates = Array.from(new Set(results.flatMap(result => result.row && result.game ? [result.game.gameday] : [])))
   let baselineCount = 0
-  if (capturedDates.length) baselineCount = await refreshNflTdBaselines(admin, capturedDates)
-  const baselineRows: NflTdBaselineRow[] = []
-  if (capturedDates.length) for (let offset = 0; ; offset += 500) {
-    if (offset >= 50000) throw new Error('NFL TD baseline paging bound exceeded')
-    const { data, error } = await admin.from('nfl_td_baseline_daily')
-      .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
-      .in('slate_date', capturedDates).order('slate_date').order('player_id').order('vendor').order('prop_type')
-      .range(offset, offset + 499).abortSignal(AbortSignal.timeout(10000))
-    if (error) throw new Error(`NFL TD baseline read failed: ${error.message}`)
-    baselineRows.push(...((data ?? []) as NflTdBaselineRow[]))
-    if ((data?.length ?? 0) < 500) break
+  let baselineStatus: 'ready' | 'failed' | 'not-due' = capturedDates.length ? 'ready' : 'not-due'
+  try {
+    if (capturedDates.length) baselineCount = await refreshNflTdBaselines(admin, capturedDates)
+    const baselineRows: NflTdBaselineRow[] = []
+    if (capturedDates.length) for (let offset = 0; ; offset += 500) {
+      if (offset >= 50000) throw new Error('NFL TD baseline paging bound exceeded')
+      const { data, error } = await admin.from('nfl_td_baseline_daily')
+        .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
+        .in('slate_date', capturedDates).order('slate_date').order('player_id').order('vendor').order('prop_type')
+        .range(offset, offset + 499).abortSignal(AbortSignal.timeout(10000))
+      if (error) throw new Error(`NFL TD baseline read failed: ${error.message}`)
+      baselineRows.push(...((data ?? []) as NflTdBaselineRow[]))
+      if ((data?.length ?? 0) < 500) break
+    }
+    const baselinesByDate = new Map<string, NflTdBaselineRow[]>()
+    for (const row of baselineRows) {
+      let dateRows = baselinesByDate.get(row.slate_date)
+      if (!dateRows) { dateRows = []; baselinesByDate.set(row.slate_date, dateRows) }
+      dateRows.push(row)
+    }
+    results.forEach(result => {
+      if (!result.row || !result.board || !result.game) return
+      const enriched = attachNflTdBaselines(result.board, baselinesByDate.get(result.game.gameday) ?? [])
+      result.row.board = enriched
+    })
+  } catch (caught) {
+    // Odds persistence is essential even if optional enrichment fails.
+    baselineStatus = 'failed'
+    console.error('[nfl-bdl-odds] touchdown baseline enrichment failed', caught)
   }
-  const baselinesByDate = new Map<string, NflTdBaselineRow[]>()
-  ;((baselineRows ?? []) as NflTdBaselineRow[]).forEach(row => baselinesByDate.set(row.slate_date, [...(baselinesByDate.get(row.slate_date) ?? []), row]))
-  results.forEach(result => {
-    if (!result.row || !result.board || !result.game) return
-    const enriched = attachNflTdBaselines(result.board, baselinesByDate.get(result.game.gameday) ?? [])
-    result.row.board = enriched
-  })
 
   const rows = results.flatMap(result => result.row ? [result.row] : [])
   const changedRows = results.flatMap(result => result.row && result.changed ? [result.row] : [])
-  if (rows.length) {
-    await writeBatches(rows, batch => admin.from('nfl_odds_current').upsert(batch, { onConflict: 'game_id' }))
-  }
+  // A failed history write must leave the previous hash available for retry.
   if (changedRows.length) {
     await writeBatches(changedRows, batch => admin.from('nfl_odds_snapshot_history').insert(batch))
+  }
+  if (rows.length) {
+    await writeBatches(rows, batch => admin.from('nfl_odds_current').upsert(batch, { onConflict: 'game_id' }))
   }
 
   if (rows.length || backfill?.status === 'complete') revalidateTag('sideline:nfl-odds', 'max')
@@ -250,9 +262,10 @@ async function run(req: Request) {
     captured: rows.length,
     changed: changedRows.length,
     baselines: baselineCount,
+    baselineStatus,
     research,
     backfill,
     failed,
     games: results.map(({ gameId, status, changed }) => ({ gameId, status, changed: Boolean(changed) })),
-  }, { status: failed ? 503 : 200 })
+  }, { status: failed || baselineStatus === 'failed' ? 503 : 200 })
 }
