@@ -96,30 +96,33 @@ export async function releaseNflBrowserAttempt(admin: SupabaseClient, reservatio
   return data?.key===reservation.key
 }
 
-const nflPublicBatchKey = (id: string) => `nfl:browser:v1:public-batch:${id}`
+const nflBrowserBatchKey = (source: NflBrowserSource, id: string) => `nfl:browser:v1:${source}-batch:${id}`
 const isBatchId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)
 
-export async function registerNflPublicBatch(admin: SupabaseClient, gameIds: readonly string[], reservations: readonly NflBrowserReservation[]) {
-  if (!gameIds.length || gameIds.length > 4 || gameIds.length !== reservations.length) throw new Error('Invalid NFL public batch')
+export async function registerNflBrowserBatch(admin: SupabaseClient, source: NflBrowserSource, gameIds: readonly string[], reservations: readonly NflBrowserReservation[]) {
+  if (!gameIds.length || gameIds.length > (source === 'fanduel' ? 1 : 4) || gameIds.length !== reservations.length
+    || reservations.some((row, index) => row.payload.source !== source || row.payload.gameId !== gameIds[index])) {
+    throw new Error('Invalid NFL browser batch')
+  }
   const id = randomUUID()
   const now = Date.now()
   const games = gameIds.map((gameId, index) => ({
     gameId, key: reservations[index].key, reservationId: reservations[index].reservationId,
   }))
   const { error } = await admin.from('nba_source_cache').insert({
-    key: nflPublicBatchKey(id), payload: { games },
+    key: nflBrowserBatchKey(source, id), payload: { games },
     fetched_at: new Date(now).toISOString(), expires_at: new Date(now + 180_000).toISOString(),
   }).abortSignal(AbortSignal.timeout(5000))
-  if (error) throw new Error('NFL public batch could not be recorded')
+  if (error) throw new Error('NFL browser batch could not be recorded')
   return id
 }
 
-export async function matchesNflPublicBatch(admin: SupabaseClient, id: string, gameIds: readonly string[]) {
+export async function matchesNflBrowserBatch(admin: SupabaseClient, source: NflBrowserSource, id: string, gameIds: readonly string[]) {
   if (!isBatchId(id) || !gameIds.length || gameIds.length > 4) return false
   const { data, error } = await admin.from('nba_source_cache').select('payload')
-    .eq('key', nflPublicBatchKey(id)).gt('expires_at', new Date().toISOString())
+    .eq('key', nflBrowserBatchKey(source, id)).gt('expires_at', new Date().toISOString())
     .abortSignal(AbortSignal.timeout(5000)).maybeSingle()
-  if (error) throw new Error('NFL public batch could not be read')
+  if (error) throw new Error('NFL browser batch could not be read')
   const stored: unknown = data?.payload?.games
   return Array.isArray(stored) && stored.length === gameIds.length
     && new Set(stored.map(game => game?.gameId)).size === gameIds.length

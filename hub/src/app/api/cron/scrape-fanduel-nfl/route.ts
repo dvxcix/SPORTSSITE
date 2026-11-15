@@ -6,6 +6,7 @@ import { nflRecoveryReservation } from '@/lib/nflNov8BrowserRecovery'
 import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { matchesNflBrowserBatch } from '@/lib/nflBrowserCaptureControls'
 import { createClient } from '@/lib/supabase/server'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame } from '@/lib/scrapers/gameMatch'
@@ -48,9 +49,15 @@ async function capture(req: Request) {
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
   const recovery = url.searchParams.get('recovery')
-  const reservationId = recovery && !auth
+  const legacyReservationId = recovery && !auth
     ? nflRecoveryReservation('fanduel', [gameId], Date.now(), recovery === '20261108' ? undefined : recovery) : undefined
-  if (recovery !== null && !reservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
+  if (recovery !== null && !legacyReservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
+  const batchId = url.searchParams.get('batch')
+  if (batchId !== null && (auth || recovery !== null || url.searchParams.get('dryRun') === '1'
+    || !await matchesNflBrowserBatch(admin, 'fanduel', batchId, [gameId]))) {
+    return NextResponse.json({ error: 'NFL browser capture deferred', budgetCode: 'configuration', browserSessions: 0 }, { status: 425 })
+  }
+  const reservationId = batchId ?? legacyReservationId
   let session: Awaited<ReturnType<typeof openSession>>
   try {
     session = await openSession({ proxyDomainPattern: FANDUEL_PROXY_DOMAIN_PATTERN, timeoutSeconds: NFL_CAPTURE_SESSION_TIMEOUT_SECONDS, reservationId, metadata: { book: 'fanduel', sport: 'nfl', mode: 'single-game', gameId } })

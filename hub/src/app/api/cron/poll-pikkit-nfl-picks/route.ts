@@ -7,7 +7,7 @@ import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { easternKickoff } from '@/lib/browserbaseRefresh'
 import { nextNflRecoveryBatch } from '@/lib/nflNov8BrowserRecovery'
 import { nflBrowserDecision, nflVerifiedNoCreateDenial } from '@/lib/nflBrowserCapturePolicy'
-import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, registerNflPublicBatch, recordNflPublicSourceEmpty, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
+import { getNflBrowserScope, readNflBrowserAttempts, reserveNflBrowserAttempt, releaseNflBrowserAttempt, registerNflBrowserBatch, recordNflPublicSourceEmpty, type NflBrowserReservation } from '@/lib/nflBrowserCaptureControls'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -72,7 +72,7 @@ async function run(req: Request) {
   let batchId: string | undefined
   if (!recovery) {
     try {
-      batchId = await registerNflPublicBatch(admin, selected.map(game => game.gameId), reservations)
+      batchId = await registerNflBrowserBatch(admin, 'public', selected.map(game => game.gameId), reservations)
     } catch {
       // No dispatch was sent. A receipt with no owned game markers cannot admit a session.
       await Promise.allSettled(reservations.map(reservation => releaseNflBrowserAttempt(admin, reservation)))

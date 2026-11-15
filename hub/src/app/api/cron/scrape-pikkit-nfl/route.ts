@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { matchesNflPublicBatch } from '@/lib/nflBrowserCaptureControls'
+import { matchesNflBrowserBatch } from '@/lib/nflBrowserCaptureControls'
 import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { nflRecoveryReservation } from '@/lib/nflNov8BrowserRecovery'
 import { BrowserbaseAdmissionError } from '@/lib/browserbaseAdmissionError'
@@ -127,7 +127,7 @@ async function run(req: Request, lifecycle: PikkitBrowserLifecycle) {
   if (recovery !== null && !legacyReservationId) return NextResponse.json({ error: 'NFL recovery scope unavailable' }, { status: 409 })
   const batchId = params.get('batch')
   if (batchId !== null && (recovery !== null || requested.size !== games.length
-    || !await matchesNflPublicBatch(createAdminClient(), batchId, games.map(game => game.gameId)))) {
+    || !await matchesNflBrowserBatch(createAdminClient(), 'public', batchId, games.map(game => game.gameId)))) {
     return NextResponse.json({ error: 'NFL browser capture deferred', budgetCode: 'configuration', browserSessions: 0 }, { status: 425 })
   }
   const reservationId = batchId ?? legacyReservationId
