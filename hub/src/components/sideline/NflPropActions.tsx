@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react'
 import { Star, Send } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
-import { nflWatchlistSelection } from '@/lib/nflWatchlist'
+import { nflWatchlistPrice, nflWatchlistSelection } from '@/lib/nflWatchlist'
 import type { NflOddsPlayer, NflPlayerMarket, NflMarketOffer } from '@/lib/nflOddsTypes'
 
 export function NflPropActions({ player, market, offer, side, game }: {
@@ -12,6 +12,7 @@ export function NflPropActions({ player, market, offer, side, game }: {
   const [busy, setBusy] = useState(false)
   const lock = useRef(false)
   const [error, setError] = useState('')
+  if (nflWatchlistPrice(offer, side) == null) return null
   const selection = nflWatchlistSelection(player, market, offer, side, game)
   const existing = wl.items.find(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === game.id &&
     item.nfl_selection?.player_id === selection.nfl_selection?.player_id && item.prop_key === selection.prop_key && item.book === offer.vendor)

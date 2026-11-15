@@ -45,7 +45,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
   const entryValue = (row: (typeof rows)[number], line: number) => {
     const e = row.entries.find(e => e.line === line)
     if (!e) return null
-    const now = ladderPrice(e.offer, side),
+    const now = e.offer.isOpeningOnly ? null : ladderPrice(e.offer, side),
       open = ladderPrice(e.offer, side, true)
     if (mode === 'odds') return americanImpliedProbability(now)
     if (mode === 'picks') return contractPicks(row.player, prop, line, side, kind) ?? (side === 'over' ? (row.estimated.get(e.market.key) ?? null) : null)
@@ -233,8 +233,9 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
                 {visible.map(line => {
                   const e = row.entries.find(e => e.line === line)
                   if (!e) return <td key={line}>—</td>
-                  const now = ladderPrice(e.offer, side),
-                    open = ladderPrice(e.offer, side, true),
+                  const openingOnly = e.offer.isOpeningOnly === true
+                  const now = openingOnly ? null : ladderPrice(e.offer, side),
+                    open = openingOnly ? (ladderPrice(e.offer, side) ?? ladderPrice(e.offer, side, true)) : ladderPrice(e.offer, side, true),
                     v = entryValue(row, line),
                     range = ranges.get(line)!
                   const strength = v != null && range.max > range.min ? (v - range.min) / (range.max - range.min) : null
@@ -246,7 +247,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
                       style={ladderHeatBackground(strength)}
                     >
                       <b>{mode === 'odds' ? price(now) : v == null ? '—' : mode === 'picks' ? (exact == null ? 'Est. ' : '') + v.toLocaleString() : v.toFixed(2)}</b>
-                      <small>{mode === 'odds' ? 'OPEN ' + price(open) : 'ODDS ' + price(now)}</small>
+                      <small>{openingOnly ? 'OPEN ONLY ' + price(open) : mode === 'odds' ? 'OPEN ' + price(open) : 'ODDS ' + price(now)}</small>
                       {e.offer.openingLine !== e.offer.line ? <small>OPEN LINE {e.offer.openingLine ?? '—'}</small> : null}
                       {mode !== 'picks' ? <small>{exact != null ? exact + ' picks' : est != null ? 'Est. ' + est : 'Picks —'}</small> : null}
                       {game && now != null ? <NflPropActions player={row.player} market={e.market} offer={e.offer} side={side} game={game} /> : null}

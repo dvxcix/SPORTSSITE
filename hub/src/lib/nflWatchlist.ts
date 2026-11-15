@@ -9,10 +9,14 @@ export type NflSavedSelection = {
   market_side: 'milestone' | 'over' | 'under'
 }
 
+export function nflWatchlistPrice(offer: NflMarketOffer, side: 'over' | 'under') {
+  if (offer.isOpeningOnly) return null
+  return (offer.type === 'milestone' ? offer.current.odds : offer.current[side]) ?? null
+}
+
 export function nflWatchlistSelection(player: NflOddsPlayer, market: NflPlayerMarket, offer: NflMarketOffer, side: 'over' | 'under', game: { id: string; gameday: string }): NewWatchlistItem {
-  if (offer.isOpeningOnly) throw new Error('This price is unavailable. Choose another market.')
   const marketSide = offer.type === 'milestone' ? 'milestone' : side
-  const odds = marketSide === 'milestone' ? offer.current.odds : offer.current[side]
+  const odds = nflWatchlistPrice(offer, side)
   if (odds == null) throw new Error('This price is unavailable. Choose another market.')
   const name = market.propType.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
   const label = ['anytime_td', 'first_td', 'last_td'].includes(market.propType) ? market.label
