@@ -16,7 +16,7 @@ const stubs:Record<string,string>={
   'next/server':`export class NextResponse extends Response{static json(v,o={}){return new Response(JSON.stringify(v),{...o,headers:{'Content-Type':'application/json',...o.headers}})}}`,
   '@/lib/nflAccess':`export async function requireNflAccess(){globalThis.marketFixture.auth++;return {userId:'member'}}`,
   '@/app/the-sideline/data':``,
-  '../data':`export const getSidelineGames=async()=>({games:[{id:'game',gameday:'2020-11-02'}]});export const getSidelineOddsBundle=async()=>{globalThis.marketFixture.bundleCalls++;return {odds:{players:[],capturedAt:null},gameState:null}};export const getSidelineTimeline=async()=>[];export const getSidelineCapture=async()=>null;export const storedGameState=()=>null`,
+  '../data':`export const getSidelineGames=async()=>({games:[{id:'game',gameday:'2020-11-02'}]});export const getSidelineOddsBundle=async()=>{globalThis.marketFixture.bundleCalls++;return {odds:{players:[],capturedAt:null},gameState:null}};export const getSidelineTimeline=async()=>[];export const getSidelineMarketCapture=async()=>null;export const storedGameState=()=>null`,
   '@/lib/nflTouchdownFeed':`export const getNflTouchdownFeed=async()=>[]`,
   '@/lib/nflPublicResultsServer':`export const getNflPublicResults=async()=>null`,
   '@/lib/nflPregameResearchData':`export const nflPregameOpen=()=>true`,

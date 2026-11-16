@@ -10,6 +10,7 @@ import * as unavailable from '../src/lib/nflResearchUnavailable.ts'
 import * as pausedProjection from '../src/lib/nflPausedProjection.ts'
 import * as spendingPause from '../src/lib/browserbaseSpendingPause.ts'
 import * as scoreIntegrity from '../src/lib/nflScoreIntegrity.ts'
+import * as nflAvailability from '../src/lib/nflAvailability.ts'
 import * as publicResearchPreview from '../src/lib/publicResearchPreview.ts'
 import type { SidelineGame } from '../src/app/the-sideline/types.ts'
 
@@ -152,7 +153,7 @@ async function dataHarness(writesEnabled = true, spendingPaused = false) {
     '@/lib/nflMarketArchive':{attachNflTdBaselines:(b:any)=>b},'@/lib/nflOddsTypes':{EMPTY_SIDELINE_ODDS},'@/lib/nflPikkit':{attachNflPikkitSnapshot:(b:any)=>b},'@/lib/sidelinePublicBoard':{sidelinePublicBoard:(b:any)=>b},'@/lib/nflFanduel':{attachNflFanduel:(b:any,s:any)=>s??b,loadNflFanduel:async(_id:string,at:string)=>{if(at)cutoffs.push(at);return supplement}},
     '@/lib/browserbaseSpendingPause':{...spendingPause,BROWSERBASE_SPENDING_PAUSED:spendingPaused,NFL_PAUSED_PROJECTION_WRITES_ENABLED:writesEnabled,NFL_PAUSED_PROJECTION_ENFORCE_ENABLED:writesEnabled},'@/lib/nflPausedProjection':pausedProjection,
     './analysis':{getSidelineLens:async()=>{analyses++;return {status:'calculated'}}},'./boardAnalysis':{getSidelineBoardLens:async()=>{analyses++;return {status:'calculated'}}},'@/lib/nflSample':samples,'@/lib/nflPregameResearchData':h.api,'@/lib/nflResearchUnavailable':unavailable,'@/lib/nflWeatherServer':{getNflWeather:async()=>''},
-    './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b},'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:'In Progress',status_state:'in_progress'}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
+    './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b},'@/lib/nflAvailability':nflAvailability,'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:'In Progress',status_state:'in_progress'}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
   return {...h,api,tables,cutoffs,board,setCurrent:(value:any)=>{currentBoard=value},setCurrentFailure:(value:boolean)=>{currentFailure=value},setSupplement:(value:any)=>{supplement=value},setOriginal:(value:any)=>{original=value},setGameStateHook:(f:()=>void)=>{gameStateHook=f},analyses:()=>analyses}
 }
 test('missing closed odds are unavailable without reading current odds or baseline tables',async()=>{
@@ -169,6 +170,22 @@ test('old original quotes and baselines survive without importing current roster
   assert.equal(result.odds.players[0].jersey,7);assert.equal(result.odds.players[0].tdBaselines[0].averageOdds,333)
   assert.ok(!h.tables.includes('nfl_td_baseline_daily'))
   assert.ok(!h.tables.includes('nba_source_cache'))
+})
+test('a captured cut status removes the player from current, frozen and slider markets without changing the source data', async () => {
+  const h = await dataHarness()
+  const offer = { vendor: 'fanduel', type: 'milestone', current: { odds: 1900 }, opening: null, line: 0.5, openingLine: 0.5, updatedAt: h.board.capturedAt }
+  const market = { key: 'anytime_td:0.5', propType: 'anytime_td', label: 'Anytime TD', category: 'touchdowns', line: 0.5, offers: [offer] }
+  const released = { ...h.board.players[0], name: 'Hayden Rucci', rosterStatus: 'CUT', lastSeason: 2026, markets: [market] }
+  const eligible = { ...released, id: 2, name: 'Other tight end', rosterStatus: 'ACT' }
+  const original = { ...h.board, players: [released, eligible] }
+  h.setCurrent(original)
+  h.setOriginal({ board: { ...original, players: original.players.map(player => ({ ...player, rosterStatus: undefined })) }, captured_at: original.capturedAt })
+  const open = await h.api.getSidelineOddsBundle(game())
+  assert.deepEqual(open.odds.players.map((player: { id: number }) => player.id), [2])
+  assert.deepEqual(h.getRow().payload.players[0].markets[0].offers, [offer])
+  h.setTime(start + 1)
+  assert.deepEqual((await h.api.getSidelineOddsBundle(game())).odds, open.odds)
+  assert.deepEqual((await h.api.getSidelineMarketCapture(game(), original.capturedAt)).board.players.map((player: { id: number }) => player.id), [2])
 })
 test('a live score await crossing kickoff refreshes the final research board',async()=>{
   const h=await dataHarness()

@@ -9,6 +9,7 @@ import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { fitNflResponsePicks, packNflBoardPicks, unpackNflBoardPicks } from '@/lib/nflOddsBoardBudget'
 import { nflMatchupTeam } from '@/lib/nflMatchupBoard'
+import { nflMarketRosterKey, nflRosterMarketExclusions } from '@/lib/nflAvailability'
 import { attachNflFanduel } from '@/lib/nflFanduel'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } from '@/lib/browserbaseSpendingPause'
@@ -20,7 +21,7 @@ export const dynamic='force-dynamic'
 export const maxDuration=120
 type CompactQuote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
-type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}
+type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];rosterExclusions?:Record<string,string[]>}
 const MAX_POOL_BYTES=4*1024*1024
 type PickSnapshotRow={snapshot:NflPikkitSnapshot;captured_at:string}
 type FrozenOdds={board:NflObservedOdds;observedAt:string;cutoffAt:number}
@@ -87,7 +88,7 @@ function mergePartial(candidate:Pool, previous:Pool|null, clocks:NflOddsBoardClo
     const key=nflBoardIdentityKey(item[0],item[1],item[3],item[2]),headshot=nflBoardImage(item[4]),fallbacks=item[5].map(nflBoardImage).filter((value):value is string=>!!value)
     if(wanted.has(key)&&headshot&&!identities.has(key))identities.set(key,[item[0],item[1],item[2],item[3],headshot,fallbacks])
   }
-  return {date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete' as const}:game),quotes,picks:candidate.picks??[],identities:[...identities.values()]}
+  return {date:candidate.date,games:candidate.games.map(game=>incomplete.has(game.id)?{...game,status:'incomplete' as const}:game),quotes,picks:candidate.picks??[],identities:[...identities.values()],rosterExclusions:{...previous.rosterExclusions,...candidate.rosterExclusions}}
 }
 
 /** Only the exact fields the comparison needs are retained, with strict size
@@ -123,17 +124,16 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v11:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v12:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
-      const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[]}|null>=Array(games.length).fill(null)
+      const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];excluded?:string[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
         const clock=clocks.find(item=>item.id===game.id), row:GameRow={id:game.id,away:game.away.abbr,home:game.home.abbr,status:'ready'}
         if(!clock?.cutoff){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
         const cutoff=clock.cutoff
-        // Counts are optional and bounded; one read per game is shared by
-        // every member and uses the same historical cutoff as the odds.
-        const picksTask:Promise<PickInput>=Date.parse(cutoff)<=Date.parse(capturedNow)
-          ? (async()=>{
+        // Use the same pregame roster evidence as Props, including once the
+        // game starts. Raw odds frames alone do not verify roster membership.
+        const researchTask=(async()=>{
               const kickoff=nflKickoffAt(game);if(!kickoff)return null
               const result=await admin.rpc('read_nfl_pregame_research',{p_game_id:game.id,p_resource:'odds:v1',p_version:1,p_kickoff:kickoff.toISOString()}).abortSignal(AbortSignal.timeout(1200))
               if(result.error||!result.data)return null
@@ -142,8 +142,12 @@ export async function GET(request:NextRequest){
               const stop=Math.min(storedTip,kickoff.getTime(),Date.parse(cutoff))
               return stored.payload&&Number.isFinite(observed)&&Number.isFinite(storedTip)&&observed<stop&&observed<=Date.parse(capturedNow)&&['capture','recovered-cache'].includes(stored.source)?{board:stored.payload,observedAt:stored.observed_at,cutoffAt:stop}:null
             })().catch(()=>null)
+        const picksTask:Promise<PickInput>=Date.parse(cutoff)<=Date.parse(capturedNow)
+          ? researchTask
           : Promise.resolve(admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(1200)).maybeSingle()).then(result=>result.error?null:result.data as PickSnapshotRow|null).catch(()=>null)
-        const [results,pickInput]=await Promise.all([Promise.all(['nfl_odds_snapshot_history','nfl_fanduel_capture_history'].map((table,index)=>admin.from(table).select(index===1?'board,captured_at,raw_tabs':'board,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(2).abortSignal(AbortSignal.timeout(12000)))),picksTask])
+        const [results,pickInput,research]=await Promise.all([Promise.all(['nfl_odds_snapshot_history','nfl_fanduel_capture_history'].map((table,index)=>admin.from(table).select(index===1?'board,captured_at,raw_tabs':'board,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(2).abortSignal(AbortSignal.timeout(12000)))),picksTask,researchTask])
+        const excluded = research && Array.isArray(research.board.players) && research.board.players.some(player => player.rosterStatus)
+          ? [...nflRosterMarketExclusions(research.board.players, game.season)] : undefined
         if(results.some(result=>result.error))row.status='incomplete'
         const sources=results.map((result,index)=>{
           if(result.error)return []
@@ -174,7 +178,7 @@ export async function GET(request:NextRequest){
         if(row.status==='unavailable'&&observations.length)row.status='incomplete'
         if(observations.some(quote=>quote.openingConflict))row.status='incomplete'
         const quotes=observations.map(tuple)
-        if(quotes.length>4000){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
+        if(quotes.length>4000){row.status='unavailable';entries[offset+relative]={game:row,quotes:[],excluded};return}
         let picks:NflBoardPick[]=[]
         try{
           let board:SidelineOddsBoard|null=null
@@ -207,19 +211,20 @@ export async function GET(request:NextRequest){
           }
           if(board)picks=nflOddsBoardPicks(game.id,[game.away.abbr,game.home.abbr],board,cutoff,Date.parse(capturedNow))
         }catch{/* optional picks never hide otherwise valid prices */}
-        entries[offset+relative]={game:row,quotes,picks,identities:nflBoardIdentities(game.id,[game.away.abbr,game.home.abbr],[...sources.flat(),...(fallback?[fallback]:[])],observations)}
+        entries[offset+relative]={game:row,quotes,picks,excluded,identities:nflBoardIdentities(game.id,[game.away.abbr,game.home.abbr],[...sources.flat(),...(fallback?[fallback]:[])],observations)}
       }))
       const groups=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!=null)
       // Keep games atomic: never silently truncate individual rungs. A game
       // that cannot fit is explicitly unavailable in this observation.
       // Reserve space for every game's prices before adding any pick counts.
-      let remaining=MAX_POOL_BYTES-Buffer.byteLength(JSON.stringify({date,games:groups.map(entry=>entry.game),quotes:[]}))-4096
+      const rosterExclusions=Object.fromEntries(groups.flatMap(entry=>entry.excluded ? [[entry.game.id,entry.excluded]] : []))
+      let remaining=MAX_POOL_BYTES-Buffer.byteLength(JSON.stringify({date,games:groups.map(entry=>entry.game),quotes:[],rosterExclusions}))-4096
       for(const entry of groups){
         const bytes=Buffer.byteLength(JSON.stringify([entry.quotes,entry.identities??[]]))
         if(bytes>remaining){entry.game.status='unavailable';entry.quotes=[];entry.picks=[];entry.identities=[]}
         else remaining-=bytes
       }
-      const pool:Pool={date,games:groups.map(entry=>entry.game),quotes:groups.flatMap(entry=>entry.quotes),picks:groups.flatMap(entry=>entry.picks??[]),identities:groups.flatMap(entry=>entry.identities??[])}
+      const pool:Pool={date,games:groups.map(entry=>entry.game),quotes:groups.flatMap(entry=>entry.quotes),picks:groups.flatMap(entry=>entry.picks??[]),identities:groups.flatMap(entry=>entry.identities??[]),rosterExclusions}
       if(groups.length!==games.length)throw new Error('Odds board games missing')
       return packNflBoardPicks(pool,MAX_POOL_BYTES)
     },110)
@@ -246,11 +251,14 @@ export async function GET(request:NextRequest){
     if(pool.date!==date||pool.games.length!==games.length||pool.games.some(row=>!games.some(game=>game.id===row.id&&game.away.abbr===row.away&&game.home.abbr===row.home)||!['ready','incomplete','unavailable'].includes(row.status)))throw new Error('Invalid saved odds board')
     // Validate even cached values against the current exact game/cutoff set.
     mergePartial({date,games:pool.games,quotes:[]},pool,clocks)
-    const markets=[...new Set(pool.quotes.map(q=>q[5]))].sort()
+    // Apply after merging so a carried quote cannot bring an excluded player back.
+    const excluded = new Map(Object.entries({ ...pool.rosterExclusions, ...candidate.value.rosterExclusions }).map(([id, keys]) => [id, new Set(keys)]))
+    const eligibleQuotes = pool.quotes.filter(q => !excluded.get(q[0])?.has(nflMarketRosterKey({ name: q[2], team: q[3] })))
+    const markets=[...new Set(eligibleQuotes.map(q=>q[5]))].sort()
     const market=requestedMarket
-    const books=[...new Set(pool.quotes.filter(q=>q[5]===market).map(q=>q[6]))].sort()
+    const books=[...new Set(eligibleQuotes.filter(q=>q[5]===market).map(q=>q[6]))].sort()
     const book=requestedBook
-    const quotes=pool.quotes.filter(q=>q[5]===market&&q[6]===book)
+    const quotes=eligibleQuotes.filter(q=>q[5]===market&&q[6]===book)
     const quoteKeys=new Set(quotes.map(q=>nflBoardPickKey(q[0],q[1],q[3],q[5],q[6],q[7])))
     const picks=unpackNflBoardPicks(pool.quotes,pool.pickCounts).filter(row=>quoteKeys.has(nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5])))
     // An unavailable future game may acquire its first verified baseline;

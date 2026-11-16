@@ -103,6 +103,28 @@ test('open game joins the original public snapshot to the saved full ladder once
  }finally{Date.now=previous}
 })
 test('source reads are shared while fresh clock checks remain per request',async()=>{reset();const first=await request();assert.equal(first.status,200);const result=await first.json();assert.equal(result.quotes.length,1);assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][10],-110);assert.equal(result.quotes[0][12],300);assert.equal(result.quotes[0][13],false);assert.equal(state.clocks,2);assert.equal(state.reads,2);assert.doesNotMatch(JSON.stringify(result),/privateField|do not expose/);assert.equal((await request()).status,200);assert.equal(state.clocks,3);assert.equal(state.reads,2)})
+test('captured roster exclusions suppress both raw book quotes and carried cache quotes', async () => {
+  reset()
+  assert.equal((await (await request()).json()).quotes.length, 1)
+  state.entries.clear()
+  const original = state.tables.nfl_odds_snapshot_history[0]
+  const board = structuredClone(original.board) as SidelineOddsBoard
+  board.players[0].rosterStatus = 'CUT'
+  state.archive = { value: board, observedAt: original.captured_at }
+  for (const history of [[original], []]) {
+    state.entries.clear()
+    state.tables.nfl_odds_snapshot_history = history
+    const response = await request()
+    assert.equal(response.status, 200)
+    const result = await response.json()
+    assert.deepEqual(result.quotes, [])
+    assert.deepEqual(result.markets, [])
+    assert.deepEqual(result.identities, [])
+  }
+  state.entries.clear()
+  state.archive = null
+  assert.deepEqual((await (await request()).json()).quotes, [], 'a failed roster reread cannot revive the carried price')
+})
 test('saved pregame player artwork is sent once per exact game/player with the game team colors',async()=>{reset();const result=await(await request()).json();assert.deepEqual(result.identities,[['game',4,'Test','SEA','https://static.www.nfl.com/headshot.png',['https://a.espncdn.com/headshot.png']]]);assert.deepEqual(result.teams[0],['game','SEA','#002244','#69BE28','https://a.espncdn.com/seattle.png']);assert.equal(result.quotes.length,1);assert.equal(state.reads,2);await request();assert.equal(state.reads,2)})
 test('untrusted artwork hosts and a mismatched player name do not supply an avatar',async()=>{reset();const next=state.tables.nfl_odds_snapshot_history[0] as ReturnType<typeof sample>;next.board.players[0].headshot='https://example.org/untrusted.png';next.board.players[0].headshotFallbacks=[];const older=state.tables.nfl_odds_snapshot_history[1] as ReturnType<typeof sample>;older.board.players[0].name='Another Player';const result=await(await request()).json();assert.deepEqual(result.identities,[])})
 test('a valid saved fallback remains usable when the primary host is untrusted',async()=>{reset();const next=state.tables.nfl_odds_snapshot_history[0] as ReturnType<typeof sample>;next.board.players[0].headshot='https://example.org/untrusted.png';const result=await(await request()).json();assert.deepEqual(result.identities,[['game',4,'Test','SEA','https://a.espncdn.com/headshot.png',[]]])})

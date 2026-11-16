@@ -19,6 +19,7 @@ import { getNflWeather } from '@/lib/nflWeatherServer'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflMatchupBoard } from '@/lib/nflMatchupBoard'
+import { filterNflRosterMarkets, nflRosterMarketExclusions } from '@/lib/nflAvailability'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
 import { scheduledDate, type SidelineScheduleDay } from './scheduleNavigation'
 import { getNflBdlDesignations, getNflBdlGame, type NflBdlDesignation } from '@/lib/nflOdds'
@@ -281,8 +282,9 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
   // browser access is later resumed. Unknown cutoffs fail closed.
   // Reader-first deployment understands already marked archives, but keeps
   // unmarked behavior unchanged until old workers have drained.
-  if (!NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection) return { odds, gameState }
-  return { odds: visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff)), gameState }
+  const visible = !NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection
+    ? odds : visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff))
+  return { odds: filterNflRosterMarkets(visible, nflRosterMarketExclusions(odds.players, game.season)), gameState }
 }
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
@@ -312,6 +314,16 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
   const historical = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
   return { capturedAt, board: NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { ...historical, legacyUnverified: true } : historical }
 }, ['sideline-selected-capture-v7-original-research'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+
+export async function getSidelineMarketCapture(game: SidelineGame, requestedCapture: string) {
+  const [frame, research] = await Promise.all([
+    getSidelineCapture(game, requestedCapture),
+    readNflPregameResearch<SidelineOddsBoard>(game, 'odds:v1'),
+  ])
+  if (!frame) return null
+  const evidence = research?.value ?? frame.board
+  return { ...frame, board: filterNflRosterMarkets(frame.board, nflRosterMarketExclusions(evidence.players, game.season)) }
+}
 
 const loadPregameBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample) => {

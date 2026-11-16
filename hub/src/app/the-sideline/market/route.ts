@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { requireNflAccess } from '@/lib/nflAccess'
-import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline, storedGameState } from '../data'
+import { getSidelineMarketCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline, storedGameState } from '../data'
 import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ ...final, results }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     if (at) {
-      const frame = await getSidelineCapture(game, new Date(at).toISOString())
+      const frame = await getSidelineMarketCapture(game, new Date(at).toISOString())
       return NextResponse.json({ frame: frame && params.get('packed')==='1' ? {...frame,board:packSidelineBoard(frame.board)} : frame }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     // Current-board polling also needs the slider index. Returning both in
