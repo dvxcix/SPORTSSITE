@@ -189,6 +189,19 @@ test('a captured out designation removes the player from current, frozen and sli
   assert.deepEqual((await h.api.getSidelineOddsBundle(game())).odds, open.odds)
   assert.deepEqual((await h.api.getSidelineMarketCapture(game(), original.capturedAt)).board.players.map((player: { id: number }) => player.id), [2])
 })
+test('the Chargers game report excludes only its exact player and matchup', async () => {
+  for (const gameId of ['2026_10_LAC_BAL', '2026_11_LAC_BAL']) {
+    const h = await dataHarness(false)
+    h.setTime(Date.parse('2026-11-16T15:33:00Z'))
+    const target = { ...game(gameId, '20:15'), gameday: '2026-11-16', away: { ...game().away, abbr: 'LAC' }, home: { ...game().home, abbr: 'BAL' } }
+    const player = { ...h.board.players[0], id: 33934684, gsisId: '00-0041550', name: 'Brenen Thompson', team: 'LAC' }
+    h.setCurrent({ ...h.board, players: [player] })
+    const bundle = await h.api.getSidelineOddsBundle(target)
+    const officialGame = gameId === '2026_10_LAC_BAL'
+    assert.equal(bundle.odds.players.length, officialGame ? 0 : 1)
+    assert.equal(h.getRow().payload.players[0].availability?.gameStatus, officialGame ? 'out' : undefined)
+  }
+})
 test('a live score await crossing kickoff refreshes the final research board',async()=>{
   const h=await dataHarness()
   h.setGameStateHook(()=>{h.setTime(start+1);h.setRow({...h.board,players:[{...h.board.players[0],jersey:12}]},start-500)})

@@ -202,8 +202,13 @@ const loadDesignations = unstable_cache(async (season: number, week: number, gam
   }
 }, ['sideline-bdl-designations-v2'], { revalidate: 60, tags: ['sideline:nfl-live'] })
 
-function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[]) {
-  if (!rows.length) return board
+// Observed on the Chargers' game-specific report while the provider still
+// listed Thompson as Doubtful: https://www.chargers.com/team/injury-report/
+const thompsonOutObservedAt = '2026-11-16T15:32:30.394Z'
+
+function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[], gameId: string) {
+  const hasClubReport = gameId === '2026_10_LAC_BAL' && Date.now() >= Date.parse(thompsonOutObservedAt)
+  if (!rows.length && !hasClubReport) return board
   const byPlayer = new Map(rows.map(row => [row.player.id, row]))
   return {
     ...board,
@@ -213,6 +218,11 @@ function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[])
       const matches = rows.filter(row => nflMatchupTeam(row.team.abbreviation) === team
         && normalizeNflPlayerName(row.player.first_name + ' ' + row.player.last_name) === normalizeNflPlayerName(player.name))
       const row = exact && nflMatchupTeam(exact.team.abbreviation) === team ? exact : matches.length === 1 ? matches[0] : null
+      if (hasClubReport && team === 'LAC' && player.id === 33934684 && player.gsisId === '00-0041550' && row?.active !== true) {
+        return { ...player, availability: {
+          gameStatus: 'out', injury: 'Hamstring', active: null, starter: null, didNotPlay: null, updatedAt: thompsonOutObservedAt,
+        } }
+      }
       if (!row) return player
       return { ...player, availability: {
         gameStatus: row.game_status ?? null,
@@ -251,15 +261,15 @@ const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
   const [identified, identifiedCurrent] = await enrichSidelineOddsBoards(game, inputs)
   const liveBoard = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
   const designations = liveBoard.bdlGameId ? await loadDesignations(game.season, game.week, game.gameType, liveBoard.bdlGameId, liveBoard.players.flatMap(player => player.teamId ? [player.teamId] : [])) : []
-  const original = sidelinePublicBoard(attachDesignations(liveBoard, designations))
-  const currentBoard = identifiedCurrent ? sidelinePublicBoard(attachDesignations(nflMatchupBoard(attachNflPikkitSnapshot(identifiedCurrent, picks), game.away.abbr, game.home.abbr), designations)) : original
+  const original = sidelinePublicBoard(attachDesignations(liveBoard, designations, game.id))
+  const currentBoard = identifiedCurrent ? sidelinePublicBoard(attachDesignations(nflMatchupBoard(attachNflPikkitSnapshot(identifiedCurrent, picks), game.away.abbr, game.home.abbr), designations, game.id)) : original
   // An empty marker when unpaused also records that decision at capture time.
   const value: NflObservedOdds = NFL_PAUSED_PROJECTION_WRITES_ENABLED
     ? { ...original, pausedProjection: packNflPausedProjection(createNflPausedProjection(original, currentBoard, game.id)) }
     : original
   if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
   return { value, observedAt: new Date().toISOString() }
-}, [`sideline-enriched-pregame-v4-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, [`sideline-enriched-pregame-v5-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 // The boundary check must run outside Next's cache: a cached pregame response
 // cannot substitute for another process's final snapshot after kickoff.
