@@ -297,7 +297,9 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
   // unmarked behavior unchanged until old workers have drained.
   const visible = !NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection
     ? odds : visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff))
-  return { odds: filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)), gameState }
+  const started = gameState?.statusState === 'in_progress' || gameState?.statusState === 'final'
+  const pickCutoff = !started && Number.isFinite(cutoff) ? cutoff : null
+  return { odds: filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)), gameState, pickCutoff }
 }
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {

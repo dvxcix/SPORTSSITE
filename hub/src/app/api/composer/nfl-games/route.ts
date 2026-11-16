@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data'
-import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 
 export const revalidate = 0
@@ -25,11 +24,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const requestedDate = searchParams.get('date') ?? undefined
   const { games, date } = await getSidelineGames(requestedDate)
-  const now = Date.now()
   const payload = await Promise.all(games.map(async game => {
-    const { odds } = await getSidelineOddsBundle(game)
-    const kickoff = nflKickoffAt(game)
-    const status = kickoff && kickoff.getTime() <= now ? 'Live' : 'Preview'
+    const { odds, pickCutoff } = await getSidelineOddsBundle(game)
+    const open = pickCutoff != null && pickCutoff > Date.now()
     return {
       gameKey: game.id,
       gamePk: game.id,
@@ -41,8 +38,8 @@ export async function GET(req: Request) {
       awayTeam: game.away.name,
       homeLogo: game.home.logo,
       awayLogo: game.away.logo,
-      status,
-      players: odds.players.map(player => ({
+      status: open ? 'Preview' : 'Live',
+      players: (open ? odds.players : []).map(player => ({
         player_id: player.gsisId ?? `bdl:${player.id}`,
         source_player_id: player.id,
         name: player.name,

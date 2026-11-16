@@ -279,6 +279,24 @@ test('a verified earlier durable kickoff preserves an older frozen board despite
   const result=await h.api.getSidelineOddsBundle(target)
   assert.deepEqual(result.odds,{...h.board,legacyUnverified:true});assert.equal(result.odds.lastSeen,undefined)
 })
+test('the composer withdraws NFL markets at the verified earlier cutoff before scheduled kickoff', async () => {
+  const h = await dataHarness()
+  const target = game('g1', '13:20')
+  const frozen = { ...h.board, bdlGameId: null }
+  h.setRow(frozen, start - 5000, start)
+  h.setTime(start + 1)
+  assert.equal((await h.api.getSidelineOddsBundle(target)).pickCutoff, start)
+  const route = await compiled('src/app/api/composer/nfl-games/route.ts', {
+    'next/server': { NextResponse: { json: Response.json } },
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'fixture' } } }) } }) },
+    '@/app/the-sideline/data': { getSidelineGames: async () => ({ games: [target], date: target.gameday }), getSidelineOddsBundle: h.api.getSidelineOddsBundle },
+  }, h.clock as DateConstructor)
+  const response = await route.GET(new Request('https://www.slipsurge.com/api/composer/nfl-games'))
+  assert.equal(response.status, 200)
+  const payload = await response.json()
+  assert.equal(payload.games[0].status, 'Live')
+  assert.deepEqual(payload.games[0].players, [])
+})
 test('old frozen opening-only prices stay original and are labelled unverified',async()=>{
   const h=await dataHarness(), time=new Date(start-60000).toISOString()
   const opening={vendor:'fanduel',line:1,openingLine:1,type:'milestone',current:{odds:400},opening:{odds:400},updatedAt:time,isOpeningOnly:true}

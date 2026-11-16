@@ -100,6 +100,7 @@ export async function POST(req: Request) {
   const candidateDatesFor = (gameDate: string | null) =>
     gameDate ? [gameDate, shiftDate(gameDate, -1), shiftDate(gameDate, 1)] : []
 
+  let nflPickCutoff = Infinity
   if (sport === 'MLB') {
     const dates = Array.from(new Set(legs.flatMap(l => candidateDatesFor(l.game_date))))
     const gamesByDate = new Map(await Promise.all(dates.map(async d => [d, await getTodaysMatchups(d)] as const)))
@@ -142,6 +143,10 @@ export async function POST(req: Request) {
         bundle = await getSidelineOddsBundle(game)
         bundles.set(game.id, bundle)
       }
+      if (bundle.pickCutoff == null || bundle.pickCutoff <= Date.now()) {
+        return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
+      }
+      nflPickCutoff = Math.min(nflPickCutoff, bundle.pickCutoff)
       const player = bundle.odds.players.find(candidate =>
         candidate.gsisId === l.player_id || `bdl:${candidate.id}` === l.player_id)
       if (!player) {
@@ -151,6 +156,10 @@ export async function POST(req: Request) {
       if (!market || !offer || currentOfferOdds(offer, l.market_side ?? 'milestone') !== l.odds) {
         return NextResponse.json({ error: `${l.player_name}'s selected price changed. Refresh the market and try again.` }, { status: 409 })
       }
+      l.player_name = player.name
+      l.team = player.team
+      l.game_date = game.gameday
+      l.headshot_url = player.headshot ?? null
     }
   }
 
@@ -204,6 +213,9 @@ export async function POST(req: Request) {
     result: 'pending',
   }))
 
+  if (sport === 'NFL' && nflPickCutoff <= Date.now()) {
+    return NextResponse.json({ error: 'An NFL game has already started — pick not posted.' }, { status: 409 })
+  }
   const admin = createAdminClient()
   const { data: post, error: postErr } = await admin.rpc('create_tracked_pick_post', { p_post: postPayload, p_picks: pickRows })
   if (postErr || !post?.id || !post.picksTracked) {
