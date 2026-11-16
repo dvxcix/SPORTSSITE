@@ -10,7 +10,7 @@ const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.
 const NflOddsBoard = dynamic(() => import('./NflOddsBoard').then(module => module.NflOddsBoard))
 import { buildBoardHeat } from './boardHeat'
 import { teamMmHighlights } from './teamHighlights'
-import { nflAvailability } from '@/lib/nflAvailability'
+import { nflAvailability, nflMarketExclusion } from '@/lib/nflAvailability'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
@@ -1694,13 +1694,17 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         void removeWatchlist(existing.id).then(() => setSaveMessage('Removed from watchlist.')).catch(() => setSaveMessage('Could not remove selection. Please try again.')).finally(() => saveLocks.current.delete(key))
         return
       }
-      if (!player.market || offer.isOpeningOnly || offerCurrent(offer) == null) { saveLocks.current.delete(key); setSaveMessage('No available price to save.'); return }
+      if (!player.market || nflMarketExclusion(player.market, selected.season) || offer.isOpeningOnly || offerCurrent(offer) == null) {
+        saveLocks.current.delete(key)
+        setSaveMessage('No available price to save.')
+        return
+      }
       void addWatchlist(nflWatchlistSelection(player.market, market, offer, 'over', { id: selected.id, gameday: selected.gameday }))
         .then(() => setSaveMessage('Saved. Open Watchlist to review and post your pick.'))
         .catch(() => setSaveMessage('Could not save selection. Check that you are signed in and try again.'))
         .finally(() => saveLocks.current.delete(key))
     },
-    [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id],
+    [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id, selected.season],
   )
   const columns = useColumnDefinitions({
     markets: availableMarkets,

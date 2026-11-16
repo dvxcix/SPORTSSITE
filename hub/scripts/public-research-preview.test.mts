@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { build } from 'esbuild'
+import { createRequire } from 'node:module'
 import { isPublicPreviewPath, PREVIEW_CONFIG, previewPagePath, previewPricingPath, previewWorkspacePath, readPreviewContext, selectPreviewPlayers } from '../src/lib/publicResearchPreview'
 import { PUBLIC_PREVIEW_EXAMPLES } from '../src/lib/publicResearchPreviewExamples'
 
@@ -50,5 +52,62 @@ test('the archived examples retain real pregame stamps and a single public ladde
     assert.ok(board.players.length > 3 && board.players.length <= 8)
     const lines: readonly number[] = PREVIEW_CONFIG[sport].lines
     assert.ok(board.players.every(player => player.prices.every(quote => lines.includes(quote.line))))
+  }
+})
+
+test('both schedule previews recover from an unavailable cache or a transient schedule read', async () => {
+  const stubs: Record<string, string> = {
+    'server-only': '',
+    'next/cache': `export const unstable_cache = load => (...args) => {
+      if (globalThis.previewFixture.cacheUnavailable) throw Error('fixture cache failure')
+      return load(...args)
+    }`,
+    './supabase/admin': `export const createAdminClient = () => ({
+      from: name => {
+        let date
+        const query = {
+          select: () => query, order: () => query, limit: () => query,
+          eq: (_, value) => { date = value; return query },
+          abortSignal: () => {
+            const fixture = globalThis.previewFixture
+            fixture.reads++
+            if (fixture.failures-- > 0) return {data: null, error: {code: 'fixture'}}
+            const data = name === 'nba_games'
+              ? [{id: 123, game_date: date, payload: {id: 123, status: 'Final', home_team: {abbreviation: 'BOS'}, visitor_team: {abbreviation: 'NYK'}}}]
+              : [{game_id: '2026_10_LAC_BAL', gameday: date, gametime: '20:15', away_team: 'LAC', home_team: 'BAL'}]
+            return {data, error: null}
+          },
+        }
+        return query
+      },
+      rpc: () => ({abortSignal: () => ({error: {code: 'fixture-no-odds'}})}),
+    })`,
+  }
+  const bundled = await build({
+    entryPoints: ['src/lib/publicResearchPreviewData.ts'], bundle: true, platform: 'node',
+    format: 'cjs', write: false, tsconfig: 'tsconfig.json',
+    plugins: [{
+      name: 'preview-schedule-fixture',
+      setup(builder) {
+        builder.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'fixture' } : undefined)
+        builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: stubs[args.path], loader: 'js' }))
+      },
+    }],
+  })
+  const compiled = { exports: {} as typeof import('../src/lib/publicResearchPreviewData') }
+  new Function('module', 'exports', 'require', bundled.outputFiles[0].text)(compiled, compiled.exports, createRequire(import.meta.url))
+  const global = globalThis as typeof globalThis & { previewFixture?: { cacheUnavailable: boolean; failures: number; reads: number } }
+  try {
+    for (const sport of ['nba', 'nfl'] as const) {
+      for (const cacheUnavailable of [true, false]) {
+        const fixture = global.previewFixture = { cacheUnavailable, failures: cacheUnavailable ? 0 : 1, reads: 0 }
+        const result = await compiled.exports.getPublicResearchPreview(sport)
+        assert.equal(result.scheduleAvailable, true)
+        assert.deepEqual(result.schedule.map(game => game.away), [sport === 'nba' ? 'NYK' : 'LAC'])
+        assert.equal(fixture.reads, cacheUnavailable ? 1 : 2)
+      }
+    }
+  } finally {
+    delete global.previewFixture
   }
 })

@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ResearchPreviewPage({ params, searchParams }: Props) {
   const { sport } = await params
   if (!isPreviewSport(sport)) notFound()
-  const [preview, query] = await Promise.all([getPublicResearchPreview(sport), searchParams])
+  const query = await searchParams
+  const preview = await getPublicResearchPreview(sport)
   const context = readPreviewContext({ ...query, preview: sport })
   const initial = context?.game === preview.board.game.id && context.date === preview.board.game.date ? context : null
   return <ResearchPreviewClient key={sport + ':' + preview.board.game.id} sport={sport} preview={preview} initial={initial} />

@@ -46,6 +46,12 @@ test('missing threshold or wrong sportsbook does not pick arbitrary first rung',
   assert.equal(findNflPickOffer(player, { prop_key: 'receiving_yards', book: 'fanduel' }), null)
   assert.equal(findNflPickOffer(player, { prop_key: 'receiving_yards', numeric_line: 60, book: 'draftkings' }), null)
 })
+test('the pick API cannot validate a matching price for a player ruled out for that game', () => {
+  const selection = { prop_key: 'receiving_yards', numeric_line: 60, book: 'fanduel', market_side: 'milestone' as const }
+  const designation = { gameStatus: 'out', injury: 'Back', active: null, starter: null, didNotPlay: null, updatedAt: null }
+  assert.equal(findNflPickOffer({ ...player, rosterStatus: 'ACT', availability: designation }, selection, 2026), null)
+  assert.equal(findNflPickOffer({ ...player, availability: { ...designation, gameStatus: 'questionable' } }, selection, 2026)?.offer.current.odds, 270)
+})
 
 test('shared watchlist posting sends NFL metadata to the guarded pick API', async () => {
   const oldFetch = globalThis.fetch

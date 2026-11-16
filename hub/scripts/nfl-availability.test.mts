@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterNflRosterMarkets, nflAvailability, nflRosterMarketExclusions, withGameAvailability } from '../src/lib/nflAvailability'
+import { filterNflMarkets, nflAvailability, nflMarketExclusions, withGameAvailability } from '../src/lib/nflAvailability'
 import { teamMmHighlights } from '../src/app/the-sideline/teamHighlights'
 import { EMPTY_SIDELINE_ODDS, type NflOddsPlayer } from '../src/lib/nflOddsTypes'
 
@@ -25,6 +25,20 @@ test('a cut player stays ineligible even if a price or an old active designation
     assert.equal(nflAvailability(player, '2026-10-16', '2026-11-16').eligible, true)
   }
 })
+test('saved game designations remove unavailable players from every market without excluding questionable players', () => {
+  const player: NflOddsPlayer = { id: 1, name: 'Ladd McConkey', team: 'LAC', position: 'WR', rosterStatus: 'ACT', markets: [] }
+  const players = [
+    { ...player, availability: availability('out') },
+    { ...player, id: 2, name: 'Inactive player', availability: availability('questionable', false) },
+    { ...player, id: 3, name: 'Questionable player', availability: availability('questionable') },
+    { ...player, id: 4, name: 'Same name on other team', team: 'BAL' },
+    { ...player, id: 5, name: player.name, team: 'BAL' },
+  ]
+  const board = { ...EMPTY_SIDELINE_ODDS, players }
+  const visible = filterNflMarkets(board, nflMarketExclusions(players, 2026))
+  assert.deepEqual(visible.players.map(row => row.id), [3, 4, 5])
+  assert.equal(board.players.length, 5)
+})
 test('roster eligibility removes sidecar prices and checks team aliases, season and game elevations', () => {
   const released: NflOddsPlayer = { id: 1, name: 'Hayden Rucci', team: 'LAC', position: 'TE', gsisId: '00-0039489', latestTeam: 'LAC', lastSeason: 2026, rosterStatus: 'CUT', markets: [] }
   const elsewhere = { ...released, id: 2, name: 'Traded player', latestTeam: 'BAL', rosterStatus: 'ACT' }
@@ -37,7 +51,7 @@ test('roster eligibility removes sidecar prices and checks team aliases, season 
     offer: { vendor: 'fanduel', type: 'milestone' as const, line: 0.5, openingLine: 0.5, current: { odds: 1900 }, opening: null, updatedAt: null },
   }))
   const board = { ...EMPTY_SIDELINE_ODDS, players: [released, elsewhere, alias, historical, elevated, practice], lastSeen: { offers: prices, lines: [] }, openingOnly: { offers: prices, lines: [] } }
-  const visible = filterNflRosterMarkets(board, nflRosterMarketExclusions(board.players, 2026))
+  const visible = filterNflMarkets(board, nflMarketExclusions(board.players, 2026))
   assert.deepEqual(visible.players.map(player => player.id), [3, 4, 5])
   assert.deepEqual(visible.lastSeen?.offers.map(quote => quote.playerId), [3])
   assert.deepEqual(visible.openingOnly?.offers.map(quote => quote.playerId), [3])

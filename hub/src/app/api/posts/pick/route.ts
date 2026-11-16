@@ -144,8 +144,11 @@ export async function POST(req: Request) {
       }
       const player = bundle.odds.players.find(candidate =>
         candidate.gsisId === l.player_id || `bdl:${candidate.id}` === l.player_id)
-      const { market, offer } = findNflPickOffer(player, l) ?? {}
-      if (!player || !market || !offer || currentOfferOdds(offer, l.market_side ?? 'milestone') !== l.odds) {
+      if (!player) {
+        return NextResponse.json({ error: `${l.player_name}'s market is unavailable for this game. Refresh the board and choose another player.` }, { status: 409 })
+      }
+      const { market, offer } = findNflPickOffer(player, l, game.season) ?? {}
+      if (!market || !offer || currentOfferOdds(offer, l.market_side ?? 'milestone') !== l.odds) {
         return NextResponse.json({ error: `${l.player_name}'s selected price changed. Refresh the market and try again.` }, { status: 409 })
       }
     }

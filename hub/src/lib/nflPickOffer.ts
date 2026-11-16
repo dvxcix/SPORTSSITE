@@ -1,11 +1,13 @@
 import type { NflOddsPlayer } from './nflOddsTypes'
+import { nflMarketExclusion } from './nflAvailability'
 
 export function findNflPickOffer(player: NflOddsPlayer | undefined, selection: {
   prop_key: string; numeric_line?: number | null; market_side?: 'milestone' | 'over' | 'under'; book: string | null
-}) {
+}, season?: number) {
+  if (!player || nflMarketExclusion(player, season)) return null
   const vendor = (selection.book ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
   const kind = (selection.market_side ?? 'milestone') === 'milestone' ? 'milestone' : 'over_under'
-  for (const market of player?.markets ?? []) {
+  for (const market of player.markets) {
     if (market.propType !== selection.prop_key) continue
     const offer = market.offers.find(candidate =>
       !candidate.isOpeningOnly && candidate.vendor.toLowerCase().replace(/[^a-z0-9]/g, '') === vendor &&

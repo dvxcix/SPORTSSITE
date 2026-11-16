@@ -9,7 +9,7 @@ import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { fitNflResponsePicks, packNflBoardPicks, unpackNflBoardPicks } from '@/lib/nflOddsBoardBudget'
 import { nflMatchupTeam } from '@/lib/nflMatchupBoard'
-import { nflMarketRosterKey, nflRosterMarketExclusions } from '@/lib/nflAvailability'
+import { nflMarketPlayerKey, nflMarketExclusions } from '@/lib/nflAvailability'
 import { attachNflFanduel } from '@/lib/nflFanduel'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } from '@/lib/browserbaseSpendingPause'
@@ -124,15 +124,15 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v12:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v13:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];excluded?:string[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
         const clock=clocks.find(item=>item.id===game.id), row:GameRow={id:game.id,away:game.away.abbr,home:game.home.abbr,status:'ready'}
         if(!clock?.cutoff){row.status='unavailable';entries[offset+relative]={game:row,quotes:[]};return}
         const cutoff=clock.cutoff
-        // Use the same pregame roster evidence as Props, including once the
-        // game starts. Raw odds frames alone do not verify roster membership.
+        // Use the same pregame player availability as Props, including once
+        // the game starts. Raw odds frames alone do not verify eligibility.
         const researchTask=(async()=>{
               const kickoff=nflKickoffAt(game);if(!kickoff)return null
               const result=await admin.rpc('read_nfl_pregame_research',{p_game_id:game.id,p_resource:'odds:v1',p_version:1,p_kickoff:kickoff.toISOString()}).abortSignal(AbortSignal.timeout(1200))
@@ -146,8 +146,8 @@ export async function GET(request:NextRequest){
           ? researchTask
           : Promise.resolve(admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(1).abortSignal(AbortSignal.timeout(1200)).maybeSingle()).then(result=>result.error?null:result.data as PickSnapshotRow|null).catch(()=>null)
         const [results,pickInput,research]=await Promise.all([Promise.all(['nfl_odds_snapshot_history','nfl_fanduel_capture_history'].map((table,index)=>admin.from(table).select(index===1?'board,captured_at,raw_tabs':'board,captured_at').eq('game_id',game.id).lt('captured_at',cutoff).lte('captured_at',capturedNow).order('captured_at',{ascending:false}).limit(2).abortSignal(AbortSignal.timeout(12000)))),picksTask,researchTask])
-        const excluded = research && Array.isArray(research.board.players) && research.board.players.some(player => player.rosterStatus)
-          ? [...nflRosterMarketExclusions(research.board.players, game.season)] : undefined
+        const excluded = research && Array.isArray(research.board.players) && research.board.players.some(player => player.rosterStatus || player.availability)
+          ? [...nflMarketExclusions(research.board.players, game.season)] : undefined
         if(results.some(result=>result.error))row.status='incomplete'
         const sources=results.map((result,index)=>{
           if(result.error)return []
@@ -253,7 +253,7 @@ export async function GET(request:NextRequest){
     mergePartial({date,games:pool.games,quotes:[]},pool,clocks)
     // Apply after merging so a carried quote cannot bring an excluded player back.
     const excluded = new Map(Object.entries({ ...pool.rosterExclusions, ...candidate.value.rosterExclusions }).map(([id, keys]) => [id, new Set(keys)]))
-    const eligibleQuotes = pool.quotes.filter(q => !excluded.get(q[0])?.has(nflMarketRosterKey({ name: q[2], team: q[3] })))
+    const eligibleQuotes = pool.quotes.filter(q => !excluded.get(q[0])?.has(nflMarketPlayerKey({ name: q[2], team: q[3] })))
     const markets=[...new Set(eligibleQuotes.map(q=>q[5]))].sort()
     const market=requestedMarket
     const books=[...new Set(eligibleQuotes.filter(q=>q[5]===market).map(q=>q[6]))].sort()

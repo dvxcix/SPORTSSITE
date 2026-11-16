@@ -18,8 +18,8 @@ import { unavailableNflBoardLens, unavailableNflFilmLens } from '@/lib/nflResear
 import { getNflWeather } from '@/lib/nflWeatherServer'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
-import { nflMatchupBoard } from '@/lib/nflMatchupBoard'
-import { filterNflRosterMarkets, nflRosterMarketExclusions } from '@/lib/nflAvailability'
+import { nflMatchupBoard, nflMatchupTeam } from '@/lib/nflMatchupBoard'
+import { filterNflMarkets, nflMarketExclusions } from '@/lib/nflAvailability'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
 import { scheduledDate, type SidelineScheduleDay } from './scheduleNavigation'
 import { getNflBdlDesignations, getNflBdlGame, type NflBdlDesignation } from '@/lib/nflOdds'
@@ -196,9 +196,11 @@ const loadDesignations = unstable_cache(async (season: number, week: number, gam
   try {
     return (await getNflBdlDesignations(season, week, teamIds, phase)).filter(row => row.game_id === bdlGameId)
   } catch {
-    return []
+    // Keep the last verified board through a designation outage. Saving a new
+    // board without that evidence could restore previously withdrawn odds.
+    throw new NflPregameResearchUnavailable()
   }
-}, ['sideline-bdl-designations-v1'], { revalidate: 60, tags: ['sideline:nfl-live'] })
+}, ['sideline-bdl-designations-v2'], { revalidate: 60, tags: ['sideline:nfl-live'] })
 
 function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[]) {
   if (!rows.length) return board
@@ -207,9 +209,10 @@ function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[])
     ...board,
     players: board.players.map(player => {
       const exact = byPlayer.get(player.id)
-      const matches = rows.filter(row => row.team.abbreviation === player.team
+      const team = nflMatchupTeam(player.team)
+      const matches = rows.filter(row => nflMatchupTeam(row.team.abbreviation) === team
         && normalizeNflPlayerName(row.player.first_name + ' ' + row.player.last_name) === normalizeNflPlayerName(player.name))
-      const row = exact?.team.abbreviation === player.team ? exact : matches.length === 1 ? matches[0] : null
+      const row = exact && nflMatchupTeam(exact.team.abbreviation) === team ? exact : matches.length === 1 ? matches[0] : null
       if (!row) return player
       return { ...player, availability: {
         gameStatus: row.game_status ?? null,
@@ -256,7 +259,7 @@ const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
     : original
   if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
   return { value, observedAt: new Date().toISOString() }
-}, [`sideline-enriched-pregame-v3-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, [`sideline-enriched-pregame-v4-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 // The boundary check must run outside Next's cache: a cached pregame response
 // cannot substitute for another process's final snapshot after kickoff.
@@ -284,7 +287,7 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
   // unmarked behavior unchanged until old workers have drained.
   const visible = !NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection
     ? odds : visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff))
-  return { odds: filterNflRosterMarkets(visible, nflRosterMarketExclusions(odds.players, game.season)), gameState }
+  return { odds: filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)), gameState }
 }
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
@@ -322,7 +325,7 @@ export async function getSidelineMarketCapture(game: SidelineGame, requestedCapt
   ])
   if (!frame) return null
   const evidence = research?.value ?? frame.board
-  return { ...frame, board: filterNflRosterMarkets(frame.board, nflRosterMarketExclusions(evidence.players, game.season)) }
+  return { ...frame, board: filterNflMarkets(frame.board, nflMarketExclusions(evidence.players, game.season)) }
 }
 
 const loadPregameBoardLens = unstable_cache(

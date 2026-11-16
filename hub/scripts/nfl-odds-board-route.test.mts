@@ -103,13 +103,13 @@ test('open game joins the original public snapshot to the saved full ladder once
  }finally{Date.now=previous}
 })
 test('source reads are shared while fresh clock checks remain per request',async()=>{reset();const first=await request();assert.equal(first.status,200);const result=await first.json();assert.equal(result.quotes.length,1);assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][10],-110);assert.equal(result.quotes[0][12],300);assert.equal(result.quotes[0][13],false);assert.equal(state.clocks,2);assert.equal(state.reads,2);assert.doesNotMatch(JSON.stringify(result),/privateField|do not expose/);assert.equal((await request()).status,200);assert.equal(state.clocks,3);assert.equal(state.reads,2)})
-test('captured roster exclusions suppress both raw book quotes and carried cache quotes', async () => {
+test('a captured game designation suppresses both raw book quotes and carried cache quotes', async () => {
   reset()
   assert.equal((await (await request()).json()).quotes.length, 1)
   state.entries.clear()
   const original = state.tables.nfl_odds_snapshot_history[0]
   const board = structuredClone(original.board) as SidelineOddsBoard
-  board.players[0].rosterStatus = 'CUT'
+  board.players[0].availability = { gameStatus: 'out', injury: 'Back', active: null, starter: null, didNotPlay: null, updatedAt: null }
   state.archive = { value: board, observedAt: original.captured_at }
   for (const history of [[original], []]) {
     state.entries.clear()
