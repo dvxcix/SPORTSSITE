@@ -73,10 +73,25 @@ export async function reserveNflBrowserAttempt(admin: SupabaseClient, source: Nf
   const rows=await readNflBrowserAttempts(admin,source,[scope],now)
   const decision=nflBrowserDecision(scope.kickoff,scope.observed,rows.get(`${scope.gameId}:${priorDecision.slot}`)??[],now)
   if(!decision.due || decision.slot===null || decision.attempt===null) return null
-  const key=nflBrowserReservationKey(source,scope.gameId,decision.slot,decision.attempt)
+  return insertNflBrowserAttempt(admin, source, scope.gameId, decision.slot, decision.attempt, now)
+}
+
+/** An admin can use the first late attempt early. Keep the same unique
+ * attempt marker and let the normal scheduler handle any remaining retry. */
+export async function reserveNflPublicLateRefresh(admin: SupabaseClient, scope: Scope, now: number) {
+  const remaining = scope.kickoff - now
+  if (!Number.isFinite(remaining) || remaining <= 330_000 || remaining > 86_400_000) return null
+  return insertNflBrowserAttempt(admin, 'public', scope.gameId, 'two-hours', 0, now)
+}
+
+async function insertNflBrowserAttempt(
+  admin: SupabaseClient, source: NflBrowserSource, gameId: string,
+  slot: NflBrowserReservation['payload']['slot'], attempt: 0 | 1, now: number,
+): Promise<NflBrowserReservation | null> {
+  const key = nflBrowserReservationKey(source, gameId, slot, attempt)
   const stamp=new Date(now).toISOString()
   const reservationId=randomUUID()
-  const payload = { version: 1, source, gameId: scope.gameId, slot: decision.slot, attempt: decision.attempt, reservationId } as const
+  const payload = { version: 1, source, gameId, slot, attempt, reservationId } as const
   const {data,error}=await admin.from('nba_source_cache').insert({key,payload,fetched_at:stamp,expires_at:new Date(now+7*86_400_000).toISOString()}).select('key').abortSignal(AbortSignal.timeout(12_000)).maybeSingle()
   if(error?.code==='23505') return null
   if(error || !data || data.key!==key) throw new Error('NFL browser reservation could not be confirmed')
