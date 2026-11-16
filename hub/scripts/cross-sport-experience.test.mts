@@ -50,6 +50,7 @@ test('NBA market endpoint checks research membership before touching schedule or
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/paintAccess': { requirePaintAccess: async () => ({ error: Response.json({}, { status: 403 }) }) },
     '@/lib/nbaPaintData': { getPaintSchedule: () => { reads++; throw new Error('Unauthorized read') } }, '@/lib/nbaComposer': { nbaComposerGame },
     '@/lib/nbaDirectory': { hydrateNbaPlayers: () => { reads++; throw new Error('Unauthorized read') } },
+    '@/lib/nbaOddsClockData': { getNbaOddsGame: () => { reads++; throw new Error('Unauthorized read') } }, '@/lib/nbaOddsMode': {},
   })
   assert.equal((await api.GET(new Request('https://test'))).status, 403)
   assert.equal(reads, 0)

@@ -1,4 +1,5 @@
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
+import * as marketAvailability from '../src/lib/nbaMarketAvailability.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {nbaCurrentBookQuotes,type NbaCurrentBookFrame} from '../src/lib/nbaBookCurrent.ts'
@@ -24,7 +25,7 @@ const market = (key = 'player_points_alternate', outcomes: unknown[] = [outcome]
 const payload = (markets = [market()]) => ({ ...event, bookmakers: [{ key: 'betmgm', markets }] })
 type Module = typeof import('../src/lib/nbaSupplementalProps.ts')
 async function compile<T>(path: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}) {
-  imports = { './nbaPregameResearchData': {}, ...imports }
+  imports = { './nbaPregameResearchData': {}, './nbaMarketAvailability': marketAvailability, './nbaOddsMode': modes, ...imports }
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const target = { exports: {} }
@@ -347,13 +348,14 @@ test('saved-pick verification accepts each exact split side and milestone, rejec
   const h=await fixture(),supp=(await h.getNbaSupplementalProps(game,'pregame')).props[0]
   let props=h.nbaMergePropSources([{...supp,line_value:'14.5',market:{type:'over_under',over_odds:-500},updated_at:new Date(now-2000).toISOString()}],[{...supp,line_value:'14.5',market:{type:'over_under',under_odds:380}},supp])
   const helper=await compile<typeof import('../src/lib/nbaPickValidation.ts')>('../src/lib/nbaPickValidation.ts',{
-    'server-only':{},'./nbaPaintData':{getPaintGame:async()=>game,getPaintProps:async()=>props,getPaintIdentity:async()=>player},'./nbaPaint':paint,
+    'server-only':{},'./nbaPaintData':{getPaintGame:async()=>game,getPaintProps:async()=>props,getPaintMarketRoster:async()=>[player]},'./nbaPaint':paint,
     './nbaFirstBasketMarkets':{nbaFirstMarket:()=>false,nbaFirstLabel:()=>null},'./nbaFirstBasketOddsData':{},'./nbaSupplementalProps':h,
     './nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})},
   },{Date:class extends Date{static now(){return now}}})
   const leg=(side:'over'|'under'|'milestone',line:number,odds:number)=>({game_pk:String(game.id),player_id:`bdl:${player.id}`,player_name:'Alex Sarr',team:null,game_date:game.date,prop_key:'points',prop_label:'Points',numeric_line:line,market_side:side,book:'betmgm',odds})
-  for(const selection of [leg('over',14.5,-500),leg('under',14.5,380),leg('milestone',15,-550)])assert.equal(await helper.validatePaintPickLegs([selection]),null)
-  assert.match((await helper.validatePaintPickLegs([leg('over',15,-550)]))!,/price changed/)
+  for(const selection of [leg('over',14.5,-500),leg('under',14.5,380),leg('milestone',15,-550)])assert.deepEqual(await helper.validatePaintPickLegs([selection]),{cutoff:Date.parse(game.datetime!)})
+  const rejected=async (selection:ReturnType<typeof leg>)=>{const result=await helper.validatePaintPickLegs([selection]);return 'error' in result?result.error:''}
+  assert.match(await rejected(leg('over',15,-550)),/price changed/)
   props=props.map(p=>({...p,updated_at:new Date(now-300_001).toISOString()}))
-  assert.match((await helper.validatePaintPickLegs([leg('milestone',15,-550)]))!,/price changed/)
+  assert.match(await rejected(leg('milestone',15,-550)),/price changed/)
 })

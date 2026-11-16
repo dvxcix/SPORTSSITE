@@ -15,7 +15,7 @@ const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint
  const modules:Record<string,string>={
   'next/server':`export const NextResponse={json:(value,options)=>Response.json(value,options)}`,
   '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
-  '@/lib/nbaPaintData':`export async function getPaintSchedule(date,exact){if(exact!==true)throw Error('date must be exact');const s=globalThis.fullOddsRoute,g={...${JSON.stringify(game)},...(s.liveGame?{status:'In progress',status_state:'in_progress'}:{})};return {date,complete:!s.incomplete,games:s.noGames?[]:s.extraGame?[g,{...g,id:13}]:[g]}};export async function getPaintRoster(g){return [{...${JSON.stringify(player)},id:g.id===13?5:4}]};export async function artwork(){throw Error('Closed games must not read current artwork')}`,
+  '@/lib/nbaPaintData':`export async function getPaintSchedule(date,exact){if(exact!==true)throw Error('date must be exact');const s=globalThis.fullOddsRoute,g={...${JSON.stringify(game)},...(s.liveGame?{status:'In progress',status_state:'in_progress'}:{})};return {date,complete:!s.incomplete,games:s.noGames?[]:s.extraGame?[g,{...g,id:13}]:[g]}};export async function getPaintMarketRoster(g){return [{...${JSON.stringify(player)},id:g.id===13?5:4}]};export async function getPaintMarketIds(g){return new Set(globalThis.fullOddsRoute.ruledOut?[]:[g.id===13?5:4])};export async function artwork(){throw Error('Closed games must not read current artwork')}`,
   '@/lib/nbaOddsClockData':`export async function getNbaOddsGame(game){const s=globalThis.fullOddsRoute;s.clockReads++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));return {...game,datetime:s.badCutoff?'invalid':game.datetime}}`,
   '@/lib/nbaOddsBoardPhaseData':`export async function getNbaOddsBoardPhase(date){const s=globalThis.fullOddsRoute;s.phaseCalls++;if(s.clockDelay)await new Promise(r=>setTimeout(r,s.clockDelay));const start=s.secondPhaseStart&&s.phaseCalls>1?s.secondPhaseStart:s.phaseStart,flag=s.badPhase?'0':'${nbaOddsBoardPhaseSignature([game as never])!.split(',')[2]}';return {header:'v1|'+date+'|'+s.phaseAt+'|'+(s.noGames?'':'12,'+start+','+flag+(s.extraGame?';13,'+start+','+flag:'')),expiresAt:s.phaseExpiresAt}}`,
   '@/lib/nbaOddsPhaseData':`export function nbaPhaseBoundary(game,mode){const start=Date.parse(game.datetime);if(!Number.isFinite(start))throw Error('bad cutoff');return {tipoff:new Date(start).toISOString(),key:mode+':'+game.id+':'+start+':'+(Date.now()>=start?'closed':'open')}};export async function getNbaPhaseFrames(game,mode,feed,scope){if(!scope.asOf&&globalThis.fullOddsRoute.latestError)throw Error('Tape unavailable');if(scope.asOf&&globalThis.fullOddsRoute.priorError)throw Error('Earlier prices unavailable');const f=scope.asOf?globalThis.fullOddsRoute.prior:globalThis.fullOddsRoute.latest;return [game.id===13?{...f,quotes:f.quotes.map(q=>({...q,game_id:13,player_id:q.player_id===4?5:6}))}:f]}`,
@@ -26,7 +26,7 @@ const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint
   '@/lib/nbaPregameResearchData':`export async function readNbaPregameResearch(g){return {value:{players:[{...${JSON.stringify(player)},id:g.id===13?5:4,headshot:'https://images.example/saved.png'}]}}}`,
   '@/lib/nbaSupplementalProps':`export const nbaSupplementalQuote=quote=>quote.id<=-1000000000000`,
   '@/lib/supabase/admin':`export function createAdminClient(){return {from(){const s=globalThis.fullOddsRoute;const read={select(){return read},eq(k,key){if(!key.startsWith('phase-prices:v5:live:12:'))throw Error('wrong cache key');return read},abortSignal(){return read},async maybeSingle(){s.cacheReads++;return {data:s.cachePayload,error:null}}};return read}}}`,
-  '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;s.cacheKeys.push(key);if(key.startsWith('odds-board:v6:')&&s.failFull)throw Error('refresh failed');if(key===s.legacyKey&&s.legacy)return {value:s.legacy,stale:false};if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
+  '@/lib/nbaSharedCache':`export async function nbaSharedCache(key,ttl,stale,load){const s=globalThis.fullOddsRoute;s.cacheKeys.push(key);if(key.startsWith('odds-board:v7:')&&s.failFull)throw Error('refresh failed');if(key===s.legacyKey&&s.legacy)return {value:s.legacy,stale:false};if(key.startsWith('odds-board-partial:')&&s.partial)return {value:s.partial,stale:false};const value=await load();if(key.startsWith('odds-board-partial:'))s.partial=value;return {value,stale:false}}`,
  }
  builder.onResolve({filter:/.*/},args=>args.path in modules?{path:args.path,namespace:'fixture'}:undefined)
  builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:modules[args.path],loader:'js'}))
@@ -96,13 +96,18 @@ test('an exact off-day returns an empty board for that day instead of a later sl
 test('a cold cache failure uses only a complete prior board for the exact phase and still checks cutoffs',async()=>{
  state.cacheKeys=[];state.partial=null;state.failFull=false;state.legacy=null;state.legacyKey='';state.phaseCalls=0
  const fresh=await get('pregame');assert.equal(fresh.status,200);const old=await fresh.json()
- const legacyBase=state.cacheKeys.find(key=>key.startsWith('odds-board:v6:'))!.split(':statuses:')[0]
- state.legacyKey=legacyBase.replace('odds-board:v6:','odds-board:v5:')
+ const legacyBase=state.cacheKeys.find(key=>key.startsWith('odds-board:v7:'))!.split(':statuses:')[0]
+ state.legacyKey=legacyBase.replace('odds-board:v7:','odds-board:v5:')
  state.legacy=old;state.failFull=true;state.cutoffReads=0;state.openingReads=0
  try{
   const response=await get('pregame');assert.equal(response.status,200);const board=nbaUnpackFullBoard(await response.json(),'points')
   assert.equal(board.stale,true);assert.equal(board.players[0]?.headshot,'https://images.example/saved.png');assert.equal(state.cutoffReads,1);assert.equal(state.openingReads,0)
-  state.legacyKey=legacyBase.replace('odds-board:v6:','odds-board:v2:')
+  Object.assign(state,{ruledOut:true})
+  try {
+    const response=await get('pregame'),filtered=nbaUnpackFullBoard(await response.json(),'points')
+    assert.equal(response.status,200);assert.deepEqual(filtered.cells,[]);assert.deepEqual(filtered.players,[])
+  } finally { Object.assign(state,{ruledOut:false}) }
+  state.legacyKey=legacyBase.replace('odds-board:v7:','odds-board:v2:')
   assert.equal((await get('pregame')).status,200,'legacy fallback remains available after the v5 miss')
   state.phaseStart-=60_000;assert.equal((await get('pregame')).status,503,'changed cutoff must not use an older phase key')
   state.phaseStart+=60_000;state.legacy={...old,complete:false};assert.equal((await get('pregame')).status,503,'incomplete prior board is not a complete fallback')

@@ -100,7 +100,7 @@ export async function POST(req: Request) {
   const candidateDatesFor = (gameDate: string | null) =>
     gameDate ? [gameDate, shiftDate(gameDate, -1), shiftDate(gameDate, 1)] : []
 
-  let nflPickCutoff = Infinity
+  let pickCutoff = Infinity
   if (sport === 'MLB') {
     const dates = Array.from(new Set(legs.flatMap(l => candidateDatesFor(l.game_date))))
     const gamesByDate = new Map(await Promise.all(dates.map(async d => [d, await getTodaysMatchups(d)] as const)))
@@ -127,8 +127,9 @@ export async function POST(req: Request) {
       }
     }
   } else if (sport === 'NBA') {
-    const error = await validatePaintPickLegs(legs)
-    if (error) return NextResponse.json({ error }, { status: 409 })
+    const validation = await validatePaintPickLegs(legs)
+    if ('error' in validation) return NextResponse.json({ error: validation.error }, { status: 409 })
+    pickCutoff = validation.cutoff
   } else {
     const bundles = new Map<string, Awaited<ReturnType<typeof getSidelineOddsBundle>>>()
     for (const l of legs) {
@@ -146,7 +147,7 @@ export async function POST(req: Request) {
       if (bundle.pickCutoff == null || bundle.pickCutoff <= Date.now()) {
         return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
       }
-      nflPickCutoff = Math.min(nflPickCutoff, bundle.pickCutoff)
+      pickCutoff = Math.min(pickCutoff, bundle.pickCutoff)
       const player = bundle.odds.players.find(candidate =>
         candidate.gsisId === l.player_id || `bdl:${candidate.id}` === l.player_id)
       if (!player) {
@@ -213,8 +214,8 @@ export async function POST(req: Request) {
     result: 'pending',
   }))
 
-  if (sport === 'NFL' && nflPickCutoff <= Date.now()) {
-    return NextResponse.json({ error: 'An NFL game has already started — pick not posted.' }, { status: 409 })
+  if (pickCutoff <= Date.now()) {
+    return NextResponse.json({ error: 'A game has already started — pick not posted.' }, { status: 409 })
   }
   const admin = createAdminClient()
   const { data: post, error: postErr } = await admin.rpc('create_tracked_pick_post', { p_post: postPayload, p_picks: pickRows })

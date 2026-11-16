@@ -1,4 +1,5 @@
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
+import * as marketAvailability from '../src/lib/nbaMarketAvailability.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -11,16 +12,19 @@ import * as primaryProps from '../src/lib/nbaPrimaryProps.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 
 const tip = Date.parse('2026-10-20T23:00:00Z')
-const game = { id: 123, datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
+const team = { id: 1, abbreviation: 'BOS', name: 'Celtics', full_name: 'Boston Celtics' }
+const game = { id: 123, datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: team, visitor_team: {...team,id:2} } as paint.PaintGame
+const roster = [434,435].map(id=>({id,first_name:'Real',last_name:'Player',team,position:'G'}))
 const quote = (odds:number, at:number):paint.PaintProp => ({ id:1,game_id:123,player_id:434,vendor:'fanduel',prop_type:'points',line_value:'20',market:{type:'milestone',odds},updated_at:new Date(at).toISOString() })
-async function harness(initialTime:number, current:paint.PaintProp[], frozen= [quote(1000,tip-60000)], firstBasket:paint.PaintProp[]=[]) {
+async function harness(initialTime:number, current:paint.PaintProp[], frozen= [quote(1000,tip-60000)], firstBasket:paint.PaintProp[]=[], ruledOut:number[] = []) {
   let now=initialTime, fetches=0, snapshots=0, crossBoundary=false
   class Clock extends Date { constructor(value:string|number=now){super(value)} static now(){return now} }
   const source=await readFile(new URL('../src/lib/nbaPaintData.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const keys:string[]=[], cached=new Map<string,unknown>()
   const imports:Record<string,unknown>={
-    './nbaPregameResearchData':{},
+    './nbaPregameResearchData':{readNbaPregameResearch:async()=>({value:{players:roster}})},
+    './nbaMarketAvailability':marketAvailability,
     'server-only':{},'node:crypto':crypto,'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':paint,'./nbaOddsHistory':{nbaAttachOpenings},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>({...g,datetime:game.datetime})},
     './nbaOddsMode':{...mode,nbaPregameOpen:(g:paint.PaintGame)=>mode.nbaPregameOpen(g,now),nbaLiveOpen:(g:paint.PaintGame)=>mode.nbaLiveOpen(g,now)},
@@ -32,7 +36,7 @@ async function harness(initialTime:number, current:paint.PaintProp[], frozen= [q
     './nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);if(!cached.has(key))cached.set(key,await load());return {value:cached.get(key)}}},
   }
   const target={exports:{}}
-  const fetch=async(url:string)=>{fetches++;if(crossBoundary)now=tip+10;return Response.json({data:url.includes('player_props')?current:[]})}
+  const fetch=async(url:string)=>{fetches++;if(crossBoundary)now=tip+10;return Response.json({data:url.includes('player_props')?current:url.includes('players/active')?roster:url.includes('player_injuries')?ruledOut.map(id=>({player:{id},status:'Out'})):[]})}
   new Function('require','module','exports','Date','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,Clock,fetch)
   return {api:target.exports as typeof import('../src/lib/nbaPaintData.ts'),keys,advance:(time:number)=>{now=time},cross:()=>{crossBoundary=true},counts:()=>({fetches,snapshots})}
 }
@@ -53,9 +57,18 @@ test('one exact milestone cannot use pregame prices in Live or live prices in Pr
   assert.equal(mode.nbaQuoteInMode(quote(-600,tip+1),game,'live',tip+1000),true)
   assert.equal(mode.nbaQuoteInMode(quote(-600,tip+1001),game,'live',tip+1000),false)
 })
+test('out status suppresses cached NBA quotes and First Basket, while eligible players keep their prices',async()=>{
+  const regular=quote(-110,tip-120000), eligible={...regular,player_id:435}
+  const first={...regular,prop_type:'first_score',line_value:'0.5'}
+  const h=await harness(tip-60000,[regular,eligible],[],[first],[434])
+  const priced=await h.api.getPaintPrices(game)
+  assert.deepEqual(priced.props,[eligible])
+  assert.deepEqual(priced.firstBasket,[])
+  assert.deepEqual(marketAvailability.nbaMarketRoster(game,roster,[{player:{id:434},status:'Questionable',description:''}]),roster)
+})
 test('after tipoff Pregame stays +1000 and keeps its pregame opening while Live is -600 with a separate opening',async()=>{
   const h=await harness(tip+60000,[quote(-600,tip+30000),{...quote(-200,tip-1000),player_id:99}])
-  const board={game:{...game,status_state:'in_progress',period:2},players:[{id:434,props:[]}],issues:[]} as unknown as paint.PaintBoard
+  const board={game:{...game,status_state:'in_progress',period:2},players:[{...roster[0],props:[]}],issues:[]} as unknown as paint.PaintBoard
   const pre=await h.api.refreshPaintBoardPrices(board,'pregame')
   assert.equal(pre.players[0].props[0].market.odds,1000);assert.equal(pre.players[0].props[0].opening?.over?.odds,1200)
   assert.equal(h.counts().fetches,0,'frozen pregame must never fetch current provider prices')
@@ -110,7 +123,7 @@ test('First Basket after tipoff renders its saved pregame quote and never reques
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>g},
     './nbaOddsMode':{...mode,nbaPregameOpen:()=>false,nbaLiveOpen:()=>true},
     './nbaOddsPhaseData':{getNbaPhaseSnapshot:async(_game:paint.PaintGame,phase:string)=>{assert.equal(phase,'pregame');return {firstBasket:[{...quote(700,tip-1000),prop_type:'first_score',line_value:'.5'}],available:{firstBasket:true},capturedAt:{firstBasket:new Date(tip-1000).toISOString()}}}},
-    './nbaPaintData':{getPaintRoster:async()=>[{id:434,first_name:'Real',last_name:'Player',team:match.home_team,position:'G'}],artwork:async()=>({headshots:new Map()})},
+    './nbaPaintData':{getPaintRoster:async()=>{throw Error('Frozen prices cannot resolve the current roster')},getPaintSavedMarketRoster:async()=>[{id:434,first_name:'Real',last_name:'Player',team:match.home_team,position:'G'}],artwork:async()=>({headshots:new Map()})},
   }
   const target={exports:{}}
   new Function('require','module','exports','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Current provider must not run')})

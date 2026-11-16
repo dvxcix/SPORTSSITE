@@ -3,6 +3,8 @@ import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintSchedule, getPaintRoster, getPaintPrices } from '@/lib/nbaPaintData'
 import { nbaComposerGame } from '@/lib/nbaComposer'
 import { hydrateNbaPlayers } from '@/lib/nbaDirectory'
+import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
+import { nbaPickGameOpen } from '@/lib/nbaOddsMode'
 
 export const maxDuration = 60
 export async function GET(request: Request) {
@@ -10,7 +12,9 @@ export async function GET(request: Request) {
   if (gate.error) return gate.error
   try {
     const { games, date } = await getPaintSchedule(new URL(request.url).searchParams.get('date') ?? undefined)
-    const payload = await Promise.all(games.map(async game => {
+    const payload = await Promise.all(games.map(async scheduled => {
+      const game = await getNbaOddsGame(scheduled)
+      if (!nbaPickGameOpen(game)) return nbaComposerGame(game, [], [])
       const [roster, prices] = await Promise.all([getPaintRoster(game), getPaintPrices(game, 'pregame')])
       const portraits = new Map((await hydrateNbaPlayers(roster)).map(player => [`bdl:${player.id}`, player.headshot]))
       const result = nbaComposerGame(game, roster, prices.props)

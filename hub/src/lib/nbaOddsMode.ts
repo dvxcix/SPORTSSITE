@@ -19,6 +19,10 @@ export function nbaPregameOpen(game: GameClock, now = Date.now()) {
   const start = nbaGameStart(game)
   return start != null && now < start && !nbaGameFinal(game) && game.status_state !== 'in_progress' && !(Number(game.period) > 0)
 }
+export function nbaPickGameOpen(game: GameClock, now = Date.now()) {
+  return nbaPregameOpen(game, now) && (game.status_state == null || game.status_state === 'scheduled' || game.status_state === 'unknown')
+    && !/^(?:postponed|cancelled|canceled|suspended|delayed)\b/i.test(game.status)
+}
 export function nbaLiveOpen(game: GameClock, now = Date.now()) {
   const start = nbaGameStart(game)
   return start != null && now >= start && !nbaGameFinal(game) && (game.status_state === 'in_progress' || Number(game.period) > 0)

@@ -1,4 +1,5 @@
 import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
+import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
@@ -14,15 +15,15 @@ async function compiled(file:string,imports:Record<string,unknown>){
   new Function('require','exports','module',outputText)((name:string)=>{if(name==='./nbaSharedCache'&&!(name in imports))return {nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})};if(name==='./nbaFirstBasketMarkets')return firstMarkets;if(!(name in imports)&&(name==='./nbaFirstBasketFacts'||name==='./nbaFirstBasketOddsData'))return {};assert.ok(name in imports,name);return imports[name]},target.exports,target)
   return target.exports
 }
-const quote:pure.PaintProp={id:22,player_id:434,game_id:123,vendor:'fanduel',prop_type:'points',line_value:'29.5',market:{type:'over_under',over_odds:350,under_odds:-480},updated_at:'2099-10-20T10:00:00Z'}
+const quote:pure.PaintProp={id:22,player_id:434,game_id:123,vendor:'fanduel',prop_type:'points',line_value:'29.5',market:{type:'over_under',over_odds:350,under_odds:-480},updated_at:'2026-10-20T10:00:00Z'}
 type CapturedPost={p_post:{visibility:string;author_id:string;pick_data:Record<string,unknown>};p_picks:Record<string,unknown>[]}
 const item=(offer=quote,side:'over'|'under'='over')=>({id:'saved',user_id:'owner',sport:'nba',player_name:'Saved name',team:'OLD',mlb_id:null,headshot_url:null,game_pk:'123',game_date:'2099-10-20',prop_key:pure.nbaSelectionKey(434,offer,side),prop_label:'Saved label',line:'wrong',book:offer.vendor,odds:pure.nbaPrice(offer,side)}) as WatchlistItem
-async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:number;user?:boolean;failed?:boolean}={}){
+async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:number;user?:boolean;failed?:boolean;ruledOut?:boolean}={}){
   const writes:CapturedPost[]=[], notices:string[]=[]
   let reads=0
-  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaSupplementalProps':{nbaSupplementalQuote:(quote:{id:number})=>quote.id<=-1_000_000_000_000},'./nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[{offer:options.offer??quote}]})},'./nbaPaintData':{
+  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaOddsMode':oddsMode,'./nbaSupplementalProps':{nbaSupplementalQuote:(quote:{id:number})=>quote.id<=-1_000_000_000_000},'./nbaFirstBasketOddsData':{getNbaFirstOdds:async()=>({rows:[{offer:options.offer??quote}]})},'./nbaPaintData':{
     getPaintGame:async()=>{reads++;return{id:123,date:'2099-10-20',datetime:options.started?'2000-10-20T20:00:00Z':'2099-10-20T20:00:00Z',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}},
-    getPaintProps:async()=>[options.offer??quote],getPaintIdentity:async()=>({id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}),
+    getPaintProps:async()=>[options.offer??quote],getPaintMarketRoster:async()=>options.ruledOut?[]:[{id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}],
   }})
   const route=await compiled('../src/app/api/posts/pick/route.ts',{
     '@/lib/pickGrading':{},'@/lib/nflPickGrading':{},'@/lib/mlbCaptureWindow':{},'@/lib/mlbOffseason':{MLB_HIBERNATING:true},
@@ -68,6 +69,15 @@ test('Only-me rejects group/page publishing and non-NBA posting before source re
   for(const extra of [{groupId:'group'},{pageId:'page'},{sport:'NFL'},{sport:'MLB'}]){
     const h=await harness(),res=await h.post(request(item(),extra))
     assert.equal(res.status,'sport'in extra?(extra.sport==='MLB'?503:403):400);assert.equal(h.reads,0);assert.equal(h.writes.length,0);assert.deepEqual(h.notices,[])
+  }
+})
+test('a previously saved price for a ruled-out player cannot post to any audience',async()=>{
+  for(const visibility of ['private','public','followers']){
+    const h=await harness({ruledOut:true}),response=await h.post(request(item(),{visibility}))
+    assert.equal(response.status,409)
+    assert.match((await response.json()).error,/is unavailable for this matchup/)
+    assert.deepEqual(h.writes,[])
+    assert.deepEqual(h.notices,[])
   }
 })
 test('Existing public and followers posting continue their notification behavior',async()=>{

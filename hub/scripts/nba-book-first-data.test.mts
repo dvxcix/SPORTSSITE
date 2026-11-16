@@ -172,7 +172,7 @@ test('aggregate First Basket deduplicates newer direct prices, applies exact wit
       './nbaOddsClockData': { getNbaOddsGame: async (value: PaintGame) => value },
       './nbaOddsMode': { ...mode, nbaPregameOpen: (value: PaintGame) => mode.nbaPregameOpen(value, h.now()), nbaLiveOpen: (value: PaintGame) => mode.nbaLiveOpen(value, h.now()) },
       './nbaOddsPhaseData': { getNbaPhaseSnapshot: async () => { throw Error('No archived result is needed before tip') } }, './supabase/admin': {},
-      './nbaPaintData': { getPaintRoster: async () => [{ id: 434, first_name: 'Real', last_name: 'Player', team: home, position: 'G' }], artwork: async () => ({ headshots: new Map() }) },
+      './nbaPaintData': { getPaintRoster: async () => [{ id: 434, first_name: 'Real', last_name: 'Player', team: home, position: 'G' }], getPaintMarketIds: async () => new Set([434]), artwork: async () => ({ headshots: new Map() }) },
       './nbaSharedCache': { nbaSharedCache: async (cacheKey: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => { if (!cached.has(cacheKey)) cached.set(cacheKey, await load()); return { value: cached.get(cacheKey) } } },
     }
     const source = await readFile(new URL('../src/lib/nbaFirstBasketOddsData.ts', import.meta.url), 'utf8')

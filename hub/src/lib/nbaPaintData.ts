@@ -15,6 +15,7 @@ import { nbaNormalizePrimaryProps } from './nbaPrimaryProps'
 import { getNbaSupplementalProps, nbaMergePropSources, nbaSupplementalQuote, type NbaSupplementalSnapshot } from './nbaSupplementalProps'
 import { getNbaBookPropEntries, nbaBookPropsSupplement } from './nbaBookPropsData'
 import { nbaPregameResearch, readNbaPregameResearch } from './nbaPregameResearchData'
+import { nbaMarketRoster, type NbaInjuryReportRow } from './nbaMarketAvailability'
 
 const BASE = 'https://api.balldontlie.io'
 type Page<T> = { data: T[]; meta?: { next_cursor?: number | null } }
@@ -89,6 +90,30 @@ export async function getPaintRoster(game:PaintGame){
   const result=await pages<PaintRoster>(`/v1/players/active?team_ids[]=${game.home_team.id}&team_ids[]=${game.visitor_team.id}&per_page=100`,300,2)
   if(!result.complete)throw new Error('Roster incomplete')
   return result.rows.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id))
+}
+async function getPaintInjuries(game: PaintGame, deadline = Infinity) {
+  return pages<NbaInjuryReportRow>(`/v1/player_injuries?team_ids[]=${game.visitor_team.id}&team_ids[]=${game.home_team.id}&per_page=100`, 300, 2, deadline)
+}
+
+export async function getPaintMarketRoster(game: PaintGame) {
+  const [roster, injuries] = await Promise.all([getPaintRoster(game), getPaintInjuries(game)])
+  if (!roster.length || !injuries.complete || injuries.rows.some(row => !Number.isSafeInteger(row?.player?.id) || typeof row.status !== 'string')) throw new Error('NBA market availability is unverified')
+  return nbaMarketRoster(game, roster, injuries.rows)
+}
+
+export async function getPaintSavedMarketRoster(game: PaintGame) {
+  const saved = await readNbaPregameResearch<PaintBoard>(game, 'board:v1')
+  return saved ? nbaMarketRoster(game, saved.value.players) : null
+}
+
+export async function getPaintMarketIds(game: PaintGame, mode: NbaOddsMode) {
+  const active = () => mode === 'pregame' ? nbaPregameOpen(game, Date.now()) : nbaLiveOpen(game, Date.now())
+  if (active()) {
+    const roster = await getPaintMarketRoster(game)
+    if (active()) return new Set(roster.map(player => player.id))
+  }
+  const saved = await getPaintSavedMarketRoster(game)
+  return saved ? new Set(saved.map(player => player.id)) : null
 }
 async function getPaintPrimaryProps(gameId: number, fresh = false): Promise<PaintProp[]> {
   if (!fresh) return nbaNormalizePrimaryProps((await bdl<PaintProp>(`/v2/odds/player_props?game_id=${gameId}`, 30)).data)
@@ -229,7 +254,7 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
   }
   if (mode === 'pregame' && !nbaPregameOpen(game)) return frozen()
   if (mode === 'live' && !nbaLiveOpen(game)) return nbaGameFinal(game) ? frozen() : empty
-  const cached = await nbaSharedCache(nbaPhasePricesKey(game,mode), 30, 0, async () => {
+  const pending = nbaSharedCache(nbaPhasePricesKey(game,mode), 30, 0, async () => {
     // Phase-specific leases ensure thousands of members share one refresh.
     const issues: string[] = []
     const optional = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => { try { return await promise } catch { issues.push(label); return fallback } }
@@ -241,12 +266,16 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
     const now = Date.now()
     return { props: snapshot.props.filter(quote => quote.game_id === game.id && nbaQuoteInMode(quote, game, mode, now)), gameOdds: gameOdds.filter(quote => (quote.game_id == null || quote.game_id === game.id) && nbaQuoteInMode(quote, game, mode, now)), firstBasket: firstBasket.filter(quote => quote.game_id === game.id && nbaQuoteInMode(quote, game, mode, now)), observedAt: new Date(now).toISOString(), issues: [...issues, ...snapshot.issues] }
   }, 60)
+  const [cached, eligible] = await Promise.all([pending, getPaintMarketIds(game, mode).catch(() => null)])
   // Neither a response crossing tipoff nor an unexpired pregame cache can
   // replace the stored closing frame after the boundary.
   if (mode === 'pregame' && !nbaPregameOpen(game)) return frozen()
   const fresh = (quote: PaintProp) => !nbaSupplementalQuote(quote) || (Date.parse(quote.updated_at) <= Date.now() && Date.now() - Date.parse(quote.updated_at) <= 300_000)
   const current = cached.value.props.filter(fresh), firstBasket = cached.value.firstBasket.filter(fresh)
-  return { ...cached.value, props: current, firstBasket, issues: current.length === cached.value.props.length && firstBasket.length === cached.value.firstBasket.length ? cached.value.issues : [...cached.value.issues, 'Some sportsbook prices unavailable'] }
+  const issues = [...cached.value.issues]
+  if (current.length !== cached.value.props.length || firstBasket.length !== cached.value.firstBasket.length) issues.push('Some sportsbook prices unavailable')
+  if (!eligible) issues.push('Player availability unavailable')
+  return { ...cached.value, props: current.filter(quote => eligible?.has(quote.player_id)), firstBasket: firstBasket.filter(quote => eligible?.has(quote.player_id)), issues }
 }
 export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMode = board.oddsMode ?? 'pregame'): Promise<PaintBoard> {
   const game = await getNbaOddsGame(board.game)
@@ -259,8 +288,10 @@ export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMo
   // Research may survive an outage; quotes come only from their strict shared
   // TTL and never inherit the research cache's five-minute fallback.
   const quotes = nbaAttachOpenings(game.id, [...prices.props, ...prices.firstBasket], prices.gameOdds, openings)
-  const priceIssues = new Set(['Sportsbook prices unavailable', 'Some sportsbook prices unavailable', 'Game lines unavailable', 'Opening prices unavailable', 'First-basket prices unavailable'])
-  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, players: board.players.map(player => ({ ...player, props: quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
+  const frozen = mode === 'pregame' && !nbaPregameOpen(game) || mode === 'live' && nbaGameFinal(game)
+  const eligible = frozen ? new Set(nbaMarketRoster(game, board.players).map(player => player.id)) : null
+  const priceIssues = new Set(['Sportsbook prices unavailable', 'Some sportsbook prices unavailable', 'Game lines unavailable', 'Opening prices unavailable', 'First-basket prices unavailable', 'Player availability unavailable'])
+  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, players: board.players.map(player => ({ ...player, props: eligible && !eligible.has(player.id) ? [] : quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const deadline = Date.now() + 65_000
@@ -271,7 +302,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const teamQuery = teams.map(t => `team_ids[]=${t.id}`).join('&')
   const [roster, injuries, images, directory, lineups] = await Promise.all([
     (game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final') ? getPaintFinalStats(game.id).then(result => ({ complete: result.complete, rows: result.rows.filter(row => row.player.first_name && row.player.last_name).map(row => ({ ...row.player, team: row.team }) as PaintRoster) })) : pages<PaintRoster>(`/v1/players/active?${teamQuery}&per_page=100`, 3600, 2, deadline),
-    optional('Injury report unavailable', pages<{ player: { id: number }; status: string; description: string; return_date?: string }>(`/v1/player_injuries?${teamQuery}&per_page=100`, 300, 2, deadline), { rows: [], complete: false }),
+    optional('Injury report unavailable', getPaintInjuries(game, deadline), { rows: [], complete: false }),
     Promise.all(teams.map(t => optional('Some player images unavailable', artwork(t.abbreviation), { headshots: new Map<string, string | null>(), logo: null }))),
     optional('Team directory unavailable', bdl<PaintTeam & { conference: string }>('/v1/teams?per_page=100',86400), { data: [] }),
     optional('Starting lineups unavailable', bdl<{ player: { id: number }; starter: boolean }>(`/v1/lineups?game_ids[]=${game.id}&per_page=100`, 120), { data: [] }),

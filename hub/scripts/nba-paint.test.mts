@@ -13,6 +13,7 @@ import { nbaOpeningSequence, nbaFirstBasketResearch } from '../src/lib/nbaFirstB
 import { nbaMilestoneMovements } from '../src/lib/nbaMovement.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import * as marketAvailability from '../src/lib/nbaMarketAvailability.ts'
 import { hasNbaAccess } from '../src/lib/nbaAccessPolicy.ts'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
@@ -385,6 +386,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { './nbaMarketAvailability': marketAvailability, ...imports }
   imports = { '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) }, ...imports }
   imports = { '@/lib/nbaSeasonTrackingView': seasonTracking, '@/lib/nbaSeasonDisplay': { nbaSeasonDisplayBoard: (board:unknown) => board }, ...imports }
   imports = { '@/lib/mlbOffseason': { MLB_HIBERNATING: true }, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, '@/lib/nbaSlateDiagnostics': { nbaSlateFailure: () => {}, nbaSlateTimer: () => ({ enter: () => {} }) }, '@/lib/nbaBrowserBudget': { NbaBrowserBudgetError: class extends Error {} }, '@/lib/nbaPublicCaptureControl': publicControl, '@/lib/nbaPublicCaptureControlData': { readNbaPublicControls: async()=>new Map(), saveNbaPublicControl: async()=>{} }, ...imports }
@@ -523,7 +525,7 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
     insert: (row: Record<string, unknown>) => ({ select: () => ({ single: async () => { const data = { id: 'saved-1', status: 'pending', ...row }; saved.push(data); return { data, error: null } } }) }),
     select: () => ({ eq: () => ({ order: async () => ({ data: saved, error: null }), in: () => { const query = { order: () => query, limit: () => query, or: () => Promise.resolve({ data: posts, error: null }) }; return query } }) }),
   }) }
-  const provider = { getPaintGame: async () => ({ id: 123, date: '2099-10-20', datetime: '2099-10-20T20:00:00Z', status_state: 'scheduled', home_team: { id: 2 }, visitor_team: { id: 9 } }), getPaintProps: async () => [offer], getPaintIdentity: async () => ({ id: 434, first_name: 'Canonical', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }) }
+  const provider = { getPaintGame: async () => ({ id: 123, date: '2099-10-20', datetime: '2099-10-20T20:00:00Z', status_state: 'scheduled', home_team: { id: 2 }, visitor_team: { id: 9 } }), getPaintProps: async () => [offer], getPaintMarketRoster: async () => [{ id: 434, first_name: 'Canonical', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }] }
   const validation = await compiled('../src/lib/nbaPickValidation.ts', { 'server-only': {}, './nbaPaintData': provider, './nbaPaint': pure })
   const admin = { rpc: async (name: string, args: Record<string, unknown>) => {
     assert.equal(name, 'create_tracked_pick_post')
@@ -562,15 +564,17 @@ test('save → post API → My Picks → final settlement preserves exact NBA id
 test('NBA posting fails closed for stale quotes, started games, duplicates, mixed books and unavailable data', async () => {
   const pure = await import('../src/lib/nbaPaint.ts')
   const leg = { player_id: 'bdl:434', player_name: 'Test', team: 'BOS', game_pk: '123', game_date: '2099-10-20', book: 'fanduel', prop_key: 'points', prop_label: 'Points', numeric_line: 20, market_side: 'over', odds: -110 }
-  for (const scenario of ['changed', 'started', 'duplicate', 'mixed', 'missing', 'valid']) {
+  for (const scenario of ['changed', 'started', 'duplicate', 'mixed', 'missing', 'ruled out', 'valid']) {
     const validator = await compiled('../src/lib/nbaPickValidation.ts', { 'server-only': {}, './nbaPaint': pure, './nbaPaintData': {
       getPaintGame: async () => ({ id: 123, datetime: scenario === 'started' ? '2000-01-01T00:00:00Z' : '2099-10-20T20:00:00Z', date: '2099-10-20', status_state: 'scheduled', home_team: { id: 2 }, visitor_team: { id: 9 } }),
-      getPaintProps: async () => { if (scenario === 'missing') throw new Error('unavailable'); return [{ ...offer, market: { ...offer.market, over_odds: scenario === 'changed' ? -111 : -110 } }] },
-      getPaintIdentity: async () => ({ first_name: 'Test', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }),
+      getPaintProps: async () => { if (scenario === 'missing' || scenario === 'ruled out') throw new Error('unavailable'); return [{ ...offer, market: { ...offer.market, over_odds: scenario === 'changed' ? -111 : -110 } }] },
+      getPaintMarketRoster: async () => scenario === 'ruled out' ? [] : [{ id: 434, first_name: 'Test', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }],
     } })
     const legs = scenario === 'duplicate' ? [{ ...leg }, { ...leg }] : scenario === 'mixed' ? [{ ...leg }, { ...leg, player_id: 'bdl:435', book: 'draftkings' }] : [{ ...leg }]
-    const error = await (validator.validatePaintPickLegs as unknown as (legs: unknown[]) => Promise<string | null>)(legs)
-    if (scenario === 'valid') assert.equal(error, null); else assert.equal(typeof error, 'string', scenario)
+    const result = await (validator.validatePaintPickLegs as unknown as (legs: unknown[]) => Promise<{ error?: string; cutoff?: number }>)(legs)
+    if (scenario === 'valid') assert.equal(result.cutoff, Date.parse('2099-10-20T20:00:00Z'))
+    else if (scenario === 'ruled out') assert.match(result.error ?? '', /is unavailable for this matchup/)
+    else assert.equal(typeof result.error, 'string', scenario)
   }
 })
 
@@ -653,7 +657,7 @@ test('NBA history enforces membership and validates market/game before archive r
   let denied=true,reads=0,openingReads=0,openingFailed=false
   const openingRows:import('../src/lib/nbaOddsHistory.ts').NbaQuoteOpeningRow[]=[{game_id:123,player_id:434,vendor:'fanduel',market:'points',market_type:'over_under',line:20.5,side:'over',odds:-110,observed_at:'2026-10-19T00:00:00Z'}]
   const pure=await import('../src/lib/nbaPaint.ts')
-  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/nbaPaint':pure,'@/lib/nbaOddsHistoryData':{getNbaMarketFrames:async(game:number,market:string,player:number|null)=>{assert.equal(game,123);assert.equal(market,'points');assert.equal(player,null);reads++;return[]},getNbaQuoteOpenings:async(game:number)=>{assert.equal(game,123);openingReads++;if(openingFailed)throw new Error('fixture unavailable');return openingRows}}})
+  const route=await compiled('../src/app/the-paint/history/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/paintAccess':{requirePaintAccess:async()=>denied?{error:Response.json({error:'Not available'},{status:403})}:{userId:'admin'}},'@/lib/nbaPaint':pure,'@/lib/nbaPaintData':{getPaintGame:async(id:number)=>({id}),getPaintMarketIds:async()=>new Set([434])},'@/lib/nbaOddsHistoryData':{getNbaMarketFrames:async(game:number,market:string,player:number|null)=>{assert.equal(game,123);assert.equal(market,'points');assert.equal(player,null);reads++;return[]},getNbaQuoteOpenings:async(game:number)=>{assert.equal(game,123);openingReads++;if(openingFailed)throw new Error('fixture unavailable');return openingRows}}})
   const get=route.GET as unknown as(request:unknown)=>Promise<Response>
   assert.equal((await get({nextUrl:new URL('https://test/the-paint/history?game=123&market=points')})).status,403)
   denied=false
@@ -694,9 +698,9 @@ test('quarter and event selections revalidate exact books, targets and canonical
  for(const market of ['double_double','triple_double','points_1q','rebounds_1q','assists_1q']){
   const quote={...offer,prop_type:market,line_value:market.endsWith('_1q')?'6':'.5',market:{type:'milestone' as const,odds:140}}
   const selection=parseNbaSelection(nbaSelectionKey(434,quote,'over'))!;assert.equal(selection.prop_key,market)
-  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaPaintData':{getPaintGame:async()=>({id:123,datetime:'2099-10-20T20:00:00Z',date:'2099-10-20',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}),getPaintProps:async()=>[quote],getPaintIdentity:async()=>({first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}})}})
+  const validator=await compiled('../src/lib/nbaPickValidation.ts',{'server-only':{},'./nbaPaint':pure,'./nbaPaintData':{getPaintGame:async()=>({id:123,datetime:'2099-10-20T20:00:00Z',date:'2099-10-20',status_state:'scheduled',home_team:{id:2},visitor_team:{id:9}}),getPaintProps:async()=>[quote],getPaintMarketRoster:async()=>[{id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}]}})
   const leg={...selection,player_name:'Test',team:'OLD',game_pk:'123',game_date:'2099-10-20',prop_label:'untrusted',book:'fanduel',odds:140}
-  assert.equal(await (validator.validatePaintPickLegs as (legs:unknown[])=>Promise<unknown>)([leg]),null);assert.equal(leg.player_name,'Canonical Player');assert.match(leg.prop_label,market.endsWith('_1q')?/^6\+ First-quarter/:/^Yes /)
+  assert.deepEqual(await (validator.validatePaintPickLegs as (legs:unknown[])=>Promise<unknown>)([leg]),{cutoff:Date.parse('2099-10-20T20:00:00Z')});assert.equal(leg.player_name,'Canonical Player');assert.match(leg.prop_label,market.endsWith('_1q')?/^6\+ First-quarter/:/^Yes /)
  }
 })
 

@@ -6,7 +6,7 @@ import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { nbaDivergences } from '@/lib/nbaDivergence'
 import type { NbaPublicCapture } from '@/lib/nbaPublic'
 import { getNbaAllMarketFrames, getNbaQuoteOpenings } from '@/lib/nbaOddsHistoryData'
-import { getPaintGame } from '@/lib/nbaPaintData'
+import { getPaintGame, getPaintMarketIds } from '@/lib/nbaPaintData'
 import { nbaGameStart } from '@/lib/nbaOddsMode'
 import { nbaMilestoneSignals } from '@/lib/nbaMilestoneSignals'
 export const maxDuration = 60
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const match = await getPaintGame(Number(game)), tip = nbaGameStart(match)
     const phaseKey = tip == null ? 'unverified' : `${tip}:${Date.now() >= tip ? 'closed' : 'open'}`
-    const cached = await nbaSharedCache(`divergence:v8:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
+    const [cached, eligible] = await Promise.all([nbaSharedCache(`divergence:v8:${mode}:${game}:${phaseKey}`, 60, 0, async () => {
       const admin = createAdminClient()
       const [allFrames, openings] = await Promise.all([
         getNbaAllMarketFrames(Number(game), mode, 'edges'),
@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
       const rows=nbaDivergences(frames,snapshots,openings)
       const publicTimes=rows.flatMap(row=>row.publicCapturedAt?[row.publicCapturedAt]:[]).sort((a,b)=>Date.parse(a)-Date.parse(b))
       return { rows,milestones:nbaMilestoneSignals(frames,openings,Number(game)), captures: frames.length, publicCapturedAt: publicTimes[0]??null, latestAt }
-    })
-    return NextResponse.json({ ...cached.value, mode, fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }), getPaintMarketIds(match, mode)])
+    const { rows, milestones } = cached.value
+    return NextResponse.json({ ...cached.value, rows: eligible ? rows.filter(row => eligible.has(row.playerId)) : rows,
+      milestones: eligible ? milestones.filter(row => eligible.has(row.playerId)) : milestones,
+      mode, fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch { return NextResponse.json({ error: 'Cross-market research could not refresh' }, { status: 503 }) }
 }

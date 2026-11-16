@@ -1,14 +1,14 @@
 import 'server-only'
 import { nbaRosterPortraits } from './nbaPlayerPortraits'
-import { artwork, getPaintRoster, getPaintFinalStats, getPaintIdentity } from './nbaPaintData'
+import { artwork, getPaintRoster, getPaintFinalStats, getPaintIdentity, getPaintMarketIds, getPaintSavedMarketRoster } from './nbaPaintData'
 import { type PaintGame, type PaintPlayer, type PaintRoster } from './nbaPaint'
 import { nbaFirstEvent, nbaNormalizeFirstOdds, type FirstOddsEvent, type FirstBasketRow } from './nbaFirstBasketOdds'
 import { nbaSharedCache } from './nbaSharedCache'
 import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
 import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaGameFinal, nbaGameStart, nbaLiveOpen, nbaPregameOpen, nbaQuoteInMode, type NbaOddsMode } from './nbaOddsMode'
-import { createAdminClient } from './supabase/admin'
 import { getNbaBookFirstSupplement } from './nbaBookFirstData'
+import { createAdminClient } from './supabase/admin'
 import { nbaReadFirstOddsResponse, NbaFirstOddsUnavailable } from './nbaFirstEventDiagnostics'
 export { NbaFirstOddsUnavailable } from './nbaFirstEventDiagnostics'
 
@@ -46,58 +46,56 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
     const snapshot=await getNbaPhaseSnapshot(game,mode)
     if(!snapshot.firstBasket.length)return {...empty(),eventMatched:snapshot.available.firstBasket,observedAt:snapshot.capturedAt.firstBasket??new Date().toISOString()}
     const teams=[game.home_team,game.visitor_team]
-    const [roster,images]=await Promise.all([
-      getFrozenFirstRoster(game,[...new Set(snapshot.firstBasket.map(offer=>offer.player_id))]),
+    const [saved,images]=await Promise.all([
+      getPaintSavedMarketRoster(game),
       Promise.all(teams.map(team=>artwork(team.abbreviation).catch(()=>({headshots:new Map<string,string|null>()})))),
     ])
+    const roster=saved??await getFrozenFirstRoster(game,[...new Set(snapshot.firstBasket.map(offer=>offer.player_id))])
     const portraits=new Map(teams.map((team,index)=>[team.id,nbaRosterPortraits(roster.filter(player=>player.team.id===team.id),images[index]?.headshots??new Map())]))
-    const rows=snapshot.firstBasket.flatMap(offer=>{
+    const eligible=saved?new Set(roster.map(player=>player.id)):null
+    const offers=eligible?snapshot.firstBasket.filter(offer=>eligible.has(offer.player_id)):snapshot.firstBasket
+    const rows=offers.flatMap(offer=>{
       const player=roster.find(player=>player.id===offer.player_id)
       return player?[{game,offer,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:portraits.get(player.team.id)?.get(player.id)??null}}]:[]
     })
-    return {rows,unmatched:snapshot.firstBasket.length-rows.length,eventMatched:snapshot.available.firstBasket,observedAt:snapshot.capturedAt.firstBasket??new Date().toISOString()}
+    return {rows,unmatched:offers.length-rows.length,eventMatched:snapshot.available.firstBasket,observedAt:snapshot.capturedAt.firstBasket??new Date().toISOString()}
   }
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
   if(mode==='live'&&!nbaLiveOpen(game))return nbaGameFinal(game)?frozen():empty()
-  const cached=await nbaSharedCache(`first-basket-phase-prices:v4:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
+  const [cached,eligible]=await Promise.all([nbaSharedCache(`first-basket-phase-prices:v4:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
     const result=await loadNbaFirstOdds(game,false)
     return {...result,rows:result.rows.filter(row=>nbaQuoteInMode(row.offer,game,mode))}
-  },60)
+  },60),getPaintMarketIds(game,mode)])
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
-  return freshBookRows(cached.value)
+  if(mode==='live'&&!nbaLiveOpen(game))return empty()
+  return freshBookRows({...cached.value,rows:cached.value.rows.filter(row=>eligible?.has(row.player.id))})
 }
 async function getFrozenFirstRoster(game:PaintGame,playerIds:number[]) {
-  const teams=[game.home_team,game.visitor_team],final=nbaGameFinal(game)
-  const [active,stats]=await Promise.all([
-    getPaintRoster(game).catch(()=>[]),
-    final?getPaintFinalStats(game.id).then(result=>result.rows).catch(()=>[]):Promise.resolve([]),
-  ])
-  const roster=new Map<number,PaintRoster>(),played=new Set<number>()
-  for(const player of active)if(playerIds.includes(player.id)&&player.first_name?.trim()&&player.last_name?.trim()) {
-    const team=teams.find(team=>team.id===player.team?.id)
-    if(team)roster.set(player.id,{...player,team})
-  }
+  const tip=nbaGameStart(game)
+  if(tip==null)return []
+  const cutoff=new Date(tip).toISOString()
+  const teams=[game.home_team,game.visitor_team]
+  const stats=nbaGameFinal(game)?await getPaintFinalStats(game.id).then(result=>result.rows).catch(()=>[]):[]
+  const roster=new Map<number,PaintRoster>()
   for(const row of stats) {
-    const team=teams.find(team=>team.id===row.team.id)
-    if(playerIds.includes(row.player.id)&&team&&row.player.first_name?.trim()&&row.player.last_name?.trim()) {
-      roster.set(row.player.id,{...row.player,first_name:row.player.first_name,last_name:row.player.last_name,position:row.player.position??'',team})
-      played.add(row.player.id)
-    }
+    const team=teams.find(candidate=>candidate.id===row.team.id)
+    const {id,first_name,last_name,position}=row.player
+    if(playerIds.includes(id)&&team&&first_name?.trim()&&last_name?.trim())roster.set(id,{id,first_name,last_name,position:position??'',team})
   }
-  await Promise.all(playerIds.filter(id=>final?!played.has(id):!roster.has(id)).map(async id=>{
-    const [player,historicalTeam]=await Promise.all([
-      roster.get(id)??getPaintIdentity(id).catch(()=>null),
-      final?nbaSharedCache(`first-basket-roster-team:v1:${game.id}:${id}`,300,0,async()=>{
-        const {data,error}=await createAdminClient().from('nba_research_snapshots').select('team_id')
-          .eq('game_id',game.id).eq('player_id',id).order('captured_at',{ascending:false}).order('id',{ascending:false})
-          .limit(1).abortSignal(AbortSignal.timeout(12000)).maybeSingle()
-        if(error)throw new Error('First Basket historical roster unavailable')
-        return data?.team_id??null
-      },25).then(result=>result.value).catch(()=>null):Promise.resolve(null),
-    ])
-    const team=teams.find(team=>team.id===(historicalTeam??player?.team?.id))
-    if(player?.id===id&&player.first_name?.trim()&&player.last_name?.trim()&&team)roster.set(id,{...player,team})
-    else roster.delete(id)
+  // For an old DNP, an original game-scoped roster observation can prove
+  // the team. The current player directory supplies only a name and position.
+  await Promise.all(playerIds.filter(id=>!roster.has(id)).map(async id=>{
+    const teamId=await nbaSharedCache(`first-basket-roster-team:v2:${game.id}:${id}:${cutoff}`,300,0,async()=>{
+      const {data,error}=await createAdminClient().from('nba_research_snapshots').select('team_id')
+        .eq('game_id',game.id).eq('player_id',id).lt('captured_at',cutoff).order('captured_at',{ascending:false}).order('id',{ascending:false})
+        .limit(1).abortSignal(AbortSignal.timeout(12000)).maybeSingle()
+      if(error)throw new Error('First Basket historical roster unavailable')
+      return data?.team_id??null
+    },25).then(result=>result.value).catch(()=>null)
+    const team=teams.find(candidate=>candidate.id===teamId)
+    if(!team)return
+    const player=await getPaintIdentity(id).catch(()=>null)
+    if(player?.id===id&&player.first_name?.trim()&&player.last_name?.trim())roster.set(id,{...player,team})
   }))
   return [...roster.values()]
 }

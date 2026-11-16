@@ -7,7 +7,8 @@ import { filterNflMarkets, nflMarketExclusions } from './nflAvailability'
 import type { SidelineOddsBoard } from './nflOddsTypes'
 import { nbaFullBoardCells } from './nbaFullOddsBoard'
 import { nbaGameFinal, nbaGameStart, nbaQuoteInMode } from './nbaOddsMode'
-import type { PaintGame, PaintProp } from './nbaPaint'
+import type { PaintGame, PaintPlayer, PaintProp } from './nbaPaint'
+import { nbaMarketUnavailable } from './nbaMarketAvailability'
 import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 import { PREVIEW_CONFIG, readPreviewContext, selectPreviewPlayers, type PreviewBoard, type PreviewGame, type PreviewSport, type ResearchPreview } from './publicResearchPreview'
 import { PUBLIC_PREVIEW_EXAMPLES } from './publicResearchPreviewExamples'
@@ -74,19 +75,22 @@ async function nbaBoard(admin: Admin, game: PreviewGame): Promise<PreviewBoard |
     && nbaQuoteInMode(quote, { datetime: cutoff, status: '' }, 'pregame', at))
   const ids = [...new Set(quotes.map(quote => quote.player_id))]
   if (!ids.length || ids.length > 60) return null
-  const [identities, openings] = await Promise.all([
-    admin.from('nba_players').select('id,first:payload->>first_name,last:payload->>last_name,team:payload->team->>abbreviation').in('id', ids).limit(60).abortSignal(readBudget()),
+  const [research, openings] = await Promise.all([
+    admin.from('nba_pregame_research').select('players:payload->players').eq('game_id', gameId).eq('resource', 'board:v1').eq('version', 1)
+      .lt('observed_at', cutoff).lte('observed_at', new Date().toISOString()).order('observed_at', { ascending: false }).limit(1).abortSignal(readBudget()).maybeSingle(),
     admin.from('nba_odds_phase_openings').select('game_id,player_id,vendor,market,market_type,line,side,odds,observed_at')
       .eq('game_id', gameId).eq('mode', 'pregame').eq('vendor', 'fanduel').eq('market', 'points').eq('market_type', 'milestone').eq('side', 'over')
       .in('line', PREVIEW_CONFIG.nba.lines).in('player_id', ids).lt('observed_at', cutoff).limit(360).abortSignal(readBudget()),
   ])
-  if (identities.error) return null
-  const directory = new Map((identities.data ?? []).map(row => [Number(row.id), row]))
+  const players = research.data?.players as PaintPlayer[] | undefined
+  if (research.error || !Array.isArray(players) || players.length > 150) return null
+  const directory = new Map(players.filter(player => !nbaMarketUnavailable(player.injury?.status)).map(player => [player.id, player]))
   const cells = nbaFullBoardCells(gameId, 'points', quotes, [], (openings.data ?? []) as NbaQuoteOpeningRow[], frame.captured_at)
   return savedBoard('nba', { ...game, start: cutoff }, frame.captured_at, cells.flatMap(cell => {
     const player = directory.get(cell.playerId)
-    if (!player || !player.first || !player.last || !team(player.team)) return []
-    return [{ id: cell.playerId, name: player.first + ' ' + player.last, team: player.team, line: cell.line,
+    const abbreviation = player?.team?.abbreviation
+    if (!player?.first_name || !player.last_name || !team(abbreviation) || ![game.away, game.home].includes(abbreviation)) return []
+    return [{ id: cell.playerId, name: player.first_name + ' ' + player.last_name, team: abbreviation, line: cell.line,
       price: cell.current.odds, opening: cell.opening?.odds ?? null }]
   }))
 }
@@ -129,7 +133,7 @@ async function loadPreview(sport: PreviewSport, date: string): Promise<ResearchP
   return { date, schedule, board: PUBLIC_PREVIEW_EXAMPLES[sport], scheduleAvailable: true }
 }
 
-const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v2'], { revalidate: 300 })
+const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v3'], { revalidate: 300 })
 
 export async function getPublicResearchPreview(sport: PreviewSport): Promise<ResearchPreview> {
   const date = scheduleDate()

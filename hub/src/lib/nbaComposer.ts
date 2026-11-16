@@ -1,16 +1,17 @@
 import { PAINT_MARKETS, nbaTeamLogo, type PaintGame, type PaintProp, type PaintRoster } from './nbaPaint'
+import { nbaGameStart, nbaPickGameOpen } from './nbaOddsMode'
 
 /** Preserve the exact line, market type and player identity used by server validation. */
 export function nbaComposerGame(game: PaintGame, roster: PaintRoster[], props: PaintProp[], now = Date.now()) {
-  const starts = Date.parse(game.datetime ?? game.status)
-  const open = Number.isFinite(starts) && starts > now && ['scheduled', 'unknown', undefined].includes(game.status_state)
+  const starts = nbaGameStart(game)
+  const open = nbaPickGameOpen(game, now)
   return {
     gameKey: String(game.id), gamePk: String(game.id), gameDate: game.date,
-    gameTime: Number.isFinite(starts) ? new Date(starts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' ET' : null,
+    gameTime: starts == null ? null : new Date(starts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' ET',
     homeAbbr: game.home_team.abbreviation, awayAbbr: game.visitor_team.abbreviation,
     homeTeam: game.home_team.full_name, awayTeam: game.visitor_team.full_name,
     homeLogo: nbaTeamLogo(game.home_team.abbreviation), awayLogo: nbaTeamLogo(game.visitor_team.abbreviation), status: open ? 'Preview' : 'Started',
-    players: roster.filter(player => [game.home_team.id, game.visitor_team.id].includes(player.team.id)).map(player => {
+    players: open ? roster.filter(player => [game.home_team.id, game.visitor_team.id].includes(player.team.id)).map(player => {
       const markets = new Map<string, { key: string; prop_type: string; label: string; line: number; offers: { vendor: string; side: 'milestone' | 'over' | 'under'; odds: number }[] }>()
       for (const prop of props) {
         const definition = PAINT_MARKETS.find(market => market.key === prop.prop_type)
@@ -24,6 +25,6 @@ export function nbaComposerGame(game: PaintGame, roster: PaintRoster[], props: P
         if (market.offers.length) markets.set(identity, market)
       }
       return { player_id: `bdl:${player.id}`, mlb_id: null, name: `${player.first_name} ${player.last_name}`, team: player.team.abbreviation, team_logo_url: nbaTeamLogo(player.team.abbreviation), position: player.position, headshot_url: null, markets: [...markets.values()] }
-    }).filter(player => player.markets.length > 0),
+    }).filter(player => player.markets.length > 0) : [],
   }
 }

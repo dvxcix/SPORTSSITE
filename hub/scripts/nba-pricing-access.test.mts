@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 // @ts-expect-error jsdom is runtime-only here and has no installed declarations.
 import { JSDOM } from 'jsdom'
 import type { PricingClient } from '../src/app/pricing/PricingClient'
+import * as publicResearchPreview from '../src/lib/publicResearchPreview.ts'
 
 type PricingProps = Parameters<typeof PricingClient>[0]
 const source = await readFile(new URL('../src/app/pricing/PricingClient.tsx', import.meta.url), 'utf8')
@@ -23,6 +24,7 @@ function render(props: Partial<PricingProps> = {}, interval: 'monthly' | 'annual
     './PricingCheckoutButton': { PricingCheckoutButton: ({ planId, label }: { planId: string; label: string }) => jsxRuntime.jsx('button', { 'data-plan': planId, children: label }) },
     '@/components/ui/button': { buttonVariants: () => '' },
     '@/lib/utils': { cn: (...values: unknown[]) => values.filter(Boolean).join(' ') },
+    '@/lib/publicResearchPreview': publicResearchPreview,
     './PricingClient.module.css': { default: new Proxy({}, { get: (_target, key) => String(key) }) },
   }
   const target = { exports: {} as { PricingClient: typeof PricingClient } }

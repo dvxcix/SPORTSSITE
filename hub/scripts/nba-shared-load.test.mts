@@ -1,4 +1,5 @@
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
+import * as marketAvailability from '../src/lib/nbaMarketAvailability.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -12,6 +13,7 @@ import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as oddsBoardPhase from '../src/lib/nbaOddsBoardPhase.ts'
 
 async function compiled<T>(file: string, imports: Record<string, unknown>, globals: Record<string, unknown> = {}): Promise<T> {
+  imports = { './nbaMarketAvailability': marketAvailability, './nbaOddsMode': oddsMode, ...imports }
   imports = { './nbaPregameResearchData': { readNbaPregameResearch: async () => null, nbaPregameResearch: async (_game: unknown, _resource: string, load: () => Promise<unknown>) => ({ ...await load() as object, source: 'capture', frozen: false }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -439,7 +441,8 @@ test('a stale research board cannot carry stale player or game prices into a new
 test('cold board research finishes before current quote reads begin', async () => {
   let now = Date.parse('2026-10-20T12:00:00Z'), researchFinished = false, priceReads = 0
   class Clock extends Date { static now() { return now } }
-  const game = { id: 123, date: '2026-10-20', season: 2026, datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0 } as paint.PaintGame
+  const home = { id: 2, abbreviation: 'BOS', name: 'Celtics', full_name: 'Boston Celtics' }
+  const game = { id: 123, date: '2026-10-20', season: 2026, datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: home, visitor_team: { ...home, id: 9 } } as paint.PaintGame
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
@@ -456,7 +459,11 @@ test('cold board research finishes before current quote reads begin', async () =
       assert.ok(researchFinished, 'a cold research wait must not age current prices')
       return { value: await load(), fetchedAt: new Date(now).toISOString(), stale: false }
     } },
-  }, { Date: Clock, fetch: async (url: string) => { priceReads++; return Response.json({ data: url.includes('player_props') ? [offer] : [] }) } })
+  }, { Date: Clock, fetch: async (url: string) => {
+    if (url.includes('/players/active?')) return Response.json({ data: [{ id: 434, team: home }] })
+    if (url.includes('/player_injuries?')) return Response.json({ data: [] })
+    priceReads++; return Response.json({ data: url.includes('player_props') ? [offer] : [] })
+  } })
   const board = await provider.getPaintBoard(game)
   assert.equal(priceReads, 2)
   assert.equal(board.players[0].props[0].market.odds, -110)
@@ -466,17 +473,17 @@ test('concurrent member pick submissions share public validation inputs but stil
   const h = await cacheHarness(), caches = await Promise.all(Array.from({ length: 6 }, h.instance))
   let games = 0, quotes = 0
   const game = { id: 123, date: '2026-10-20', datetime: '2026-10-20T23:00:00Z', status: 'Scheduled', status_state: 'scheduled', home_team: { id: 2 }, visitor_team: { id: 9 } }
-  const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 } }
+  const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: '2026-10-20T11:58:00Z' }
   const instances = await Promise.all(caches.map(cache => compiled<typeof import('../src/lib/nbaPickValidation.ts')>('../src/lib/nbaPickValidation.ts', {
     'server-only': {}, './nbaPaint': paint, './nbaFirstBasketMarkets': firstMarkets, './nbaFirstBasketOddsData': {}, './nbaSharedCache': cache,
     './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000 },
-    './nbaPaintData': { getPaintGame: async () => { games++; return game }, getPaintProps: async () => { quotes++; return [offer] }, getPaintIdentity: async () => ({ first_name: 'Real', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }) },
+    './nbaPaintData': { getPaintGame: async () => { games++; return game }, getPaintProps: async () => { quotes++; return [offer] }, getPaintMarketRoster: async () => [{ id: 434, first_name: 'Real', last_name: 'Player', team: { id: 2, abbreviation: 'BOS' } }] },
   }, { Date: h.Clock })))
   const leg = { game_pk: '123', player_id: 'bdl:434', player_name: 'Real Player', team: 'BOS', game_date: game.date, prop_key: 'points', prop_label: '15+ points', numeric_line: 15, market_side: 'milestone' as const, book: 'fanduel', odds: -110 }
   const result = await Promise.all(Array.from({ length: 600 }, (_, index) => instances[index % 6].validatePaintPickLegs([{ ...leg, odds: index % 2 ? -110 : 100 }])))
   assert.equal(games, 1); assert.equal(quotes, 1)
-  assert.equal(result.filter(value => value == null).length, 300)
-  assert.ok(result.filter(value => value != null).every(value => value!.includes('price changed')))
+  assert.equal(result.filter(value => 'cutoff' in value).length, 300)
+  assert.ok(result.filter(value => 'error' in value).every(value => value.error.includes('price changed')))
 })
 
 test('NBA focus events obey the normal polling cadence, wait for in-flight work and stop after cleanup', async () => {

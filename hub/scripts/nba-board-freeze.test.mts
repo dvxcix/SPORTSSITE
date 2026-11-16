@@ -7,6 +7,7 @@ import * as paint from '../src/lib/nbaPaint.ts'
 import * as modes from '../src/lib/nbaOddsMode.ts'
 import * as primary from '../src/lib/nbaPrimaryProps.ts'
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
+import * as marketAvailability from '../src/lib/nbaMarketAvailability.ts'
 import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 import { nbaMarketRanks } from '../src/lib/nbaMarketMetrics.ts'
 import { nbaSelectedPlayers } from '../src/lib/nbaMarketSelection.ts'
@@ -27,19 +28,22 @@ async function harness() {
   let now = tip - 30000, researchReads = 0, phaseReads = 0, wrapperReads = 0
   let onPriceRead: (() => void) | undefined
   const snapshots = new Map<string, Snapshot>(), research = fixtureBoard()
+  const activeRoster = structuredClone(research.players)
   const scouting = { season: 2026, fetchedAt: research.fetchedAt, players: [{ id: 1, advanced: { usg_pct: .24 }, passing: { passes: 55 } }], issues: [] as string[] }
   class Clock extends Date { constructor(value: string | number = now) { super(value) } static now() { return now } }
   class Missing extends Error { constructor() { super('Pregame research snapshot unavailable') } }
   const imports: Record<string, unknown> = {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => new Clock().toISOString().slice(0, 10) },
+    './nbaMarketAvailability': marketAvailability,
     './nbaOddsMode': { ...modes, nbaPregameOpen: (g: paint.PaintGame) => modes.nbaPregameOpen(g, now), nbaLiveOpen: (g: paint.PaintGame) => modes.nbaLiveOpen(g, now) },
     './nbaOddsClockData': { getNbaOddsGame: async (g: paint.PaintGame) => ({ ...g, ...(now >= tip ? { status: 'Final', status_state: 'final', period: 4, home_team_score: 110 } : {}) }) },
     './nbaPlayerPortraits': portraits, './nbaOddsHistory': { nbaAttachOpenings }, './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaPrimaryProps': primary,
     './nbaFirstBasketOddsData': {}, './nbaBookPropsData': {}, './nbaSupplementalProps': { nbaSupplementalQuote: () => false },
     './nbaOddsPhaseData': { getNbaPhaseSnapshot: async () => { phaseReads++; return { props: quotes, gameOdds: [], firstBasket: [], capturedAt: { props: new Date(tip - 60000).toISOString() } } } },
-    './nbaSharedCache': { nbaSharedCache: async (key: string) => {
+    './nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => {
       if (key.startsWith('board:')) { researchReads++; return { value: structuredClone(research), fetchedAt: research.fetchedAt, stale: false } }
       if (key.startsWith('scouting:')) { researchReads++; return { value: structuredClone(scouting), fetchedAt: scouting.fetchedAt, stale: false } }
+      if (key.startsWith('provider:v1:300:')) return { value: await load() }
       assert.ok(key.startsWith('phase-prices:'), key)
       onPriceRead?.()
       return { value: { props: quotes, gameOdds: [], firstBasket: [], observedAt: new Date(tip - 60000).toISOString(), issues: [] }, fetchedAt: new Clock().toISOString(), stale: false }
@@ -55,7 +59,11 @@ async function harness() {
   const source = await readFile(new URL('../src/lib/nbaPaintData.ts', import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const fixtureModule = { exports: {} }
-  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, fixtureModule, fixtureModule.exports, Clock, () => { throw Error('Unexpected provider fetch') })
+  new Function('require', 'module', 'exports', 'Date', 'fetch', output)((name: string) => { assert.ok(name in imports, name); return imports[name] }, fixtureModule, fixtureModule.exports, Clock, async (url: string) => {
+    if (url.includes('/players/active?')) return Response.json({ data: activeRoster })
+    if (url.includes('/player_injuries?')) return Response.json({ data: activeRoster.flatMap(player => player.injury ? [{ ...player.injury, player: { id: player.id } }] : []) })
+    throw Error('Unexpected provider fetch')
+  })
   return { api: fixtureModule.exports as typeof import('../src/lib/nbaPaintData.ts'), research, scouting, snapshots, setTime: (value: number) => { now = value }, onPriceRead: (callback: () => void) => { onPriceRead = callback }, metrics: () => ({ researchReads, phaseReads, wrapperReads }) }
 }
 
