@@ -306,17 +306,13 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requ
   if (oddsResult.error || picksResult.error) throw new Error('NFL capture unavailable')
   if (!oddsResult.data) return null
   const raw = { ...(oddsResult.data.board as SidelineOddsBoard), capturedAt: oddsResult.data.captured_at, source: 'snapshot' as const }
-  // These rows already contain their captured identity/baselines. Re-enriching
-  // an old frame from current season/roster tables changes historical research.
+  // Older frames carry only the identity observed at capture. The matchup
+  // filter quarantines unrelated teams without assigning a later roster.
   const original = attachNflFanduel(raw, supplement)
-  const [corrected] = await enrichSidelineOddsBoards(game, [original])
-  // Retain the existing exact-name collision repair for an unrelated source
-  // team. Ordinary historical roster/season metadata remains as captured.
-  const identified = { ...original, players: original.players.map((player, index) => corrected.players[index]?.team !== player.team ? corrected.players[index] : player) }
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
-  const historical = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
+  const historical = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(original, picks), game.away.abbr, game.home.abbr))
   return { capturedAt, board: NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { ...historical, legacyUnverified: true } : historical }
-}, ['sideline-selected-capture-v7-original-research'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+}, ['sideline-selected-capture-v8-original-research'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export async function getSidelineMarketCapture(game: SidelineGame, requestedCapture: string) {
   const [frame, research] = await Promise.all([
