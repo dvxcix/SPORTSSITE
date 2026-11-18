@@ -35,3 +35,16 @@ Capture/control/admission regression suite: 80/80 before final two added tests;
 new bounded fifteen-game route test and safe error mapping tests also pass.
 Typecheck and production release evidence are recorded in enclosing outputs.
 Do not call future tip-time freshness verified before the normal slot occurs.
+
+Verification update:
+Source typecheck passed with local workspace packages resolved to this checkout.
+Final capture/control/pregame tests: 141/141. Production READY on main 4f75ac66.
+One guarded cloud run imported all 12 Nov18 games in154s, zero failed games,
+zero cleanup issues, all four core market states captured per game.
+Source timestamps11:44:51–11:47:06 UTC /6:44–6:47AM Eastern.
+Signed-in member ThePublic displays these fresh timestamps.
+Migration20261118115244_nba_capture_stable_slate_capacity keeps capacity based on
+the full slate, including games already finished; late games cannot lose their
+allowance as earlier games finish. No games are replayed by this migration.
+Later automatic T12/T4/T1 captures are future events and require their normal
+schedule to occur before claiming final pre-tip freshness verified.
