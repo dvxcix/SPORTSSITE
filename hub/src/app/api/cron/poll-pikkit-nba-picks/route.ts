@@ -5,7 +5,7 @@ import {getPaintSchedule} from '@/lib/nbaPaintData'
 import {getNbaOddsGame} from '@/lib/nbaOddsClockData'
 import {nbaToday} from '@/lib/nbaPaint'
 import {nbaGameStart,nbaPregameOpen} from '@/lib/nbaOddsMode'
-import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCohortHold,nbaPublicIntermediateCohortHold,nbaPublicFourHourCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
+import {nbaPublicGameControlKey,nbaPublicContextControlKey,nbaPublicCaptureDecision,nbaPublicPrioritize,nbaNextPublicControl,nbaPublicCaptureSelection,nbaPublicCaptureBatch,nbaPublicCohortHold,nbaPublicIntermediateCohortHold,nbaPublicFourHourCohortHold,type NbaPublicOutcome} from '@/lib/nbaPublicCaptureControl'
 import {readNbaPublicControls,saveNbaPublicControl} from '@/lib/nbaPublicCaptureControlData'
 import {createAdminClient} from '@/lib/supabase/admin'
 import {acquirePikkitBrowserLease} from '@/lib/pikkitBrowserLease'
@@ -98,7 +98,7 @@ async function run(request:Request){
   const hold=cohortHold()
   if(hold!==null)return NextResponse.json({games:upcoming.length,due:due.length,browserSessions:0,skipped:'Waiting for the next scheduled group',retryAt:new Date(hold).toISOString()})
   let deferredForCap=0
-  const limitIntermediate=()=>{const bounded=boundedIntermediate(due);deferredForCap=due.length-bounded.length;due=bounded}
+  const limitIntermediate=()=>{const bounded=nbaPublicCaptureBatch(boundedIntermediate(due));deferredForCap=due.length-bounded.length;due=bounded}
   limitIntermediate()
   const lease=await acquirePikkitBrowserLease()
   if(!lease)return NextResponse.json({stage:'deferred',reason:'Pikkit browser busy; deferred to the next run',games:upcoming.length,due:due.length+deferredForCap,deferred:due.length+deferredForCap,browserSessions:0},{status:425})

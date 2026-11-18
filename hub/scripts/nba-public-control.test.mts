@@ -9,6 +9,17 @@ import type { PaintGame } from '../src/lib/nbaPaint.ts'
 const HOUR=3_600_000, tip=Date.parse('2026-11-01T23:00:00Z')
 const game={id:123,date:'2026-11-01',datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0,visitor_team:{full_name:'Boston Celtics'},home_team:{full_name:'Detroit Pistons'}} as PaintGame
 const parser='nba-public-fixture'
+
+test('automatic batches cover a large slate without widening the admitted scope',()=>{
+  const games=Array.from({length:15},(_,i)=>({...game,id:i+1}))
+  const first=control.nbaPublicCaptureBatch(games)
+  assert.deepEqual(first.map(g=>g.id),Array.from({length:12},(_,i)=>i+1))
+  assert.ok(control.nbaPublicCaptureSelection(first.map(g=>g.id)))
+  const captured=new Set(first.map(g=>g.id))
+  const second=control.nbaPublicCaptureBatch(games.filter(g=>!captured.has(g.id)))
+  assert.deepEqual(second.map(g=>g.id),[13,14,15])
+  assert.equal(games.length,15)
+})
 test('NBA checkpoints require only the latest due slot and retain original observations',()=>{
   assert.equal(control.nbaPublicCaptureDecision(game,null,undefined,tip-25*HOUR).due,false)
   for(const hours of [24,12,4,1]){
@@ -183,6 +194,17 @@ async function fixture(options:{now?:number;games?:PaintGame[];complete?:boolean
   }
   return{rows,invoke,data,metrics:()=>({opens,claims,releases,reads,writes}),advance:(ms:number)=>{now+=ms},clock:()=>now,setReadFailure:(value:boolean)=>{failRead=value},setWriteFailure:(value:boolean)=>{failWrite=value},setAuth:()=>{auth=true},setStartupFailure:()=>{startupFails=true},setBudgetFailure:(code:import('../src/lib/nbaBrowserBudget.ts').NbaBrowserBudgetCode)=>{startupError=new budget.NbaBrowserBudgetError(code)},setSpoofedBudgetFailure:()=>{startupError=Object.assign(new Error('provider secret'),{name:'NbaBrowserBudgetError',code:'spend-limit'})},setReleaseFailure:()=>{failRelease=true},setLeaseBusy:()=>{leaseBusy=true},onLease:(fn:()=>void)=>{underLease=fn}}
 }
+test('automatic launch caps a fifteen-game baseline and keeps the unvisited tail due',async()=>{
+  const games=Array.from({length:15},(_,i)=>({...game,id:100+i}))
+  const f=await fixture({now:tip-20*HOUR,games})
+  const first=await f.invoke()
+  assert.equal(first.body.due,15)
+  assert.equal(first.body.results.length,12)
+  for(const item of games.slice(12))assert.equal(f.rows.has(control.nbaPublicGameControlKey(item,parser)),false)
+  const next=await f.invoke()
+  assert.deepEqual(next.body.results.map((row:{game:number})=>row.game),[112,113,114])
+})
+
 test('day-before cohort holds without a paid launch and starts due games on the next tick',async()=>{
   const later={...game,id:456,datetime:new Date(tip+30*60_000).toISOString()}
   const f=await fixture({now:tip-24*HOUR+6*60_000,games:[game,later]})

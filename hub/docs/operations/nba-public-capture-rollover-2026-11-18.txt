@@ -1,0 +1,37 @@
+NBA automatic pregame pick capture repair - November 18, 2026
+
+Live failure:
+Provider Project Usage counters reset on the configured UTC billing day (18).
+The application's shared and NBA ledgers retained the previous raw counters.
+At 00:06 UTC the public poll began returning an unverified reservation denial;
+no paid browser session opened. Every later scheduled attempt was deferred.
+The old shared period also ended at midnight; its NBA exception covered only
+urgent <=6h work, and its fixed six-session allowance could exhaust on large slates.
+The signed-in admin browser report confirmed the reset and zero running sessions.
+
+Repair:
+- Append-only billing usage epochs normalize reset counters onto the previous
+  logical floor. Existing spend/reservations are never refunded or rewritten.
+- Only a fresh, ordered decrease in both meters after the configured billing
+  boundary can begin a new epoch; mid-period and inconsistent decreases deny.
+- Existing per-game pregame exception includes the actual 24h/12h/4h/1h slots.
+- Public launch capacity follows scheduled games, minimum 8 / maximum 60 per
+  Eastern day, with unchanged per-game retries, shared single-session lock,
+  300s browser timeout, release verification and pregame ingestion cutoffs.
+- Automatic batches stay at <=12 games; unvisited games remain due.
+- Pipeline failures retain the safe budget reason code.
+- NFL scopes, other workflow ceilings, contexts, secrets, schedules, archived
+  observations and historical snapshots were not changed.
+
+Database migration applied: 20261118113947_nba_capture_billing_rollover.
+SQL includes live-definition hash guards and real PostgreSQL rollback fixtures:
+reset, additive new usage, stale/reordered/mid-period rejection, early captures,
+duplicate/post-tip rejection, eight reservations, create/monitor/release, and
+preservation of historical debit. All fixture writes are rolled back.
+Source migration is history only; do not replay it or the historical tree.
+
+Validation:
+Capture/control/admission regression suite: 80/80 before final two added tests;
+new bounded fifteen-game route test and safe error mapping tests also pass.
+Typecheck and production release evidence are recorded in enclosing outputs.
+Do not call future tip-time freshness verified before the normal slot occurs.

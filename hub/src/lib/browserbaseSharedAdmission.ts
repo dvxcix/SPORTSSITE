@@ -69,6 +69,8 @@ export async function reserveBrowserbaseSharedAdmission(input: AdmissionInput): 
     if (row?.allowed === false && row.reason === 'usage-reordered' && attempt === 0) continue
     if (row?.allowed === false && row.reason === 'spend-limit') throw new BrowserbaseAdmissionError('spend-limit')
     if (row?.allowed === false && row.reason === 'session-unverified') throw new BrowserbaseAdmissionError('session-busy')
+    if (row?.allowed === false && row.reason === 'usage-unavailable') throw new BrowserbaseAdmissionError('usage-unavailable')
+    if (row?.allowed === false && row.reason === 'daily-session-limit') throw new BrowserbaseAdmissionError('quota-limit')
     if (row?.allowed !== true || row.reason !== 'reserved' || row.id !== id || row.reservedCents !== expectedCents) {
       throw new BrowserbaseAdmissionError('reservation-unavailable')
     }

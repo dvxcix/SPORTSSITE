@@ -12,6 +12,11 @@ export function nbaPublicCaptureSelection(value: unknown): number[] | null {
     || new Set(value).size !== value.length) return null
   return value as number[]
 }
+/** Keep every automatic launch inside the same bounded game scope as an admin
+ * selection. Unvisited games remain due on the next normal scheduler tick. */
+export function nbaPublicCaptureBatch<T>(games: readonly T[]): T[] {
+  return games.slice(0, 12)
+}
 export type NbaPublicOutcome = 'running' | 'captured' | 'partial' | 'unavailable' | 'failed' | 'auth' | 'ready'
 export type NbaPublicControl = {
   version: 1; outcome: NbaPublicOutcome; attemptedAt: string; nextAttemptAt: string

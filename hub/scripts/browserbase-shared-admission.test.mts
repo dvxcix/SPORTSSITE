@@ -20,6 +20,16 @@ function fixture() {
 }
 const denied = (code: string) => (error: unknown) => error instanceof BrowserbaseAdmissionError && error.code === code
 
+test('usage reset failures and finite session limits retain their actionable reason',async()=>{
+  for(const [reason,code] of [['usage-unavailable','usage-unavailable'],['daily-session-limit','quota-limit']]){
+    const {input,calls}=fixture()
+    await assert.rejects(reserveBrowserbaseSharedAdmission({...input,reserve:async()=>{
+      calls.push('reserve');return {allowed:false,reason}
+    }}),denied(code))
+    assert.deepEqual(calls,['usage','reserve'])
+  }
+})
+
 test('admission checks real usage before one uniquely identified reservation', async () => {
   const { input, calls } = fixture()
   const first = await reserveBrowserbaseSharedAdmission(input)
