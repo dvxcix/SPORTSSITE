@@ -1,3 +1,4 @@
+import * as workload from '../src/lib/nbaWorkload.ts'
 import * as seasonDisplay from '../src/lib/nbaSeasonDisplay.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
@@ -175,6 +176,7 @@ test('unchanged successful polling times do not generate new research archive id
 
 async function compiled(path:string,imports:Record<string,unknown>,clock:DateConstructor=Date){
   imports = { '@/lib/nbaSeasonDisplay': seasonDisplay, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, ...imports }
+  imports = { '@/lib/nbaWorkload': workload, ...imports }
   const source=await readFile(new URL(path,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
