@@ -63,8 +63,48 @@ test('a retired endpoint failure is not treated as a missing membership',async()
   assert.deepEqual(await missing.fetchWhopMembershipById('key',member.id),{missing:true})
 })
 
-async function reconciliation({localTier='free',outage=false,conflict=false}={}){
-  const local={id:ownerId,username:'fixture',tier:localTier,tier_status:'canceling',whop_membership_id:member.id,whop_plan_id:'plan_tCrVAX62uKyEq',whop_user_id:'user_test',tier_current_period_end:'2026-10-06T00:00:00Z',tier_purchased_at:'2026-09-01T00:00:00Z',tier_cancel_at_period_end:true}
+function ownerDatabase(rows, error = null) {
+  return { from(table) {
+    assert.equal(table, 'users')
+    return { select() { return { async in(column, values) {
+      assert.ok(['whop_membership_id', 'whop_user_id'].includes(column))
+      assert.ok(values.length <= 100)
+      return { data: rows.filter(row => values.includes(row[column])), error }
+    } } } }
+  } }
+}
+
+test('older purchases recover through a unique linked Whop identity without email matching',async()=>{
+  const helper=await compile('../src/lib/whopMembershipsFetch.ts')
+  const purchase={...member,metadata:{},id:'mem_new'}
+  const db=ownerDatabase([{id:ownerId,whop_membership_id:'mem_old',whop_user_id:'user_test'}])
+  assert.equal((await helper.readWhopMembershipOwners(db,[purchase])).get(purchase.id),ownerId)
+  assert.equal((await helper.readWhopMembershipOwners(db,[{...purchase,user_id:'user_unknown'}])).size,0)
+})
+
+test('ambiguous Whop identities never select an arbitrary account and database failures stop recovery',async()=>{
+  const helper=await compile('../src/lib/whopMembershipsFetch.ts')
+  const purchase={...member,metadata:{},id:'mem_new'}
+  const rows=[{id:ownerId,whop_user_id:'user_test'},{id:'other-account',whop_user_id:'user_test'}]
+  assert.equal((await helper.readWhopMembershipOwners(ownerDatabase(rows),[purchase])).size,0)
+  await assert.rejects(()=>helper.readWhopMembershipOwners(ownerDatabase([],{message:'unavailable'}),[purchase]))
+  await assert.rejects(()=>helper.readWhopMembershipOwners(ownerDatabase(rows.map(row=>({...row,whop_membership_id:purchase.id}))),[purchase]))
+})
+
+test('owner lookup covers all purchases beyond one database page in bounded batches',async()=>{
+  const helper=await compile('../src/lib/whopMembershipsFetch.ts')
+  const purchases=Array.from({length:201},(_,i)=>({...member,id:`mem_${i}`,metadata:{},user_id:`user_${i}`}))
+  const rows=purchases.map((purchase,i)=>({id:`account-${i}`,whop_membership_id:`mem_old${i}`,whop_user_id:purchase.user_id}))
+  const owners=await helper.readWhopMembershipOwners(ownerDatabase(rows),purchases)
+  assert.equal(owners.size,201)
+  assert.equal(owners.get('mem_200'),'account-200')
+})
+
+async function reconciliation({localTier='free',outage=false,conflict=false,business='main',unlinked=false,inactive=false,noLocalWhopLink=false}={}){
+  const addonPlan='plan_Q1Ey6RMgjS9XQ'
+  const provider={...member,variant_id:business==='addon'?addonPlan:plan,status:inactive?'expired':'active',metadata:unlinked?{}:member.metadata}
+  const local={id:ownerId,username:'fixture',tier:localTier,tier_status:'canceling',whop_membership_id:unlinked?'mem_old':member.id,whop_plan_id:business==='addon'?addonPlan:'plan_tCrVAX62uKyEq',whop_user_id:'user_test',tier_current_period_end:'2026-10-06T00:00:00Z',tier_purchased_at:'2026-09-01T00:00:00Z',tier_cancel_at_period_end:true}
+  if(noLocalWhopLink)Object.assign(local,{whop_membership_id:null,whop_plan_id:null,whop_user_id:null})
   const writes=[],calls=[],notices=[]
   const admin={from(table){
     const filters=[];let patch=null
@@ -83,14 +123,14 @@ async function reconciliation({localTier='free',outage=false,conflict=false}={})
     return query
   }}
   const fetching=await compile('../src/lib/whopMembershipsFetch.ts')
-  const helper=await compile('../src/lib/whopMainReconcile.ts',{
+  const helper=await compile(business==='addon'?'../src/lib/whopAddonReconcile.ts':'../src/lib/whopMainReconcile.ts',{
     'next/server':{after:callback=>notices.push(callback)},'@/lib/supabase/admin':{createAdminClient:()=>admin},
     '@slipsurge/core/tiers':tiers,'@/lib/tierBadges':{syncTierBadge:async()=>{}},'@/lib/discord':{syncDiscordRoleForUser:async()=>{}},
     '@/lib/xConversion':{sendXConversion:async()=>{}},'@/lib/whopMembershipAccess':access,
     '@/lib/whopRepricedUltimate':{resolveRepricedUltimatePlan:async()=>null},
     '@/lib/whopMembershipsFetch':{...fetching,
-      fetchWhopMembershipById:async(_key,id)=>{calls.push(id);return outage?{error:'410'}:{membership:{...member,metadata:{internal_user_id:conflict?'another-owner':ownerId}}}},
-      fetchAllWhopMemberships:async(key,plans,options)=>{calls.push({key,plans,options});return{memberships:key==='addon'?[]:[member],pagesFetched:1}}
+      fetchWhopMembershipById:async(_key,id)=>{calls.push(id);return outage?{error:'410'}:{membership:{...provider,metadata:{internal_user_id:conflict?'another-owner':ownerId}}}},
+      fetchAllWhopMemberships:async(key,plans,options)=>{calls.push({key,plans,options});return{memberships:key===business?[provider]:[],pagesFetched:1}}
     }
   },{process:{env:{WHOP_API_KEY:'main',ADDON_WHOP_KEY:'addon'}}})
   return {helper,local,writes,calls,notices}
@@ -108,6 +148,16 @@ test('support reconciliation repairs a locally free selected member without cons
   assert.equal(h.notices.length,0)
 })
 
+test('support can recover a first purchase from verified checkout metadata before any local Whop link exists',async()=>{
+  const h=await reconciliation({noLocalWhopLink:true})
+  const result=await h.helper.reconcileWhopMain({userId:ownerId})
+  assert.equal(result.error,undefined)
+  assert.equal(h.local.tier,'ultimate')
+  assert.equal(h.local.whop_membership_id,member.id)
+  assert.ok(h.calls.some(call=>call.key==='main'&&!call.options.userId))
+  assert.ok(h.calls.some(call=>call.key==='addon'&&!call.options.userId))
+})
+
 test('dry runs and conflicting ownership cannot mutate members or cursors',async()=>{
   for(const options of [{},{outage:true},{conflict:true}]){
     const h=await reconciliation(options),result=await h.helper.reconcileWhopMain({userId:ownerId,dryRun:true})
@@ -123,6 +173,27 @@ test('normal scheduled discovery also restores free members that the prior batch
   assert.equal(result.error,undefined)
   assert.equal(h.local.tier,'ultimate')
   assert.ok(h.calls.some(call=>call.options?.statuses.includes('active')&&!call.options.userId))
+})
+
+test('both businesses restore older purchases through the exact linked Whop identity',async()=>{
+  for(const business of ['main','addon']){
+    const h=await reconciliation({business,unlinked:true})
+    const result=await (business==='addon'?h.helper.reconcileWhopAddon():h.helper.reconcileWhopMain())
+    assert.equal(result.error,undefined)
+    assert.equal(h.local.tier,'ultimate')
+    assert.equal(h.local.whop_membership_id,member.id)
+  }
+})
+
+test('addon dry runs preview grants and revocations without changing access or dispatching side effects',async()=>{
+  for(const inactive of [false,true]){
+    const h=await reconciliation({business:'addon',localTier:inactive?'ultimate':'free',inactive})
+    const result=await h.helper.reconcileWhopAddon({dryRun:true})
+    assert.equal(result.error,undefined)
+    assert.ok(result.results.some(row=>inactive?row.wouldRevoke==='ultimate':row.wouldGrant==='ultimate'))
+    assert.equal(h.writes.length,0)
+    assert.equal(h.notices.length,0)
+  }
 })
 
 test('member cancellation uses current API and preserves paid time, with immediate trial cancellation',async()=>{

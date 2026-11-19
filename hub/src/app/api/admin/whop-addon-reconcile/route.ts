@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
 
-  const result = await reconcileWhopAddon()
+  const result = await reconcileWhopAddon({ dryRun: new URL(req.url).searchParams.get('dryRun') === '1' })
   if ('error' in result) return NextResponse.json(result, { status: result.error.includes('not configured') ? 500 : 502 })
-  return NextResponse.json(result)
+  return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } })
 }

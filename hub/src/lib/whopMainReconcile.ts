@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
-import { fetchAllWhopMemberships, fetchWhopMembershipById, whopMembershipPlanId, whopMembershipUserId, type WhopMembershipRecord } from '@/lib/whopMembershipsFetch'
+import { fetchAllWhopMemberships, fetchWhopMembershipById, readWhopMembershipOwners, whopMembershipPlanId, whopMembershipUserId, type WhopMembershipRecord } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
 import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
@@ -117,7 +117,6 @@ export async function reconcileWhopMain(options: { userId?: string; dryRun?: boo
   const discovery = new Map(direct.map(member => [member.id, member]))
   const businesses = options.userId ? [false, true] : [false]
   for (const addon of businesses) {
-    if (options.userId && !whopUserId) continue
     const key = addon ? process.env.ADDON_WHOP_KEY : apiKey
     if (!key) return { error: 'Whop business credentials are not configured' }
     const plans = Object.entries(WHOP_PLANS).filter(([, info]) => (info.company === 'addon') === addon).map(([id]) => id)
@@ -132,16 +131,14 @@ export async function reconcileWhopMain(options: { userId?: string; dryRun?: boo
   const memberships = [...discovery.values()]
   // Include locally free owners and older checkout records when resolving
   // stable membership links. Never infer ownership from matching emails.
-  for (let offset = 0; offset < memberships.length; offset += 100) {
-    const ids = memberships.slice(offset, offset + 100).map(member => member.id)
-    const linked = await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', ids)
-    if (linked.error) return { error: 'Whop membership owners could not be loaded' }
-    for (const owner of linked.data ?? []) {
-      const prior = linkedOwnerByMembershipId.get(owner.whop_membership_id)
-      if (prior && prior !== owner.id) return { error: 'Whop membership has conflicting local owners' }
-      linkedOwnerByMembershipId.set(owner.whop_membership_id, owner.id)
+  try {
+    const linked = await readWhopMembershipOwners(admin, memberships)
+    for (const [membershipId, userId] of linked) {
+      const prior = linkedOwnerByMembershipId.get(membershipId)
+      if (prior && prior !== userId) return { error: 'Whop membership has conflicting local owners' }
+      linkedOwnerByMembershipId.set(membershipId, userId)
     }
-  }
+  } catch { return { error: 'Whop membership owners could not be verified' } }
   for (const m of memberships) {
     let planId = whopMembershipPlanId(m)
     if (planId && !WHOP_PLANS[planId] && whopMembershipGrantsAccess(m)) {

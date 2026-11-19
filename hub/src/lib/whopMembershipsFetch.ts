@@ -1,4 +1,5 @@
 import { WHOP_API_URL, whopApiHeaders } from './whopApi'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const MAX_ATTEMPTS = 3
 const REQUEST_TIMEOUT_MS = 12_000
@@ -28,6 +29,38 @@ export function whopMembershipPlanId(member: WhopMembershipRecord) {
 }
 export function whopMembershipUserId(member: WhopMembershipRecord) {
   return member.user_id ?? (typeof member.user === 'string' ? member.user : member.user?.id)
+}
+
+/** Recover older purchases only through stable, unique provider identities. */
+export async function readWhopMembershipOwners(admin: SupabaseClient, memberships: WhopMembershipRecord[]) {
+  const owners = new Map<string, string>()
+  for (let offset = 0; offset < memberships.length; offset += 100) {
+    const ids = memberships.slice(offset, offset + 100).map(member => member.id)
+    const linked = await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', ids)
+    if (linked.error) throw new Error('Whop membership owners could not be loaded')
+    for (const owner of linked.data ?? []) {
+      const prior = owners.get(owner.whop_membership_id)
+      if (prior && prior !== owner.id) throw new Error('Whop membership has conflicting local owners')
+      owners.set(owner.whop_membership_id, owner.id)
+    }
+  }
+  const missing = memberships.filter(member => !owners.has(member.id) && !member.metadata?.internal_user_id)
+  const ids = [...new Set(missing.map(whopMembershipUserId).filter((id): id is string => !!id))]
+  const byWhopUser = new Map<string, string | null>()
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const linked = await admin.from('users').select('id, whop_user_id').in('whop_user_id', ids.slice(offset, offset + 100))
+    if (linked.error) throw new Error('Linked Whop accounts could not be loaded')
+    for (const owner of linked.data ?? []) {
+      const prior = byWhopUser.get(owner.whop_user_id)
+      byWhopUser.set(owner.whop_user_id, prior === undefined || prior === owner.id ? owner.id : null)
+    }
+  }
+  for (const member of missing) {
+    const id = whopMembershipUserId(member)
+    const owner = id ? byWhopUser.get(id) : null
+    if (owner) owners.set(member.id, owner)
+  }
+  return owners
 }
 function readMembership(value: unknown): WhopMembershipRecord | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null

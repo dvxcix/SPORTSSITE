@@ -1,0 +1,48 @@
+Whop API and membership access repair — 2026-11-19
+
+Incident
+Remaining api/v2/memberships requests returned HTTP 410. Both reconciliation
+jobs recorded 94 failed runs from 2026-11-18 21:15 UTC before the repair.
+The selected-member support action also ran the global rotating batch and
+excluded locally Free members, so its result did not verify the selected account.
+
+Released baseline
+cbf2acd6339888ad0d20ff106c53eeb01e94da6e was released from GitHub main to
+dpl_6JeJyqTvpPUtdzLkQg1dkmFFiv7u. All raw membership requests use api/v1,
+the dated 2026-11-17-3 contract, current field names and cursor pagination.
+Checkout and the installed creator SDK explicitly pin their supported
+2026-07-20 contract. Signed webhook handling accepts variant_id/current_period_end.
+Cancellation, upgrade, repricing, reconciliation and diagnostics no longer use v2.
+No secrets, webhook registrations, payment operations or historical migrations
+were changed or replayed.
+
+Selected account
+The supplied mem_GemfrKEc9BXnNw was a stale link on dkitner90, whose local
+account was Free. Current Whop data verified an active Ultimate subscription.
+The normal signed-in support action restored Ultimate with active membership
+mem_I0ZgTCrEPk4BaO and paid-through 2026-12-05 23:19:41.490 UTC.
+The admin browser and an independent database read confirmed the saved state.
+The member's own session was not impersonated.
+
+Automatic jobs
+Addon succeeded at 2026-11-19 20:45:31.698 UTC.
+Main succeeded at 2026-11-19 20:46:28.164 UTC.
+Read-only main audit after these jobs found two active purchases without a local
+membership/metadata owner and one active membership with a missing public profile.
+The latter's auth account exists with username alirich46. No deletion request
+or admin audit entry was found. Profile restoration needs the owner's decision.
+
+Follow-up recovery
+Both businesses now resolve older purchases through a unique exact whop_user_id
+when no stable membership or checkout-metadata link exists. Duplicate identities
+stay unresolved, conflicting owners and lookup failures stop writes. Email is
+never used to infer ownership. Member/account reads use bounded batches.
+Support can recover first purchases by verified checkout metadata even before
+any local Whop link exists. Both admin reconciliation routes support dryRun=1
+without entitlement, cursor, badge, Discord or conversion writes.
+
+Validation
+74/74 Whop tests, 134/134 production smoke checks, full TypeScript check passed.
+New regressions cover unique identity recovery, duplicate/foreign identities,
+pagination, first-purchase support recovery and addon dry-run grants/revocations.
+No live cancellation, paid checkout or creator payout was performed.

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
-import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
+import { fetchAllWhopMemberships, readWhopMembershipOwners } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
 import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
@@ -34,7 +34,7 @@ function sameInstant(left: string | null | undefined, right: string | null | und
   return Number.isFinite(leftMs) && Number.isFinite(rightMs) ? leftMs === rightMs : left === right
 }
 
-export async function reconcileWhopAddon(): Promise<ReconcileResult> {
+export async function reconcileWhopAddon(options: { dryRun?: boolean } = {}): Promise<ReconcileResult> {
   const apiKey = process.env.ADDON_WHOP_KEY
   if (!apiKey) return { error: 'ADDON_WHOP_KEY is not configured' }
 
@@ -56,6 +56,13 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const linkedOwnerByMembershipId = new Map((trackedOwners ?? [])
     .filter(user => user.whop_membership_id)
     .map(user => [user.whop_membership_id as string, user.id as string]))
+  try {
+    for (const [membershipId, userId] of await readWhopMembershipOwners(admin, memberships)) {
+      const prior = linkedOwnerByMembershipId.get(membershipId)
+      if (prior && prior !== userId) return { error: 'Whop membership has conflicting local owners' }
+      linkedOwnerByMembershipId.set(membershipId, userId)
+    }
+  } catch { return { error: 'Whop membership owners could not be verified' } }
   const providerMembershipById = new Map(memberships
     .filter(membership => membership.id)
     .map(membership => [membership.id as string, membership]))
@@ -67,6 +74,8 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     const isActive = whopMembershipGrantsAccess(m)
     const internalUserId: string | undefined = m.metadata?.internal_user_id
       ?? (m.id ? linkedOwnerByMembershipId.get(m.id) : undefined)
+    if (m.metadata?.internal_user_id && linkedOwnerByMembershipId.has(m.id) &&
+      linkedOwnerByMembershipId.get(m.id) !== m.metadata.internal_user_id) return { error: 'Whop membership has conflicting provider and local owners' }
     if (!internalUserId) {
       results.push({ membershipId: m.id, status, skipped: 'no metadata or linked membership owner' })
       continue
@@ -81,10 +90,12 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     if (!current || candidateEnd > currentEnd) bestByUser.set(internalUserId, candidate)
   }
   const relevantUserIds = [...new Set([...bestByUser.keys(), ...(trackedOwners ?? []).map(user => user.id as string)])]
-  const { data: existingUsers, error: existingUsersError } = relevantUserIds.length
-    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', relevantUserIds)
-    : { data: [], error: null }
-  if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
+  const existingUsers = []
+  for (let offset = 0; offset < relevantUserIds.length; offset += 100) {
+    const users = await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', relevantUserIds.slice(offset, offset + 100))
+    if (users.error) return { error: 'Whop member accounts could not be loaded' }
+    existingUsers.push(...users.data ?? [])
+  }
   const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
 
   for (const m of bestByUser.values()) {
@@ -127,6 +138,10 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       && (existing.whop_membership_id ?? null) === (membershipId ?? null)
       && sameInstant(existing.tier_current_period_end, periodEnd)
     if (unchanged) continue
+    if (options.dryRun) {
+      results.push({ internalUserId, membershipId, active: true, wouldGrant: planInfo.tier })
+      continue
+    }
 
     const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
     const nextEffectiveTier = effectiveTier(planInfo.tier as Tier, existing.discord_advanced_claimed, existing.admin_granted_tier)
@@ -170,6 +185,10 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       cancelAtPeriodEnd: existing.tier_cancel_at_period_end,
       periodEnd: existing.tier_current_period_end,
     })) continue
+    if (options.dryRun) {
+      results.push({ internalUserId: existing.id, active: false, wouldRevoke: existing.tier })
+      continue
+    }
 
     const currentTier = (existing.tier as Tier | undefined) ?? 'free'
     const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
