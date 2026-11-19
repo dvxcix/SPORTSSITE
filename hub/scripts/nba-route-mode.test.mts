@@ -1,3 +1,4 @@
+import * as workload from '../src/lib/nbaWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -5,6 +6,7 @@ import ts from 'typescript'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 
 async function route(file: string, imports: Record<string, unknown>) {
+  imports = { '@/lib/nbaWorkload': workload, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText

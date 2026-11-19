@@ -1,0 +1,58 @@
+NBA workload evidence in the Score panel — 2026-11-19
+
+Base: GitHub main 043d564993ec249c856729b164a1f324c19ce4f8
+Production checked: dpl_2Y6436o5Rw4cNKWZNsky2hFYab1n (same SHA).
+Branch: codex/nba-workload-context-20261119.
+
+Problem
+The NBA Score panel exposes past production and market signals, but not a directly inspectable opportunity calculation for the selected market. The existing numeric score uses shots for PTS/3PM and primarily per-36 production for REB/AST. A descriptive workload calculation should be visible without implying it is a validated hit selector.
+
+Change
+The final UI reuses the existing PaintScoreCell / MechanicsScoreRing, including all size and color thresholds. There is no additional Workload column or sorting. Click or tap the existing radial score to open its score details, containing:
+- Last-two and earlier opportunities and minutes; source sample sizes.
+- Recent production, earlier conversion, and the explicit estimate.
+- Gap to the exact selected target with correct Over/Under direction.
+- Full-roster team workload rank/share, and saved input timestamp in Eastern time.
+- An explicit warning that passes are a proxy, not potential assists.
+- Missing evidence as unavailable, including missing historical tracking.
+
+Formula
+Last two prior appearances' mean opportunities multiplied by sum(production)/sum(opportunities) in the earlier available three-to-eight appearances. Uses at most ten prior current-team/current-season completed full-game appearances.
+PTS: FGA + 0.44 FTA (shot equivalents).
+3PM: three-point attempts.
+REB: recorded rebound_chances_total.
+AST: recorded passes, explicitly labelled a proxy.
+The estimate describes continuation of recent workload; it does not forecast an injury-adjusted rotation.
+Confirmed out/doubtful/inactive/suspended and questionable/game-time-decision players are excluded from team-rank/share pools. The player's own descriptive sample remains inspectable.
+
+Freeze and access
+Tracking is loaded through existing getNbaResearchTracking inside resolveNbaResearchBundle. A tip-crossing request resolves the final board and final tracking together. No new tables, schedules, jobs or providers. Missing tracking does not hide independent existing scores/odds or substitute today's values for historical inputs. The response retains the existing access gate and private/no-store policy.
+Current/future outcomes, past seasons, previous teams, quarter rows, conflicting tracking and invalid identities cannot enter the new calculation.
+
+Validation and limits
+The retrospective estimate audit covered 122 games. Mean absolute errors versus the recent-production-average reference:
+PTS 5.0885 vs 4.7327 (2,313 observations)
+REB 2.0855 vs 1.9165 (2,270)
+AST 1.4822 vs 1.3954 (2,274)
+3PM 1.0596 vs 1.0062 (2,146)
+All four estimates were less accurate than that reference. These previously studied games are development evidence, not pristine independent selection validation.
+Therefore this change does NOT add an arbitrary numeric score boost, replace the validated projection or MM, or advertise a winner selector. It integrates inspectable workload evidence into the public Score panel. Numeric weighting and slate forecasting remain separate work requiring successful validation.
+
+Checks
+The original100 focused calculation, UI-rendering, season/access and bundle/resource checks passed. The radial revision passes24 targeted checks, including actual ring tone thresholds, dialog opening, Escape closing and focus restoration.
+124 pregame-freeze checks pass.
+26 market-signal and route-mode checks pass.
+Full TypeScript check passes using this checkout's own core package path; the reused dependency junction otherwise points at another checkout's older core package.
+No database mutation or manual job replay is required. Release evidence is recorded separately after main deployment.
+
+Historical comparison caveat
+The Brown PHI–CLE study uses original frozen pretip roster and prior statistics. That roster observation was later than the retained price/count anchor. It is labelled a frozen-close descriptive comparison, not an as-of-anchor validated selection.
+Brown made 2/9 threes. Edgecombe made3/5 and Mobley3/4. Opportunity/low attention alone does not resolve these conversion differences. No zero-false-positive profile was validated.
+
+Evidence in enclosing outputs:
+NBA-2026-11-19-brown-whole-game-study.json
+NBA-2026-11-19-integrated-workload-comparisons.json
+NBA-2026-11-19-workload-estimate-audit.json
+NBA-2026-11-19-workload-test-results.txt
+NBA-2026-11-19-workload-freeze-test-results.txt
+

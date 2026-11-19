@@ -1,3 +1,4 @@
+import * as workload from '../src/lib/nbaWorkload.ts'
 import * as seasonTracking from '../src/lib/nbaSeasonTrackingView.ts'
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import * as publicControl from '../src/lib/nbaPublicCaptureControl.ts'
@@ -386,6 +387,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { '@/lib/nbaWorkload': workload, ...imports }
   imports = { './nbaMarketAvailability': marketAvailability, ...imports }
   imports = { '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) }, ...imports }
   imports = { '@/lib/nbaSeasonTrackingView': seasonTracking, '@/lib/nbaSeasonDisplay': { nbaSeasonDisplayBoard: (board:unknown) => board }, ...imports }

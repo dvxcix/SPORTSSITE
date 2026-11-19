@@ -1,3 +1,4 @@
+import * as workload from '../src/lib/nbaWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
@@ -5,6 +6,7 @@ import ts from 'typescript'
 import type {PaintBoard} from '../src/lib/nbaPaint.ts'
 import * as display from '../src/lib/nbaSeasonDisplay.ts'
 async function compiled(file:string,imports:Record<string,unknown>){
+  imports = { '@/lib/nbaWorkload': workload, ...imports }
  const source=await readFile(new URL(file,import.meta.url),'utf8'),out=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const m={exports:{} as Record<string,any>};new Function('require','exports','module',out)((key:string)=>{assert.ok(key in imports,key);return imports[key]},m.exports,m);return m.exports
 }
