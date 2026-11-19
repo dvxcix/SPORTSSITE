@@ -6,6 +6,7 @@ import ts from 'typescript'
 import * as api from '../src/lib/whopApi.ts'
 import * as access from '../src/lib/whopMembershipAccess.ts'
 import * as tiers from '../packages/core/src/tiers.ts'
+import { whopReconciliationMetadata } from '../src/lib/whopReconcileHealth.ts'
 
 async function compile(path, imports = {}, globals = {}) {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
@@ -13,7 +14,7 @@ async function compile(path, imports = {}, globals = {}) {
   const mod = { exports: {} }
   new Function('require','exports','module','fetch','process','setTimeout',output)(name => {
     if (name === './whopApi') return api
-    if (name === 'crypto') return crypto
+    if (name === 'crypto' || name === 'node:crypto') return crypto
     assert.ok(name in imports, name)
     return imports[name]
   },mod.exports,mod,globals.fetch ?? fetch,globals.process ?? process,callback => { callback(); return 0 })
@@ -22,6 +23,38 @@ async function compile(path, imports = {}, globals = {}) {
 const plan = 'plan_2uISqRWL3Re5v'
 const ownerId = '123e4567-e89b-42d3-a456-426614174000'
 const member = {id:'mem_fixture',variant_id:plan,user_id:'user_test',status:'active',current_period_end:'2099-12-01T00:00:00Z',cancel_at_period_end:false,metadata:{internal_user_id:ownerId}}
+
+test('Whop job health distinguishes clean, unresolved and failed runs without storing member details',()=>{
+  const clean=whopReconciliationMetadata({totalMemberships:432,results:[{granted:'ultimate',username:'private-name',membershipId:'mem_private'},{revoked:'basic'}]})
+  assert.equal(clean.status,undefined)
+  assert.equal(clean.recordsProcessed,2)
+  assert.equal(clean.error,null)
+  assert.equal(JSON.stringify(clean).includes('private'),false)
+  for(const row of [{error:'user not found'},{status:'active',skipped:'no metadata or linked membership owner'}]){
+    assert.equal(whopReconciliationMetadata({totalMemberships:1,results:[row]}).status,'deferred')
+  }
+  assert.equal(whopReconciliationMetadata({totalMemberships:1,results:[{error:'write failed'}]}).status,'failed')
+  assert.equal(whopReconciliationMetadata({totalMemberships:1,results:[{status:'expired',skipped:'no metadata or linked membership owner'}]}).status,undefined)
+  for(const body of [{},{totalMemberships:-1,results:[]},{totalMemberships:0,results:[null]}])assert.equal(whopReconciliationMetadata(body).status,'failed')
+})
+
+test('both scheduled Whop jobs persist unresolved-account status even when the HTTP response succeeds',async()=>{
+  for(const job of ['whop-reconcile','whop-addon-reconcile']){
+    const writes=[]
+    const query={eq(){return this},lt(){return this},then(resolve){resolve({error:null})}}
+    const admin={from(){return{update(row){writes.push(row);return query},async insert(row){writes.push(row);return{error:null}}}}}
+    const health=await compile('../src/lib/pipelineHealth.ts',{
+      '@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/cron-auth':{isCronRequestAuthorized:()=>true},
+      '@/lib/safeApiError':{safeErrorMetadata:()=>({})},'@/lib/mlbOffseason':{isMlbCronPaused:()=>false},
+      '@/lib/whopReconcileHealth':{whopReconciliationMetadata},
+    })
+    const response=await health.withPipelineHealth(job,async()=>Response.json({totalMemberships:126,results:[{error:'user not found',membershipId:'mem_private'}]}))(new Request('https://fixture.test/api/cron/'+job))
+    assert.equal(response.status,200)
+    assert.equal(writes.at(-1).status,'deferred')
+    assert.equal(writes.at(-1).details.missingProfiles,1)
+    assert.equal(JSON.stringify(writes.at(-1)).includes('mem_private'),false)
+  }
+})
 
 test('current membership requests pin v1, validate identity and follow every cursor with exact filters',async()=>{
   const calls=[]

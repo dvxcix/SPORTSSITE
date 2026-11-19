@@ -41,8 +41,30 @@ Support can recover first purchases by verified checkout metadata even before
 any local Whop link exists. Both admin reconciliation routes support dryRun=1
 without entitlement, cursor, badge, Discord or conversion writes.
 
+Live follow-up
+cd48de66cbea2359d9c4951123e1c427bb940ef0 was verified on production deployment
+dpl_8zUV1mwKE31hrxUUtKDzgaEPF3wB. Both previously unlinked active purchases
+matched unique existing Whop identities. Selected-account reconciliation restored
+wr_edwards89 using mem_QrUJHVd4BZ1ZaE, paid through 2026-12-13 14:32:47.826 UTC,
+and midnightlif using mem_TPookxkAv57tNX, paid through 2026-12-13 10:52:46 UTC.
+An independent database read confirmed all three repaired accounts Active/Ultimate.
+The final main dry-run found no pending grant or revocation and no unlinked active
+purchase. The addon dry-run checked 432 records with an empty corrections list.
+The remaining main result is alirich46's missing profile. The owner was unsure
+whether it was deliberately deleted, so no profile was recreated or reassigned.
+
+Reporting correction
+Whop jobs now persist bounded reconciliation counts in pipeline_runs. Missing
+profiles or unlinked active purchases mark the run Deferred with an account-review
+message, individual write failures mark it Failed, and clean results succeed.
+HTTP 200 alone no longer hides an unresolved member. The ledger stores no raw
+membership payload, account identifiers, names or provider error strings.
+
 Validation
-74/74 Whop tests, 134/134 production smoke checks, full TypeScript check passed.
+105/105 Whop and adjacent job-health tests, 134/134 production smoke checks and
+the full TypeScript check passed.
 New regressions cover unique identity recovery, duplicate/foreign identities,
 pagination, first-purchase support recovery and addon dry-run grants/revocations.
+The job wrapper is exercised for both Whop schedules with an HTTP-200 partial
+result, confirming that the saved job status is Deferred and contains only counts.
 No live cancellation, paid checkout or creator payout was performed.

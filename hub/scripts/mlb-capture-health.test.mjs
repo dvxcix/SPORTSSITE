@@ -26,6 +26,7 @@ async function recordResponse(handler) {
   const query = { eq() { return this }, lt() { return this }, then(resolve) { resolve({ error: null }) } }
   const admin = { from: () => ({ update: row => { writes.push(row); return query }, insert: async row => { writes.push(row); return { error: null } } }) }
   const { withPipelineHealth } = load('lib/pipelineHealth.ts', {
+    '@/lib/whopReconcileHealth': load('lib/whopReconcileHealth.ts', {}),
     'node:crypto': { randomUUID: () => 'fixture-run' }, '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/cron-auth': { isCronRequestAuthorized: () => true }, '@/lib/safeApiError': { safeErrorMetadata: () => ({}) },
   })

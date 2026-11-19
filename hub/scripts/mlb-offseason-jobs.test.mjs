@@ -34,6 +34,7 @@ test('MLB-only jobs are paused and absent from the scheduler while NFL/NBA stay 
 test('authenticated MLB jobs return before pipeline ledger and handler; unrelated handlers remain reachable', async () => {
   let touched = 0
   const { withPipelineHealth } = load('lib/pipelineHealth.ts', {
+    '@/lib/whopReconcileHealth': load('lib/whopReconcileHealth.ts'),
     'node:crypto': { randomUUID: () => 'id' }, '@/lib/supabase/admin': { createAdminClient: () => { touched++; throw Error('unexpected ledger') } },
     '@/lib/cron-auth': { isCronRequestAuthorized: () => true }, '@/lib/safeApiError': { safeErrorMetadata: () => ({}) }, '@/lib/mlbOffseason': pause,
   })
