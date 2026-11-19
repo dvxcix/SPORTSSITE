@@ -1,28 +1,54 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import {readFile} from 'node:fs/promises'
+import * as React from 'react'
+import * as ReactDOM from 'react-dom'
+import {createRoot} from 'react-dom/client'
+import {renderToStaticMarkup} from 'react-dom/server'
 import * as jsx from 'react/jsx-runtime'
+import {createRequire} from 'node:module'
 import ts from 'typescript'
-import type { NbaWorkload } from '../src/lib/nbaWorkload.ts'
-async function cell() {
- const source=await readFile(new URL('../src/app/the-paint/PaintIntelligence.tsx',import.meta.url),'utf8')
- const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText
- const m={exports:{} as any}
- new Function('require','exports','module',js)((name:string)=>name==='react/jsx-runtime'?jsx:name==='./PaintVisuals'?{number:(n:number|null|undefined)=>n==null?'—':n.toFixed(1)}:name.endsWith('.css')?{default:{detail:'detail'}}:{},m.exports,m)
- return m.exports.PaintWorkloadCell
+import type {NbaWorkload} from '../src/lib/nbaWorkload.ts'
+const {JSDOM}=createRequire(import.meta.url)('jsdom')
+async function compiled(path:string,imports:Record<string,unknown>={}){
+ const source=await readFile(new URL(path,import.meta.url),'utf8'),js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,m={exports:{} as any}
+ new Function('require','exports','module',js)((n:string)=>n==='react/jsx-runtime'?jsx:n==='react'?React:n in imports?imports[n]:n.endsWith('.css')?{default:new Proxy({},{get:(_t,k)=>String(k)}),__esModule:true}:{},m.exports,m)
+ return m.exports
 }
-test('workload detail exposes actual sample, proxy and selected-side gap without a hit-probability claim',async()=>{
- const component=await cell(),value={status:'available',estimate:4.2,proxy:true,market:'assists',opportunityLabel:'Passes (proxy)',
-  recentGames:2,priorGames:5,recentMinutes:30,priorMinutes:20,recentOpportunity:40,priorOpportunity:25,
-  recentProduction:5,conversion:.105,teamRank:2,teamPool:8,teamShare:.22,observedAt:'2026-11-19T21:07:00Z'} as NbaWorkload
- const html=renderToStaticMarkup(createElement(component,{value,gap:-1.8}))
- for(const text of ['<details','<summary','4.2','Passes (proxy)','last 2 / prior 5','40.0 / 25.0','-1.8','2 / 8','22.0%','not potential assists','not a ceiling or a hit rate','Eastern'])assert.ok(html.includes(text),text)
+async function components(){
+ const image={default:(p:any)=>React.createElement('img',p),__esModule:true}
+ const ring=await compiled('../src/components/ui/MechanicsScoreRing.tsx',{'next/image':image})
+ const cells=await compiled('../src/app/the-paint/PaintResearchCells.tsx',{'@/components/ui/MechanicsScoreRing':ring,'next/image':image})
+ const modal=await compiled('../src/components/ui/ModalSurface.tsx',{'react-dom':ReactDOM})
+ return compiled('../src/app/the-paint/PaintIntelligence.tsx',{'./PaintResearchCells':cells,'@/components/ui/ModalSurface':modal,'./PaintVisuals':{number:(n:number|null|undefined)=>n==null?'—':n.toFixed(1)},'lucide-react':{X:()=>null}})
+}
+const value={status:'available',estimate:4.2,proxy:true,market:'assists',opportunityLabel:'Passes (proxy)',recentGames:2,priorGames:5,recentMinutes:30,priorMinutes:20,recentOpportunity:40,priorOpportunity:25,recentProduction:5,conversion:.105,teamRank:2,teamPool:8,teamShare:.22,observedAt:'2026-11-19T21:07:00Z'} as NbaWorkload
+test('workload detail exposes samples and the selected-side gap as context',async()=>{
+ const {PaintWorkloadDetails}=await components(),html=renderToStaticMarkup(React.createElement(PaintWorkloadDetails,{value,gap:-1.8}))
+ for(const text of ['4.2','Passes (proxy)','last 2 / prior 5','40.0 / 25.0','-1.8','2 / 8','22.0%','not potential assists','not a ceiling or a hit rate','Eastern'])assert.ok(html.includes(text),text)
 })
 test('unavailable workload renders missing evidence rather than zero',async()=>{
- const component=await cell(),html=renderToStaticMarkup(createElement(component,{value:{status:'unavailable',reason:'Missing rebound chances'},gap:null}))
- assert.ok(html.includes('Workload unavailable'));assert.ok(html.includes('Missing rebound chances'))
- assert.ok(!html.includes('<details'));assert.ok(!html.includes('0.0'))
+ const {PaintWorkloadDetails}=await components(),html=renderToStaticMarkup(React.createElement(PaintWorkloadDetails,{value:{status:'unavailable',reason:'Missing rebound chances'},gap:null}))
+ assert.ok(html.includes('Workload unavailable'));assert.ok(html.includes('Missing rebound chances'));assert.ok(!html.includes('0.0'))
+})
+test('score entry reuses the real radial component and its existing color thresholds',async()=>{
+ const {PaintScoreWorkloadCell}=await components()
+ for(const [score,tone]of [[39,'cold'],[40,'neutral'],[58,'positive'],[70,'elite']] as const){
+  const html=renderToStaticMarkup(React.createElement(PaintScoreWorkloadCell,{score,value,playerName:'Example Player'}))
+  assert.ok(html.includes('data-tone="'+tone+'"'));assert.ok(html.includes('data-size="small"'));assert.ok(html.includes('aria-haspopup="dialog"'));assert.ok(html.includes('aria-expanded="false"'));assert.ok(!html.includes('4.2'))
+ }
+ const source=await readFile(new URL('../src/app/the-paint/PaintIntelligence.tsx',import.meta.url),'utf8');assert.ok(!source.includes("header('Workload'"))
+})
+test('radial opens details; Escape closes and restores keyboard focus',async()=>{
+ const dom=new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>',{url:'https://example.test',pretendToBeVisual:true}),saved=new Map<string,PropertyDescriptor|undefined>()
+ for(const [k,v]of Object.entries({window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,Node:dom.window.Node,IS_REACT_ACT_ENVIRONMENT:true})){saved.set(k,Object.getOwnPropertyDescriptor(globalThis,k));Object.defineProperty(globalThis,k,{value:v,writable:true,configurable:true})}
+ const {PaintScoreWorkloadCell}=await components(),root=createRoot(dom.window.document.getElementById('root')!)
+ try{
+  await React.act(async()=>root.render(React.createElement(PaintScoreWorkloadCell,{score:72,value,gap:-1.8,playerName:'Example Player'})))
+  const button=dom.window.document.querySelector('button[aria-haspopup="dialog"]') as HTMLButtonElement;button.focus();await React.act(async()=>button.click())
+  const dialog=dom.window.document.querySelector('[role="dialog"]');assert.ok(dialog);assert.ok(dialog.textContent?.includes('4.2'));assert.ok(dialog.textContent?.includes('does not change this score'));assert.equal(button.getAttribute('aria-expanded'),'true')
+  await React.act(async()=>{dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}))})
+  assert.equal(dom.window.document.querySelector('[role="dialog"]'),null);assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(dom.window.document.activeElement,button)
+ }finally{await React.act(async()=>root.unmount());dom.window.close();for(const [k,d]of saved)if(d)Object.defineProperty(globalThis,k,d);else Reflect.deleteProperty(globalThis,k)}
 })
 

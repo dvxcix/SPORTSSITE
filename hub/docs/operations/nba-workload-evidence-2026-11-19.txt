@@ -8,7 +8,7 @@ Problem
 The NBA Score panel exposes past production and market signals, but not a directly inspectable opportunity calculation for the selected market. The existing numeric score uses shots for PTS/3PM and primarily per-36 production for REB/AST. A descriptive workload calculation should be visible without implying it is a validated hit selector.
 
 Change
-Add a Workload column and sorting in the Score/matchup player table. Expand a value to see:
+The final UI reuses the existing PaintScoreCell / MechanicsScoreRing, including all size and color thresholds. There is no additional Workload column or sorting. Click or tap the existing radial score to open its score details, containing:
 - Last-two and earlier opportunities and minutes; source sample sizes.
 - Recent production, earlier conversion, and the explicit estimate.
 - Gap to the exact selected target with correct Over/Under direction.
@@ -39,11 +39,11 @@ All four estimates were less accurate than that reference. These previously stud
 Therefore this change does NOT add an arbitrary numeric score boost, replace the validated projection or MM, or advertise a winner selector. It integrates inspectable workload evidence into the public Score panel. Numeric weighting and slate forecasting remain separate work requiring successful validation.
 
 Checks
-100 focused calculation, UI-rendering, season/access and bundle/resource checks pass.
+The original100 focused calculation, UI-rendering, season/access and bundle/resource checks passed. The radial revision passes24 targeted checks, including actual ring tone thresholds, dialog opening, Escape closing and focus restoration.
 124 pregame-freeze checks pass.
 26 market-signal and route-mode checks pass.
 Full TypeScript check passes using this checkout's own core package path; the reused dependency junction otherwise points at another checkout's older core package.
-No production release, database mutation or manual job replay performed for this change.
+No database mutation or manual job replay is required. Release evidence is recorded separately after main deployment.
 
 Historical comparison caveat
 The Brown PHI–CLE study uses original frozen pretip roster and prior statistics. That roster observation was later than the retained price/count anchor. It is labelled a frozen-close descriptive comparison, not an as-of-anchor validated selection.
