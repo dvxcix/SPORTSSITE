@@ -22,7 +22,10 @@ export async function GET(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
 
-  const result = await reconcileWhopMain()
+  const params = new URL(req.url).searchParams
+  const userId = params.get('userId') ?? undefined
+  if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return NextResponse.json({ error: 'Invalid member' }, { status: 400 })
+  const result = await reconcileWhopMain({ userId, dryRun: params.get('dryRun') === '1' })
   if ('error' in result) return NextResponse.json(result, { status: result.error.includes('not configured') ? 500 : 502 })
-  return NextResponse.json(result)
+  return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } })
 }

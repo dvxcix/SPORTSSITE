@@ -142,7 +142,7 @@ export async function handleWhopWebhookRequest(
     const internalUserId = stringValue(metadata.internal_user_id)
     const creatorProductId = stringValue(metadata.slipsurge_product_id)
     const creatorId = stringValue(metadata.slipsurge_creator_id)
-    const planId = stringValue(data.plan_id) ?? objectId(data.plan)
+    const planId = stringValue(data.variant_id) ?? stringValue(data.plan_id) ?? objectId(data.plan)
     // Real bug (confirmed via Whop's actual payment.succeeded schema): on a
     // payment event, `data` is the PAYMENT object, and its own real
     // membership reference lives at `data.membership` (a plain "mem_..."

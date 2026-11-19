@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import ts from 'typescript'
 import { contentSecurityPolicy } from '@whop/elements'
+import * as whopApi from '../src/lib/whopApi.ts'
 
 const source = await readFile(new URL('../src/app/api/whop/checkout-session/route.ts', import.meta.url), 'utf8')
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } })
@@ -38,6 +39,7 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
     '@/lib/serverRateLimit': { consumeServerRateLimit: async () => ({ allowed, available }) },
     '@/lib/safeApiError': { safeApiError: (_tag, _error, message, status) => Response.json({ error: message }, { status }) },
     '@/lib/whopUrl': { isTrustedWhopUrl: url => typeof url === 'string' && new URL(url).hostname === 'whop.com' },
+    '@/lib/whopApi': whopApi,
   }
   const compiled = { exports: {} }
   new Function('require', 'exports', 'process', 'fetch', outputText)(
@@ -64,6 +66,7 @@ test('Elements configuration preserves server-authored membership attribution', 
     assert.equal(calls[0].body.plan_id, planId)
     assert.equal(calls[0].body.redirect_url, 'https://www.slipsurge.com/pricing')
     assert.equal(calls[0].headers.Authorization, 'Bearer test-main-key')
+    assert.equal(calls[0].headers['Api-Version-Date'], whopApi.WHOP_SDK_API_VERSION)
     assert.ok(calls[0].signal instanceof AbortSignal)
   }
 })

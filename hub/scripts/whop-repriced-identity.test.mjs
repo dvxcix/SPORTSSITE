@@ -2,12 +2,14 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
+import * as whopApi from '../src/lib/whopApi.ts'
 
 async function compile(path, imports = {}) {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
   const exports = {}
   new Function('require', 'exports', output)(name => {
+    if (name === './whopApi') return whopApi
     assert.ok(imports[name], name)
     return imports[name]
   }, exports)

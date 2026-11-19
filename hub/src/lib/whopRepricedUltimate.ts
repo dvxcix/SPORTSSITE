@@ -1,4 +1,5 @@
 import { whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
+import { WHOP_API_URL, WHOP_SDK_API_VERSION, whopApiHeaders } from './whopApi'
 
 // A Whop per-member renewal edit creates a new hidden plan. Recognize it
 // only for the already-linked membership, never as a new checkout offer.
@@ -25,8 +26,8 @@ export async function resolveRepricedUltimatePlan(
 
   let membershipRes: Response
   try {
-    membershipRes = await fetcher(`https://api.whop.com/api/v2/memberships/${encodeURIComponent(membershipId)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    membershipRes = await fetcher(`${WHOP_API_URL}/memberships/${encodeURIComponent(membershipId)}`, {
+      headers: whopApiHeaders(apiKey),
       signal: AbortSignal.timeout(10_000),
     })
   } catch {
@@ -37,7 +38,7 @@ export async function resolveRepricedUltimatePlan(
   if (!membershipBody || typeof membershipBody !== 'object') throw new Error('Whop membership lookup returned invalid data')
   const wrapper = membershipBody as Record<string, unknown>
   const membership = wrapper.data && typeof wrapper.data === 'object' ? wrapper.data as Record<string, unknown> : wrapper
-  const membershipPlan = typeof membership.plan_id === 'string' ? membership.plan_id
+  const membershipPlan = typeof membership.variant_id === 'string' ? membership.variant_id : typeof membership.plan_id === 'string' ? membership.plan_id
     : typeof membership.plan === 'string' ? membership.plan
       : membership.plan && typeof membership.plan === 'object' ? (membership.plan as Record<string, unknown>).id : undefined
   if (typeof membership.id !== 'string' || typeof membershipPlan !== 'string') {
@@ -48,7 +49,7 @@ export async function resolveRepricedUltimatePlan(
   if (membership.id !== membershipId || membershipPlan !== planId) {
     throw new Error('Whop membership plan not yet confirmed')
   }
-  for (const [field, expected] of [['company', SLIPSURGE_BUSINESS], ['product', SLIPSURGE_PRODUCT]] as const) {
+  for (const [field, expected] of [['account', SLIPSURGE_BUSINESS], ['company', SLIPSURGE_BUSINESS], ['product_id', SLIPSURGE_PRODUCT], ['product', SLIPSURGE_PRODUCT]] as const) {
     const nested = membership[field]
     if (nested == null) continue
     // Whop's membership response may return these identities as a scalar ID
@@ -70,8 +71,8 @@ export async function resolveRepricedUltimatePlan(
 
   let res: Response
   try {
-    res = await fetcher(`https://api.whop.com/api/v1/plans/${encodeURIComponent(planId)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    res = await fetcher(`${WHOP_API_URL}/variants/${encodeURIComponent(planId)}`, {
+      headers: whopApiHeaders(apiKey, WHOP_SDK_API_VERSION),
       signal: AbortSignal.timeout(10_000),
     })
   } catch {

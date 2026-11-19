@@ -49,7 +49,6 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     .from('users')
     .select('id, whop_membership_id')
     .eq('whop_plan_id', ADDON_PLAN_ID)
-    .neq('tier', 'free')
   if (trackedOwnersError) return { error: `Could not load tracked memberships: ${trackedOwnersError.message}` }
   // Older memberships predate checkout metadata. Preserve their stable
   // account link through users.whop_membership_id so an email change cannot
@@ -163,6 +162,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   }
 
   for (const existing of existingUsers ?? []) {
+    if (existing.tier === 'free') continue
     if (existing.whop_plan_id !== ADDON_PLAN_ID || !existing.whop_membership_id) continue
     if (bestByUser.has(existing.id as string)) continue
     const providerRecord = providerMembershipById.get(existing.whop_membership_id)

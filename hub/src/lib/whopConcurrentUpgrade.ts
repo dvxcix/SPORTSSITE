@@ -1,4 +1,5 @@
 import { whopMembershipPeriodEnd, type WhopAccessRecord } from '@/lib/whopMembershipAccess'
+import { WHOP_API_URL, whopApiHeaders } from './whopApi'
 
 /** Verify a separate higher-tier membership before replacing the current link. */
 export async function verifyConcurrentUpgrade(
@@ -9,8 +10,8 @@ export async function verifyConcurrentUpgrade(
   if (!apiKey) throw new Error('Whop upgrade verification unavailable')
   let response: Response
   try {
-    response = await fetcher(`https://api.whop.com/api/v2/memberships/${encodeURIComponent(input.membershipId)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10_000),
+    response = await fetcher(`${WHOP_API_URL}/memberships/${encodeURIComponent(input.membershipId)}`, {
+      headers: whopApiHeaders(apiKey), signal: AbortSignal.timeout(10_000),
     })
   } catch {
     throw new Error('Whop upgrade verification unavailable')
@@ -26,9 +27,9 @@ export async function verifyConcurrentUpgrade(
     : value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>).id : undefined
   const metadata = member.metadata && typeof member.metadata === 'object' && !Array.isArray(member.metadata)
     ? member.metadata as Record<string, unknown> : {}
-  const providerUserId = idOf(member.user)
+  const providerUserId = idOf(member.user_id ?? member.user)
   const metadataUserId = metadata.internal_user_id
-  const planReferences = [member.plan_id, member.plan].filter(value => value != null).map(idOf)
+  const planReferences = [member.variant_id, member.plan_id, member.plan].filter(value => value != null).map(idOf)
   if (member.id !== input.membershipId || planReferences.length === 0 || planReferences.some(id => id !== input.planId)
     || (metadataUserId != null && metadataUserId !== input.userId)
     || (input.whopUserId && providerUserId !== input.whopUserId)
@@ -36,7 +37,7 @@ export async function verifyConcurrentUpgrade(
     throw new Error('Whop upgrade identity mismatch')
   }
   if (input.source === 'main') {
-    for (const [field, expected] of [['company', 'biz_lQsa02bB46YIlL'], ['product', 'prod_7z1xwDKvVgpiE']] as const) {
+    for (const [field, expected] of [['account', 'biz_lQsa02bB46YIlL'], ['company', 'biz_lQsa02bB46YIlL'], ['product_id', 'prod_7z1xwDKvVgpiE'], ['product', 'prod_7z1xwDKvVgpiE']] as const) {
       if (member[field] != null && idOf(member[field]) !== expected) throw new Error('Whop upgrade identity mismatch')
     }
   }

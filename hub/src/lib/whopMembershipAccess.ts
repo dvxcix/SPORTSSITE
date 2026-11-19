@@ -4,12 +4,13 @@ export type WhopAccessRecord = {
   valid?: boolean
   cancel_at_period_end?: boolean
   renewal_period_end?: string | number
+  current_period_end?: string | number
   period_end?: string | number
   expires_at?: string | number
 }
 
 export function whopMembershipPeriodEnd(record: WhopAccessRecord): string | null {
-  const raw = record.renewal_period_end ?? record.period_end ?? record.expires_at
+  const raw = record.current_period_end ?? record.renewal_period_end ?? record.period_end ?? record.expires_at
   if (typeof raw === 'number') {
     const milliseconds = raw > 10_000_000_000 ? raw : raw * 1000
     const parsed = new Date(milliseconds)

@@ -5,6 +5,7 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createRequire } from 'node:module'
+import * as whopApi from '../src/lib/whopApi.ts'
 
 const source = await readFile(new URL('../src/app/api/admin/whop-renewal-shape/route.ts', import.meta.url), 'utf8')
 const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
@@ -15,11 +16,11 @@ new Function('exports', accessOutput)(access)
 const resolverSource = await readFile(new URL('../src/lib/whopRepricedUltimate.ts', import.meta.url), 'utf8')
 const resolverOutput = ts.transpileModule(resolverSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 const resolver = {}
-new Function('require', 'exports', resolverOutput)(name => { assert.equal(name, '@/lib/whopMembershipAccess'); return access }, resolver)
+new Function('require', 'exports', resolverOutput)(name => { if(name==='./whopApi')return whopApi;assert.equal(name, '@/lib/whopMembershipAccess'); return access }, resolver)
 const upgradeSource = await readFile(new URL('../src/lib/whopConcurrentUpgrade.ts', import.meta.url), 'utf8')
 const upgradeOutput = ts.transpileModule(upgradeSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 const upgrade = {}
-new Function('require', 'exports', upgradeOutput)(name => { assert.equal(name, '@/lib/whopMembershipAccess'); return access }, upgrade)
+new Function('require', 'exports', upgradeOutput)(name => { if(name==='./whopApi')return whopApi;assert.equal(name, '@/lib/whopMembershipAccess'); return access }, upgrade)
 const require = createRequire(import.meta.url)
 const targetId = '123e4567-e89b-42d3-a456-426614174000'
 const memberId = 'mem_test'
@@ -44,6 +45,7 @@ function route(options = {}) {
     '@/lib/whopMembershipAccess': access,
     '@/lib/whopRepricedUltimate': resolver,
     '@/lib/whopConcurrentUpgrade': upgrade,
+    '@/lib/whopApi': whopApi,
   }
   const compiled = { exports: {} }
   const fetcher = async (url, init) => {

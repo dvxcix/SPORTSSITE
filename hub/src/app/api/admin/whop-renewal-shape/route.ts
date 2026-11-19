@@ -5,6 +5,7 @@ import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
 import { verifyConcurrentUpgrade } from '@/lib/whopConcurrentUpgrade'
+import { WHOP_SDK_API_VERSION, whopApiHeaders } from '@/lib/whopApi'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store' }
@@ -77,32 +78,32 @@ export async function POST(request: Request) {
       runtimeMembershipPeriodUnavailable: false, runtimePlanIncomplete: false,
       runtimeReturnedNoMatch: false, runtimeOtherError: false,
     }
-    const get = async (path: string) => {
+    const get = async (path: string, version?: string) => {
       try {
         const response = await fetch(`https://api.whop.com${path}`, {
-          headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5_000),
+          headers: whopApiHeaders(key, version), signal: AbortSignal.timeout(5_000),
         })
         if (!response.ok) return null
         return object(await response.json().catch(() => null))
       } catch { return null }
     }
-    const membershipResponse = await get(`/api/v2/memberships/${encodeURIComponent(membershipId)}`)
+    const membershipResponse = await get(`/api/v1/memberships/${encodeURIComponent(membershipId)}`)
     const membership = object(membershipResponse?.data) ?? membershipResponse
     if (!membership) return NextResponse.json(result, { headers })
     result.membershipRead = true
     result.membershipIdMatches = membership.id === membershipId
     result.membershipPlanNested = typeof object(membership.plan)?.id === 'string'
-    result.membershipPlanFlat = typeof membership.plan_id === 'string' || typeof membership.plan === 'string'
+    result.membershipPlanFlat = typeof membership.variant_id === 'string' || typeof membership.plan_id === 'string' || typeof membership.plan === 'string'
     result.membershipStatusPresent = typeof membership.status === 'string' || typeof membership.valid_status === 'string' || typeof membership.valid === 'boolean'
     result.membershipGrantsAccess = whopMembershipGrantsAccess(membership)
-    result.membershipPeriodPresent = ['renewal_period_end', 'period_end', 'expires_at'].some(field => typeof membership[field] === 'string' || typeof membership[field] === 'number')
+    result.membershipPeriodPresent = ['current_period_end', 'renewal_period_end', 'period_end', 'expires_at'].some(field => typeof membership[field] === 'string' || typeof membership[field] === 'number')
     const periodEnd = whopMembershipPeriodEnd(membership)
     result.membershipPeriodValid = periodEnd !== null
     result.membershipPeriodFuture = periodEnd !== null && Date.parse(periodEnd) > Date.now()
     result.membershipCancelFlagPresent = typeof membership.cancel_at_period_end === 'boolean'
     const membershipMetadata = object(membership.metadata)
     const internalOwner = membershipMetadata?.internal_user_id
-    const providerUser = id(membership.user)
+    const providerUser = id(membership.user_id ?? membership.user)
     result.membershipInternalOwnerPresent = typeof internalOwner === 'string'
     result.membershipInternalOwnerMatches = internalOwner === targetId
     result.localWhopUserPresent = typeof target?.whop_user_id === 'string' && target.whop_user_id.length > 0
@@ -111,15 +112,15 @@ export async function POST(request: Request) {
     result.membershipValidFalse = membership.valid === false
     result.membershipStatusCompatible = typeof membership.status === 'string'
       && ['active', 'trialing', 'past_due', 'canceling'].includes(membership.status.trim().toLowerCase())
-    result.membershipBusinessMatches = id(membership.company) === MAIN_BUSINESS
-    result.membershipProductMatches = id(membership.product) === MAIN_PRODUCT
+    result.membershipBusinessMatches = id(membership.account ?? membership.company) === MAIN_BUSINESS
+    result.membershipProductMatches = id(membership.product_id ?? membership.product) === MAIN_PRODUCT
     result.membershipBusinessMissing = membership.company == null
     result.membershipBusinessScalar = typeof membership.company === 'string'
     result.membershipBusinessObject = object(membership.company) !== null
     result.membershipProductMissing = membership.product == null
     result.membershipProductScalar = typeof membership.product === 'string'
     result.membershipProductObject = object(membership.product) !== null
-    const planId = id(membership.plan_id) ?? id(membership.plan)
+    const planId = id(membership.variant_id) ?? id(membership.plan_id) ?? id(membership.plan)
     result.membershipPlanMatchesExpected = planId === expectedPlanId
     if (!result.membershipIdMatches || !result.membershipPlanMatchesExpected || !planId || !planId.startsWith('plan_') || !PROVIDER_ID.test(planId)) return NextResponse.json(result, { headers })
     try {
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
         membershipId, planId, userId: targetId, whopUserId: target.whop_user_id ?? null, source: 'main',
       }, 'diagnostic', capturedFetch))
     } catch { /* Return only fixed booleans, never provider or user details. */ }
-    const plan = await get(`/api/v1/plans/${encodeURIComponent(planId)}`)
+    const plan = await get(`/api/v1/variants/${encodeURIComponent(planId)}`, WHOP_SDK_API_VERSION)
     if (!plan) return NextResponse.json(result, { headers })
     result.planRead = true
     result.planIdMatches = plan.id === planId
@@ -159,8 +160,8 @@ export async function POST(request: Request) {
     try {
       const capturedFetch: typeof fetch = async resource => {
         const url = String(resource)
-        if (url === `https://api.whop.com/api/v2/memberships/${encodeURIComponent(membershipId)}`) return Response.json(membershipResponse)
-        if (url === `https://api.whop.com/api/v1/plans/${encodeURIComponent(planId)}`) return Response.json(plan)
+        if (url === `https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`) return Response.json(membershipResponse)
+        if (url === `https://api.whop.com/api/v1/variants/${encodeURIComponent(planId)}`) return Response.json(plan)
         throw new Error('Unexpected captured lookup')
       }
       result.runtimeWouldAccept = !!(await resolveRepricedUltimatePlan({ source: 'main', planId, membershipId, stored: target }, 'diagnostic', capturedFetch))

@@ -3,12 +3,14 @@ import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
+import * as whopApi from '../src/lib/whopApi.ts'
 
 async function compile(path, imports = {}, globals = {}) {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
   const mod = { exports: {} }
   new Function('require', 'exports', 'process', 'fetch', output)(name => {
+    if (name === './whopApi') return whopApi
     assert.ok(imports[name], name)
     return imports[name]
   }, mod.exports, globals.process ?? process, globals.fetch ?? fetch)
@@ -41,6 +43,9 @@ test('repriced plan requires pinned owner and authenticated membership and plan 
   const { calls, fetcher } = provider()
   assert.deepEqual(await helper.resolveRepricedUltimatePlan(input, 'secret', fetcher), { canonicalPlanId: stored.whop_plan_id, periodEnd: later })
   assert.equal(calls.length, 2)
+  assert.equal(calls[0].url, `${whopApi.WHOP_API_URL}/memberships/${membershipId}`)
+  assert.equal(calls[1].url, `${whopApi.WHOP_API_URL}/variants/${planId}`)
+  assert.equal(calls[0].init.headers['Api-Version-Date'], whopApi.WHOP_API_VERSION)
   assert.ok(calls.every(call => call.init.headers.Authorization === 'Bearer secret'))
   assert.ok(calls.every(call => call.init.signal instanceof AbortSignal))
   for (const invalid of [

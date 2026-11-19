@@ -1,160 +1,106 @@
-// Whop's memberships-list endpoint paginates — confirmed live against the
-// real addon-plan response: { pagination: { current_page, total_page,
-// total_count }, data: [...] }, 39 real memberships across 4 pages. Both
-// reconcile routes previously only ever fetched page 1, which is the real
-// root cause behind two separate live incidents: real customers wrongly
-// downgraded (their membership just wasn't on page 1) and real purchases
-// never granted at all (same reason). Follows page 2..total_page via the
-// same URL + &page=N once a working candidate path is found on page 1.
+import { WHOP_API_URL, whopApiHeaders } from './whopApi'
+
 const MAX_ATTEMPTS = 3
 const REQUEST_TIMEOUT_MS = 12_000
-const DEFAULT_RATE_LIMIT_RETRY_MS = 15_000
+const MAX_PAGES = 30
+const REQUEST_SPACING_MS = 1_200
 
 export type WhopMembershipRecord = {
-  id?: string
+  id: string
   status?: string
   valid_status?: string
   valid?: boolean
   cancel_at_period_end?: boolean
   metadata?: { internal_user_id?: string }
   renewal_period_end?: string | number
+  current_period_end?: string | number
   period_end?: string | number
   expires_at?: string | number
+  variant_id?: string
+  plan_id?: string
+  plan?: string | { id?: string }
+  user_id?: string
+  user?: string | { id?: string }
 }
 
-type WhopMembershipPage = {
-  data?: WhopMembershipRecord[]
-  memberships?: WhopMembershipRecord[]
-  pagination?: { total_page?: number }
+export function whopMembershipPlanId(member: WhopMembershipRecord) {
+  return member.variant_id ?? member.plan_id ?? (typeof member.plan === 'string' ? member.plan : member.plan?.id)
+}
+export function whopMembershipUserId(member: WhopMembershipRecord) {
+  return member.user_id ?? (typeof member.user === 'string' ? member.user : member.user?.id)
+}
+function readMembership(value: unknown): WhopMembershipRecord | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const member = value as WhopMembershipRecord
+  return typeof member.id === 'string' && /^mem_[A-Za-z0-9]+$/.test(member.id)
+    && typeof member.status === 'string' && !!whopMembershipPlanId(member) ? member : null
 }
 
-function parseMembershipPage(value: unknown): { memberships: WhopMembershipRecord[]; totalPages: number } | null {
-  if (Array.isArray(value)) return { memberships: value as WhopMembershipRecord[], totalPages: 1 }
-  if (!value || typeof value !== 'object') return null
-  const page = value as WhopMembershipPage
-  const memberships = Array.isArray(page.data) ? page.data : Array.isArray(page.memberships) ? page.memberships : []
-  const rawTotalPages = page.pagination?.total_page
-  const totalPages = typeof rawTotalPages === 'number' && Number.isInteger(rawTotalPages) && rawTotalPages > 0
-    ? rawTotalPages
-    : 1
-  return { memberships, totalPages }
-}
-
-async function fetchWhopPage(url: string, apiKey: string): Promise<Response> {
-  let lastError: unknown
+async function fetchWhopPage(url: URL | string, apiKey: string): Promise<Response> {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const response = await fetch(url, {
+        headers: whopApiHeaders(apiKey), cache: 'no-store',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
-      if (res.status !== 429 && res.status < 500) return res
-      lastError = new Error(`Whop returned ${res.status}`)
-      if (attempt < MAX_ATTEMPTS - 1) {
-        const retryAfter = Number(res.headers.get('retry-after'))
-        const delay = Number.isFinite(retryAfter) && retryAfter > 0
-          ? Math.min(retryAfter * 1000, 60_000)
-          : res.status === 429
-            ? DEFAULT_RATE_LIMIT_RETRY_MS * (attempt + 1)
-            : Math.min(500 * 2 ** attempt, 4_000)
-        await new Promise(resolve => setTimeout(resolve, delay))
-      }
-    } catch (error) {
-      lastError = error
-      if (attempt < MAX_ATTEMPTS - 1) await new Promise(resolve => setTimeout(resolve, Math.min(500 * 2 ** attempt, 4_000)))
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Whop request failed')
-}
-
-export async function fetchWhopMembershipById(
-  apiKey: string,
-  membershipId: string,
-): Promise<{ membership: WhopMembershipRecord } | { missing: true } | { error: string }> {
-  const encodedId = encodeURIComponent(membershipId)
-  try {
-    const res = await fetchWhopPage(`https://api.whop.com/api/v2/memberships/${encodedId}`, apiKey)
-    // A provider-side deletion is an authoritative absence. The caller still
-    // applies the stored paid-through boundary before revoking access.
-    if (res.status === 404) return { missing: true }
-    if (!res.ok) {
-      console.error('[whop-memberships] direct lookup failed', { status: res.status })
-      return { error: `Whop membership lookup returned ${res.status}` }
-    }
-    const body = await res.json().catch(() => null)
-    const membership = body?.data && typeof body.data === 'object' ? body.data : body
-    if (!membership || typeof membership !== 'object') {
-      return { error: 'Whop membership lookup returned invalid JSON' }
-    }
-    return { membership: membership as WhopMembershipRecord }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : 'Unknown failure'
-    console.error('[whop-memberships] direct lookup failed', { reason })
-    return { error: 'Whop membership lookup failed after bounded retries' }
-  }
-}
-
-export async function fetchAllWhopMemberships(apiKey: string, planId: string): Promise<{ memberships: WhopMembershipRecord[]; pagesFetched: number } | { error: string }> {
-  const candidates = [
-    `https://api.whop.com/api/v2/memberships?plan_id=${planId}`,
-    `https://api.whop.com/api/v2/memberships?plan=${planId}`,
-    `https://api.whop.com/api/v1/memberships?plan_id=${planId}`,
-  ]
-  let baseUrl: string | null = null
-  let firstPage: { memberships: WhopMembershipRecord[]; totalPages: number } | null = null
-  let lastStatus: number | null = null
-  for (const url of candidates) {
-    let attempt: Response
-    try {
-      attempt = await fetchWhopPage(url, apiKey)
+      if (response.status !== 429 && response.status < 500) return response
+      if (attempt === MAX_ATTEMPTS - 1) return response
+      const retryAfter = Number(response.headers.get('retry-after'))
+      const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 15_000)
+        : response.status === 429 ? 5_000 : 500 * 2 ** attempt
+      await new Promise(resolve => setTimeout(resolve, delay))
     } catch {
-      continue
+      if (attempt === MAX_ATTEMPTS - 1) throw new Error('Whop request failed after bounded retries')
+      await new Promise(resolve => setTimeout(resolve, 500 * 2 ** attempt))
     }
-    if (attempt.ok) {
-      baseUrl = url
-      firstPage = parseMembershipPage(await attempt.json().catch(() => null))
-      if (firstPage) break
-      baseUrl = null
-      continue
-    }
-    lastStatus = attempt.status
   }
-  if (!baseUrl || !firstPage) {
-    console.error('[whop-memberships] lookup failed', { status: lastStatus ?? undefined })
-    return { error: 'Whop memberships lookup failed' }
-  }
+  throw new Error('Whop request failed after bounded retries')
+}
 
-  const memberships = [...firstPage.memberships]
-  let totalPages = firstPage.totalPages
-  let pagesFetched = 1
+export async function fetchWhopMembershipById(apiKey: string, membershipId: string):
+Promise<{ membership: WhopMembershipRecord } | { missing: true } | { error: string }> {
+  if (!/^mem_[A-Za-z0-9]+$/.test(membershipId)) return { error: 'Invalid Whop membership ID' }
+  try {
+    const response = await fetchWhopPage(`${WHOP_API_URL}/memberships/${encodeURIComponent(membershipId)}`, apiKey)
+    if (response.status === 404) return { missing: true }
+    if (!response.ok) return { error: `Whop membership lookup returned ${response.status}` }
+    const body = await response.json().catch(() => null)
+    const member = readMembership(body?.data ?? body)
+    if (!member || member.id !== membershipId) return { error: 'Whop membership lookup returned incomplete or mismatched data' }
+    return { membership: member }
+  } catch { return { error: 'Whop membership lookup failed after bounded retries' } }
+}
 
-  // Keep the read fail-closed, but fetch pages independently. A single slow
-  // page now gets its own retry budget and a useful page number in telemetry
-  // instead of cancelling every other in-flight request in Promise.all().
-  for (let page = 2; page <= totalPages; page++) {
-    const pageUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page}`
+export async function fetchAllWhopMemberships(
+  apiKey: string, planId: string | string[],
+  options: { userId?: string; statuses?: string[] } = {},
+): Promise<{ memberships: WhopMembershipRecord[]; pagesFetched: number } | { error: string }> {
+  const planIds = new Set(Array.isArray(planId) ? planId : [planId])
+  const url = new URL(`${WHOP_API_URL}/memberships`)
+  url.searchParams.set('first', '100')
+  for (const id of planIds) url.searchParams.append('variant_ids', id)
+  for (const status of options.statuses ?? []) url.searchParams.append('statuses', status)
+  if (options.userId) url.searchParams.set('user_id', options.userId)
+  const cursors = new Set<string>(), deduped = new Map<string, WhopMembershipRecord>()
+  for (let page = 1; page <= MAX_PAGES; page++) {
     try {
-      const res = await fetchWhopPage(pageUrl, apiKey)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const pageBody = parseMembershipPage(await res.json().catch(() => null))
-      if (!pageBody) throw new Error('Invalid JSON')
-      memberships.push(...pageBody.memberships)
-      pagesFetched += 1
-      // Whop can add a page during a reconciliation. Honor a larger total
-      // reported by later responses without ever accepting a partial list.
-      totalPages = Math.max(totalPages, pageBody.totalPages)
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Unknown failure'
-      console.error('[whop-memberships] pagination failed', { page, totalPages, reason })
-      return { error: `Whop memberships page ${page} of ${totalPages} failed after ${MAX_ATTEMPTS} attempts` }
-    }
+      const response = await fetchWhopPage(url, apiKey)
+      if (!response.ok) return { error: `Whop memberships lookup returned ${response.status}` }
+      const body = await response.json().catch(() => null)
+      if (!Array.isArray(body?.data) || typeof body?.page_info?.has_next_page !== 'boolean') return { error: 'Whop memberships returned incomplete pagination' }
+      for (const raw of body.data) {
+        const member = readMembership(raw)
+        if (!member || !planIds.has(whopMembershipPlanId(member)!) ||
+          options.userId && whopMembershipUserId(member) !== options.userId) return { error: 'Whop memberships returned an unverified plan or owner' }
+        deduped.set(member.id, member)
+      }
+      if (!body.page_info.has_next_page) return { memberships: [...deduped.values()], pagesFetched: page }
+      const cursor = body.page_info.end_cursor
+      if (!body.data.length || typeof cursor !== 'string' || !cursor || cursors.has(cursor)) return { error: 'Whop memberships pagination did not advance' }
+      cursors.add(cursor)
+      url.searchParams.set('after', cursor)
+      await new Promise(resolve => setTimeout(resolve, REQUEST_SPACING_MS))
+    } catch { return { error: `Whop memberships page ${page} failed after ${MAX_ATTEMPTS} attempts` } }
   }
-
-  const deduped = new Map<string, WhopMembershipRecord>()
-  for (const membership of memberships) {
-    const key = membership.id
-      ?? `${membership.metadata?.internal_user_id ?? 'unknown'}:${membership.renewal_period_end ?? membership.period_end ?? membership.expires_at ?? 'open'}:${membership.status ?? membership.valid_status ?? membership.valid ?? 'unknown'}`
-    deduped.set(key, membership)
-  }
-  return { memberships: [...deduped.values()], pagesFetched }
+  return { error: 'Whop memberships exceeded the bounded pagination limit' }
 }

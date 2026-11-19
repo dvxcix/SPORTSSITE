@@ -148,28 +148,21 @@ export async function POST(req: Request) {
   }
 
   if (action === 'reconcileMembership') {
-    // Whop's memberships API has no per-user filter (confirmed against the
-    // real endpoint — see whopMembershipsFetch.ts), so there's no cheaper
-    // way to check one person's real state than the same full pass the
-    // 15-min cron already runs; this just runs it on demand for a support
-    // rep and reports back only the one user they're looking at. Exists
-    // because of a real live case: a customer's succeeded Basic payment got
-    // reset to Free by an unrelated failed/abandoned trial attempt on the
-    // same Whop account (now fixed at the source in whopWebhook.ts), and
-    // support needed a way to force a fix immediately instead of waiting on
-    // the next cron tick.
-    const result = await reconcileWhopMain()
+    const result = await reconcileWhopMain({ userId })
     if ('error' in result) return safeApiError('admin-support-whop-reconcile', result.error, 'Membership reconciliation failed', 502)
-    const mine = result.results.filter((r: any) => r.internalUserId === userId)
-    const granted = mine.find((r: any) => r.granted)
+    const mine = result.results.filter(row => row.internalUserId === userId)
+    const granted = mine.find(row => row.granted)
     if (granted) {
       const label = String(granted.granted)
       return NextResponse.json({ ok: true, message: `Reconciled — now ${label.charAt(0).toUpperCase()}${label.slice(1)}.` })
     }
-    const withError = mine.find((r: any) => r.error)
+    const withError = mine.find(row => row.error)
     if (withError) return safeApiError('admin-support-whop-member', withError.error, 'Membership reconciliation failed', 502)
-    if (!mine.length) return NextResponse.json({ error: 'No Whop membership on file for this user across any plan — nothing to reconcile.' }, { status: 404 })
-    return NextResponse.json({ ok: true, message: 'Checked — no active membership found, tier unchanged.' })
+    const active = mine.find(row => row.active === true)
+    if (active) return NextResponse.json({ ok: true, message: `Verified — active ${String(active.tier)} membership is already applied.` })
+    const skipped = mine.find(row => row.skipped)
+    if (skipped) return NextResponse.json({ ok: true, message: 'Verified the Whop subscription. The account already has higher access.' })
+    return NextResponse.json({ ok: true, message: 'Checked this member’s Whop account across both businesses. No active SlipSurge subscription was returned.' })
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

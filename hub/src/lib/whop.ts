@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { WHOP_API_URL, WHOP_API_VERSION, whopApiHeaders } from './whopApi'
 
 // "Sign in with Whop" — OAuth 2.1 + PKCE + OIDC, per docs.whop.com/developer/
 // guides/oauth (confirmed directly against that page, not assumed from
@@ -128,7 +129,7 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
   if (!accessPassId) return false
   try {
     const res = await fetch(`${WHOP_API_BASE}/api/v1/users/${whopUserId}/access/${accessPassId}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, 'Api-Version-Date': WHOP_API_VERSION },
       signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return false
@@ -137,51 +138,17 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
   } catch { return false }
 }
 
-// Real bug, confirmed live (2026-07-27): this originally guessed
-// `DELETE /api/v2/memberships/:id`, which Whop rejected on every single
-// attempt (70 straight 502s in production, zero successes) — the guess was
-// wrong on BOTH the verb and the path. Whop's actual documented endpoint
-// (docs.whop.com/api-reference/memberships/cancel-membership) is
-// `POST /memberships/:id/cancel`, with an optional `cancellation_mode` body
-// ('at_period_end' [default] or 'immediate'). Kept on the same /api/v2 base
-// as fetchAllWhopMemberships (whopMembershipsFetch.ts, confirmed live) since
-// that's the proven-correct version prefix for this exact resource in this
-// codebase — Whop's own docs are inconsistent about v1 vs v2 elsewhere.
-// Send the cancellation mode explicitly so API-version defaults cannot
-// silently change the access behavior promised by the caller's UI.
-//
-// Whop cancels at the end of the current billing period by default (access
-// continues, auto-renew stops) rather than revoking immediately — the caller
-// should reflect that ("still active until period end") rather than treating
-// a successful call as an instant downgrade. The real tier/tier_status flip
-// still happens later via the existing membership.deactivated/went_invalid
-// webhook branch once Whop actually ends the membership.
-//
-// Real customer-facing bug, confirmed live: a member cancels DURING a free
-// trial, expecting to never be charged — but 'at_period_end' just schedules
-// the cancellation for whenever the CURRENT period closes, and for a
-// trialing membership that's the trial's own conversion-to-paid boundary.
-// Whop still fires that conversion charge before honoring the cancellation,
-// so "I cancelled my trial" silently became "I got charged once anyway."
-// Fetching the live membership first and forcing 'immediate' mode whenever
-// its status looks like a trial (case-insensitive "trial" substring match —
-// deliberately loose since Whop's exact status string isn't confirmed
-// against a real trialing payload yet) skips that boundary entirely: a
-// trial member hasn't been charged yet, so there's no already-paid-for
-// period to honor by waiting.
+// Current REST cancellation preserves the paid billing period. Trial
+// cancellations end immediately after the provider state is verified.
 async function isTrialingMembership(membershipId: string, apiKey: string): Promise<boolean> {
-  try {
-    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
-    })
-    if (!res.ok) return false
-    const data = await res.json().catch(() => null)
-    const status = String(data?.status ?? data?.valid_status ?? '').toLowerCase()
-    return status.includes('trial')
-  } catch {
-    return false
-  }
+  const res = await fetch(`${WHOP_API_URL}/memberships/${encodeURIComponent(membershipId)}`, {
+    headers: whopApiHeaders(apiKey), cache: 'no-store',
+    signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
+  })
+  if (!res.ok) throw new Error('Whop membership could not be verified before cancellation')
+  const data = await res.json().catch(() => null)
+  if (data?.id !== membershipId || typeof data?.status !== 'string') throw new Error('Whop membership identity could not be verified before cancellation')
+  return data.status.toLowerCase().includes('trial')
 }
 
 // opts.forceImmediate is for an admin explicitly terminating a membership
@@ -192,11 +159,12 @@ async function isTrialingMembership(membershipId: string, apiKey: string): Promi
 // special-cases.
 export async function cancelWhopMembership(membershipId: string, apiKey: string, opts?: { forceImmediate?: boolean }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   try {
+    if (!/^mem_[A-Za-z0-9]+$/.test(membershipId)) return { ok: false, status: 400, error: 'Invalid membership ID' }
     const immediate = opts?.forceImmediate || await isTrialingMembership(membershipId, apiKey)
-    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}/cancel`, {
+    const res = await fetch(`${WHOP_API_URL}/memberships/${encodeURIComponent(membershipId)}/cancel`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellation_mode: immediate ? 'immediate' : 'at_period_end' }),
+      headers: { ...whopApiHeaders(apiKey), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancel_at_period_end: !immediate }),
       signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) {

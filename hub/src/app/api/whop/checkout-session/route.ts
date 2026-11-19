@@ -7,6 +7,7 @@ import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
 import { previewPricingPath, readPreviewContext } from '@/lib/publicResearchPreview'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
+import { WHOP_SDK_API_VERSION, whopApiHeaders } from '@/lib/whopApi'
 
 export const revalidate = 0
 
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
   try {
     const res = await fetch('https://api.whop.com/api/v1/checkout_configurations', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    headers: { ...whopApiHeaders(apiKey, WHOP_SDK_API_VERSION), 'Content-Type': 'application/json' },
       body: JSON.stringify({
       plan_id: planId,
       metadata: { internal_user_id: user.id },
