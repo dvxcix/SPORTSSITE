@@ -76,3 +76,13 @@ The private review/checklist remains disabled on production.
 Real member pick placement, matrix writes, social publication and physical-phone
 hardware testing were not performed. No automatic changelog announcement was
 published to members during this release.
+
+Live verification
+The Git-backed production release was verified at www.slipsurge.com. CHA–ATL
+showed 21,613 community picks and approximately .5K at the archived 6:06 PM
+ET observation; the totals matched the read-only archive query. Switching from
+DraftKings to FanDuel changed prices while leaving the community cohort intact.
+Wager shares showed CHA/ATL 13%/87%, spread 20%/80%, and over/under 48%/52%.
+Team ratings and honest unconfirmed-lineup status remained accessible.
+The pre-existing source-delay banner remains visible; UI verification is not
+a claim that every upstream feed has recovered.
