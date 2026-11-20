@@ -19,11 +19,9 @@ export default async function AdminChangelogPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">What's New / Changelog</h1>
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Changelog</h1>
       <p className="text-sm text-[var(--text-3)] mb-6">
-        When a big feature ships, add an entry here and turn it on — every signed-in member sees it as a popup the
-        next time they load the site, once, until they dismiss it (permanently, on every device — not just for this
-        browser session). Multiple active entries can queue up; a member sees each one they haven't dismissed yet.
+        Publish updates to What's new. Active entries appear when members next visit; dismissals sync across devices.
       </p>
       <ChangelogManager initialEntries={(entries ?? []) as ChangelogEntry[]} />
     </div>

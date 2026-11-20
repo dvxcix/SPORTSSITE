@@ -261,3 +261,91 @@
 
 .matchupContext{margin-bottom:8px}.gameLine{min-height:46px;padding-block:6px}.marketRail{padding:0;border-radius:0;background:transparent;box-shadow:none;border-bottom:1px solid var(--border);gap:0}.marketRail button{min-height:36px;padding:7px 12px}.mmControls{display:flex;align-items:center;gap:3px;flex-shrink:0}.mmControls button{min-height:34px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--accent);font-size:12px;font-weight:550}.mmControls button:last-child{color:var(--red)}.mmControls button[aria-pressed=true]{background:var(--selected-bg);border-color:var(--selected-border)}
 @media(max-width:767px){.mmControls button{min-height:40px}.marketRail button{min-height:40px}.matchupContext{margin-bottom:6px}}
+.drawer{width:min(100%,640px);overflow:hidden}
+.drawerTop{position:relative;top:auto;padding:10px 18px;min-height:64px}
+.drawerScroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-padding-top:60px}
+.drawerScroll>.playerHero,.drawerScroll>.playerStrip,.drawerScroll>.playerSample{flex-shrink:0}
+.playerHero{min-height:0;padding:16px 20px;align-items:center;overflow:visible;background:var(--surface)}
+.playerHero>div{padding-bottom:0}
+.playerHero h2{margin:6px 0;font-size:24px;line-height:1.2}
+.playerHero h2 strong{font-size:28px;letter-spacing:-.03em}
+.playerHero .portrait{flex:0 0 148px;width:148px;height:116px;align-self:center;overflow:hidden;border-radius:12px}
+.playerStrip{padding:14px 18px 10px;gap:8px}
+.playerStrip b{font-size:21px}.playerStrip small{letter-spacing:0}
+.playerSample{padding:4px 18px 12px;flex-wrap:nowrap}
+.playerSample>span{flex-basis:auto}
+.panelTabs{top:0;flex-wrap:nowrap;padding:6px 12px;border-block:1px solid var(--border);scrollbar-width:thin}
+.drawer .panelTabs{scrollbar-width:thin}
+.panelTabs button{flex:1 0 auto;font-size:12px;padding-inline:9px}
+.panelMobileTabs{display:none}
+.panelBody{padding:16px 20px 24px}
+.drawerFooter{position:relative;bottom:auto;padding:10px 18px max(10px,env(safe-area-inset-bottom));background:var(--surface);box-shadow:none}
+.priceComparison{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.priceQuote.priceQuote{position:relative;gap:3px;min-width:116px}
+.priceComparison .priceDelta{font-weight:500}
+.priceQuote .priceNow b{font-weight:600;font-size:14px}
+.lineButton:has(.priceQuote){gap:6px;padding-block:3px}
+.table td{padding-block:10px;font-variant-numeric:tabular-nums}
+.table .heat{background:transparent;box-shadow:none;border-color:transparent;min-width:44px}
+.table .heat small{color:var(--text-3)}
+.boardOptionsRow{display:none}
+.boardFilterSheet{display:flex;flex-direction:column;width:100%;max-height:calc(100dvh - 24px);border:1px solid var(--border-2);border-radius:16px 16px 0 0;background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-overlay)}
+.boardFilterSheet>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.boardFilterSheet h2{font-size:18px;font-weight:600}
+.boardFilterSheet>header button{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2);color:var(--text-1)}
+.boardFilterBody{overflow-y:auto;overscroll-behavior:contain;padding:8px 12px}
+.boardFilterSheet>footer{padding:12px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.boardFilterSheet>footer>button{min-height:44px;width:100%;border:1px solid var(--accent);border-radius:8px;background:var(--accent-fill);color:var(--accent-fg);font:inherit;font-weight:600}
+@media(max-width:767px){
+ .drawer{width:100%;border:0}
+ .drawerTop{padding:8px 12px;min-height:60px}
+ .playerHero{padding:12px 14px;gap:10px}
+ .playerHero h2,.playerHero h2 strong{font-size:23px;line-height:1.15;letter-spacing:-.025em}
+ .playerHero .portrait{flex-basis:104px;width:104px;height:104px}
+ .playerStrip{padding:10px 12px;gap:6px}.playerStrip b{font-size:20px}
+ .playerSample{padding:2px 14px 10px;gap:8px}.playerSample>span{flex-basis:auto;font-size:12px}
+ .drawer .panelTabs{display:none}
+ .panelMobileTabs{display:block;position:sticky;top:0;z-index:3;padding:8px 12px;border-block:1px solid var(--border);background:var(--surface)}
+ .panelMobileTabs select{width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:8px;background:var(--input-bg);color:var(--text-1);font:inherit;font-size:16px}
+ .panelBody{padding:14px 12px 20px}
+ .drawerFooter{min-height:64px;padding-inline:12px;gap:8px}
+ .drawerFooter .priceComparison{gap:5px}
+ .header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:10px}
+ .identity{grid-column:1;grid-row:1;min-width:0}.identity h1{font-size:23px}.identity h1 i{font-size:11px}
+ .headerActions{grid-column:2;grid-row:1;margin:0;gap:6px}
+ .headerActions>button:first-child{width:44px;min-width:44px;padding:0;font-size:0;gap:0;justify-content:center}
+ .headerActions>button:first-child svg{width:18px;height:18px}
+ .oddsMode{grid-column:1/-1;grid-row:2;margin:0;min-height:44px}
+ .context[data-core=true]{margin:4px 0;min-height:14px}.sampleBadge{font-size:11px}
+ .mobileToolPicker{margin:6px 0}.mobileToolPicker select{min-height:44px}
+ .gameLine{min-height:52px;margin-block:6px;padding-block:8px;font-size:12px}
+ .gameLine .priceComparison{display:none}
+ .boardControlsDesktop{display:none}
+ .boardOptionsRow{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)}
+ .boardOptionsRow>.search{min-width:0;flex:1;max-width:none;min-height:44px;margin:0}
+ .boardOptionsRow input{font-size:16px;min-width:0;width:100%}
+ .boardOptions{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:48%;min-width:104px;min-height:44px;padding:8px 10px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2);color:var(--text-1);font:inherit;font-size:12px}
+ .boardOptions>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .boardFilterBody .marketRail{display:flex;flex-wrap:wrap;gap:4px;overflow:visible;max-height:none;margin:0 0 10px;padding:0 0 10px;border-bottom:1px solid var(--border)}
+ .boardFilterBody .marketRail button{min-height:44px;font-size:13px;white-space:normal;flex:1 0 28%;padding:8px}
+ .boardFilterBody .filters{display:flex;flex-wrap:wrap;padding:10px 0;background:transparent;border-bottom:1px solid var(--border)}
+ .boardFilterBody .filters>*{flex:1 1 44%;width:auto;min-width:0;max-width:none}
+ .boardFilterBody .filters>.mmControls{display:flex;flex:1 0 100%;gap:8px}
+ .boardFilterBody .filters>.mmControls button{flex:1;min-height:44px}
+ .boardFilterBody .filters>.filterToggle:has(svg+span){min-height:44px}
+ .boardFilterBody .movementTools{margin:0;padding:6px 0 10px}
+ .boardFilterBody .movementTools label{flex:1;min-width:0}
+ .boardFilterBody select{font-size:16px!important;max-width:100%;min-height:44px}
+ .boardFilterBody .extraFilters{padding:10px 0;background:transparent;grid-template-columns:1fr 1fr}
+ .boardMeta{padding:8px 10px;font-size:12px}
+ .mobilePlayer{padding:12px}.mobilePlayer .mobileMm{margin-block:6px}.mobileStats{padding-block:8px}
+}
+
+.chartFigure{margin:0;padding-top:4px;min-width:0}.chartFigure .chart{height:160px;margin:24px 0 0;border-bottom:1px solid var(--chart-axis);background:repeating-linear-gradient(to top,transparent 0,transparent calc(25% - 1px),var(--chart-grid) calc(25% - 1px),var(--chart-grid) 25%)}.chartFigure .chart>button{position:relative;z-index:1;flex:1;max-width:38px;min-width:4px;padding:0;border:0;border-radius:3px 3px 0 0;touch-action:manipulation}.chartFigure .chart>button:focus-visible{outline:2px solid var(--text-1);outline-offset:3px}.chartFigure .chart>button[data-result=push]{background:var(--surface-3);border:1px dashed var(--chart-axis)}.chartFigure .chartLine{height:0;border-color:var(--chart-axis);pointer-events:none}.chartFigure .chartLine>span{position:absolute;right:0;bottom:4px;padding:2px 4px;line-height:1.2;border-radius:3px;background:var(--surface);color:var(--text-1);font-size:11px}.chartLegend{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-height:40px;padding-top:10px;font-size:12px;color:var(--text-2);font-variant-numeric:tabular-nums}.chartLegend>span{display:flex;align-items:center;gap:5px}.chartLegend>span:before{content:"";display:block;width:8px;height:8px;border-radius:2px;background:var(--chart-muted)}.chartLegend>span[data-result=win]:before{background:var(--green)}.chartLegend>span[data-result=push]:before{background:transparent;border:1px dashed var(--chart-axis)}.chartLegend output{margin-left:auto;min-height:16px;color:var(--text-1)}@media(max-width:767px){.chartLegend output{flex-basis:100%;margin:0}.chartFigure .chart{height:140px;gap:5px}}
+
+.mobileMarketSelect{display:none}.priceComparison [data-direction=unknown]{display:none}.panelBody>.estimateCard{margin-block:16px}.trackingFigure{margin:0;min-width:94px}.trackingFigure figcaption{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-2)}.shotResearch>.chartLegend{margin:4px 0 10px;min-height:28px}@media(max-width:767px){.boardFilterBody .marketRail{display:none}.boardFilterBody .mobileMarketSelect{display:grid;gap:6px;margin:6px 0 10px;color:var(--text-2);font-size:12px}.boardFilterBody .mobileMarketSelect select{width:100%;padding:8px 12px;border:1px solid var(--control-border);border-radius:8px;background:var(--input-bg);color:var(--text-1)}.boardFilterBody [data-extra-filters]{display:none}.boardFilterBody .filters>select[aria-label="Sort NBA players"]{flex-basis:100%}}
+
+@media(max-width:767px){.tableScroll{display:none}.mobileList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px}}
+.chartFigure .chart b{left:0;min-width:0}
+.shotResearch>.chartLegend>span:before{border-radius:50%}.shotResearch>.chartLegend>span[data-result=loss]:before{background:transparent;border:1px solid var(--red)}
+@media(max-width:767px){.boardFilterBody .extraFilters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}.boardFilterBody .extraFilters>label{min-width:0;width:100%}.boardFilterBody .extraFilters select{width:100%;max-width:100%}.boardFilterBody .extraFilters>button{min-height:44px}}

@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext'
 import { ChevronLeft, ChevronRight, Crown, LockKeyhole } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
+import { ResearchNavGroup, researchToolGroup } from '@/components/layout/ResearchNavGroup'
 import { AccountMenu } from '@/components/layout/AccountMenu'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
@@ -36,6 +37,22 @@ export function DesktopNavigation() {
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
   const items = context.items.filter(item => (isNbaToolHref(item.href) || !item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === selectedSport))
+
+  const renderNavItem = (item: typeof items[number]) => {
+              const Icon = item.icon
+              const nbaTool = isNbaToolHref(item.href)
+              const locked = nbaTool && !nbaAccess
+              const active = !locked && ((isNflToolHref(item.href) || nbaTool) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item))
+              const label = nbaTool ? item.shortLabel ?? item.label : item.label
+              return (
+                <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} className={navigationStyles.toolLink} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={nbaTool ? undefined : label}>
+                  <Icon size={15} aria-hidden="true" />
+                  <span>{label}</span>
+                  {locked && !contextCollapsed && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}
+                  {item.badge && <em>{item.badge}</em>}
+                </Link>
+              )
+  }
 
   return (
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
@@ -76,20 +93,12 @@ export function DesktopNavigation() {
           {context.area === 'research' && <ResearchSportSwitcher sport={selectedSport} onChange={chooseSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={contextCollapsed} />}
           <div className={`ss-desktop-context-label ${navigationStyles.heading}`}>{context.area === 'research' ? selectedSport.toUpperCase() + ' RESEARCH' : 'WORKSPACE'}</div>
           <nav className={navigationStyles.desktopTools} aria-label={`${context.area === 'research' ? selectedSport.toUpperCase() + ' research' : context.meta.label} navigation`}>
-            {items.map(item => {
-              const Icon = item.icon
-              const nbaTool = isNbaToolHref(item.href)
-              const locked = nbaTool && !nbaAccess
-              const active = !locked && ((isNflToolHref(item.href) || nbaTool) ? researchToolActive(item.href, pathname, searchParams) : routeMatches(pathname, item))
-              const label = nbaTool ? item.shortLabel ?? item.label : item.label
-              return (
-                <Link key={item.href} href={researchNavigationHref(item.href, pathname, searchParams, nbaAccess)} prefetch={false} className={navigationStyles.toolLink} data-active={active} aria-current={active ? 'page' : undefined} aria-label={locked ? `${label} · Ultimate required` : label} title={nbaTool ? undefined : label}>
-                  <Icon size={15} aria-hidden="true" />
-                  <span>{label}</span>
-                  {locked && !contextCollapsed && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}
-                  {item.badge && <em>{item.badge}</em>}
-                </Link>
-              )
+            {items.map((item, index) => {
+              const group = context.area === 'research' && !contextCollapsed ? researchToolGroup(item.href) : null
+              if (!group) return renderNavItem(item)
+              if (items.findIndex(row => researchToolGroup(row.href) === group) !== index) return null
+              const members = items.filter(row => researchToolGroup(row.href) === group)
+              return <ResearchNavGroup key={group} label={group} active={members.some(row => researchToolActive(row.href, pathname, searchParams))}>{members.map(renderNavItem)}</ResearchNavGroup>
             })}
           </nav>
           <UpdateCenter compact={contextCollapsed} />

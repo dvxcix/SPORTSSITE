@@ -59,6 +59,8 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         <Link key={tool.mode} href={researchToolHref(href(tool.mode), '/the-sideline', searchParams)} prefetch={false} scroll={false} aria-current={mode === tool.mode ? 'page' : undefined}><tool.icon size={16} aria-hidden="true" /><span>{tool.label}</span></Link>)}
     </nav>
 
+    <label className={styles.mobileWorkspace}><span className="sr-only">NFL research workspace</span><select aria-label="NFL research workspace" value={mode} disabled={pending} onChange={event => change(researchToolHref(href(event.target.value), '/the-sideline', searchParams))}><option value="">The Sideline</option><option value="cheatsheets">Cheatsheets</option><option value="public">The Public</option><option value="markets">Sportsbooks</option><option value="research">Matchup Lab</option></select></label>
+
     <div className={styles.schedulePicker}>
       <nav className={styles.dayRail} aria-label="NFL game days">
         {weekDays.map(day => {

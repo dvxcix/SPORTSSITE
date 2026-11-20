@@ -1,0 +1,106 @@
+SlipSurge UI polish: six approved improvements, 20 November 2026
+
+Scope: member and admin interface work. Team logos, bounded player portraits,
+team colour backgrounds, odds values, grading, access gates and archived pregame
+research remain intact. No database migrations, feature flag changes, captures,
+billing operations or changelog publications are part of this release.
+
+1. Player drawer
+The drawer now has a fixed header and action footer around one scrolling body.
+This removes the flex shrink that clipped identity text. The desktop panel is
+640px wide; phone uses the viewport width and a native research section picker.
+The chart precedes the projection card and log. All six existing sections remain.
+
+2. Mobile board
+Player search remains on the board. Market, target, book, team, sort, saved and
+sample controls move into one sheet with a result count and persistent state.
+The existing desktop controls stay inline. Only the active table/card presentation
+renders. The NFL header uses one native workspace picker on phones, with the
+existing week, date, game and stat sample retained when switching tools.
+
+3. Tables and charts
+Current prices lead each quote; opening price and exact probability movement
+share a secondary line. Accessible labels and capture identity remain. Rows use
+tabular numbers, quieter heat cells and less padding. Detailed NBA game charts
+have a reference line, explicit hit/miss/push legend and keyboard point navigation.
+Shot charts distinguish filled makes and outlined misses. Missing tracking
+observations still break the line. NFL charts retain their underlying data.
+
+4. Research navigation
+Core NBA tools stay immediately visible. Boards, Trends and Matchups disclose
+the remaining tools; the active group opens automatically. Sidebar search still
+reaches every destination. The icon rail retains individual destinations. The
+web and native desktop shells share the group component. The full-slate Odds
+Board is also available in the desktop navigation.
+
+5. Secondary surfaces
+Settings headers and forms use flatter surfaces and smaller headings. Phones
+use a section picker. Admin headers, statistics and navigation lose decorative
+frames and redundant visible descriptions. Changelog instructions are shorter;
+phone entry actions sit below the full title. Generic sports entity panels and
+NFL board/research/cheatsheet surfaces use the same calmer contrast and borders.
+
+6. Responsiveness work
+Heavy unselected NBA research tools and drawer panels load on demand. Price
+formatters are reused and quote values memoized. Desktop tables and phone cards
+no longer render simultaneously. Opaque shell surfaces no longer apply backdrop
+blur. Private fixture-only metrics have no analytics destination or production
+mount; they are gated by the existing private design review environment.
+
+Matched optimized local fixture measurements at 1280 x 900, same content/actions:
+Initial encoded script bodies: 434,123 -> 404,059 bytes (6.9% less).
+Drawer click to next visual frame, three trials: median 67.2 -> 50.6ms.
+Sort input to next visual frame, two trials: median 56.1 -> 49.2ms.
+Search typing: 25.8 -> 20.5ms; clearing: 99.9 -> 72.6ms.
+Sampled scrolling frame gap p95: 20.9 -> 20.8ms, essentially unchanged.
+At 390 x 844, first player card moved from y=1030.2 to y=651.75 at scroll zero.
+These are local fixture observations, not production RUM, official INP or complete
+data readiness timings. Do not extrapolate them into a universal speed claim.
+
+Verification before release
+Optimized Next build includes TypeScript, page generation and build tracing.
+Production source suite: 134/134. NBA suite: 709/709 plus freeze suite: 124/124.
+Cross-sport suite: 44/44. Earlier targeted NFL/access/sample/freeze/polish run:
+76/76. Final targeted drawer/quote/access/freeze/new-behaviour run: 63/63, plus
+NFL sample integrity: 4/4. Counts overlap; they are not a unique-test total.
+The new behaviour suite has five tests, including preserved NFL picker context,
+sheet state/Escape handling, group disclosure and chart keyboard navigation.
+Scoped ESLint is clean; --pass-on-unpruned-suppressions avoids unrelated stale
+entries in the repository suppression file, which was not changed.
+
+Two existing browser harnesses could not start because their local Chromium
+binary is absent. Their navigation and cheatsheet flows were checked through
+the connected browser instead. Do not report those two scripts as passing.
+No CLI browser installation or browser automation was used for visual checks.
+
+Connected-browser coverage includes all 17 NBA workspaces on desktop and phone
+in both themes, all 10 settings sections, all five NFL modes, and all five NFL
+cheatsheet subviews at 320, 390, 768 and 1440px in both themes. Two initial phone
+Odds comparison overflows were traced to unpositioned screen-reader labels and
+fixed at the quote ancestor. A tiny drawer chart overflow was traced to the
+absolute bar label position and corrected. Initial failures remain in the local
+evidence; final retests are recorded separately.
+
+References inspected on Mobbin (structure only; SlipSurge artwork and identity
+were preserved):
+Hootsuite analytics detail drawer and grouped sidebar:
+https://mobbin.com/screens/e57031db-f722-4518-a718-1466a319eee5
+Mintlify detail drawer:
+https://mobbin.com/screens/22f8b42f-53a7-467c-a51e-3fe1165fd941
+Fey screener table/filter grouping:
+https://mobbin.com/screens/1258f74f-b76a-4411-ab06-3a0f78c48fd6
+OKX separate screener filters:
+https://mobbin.com/screens/e1788cb5-4baf-4097-966e-527f1193cc64
+Mercury iOS filter sheet:
+https://mobbin.com/screens/6d301094-30a8-48d1-9021-8260aed49e2d
+Copilot iOS filter sheet:
+https://mobbin.com/screens/6ad11906-06a4-4ac5-9058-8e048e221d6f
+
+The mobile references are iOS patterns adapted to the web, not web screenshots.
+Five visual changes above group the six work items; measured performance is
+recorded separately. Before/after screenshots use the same local fixture and
+viewport. The standalone comparison file is for manual viewing: browser file
+protocol access is blocked, so it was not opened through an alternate route.
+
+Release confirmation, exact deployment identity and authenticated production
+browser checks are retained in the local evidence and the delivery message.

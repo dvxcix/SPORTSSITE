@@ -229,7 +229,7 @@ test('First Basket sorts signed movement and changes baseline without dropping t
     assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
     await select('First-basket movement baseline','previous')
     assert.deepEqual(names(),['Beta Player','Alpha Player','Gamma Player'])
-    assert.match(ui.host.textContent??'',/PREV/)
+    assert.match(ui.host.textContent??'',/Prev/)
     await select('First-basket sportsbook','all')
     await select('First-basket movement direction','shortened')
     assert.deepEqual(names(),['Beta Player'])

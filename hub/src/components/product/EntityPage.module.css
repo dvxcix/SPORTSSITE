@@ -70,3 +70,5 @@
 .eyebrow,.panelHeading,.metricLabel,.dataTable thead th,.groupLabel{color:var(--text-2);font-size:12px;font-weight:600;letter-spacing:0}
 .sectionTitle{font-weight:600}.sectionMeta{color:var(--text-2);font-size:12px}
 .metricValue{font-weight:600;font-variant-numeric:tabular-nums}
+
+.hero{box-shadow:none;border-radius:16px;backdrop-filter:none}.hero::after{display:none}.avatar{box-shadow:none;border-radius:16px}.panel{box-shadow:none;border-color:var(--border);border-radius:12px;background:var(--surface);backdrop-filter:none}.metric{box-shadow:none;border-radius:10px}.panelHeading,.metricLabel,.dataTable thead th{text-transform:none;letter-spacing:0}.dataTable{font-variant-numeric:tabular-nums}.dataTable tbody td:first-child{font-weight:550}

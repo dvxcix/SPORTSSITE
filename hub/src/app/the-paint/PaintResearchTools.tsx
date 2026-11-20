@@ -4,7 +4,7 @@ import { nbaResearchRevision } from '@/lib/nbaResearchRevision'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowDown, ArrowUpRight, ClipboardList, HeartPulse, Layers3, Shield, Target } from 'lucide-react'
+import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { BookLogo, bookName } from '@/components/BookLogo'
 import { nbaBinary, nbaPrice, nbaTarget, nbaMarketLogs, nbaAverage, nbaSample, nbaSeason, PAINT_MARKETS, type PaintBoard, type PaintMarket, type PaintPlayer } from '@/lib/nbaPaint'
 import { nbaRosterHistory } from '@/lib/nbaRosterHistory'
@@ -18,21 +18,8 @@ import { PaintBookSelect } from './PaintEntitySelect'
 import styles from './paint.module.css'
 import heatmap from './heatmap.module.css'
 
-export const PAINT_TOOLS = [
-  {key:'research',label:'The Court',icon:Layers3},
-  {key:'odds-board',label:'Odds Board',icon:Layers3},
-  {key:'first-basket',label:'First basket',icon:Target},
-  {key:'cheatsheets',label:'Cheatsheets',icon:ClipboardList},
-  {key:'usage',label:'Player trends',icon:Activity},
-  {key:'score',label:'SlipSurge Score',icon:Target},
-  {key:'slate',label:'Slate Edge',icon:Layers3},
-  {key:'dvp',label:'Defense × position',icon:Shield},
-  {key:'divergence',label:'Cross-market',icon:Activity},
-  {key:'matchup',label:'Matchup Lab',icon:Target},
-  {key:'availability',label:'Availability',icon:HeartPulse},
-  {key:'game-markets',label:'Game markets',icon:Shield},
-] as const
-export type PaintTool = typeof PAINT_TOOLS[number]['key']
+export { PAINT_TOOLS } from './paintTools'
+export type { PaintTool } from './paintTools'
 
 function Identity({player,open}:{player:PaintPlayer;open:(id:number,market?:PaintMarket)=>void}) {
   return <button className={styles.playerButton} aria-label={`Analyze ${player.first_name} ${player.last_name}, ${player.team.full_name}`} onClick={()=>open(player.id)}><PlayerAvatar player={player}/><span><strong>{player.first_name} {player.last_name}</strong><small>{player.position || '—'}</small></span></button>

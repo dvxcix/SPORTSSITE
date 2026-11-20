@@ -95,7 +95,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-semibold">{group.label}</span>
-                      <span className="mt-0.5 block truncate text-[12px] font-normal text-[var(--text-2)]">{group.description}</span>
+                      <span className="sr-only">{group.description}</span>
                     </span>
                     <ChevronDown size={14} aria-hidden="true" className={cn('shrink-0 transition-transform', !isOpen && '-rotate-90')} />
                   </button>
@@ -124,7 +124,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-xs font-semibold">{link.label}</span>
-                              <span className="mt-0.5 block truncate text-[12px] text-[var(--text-2)]">{link.description}</span>
+                              <span className="sr-only">{link.description}</span>
                             </span>
                           </Link>
                         )

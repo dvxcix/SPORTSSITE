@@ -115,3 +115,7 @@
 .hero { border-color: var(--border-2); background: var(--surface-2); box-shadow: none; }
 .hero:after { content: none; }
 .sectionIntro small, .sectionIntro > span { font-size: 12px; letter-spacing: 0; }
+
+/* Shared restrained panel treatment. */
+.hero,.tableWrap,.cards article,.heroTeams,.cards article:hover{box-shadow:none}.hero:after{display:none}
+.hero{min-height:0;padding:12px 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent}.hero h1{font-size:22px;line-height:1.2;letter-spacing:-.025em}.heroTeams{border:0;border-radius:0;padding:0;background:transparent}.hero p{margin-top:4px;font-size:12px}

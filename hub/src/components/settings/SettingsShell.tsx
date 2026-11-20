@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SettingsSectionSelect } from './SettingsSectionSelect'
 import { AtSign, Bell, Compass, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Shield, Sparkles, UserRound, UserX } from 'lucide-react'
 
 const items = [
@@ -15,11 +16,12 @@ const items = [
   { href: '/creators/studio', label: 'Creator Studio', icon: Sparkles },
 ]
 
-export function SettingsShell({ active, eyebrow = 'Your account', title, description, children }: {
+export function SettingsShell({ active, eyebrow, title, description, children }: {
   active: string; eyebrow?: string; title: string; description: string; children: React.ReactNode
 }) {
   return <div className="ss-settings-shell">
-    <header className="ss-settings-hero"><div><p className="ss-settings-eyebrow">{eyebrow.charAt(0).toUpperCase() + eyebrow.slice(1).toLowerCase()}</p><h1 id="settings-page-title">{title}</h1><p>{description}</p></div></header>
+    <header className="ss-settings-hero"><div>{eyebrow && <p className="ss-settings-eyebrow">{eyebrow}</p>}<h1 id="settings-page-title">{title}</h1><p>{description}</p></div></header>
+    <SettingsSectionSelect active={active} items={items.map(({ href, label }) => ({ href, label }))}/>
     <div className="ss-settings-layout">
       <nav className="ss-settings-nav" aria-label="Settings sections">
         {items.map(item => { const Icon = item.icon; const current = active === item.href; return <Link key={item.href} href={item.href} aria-current={current ? 'page' : undefined} className={current ? 'is-active' : ''}><Icon size={17} /><span>{item.label}</span></Link> })}

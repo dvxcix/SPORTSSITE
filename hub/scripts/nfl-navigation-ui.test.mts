@@ -17,6 +17,7 @@ try {
       if (document.documentElement.scrollWidth > innerWidth + 1) issues.push('page overflow')
       for (const control of shell.querySelectorAll('select, button')) {
         const bounds = control.getBoundingClientRect()
+        if (!bounds.width || !bounds.height) continue
         if (bounds.height < 44) issues.push('small touch target')
         if (bounds.left < 0 || bounds.right > innerWidth + 1) issues.push('control outside viewport')
       }
@@ -27,7 +28,10 @@ try {
       return issues
     })
     assert.deepEqual(issues, [], width + 'px geometry')
-    const links = page.getByRole('navigation', { name: 'NFL tools' }).getByRole('link')
+    const picker = page.getByRole('combobox', { name: 'NFL research workspace' })
+    assert.equal(await picker.isVisible(), width < 768)
+    assert.equal(await picker.locator('option').count(), 5)
+    const links = page.locator('nav[aria-label="NFL tools"] a')
     assert.equal(await links.count(), 5)
     for (const link of await links.all()) {
       const url = new URL((await link.getAttribute('href'))!, 'https://www.slipsurge.com')

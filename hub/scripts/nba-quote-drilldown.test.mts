@@ -72,7 +72,8 @@ const board: PaintBoard = {
   players: [{ id: 434, first_name: 'Test', last_name: 'Player', position: 'G', team, headshot: null, injury: null, average: { pts: 22, min: 30 }, props: [main, alt, milestone, quarterMilestone, sameBookMilestone, tiedMilestone], logs: [21, 22, 23, 24, 20].map((pts, i) => ({ id: i + 10, pts, reb: 5, ast: 4, fg3m: 2, stl: 1, blk: 0, turnover: 1, fga: 14, fgm: 8, fg3a: 6, fta: 5, ftm: 3, min: '30:00', player: { id: 434 }, team, game: { id: i + 10, date: `2026-04-${String(i + 1).padStart(2, '0')}`, status: 'Final', season: 2025, home_team_id: 2, visitor_team_id: 9 } } satisfies PaintStat)) }],
 }
 const originalFetch = globalThis.fetch
-async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '', initial = board) {
+async function harness(view: string, side = 'over', offer: PaintProp | null = null, error = false, market = 'points', extraParams = '', initial = board, compact = false) {
+  dom.window.matchMedia = () => ({ matches: compact, addEventListener() {}, removeEventListener() {} })
   state.search = `contract=${market.endsWith('_1q')||extraParams.includes('contract=milestone')?'milestone':'over_under'}&view=${view}&market=${market}&book=all&side=${side}${extraParams}`; state.offer = offer; state.error = error; state.navigations = []; state.requests = []
   window.history.replaceState(null, '', '/the-paint?' + state.search)
   globalThis.fetch = async input => {
@@ -316,10 +317,13 @@ test('primary Line/Odds click preserves its exact reference and side while openi
 })
 
 test('ordinary desktop and mobile player opens clear an orphaned URL quote instead of selecting an unrelated threshold', async () => {
-  for (const [label, index] of [['Analyze Test Player, Boston Celtics', 0], ['Analyze Test Player, Boston Celtics', -1], ['Open Test Player details', 0], ['Open Test Player details', -1]] as const) {
-    const ui = await harness('research', 'over', null, false, 'points', '&line=99&type=milestone&panel=movement&player=999')
+  for (const [label, compact] of [['Analyze Test Player, Boston Celtics', false], ['Analyze Test Player, Boston Celtics', true], ['Open Test Player details', false], ['Open Test Player details', true]] as const) {
+    const ui = await harness('research', 'over', null, false, 'points', '&line=99&type=milestone&panel=movement&player=999', board, compact)
     try {
-      await ui.click([...ui.host.querySelectorAll('button')].filter(button => button.getAttribute('aria-label') === label).at(index))
+      assert.equal(!!ui.host.querySelector('article'), compact, 'only the active device layout renders')
+      const buttons = [...ui.host.querySelectorAll('button')].filter(button => button.getAttribute('aria-label') === label)
+      assert.equal(buttons.length, 1)
+      await ui.click(buttons[0])
       const dialog = ui.host.querySelector('[role="dialog"]')!
       assert.equal(dialog.querySelector('[data-paint-entity-select="book"]')?.getAttribute('data-value'), 'all')
       assert.equal(new URL(window.location.href).searchParams.has('line'), false)

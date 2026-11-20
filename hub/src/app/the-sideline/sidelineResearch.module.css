@@ -18,3 +18,6 @@
 .cardFooter small, .cardFooter a, .bookOffer>span, .bookOffer>small { font-size: 12px; }
 .pickBadge small, .bookOffer em { font-size: 12px; letter-spacing: 0; }
 .bookOffer>small, .cardFooter small { color: var(--text-1) !important; }
+
+/* Shared restrained panel treatment. */
+.card{box-shadow:none}

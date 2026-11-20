@@ -118,7 +118,7 @@ export default async function AdminDashboard() {
     <div className="mx-auto w-full max-w-[1480px] space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:space-y-8 lg:px-8 lg:py-8">
       <AdminPageHeader
         title="Control center"
-        description="A single operational view of platform health, member activity, moderation, creator commerce, and work that needs attention."
+        description="Platform activity and work awaiting review."
         icon={LayoutDashboard}
         actions={(
           <Link href="/admin/pipeline-health" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border-2)] bg-[var(--surface-2)] px-3 text-xs font-extrabold text-[var(--text-2)] transition hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--border-2))] hover:text-[var(--accent)]">
@@ -132,12 +132,12 @@ export default async function AdminDashboard() {
       </section>
 
       <section className="relative overflow-hidden rounded-3xl border border-[color-mix(in_srgb,var(--accent)_22%,var(--border))] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" aria-labelledby="operations-heading">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70" />
+
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Operational inbox</p>
+
             <h2 id="operations-heading" className="mt-1 text-lg font-semibold text-[var(--text-1)]">What needs attention</h2>
-            <p className="mt-1 text-xs text-[var(--text-3)]">Live queues from moderation, creator operations, privacy, delivery, and production jobs.</p>
+            <p className="mt-1 text-xs text-[var(--text-3)]">Moderation, accounts, delivery and production queues.</p>
           </div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--text-2)]">
             <span className={`size-2 rounded-full ${actionTotal > 0 ? 'bg-[var(--gold-fill)] shadow-[0_0_10px_rgba(251,191,36,.8)]' : 'bg-[var(--green-fill)] shadow-[0_0_10px_rgba(52,211,153,.8)]'}`} />

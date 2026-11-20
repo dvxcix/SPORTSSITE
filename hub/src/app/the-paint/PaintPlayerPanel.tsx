@@ -1,4 +1,5 @@
 'use client'
+import dynamic from 'next/dynamic'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaResearchRevision } from '@/lib/nbaResearchRevision'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
@@ -15,14 +16,21 @@ import { number, PlayerAvatar, ShotCourt, TeamLogo, TrendBars } from './PaintVis
 import { PaintPickActions } from './PaintPickActions'
 import { nbaRosterHistory } from '@/lib/nbaRosterHistory'
 import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
-import { PaintLadders } from './PaintLadders'
-import { PaintMovement } from './PaintMovement'
-import { PaintTracking } from './PaintTracking'
-import { PaintEstimate } from './PaintEstimate'
-import { PaintShotChart } from './PaintShotChart'
+
+
+
+
+
 import { PaintPrice } from './PaintPrice'
 import styles from './paint.module.css'
 import { nbaHeatStyle } from './paintHeat'
+
+function ToolLoading() { return <div className={styles.panelEmpty} role="status">Loading research…</div> }
+const PaintLadders = dynamic(() => import('./PaintLadders').then(module => module.PaintLadders), { loading: ToolLoading })
+const PaintMovement = dynamic(() => import('./PaintMovement').then(module => module.PaintMovement), { loading: ToolLoading })
+const PaintTracking = dynamic(() => import('./PaintTracking').then(module => module.PaintTracking), { loading: ToolLoading })
+const PaintEstimate = dynamic(() => import('./PaintEstimate').then(module => module.PaintEstimate), { loading: ToolLoading })
+const PaintShotChart = dynamic(() => import('./PaintShotChart').then(module => module.PaintShotChart), { loading: ToolLoading })
 
 export type PaintPlayerTab = 'trends' | 'court' | 'markets' | 'ladder' | 'movement' | 'tracking'
 
@@ -60,12 +68,14 @@ export function PaintPlayerPanel({ available = true, selection, player, board, m
   return <ModalSurface open onClose={close} label={`${player.first_name} ${player.last_name} research`} backdropClassName={styles.drawerBackdrop} backdropStyle={{ justifyContent: 'flex-end', alignItems: 'stretch' }} panelClassName={styles.drawer}>
     {available ? <>
     <header className={styles.drawerTop}><span><Link href={nbaModeHref(`/nba/teams/${player.team.id}?game=${board.game.id}`, oddsMode)} className="inline-flex items-center gap-2"><TeamLogo abbr={player.team.abbreviation} size={23}/>{player.team.full_name}</Link></span><Link className={styles.iconButton} href={nbaModeHref(`/nba/players/${player.id}?game=${board.game.id}`, oddsMode)} aria-label={`Open ${player.first_name} ${player.last_name} full profile`}><ArrowUpRight size={19}/></Link><button className={styles.iconButton} onClick={close} aria-label="Close player details"><X size={20}/></button></header>
+    <div className={styles.drawerScroll}>
     <div className={styles.playerHero}><div><span className={styles.playerPosition}>#{player.jersey_number || '—'} · {player.position} · {player.height || '—'}</span>{player.draft_year!=null&&<span className={styles.draftContext}>{player.draft_year} draft{player.draft_number!=null?' · #'+player.draft_number:''}</span>}<h2>{player.first_name}<strong>{player.last_name}</strong></h2><span className={styles.playerOpponent}><TeamLogo abbr={opponent.abbreviation} size={20}/>vs {opponent.name}</span></div><PlayerAvatar player={player} large/></div>
     {teamContext.newTeam && <div className={styles.teamContext}><strong>New team</strong>{teamContext.priorTeams.map(id=>{const team=board.teams?.find(team=>team.id===id);return team?<span key={id}><TeamLogo abbr={team.abbreviation} size={20}/>{team.full_name}</span>:null})}<span>→</span><span><TeamLogo abbr={player.team.abbreviation} size={20}/>{player.team.full_name}</span></div>}
     <div className={styles.playerStrip}>{[{ label: 'PTS', value: player.average.pts }, { label: 'REB', value: player.average.reb }, { label: 'AST', value: player.average.ast }, { label: 'MIN', value: player.average.min }].map(s => <span key={s.label}><b>{number(s.value)}</b><small>{s.label}</small></span>)}</div>
     <div className={styles.playerSample}><span>{nbaSeason(player.averageSeason??board.sampleSeason)} · Per game</span>{onBookChange&&<PaintBookSelect label="Player sportsbook" value={book??'all'} onChange={value=>{onClearQuote?.();onBookChange(value)}} books={[...new Set(player.props.filter(p=>p.prop_type===market).map(p=>p.vendor))].sort()}/>}<button onClick={compare} disabled={compareDisabled} aria-pressed={compared}><Columns3 size={14}/>{compared ? 'Comparing' : 'Compare'}</button></div>
     {player.injury && <details className={styles.injury}><summary>{player.injury.status}<span>Injury report<ChevronDown size={13}/></span></summary><p>{player.injury.description}</p>{player.injury.return_date && <small>Expected return: {player.injury.return_date}</small>}</details>}
     <div className={styles.panelTabs} role="group" aria-label="Player research view">{(['trends', 'tracking', 'ladder', 'movement', 'court', 'markets'] as const).map(t => <button key={t} aria-pressed={tab === t} onClick={() => changeTab(t)}>{t === 'tracking' ? 'Game tracking' : t === 'court' ? 'Shots' : t === 'markets' ? 'All odds' : t === 'ladder' ? 'Ladders' : t === 'movement' ? 'Market Story' : 'Overview'}</button>)}</div>
+    <label className={styles.panelMobileTabs}><span className="sr-only">Player research view</span><select aria-label="Player research section" value={tab} onChange={event=>changeTab(event.target.value as PaintPlayerTab)}><option value="trends">Overview</option><option value="tracking">Game tracking</option><option value="ladder">Ladders</option><option value="movement">Market Story</option><option value="court">Shots</option><option value="markets">All odds</option></select></label>
     <div className={styles.panelBody}>
       {tab === 'tracking' ? <PaintTracking board={board} players={[player]} initialMetric={trackingMetric}/> : tab === 'ladder' || tab === 'movement' ? <><div className={styles.panelMarket}><select aria-label="Player tool market" value={market} onChange={e=>changeMarket(e.target.value as PaintMarket)}>{PAINT_MARKETS.map(m=><option key={m.key} value={m.key}>{m.label}</option>)}</select><div className={styles.segment}>{(['over','under'] as const).map(s=><button key={s} aria-pressed={s===side} onClick={()=>changeSide(s)}>{s==='over'?'Over':'Under'}</button>)}</div></div>{tab === 'ladder' ? <PaintLadders key={`${market}:${quote?.type??"default"}:${quote?.line??"all"}`} player={player} board={board} market={market} side={side} vendor={book} initialType={quote?.type??ladderType} selectedLine={quote?.line} onTypeChange={next=>{setLadderType(next);onClearQuote?.()}}/> : <PaintMovement key={`${market}:${quote?.line??'all'}`} initialLine={quote?.type==='milestone'?quote.line:undefined} board={board} market={market} side={side} book={book} onBookChange={onBookChange} player={player}/>}</> : tab === 'court' ? <>
         <div className={styles.sectionHeading}><h3>Shot profile</h3><span>{nbaSeason(profile?.season ?? board.sampleSeason)}</span></div>
@@ -74,12 +84,12 @@ export function PaintPlayerPanel({ available = true, selection, player, board, m
       </> : <>
         <div className={styles.mobileMm}><span>MM <b className={(rank?.mm ?? 0) > 0 ? styles.hit : (rank?.mm ?? 0) < 0 ? styles.miss : styles.muted}>{rank ? `${rank.mm > 0 ? '+' : ''}${rank.mm}` : '—'}</b></span>{rank && <small>Book #{rank.marketRank} · Stats #{rank.statRank}</small>}</div><div className={styles.panelMarket}><select aria-label="Player detail market" value={market} onChange={e => changeMarket(e.target.value as PaintMarket)}>{PAINT_MARKETS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}</select><div className={styles.segment}>{(['over', 'under'] as const).map(s => <button key={s} aria-pressed={s === side} onClick={() => changeSide(s)}>{s === 'over' ? 'Over' : 'Under'}</button>)}</div></div>
         {tab === 'trends' ? <>
-          <PaintEstimate player={player} market={market} game={board.game.id} researchRevision={researchRevision}/>
           <div className={styles.trendSummary}><div><span>{window}-game average</span><strong>{nbaBinary(market) && average != null ? `${(average*100).toFixed(1)}%` : number(average)}<small>{definition.short}</small></strong></div><div><span>Market line</span><strong>{reference ? nbaTarget(reference,side) : '—'}</strong></div><div className={styles.summaryHit} style={nbaHeatStyle(hits?.rate)} data-heat={hits?.rate == null ? "none" : hits.rate >= 70 ? "hot" : hits.rate >= 50 ? "warm" : "cold"}><span>Hit rate · {side}</span><strong>{hits?.rate == null ? '—' : `${Math.round(hits.rate)}%`}</strong><small>{hits ? `${hits.wins}/${hits.games-hits.pushes} · ${hits.pushes} pushes` : 'No current line'}</small></div></div>
           <div className={styles.chartFilters}><div className={styles.segment}>{[5, 10, 20].map(n => <button key={n} aria-pressed={window === n} onClick={() => setWindow(n)}>L{n}</button>)}</div><select aria-label="Player game-log split" value={split} onChange={e => setSplit(e.target.value as typeof split)}><option value="all">All games</option><option value="home">Home</option><option value="away">Away</option><option value="h2h">vs {opponent.name}</option></select></div>
           <TrendBars logs={logs} market={market} line={line} side={side} milestone={reference?.market.type === 'milestone'} tall/>
           <div className={styles.chartCaption}><span>Oldest → newest</span><span>{logs.length} appearances · {nbaSeason(board.sampleSeason)}</span></div>
 
+          <PaintEstimate player={player} market={market} game={board.game.id} researchRevision={researchRevision}/>
           <div className={styles.sectionHeading}><h3>Game log</h3><span>{definition.short}</span></div>
           <table className={styles.logTable}><thead><tr><th aria-sort={logSort==='date'?logAscending?'ascending':'descending':'none'}><button onClick={()=>sortLogs('date')}>Date<ArrowDown size={11}/></button></th><th>Opponent</th><th aria-sort={logSort==='minutes'?logAscending?'ascending':'descending':'none'}><button onClick={()=>sortLogs('minutes')}>MIN<ArrowDown size={11}/></button></th><th aria-sort={logSort==='stat'?logAscending?'ascending':'descending':'none'}><button onClick={()=>sortLogs('stat')}>{definition.short}<ArrowDown size={11}/></button></th><th>Result</th></tr></thead><tbody>{displayedLogs.map(log => { const value = nbaValue(log, market); const result = line == null ? null : gradeNbaValue(value,line,reference?.market.type === 'milestone'?'milestone':side); const hit = result == null ? null : result === 'win'; const push = result === 'push'; return <tr key={log.id}><td>{new Date(`${log.game.date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</td><td>{(()=>{const home=log.team.id===log.game.home_team_id,opponent=board.teams?.find(team=>team.id===(home?log.game.visitor_team_id:log.game.home_team_id));return <span className={styles.logOpponent}>{opponent&&<TeamLogo abbr={opponent.abbreviation} size={21}/>}<span>{opponent?.name??'Opponent'}<small className={styles.blockMuted}>{home?'Home':'Away'}</small></span></span>})()}</td><td>{number(nbaMinutes(log.min), 0)}</td><td>{value ?? '—'}</td><td><span className={push || hit == null ? styles.muted : hit ? styles.hit : styles.miss}>{push ? 'Push' : hit == null ? '—' : hit ? <><ArrowUpRight size={13}/>Hit</> : <><ArrowDownRight size={13}/>Miss</>}</span></td></tr> })}</tbody></table>
           {!logs.length && <div className={styles.panelEmpty}>No appearances in this sample.</div>}
@@ -90,6 +100,7 @@ export function PaintPlayerPanel({ available = true, selection, player, board, m
 
         </>}
       </>}
+    </div>
     </div>
     {tab !== 'markets' && tab !== 'ladder' && reference && <footer className={styles.drawerFooter}><BookLogo vendor={reference.vendor} size={22}/><span><strong>{nbaTarget(reference, side)} {definition.short}</strong><PaintPrice offer={reference} side={side} compact/></span><PaintPickActions player={player} offer={reference} side={side} game={board.game}/><button onClick={() => {onClearQuote?.();onBookChange?.('all');changeTab('markets')}}>All books<ArrowUpRight size={15}/></button></footer>}
     </> : <section className={styles.panelEmpty} role="status"><p>Player unavailable for this matchup.</p><button onClick={close}>Close</button></section>}

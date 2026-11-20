@@ -220,9 +220,9 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
       <div className="space-y-2">
         {entries.length === 0 && <p className="text-sm text-[var(--text-3)]">No entries yet.</p>}
         {entries.map(entry => (
-          <div key={entry.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between gap-4">
+          <div key={entry.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-[var(--text-1)] truncate">{entry.title}</p>
+              <p className="text-sm font-semibold text-[var(--text-1)] break-words">{entry.title}</p>
               <p className="text-xs text-[var(--text-3)] truncate">{entry.description}</p>
               <p className="text-[12px] text-[var(--text-3)] mt-0.5">{new Date(entry.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
             </div>

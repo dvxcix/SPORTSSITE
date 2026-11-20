@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { Shield, UserRound } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { nbaBinary, gradeNbaValue, nbaValue, type PaintPlayer, type PaintStat } from '@/lib/nbaPaint'
@@ -26,11 +27,34 @@ export const marketNumber = (value:number|null|undefined,market:string) => nbaBi
 export function TrendBars({ logs, market, line, side = 'over', milestone = false, tall = false }: { logs: PaintStat[]; market: string; line: number | null; side?: 'over' | 'under'; milestone?: boolean; tall?: boolean }) {
   const values = [...logs].reverse().map(log => ({ log, value: nbaValue(log, market) }))
   const max = Math.max(1, ...values.map(v => v.value ?? 0), line ?? 0) * 1.15
+  if (tall) return <TrendChart values={values} max={max} line={line} side={side} milestone={milestone}/>
   return <div className={tall ? styles.chart : styles.spark} role="img" aria-label={values.length ? `${values.length} games, oldest to newest: ${values.map(v => v.value ?? 'unavailable').join(', ')}${line != null ? `; reference line ${line}` : ''}` : 'No game sample available'}>
     {line != null && <span className={styles.chartLine} style={{ bottom: `${line / max * 100}%` }}>{tall ? line : ''}</span>}
     {values.map(({ log, value }) => <span key={log.id} className={line != null && value != null && gradeNbaValue(value,line,milestone?'milestone':side)==='win' ? styles.barHit : styles.bar} style={{ height: `${Math.max(2, (value ?? 0) / max * 100)}%` }} aria-label={`${log.game.date}: ${value ?? 'No data'}`}>{tall && <b>{value ?? '—'}</b>}</span>)}
     {!values.length && <small>—</small>}
   </div>
+}
+function TrendChart({ values, max, line, side, milestone }: {
+  values: { log: PaintStat; value: number | null }[]; max: number; line: number | null; side: 'over' | 'under'; milestone: boolean
+}) {
+  const [active, setActive] = useState<number | null>(null)
+  const [focus, setFocus] = useState(0)
+  const selected = active == null ? null : values[active]
+  const result = (value: number | null) => line == null || value == null ? null : gradeNbaValue(value, line, milestone ? 'milestone' : side)
+  const describe = (value: number | null) => value == null ? 'Unavailable' : result(value) === 'win' ? 'Hit' : result(value) === 'push' ? 'Push' : result(value) === 'loss' ? 'Miss' : 'No reference line'
+  return <figure className={styles.chartFigure}>
+    <div className={styles.chart} role="group" aria-label="Game-by-game results" onPointerLeave={() => setActive(null)}>
+      {line != null && <span className={styles.chartLine} style={{ bottom: `${line / max * 100}%` }}><span>Line {line}</span></span>}
+      {values.map(({ log, value }, index) => <button type="button" key={log.id} data-chart-bar data-result={result(value) ?? 'unavailable'} className={result(value) === 'win' ? styles.barHit : styles.bar} style={{ height: `${Math.max(2, (value ?? 0) / max * 100)}%` }} tabIndex={index === focus ? 0 : -1} aria-label={`${log.game.date}: ${value ?? 'Unavailable'} · ${describe(value)}`} onPointerEnter={() => setActive(index)} onFocus={() => { setActive(index); setFocus(index) }} onBlur={() => setActive(null)} onClick={() => setActive(index)} onKeyDown={event => {
+        if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return
+        event.preventDefault()
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + values.length) % values.length
+        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button[data-chart-bar]')[next]?.focus({ preventScroll: true })
+      }}><b>{value ?? '—'}</b></button>)}
+      {!values.length && <small>No game sample</small>}
+    </div>
+    <figcaption className={styles.chartLegend}><span data-result="win">Hit</span><span data-result="loss">Miss</span><span data-result="push">Push</span><output aria-live="polite">{selected ? `${selected.log.game.date} · ${selected.value ?? 'Unavailable'} · ${describe(selected.value)}` : `${values.length} games${line == null ? ' · No reference line' : ` · Line ${line}`}`}</output></figcaption>
+  </figure>
 }
 export function ShotCourt({ stats }: { stats: Record<string, number | null> }) {
   const zones = [{ key: 'restricted_area', label: 'At rim', x: 150, y: 49 }, { key: 'in_the_paint_(non-ra)', label: 'Paint', x: 150, y: 100 }, { key: 'mid-range', label: 'Midrange', x: 150, y: 151 }, { key: 'left_corner_3', label: 'Left corner', x: 28, y: 81 }, { key: 'right_corner_3', label: 'Right corner', x: 272, y: 81 }, { key: 'above_the_break_3', label: 'Above break', x: 150, y: 214 }]

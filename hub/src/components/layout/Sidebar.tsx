@@ -24,6 +24,7 @@ import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nbaResearchNavigation } from './navigationConfig'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { UpdateCenter } from './UpdateCenter'
+import { ResearchNavGroup, researchToolGroup } from './ResearchNavGroup'
 import { AccountMenu } from './AccountMenu'
 import navigationStyles from './researchNavigation.module.css'
 
@@ -211,57 +212,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     return researchToolActive(href, path, searchParams)
   }
 
-  return (
-    <>
-      {/* Backdrop — mobile only, dismisses the drawer on tap outside it */}
-      {open && (
-        <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-[var(--overlay)]" aria-hidden="true" />
-      )}
-      <aside
-        ref={drawerRef}
-        // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
-        // that custom property (0px when it's not showing) so this sticks
-        // right below the banner instead of overlapping it once scrolled.
-        className={`ss-site-sidebar fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{
-          // Confirmed live: a `width` transition on this element never
-          // resolves — it commits the inline style and the DOM value
-          // instantly but getComputedStyle/getBoundingClientRect stay
-          // pinned to the pre-toggle width indefinitely (reflow, resize,
-          // and scroll events don't unstick it either). That reproduced
-          // identically whether width referenced CSS custom properties or
-          // plain numbers, so it's specific to `position: sticky` + a
-          // `width` transition on this element, not the value source.
-          // Collapse/expand snaps instantly instead; only `transform`
-          // (the mobile drawer's slide) stays animated.
-          width: isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
-          transitionProperty: 'transform',
-          transitionDuration: '200ms',
-          transitionTimingFunction: 'ease-out',
-          background: 'var(--surface)',
-          borderRight: '1px solid var(--border)',
-          // Shared chrome accounts for the notice above both the sticky
-          // desktop sidebar and the fixed phone drawer.
-          height: 'var(--sidebar-height,100dvh)',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-        }}
-      >
-      <div className="ss-sidebar-brand" data-collapsed={isCollapsed}>
-        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={40} height={40} priority style={{ objectFit: 'contain' }} /></Link>
-        <button type="button" onClick={toggleCollapsed} className="ss-sidebar-collapse hidden md:flex" aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
-        <button type="button" onClick={onClose} className="ss-sidebar-close md:hidden" aria-label="Close menu"><X size={18}/></button>
-      </div>
-
-      <div className={navigationStyles.controls}>
-        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
-        {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page…" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
-      </div>
-      {/* Remount the scroll area when switching sports so its first tool is visible. */}
-      <nav key={selectedSport + query} aria-label="All navigation" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {!visibleNav.length && <p role="status" className={navigationStyles.empty}>No matching pages.</p>}
-        {visibleNav.map((item, i) => {
+  const renderNavItem = (item: NavItem, i: number) => {
           if (item === null) {
             return <div key={`div-${i}`} style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
           }
@@ -320,6 +271,64 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             </Link>
           )
           return link
+  }
+
+  return (
+    <>
+      {/* Backdrop — mobile only, dismisses the drawer on tap outside it */}
+      {open && (
+        <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-[var(--overlay)]" aria-hidden="true" />
+      )}
+      <aside
+        ref={drawerRef}
+        // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
+        // that custom property (0px when it's not showing) so this sticks
+        // right below the banner instead of overlapping it once scrolled.
+        className={`ss-site-sidebar fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          // Confirmed live: a `width` transition on this element never
+          // resolves — it commits the inline style and the DOM value
+          // instantly but getComputedStyle/getBoundingClientRect stay
+          // pinned to the pre-toggle width indefinitely (reflow, resize,
+          // and scroll events don't unstick it either). That reproduced
+          // identically whether width referenced CSS custom properties or
+          // plain numbers, so it's specific to `position: sticky` + a
+          // `width` transition on this element, not the value source.
+          // Collapse/expand snaps instantly instead; only `transform`
+          // (the mobile drawer's slide) stays animated.
+          width: isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
+          transitionProperty: 'transform',
+          transitionDuration: '200ms',
+          transitionTimingFunction: 'ease-out',
+          background: 'var(--surface)',
+          borderRight: '1px solid var(--border)',
+          // Shared chrome accounts for the notice above both the sticky
+          // desktop sidebar and the fixed phone drawer.
+          height: 'var(--sidebar-height,100dvh)',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+        }}
+      >
+      <div className="ss-sidebar-brand" data-collapsed={isCollapsed}>
+        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={40} height={40} priority style={{ objectFit: 'contain' }} /></Link>
+        <button type="button" onClick={toggleCollapsed} className="ss-sidebar-collapse hidden md:flex" aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
+        <button type="button" onClick={onClose} className="ss-sidebar-close md:hidden" aria-label="Close menu"><X size={18}/></button>
+      </div>
+
+      <div className={navigationStyles.controls}>
+        <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
+        {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page…" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
+      </div>
+      {/* Remount the scroll area when switching sports so its first tool is visible. */}
+      <nav key={selectedSport + query} aria-label="All navigation" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {!visibleNav.length && <p role="status" className={navigationStyles.empty}>No matching pages.</p>}
+        {visibleNav.map((item, index) => {
+          const group = item && 'href' in item ? researchToolGroup(item.href) : null
+          if (!group || isCollapsed || query) return renderNavItem(item, index)
+          if (visibleNav.findIndex(row => row && 'href' in row && researchToolGroup(row.href) === group) !== index) return null
+          const members = visibleNav.filter((row): row is NavLink => !!row && 'href' in row && researchToolGroup(row.href) === group)
+          return <ResearchNavGroup key={group} label={group} active={members.some(row => active(row.href))}>{members.map(renderNavItem)}</ResearchNavGroup>
         })}
       </nav>
 

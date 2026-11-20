@@ -13,11 +13,10 @@ export function AdminStatCard({ label, value, icon: Icon, tone = 'info', detail 
   const background = `var(--status-${tone}-muted)`
 
   return (
-    <article className="group relative min-w-0 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-3.5 shadow-[var(--shadow-card)] transition duration-[var(--motion-fast)] hover:-translate-y-0.5 hover:border-[var(--border-strong)] sm:p-5">
-      <div className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
+    <article className="ss-admin-stat-card relative min-w-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] sm:text-xs">{label}</p>
+          <p className="text-xs font-medium text-[var(--text-2)]">{label}</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-[var(--text-primary)] sm:mt-3 sm:text-3xl">{typeof value === 'number' ? value.toLocaleString() : value}</p>
           {detail && <p className="mt-1 text-xs text-[var(--text-secondary)]">{detail}</p>}
         </div>
