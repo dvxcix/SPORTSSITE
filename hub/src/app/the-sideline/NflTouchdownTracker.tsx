@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo, useState, type CSSProperties } from 'react'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 import Image from 'next/image'
 import { Download, Flame, Radio, X } from 'lucide-react'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
@@ -36,12 +36,7 @@ function Avatar({ event }: { event: NflTouchdownEvent }) {
 export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouchdownEvent[] | null; onJumpToGame: (gameId: string) => void }) {
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState<'all' | NflTouchdownEvent['kind']>('all')
-  useEffect(() => {
-    if (!open) return
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
-    window.addEventListener('keydown', close)
-    return () => window.removeEventListener('keydown', close)
-  }, [open])
+
 
   const visible = useMemo(() => events?.filter(event => filter === 'all' || event.kind === filter) ?? [], [events, filter])
   const firstCount = events?.filter(event => event.isFirstTdOfGame).length
@@ -50,9 +45,7 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
       <Flame size={15} /> Touchdowns
       <span className={styles.count}>{events?.length ?? '—'}</span>
     </button>
-    {open && typeof document !== 'undefined' ? createPortal(
-      <div className={styles.backdrop} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false) }}>
-        <section className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="nfl-touchdown-title">
+    <ModalSurface open={open} onClose={() => setOpen(false)} labelledBy="nfl-touchdown-title" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.sheet}>
           <header>
             <span className={styles.flame}><Flame size={20} /></span>
             <div>
@@ -89,7 +82,6 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
               </div>
             </article>})}
           </div>
-        </section>
-      </div>, document.body) : null}
+    </ModalSurface>
   </>
 }

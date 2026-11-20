@@ -15,7 +15,7 @@ import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
-import { createPortal } from 'react-dom'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 import { useSidelineMarket } from './useSidelineMarket'
 import { NflTouchdownTracker } from './NflTouchdownTracker'
 import { NflLastSeen } from './NflLastSeen'
@@ -1259,26 +1259,9 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
     }
   }, [board.gameLines, detailWindow, game.home.abbr, lens.windows, player])
   const markets = player.market?.markets ?? []
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [onClose])
+
   return (
-    <div
-      className={styles.modalBackdrop}
-      role="presentation"
-      onMouseDown={event => {
-        if (event.currentTarget === event.target) onClose()
-      }}
-    >
-      <section className={styles.playerModal} role="dialog" aria-modal="true" aria-label={`${player.name} NFL breakdown`}>
+    <ModalSurface open onClose={onClose} label={`${player.name} NFL breakdown`} backdropClassName={styles.modalTheme + ' ' + styles.modalBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.playerModal}>
         <header>
           <div className={styles.modalPlayer}>
             <PlayerAvatar player={player} team={team} />
@@ -1397,22 +1380,14 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
             </div>
           )}
         </div>
-      </section>
-    </div>
+    </ModalSurface>
   )
 }
 
 function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset, onClose }: { columns: ColumnDefinition[]; visibleIds: Set<string>; order: string[]; onVisible: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onReset: () => void; onClose: () => void }) {
   const ordered = order.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
   return (
-    <div
-      className={styles.modalBackdrop}
-      role="presentation"
-      onMouseDown={event => {
-        if (event.currentTarget === event.target) onClose()
-      }}
-    >
-      <section className={styles.columnModal} role="dialog" aria-modal="true" aria-label="Customize NFL board columns">
+    <ModalSurface open onClose={onClose} label="Customize NFL board columns" backdropClassName={styles.modalTheme + ' ' + styles.modalBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.columnModal}>
         <header>
           <div>
             <small>THE SIDELINE</small>
@@ -1453,8 +1428,7 @@ function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset,
             Done
           </button>
         </footer>
-      </section>
-    </div>
+    </ModalSurface>
   )
 }
 
@@ -2475,9 +2449,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
 
       <NflSlateEdgeOverlay open={slateEdgeOpen} date={selected.gameday} sample={sample} onClose={() => setSlateEdgeOpen(false)} />
 
-      {expanded || columnsOpen
-        ? createPortal(
-            <div className={styles.modalTheme}>
+      <>
               {expanded ? (
                 <PlayerModal
                   player={
@@ -2519,10 +2491,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                   onClose={() => setColumnsOpen(false)}
                 />
               ) : null}
-            </div>,
-            document.body,
-          )
-        : null}
+      </>
     </div></NflScorerProvider>
   )
 }
