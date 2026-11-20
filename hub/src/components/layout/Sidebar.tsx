@@ -24,6 +24,7 @@ import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nbaResearchNavigation } from './navigationConfig'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { UpdateCenter } from './UpdateCenter'
+import { AccountMenu } from './AccountMenu'
 import navigationStyles from './researchNavigation.module.css'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
@@ -183,7 +184,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   }, [open])
 
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
-  const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
+  const hasUltimate = hydrated && !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
   const permittedNav = nav.filter(item => {
     if (!item) return true
     if (!mlbAccess && (('section' in item && item.section === 'MLB Research') || ('href' in item && researchSportForPath(item.href.split('?')[0]) === 'mlb'))) return false
@@ -246,71 +247,21 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           // banner's height. 100vh just means the sticky desktop sidebar's
           // own box extends a few tens of px past the viewport bottom when
           // a banner is showing — invisible/harmless, unlike the mobile gap.
-          height: '100dvh',
+          height: 'var(--sidebar-height,100dvh)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
         }}
       >
-      {/* Logo */}
-      <div className="ss-sidebar-brand" style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        justifyContent: isCollapsed ? 'center' : 'flex-start',
-        padding: isCollapsed ? '20px 8px 18px' : '20px 16px 18px',
-        borderBottom: '1px solid var(--border)',
-        textDecoration: 'none',
-      }}>
-        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain', flexShrink: 0 }} /></Link>
-        {!isCollapsed && (
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
-              Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
-              SPORTS | PICKS | SOCIAL
-            </div>
-          </div>
-        )}
-        {!isCollapsed && (
-          <button
-            onClick={e => { e.preventDefault(); onClose() }}
-            className="ss-sidebar-close md:hidden"
-            style={{ width: 44, minWidth: 44, height: 44, minHeight: 44, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
-            aria-label="Close menu"
-          >
-            <X size={18} />
-          </button>
-        )}
+      <div className="ss-sidebar-brand" data-collapsed={isCollapsed}>
+        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={40} height={40} priority style={{ objectFit: 'contain' }} /></Link>
+        <button type="button" onClick={toggleCollapsed} className="ss-sidebar-collapse hidden md:flex" aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
+        <button type="button" onClick={onClose} className="ss-sidebar-close md:hidden" aria-label="Close menu"><X size={18}/></button>
       </div>
-
-      {/* Collapse toggle — desktop/tablet only, mirrors the mobile X button's
-          spot in the flow but lives in its own row since collapsing needs to
-          stay reachable even when the logo row above is icon-only. */}
-      <button
-        onClick={toggleCollapsed}
-        className="hidden md:flex"
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        style={{
-          alignItems: 'center', gap: 6,
-          justifyContent: isCollapsed ? 'center' : 'flex-end',
-          padding: '6px 12px 10px',
-          background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer',
-          borderBottom: '1px solid var(--border)', marginBottom: 6,
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}
-      >
-        {isCollapsed ? <ChevronRight size={14} /> : (
-          <>
-            <ChevronLeft size={14} />
-            <span style={{ fontSize: 12, fontWeight: 600 }}>Collapse</span>
-          </>
-        )}
-      </button>
 
       <div className={navigationStyles.controls}>
         <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
-        {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page or tool" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
+        {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page…" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}
       </div>
       {/* Remount the scroll area when switching sports so its first tool is visible. */}
       <nav key={selectedSport + query} aria-label="All navigation" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -340,10 +291,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           const link = (
             <Link key={item.href} href={researchNavigationHref(item.href, path, searchParams, nbaAccess)} prefetch={false} className="nav-item" data-active={isActive} aria-current={isActive ? 'page' : undefined} aria-label={locked ? `${item.label} · Ultimate required` : isCollapsed ? item.label : undefined} title={!item.nbaOnly && isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
-              minHeight: 44,
+              minHeight: 36,
               justifyContent: isCollapsed ? 'center' : 'flex-start',
               padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
-              fontSize: 13, fontWeight: isActive ? 700 : 500,
+              fontSize: 13, fontWeight: isActive ? 600 : 450,
               color: isActive ? 'var(--accent)' : 'var(--text-2)',
               background: isActive ? 'var(--accent-dim)' : idleBg,
               transition: 'all 130ms',
@@ -378,7 +329,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </nav>
 
       {/* Bottom: Settings */}
-      <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
+      <div className="ss-sidebar-footer">
         <UpdateCenter compact={isCollapsed} />
         <Link href="/settings" prefetch={false} className="ss-sidebar-settings" aria-label={isCollapsed ? 'Settings & Help' : undefined} style={{
           display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
@@ -391,8 +342,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}>
           <Settings size={16} aria-hidden="true" />
-          {!isCollapsed && <span>Settings & Help</span>}
+          {!isCollapsed && <span>Settings</span>}
         </Link>
+        {hydrated && <AccountMenu placement="sidebar" compact={isCollapsed} onNavigate={onClose} />}
       </div>
       </aside>
     </>

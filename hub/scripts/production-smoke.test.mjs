@@ -143,7 +143,9 @@ test('shared member avatars cannot expand top-bar or social layouts', async () =
   assert.ok(avatar.includes('width={size} height={size}'))
   assert.ok(avatar.includes('role="img"'))
   assert.ok(avatar.includes('aria-label={`${name} avatar`}'))
-  assert.ok(topbar.includes('className="ss-topbar-profile-avatar"'))
+  const account = await read('src/components/layout/AccountMenu.tsx')
+  assert.ok(topbar.includes('<AccountMenu'))
+  assert.ok(account.includes('className="ss-topbar-profile-avatar"'))
   assert.ok(css.includes('.ss-topbar-profile-trigger > .ss-topbar-profile-avatar'))
 })
 
@@ -167,6 +169,7 @@ test('desktop notifications include realtime and reconnect catch-up', async () =
 
 test('activity and account menus preserve explicit unread state and complete navigation', async () => {
   const topbar = await read('src/components/layout/TopBar.tsx')
+  const account = await read('src/components/layout/AccountMenu.tsx')
   const desktopNavigation = await read('src/components/desktop/DesktopNavigation.tsx')
   const authContext = await read('src/context/AuthContext.tsx')
   const activityPage = await read('src/app/notifications/page.tsx')
@@ -177,11 +180,12 @@ test('activity and account menus preserve explicit unread state and complete nav
     assert.ok(topbar.includes(contract), `top bar activity center is missing ${contract}`)
   }
   for (const destination of ['/bookmarks', '/settings/membership', '/settings/notifications']) {
-    assert.ok(topbar.includes(destination), `account shell omits ${destination}`)
+    assert.ok((topbar + account).includes(destination), `account shell omits ${destination}`)
   }
-  assert.ok(!topbar.includes("|| 'Me'"), 'missing profiles must not masquerade as the current member')
-  assert.ok(topbar.includes("'Checking access…'"), 'profile hydration needs an explicit pending-access state')
-  assert.ok(desktopNavigation.includes('`${profileTier.charAt(0).toUpperCase()}${profileTier.slice(1)} workspace`'))
+  assert.ok(!account.includes("|| 'Me'"), 'missing profiles must not masquerade as the current member')
+  assert.ok(account.includes("'Checking access…'"), 'profile hydration needs an explicit pending-access state')
+  assert.ok(desktopNavigation.includes('<AccountMenu placement="sidebar"'), 'desktop identity must use the shared account menu')
+  assert.ok(account.includes('const currentTier = effectiveTier(') && account.includes('TIER_LABEL[currentTier]'), 'shared identity must display effective access')
   assert.ok(!desktopNavigation.includes("profile?.tier || 'free'"), 'desktop identity must render effective access, not raw billing tier')
   assert.ok(authContext.includes('fetchProfile(next.user.id).finally'), 'initial auth loading must settle with profile hydration')
   assert.ok(authContext.includes('supabase.auth.refreshSession()'), 'an expired account request must get one bounded session refresh')
@@ -192,10 +196,10 @@ test('activity and account menus preserve explicit unread state and complete nav
   assert.match(topbar, /ref=\{notifTriggerRef\}/, 'notification sheet needs a stable trigger anchor')
   assert.ok(!topbar.includes('notifRef.current.contains'), 'a header-scoped outside-click handler must not close a portaled notification sheet')
   assert.ok(topbar.includes('aria-controls="topbar-notification-center"'))
-  assert.match(topbar, /<FloatingSurface[\s\S]{0,420}className="ss-dropdown ss-topbar-profile-menu"[\s\S]{0,220}mobileSheet/, 'account controls must use the same portaled mobile-sheet system')
-  assert.match(topbar, /ref=\{menuTriggerRef\}/, 'account menu needs a stable trigger anchor')
+  assert.match(account, /<FloatingSurface[\s\S]{0,420}className="ss-dropdown ss-topbar-profile-menu"[\s\S]{0,220}mobileSheet/, 'account controls must use the same portaled mobile-sheet system')
+  assert.match(account, /ref=\{menuTriggerRef\}/, 'account menu needs a stable trigger anchor')
   assert.ok(!topbar.includes('menuRef.current.contains'), 'a header-scoped outside-click handler must not close a portaled account menu')
-  assert.ok(topbar.includes('aria-controls="topbar-account-menu"'))
+  assert.ok(account.includes('aria-controls={menuId}') && account.includes("'sidebar-account-menu'") && account.includes("'topbar-account-menu'"), 'sidebar and mobile account menus must have separate controlled IDs')
   assert.match(topbar, /<FloatingSurface[\s\S]{0,260}open=\{quickOpen && search\.trim\(\)\.length >= 2\}[\s\S]{0,320}className="ss-dropdown ss-topbar-search-results"/, 'global search suggestions must escape the sticky header')
   assert.ok(!topbar.includes("document.addEventListener('mousedown', handleClick)"), 'header surfaces must share pointer-safe portal dismissal')
   assert.ok(css.includes('.ss-topbar-notification-shell'))
@@ -678,7 +682,10 @@ test('member avatars use the shared bounded renderer across social surfaces', as
 
   for (const file of files) {
     const source = await read(file)
-    assert.ok(source.includes('MemberAvatar'), `${file} bypasses the bounded member avatar`)
+    if (file === 'src/components/desktop/DesktopNavigation.tsx') {
+      assert.ok(source.includes('<AccountMenu'))
+      assert.ok((await read('src/components/layout/AccountMenu.tsx')).includes('<MemberAvatar'))
+    } else assert.ok(source.includes('MemberAvatar'), `${file} bypasses the bounded member avatar`)
   }
 })
 
@@ -980,7 +987,7 @@ test('connected accounts are discoverable, provider-backed, and safe to disconne
   const panel = await read('src/components/settings/ConnectedAccountsPanel.tsx')
   const globalStyles = await read('src/app/globals.css')
   const profile = await read('src/components/settings/ProfileForm.tsx')
-  const topBar = await read('src/components/layout/TopBar.tsx')
+  const topBar = await read('src/components/layout/TopBar.tsx') + await read('src/components/layout/AccountMenu.tsx')
   const navigation = await read('src/components/layout/navigationConfig.ts')
   const commands = await read('src/components/layout/GlobalCommandPalette.tsx')
   const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')

@@ -1,0 +1,34 @@
+SlipSurge navigation and dashboard refinement — 2026-11-20
+
+Scope
+Logo-only site/admin brand; account control beside sidebar utilities; shared
+account menu for web, mobile and desktop app; concise update-panel copy;
+desktop research navigation uses the sidebar; mobile keeps workspace access;
+tighter NBA slate, market and sort controls. Existing imagery, research,
+entitlements, routes, snapshot rules and data services are preserved.
+
+Source baseline
+GitHub main and production both at bd5015d44a751e531a8c23f3b3f943e2a5775e85.
+Production dpl_2Yuxk8UDN6sg1JWSQHCq1RPn1raN was READY with www alias.
+Required recovered NFL ancestry remains present. Isolated review worktree;
+unrelated original checkout work is preserved.
+
+Validation before release
+134/134 source checks; 62/62 selected integration tests; 13/13 additional
+account/search/privacy checks (the last group repeats five account tests).
+TypeScript and scoped ESLint pass. Optimized private build passes all Next.js
+compile, type and prerender stages. No database/API/model changes or dependencies.
+
+Browser verification uses actual components with isolated illustrative data.
+1280x900 dark/light and 390x844 phone: footer account menu, keyboard focus,
+Escape, collapse/expand, NBA Odds/workspace/Ladders, NFL sidebar navigation,
+admin account access, updates panel and phone drawer checked. No document
+horizontal overflow observed. Native footer clicks preserve page scroll;
+automation locator clicks can scroll sticky content into view before clicking.
+First player row moves from y=891.19 to y=655.53 at the same desktop viewport,
+approximately 236px earlier. This is a layout measurement, not a speed claim.
+
+Local evidence (ignored): docs/design/evidence/live/shell-refinement/.
+Private preview contains fixtures, not live research results. The development
+server had oversized chunk reload timeouts; optimized build hydration succeeds.
+This pass does not rerun or claim the prior 620-state release audit.

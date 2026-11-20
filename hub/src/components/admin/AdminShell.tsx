@@ -44,7 +44,7 @@ export function AdminShell({ email, children }: { email: string; children: React
             <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-2)]">
               <span>{group}</span><span aria-hidden="true">/</span><span className="truncate">{title}</span>
             </div>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--text-1)] sm:text-base">{title}</p>
+
           </div>
 
           <button type="button" onClick={() => setCommandOpen(true)} className="hidden min-h-10 min-w-52 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-xs font-semibold text-[var(--text-3)] transition hover:border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] hover:bg-[var(--surface-2)] hover:text-[var(--text-2)] md:flex xl:min-w-64">
@@ -56,7 +56,7 @@ export function AdminShell({ email, children }: { email: string; children: React
             <Search size={17} aria-hidden="true" />
           </button>
 
-          <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 xl:flex">
+          <div className="sr-only">
             <ShieldCheck size={14} aria-hidden="true" className="shrink-0 text-[var(--accent)]" />
             <span className="max-w-44 truncate text-[12px] font-bold text-[var(--text-2)]">{email}</span>
           </div>

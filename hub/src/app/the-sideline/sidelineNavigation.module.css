@@ -48,3 +48,6 @@
 
 
 .navigation{background:var(--bg)}.toolNav a{flex:0 0 auto;min-height:38px;font-size:13px;font-weight:500}.selectControl select{color-scheme:inherit;background:var(--surface);border-color:var(--control-border);font-weight:500}.dayRail{background:var(--surface)}.dayRail button[aria-current=date]{background:var(--accent-fill);color:var(--accent-fg);border-color:var(--accent-fill)}.dayRail button[aria-current=date] small{color:var(--accent-fg)}.gameCards button{background:var(--surface)}.gameCards .gameActive{background:var(--selected-bg);border-color:var(--selected-border)}
+
+/* Desktop research tools live in the shared sidebar. */
+@media(min-width:768px){.toolNav{display:none}.identity small{display:none}.topBar{padding-block:10px}}

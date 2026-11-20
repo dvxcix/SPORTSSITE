@@ -1,10 +1,11 @@
 'use client'
 
+import { AccountMenu } from './AccountMenu'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, ChevronRight, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards, CheckCheck, Bookmark, CreditCard, CircleHelp } from 'lucide-react'
+import { Search, Bell, ChevronRight, Settings, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, CheckCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
@@ -13,8 +14,6 @@ import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { useCustomEmojis, type CustomEmoji } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
-import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
-import { Badge } from '@/components/ui/badge'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -23,7 +22,6 @@ import { EmojiText } from '@/components/social/EmojiText'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import type { NbaSearchPlayer, NbaSearchTeam } from '@/lib/nbaEntities'
 
-const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
@@ -128,12 +126,10 @@ function TopbarNotificationEntry({
 }
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { user, profile, loading, authUnavailable, retrySession, signOut: signOutSession } = useAuth()
+  const { user, profile, loading, authUnavailable, retrySession } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [search, setSearch] = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [signOutError, setSignOutError] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifFilter, setNotifFilter] = useState<NotificationFilter>('all')
   const [notifLoading, setNotifLoading] = useState(false)
@@ -146,12 +142,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   if (notificationOwner !== userId) {
     setNotificationOwner(userId)
     setNotifications([]); setUnread(0); setNotifOpen(false); setNotifLoading(false); setNotifError('')
-    setMenuOpen(false); setSignOutError('')
   }
   const customEmojis = useCustomEmojis()
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const notifTriggerRef = useRef<HTMLButtonElement>(null)
   const [blockState, setBlockState] = useState<{ owner: string | undefined; ids: string[] | null }>({ owner: undefined, ids: null })
   const accountContext = `${userId ?? ''}:${loading}:${authUnavailable}`
@@ -267,27 +261,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     return filtered
   }, [notifFilter, notifications, notificationOwner, userId, currentBlockIds])
 
-  // Same effectiveTier() fold used everywhere else tier is checked or shown
-  // (TierGate, requireTier, /pricing, /settings/membership) — the profile
-  // dropdown is one more place someone can glance at their real access
-  // level, so it can't show a different answer than any of those.
-  const rawTier = (profile?.tier as Tier) ?? 'free'
-  const currentTier = effectiveTier(rawTier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null | undefined)
-  const fullAccess = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active)
-  const accountName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
-  const tierLabel = !profile
-    ? (loading ? 'Checking access…' : 'Refresh account')
-    : fullAccess
-      ? (profile.account_type === 'admin' ? 'Admin' : 'Beta — Full Access')
-      : TIER_LABEL[currentTier]
-  const profileHref = profile?.username ? `/profile/${profile.username}` : '/settings'
-  const avatarTone = profile?.account_type === 'admin' || currentTier === 'ultimate'
-    ? 'ultimate'
-    : currentTier === 'advanced'
-      ? 'advanced'
-      : profile?.account_type === 'creator'
-        ? 'creator'
-        : 'default'
 
   function goTo(href: string) {
     setQuickOpen(false)
@@ -338,7 +311,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     const epoch = notificationEpoch.current
     const opening = !notifOpen
     setNotifOpen(opening)
-    setMenuOpen(false)
+
     // Previously only fetched once ever (gated behind a one-time-set flag)
     // — the realtime subscription above bumps the unread badge on a new
     // notification, but the dropdown's actual list never refreshed after
@@ -410,13 +383,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (error) setNotifications(prev) // restore — it's still in the DB
   }
 
-  async function signOut() {
-    setSignOutError('')
-    try {
-      await signOutSession()
-      router.push('/auth/login')
-    } catch { setSignOutError('Sign out could not finish. Try again.') }
-  }
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -452,7 +418,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         </button>
       )}
 
-      <ThemeToggle />
+      {!user && <div className="ss-topbar-theme"><ThemeToggle /></div>}
       {/* Search */}
       <form ref={searchRef} onSubmit={handleSearch} className="ss-topbar-search">
         <Search size={14} style={{
@@ -465,7 +431,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           maxLength={64}
           onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
           onFocus={() => setQuickOpen(true)}
-          placeholder="Search picks, users, teams…"
+          placeholder="Search SlipSurge"
           className="ss-topbar-search-input"
           aria-label="Search SlipSurge"
         />
@@ -670,87 +636,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               </FloatingSurface>
             </div>
 
-            {/* Avatar + menu */}
-            <div className="ss-topbar-control-wrap">
-              <button ref={menuTriggerRef} type="button" onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-haspopup="menu" aria-controls="topbar-account-menu" aria-expanded={menuOpen} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '5px 8px 5px 5px', borderRadius: 8,
-                background: 'transparent', border: '1px solid var(--border)',
-                cursor: 'pointer', transition: 'all 130ms',
-              }}>
-                <MemberAvatar className="ss-topbar-profile-avatar" src={profile?.avatar_url} name={accountName} size={26} tone={avatarTone} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
-                <span className="ss-topbar-profile-copy hidden sm:flex">
-                  <strong>{accountName}</strong>
-                  <small>{tierLabel}</small>
-                </span>
-                <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
-              </button>
-
-              <FloatingSurface
-                open={menuOpen}
-                anchorRef={menuTriggerRef}
-                onClose={() => setMenuOpen(false)}
-                className="ss-dropdown ss-topbar-profile-menu"
-                width={292}
-                align="end"
-                mobileSheet
-                role="menu"
-                ariaLabel="Account menu"
-              >
-                <div id="topbar-account-menu" className="ss-topbar-profile-menu-shell">
-                  <div className="ss-topbar-account-card">
-                    <MemberAvatar src={profile?.avatar_url} name={accountName} size={46} tone={avatarTone} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
-                    <div className="ss-topbar-account-copy">
-                      <strong>{accountName}</strong>
-                      <span>{profile?.username ? `@${profile.username}` : 'Signed-in account'}</span>
-                      <Link href="/settings/membership" onClick={() => setMenuOpen(false)}><Badge variant="save">{tierLabel}</Badge></Link>
-                    </div>
-                    <Link href={profileHref} className="ss-topbar-account-open" onClick={() => setMenuOpen(false)} aria-label="View your profile"><ChevronRight size={16} /></Link>
-                  </div>
-                  <p className="ss-topbar-menu-label">Account</p>
-                  <Link href={profileHref} className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <User size={15} /><span>Profile</span><ChevronRight size={13} />
-                  </Link>
-                  <Link href="/bookmarks" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <Bookmark size={15} /><span>Bookmarks</span><ChevronRight size={13} />
-                  </Link>
-                  <Link href="/settings" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <Settings size={15} /><span>Settings</span><ChevronRight size={13} />
-                  </Link>
-                  <Link href="/settings/connections" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <AtSign size={15} /><span>Connected accounts</span><ChevronRight size={13} />
-                  </Link>
-                  <Link href="/settings/membership" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <CreditCard size={15} /><span>Membership</span><ChevronRight size={13} />
-                  </Link>
-                  {(profile?.account_type === 'creator' || profile?.username?.toLowerCase() === 'slipsurge') && (
-                    <>
-                      <p className="ss-topbar-menu-label">Creator</p>
-                      <Link href="/creators/studio" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                        <Sparkles size={15} /><span>Creator Studio</span><ChevronRight size={13} />
-                      </Link>
-                      <Link href="/creators/payouts" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                        <WalletCards size={15} /><span>Payouts</span><ChevronRight size={13} />
-                      </Link>
-                    </>
-                  )}
-                  {profile?.account_type === 'admin' && (
-                    <Link href="/admin" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                      <Shield size={15} /><span>Admin</span><ChevronRight size={13} />
-                    </Link>
-                  )}
-                  <p className="ss-topbar-menu-label">Support</p>
-                  <Link href="/support" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <CircleHelp size={15} /><span>Help & support</span><ChevronRight size={13} />
-                  </Link>
-                  <div className="ss-topbar-menu-separator" />
-                  <button type="button" className="ss-dropdown-item danger" onClick={signOut}>
-                    <LogOut size={15} /><span>Sign out</span>
-                  </button>
-                  {signOutError && <p role="status">{signOutError}</p>}
-                </div>
-              </FloatingSurface>
-            </div>
+            <div className="ss-mobile-account"><AccountMenu /></div>
           </>
         ) : loading || authUnavailable ? (
           <div role="status" className="ss-topbar-guest-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)' }}>

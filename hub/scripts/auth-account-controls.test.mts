@@ -48,13 +48,13 @@ const stubs:Record<string,string>={
   '@/components/ui/FloatingSurface':'export const FloatingSurface=({open,children})=>open?children:null',
   '@/components/social/EmojiText':'export const EmojiText=({text})=>text',
 }
-const bundle=await build({stdin:{contents:"export {TopBar} from './src/components/layout/TopBar'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom','lucide-react'],tsconfig:'tsconfig.json',plugins:[{name:'account-controls-fixture',setup(builder){builder.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'fixture'}:undefined);builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:stubs[args.path],loader:'tsx',resolveDir:resolve('.')}))}}]})
-const compiled={exports:{} as {TopBar:ComponentType}}
+const bundle=await build({stdin:{contents:"export {TopBar} from './src/components/layout/TopBar'; export {AccountMenu} from './src/components/layout/AccountMenu'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom','lucide-react'],tsconfig:'tsconfig.json',plugins:[{name:'account-controls-fixture',setup(builder){builder.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'fixture'}:undefined);builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:stubs[args.path],loader:'tsx',resolveDir:resolve('.')}))}}]})
+const compiled={exports:{} as {TopBar:ComponentType;AccountMenu:ComponentType<any>}}
 new Function('require','module','exports',bundle.outputFiles[0].text)(require,compiled,compiled.exports)
-async function harness(initial:Account){
+async function harness(initial:Account,component: 'TopBar'|'AccountMenu'='TopBar',props:Record<string,unknown>={}){
   auth=initial;routes=[];notificationLoad=async()=>({data:[],error:null})
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
-  const render=async(next:Account)=>{auth=next;await act(async()=>root.render(createElement(compiled.exports.TopBar)))}
+  const render=async(next:Account)=>{auth=next;await act(async()=>root.render(createElement(compiled.exports[component],props)))}
   await render(initial)
   const click=async(selector:string)=>{const button=host.querySelector<HTMLButtonElement>(selector);assert.ok(button,selector);await act(async()=>button.click())}
   return{host,render,click,close:async()=>{await act(async()=>root.unmount());host.remove()}}
@@ -102,5 +102,35 @@ test('a late notification response cannot show the previous member activity afte
     await ui.click('[aria-label="Notifications"]')
     assert.doesNotMatch(ui.host.textContent!,/Private account A activity/)
     assert.match(ui.host.textContent!,/You're all caught up/)
+  }finally{await ui.close()}
+})
+
+
+test('sidebar account menu keeps identity, effective access and destinations in one control and clears on account change',async()=>{
+  const ui=await harness(account('a'),'AccountMenu',{placement:'sidebar'})
+  try{
+    const trigger=ui.host.querySelector<HTMLButtonElement>('[aria-label="Open account menu"]')!
+    assert.equal(trigger.getAttribute('aria-controls'),'sidebar-account-menu')
+    assert.equal(trigger.textContent?.trim(),'a')
+    await ui.click('[aria-label="Open account menu"]')
+    for(const href of ['/profile/a','/bookmarks','/settings','/settings/connections','/settings/membership','/support'])assert.ok(ui.host.querySelector('a[href="'+href+'"]'),href)
+    assert.match(ui.host.textContent!,/Ultimate/)
+    assert.equal(ui.host.querySelector('[role="menuitemradio"][aria-label="Use dark theme"]')?.getAttribute('aria-checked'),'true')
+    await ui.render(account('b'))
+    assert.equal(ui.host.querySelector('a[href="/profile/a"]'),null)
+    assert.equal(trigger.getAttribute('aria-expanded'),'false')
+    assert.equal(trigger.textContent?.trim(),'b')
+  }finally{await ui.close()}
+})
+
+test('account menu Escape closes and returns focus without moving the document',async()=>{
+  const ui=await harness(account('a'),'AccountMenu',{placement:'sidebar'})
+  try{
+    await ui.click('[aria-label="Open account menu"]')
+    const item=ui.host.querySelector<HTMLAnchorElement>('a[href="/profile/a"]')!
+    item.focus()
+    await act(async()=>item.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
+    assert.equal(ui.host.querySelector('a[href="/profile/a"]'),null)
+    assert.equal(document.activeElement,ui.host.querySelector('[aria-label="Open account menu"]'))
   }finally{await ui.close()}
 })

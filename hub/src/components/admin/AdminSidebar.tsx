@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
+import { AccountMenu } from '@/components/layout/AccountMenu'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Search, Shield, X } from 'lucide-react'
+import { ChevronDown, Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ADMIN_NAV_GROUPS, adminPathIsActive } from '@/components/admin/adminNavigation'
 import { cn } from '@/lib/utils'
@@ -52,13 +54,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
         )}
       >
         <div className="relative flex min-h-20 items-center gap-3 overflow-hidden border-b border-[var(--border)] px-4">
-          <span className="relative grid size-10 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]">
-            <Shield size={19} aria-hidden="true" />
-          </span>
-          <div className="relative min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[var(--text-1)]">SlipSurge Control</p>
-            <p className="mt-0.5 text-xs text-[var(--text-2)]">Operations workspace</p>
-          </div>
+          <Link href="/admin" aria-label="SlipSurge admin home" className="flex flex-1 items-center"><Image src="/logo.png" alt="SlipSurge" width={40} height={40}/></Link>
           <button type="button" aria-label="Close navigation" onClick={onClose} className="relative grid size-11 shrink-0 place-items-center rounded-xl text-[var(--text-3)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] lg:hidden">
             <X size={17} aria-hidden="true" />
           </button>
@@ -152,6 +148,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
             Return to SlipSurge
           </Link>
         </div>
+        <div className="ss-admin-account"><AccountMenu placement="sidebar" onNavigate={onClose}/></div>
       </aside>
     </>
   )

@@ -116,7 +116,9 @@ test('same-game sidebar navigation replaces the internally selected tool without
   const ui = await harness('ladders', 'over', null, false, 'points', '&contract=milestone&mode=live')
   try {
     assert.ok(ui.host.querySelector('[aria-label="Ladder player"]'))
-    await ui.click([...ui.host.querySelectorAll('nav[aria-label="NBA research tools"] button')].find(button=>button.textContent==='First Basket'))
+    const workspace = ui.host.querySelector<HTMLSelectElement>('[aria-label="NBA research workspace"]')!
+    assert.ok(workspace)
+    await act(async()=>{workspace.value='first-basket';workspace.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
     assert.ok(ui.host.querySelector('[aria-label="First Basket fixture"]'))
     assert.equal(new URL(window.location.href).searchParams.get('view'), 'first-basket')
     const sidebar = new URL(window.location.href)

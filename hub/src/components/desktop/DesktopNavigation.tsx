@@ -6,10 +6,10 @@ import { isNflToolHref } from '@/lib/nflAccessPolicy'
 import { hasNbaAccess, isNbaToolHref } from '@/lib/nbaAccessPolicy'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { ChevronLeft, ChevronRight, Crown, LockKeyhole, Settings2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, LockKeyhole } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
-import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { AccountMenu } from '@/components/layout/AccountMenu'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
 import { researchHome, researchSportForPath, resolveResearchSport, researchToolActive, researchNavigationHref } from '@/components/layout/researchNavigation'
@@ -24,7 +24,7 @@ export function DesktopNavigation() {
   const searchParams = useSearchParams()
   const { sport, chooseSport } = useResearchSport(pathname)
   const { allowed: nflAccess } = useNflAccess()
-  const { profile, loading } = useAuth()
+  const { profile } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const selectedSport = resolveResearchSport(sport, nflAccess, mlbAccess)
@@ -36,14 +36,6 @@ export function DesktopNavigation() {
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
   const items = context.items.filter(item => (isNbaToolHref(item.href) || !item.ultimateOnly || hasUltimate) && (!isNflToolHref(item.href) || nflAccess) && (context.area !== 'research' || !researchSportForPath(item.href.split('?')[0]) || researchSportForPath(item.href.split('?')[0]) === selectedSport))
-  const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
-  const accessLabel = !profile
-    ? (loading ? 'Checking access…' : 'Refresh account')
-    : profile.account_type === 'admin'
-      ? 'Admin workspace'
-      : fullAccess
-        ? 'Full-access workspace'
-        : `${profileTier.charAt(0).toUpperCase()}${profileTier.slice(1)} workspace`
 
   return (
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
@@ -64,6 +56,7 @@ export function DesktopNavigation() {
           })}
         </nav>
         <div className="ss-desktop-rail-bottom">
+          {channelsWorkspace && <AccountMenu placement="sidebar" compact />}
           {accountQuickNavigation.map(item => {
             const Icon = item.icon
             return <Link key={item.href} href={item.href} prefetch={false} title={item.label} aria-label={item.label} data-active={routeMatches(pathname, item)}><Icon size={18} /></Link>
@@ -74,7 +67,7 @@ export function DesktopNavigation() {
       {!channelsWorkspace && (
         <div className="ss-desktop-context-nav">
           <header>
-            <div><span>{context.meta.eyebrow}</span><strong>{context.meta.label}</strong></div>
+            <div><strong>{context.meta.label}</strong></div>
             <Link href="/pricing" prefetch={false} title="Upgrade"><Crown size={15} /></Link>
           </header>
           <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
@@ -100,13 +93,7 @@ export function DesktopNavigation() {
             })}
           </nav>
           <UpdateCenter compact={contextCollapsed} />
-          <div className="ss-desktop-account-card">
-            <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
-              <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
-            </Link>
-            <div><strong>{displayName}</strong><span>{accessLabel}</span></div>
-            <Link href="/settings" prefetch={false} aria-label="Account settings"><Settings2 size={14} /></Link>
-          </div>
+          <AccountMenu placement="sidebar" compact={contextCollapsed} />
         </div>
       )}
     </aside>

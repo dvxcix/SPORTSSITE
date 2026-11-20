@@ -41,7 +41,7 @@ const stubs: Record<string, string> = {
   '@/lib/blocks': 'export const getBlockedEitherWayIds=async()=>[]',
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null;export const TeamLogo=()=>null',
   '@slipsurge/core/mlb-api': 'export const mlbHeadshot=()=>null;export const mlbTeamLogo=()=>null',
-  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null',
+  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null;export const getTeamColor=()=>"#123456"',
   '@/components/shared/NflTeamLogo': 'export const NflTeamLogo=()=>null',
   '@/lib/sportLogos': 'export const sportLogoUrl=()=>null',
   '@/lib/emoji': 'export const useCustomEmojis=()=>[]',

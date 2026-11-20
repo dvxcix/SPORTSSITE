@@ -15,6 +15,7 @@ const stubs: Record<string,string> = {
   'next/image': `import React from 'react';export default function Image({priority,...props}){return <img {...props}/>}`,
   '@/components/ui/SafeImage': `import React from 'react';export function SafeImage({fallback,...props}){return <img {...props}/>}`,
   '@/components/social/MemberAvatar': `import React from 'react';export const MemberAvatar=()=> <span>Avatar</span>`,
+  '@/components/layout/AccountMenu': `export const AccountMenu=()=>null`,
   '@/context/AuthContext': `export const useAuth=()=>({profile:{account_type:globalThis.nbaNavFixture.role,tier:globalThis.nbaNavFixture.tier,admin_granted_tier:globalThis.nbaNavFixture.granted,beta_access_active:globalThis.nbaNavFixture.beta,username:'tester'},loading:false})`,
   '@/lib/useNflAccess': `export const useNflAccess=()=>({allowed:globalThis.nbaNavFixture.nfl})`,
   '@/lib/useSidebarCollapsed': `export const useSidebarCollapsed=()=>({collapsed:globalThis.nbaNavFixture.collapsed,toggle(){}})`,
