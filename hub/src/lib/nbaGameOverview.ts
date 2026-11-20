@@ -1,4 +1,6 @@
 import type { PaintGame } from './nbaPaint'
+import { nbaGameStart, type NbaOddsMode } from './nbaOddsMode'
+import type { NbaOddsBoardPhaseCheck } from './nbaOddsBoardPhase'
 
 export type NbaGameMarket = 'moneyline' | 'spread' | 'total'
 export type NbaGameSplit = { market: NbaGameMarket; side: 'away' | 'home' | 'over' | 'under'; betShare: number | null; moneyShare: number | null }
@@ -7,6 +9,17 @@ export type NbaGameOverview = { gameId: number; observedAt: string; totalBets: n
 const record = (value: unknown): Record<string, unknown> | null => value != null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 const bounded = (value: unknown, max: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max ? value : null
 const teamName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^losangelesclippers$/, 'laclippers')
+
+/** A newer slate proof can tighten the header clock before the lightweight
+ * price read finishes. Never keep an observation beyond that known boundary. */
+export function nbaGameHeaderClock(game: PaintGame, mode: NbaOddsMode, check?: NbaOddsBoardPhaseCheck | null): PaintGame | null {
+  const start = nbaGameStart(game)
+  if (start == null || check?.accessDenied) return null
+  if (!check?.phase || check.date !== game.date || check.mode !== mode) return game
+  const entry = check.phase.signature.split(';').find(row => row.split(',')[0] === String(game.id))
+  const known = entry ? Number(entry.split(',')[1]) : NaN
+  return Number.isSafeInteger(known) && known > 0 ? { ...game, datetime: new Date(Math.min(start, known)).toISOString() } : null
+}
 
 /** Only project observed public aggregates. Never derive side counts from the
  * all-market count, or mistake the source's period groups for sportsbooks. */

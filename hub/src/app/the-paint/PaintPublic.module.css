@@ -2,7 +2,7 @@
 @media(max-width:640px){
  .desktop{display:none}
  .mobileSort{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;color:var(--text-2);font-size:12px}
- .mobileSort select{min-height:44px;max-width:70%;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);color:var(--text-1);padding:8px;font:inherit}
+ .mobileSort select{min-height:44px;max-width:70%;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);color:var(--text-1);padding:8px;font:inherit;font-size:16px}
  .cards{display:grid;gap:10px}
  .card{min-width:0;padding:13px;border:1px solid var(--border-2);border-radius:11px;background:var(--surface-2)}
  .card header{display:flex;align-items:center;justify-content:space-between;gap:8px}

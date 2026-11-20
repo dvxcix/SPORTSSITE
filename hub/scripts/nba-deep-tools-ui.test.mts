@@ -35,7 +35,7 @@ const fixtureModule = { exports: {} as Record<string, ComponentType<Record<strin
 new Function('require', 'module', 'exports', bundle.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, fixtureModule, fixtureModule.exports)
 
 const team = { id: 2, abbreviation: 'BOS', full_name: 'Boston Celtics', name: 'Celtics' }
-const board = { game: { id: 123, date: '2026-10-20', visitor_team: team, home_team: { ...team, id: 9, abbreviation: 'DET', full_name: 'Detroit Pistons', name: 'Pistons' } }, players: [], sampleSeason: 2025 }
+const board = { game: { id: 123, date: '2026-10-20', datetime:'2026-10-20T23:00:00Z',status:'Scheduled',visitor_team: team, home_team: { ...team, id: 9, abbreviation: 'DET', full_name: 'Detroit Pistons', name: 'Pistons' } }, players: [], sampleSeason: 2025 }
 test('research refresh scope stays stable while open and isolates exact frozen and missing-snapshot boundaries', () => {
   const now=Date.now
   const tip=Date.parse('2030-10-20T23:00:00Z')
@@ -183,6 +183,30 @@ test('Odds Board header waits for phase-safe prices and distinguishes a failed r
     ui.succeed();await ui.click('Retry')
     assert.ok(ui.host.textContent?.includes('Game prices unavailable'))
     assert.equal(ui.host.textContent?.includes('-999'),false)
+  } finally {await ui.close()}
+})
+
+test('new slate proof removes header quotes beyond an earlier tip before the replacement read finishes', async () => {
+  const quoted={...board,gameOdds:[{id:1,vendor:'draftkings',moneyline_home_odds:-175,updated_at:'2026-10-20T22:59:00Z'}]}
+  const ui=await harness('PaintMatchup',{board:quoted},{overview:null})
+  try {
+    assert.ok(ui.host.textContent?.includes('-175'))
+    const start=Date.parse('2026-10-20T22:58:00Z')
+    await ui.render({board:quoted,phaseCheck:{date:board.game.date,mode:'pregame',receivedAt:Date.now(),phase:{date:board.game.date,checkedAt:Date.now(),signature:`123,${start},1`}}})
+    assert.equal(ui.host.textContent?.includes('-175'),false,'later prices never survive an earlier known clock')
+  } finally {await ui.close()}
+})
+
+test('membership denial clears loaded public activity and independent header prices', async () => {
+  const upcoming={...board,game:{...board.game,datetime:'2030-10-20T23:00:00Z'}}
+  const overview={gameId:123,observedAt:'2030-10-20T20:00:00Z',totalBets:21613,totalHandleDollars:null,splits:[]}
+  const ui=await harness('PaintMatchup',{board:upcoming,refreshPrices:true},{overview,gameOdds:[{id:1,vendor:'draftkings',moneyline_home_odds:-175,updated_at:'2030-10-20T20:00:00Z'}]})
+  try {
+    ui.succeed();await ui.click('Retry')
+    assert.ok(ui.host.textContent?.includes('21,613'));assert.ok(ui.host.textContent?.includes('-175'))
+    globalThis.fetch=async()=>Response.json({error:'Ultimate required'},{status:403})
+    await ui.refresh()
+    assert.equal(ui.host.textContent?.includes('21,613'),false);assert.equal(ui.host.textContent?.includes('-175'),false)
   } finally {await ui.close()}
 })
 

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { nbaGameOverviewView } from '../src/lib/nbaGameOverview.ts'
+import { nbaGameHeaderClock, nbaGameOverviewView } from '../src/lib/nbaGameOverview.ts'
 import type { PaintGame } from '../src/lib/nbaPaint.ts'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
@@ -29,6 +29,15 @@ test('earliest known start, stored cutoff, future observations and game identity
   assert.equal(nbaGameOverviewView(frame(), game, now - 60000, now), null)
   assert.equal(nbaGameOverviewView(frame(), game, NaN, now), null)
   assert.equal(nbaGameOverviewView(frame(), { ...game, home_team: { ...game.home_team, full_name: 'Boston Celtics' } }, cutoff, now), null)
+})
+
+test('a newly resolved slate clock tightens the header immediately and never reopens a start', () => {
+  const input={...game,date:'2026-11-20',datetime:new Date(cutoff).toISOString()}
+  const check={date:input.date,mode:'pregame' as const,receivedAt:now,phase:{date:input.date,checkedAt:now,signature:`${input.id},${cutoff-60000},1`}}
+  assert.equal(nbaGameHeaderClock(input,'pregame',check)?.datetime,new Date(cutoff-60000).toISOString())
+  assert.equal(nbaGameHeaderClock(input,'pregame',{...check,phase:{...check.phase,signature:`${input.id},${cutoff+60000},0`}})?.datetime,input.datetime)
+  assert.equal(nbaGameHeaderClock(input,'pregame',{...check,accessDenied:true}),null)
+  assert.equal(nbaGameHeaderClock(input,'pregame',{...check,phase:{...check.phase,signature:''}}),null)
 })
 
 test('invalid and conflicting percentages stay unavailable without invented complements', () => {

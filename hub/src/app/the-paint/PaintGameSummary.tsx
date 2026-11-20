@@ -3,13 +3,14 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Banknote, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { nbaModeHref } from '@/lib/nbaModeHref'
-import { nbaPregameOpen } from '@/lib/nbaOddsMode'
+import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
+import type { NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
 import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { PickCount, PicksMark } from '@/components/research/ResearchMetrics'
 import { bookName } from '@/components/BookLogo'
 import { nbaOdds, type PaintBoard, type PaintGameOdds } from '@/lib/nbaPaint'
-import type { NbaGameOverview } from '@/lib/nbaGameOverview'
+import { nbaGameHeaderClock, type NbaGameOverview } from '@/lib/nbaGameOverview'
 import { TeamLogo } from './PaintVisuals'
 import { PaintBookSelect } from './PaintEntitySelect'
 import { PaintGamePrice } from './PaintPrice'
@@ -19,14 +20,20 @@ const captured = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeri
 const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 })
 const percent = (value: number | null | undefined) => value == null ? '—' : `${Math.round(value * 100)}%`
 
-export function PaintGameSummary({ board, teamControl, refreshPrices = false }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean }) {
+export function PaintGameSummary({ board, teamControl, refreshPrices = false, phaseCheck }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean; phaseCheck?: NbaOddsBoardPhaseCheck | null }) {
   const mode = useNbaOddsMode(), id = useId(), rail = useRef<HTMLDivElement>(null)
   const [book, setBook] = useState('draftkings'), [metric, setMetric] = useState<'betShare' | 'moneyShare'>('betShare')
   const [edges, setEdges] = useState({ start: true, end: true }), [retry, setRetry] = useState(0)
   const [state, setState] = useState<{ key: string; overview: NbaGameOverview | null; error: boolean; gameOdds?: PaintGameOdds[]; pricesError?: boolean } | null>(null)
-  const key = `${board.game.id}:${mode}:${board.game.datetime ?? board.game.status}:${refreshPrices}`, overview = state?.key === key ? state.overview : null, error = state?.key === key && state.error
-  const poll = nbaPregameOpen(board.game), gameId = board.game.id
-  const gameOdds = refreshPrices ? state?.key === key ? state.gameOdds ?? [] : [] : board.gameOdds ?? []
+  const clockGame = nbaGameHeaderClock(board.game, mode, phaseCheck), start = clockGame ? nbaGameStart(clockGame) : null
+  const key = `${board.game.id}:${mode}:${start}:${refreshPrices}:${phaseCheck?.phase?.signature ?? ''}:${phaseCheck?.accessDenied ?? false}`
+  const observed = state?.key === key ? state.overview : null
+  const overview = observed && start != null && Date.parse(observed.observedAt) < start ? observed : null, error = state?.key === key && state.error
+  const poll = !!clockGame && nbaPregameOpen(clockGame), gameId = board.game.id
+  const candidates = refreshPrices ? state?.key === key ? state.gameOdds ?? [] : [] : board.gameOdds ?? []
+  // Server readers validate observation time. Here tighten only the phase
+  // boundary, so a member's mis-set PC clock cannot rewrite a verified quote.
+  const gameOdds = candidates.filter(quote => { const at = Date.parse(quote.updated_at); return start != null && Number.isFinite(at) && (mode === 'pregame' ? at < start : at >= start) })
   const books = [...new Set(gameOdds.map(quote => quote.vendor))]
   const selectedBook = books.includes(book) ? book : books[0], quote = gameOdds.find(item => item.vendor === selectedBook)
   const teams = [board.game.visitor_team, board.game.home_team]
@@ -40,6 +47,10 @@ export function PaintGameSummary({ board, teamControl, refreshPrices = false }: 
       pending = true
       try {
         const response = await fetch(nbaModeHref(`/the-paint/game-overview?game=${gameId}${refreshPrices ? '&prices=1' : ''}`, mode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) })
+        if (response.status === 401 || response.status === 403) {
+          if (!controller.signal.aborted) setState({ key, overview: null, error: true, pricesError: refreshPrices })
+          return
+        }
         if (!response.ok) throw new Error('overview')
         const data = await response.json() as { overview: NbaGameOverview | null; publicUnavailable?: boolean; gameOdds?: PaintGameOdds[]; pricesUnavailable?: boolean }
         if (!controller.signal.aborted) setState(prior => ({ key, overview: data.publicUnavailable ? prior?.key === key ? prior.overview : null : data.overview?.gameId === gameId ? data.overview : null, error: data.publicUnavailable === true, gameOdds: data.gameOdds, pricesError: data.pricesUnavailable }))

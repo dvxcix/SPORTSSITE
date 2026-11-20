@@ -34,7 +34,7 @@ Availability uses the same honest Lineup not confirmed wording as Teams.
 
 Verification
 - New data projection, source query, membership gate, Live isolation, failure
-  separation, cohort switching and matchup isolation: 31/31 focused checks.
+  separation, cohort switching and matchup isolation: 34/34 focused checks.
 - NBA phase, capture continuity, chart, quote, navigation, refresh, entity,
   heatmap, slate and Odds Board regressions: 121/121.
 - Production source smoke: 134/134. Focused ESLint and TypeScript passed.
@@ -44,7 +44,9 @@ Verification
   changes, pick/wager switching, team details, public filtering, sorting, empty
   state and keyboard access to analysis were exercised in the PC browser.
 - Pregame reads enforce the canonical earliest start and stored cutoff. Future,
-  wrong-game and post-tip observations are rejected. Live never borrows the
+  wrong-game and post-tip observations are rejected. A newly verified earlier
+  slate clock clears affected header prices immediately; membership denial also
+  clears loaded public activity and independently loaded prices. Live never borrows the
   pregame community snapshot. Failed or missing prices are not filled with a
   different phase or a stale player-board fallback.
 
