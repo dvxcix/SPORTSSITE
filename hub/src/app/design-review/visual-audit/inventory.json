@@ -4177,7 +4177,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live follow-up corrected Both Teams to the two selected matchup defenses; single-team samples and the league comparison pool are preserved. Regression coverage includes switching between both and one team.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,

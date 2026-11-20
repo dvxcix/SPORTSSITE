@@ -219,14 +219,14 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
     return [...rows].sort((a, b) => direction === 'asc' ? metric(a) - metric(b) : metric(b) - metric(a))
   }, [direction, lens.runGaps, sort, team])
   const dvpRows = useMemo(() => {
-    const rows = lens.dvp.filter(row => team === 'all' || row.defense === team)
+    const rows = lens.dvp.filter(row => team === 'all' ? lens.teams.some(item => item.team.abbr === row.defense) : row.defense === team)
     const value = (row: typeof rows[number]) => sort === 'd-defense' ? row.defense : sort === 'd-position' ? row.position : sort === 'd-stat' ? row.stat : sort === 'd-games' ? row.games : row.pctDiff
     return rows.sort((a, b) => {
       const left = value(a), right = value(b)
       const result = typeof left === 'string' || typeof right === 'string' ? String(left).localeCompare(String(right)) : Number(left) - Number(right)
       return direction === 'asc' ? result : -result
     })
-  }, [direction, lens.dvp, sort, team])
+  }, [direction, lens.dvp, lens.teams, sort, team])
 
   return <div className={styles.root}>
     <header className={styles.hero}>

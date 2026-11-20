@@ -26,6 +26,10 @@ Changes
   a readable popover without widening the phone page.
 - Existing NFL data methods, entitlement, freezes, collectors and feature flags
   are unchanged. No database mutations, jobs, picks, publishing or matrix writes.
+- Live review caught an existing Defense / DvP filter defect: Both Teams included
+  unrelated league defenses. It now displays only the selected matchup, preserving
+  the complete comparison pool and each team's sample. A regression test covers
+  both teams, one team and return navigation without mutating the source lens.
 
 Verification
 The browser evidence is local and ignored by Git:
@@ -39,8 +43,8 @@ trigger. Development hot-reload CSS failures were superseded by compiled checks.
 Deployed source and authenticated live checks are saved in the evidence directory
 after release.
 
-Automated checks: safe NFL suite 349/352 (three baseline failures below);
-test:sideline-ui 23/23; production smoke 134/134; shared
+Automated checks: safe NFL suite 350/353 (three baseline failures below);
+test:sideline-ui 24/24; production smoke 134/134; shared
 modal/chart/framework/portrait/entity checks 27/27. TypeScript and focused ESLint
 passed. The optimized private build and Git-based Vercel preview passed. The complete safe NFL suite excludes eight legacy
 scripts that launch a browser; their layout/navigation cases are checked with
