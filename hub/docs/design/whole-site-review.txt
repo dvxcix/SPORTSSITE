@@ -1,8 +1,9 @@
 SLIPSURGE / PRIVATE ENTIRE-SITE UI REVIEW
 20 November 2026
 
-STATUS
+STATUS AT PRIVATE REVIEW / ARCHIVED
 Final private polish verified and ready for owner visual review. Nothing pushed, merged or deployed. No live database, settings, jobs, collectors, payments or member messages changed.
+Owner subsequently authorized rollout on 20 November 2026. See docs/operations/ui-framework-release-2026-11-20.txt for the release boundary and verification record.
 Local branch: codex/ui-framework-review
 Verified main/live baseline: e7b68ef36a967955ff5c6acf4e4fa45e21ac7df7
 Production preflight deployment: dpl_3Nsz6iyNp6ZuYP76N6CNLj4Yserp

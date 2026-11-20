@@ -35,5 +35,5 @@ export function nbaHeatStyle(value: HeatValue, midpoint = 50, tone: NbaHeatTone 
   const distance = Math.min(1, Math.abs(bounded - midpoint) / (bounded < midpoint ? midpoint : 100 - midpoint))
   const tint = tone === 'volume' ? bounded < midpoint ? [137, 174, 247] : [115, 228, 201] : bounded < midpoint ? [233, 128, 145] : [169, 223, 116]
   const accent = [165, 180, 199].map((channel, index) => Math.round(channel + (tint[index] - channel) * distance)).join(' ')
-  return { '--heat-rgb': accent, '--heat-strength': (.12 + distance * .2).toFixed(3), '--heat-fill': `color-mix(in srgb, rgb(${tint.join(' ')}) ${Math.round(10 + distance * 23)}%, var(--surface))`, '--heat-ink': 'var(--text-1)' } as CSSProperties
+  return { '--heat-rgb': accent, '--heat-strength': (.12 + distance * .2).toFixed(3), '--heat-fill': `color-mix(in srgb, rgb(${tint.join(' ')}) ${(10 + distance * 23).toFixed(2)}%, var(--surface))`, '--heat-ink': 'var(--text-1)' } as CSSProperties
 }

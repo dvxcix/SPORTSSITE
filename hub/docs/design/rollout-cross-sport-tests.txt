@@ -1,0 +1,56 @@
+
+> hub@0.1.0 test:cross-sport
+> node --import tsx --test scripts/cross-sport-experience.test.mts scripts/sport-favorites.test.mts scripts/nfl-game-center.test.mts scripts/sport-team-artwork.test.mts scripts/player-portraits.test.mts
+
+✔ NBA composer preserves exact lines, sides, book and validation identities; fails closed after tipoff (11.6311ms)
+✔ historical NBA summary controls final/live status and preserves overtime and missing quarter scores (0.2032ms)
+✔ NBA market endpoint checks research membership before touching schedule or providers (58.3134ms)
+✔ ordinary members can search NBA favorites without receiving research, and guests cannot read the directory (7.9653ms)
+✔ league feed filters apply to top/latest posts and reposts without changing cursor boundaries (1.5766ms)
+✔ NBA score-to-research links require one exact date and two-team match, including alternate abbreviations (10.678ms)
+✔ stored feed maps into the same game-center contract as other sports (6.2922ms)
+✔ box scores distinguish zero from missing and separate receiving from passing (0.2289ms)
+✔ pregame/missing feed does not invent plays or zero player statistics (0.078ms)
+✔ wrong provider game and mismatched individual rows are excluded (0.0988ms)
+✔ duplicate plays excluded; only explicit scoring flag highlights a score (0.1508ms)
+✔ future quarters stay blank and zero OT placeholders do not create overtime (0.1075ms)
+✔ overtime appears when a fifth period is actually observed (0.1405ms)
+✔ chronology uses provider sequence before identifiers (0.1167ms)
+✔ NFL links open game center and refresh does not reload the document (3.4476ms)
+✔ all seven observed name mismatches use the exact player-ID-pinned image (1.3781ms)
+✔ six verified official NBA portraits cover missing team artwork without requests (0.2224ms)
+✔ exact normal names retain their source image; accents and suffixes normalize (0.1299ms)
+✔ aliases never guess a misspelling, surname or a different player ID (0.1202ms)
+✔ ambiguous names, duplicate IDs and conflicting portraits fail closed (0.1102ms)
+✔ closed boards retain the original archive and make no artwork reads; crossed cutoffs reject (0.5329ms)
+✔ NFL fallback uses its own validated ESPN ID and preserves a supplied image (0.1107ms)
+✔ saved social cards and frozen Court avatars recover Sarr without editing the archive (5.712ms)
+✔ a broken saved URL tries the verified photo once, stops after failure, and recovers for a new player (2386.3145ms)
+✔ NFL search uses the existing directory ID without an added query or external request (161.6621ms)
+✔ legacy MLB storage and identity are preserved alongside collision-safe NFL/NBA players (1.1775ms)
+✔ team league collisions and historical raw storage remain separate (0.3317ms)
+✔ non-entitled edits preserve stored NBA choices without adding new ones (0.2759ms)
+✔ search responses preserve exact league provider IDs and valid imagery (0.1509ms)
+✔ favorites API requires sign-in and makes all three leagues available to ordinary members (87.281ms)
+✔ offseason favorites hide MLB from members without deleting saved selections (18.6224ms)
+✔ favorites API saves/removes exact NFL and NBA IDs while preserving unrelated favorites (10.6998ms)
+✔ NBA favorites are independent of research membership, including free and Advanced accounts (24.6693ms)
+✔ favorite entity writes allow eight per league while preserving a full MLB roster (16.7548ms)
+✔ normalizer keeps eight players from each league and bounds only that league overflow (0.4046ms)
+✔ onboarding persists MLB, NFL and NBA favorites for every account tier (16.405ms)
+✔ public profiles display MLB, NFL and NBA favorites regardless of viewer membership (14.6103ms)
+✔ Baltimore and shared abbreviations stay in their explicit league (1.1351ms)
+✔ all NFL teams and supported historical aliases have explicit local logos (0.265ms)
+✔ an NFL avatar corrects a stale Orioles URL and supplies a missing Jaguars badge (8.5046ms)
+✔ the actual post renderer fixes every Baltimore/Jacksonville parlay leg in the reported incident (7.6764ms)
+✔ straight picks and mixed parlays use each saved league without rewriting pick data (6.9639ms)
+✔ the actual generated post image uses NFL logos for parlay and straight-player picks (30.887ms)
+✔ a reused avatar recovers its portrait and badge after another image failed (2681.6868ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3501.8663

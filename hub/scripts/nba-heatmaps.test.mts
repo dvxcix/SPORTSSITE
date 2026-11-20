@@ -3,6 +3,8 @@ import test from 'node:test'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
+import { readFileSync } from 'node:fs'
+import postcss from 'postcss'
 import { act, createElement, type ComponentType } from 'react'
 import { nbaCenteredHeat, nbaHeatStyle, nbaRelativeHeat } from '../src/app/the-paint/paintHeat.ts'
 import type { PaintBoard, PaintPlayer } from '../src/lib/nbaPaint.ts'
@@ -27,15 +29,30 @@ test('signed heat keeps zero neutral and positive evidence above neutral even in
   assert.equal(nbaCenteredHeat(2, [2, 2]), null)
 })
 
-test('solid heat palettes provide readable small-text contrast throughout both gradients', () => {
+test('theme heat palettes provide readable small-text contrast throughout both continuous gradients', () => {
   const luminance = (rgb: number[]) => rgb.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0)
+  const palettes:Record<string,Record<string,string>>={}
+  postcss.parse(readFileSync(new URL('../src/app/framework.css',import.meta.url),'utf8')).walkRules(rule=>{
+    if(![':root,[data-theme="dark"]','[data-theme="light"]'].includes(rule.selector))return
+    const tokens:Record<string,string>={};rule.walkDecls(declaration=>{tokens[declaration.prop]=declaration.value})
+    palettes[rule.selector]=tokens
+  })
+  assert.equal(Object.keys(palettes).length,2)
+  const rgb=(hex:string)=>{const value=hex.length===4?'#'+hex.slice(1).split('').map(channel=>channel+channel).join(''):hex;return [0,2,4].map(index=>parseInt(value.slice(index+1,index+3),16))}
   for (const tone of ['volume', 'performance'] as const) {
     const fills = new Set<string>()
     for (let heat = 0; heat <= 100; heat++) {
       const style = nbaHeatStyle(heat, 50, tone) as Record<string, string>
       const fill = style['--heat-fill']; fills.add(fill)
-      const contrast = (luminance([244, 248, 252]) + .05) / (luminance(fill.match(/\d+/g)!.map(Number)) + .05)
-      assert.ok(contrast >= 4.5, `${tone} ${heat}: ${contrast}`)
+      const mix=fill.match(/^color-mix\(in srgb, rgb\((\d+) (\d+) (\d+)\) (\d+(?:\.\d+)?)%, var\(--surface\)\)$/)
+      assert.ok(mix,fill);assert.equal(style['--heat-ink'],'var(--text-1)')
+      for(const [theme,tokens]of Object.entries(palettes)){
+        const tint=mix.slice(1,4).map(Number),weight=Number(mix[4])/100
+        const background=rgb(tokens['--surface']).map((value,index)=>value*(1-weight)+tint[index]*weight)
+        const values=[luminance(rgb(tokens['--text-1'])),luminance(background)].sort((a,b)=>b-a)
+        const contrast=(values[0]+.05)/(values[1]+.05)
+        assert.ok(contrast>=4.5,`${theme} ${tone} ${heat}: ${contrast}`)
+      }
     }
     assert.ok(fills.size > 50, 'Heat is a continuous gradient, not three discrete buckets')
   }

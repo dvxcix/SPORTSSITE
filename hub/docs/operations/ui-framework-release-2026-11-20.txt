@@ -1,0 +1,23 @@
+SLIPSURGE UI FRAMEWORK / APPROVED ROLLOUT
+20 November 2026
+
+AUTHORIZATION
+Owner explicitly requested rollout of the reviewed entire-site redesign, followed by live issue checks. The earlier private-review restriction is superseded for this release. Database changes, job replays, collectors, billing actions and member messages remain outside this release.
+
+PREFLIGHT
+GitHub main and live Vercel source matched e7b68ef36a967955ff5c6acf4e4fa45e21ac7df7.
+Previous production deployment / rollback target: dpl_3Nsz6iyNp6ZuYP76N6CNLj4Yserp.
+Required ancestry preserved: 6c3811b0882e1b1a6694a30849273f3e210cd69c.
+Original checkout's unrelated local research/account changes were preserved. Release source is the isolated codex/ui-framework-review branch, integrated into GitHub main without force-pushing.
+
+VALIDATION
+383 automated checks pass: 134 source, 7 framework, 44 cross-sport, 16 context handoff, 62 freeze and 120 research UI/access contracts. Production build also performs TypeScript validation.
+The expanded UI contracts now exercise the hydrated navigation while separately asserting the server sidebar's locked state. Heatmap contrast uses the actual dark/light palette and color-mix backgrounds across all 101 gradient values. NFL identity checks follow the new portrait frame while retaining the separate team badge and team gradient requirements. No access or identity assertions were removed.
+Heatmap mix percentages retain fractional precision so the redesigned scale stays continuous. Models, research calculations and ranking inputs are unchanged.
+
+RELEASE BOUNDARY
+Shared UI/styles, theme controls, portraits, charts, navigation, member/admin layouts and update interfaces are included. Private review fixtures are gated off by normal deployment configuration; the review catalog must return 404 in production. Original session middleware handles real requests. No API implementation or database migration changes are included.
+Next.js and matching lint/compiler packages are patched to 16.4.6. The broader pre-existing workspace dependency warnings remain documented in docs/design/polish-release-check.txt; this is not a clean whole-workspace dependency audit.
+
+LIVE CHECKS
+After deployment, verify the exact GitHub main SHA, www.slipsurge.com domain assignment, normal data/auth behavior, no local-review headers/ribbon or fixture dates, and production 404 for /design-review. Check desktop/mobile, dark/light, NBA/NFL tools, account/community/creator/admin routes, panels, sorting and navigation. Do not send messages, publish content, change settings or replay jobs as part of inspection. Live evidence is recorded locally under docs/design/evidence/live/.

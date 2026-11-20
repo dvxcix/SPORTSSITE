@@ -25,6 +25,25 @@ const compiled = {exports: {} as Record<string, React.ComponentType<Record<strin
 new Function('require','module','exports',bundled.outputFiles.find(file=>file.path.endsWith('.cjs'))!.text)(require,compiled,compiled.exports)
 const noop = () => {}
 const render = (name: string, props: Record<string,unknown> = {}) => renderToStaticMarkup(createElement(compiled.exports[name],props))
+async function renderClient(name: string, props: Record<string,unknown> = {}) {
+  const {JSDOM}=require('jsdom')
+  const dom=new JSDOM('<!doctype html><html><body><div id="fixture"></div></body></html>',{url:'https://www.slipsurge.com'+state.path})
+  Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,Event:dom.window.Event,localStorage:dom.window.localStorage,IS_REACT_ACT_ENVIRONMENT:true})
+  dom.window.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
+  const {createRoot}=await import('react-dom/client')
+  const host=document.getElementById('fixture')!,root=createRoot(host)
+  try {
+    await act(async()=>root.render(createElement(compiled.exports[name],{open:false,onClose:noop,onMenuClick:noop,...props})))
+    return host.innerHTML
+  } finally {await act(async()=>root.unmount());dom.window.close()}
+}
+
+test('server sidebar keeps account-dependent research links locked until hydration',()=>{
+  Object.assign(state,{role:'admin',tier:'ultimate',granted:null,beta:false})
+  const html=render('Sidebar',{open:false,onClose:noop})
+  assert.doesNotMatch(html,/href="\/the-paint/)
+  assert.match(html,/Ultimate required/)
+})
 
 test('all navigation shells expose NBA while lower-tier tools link to Ultimate upgrade', () => {
   for (const tier of ['free','basic','advanced']) {
@@ -40,11 +59,11 @@ test('all navigation shells expose NBA while lower-tier tools link to Ultimate u
   }
 })
 
-test('Ultimate, granted Ultimate and admin shells expose each NBA tool once and mark the exact current tool', () => {
+test('Ultimate, granted Ultimate and admin shells expose each NBA tool once and mark the exact current tool', async () => {
   for (const access of [{role:'admin',tier:'free',granted:null},{role:'user',tier:'ultimate',granted:null},{role:'user',tier:'free',granted:'ultimate'}]) {
     Object.assign(state,access,{beta:false})
     for (const name of ['Sidebar','DesktopNavigation']) {
-      const html=render(name,{open:true,onClose:noop})
+      const html=await renderClient(name,{open:true,onClose:noop})
       assert.match(html,/href="\/the-paint/,name)
       assert.match(html,/leagues\/500\/nba\.png/,name)
       assert.equal((html.match(/aria-current="page"/g)??[]).length,1,name)
@@ -133,19 +152,19 @@ test('mobile NBA tab changes the actual tool menu and dismissing restores focus 
   }finally{await act(async()=>root.unmount());host.remove();dom.window.close()}
 })
 
- test('first-basket navigation marks its own destination active',()=>{
+ test('first-basket navigation marks its own destination active',async()=>{
   state.view='first-basket';state.tier='ultimate';state.role='user';state.granted=null
-  try {assert.match(render('Sidebar'),/href="\/the-paint\?view=first-basket[^"]*"[^>]*aria-current="page"/)}finally{state.view='public'}
+  try {assert.match(await renderClient('Sidebar'),/href="\/the-paint\?view=first-basket[^"]*"[^>]*aria-current="page"/)}finally{state.view='public'}
  })
 
 
-test('desktop, sidebar and mobile NBA tool links preserve Live across Court and entity pages', () => {
+test('desktop, sidebar and mobile NBA tool links preserve Live across Court and entity pages', async () => {
   Object.assign(state,{role:'user',tier:'ultimate',granted:null,beta:false,mode:'live'})
   try {
     for (const path of ['/the-paint','/nba/players/434']) {
       state.path=path
       for(const name of ['Sidebar','DesktopNavigation','DesktopCommandBar','MobileResearchPicker']) {
-        const html=render(name,{path,sport:'nba',nflAccess:true,nbaAccess:true,hasUltimate:true,onSport:noop,onClose:noop})
+        const html=name==='Sidebar'?await renderClient(name):render(name,{path,sport:'nba',nflAccess:true,nbaAccess:true,hasUltimate:true,onSport:noop,onClose:noop})
         const links=[...html.matchAll(/href="(\/the-paint[^"]*)"/g)].map(match=>match[1].replaceAll('&amp;','&'))
         assert.ok(links.length>0,name+' '+path)
         assert.ok(links.every(href=>new URL(href,'https://www.slipsurge.com').searchParams.get('mode')==='live'),name+' '+JSON.stringify(links))

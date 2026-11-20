@@ -1,0 +1,29 @@
+
+> hub@0.1.0 test:context-handoff
+> node --test scripts/context-handoff.test.mjs
+
+[context-handoff] sync failed NETWORK
+✔ starts real lazy save, retries failures, captures later scrolling, reconnects (49.0053ms)
+✔ retained identity during auth outage keeps local position without anonymous remote retries (20.8135ms)
+✔ remote query errors preserve a known context but a verified missing entry clears it (6.7026ms)
+✔ simultaneous return-to-tab events share one remote read and stale responses cannot change accounts (5.7886ms)
+✔ isolated second device resumes cloud path/query/scroll through navigation cleanup (14.099ms)
+✔ waits for delayed content and lets manual scrolling cancel restoration (13.3495ms)
+✔ stable account identity does not postpone sync; hidden page flushes (5.3107ms)
+✔ ignores unsafe remote routes and separates accounts (26.6877ms)
+✔ desktop inner scroll position is saved and restored across devices (9.9531ms)
+✔ blocked browser storage does not stop automatic cloud sync (7.1494ms)
+✔ a top-of-page restore resets the old page position (5.4687ms)
+✔ a loading route does not consume the restore before slow feed content arrives (6.2962ms)
+✔ an idle hidden tab cannot overwrite a newer position from another device (3.5892ms)
+✔ unchanged sessions do not repeatedly replace another device resume record (3.3899ms)
+✔ pending restore survives a streamed-route component remount (5.0091ms)
+✔ returning to an open Missions tab discovers a new cross-device destination (4.4008ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2257.4052

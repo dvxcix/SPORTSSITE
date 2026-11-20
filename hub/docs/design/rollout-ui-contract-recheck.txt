@@ -1,0 +1,43 @@
+✔ relative heat preserves direction, missingness and neutral equal or insufficient pools (39.3093ms)
+✔ signed heat keeps zero neutral and positive evidence above neutral even in a wholly positive pool (7.5786ms)
+✔ theme heat palettes provide readable small-text contrast throughout both continuous gradients (6.3228ms)
+✔ Role & Minutes renders per-column heat, neutral missing/equal data, and a stable full-roster scale after filtering (121.5248ms)
+✔ Tracking heat uses the full roster before player filtering and reverses only the known defensive-rating metric (93.0362ms)
+✔ Cheatsheet heat preserves selected-side hit rates, market-specific form scales and exact save actions (74.0276ms)
+✔ Team matchup heat inverts defensive rating, keeps tied rates neutral and retains roster-relative rotation minutes (22.6148ms)
+✔ Player history heat keeps each stat and season comparable, ties neutral, and colors unchanged by sorting (114.3304ms)
+✔ server sidebar keeps account-dependent research links locked until hydration (18.3708ms)
+✔ all navigation shells expose NBA while lower-tier tools link to Ultimate upgrade (77.3088ms)
+✔ Ultimate, granted Ultimate and admin shells expose each NBA tool once and mark the exact current tool (3277.4172ms)
+✔ mobile sport picker and switcher show every NBA tool with explicit Ultimate lock state (47.7703ms)
+✔ unrelated beta override cannot unlock NBA navigation (88.6807ms)
+✔ NBA navigation keeps accessible labels without native or branded guide tooltip triggers (945.4238ms)
+✔ mobile NBA tab changes the actual tool menu and dismissing restores focus and page scroll (99.5703ms)
+✔ first-basket navigation marks its own destination active (126.3768ms)
+✔ desktop, sidebar and mobile NBA tool links preserve Live across Court and entity pages (373.5215ms)
+✔ the Market menu opens separate scorer boards with named columns (112.1409ms)
+✔ all games and exact milestones show prices, movement and no public timestamps (25.474ms)
+✔ rungs show estimated counts, actual zero and unavailable picks independently (41.3576ms)
+✔ saved player face, team logo and matching team gradient appear once per player (47.6117ms)
+✔ sorting by a chosen milestone ranks the requested direction, not another rung (76.2847ms)
+✔ primary controls stay visible while optional filters show their active count (96.2367ms)
+✔ the board distinguishes partial source coverage from missing selected prices (71.2547ms)
+✔ missing opening or earlier observations do not appear as zero movement (43.4409ms)
+✔ opening and earlier compare different recorded baselines without inventing zeroes (45.8007ms)
+✔ a changed phase hides old prices while loading and restores filters and scroll (127.7325ms)
+✔ a failed phase check keeps the same table explicitly marked last verified (90.8341ms)
+✔ resuming a throttled tab labels the last verified table and bounds its age (68.6289ms)
+✔ resume retains the filter and marks prices last verified until a fresh observation arrives (148.1279ms)
+✔ a phase change while a request is pending queues one follow-up (144.4542ms)
+✔ a pre-resume response arriving late cannot satisfy the new proof requirement (125.0496ms)
+✔ offline and reconnect preserve last verified prices with a status (151.0684ms)
+✔ changing market cancels a queued old-market refresh (138.326ms)
+✔ denied membership clears the table rather than using the last-seen view (67.2189ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5705.1598

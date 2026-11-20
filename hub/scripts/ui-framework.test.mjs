@@ -55,7 +55,7 @@ test('heatmaps use the shared theme surface and text roles at both extremes',()=
  for(const tone of ['volume','performance'])for(const value of [0,25,50,75,100]){
   const style=nbaHeatStyle(value,50,tone)
   assert.equal(style['--heat-ink'],'var(--text-1)')
-  assert.match(style['--heat-fill'],/color-mix\(in srgb, rgb\([\d ]+\) \d+%, var\(--surface\)\)/)
+  assert.match(style['--heat-fill'],/color-mix\(in srgb, rgb\([\d ]+\) \d+(?:\.\d+)?%, var\(--surface\)\)/)
  }
 })
 
