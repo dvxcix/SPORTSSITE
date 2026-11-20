@@ -56,3 +56,5 @@
 .shell{box-shadow:none;background:var(--surface);border-color:var(--border);backdrop-filter:none}
 .mobileWorkspace{display:none}
 @media(max-width:767px){.identity small,.toolNav{display:none}.topBar{padding:10px}.identity{min-height:28px}.nflMark{width:24px;height:24px}.contextControls{gap:8px}.selectControl>span:first-child{font-size:11px;letter-spacing:0}.selectControl select{min-height:44px;font-size:13px}.mobileWorkspace{display:block;padding:0 10px 10px;border-bottom:1px solid var(--border)}.mobileWorkspace select{width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:8px;background:var(--input-bg);color:var(--text-1);font:inherit;font-size:16px}.schedulePicker{padding:8px}.dayRail{margin-bottom:6px}.dayRail button{min-height:44px}.gamePicker{min-width:0}.gameCards>button{min-height:56px}}
+.boardHeading{display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
+@media(max-width:767px){.boardHeading{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%}.topBar{width:100%}}

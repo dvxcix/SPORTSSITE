@@ -57,9 +57,14 @@ export function researchToolHref(href: string, path: string, search: { get(key: 
 
 export function researchToolActive(href: string, path: string, search: { get(key: string): string | null }) {
   const [target, query] = href.split('?')
-  if (target === '/the-sideline') return path === target && (search.get('mode') ?? '') === (new URLSearchParams(query).get('mode') ?? '')
+  if (target === '/the-sideline') {
+    const requested = new URLSearchParams(query)
+    const mode = search.get('mode') ?? ''
+    const odds = !mode && search.get('view') === 'odds-board'
+    return path === target && mode === (requested.get('mode') ?? '') && odds === (requested.get('view') === 'odds-board')
+  }
   if (target === '/the-paint') {
-    const views = ['research','odds','ladders','movement','cheatsheets','usage','tracking','matchup','availability','game-markets','public','score','dvp','divergence','slate','first-basket']
+    const views = ['research','odds','ladders','movement','cheatsheets','usage','tracking','matchup','availability','game-markets','public','score','dvp','divergence','slate','first-basket','odds-board']
     const requested = search.get('view') ?? 'research'
     const current = views.includes(requested) ? requested : 'research'
     return path === target && current === (new URLSearchParams(query).get('view') ?? 'research')

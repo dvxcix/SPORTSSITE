@@ -349,3 +349,5 @@
 .chartFigure .chart b{left:0;min-width:0}
 .shotResearch>.chartLegend>span:before{border-radius:50%}.shotResearch>.chartLegend>span[data-result=loss]:before{background:transparent;border:1px solid var(--red)}
 @media(max-width:767px){.boardFilterBody .extraFilters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}.boardFilterBody .extraFilters>label{min-width:0;width:100%}.boardFilterBody .extraFilters select{width:100%;max-width:100%}.boardFilterBody .extraFilters>button{min-height:44px}}
+.header>nav[aria-label="NBA boards"]{margin-right:auto}
+@media(max-width:767px){.header>nav[aria-label="NBA boards"]{grid-column:1/-1;grid-row:2;margin:0}.header>.oddsMode{grid-row:3}}

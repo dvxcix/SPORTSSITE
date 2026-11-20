@@ -173,3 +173,22 @@ test('desktop, sidebar and mobile NBA tool links preserve Live across Court and 
     }
   } finally { state.path='/the-paint';state.mode='' }
 })
+test('both Odds Boards stay visible outside collapsed groups and mark their exact destination', async () => {
+  const {JSDOM}=require('jsdom')
+  Object.assign(state,{role:'user',tier:'ultimate',granted:null,beta:false,collapsed:false,mode:'',view:'odds-board'})
+  try {
+    for(const path of ['/the-paint','/the-sideline']) {
+      state.path=path
+      for(const name of ['Sidebar','DesktopNavigation']) {
+        const dom=new JSDOM(await renderClient(name))
+        try {
+          const link=dom.window.document.querySelector(`a[href^="${path}?view=odds-board"]`)!
+          assert.ok(link,name+' '+path+' exposes Odds Board')
+          assert.equal(link.closest('[hidden]'),null,'primary board is not in a collapsed group')
+          assert.equal(link.getAttribute('aria-current'),'page','Odds Board has its own selected state')
+          assert.equal(dom.window.document.querySelectorAll(`a[aria-current="page"]`).length,1)
+        } finally {dom.window.close()}
+      }
+    }
+  } finally {Object.assign(state,{path:'/the-paint',view:'public'})}
+})

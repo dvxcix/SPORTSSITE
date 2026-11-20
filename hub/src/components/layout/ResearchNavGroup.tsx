@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react'
 
 export type ResearchToolGroup = 'Boards' | 'Matchups' | 'Trends'
 const nbaGroups: Record<string, ResearchToolGroup> = {
-  'odds-board': 'Boards', 'first-basket': 'Boards', cheatsheets: 'Boards', score: 'Boards', slate: 'Boards', public: 'Boards', 'game-markets': 'Boards',
+  'first-basket': 'Boards', cheatsheets: 'Boards', score: 'Boards', slate: 'Boards', public: 'Boards', 'game-markets': 'Boards',
   dvp: 'Matchups', matchup: 'Matchups', availability: 'Matchups',
   usage: 'Trends', tracking: 'Trends', divergence: 'Trends',
 }

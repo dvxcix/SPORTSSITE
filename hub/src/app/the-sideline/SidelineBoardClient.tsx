@@ -2235,13 +2235,13 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </section>
       ) : null}
 
-      <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">
-        {VIEW_OPTIONS.map(option => (
+      {view !== 'odds-board' && <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">
+        {VIEW_OPTIONS.filter(option => option.id !== 'odds-board').map(option => (
           <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>
             {option.label}
           </button>
         ))}
-      </nav>
+      </nav>}
       {view !== 'odds-board' && <nav className={styles.roleTabs} aria-label="NFL position lanes">
         {ROLE_OPTIONS.map(option => (
           <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>

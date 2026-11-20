@@ -36,11 +36,11 @@ export const primaryNavigation: ProductNavItem[] = [
 /** Public destinations; consumers offer an Ultimate upgrade without fetching gated data. */
 export const nbaResearchNavigation: ProductNavItem[] = [
   { href: '/the-paint', label: 'The Court · NBA', shortLabel: 'The Court', icon: Layers3 },
+  { href: '/the-paint?view=odds-board', label: 'NBA Odds Board', shortLabel: 'Odds Board', icon: Table2 },
   { href: '/the-paint?view=odds', label: 'NBA Odds', shortLabel: 'Odds', icon: ChartSpline },
   { href: '/the-paint?view=ladders', label: 'NBA Ladders', shortLabel: 'Ladders', icon: ListOrdered },
   { href: '/the-paint?view=movement', label: 'NBA Market Story', shortLabel: 'Market Story', icon: TrendingUp },
   { href: '/the-paint?view=first-basket', label: 'NBA First basket', shortLabel: 'First basket', icon: Crosshair },
-  { href: '/the-paint?view=odds-board', label: 'NBA Odds Board', shortLabel: 'Odds Board', icon: Table2 },
   { href: '/the-paint?view=cheatsheets', label: 'NBA Cheatsheets', shortLabel: 'Cheatsheets', icon: Table2 },
   { href: '/the-paint?view=score', label: 'NBA SlipSurge Score', shortLabel: 'SlipSurge Score', icon: Crosshair },
   { href: '/the-paint?view=slate', label: 'NBA Slate Edge', shortLabel: 'Slate Edge', icon: Layers3 },
@@ -69,6 +69,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/workspace', label: 'Research Workspace', icon: Layers3 },
     { href: '/dugout', label: 'The Dugout · MLB', shortLabel: 'Dugout', icon: FlaskConical },
     { href: '/the-sideline', label: 'The Sideline · NFL', shortLabel: 'Sideline', icon: Trophy },
+    { href: '/the-sideline?view=odds-board', label: 'NFL Odds Board', shortLabel: 'Odds Board', icon: Table2 },
     { href: '/the-sideline?mode=cheatsheets', label: 'NFL Cheatsheets', shortLabel: 'Cheatsheets', icon: Table2 },
     { href: '/the-sideline?mode=public', label: 'NFL Public', shortLabel: 'NFL Public', icon: Users },
     { href: '/the-sideline?mode=markets', label: 'NFL Sportsbooks', shortLabel: 'NFL Books', icon: ChartSpline },

@@ -9,6 +9,7 @@ import type { SidelineGame, SidelineTeam } from './types'
 import styles from './sidelineNavigation.module.css'
 import { scheduleWeekKey, scheduleWeekLabel, type SidelineScheduleDay } from './scheduleNavigation'
 import { researchToolHref } from '@/components/layout/researchNavigation'
+import { ResearchBoardTabs } from '@/components/layout/ResearchBoardTabs'
 
 function shortDay(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -29,7 +30,8 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
   const router = useRouter()
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
-  const href = (section: string, game = selected.id, date = selected.gameday, reference = sample) => `/the-sideline?${new URLSearchParams({ game, date, sample: reference, ...(section ? { mode: section } : {}) })}`
+  const workspace = !mode && searchParams.get('view') === 'odds-board' ? 'odds-board' : mode
+  const href = (section: string, game = selected.id, date = selected.gameday, reference = sample) => `/the-sideline?${new URLSearchParams({ game, date, sample: reference, ...(section === 'odds-board' ? { view: 'odds-board' } : section ? { mode: section } : {}) })}`
   const change = (url: string) => startTransition(() => router.push(url, { scroll: false }))
   const selectedDay = { ...selected, date: selected.gameday }
   const weekKey = scheduleWeekKey(selectedDay)
@@ -38,40 +40,41 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
 
   return <section className={styles.shell} aria-label="NFL workspace" aria-busy={pending}>
     <header className={styles.topBar}>
-      <div className={styles.identity}>
+      <div className={styles.boardHeading}><div className={styles.identity}>
         <Image className={styles.nflMark} src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="NFL" width={30} height={30} unoptimized />
         <div><strong>The Sideline</strong><small>{scheduleWeekLabel(selectedDay)}</small></div>
       </div>
+      <ResearchBoardTabs sport="NFL" researchLabel="The Sideline" oddsActive={workspace==='odds-board'} onSelect={board=>change(researchToolHref(href(board==='research'?'':board),'/the-sideline',searchParams))}/></div>
       <div className={styles.contextControls}>
         <label className={styles.selectControl}>
           <span>Week</span>
-          <span><select aria-label="NFL week" value={weekKey} disabled={pending} onChange={event => { const day = days.find(item => scheduleWeekKey(item) === event.target.value); if (day) change(href(mode, '', day.date)) }}>{weeks.map(day => <option key={scheduleWeekKey(day)} value={scheduleWeekKey(day)}>{scheduleWeekLabel(day)}</option>)}</select><ChevronDown size={14} /></span>
+          <span><select aria-label="NFL week" value={weekKey} disabled={pending} onChange={event => { const day = days.find(item => scheduleWeekKey(item) === event.target.value); if (day) change(href(workspace, '', day.date)) }}>{weeks.map(day => <option key={scheduleWeekKey(day)} value={scheduleWeekKey(day)}>{scheduleWeekLabel(day)}</option>)}</select><ChevronDown size={14} /></span>
         </label>
         <label className={styles.selectControl}>
           <span>Stat sample</span>
-          <span><select aria-label="NFL stat sample" value={sample} disabled={pending} onChange={event => change(href(mode, selected.id, selected.gameday, event.target.value))}><option value="previous">{selected.season - 1} regular</option><option value="preseason">{selected.season} preseason</option><option value="regular">{selected.season} regular</option></select><ChevronDown size={14} /></span>
+          <span><select aria-label="NFL stat sample" value={sample} disabled={pending} onChange={event => change(href(workspace, selected.id, selected.gameday, event.target.value))}><option value="previous">{selected.season - 1} regular</option><option value="preseason">{selected.season} preseason</option><option value="regular">{selected.season} regular</option></select><ChevronDown size={14} /></span>
         </label>
       </div>
     </header>
 
     <nav className={styles.toolNav} aria-label="NFL tools">
-      {[{mode:'',label:'The Sideline',icon:Trophy},{mode:'cheatsheets',label:'Cheatsheets',icon:Table2},{mode:'public',label:'The Public',icon:Megaphone},{mode:'markets',label:'Sportsbooks',icon:ChartSpline},{mode:'research',label:'Matchup Lab',icon:Crosshair}].map(tool =>
-        <Link key={tool.mode} href={researchToolHref(href(tool.mode), '/the-sideline', searchParams)} prefetch={false} scroll={false} aria-current={mode === tool.mode ? 'page' : undefined}><tool.icon size={16} aria-hidden="true" /><span>{tool.label}</span></Link>)}
+      {[{mode:'',label:'The Sideline',icon:Trophy},{mode:'odds-board',label:'Odds Board',icon:Table2},{mode:'cheatsheets',label:'Cheatsheets',icon:Table2},{mode:'public',label:'The Public',icon:Megaphone},{mode:'markets',label:'Sportsbooks',icon:ChartSpline},{mode:'research',label:'Matchup Lab',icon:Crosshair}].map(tool =>
+        <Link key={tool.mode} href={researchToolHref(href(tool.mode), '/the-sideline', searchParams)} prefetch={false} scroll={false} aria-current={workspace === tool.mode ? 'page' : undefined}><tool.icon size={16} aria-hidden="true" /><span>{tool.label}</span></Link>)}
     </nav>
 
-    <label className={styles.mobileWorkspace}><span className="sr-only">NFL research workspace</span><select aria-label="NFL research workspace" value={mode} disabled={pending} onChange={event => change(researchToolHref(href(event.target.value), '/the-sideline', searchParams))}><option value="">The Sideline</option><option value="cheatsheets">Cheatsheets</option><option value="public">The Public</option><option value="markets">Sportsbooks</option><option value="research">Matchup Lab</option></select></label>
+    <label className={styles.mobileWorkspace}><span className="sr-only">NFL research workspace</span><select aria-label="NFL research workspace" value={workspace} disabled={pending} onChange={event => change(researchToolHref(href(event.target.value), '/the-sideline', searchParams))}><option value="">The Sideline</option><option value="odds-board">Odds Board</option><option value="cheatsheets">Cheatsheets</option><option value="public">The Public</option><option value="markets">Sportsbooks</option><option value="research">Matchup Lab</option></select></label>
 
     <div className={styles.schedulePicker}>
       <nav className={styles.dayRail} aria-label="NFL game days">
         {weekDays.map(day => {
           const [weekday, date] = shortDay(day.date).split(', ')
-          return <button key={day.date} type="button" aria-current={day.date === selected.gameday ? 'date' : undefined} disabled={pending} onClick={() => change(href(mode, '', day.date))}><small>{weekday}</small><strong>{date}</strong></button>
+          return <button key={day.date} type="button" aria-current={day.date === selected.gameday ? 'date' : undefined} disabled={pending} onClick={() => change(href(workspace, '', day.date))}><small>{weekday}</small><strong>{date}</strong></button>
         })}
       </nav>
       <div className={styles.gamePicker}>
         <div className={styles.gamePickerTitle}><span>Games</span><b>{games.length}</b></div>
         <div className={styles.gameCards}>
-          {games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} disabled={pending} aria-pressed={game.id === selected.id} onClick={() => change(href(mode, game.id, game.gameday))} style={{ '--away-color': game.away.color, '--home-color': game.home.color } as CSSProperties}>
+          {games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} disabled={pending} aria-pressed={game.id === selected.id} onClick={() => change(href(workspace, game.id, game.gameday))} style={{ '--away-color': game.away.color, '--home-color': game.home.color } as CSSProperties}>
             <span className={styles.matchupTeam} data-side="away"><NavigationTeamLogo team={game.away} /><strong>{game.away.abbr}</strong></span>
             <span className={styles.matchupCenter}><i>AT</i><small>{gameStatus(game)}</small></span>
             <span className={styles.matchupTeam} data-side="home"><NavigationTeamLogo team={game.home} /><strong>{game.home.abbr}</strong></span>

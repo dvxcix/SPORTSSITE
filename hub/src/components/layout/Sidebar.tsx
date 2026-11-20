@@ -75,6 +75,7 @@ const nav: NavItem[] = [
   null,
   { section: 'NFL Research', logo: NFL_LOGO_URL, nflOnly: true },
   { href: '/the-sideline', icon: Trophy, label: 'The Sideline', nflOnly: true },
+  { href: '/the-sideline?view=odds-board', icon: Table2, label: 'Odds Board', nflOnly: true },
   { href: '/the-sideline?mode=cheatsheets', icon: Table2, label: 'Cheatsheets', nflOnly: true },
   { href: '/the-sideline?mode=public', icon: Megaphone, label: 'The Public', nflOnly: true },
   { href: '/the-sideline?mode=markets', icon: ChartSpline, label: 'Sportsbooks', nflOnly: true },

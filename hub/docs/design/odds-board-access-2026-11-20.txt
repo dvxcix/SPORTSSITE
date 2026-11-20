@@ -1,0 +1,42 @@
+Odds Board access correction, 20 November 2026
+
+The shared navigation cleanup made the NBA Odds Board difficult to discover and
+left NFL's existing Odds Board without a direct workspace entry. NBA's active
+route matcher also omitted odds-board, so it highlighted The Court instead.
+
+Both sports now have a permanent two-choice board switch beside the workspace
+identity. Odds Board is also a top-level sidebar/native desktop destination,
+immediately after The Court or The Sideline, outside collapsed research groups.
+Both mobile research menus expose the same destination. The NFL workspace picker
+now includes Odds Board alongside its other five destinations.
+
+NBA continues using its existing view=odds-board route. NFL uses its existing
+view=odds-board entry into SidelineBoardClient/NflOddsBoard. NFL's week, sample,
+date and game controls retain that view. Returning to The Sideline clears it.
+The secondary NFL column controls remain with the research board; the Odds Board
+uses its existing market, book, comparison and filter controls.
+
+The board switch uses shared spacing, theme tokens, visible selected/focus states
+and 44px buttons. Existing SlipSurge team logos, portraits, research methods,
+odds processing, access gates and frozen pregame rules are preserved.
+
+Validation: 134/134 production source checks; 33/33 navigation/new UI/NFL board
+behaviour checks; 61/61 NBA full board/phase and NFL access/route checks. Scoped
+ESLint passes with the repository's existing suppression file; no suppression
+entries were added or changed. Optimized build includes TypeScript validation.
+
+The new navigation regression checks require both Odds Board links to sit outside
+hidden groups and require exactly one active destination in each sidebar shell.
+The NFL interaction check verifies both the direct button and mobile picker
+resolve to the existing board while preserving game and sample context.
+
+Browser geometry, round trips, themes and production release identity are saved
+in the local odds-board-hotfix evidence directory. The original dirty checkout,
+data services, database, feature flags and publishing controls are untouched.
+
+Private optimized browser verification passed at 320, 390, 768, 1024 and 1440px
+for NBA and NFL in both themes: all switch buttons remain visible, 44px high,
+and inside the viewport, without document overflow. NBA's keyboard switch and
+both return-to-research paths work. NFL's sample and game changes retain the
+Odds Board and exact selected context. No browser console errors were observed.
+The optimized build, including TypeScript and prerendering, completed successfully.

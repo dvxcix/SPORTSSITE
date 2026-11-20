@@ -102,12 +102,20 @@ test('NFL phone workspace selection preserves game, date and stat sample', async
   const selected = { id: 'fixture', season: 2030, week: 12, gameType: 'REG', gameday: '2030-11-20', gametime: '20:20', home: { abbr: 'KC', name: 'Kansas City Chiefs', color: '#c00' }, away: { abbr: 'BUF', name: 'Buffalo Bills', color: '#00c' } }
   await mount(h(ui.SidelineNavigation, { games: [selected], days: [{ ...selected, date: selected.gameday }], selected, sample: 'previous', mode: '' }), async host => {
     const picker = host.querySelector<HTMLSelectElement>('select[aria-label="NFL research workspace"]')!
-    assert.equal(picker.options.length, 5)
+    assert.equal(picker.options.length, 6)
     await act(async () => { picker.value = 'cheatsheets'; picker.dispatchEvent(new dom.window.Event('change', { bubbles: true })) })
     const url = new URL(navigations.at(-1)!, 'https://www.slipsurge.com')
     assert.equal(url.searchParams.get('game'), 'fixture')
     assert.equal(url.searchParams.get('date'), '2030-11-20')
     assert.equal(url.searchParams.get('sample'), 'previous')
     assert.equal(url.searchParams.get('mode'), 'cheatsheets')
+    await act(async () => { picker.value = 'odds-board'; picker.dispatchEvent(new dom.window.Event('change', { bubbles: true })) })
+    const oddsUrl = new URL(navigations.at(-1)!, 'https://www.slipsurge.com')
+    assert.equal(oddsUrl.searchParams.get('view'), 'odds-board')
+    assert.equal(oddsUrl.searchParams.get('mode'), null)
+    assert.equal(oddsUrl.searchParams.get('game'), 'fixture')
+    assert.equal(oddsUrl.searchParams.get('sample'), 'previous')
+    await click(host.querySelector('nav[aria-label="NFL boards"] button:last-child')!)
+    assert.equal(new URL(navigations.at(-1)!, 'https://www.slipsurge.com').searchParams.get('view'), 'odds-board')
   })
 })

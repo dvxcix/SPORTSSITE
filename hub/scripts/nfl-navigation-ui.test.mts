@@ -30,9 +30,9 @@ try {
     assert.deepEqual(issues, [], width + 'px geometry')
     const picker = page.getByRole('combobox', { name: 'NFL research workspace' })
     assert.equal(await picker.isVisible(), width < 768)
-    assert.equal(await picker.locator('option').count(), 5)
+    assert.equal(await picker.locator('option').count(), 6)
     const links = page.locator('nav[aria-label="NFL tools"] a')
-    assert.equal(await links.count(), 5)
+    assert.equal(await links.count(), 6)
     for (const link of await links.all()) {
       const url = new URL((await link.getAttribute('href'))!, 'https://www.slipsurge.com')
       assert.equal(url.searchParams.get('game'), 'fixture')
