@@ -14,7 +14,7 @@
 .bookSelect { display:flex; align-items:center; gap:8px; min-width:0; min-height:44px; color:var(--text-1); font-size:13px; font-weight:500; }
 .bookSelect > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .control button { flex-shrink:0; }
-.scroll { position:relative; max-width:100%; overflow:auto; border:1px solid var(--border-2); border-radius:8px; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:var(--text-3) transparent; }
+.scroll { position:relative; max-width:100%; max-height:min(72dvh,780px); scroll-margin-top:calc(var(--topbar-h,64px) + var(--banner-h,0px) + 12px); overflow:auto; border:1px solid var(--border-2); border-radius:8px; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:var(--text-3) transparent; }
 .scroll table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; font-size:12px; font-variant-numeric:tabular-nums; }
 .scroll th, .scroll td { box-sizing:border-box; padding:8px 12px; border-right:1px solid var(--border-2); border-bottom:1px solid var(--border-2); text-align:center; vertical-align:middle; }
 .scroll thead th { position:sticky; top:0; z-index:2; background:var(--surface-2); color:var(--text-1); font-size:12px; font-weight:600; }

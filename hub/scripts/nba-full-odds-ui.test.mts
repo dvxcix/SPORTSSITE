@@ -109,7 +109,10 @@ test('full board exposes all posted rungs, exact comparisons, sorting, search an
   const second=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Amy Adams 20+ Points, FanDuel, last seen +220"]')!.closest('td')!;assert.ok(second.querySelector('[aria-label="Estimated picks: 143"]'))
   assert.ok(region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Bea Baker 15+ Points, FanDuel, last seen +300"]')!.closest('td')!.querySelector('[aria-label="Estimated picks: unavailable"]'))
   const other=region.querySelector<HTMLAnchorElement>('a[aria-label="Analyze Cam Clark 15+ Points, FanDuel, last seen +250"]')!;const otherTarget=new URL(other.href);assert.equal(otherTarget.searchParams.get('game'),'13');assert.equal(otherTarget.searchParams.get('player'),'3');assert.equal(otherTarget.searchParams.get('line'),'15');assert.equal(other.dataset.prefetch,'false')
+  region.scrollTop=300;region.scrollLeft=117
   await select('Compare odds to','previous');assert.match(region.textContent??'',/Earlier\s*\+175/)
+  assert.equal(region.scrollTop,0,'changing filters starts at the first result')
+  assert.equal(region.scrollLeft,117,'changing comparison preserves the selected columns')
   await select('Sort odds board','lengthened');assert.match(region.querySelector('tbody tr')?.textContent??'',/Bea Baker/)
   await select('Sort by milestone','20');assert.match(region.querySelector('tbody tr')?.textContent??'',/Amy Adams/)
   assert.match(filters.querySelector('summary')?.textContent??'',/2 active/);filters.open=false;filters.open=true

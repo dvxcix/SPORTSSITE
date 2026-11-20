@@ -118,6 +118,9 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
     node.scrollLeft=scrollLeft.current
     return()=>{scrollLeft.current=node.scrollLeft}
   },[slate])
+  useLayoutEffect(()=>{
+    if(scroll.current)scroll.current.scrollTop=0
+  },[market,book,game,team,sort,target,query,comparison])
   const error=errorKey===key
   const books=useMemo(()=>slate?.books??[],[slate])
   const actualBook=slate?.selectedBook??book

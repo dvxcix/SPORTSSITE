@@ -86,3 +86,13 @@ Wager shares showed CHA/ATL 13%/87%, spread 20%/80%, and over/under 48%/52%.
 Team ratings and honest unconfirmed-lineup status remained accessible.
 The pre-existing source-delay banner remains visible; UI verification is not
 a claim that every upstream feed has recovered.
+
+Long-board scrolling follow-up
+Live phone verification also exposed unbounded vertical tables. Odds Board now
+uses a bounded viewport with pinned column labels and player identity. A page
+of internal scroll kept the first header 0.67px below its viewport edge at
+scrollTop 522; the page remained phone-width. Filter/comparison changes start
+at the first result while retaining horizontal column position. Background
+refresh and phase-check restoration remain stable. The 11 Odds Board interaction
+checks were rerun and passed; these are already included in the 121 regression
+checks above, not an additional inflated test count.
