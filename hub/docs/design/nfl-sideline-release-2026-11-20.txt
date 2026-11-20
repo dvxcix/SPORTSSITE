@@ -21,6 +21,9 @@ Changes
 - Saved portrait fallbacks survive failed images and theme rerenders.
 - Sideline Edge can retry failures and retain its previous loaded slate.
 - Table identity columns, long names, phone controls and overlay scrolling checked.
+- A 320px toolbar regression was corrected with a two-column control layout;
+  off-canvas overflow is contained by the NFL shell. The board guide opens as
+  a readable popover without widening the phone page.
 - Existing NFL data methods, entitlement, freezes, collectors and feature flags
   are unchanged. No database mutations, jobs, picks, publishing or matrix writes.
 
@@ -28,12 +31,18 @@ Verification
 The browser evidence is local and ignored by Git:
 docs/design/evidence/live/sideline-review/.
 Private review uses illustrative data with all service credentials removed.
-Production-mode local navigation, deployed-source state and authenticated live
-checks are recorded after the release candidate completes.
+Production-mode local navigation passed across the six NFL workspaces. Lazy
+panels retain their CSS after navigation; compiled Sideline Edge uses the correct
+fixed backdrop, card layout and quote display. Layout sizes include 320, 390,
+768, 1024 and 1440px. Escape closes the player drawer and returns focus to its
+trigger. Development hot-reload CSS failures were superseded by compiled checks.
+Deployed source and authenticated live checks are saved in the evidence directory
+after release.
 
-Automated checks: test:sideline-ui 23/23; production smoke 134/134; shared
+Automated checks: safe NFL suite 349/352 (three baseline failures below);
+test:sideline-ui 23/23; production smoke 134/134; shared
 modal/chart/framework/portrait/entity checks 27/27. TypeScript and focused ESLint
-must pass before release. The complete safe NFL suite excludes eight legacy
+passed. The optimized private build and Git-based Vercel preview passed. The complete safe NFL suite excludes eight legacy
 scripts that launch a browser; their layout/navigation cases are checked with
 the connected browser instead.
 

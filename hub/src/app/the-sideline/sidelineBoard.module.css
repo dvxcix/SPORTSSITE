@@ -1291,3 +1291,11 @@
 .columnList article>label small{font-size:11px;line-height:1.5;color:var(--text-2)}
 .columnList article>div{grid-column:2;display:flex;gap:4px}
 .columnList article>div>button{width:44px;min-width:44px;height:44px;min-height:44px}
+@media(max-width:767px){
+ .page[data-nfl-workspace] .controlBar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+ .page[data-nfl-workspace] .controlBar>.matchupMini{display:none}
+ .page[data-nfl-workspace] .windowTabs{grid-column:1/-1;grid-row:1;order:0;width:100%;min-width:0;max-width:100%;margin:0}
+ .page[data-nfl-workspace] .windowTabs button{flex:1 1 0;min-width:0;padding-inline:6px;font-size:11px}
+ .page[data-nfl-workspace] .controlBar>button{width:100%;min-width:0;min-height:44px;justify-content:center}
+}
+:global(.ss-site-shell):has(.page[data-nfl-workspace]){overflow-x:clip}

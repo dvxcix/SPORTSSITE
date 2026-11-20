@@ -2382,20 +2382,24 @@
     "label": "Nfl · Players · Id",
     "group": "NFL",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "route:/nfl/teams/[abbr]",
@@ -2404,20 +2408,24 @@
     "label": "Nfl · Teams · Abbr",
     "group": "NFL",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "route:/notifications",
@@ -3328,20 +3336,24 @@
     "label": "The Sideline",
     "group": "NFL",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "route:/weather-lab",
@@ -3759,20 +3771,24 @@
     "label": "NFL · The Sideline",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl:view=odds-board",
@@ -3797,7 +3813,10 @@
       "page-review/browser-checks.json",
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
-      "page-review/framework-tests.txt · 25 passed"
+      "page-review/framework-tests.txt · 25 passed",
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
     ]
   },
   {
@@ -3806,20 +3825,24 @@
     "label": "NFL · Cheatsheets",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl:mode=public",
@@ -3827,20 +3850,24 @@
     "label": "NFL · The Public",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl:mode=markets",
@@ -3848,20 +3875,24 @@
     "label": "NFL · Sportsbooks",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl:mode=research",
@@ -3869,20 +3900,24 @@
     "label": "NFL · Matchup Lab",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nba-drawer:Overview",
@@ -4040,20 +4075,24 @@
     "label": "Cheatsheets · Market Edge",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-cheatsheet:Exact-Line Hits",
@@ -4061,20 +4100,24 @@
     "label": "Cheatsheets · Exact-Line Hits",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-cheatsheet:Explosive Plays",
@@ -4082,20 +4125,24 @@
     "label": "Cheatsheets · Explosive Plays",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-cheatsheet:Run Gaps",
@@ -4103,20 +4150,24 @@
     "label": "Cheatsheets · Run Gaps",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-cheatsheet:Defense / DvP",
@@ -4124,20 +4175,24 @@
     "label": "Cheatsheets · Defense / DvP",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:core",
@@ -4145,20 +4200,24 @@
     "label": "Sideline board · Game Day",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:touchdowns",
@@ -4166,20 +4225,24 @@
     "label": "Sideline board · TDs",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:props",
@@ -4187,20 +4250,24 @@
     "label": "Sideline board · Props",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:usage",
@@ -4208,20 +4275,24 @@
     "label": "Sideline board · Usage",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:tracking",
@@ -4229,20 +4300,24 @@
     "label": "Sideline board · Tracking",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:team",
@@ -4250,20 +4325,24 @@
     "label": "Sideline board · Team",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:all",
@@ -4271,20 +4350,24 @@
     "label": "Sideline board · All",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-board:custom",
@@ -4292,20 +4375,24 @@
     "label": "Sideline board · Custom",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-drawer:Matchup",
@@ -4313,20 +4400,24 @@
     "label": "NFL player drawer · Matchup",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-drawer:NFL Tracking",
@@ -4334,20 +4425,24 @@
     "label": "NFL player drawer · NFL Tracking",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-drawer:Sportsbooks",
@@ -4355,20 +4450,24 @@
     "label": "NFL player drawer · Sportsbooks",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Role command",
@@ -4376,20 +4475,24 @@
     "label": "Matchup Lab · Role command",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Score zone",
@@ -4397,20 +4500,24 @@
     "label": "Matchup Lab · Score zone",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Receiving value",
@@ -4418,20 +4525,24 @@
     "label": "Matchup Lab · Receiving value",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Route leverage",
@@ -4439,20 +4550,24 @@
     "label": "Matchup Lab · Route leverage",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Ground game",
@@ -4460,20 +4575,24 @@
     "label": "Matchup Lab · Ground game",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:QB command",
@@ -4481,20 +4600,24 @@
     "label": "Matchup Lab · QB command",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Explosive lanes",
@@ -4502,20 +4625,24 @@
     "label": "Matchup Lab · Explosive lanes",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-matchup:Market signal",
@@ -4523,20 +4650,24 @@
     "label": "Matchup Lab · Market signal",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-edge:Slate Rankings",
@@ -4544,20 +4675,24 @@
     "label": "Sideline Edge · Slate Rankings",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-edge:Matchup Lens",
@@ -4565,20 +4700,24 @@
     "label": "Sideline Edge · Matchup Lens",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-edge:Model vs Market",
@@ -4586,20 +4725,24 @@
     "label": "Sideline Edge · Model vs Market",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-edge:Signal Lab",
@@ -4607,20 +4750,24 @@
     "label": "Sideline Edge · Signal Lab",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Touchdown tracker",
@@ -4628,20 +4775,24 @@
     "label": "NFL · Touchdown tracker",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Matrix library",
@@ -4649,20 +4800,24 @@
     "label": "NFL · Matrix library",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Matrix community",
@@ -4670,20 +4825,24 @@
     "label": "NFL · Matrix community",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Matrix editor",
@@ -4691,20 +4850,24 @@
     "label": "NFL · Matrix editor",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Column manager",
@@ -4712,20 +4875,24 @@
     "label": "NFL · Column manager",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Player comparison",
@@ -4733,20 +4900,24 @@
     "label": "NFL · Player comparison",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "nfl-tool:Game lines and capture replay",
@@ -4754,20 +4925,24 @@
     "label": "NFL · Game lines and capture replay",
     "group": "NFL",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": 3,
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nfl-sideline-release-2026-11-20.txt",
+      "sideline-review/browser-layout-audit.json",
+      "sideline-review/ui-final.txt"
+    ]
   },
   {
     "id": "shared:Member identity, avatar rings and badges",

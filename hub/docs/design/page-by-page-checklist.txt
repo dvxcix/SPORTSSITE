@@ -113,8 +113,8 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | Nba | /nba
 [Queued] NBA | Nba · Players · Id | /nba/players/[id]
 [Queued] NBA | Nba · Teams · Id | /nba/teams/[id]
-[Queued] NFL | Nfl · Players · Id | /nfl/players/[id]
-[Queued] NFL | Nfl · Teams · Abbr | /nfl/teams/[abbr]
+[Review ready] NFL | Nfl · Players · Id | /nfl/players/[id]
+[Review ready] NFL | Nfl · Teams · Abbr | /nfl/teams/[abbr]
 [Queued] Community | Notifications | /notifications
 [Queued] MLB · off-season | Odds Terminal | /odds-terminal
 [Queued] Account access | Onboarding | /onboarding
@@ -156,7 +156,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] General | Terms | /terms
 [In progress] NBA | The Paint | /the-paint
 [Queued] MLB · off-season | The Public | /the-public
-[Queued] NFL | The Sideline | /the-sideline
+[Review ready] NFL | The Sideline | /the-sideline
 [Queued] MLB · off-season | Weather Lab | /weather-lab
 [Queued] General | Workspace | /workspace
 [Approved] NBA | NBA · The Court | /the-paint?view=research
@@ -176,53 +176,53 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | NBA · Matchup Lab | /the-paint?view=matchup
 [Queued] NBA | NBA · Availability | /the-paint?view=availability
 [Queued] NBA | NBA · Game markets | /the-paint?view=game-markets
-[Queued] NFL | NFL · The Sideline | /the-sideline
+[Review ready] NFL | NFL · The Sideline | /the-sideline
 [Approved] NFL | NFL · Odds Board | /the-sideline?view=odds-board
-[Queued] NFL | NFL · Cheatsheets | /the-sideline?mode=cheatsheets
-[Queued] NFL | NFL · The Public | /the-sideline?mode=public
-[Queued] NFL | NFL · Sportsbooks | /the-sideline?mode=markets
-[Queued] NFL | NFL · Matchup Lab | /the-sideline?mode=research
+[Review ready] NFL | NFL · Cheatsheets | /the-sideline?mode=cheatsheets
+[Review ready] NFL | NFL · The Public | /the-sideline?mode=public
+[Review ready] NFL | NFL · Sportsbooks | /the-sideline?mode=markets
+[Review ready] NFL | NFL · Matchup Lab | /the-sideline?mode=research
 [Approved] NBA | Player drawer · Overview | /the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame
 [Approved] NBA | Player drawer · Game tracking | /the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame
 [Approved] NBA | Player drawer · Ladders | /the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame
 [Approved] NBA | Player drawer · Market Story | /the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame
 [Approved] NBA | Player drawer · Shots | /the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame
 [Approved] NBA | Player drawer · All odds | /the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame
-[Queued] NFL | Cheatsheets · Market Edge | /the-sideline?mode=cheatsheets
-[Queued] NFL | Cheatsheets · Exact-Line Hits | /the-sideline?mode=cheatsheets
-[Queued] NFL | Cheatsheets · Explosive Plays | /the-sideline?mode=cheatsheets
-[Queued] NFL | Cheatsheets · Run Gaps | /the-sideline?mode=cheatsheets
-[Queued] NFL | Cheatsheets · Defense / DvP | /the-sideline?mode=cheatsheets
-[Queued] NFL | Sideline board · Game Day | /the-sideline?view=core
-[Queued] NFL | Sideline board · TDs | /the-sideline?view=touchdowns
-[Queued] NFL | Sideline board · Props | /the-sideline?view=props
-[Queued] NFL | Sideline board · Usage | /the-sideline?view=usage
-[Queued] NFL | Sideline board · Tracking | /the-sideline?view=tracking
-[Queued] NFL | Sideline board · Team | /the-sideline?view=team
-[Queued] NFL | Sideline board · All | /the-sideline?view=all
-[Queued] NFL | Sideline board · Custom | /the-sideline?view=custom
-[Queued] NFL | NFL player drawer · Matchup | /the-sideline
-[Queued] NFL | NFL player drawer · NFL Tracking | /the-sideline
-[Queued] NFL | NFL player drawer · Sportsbooks | /the-sideline
-[Queued] NFL | Matchup Lab · Role command | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Score zone | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Receiving value | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Route leverage | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Ground game | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · QB command | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Explosive lanes | /the-sideline?mode=research
-[Queued] NFL | Matchup Lab · Market signal | /the-sideline?mode=research
-[Queued] NFL | Sideline Edge · Slate Rankings | /the-sideline
-[Queued] NFL | Sideline Edge · Matchup Lens | /the-sideline
-[Queued] NFL | Sideline Edge · Model vs Market | /the-sideline
-[Queued] NFL | Sideline Edge · Signal Lab | /the-sideline
-[Queued] NFL | NFL · Touchdown tracker | /the-sideline
-[Queued] NFL | NFL · Matrix library | /the-sideline
-[Queued] NFL | NFL · Matrix community | /the-sideline
-[Queued] NFL | NFL · Matrix editor | /the-sideline
-[Queued] NFL | NFL · Column manager | /the-sideline
-[Queued] NFL | NFL · Player comparison | /the-sideline
-[Queued] NFL | NFL · Game lines and capture replay | /the-sideline
+[Review ready] NFL | Cheatsheets · Market Edge | /the-sideline?mode=cheatsheets
+[Review ready] NFL | Cheatsheets · Exact-Line Hits | /the-sideline?mode=cheatsheets
+[Review ready] NFL | Cheatsheets · Explosive Plays | /the-sideline?mode=cheatsheets
+[Review ready] NFL | Cheatsheets · Run Gaps | /the-sideline?mode=cheatsheets
+[Review ready] NFL | Cheatsheets · Defense / DvP | /the-sideline?mode=cheatsheets
+[Review ready] NFL | Sideline board · Game Day | /the-sideline?view=core
+[Review ready] NFL | Sideline board · TDs | /the-sideline?view=touchdowns
+[Review ready] NFL | Sideline board · Props | /the-sideline?view=props
+[Review ready] NFL | Sideline board · Usage | /the-sideline?view=usage
+[Review ready] NFL | Sideline board · Tracking | /the-sideline?view=tracking
+[Review ready] NFL | Sideline board · Team | /the-sideline?view=team
+[Review ready] NFL | Sideline board · All | /the-sideline?view=all
+[Review ready] NFL | Sideline board · Custom | /the-sideline?view=custom
+[Review ready] NFL | NFL player drawer · Matchup | /the-sideline
+[Review ready] NFL | NFL player drawer · NFL Tracking | /the-sideline
+[Review ready] NFL | NFL player drawer · Sportsbooks | /the-sideline
+[Review ready] NFL | Matchup Lab · Role command | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Score zone | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Receiving value | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Route leverage | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Ground game | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · QB command | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Explosive lanes | /the-sideline?mode=research
+[Review ready] NFL | Matchup Lab · Market signal | /the-sideline?mode=research
+[Review ready] NFL | Sideline Edge · Slate Rankings | /the-sideline
+[Review ready] NFL | Sideline Edge · Matchup Lens | /the-sideline
+[Review ready] NFL | Sideline Edge · Model vs Market | /the-sideline
+[Review ready] NFL | Sideline Edge · Signal Lab | /the-sideline
+[Review ready] NFL | NFL · Touchdown tracker | /the-sideline
+[Review ready] NFL | NFL · Matrix library | /the-sideline
+[Review ready] NFL | NFL · Matrix community | /the-sideline
+[Review ready] NFL | NFL · Matrix editor | /the-sideline
+[Review ready] NFL | NFL · Column manager | /the-sideline
+[Review ready] NFL | NFL · Player comparison | /the-sideline
+[Review ready] NFL | NFL · Game lines and capture replay | /the-sideline
 [Approved] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Queued] Shared components | Account menu | Shared surface
 [Queued] Shared components | Global search | Shared surface
