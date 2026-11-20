@@ -6,18 +6,18 @@ import { SafeImage } from '@/components/ui/SafeImage'
 // (copied from mlb-party's asset set) — remote sportsbook favicons are
 // unreliable to hotlink (many block cross-origin fetches or 404 silently).
 const BOOKS: Record<string, { favicon: string; initials: string; bg: string; color: string }> = {
-  fanduel:    { favicon: '/sportsbooks/fanduel.ico',    initials: 'FD',  bg: '#1493FF', color: 'var(--text-1)' },
-  draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: 'var(--text-1)' },
-  betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: 'var(--text-1)' },
+  fanduel:    { favicon: '/sportsbooks/fanduel.ico',    initials: 'FD',  bg: '#1493FF', color: '#07111c' },
+  draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#07111c' },
+  betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#07111c' },
   caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
-  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: 'var(--text-1)' },
-  pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: 'var(--text-1)' },
+  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#ffffff' },
+  pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#ffffff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
-  fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: 'var(--text-1)' },
-  betparx:    { favicon: '/sportsbooks/betparx.png',    initials: 'BP', bg: '#a900ff', color: 'var(--text-1)' },
-  ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: 'var(--text-1)' },
+  fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#ffffff' },
+  betparx:    { favicon: '/sportsbooks/betparx.png',    initials: 'BP', bg: '#a900ff', color: '#ffffff' },
+  ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: '#ffffff' },
   kalshi:     { favicon: 'https://kalshi.com/Kalshi_Favicon.png?v=20260807', initials: 'K', bg: '#014737', color: '#00DD94' },
-  polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#2E5CFF' },
+  polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#8eacff' },
 }
 
 // Normalize vendor key from any alias
