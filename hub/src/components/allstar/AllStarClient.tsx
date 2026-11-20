@@ -222,7 +222,7 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
       onClick={() => onSort(sortKey)}
       title={title}
       style={{
-        padding: '6px 8px', fontSize: 10, fontWeight: 800,
+        padding: '6px 8px', fontSize: 12, fontWeight: 700,
         color: active ? 'var(--accent)' : 'var(--text-3)',
         textTransform: 'uppercase', letterSpacing: '0.03em',
         whiteSpace: 'nowrap', textAlign: 'right', userSelect: 'none', cursor: 'pointer',
@@ -240,11 +240,11 @@ const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c0
 // hasn't played yet, who's already been pulled/pinch-hit for. Refreshes
 // every 5s off the same poll that grades the props.
 function StatusBadge({ status, isCurrent, isOnDeck, currentLabel }: { status: 'in' | 'not_played' | 'done' | null; isCurrent: boolean; isOnDeck: boolean; currentLabel: string }) {
-  if (isCurrent) return <span style={{ fontSize: 9.5, fontWeight: 900, color: '#06070A', background: 'var(--accent)', borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>⚾ {currentLabel}</span>
-  if (isOnDeck) return <span style={{ fontSize: 9.5, fontWeight: 800, color: '#fbbf24', border: '1px solid #fbbf24', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>ON DECK</span>
-  if (status === 'in') return <span style={{ fontSize: 9.5, fontWeight: 800, color: '#4ade80', border: '1px solid rgba(74,222,128,0.5)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>🟢 IN</span>
-  if (status === 'not_played') return <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>BENCH</span>
-  if (status === 'done') return <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-3)', background: 'rgba(255,255,255,0.04)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>⚫ OUT</span>
+  if (isCurrent) return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)', background: 'var(--accent-fill)', borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>⚾ {currentLabel}</span>
+  if (isOnDeck) return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', border: '1px solid var(--gold)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>ON DECK</span>
+  if (status === 'in') return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', border: '1px solid rgba(74,222,128,0.5)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>🟢 IN</span>
+  if (status === 'not_played') return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>BENCH</span>
+  if (status === 'done') return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'rgba(var(--contrast-rgb),0.04)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>⚫ OUT</span>
   return null
 }
 
@@ -269,11 +269,11 @@ function LiveCashedFeed({
   return (
     <div style={{ marginBottom: 24, border: '1px solid var(--accent)', borderRadius: 14, padding: 16, background: 'rgba(180,255,77,0.05)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 10, fontWeight: 900, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.03em' }}>✅ CASHED LIVE</span>
-        <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{feed.length} prop{feed.length !== 1 ? 's' : ''} hit so far</h2>
+        <span style={{ background: 'var(--accent-fill)', color: 'var(--accent-fg)', fontSize: 12, fontWeight: 700, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.03em' }}>✅ CASHED LIVE</span>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{feed.length} prop{feed.length !== 1 ? 's' : ''} hit so far</h2>
         <button
           onClick={() => setSortMode(m => (m === 'recent' ? 'highest' : m === 'highest' ? 'lowest' : 'recent'))}
-          style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', padding: 0 }}
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', padding: 0 }}
         >
           Sort: {CASH_SORT_LABEL[sortMode]}
         </button>
@@ -290,7 +290,7 @@ function LiveCashedFeed({
               <span style={{ fontSize: 12, color: 'var(--text-2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 <b style={{ color: 'var(--text-1)' }}>{player ? player.name : f.option.label}</b> — {f.market.title}{player ? ` (${f.option.label})` : ''}
               </span>
-              <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: 12, flexShrink: 0 }}>{oddsStr(f.option.odds)}</span>
+              <span style={{ fontWeight: 700, color: 'var(--accent)', fontSize: 12, flexShrink: 0 }}>{oddsStr(f.option.odds)}</span>
               <span style={{ flexShrink: 0 }}>✅</span>
             </div>
           )
@@ -319,16 +319,16 @@ function ContradictionBoard({
   const shown = rows.slice(0, 25)
   if (shown.length === 0) return null
   return (
-    <div style={{ marginBottom: 24, border: '1px solid #f87171', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)', overflowX: 'auto' }}>
-      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 10 }}>🚩 HR Race Odds — Caesars vs FanDuel vs BetMGM</h2>
+    <div style={{ marginBottom: 24, border: '1px solid var(--red)', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)', overflowX: 'auto' }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>🚩 HR Race Odds — Caesars vs FanDuel vs BetMGM</h2>
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
-            <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Player</th>
+            <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Player</th>
             {RACE_BOOK_ORDER.map(b => (
-              <th key={b} style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>{BOOK_LABEL[b]}</th>
+              <th key={b} style={{ textAlign: 'right', padding: '4px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>{BOOK_LABEL[b]}</th>
             ))}
-            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Spread</th>
+            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Spread</th>
           </tr>
         </thead>
         <tbody>
@@ -343,20 +343,20 @@ function ContradictionBoard({
               <tr key={r.mlbId} style={{ borderBottom: i < shown.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <td style={{ padding: '6px 8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-3)', width: 16, flexShrink: 0 }}>#{i + 1}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', width: 16, flexShrink: 0 }}>#{i + 1}</span>
                     <PlayerAvatar headshot={mlbHeadshot(r.mlbId)} teamLogo={logo} teamAbbr={abbr} name={p.name} size={22} />
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{p.name}</span>
-                    {r.isReserve && <span style={{ fontSize: 8.5, fontWeight: 800, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '0 4px' }}>RES</span>}
+                    {r.isReserve && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '0 4px' }}>RES</span>}
                   </div>
                 </td>
                 {RACE_BOOK_ORDER.map(b => {
                   const cell = r.cells[b]
                   return (
-                    <td key={b} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                    <td key={b} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, whiteSpace: 'nowrap' }}>
                       {cell ? (
                         <span>
                           <span style={{ color: 'var(--text-3)', marginRight: 4 }}>{RACE_KEY_SHORT[cell.key] ?? cell.key}</span>
-                          <span style={{ fontWeight: 800, color: 'var(--text-1)' }}>{oddsStr(cell.odds)}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>{oddsStr(cell.odds)}</span>
                         </span>
                       ) : (
                         <span style={{ color: 'var(--text-3)' }}>—</span>
@@ -364,7 +364,7 @@ function ContradictionBoard({
                     </td>
                   )
                 })}
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 800, color: spreadColor }}>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: spreadColor }}>
                   {spreadPts.toFixed(1)}pt
                 </td>
               </tr>
@@ -448,16 +448,16 @@ function LeagueBatterTable({
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <span style={{
-          fontSize: 10, fontWeight: 900, padding: '3px 8px', borderRadius: 6,
+          fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
           background: league === 'AL' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
           color: league === 'AL' ? '#f87171' : '#60a5fa',
         }}>{league === 'AL' ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{rows.length} batters</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{rows.length} batters</span>
         <select
           value={manualPitcherId}
           onChange={e => setManualPitcherId(e.target.value ? Number(e.target.value) : '')}
           className="ss-input"
-          style={{ fontSize: 11, padding: '5px 8px', maxWidth: 260 }}
+          style={{ fontSize: 12, padding: '5px 8px', maxWidth: 260 }}
         >
           <option value="">{livePitcher ? `🔴 Live: ${livePitcher.name}` : `vs ${hand === 'R' ? 'RHP' : 'LHP'} (season avg)…`}</option>
           {opposingPitchers.map(p => <option key={p.mlb_id} value={p.mlb_id}>{p.name} ({p.throws}HP){live?.currentPitcherId === p.mlb_id ? ' 🔴 LIVE' : ''}</option>)}
@@ -465,9 +465,9 @@ function LeagueBatterTable({
         {selectedPitcher && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <PlayerAvatar headshot={mlbHeadshot(selectedPitcher.mlb_id)} teamLogo={pLogo} teamAbbr={pAbbr} name={selectedPitcher.name} size={22} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>{selectedPitcher.name}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{selectedPitcher.name}</span>
             {isLiveMatchup && (
-              <span style={{ fontSize: 9, fontWeight: 900, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
                 🔴 LIVE PITCHING NOW
               </span>
             )}
@@ -478,7 +478,7 @@ function LeagueBatterTable({
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Player</th>
+              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Player</th>
               <TH label="Status" title="Real live status straight from MLB's boxscore — who's actually in the lineup right now, at bat, on deck, hasn't played yet, or has already been substituted out. Refreshes every 5s." sortKey="statusRank" sort={sort} onSort={onSort} />
               <TH label="🚩" title="Total contradiction flags on this player — cross-book disagreement, market price vs. our own data, or a logical containment violation (e.g. First HR of the Game priced above First PA HR). Click the player to see exactly which." sortKey="flagCount" sort={sort} onSort={onSort} />
               {selectedPitcher && (
@@ -502,9 +502,9 @@ function LeagueBatterTable({
                       <button onClick={() => onToggleExpand(r.mlb_id)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                         <PlayerAvatar headshot={mlbHeadshot(r.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={r.name} size={28} />
                         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.name}</span>
-                        <span style={{ fontSize: 9, fontWeight: 800, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.bats}</span>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{r.position}</span>
-                        {playerMarkets.length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>{playerMarkets.length} mkts {isOpen ? '▲' : '▼'}</span>}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.bats}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.position}</span>
+                        {playerMarkets.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{playerMarkets.length} mkts {isOpen ? '▲' : '▼'}</span>}
                       </button>
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'right' }}>
@@ -512,18 +512,18 @@ function LeagueBatterTable({
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'right', ...heat(r.flagCount, g('flagCount')) }}>
                       {r.flagCount > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
                           🚩 {r.flagCount}
                         </span>
                       )}
                     </td>
                     {selectedPitcher && (
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--accent)', fontFamily: "'SF Mono',monospace", ...heat((r as any).edge, g('edge')) }}>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontFamily: "'SF Mono',monospace", ...heat((r as any).edge, g('edge')) }}>
                         {fmt((r as any).edge)}
                       </td>
                     )}
                     {BATTER_COLS.map(c => (
-                      <td key={c.key as string} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace", ...heat(r[c.key] as number | null, g(c.key as string), c.dir) }}>
+                      <td key={c.key as string} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace", ...heat(r[c.key] as number | null, g(c.key as string), c.dir) }}>
                         {fmt(r[c.key] as number | null, c.dec ?? 1)}
                       </td>
                     ))}
@@ -533,21 +533,21 @@ function LeagueBatterTable({
                       <td colSpan={BATTER_COLS.length + 3 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
                         {playerTop && (
                           <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>🚩</span>
-                            <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{describeTopFlag(playerTop.top)}</span>
-                            {playerTop.extraCount > 0 && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>+{playerTop.extraCount} more</span>}
+                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>🚩</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{describeTopFlag(playerTop.top)}</span>
+                            {playerTop.extraCount > 0 && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>+{playerTop.extraCount} more</span>}
                           </div>
                         )}
                         {playerMarkets.length === 0 ? (
-                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>No markets loaded for {r.name} yet.</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>No markets loaded for {r.name} yet.</span>
                         ) : (
                           playerMarkets.map(({ market, option }, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0', maxWidth: 520 }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', maxWidth: 520 }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)' }}>
                                 <BookLogo vendor={market.book} size={14} />
                                 {market.title} — {option.label}
                               </span>
-                              <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{option.odds > 0 ? `+${option.odds}` : option.odds}</span>
+                              <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{option.odds > 0 ? `+${option.odds}` : option.odds}</span>
                             </div>
                           ))
                         )}
@@ -572,17 +572,17 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span style={{
-          fontSize: 10, fontWeight: 900, padding: '3px 8px', borderRadius: 6,
+          fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
           background: league === 'AL' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
           color: league === 'AL' ? '#f87171' : '#60a5fa',
         }}>{league === 'AL' ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{rows.length} pitchers</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{rows.length} pitchers</span>
       </div>
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--border)', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Pitcher</th>
+              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Pitcher</th>
               <TH label="Status" title="Real live status straight from MLB's boxscore — who's actually pitching right now, hasn't been used yet, or has already been pulled. Refreshes every 5s." sortKey="statusRank" sort={sort} onSort={onSort} />
               {PITCHER_COLS.map(c => <TH key={c.key as string} label={c.label} title={c.title} sortKey={c.key as string} sort={sort} onSort={onSort} />)}
             </tr>
@@ -598,14 +598,14 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <PlayerAvatar headshot={mlbHeadshot(r.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={r.name} size={28} />
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.name}</span>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.throws}HP</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.throws}HP</span>
                     </div>
                   </td>
                   <td style={{ padding: '6px 8px', textAlign: 'right' }}>
                     <StatusBadge status={r.status} isCurrent={r.isCurrentPitcher} isOnDeck={false} currentLabel="PITCHING" />
                   </td>
                   {PITCHER_COLS.map(c => (
-                    <td key={c.key as string} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace", ...heat(r[c.key] as number | null, g(c.key as string), c.dir) }}>
+                    <td key={c.key as string} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace", ...heat(r[c.key] as number | null, g(c.key as string), c.dir) }}>
                       {fmt(r[c.key] as number | null, c.dec ?? 1)}
                     </td>
                   ))}
@@ -639,7 +639,7 @@ function MarketOptionsList({
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
         <button
           onClick={() => setDir(d => (d === 'desc' ? 'asc' : 'desc'))}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', padding: 0 }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', padding: 0 }}
         >
           Sort: {dir === 'desc' ? 'Favorite first ▼' : 'Longshot first ▲'}
         </button>
@@ -655,16 +655,16 @@ function MarketOptionsList({
         )
         const outcome = settlement.get(`${marketId}::${o.label}`)
         return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 6px', borderRadius: 8, background: outcomeBg(outcome) }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, padding: '4px 6px', borderRadius: 8, background: outcomeBg(outcome) }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)', minWidth: 0 }}>
               {flagged && <span style={{ flexShrink: 0 }}>🚩</span>}
               {player && <PlayerAvatar headshot={mlbHeadshot(player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={player.name} size={18} />}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-              {outcome && <span style={{ flexShrink: 0, fontWeight: 800, fontSize: 10 }}>{outcomeMark(outcome)}</span>}
+              {outcome && <span style={{ flexShrink: 0, fontWeight: 700, fontSize: 12 }}>{outcomeMark(outcome)}</span>}
             </span>
             <span style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               <span style={{ color: 'var(--text-3)' }}>{(o.prob * 100).toFixed(1)}%</span>
-              <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{o.odds > 0 ? `+${o.odds}` : o.odds}</span>
+              <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{o.odds > 0 ? `+${o.odds}` : o.odds}</span>
             </span>
           </div>
         )
@@ -692,8 +692,8 @@ function BookMarketsPanel({
     <div style={{ marginBottom: 24, border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <BookLogo vendor={book} size={24} />
-        <h3 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{BOOK_LABEL[book]}</h3>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{markets.length} market{markets.length !== 1 ? 's' : ''}</span>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{BOOK_LABEL[book]}</h3>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{markets.length} market{markets.length !== 1 ? 's' : ''}</span>
       </div>
       <input
         value={query}
@@ -712,8 +712,8 @@ function BookMarketsPanel({
             onClick={() => setOpenSections(s => { const n = new Set(s); if (n.has(section)) n.delete(section); else n.add(section); return n })}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--surface)', border: 'none', cursor: 'pointer' }}
           >
-            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{section}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{grouped[section].length} · {openSections.has(section) ? '▲' : '▼'}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{section}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{grouped[section].length} · {openSections.has(section) ? '▲' : '▼'}</span>
           </button>
           {openSections.has(section) && (
             <div style={{ borderTop: '1px solid var(--border)' }}>
@@ -738,10 +738,10 @@ function BookMarketsPanel({
                       {m.title}
                       {(() => {
                         const wonCount = m.options.filter(o => settlement.get(`${m.id}::${o.label}`) === 'won').length
-                        return wonCount > 0 ? <span style={{ color: '#4ade80', fontSize: 10, fontWeight: 800 }}>✅ {wonCount}</span> : null
+                        return wonCount > 0 ? <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 700 }}>✅ {wonCount}</span> : null
                       })()}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.options.length} · {openMarkets.has(m.id) ? '▲' : '▼'}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.options.length} · {openMarkets.has(m.id) ? '▲' : '▼'}</span>
                   </button>
                   {openMarkets.has(m.id) && <MarketOptionsList options={m.options} title={m.title} marketId={m.id} rosterById={rosterById} flags={flags} dataFlags={dataFlags} containmentFlags={containmentFlags} settlement={settlement} />}
                 </div>
@@ -895,21 +895,21 @@ export function AllStarClient() {
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 16px 60px' }}>
       {/* Header */}
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, border: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(180,255,77,0.07), var(--surface))', padding: '32px 24px', marginBottom: 28 }}>
-        <Spotlight className="left-0 top-0" fill="#B4FF4D" />
+        <Spotlight className="left-0 top-0" fill="var(--accent-fill)" />
         <Meteors number={10} className="opacity-40" />
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>One Night Only</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>One Night Only</span>
             {live?.gameState === 'Live' && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#f87171', border: '1px solid #f87171', borderRadius: 6, padding: '1px 6px' }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171' }} /> LIVE
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: 'var(--red)', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--red)' }} /> LIVE
               </span>
             )}
             {live?.gameState === 'Final' && (
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 6px' }}>FINAL</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 6px' }}>FINAL</span>
             )}
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', margin: '4px 0' }}>2026 MLB All-Star Game</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.02em', margin: '4px 0' }}>2026 MLB All-Star Game</h1>
           <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 2 }}>American League vs National League</p>
           <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{data.venue} · Philadelphia, PA{gameDateLabel ? ` · ${gameDateLabel}` : ''}</p>
         </div>
@@ -920,14 +920,14 @@ export function AllStarClient() {
 
       {/* Hand toggle */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Splits vs</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Splits vs</span>
         <div style={{ display: 'flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 2 }}>
           {(['R', 'L'] as const).map(h => (
             <button
               key={h}
               onClick={() => setHand(h)}
               style={{
-                padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 800, border: 'none', cursor: 'pointer',
+                padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
                 background: hand === h ? 'var(--accent)' : 'transparent', color: hand === h ? 'var(--accent-fg)' : 'var(--text-3)',
               }}
             >{h === 'R' ? 'RHP / RHB' : 'LHP / LHB'}</button>
@@ -939,17 +939,17 @@ export function AllStarClient() {
       <ContradictionBoard rows={hrRaceRows} rosterById={rosterById} />
 
       {/* Section 1: Bat tracking board */}
-      <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
       <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} live={live} />
       <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} live={live} />
 
       {/* Pitching staffs */}
-      <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
       <LeaguePitcherTable league="AL" rows={sortRows(alPitchers, pitcherSort)} pool={allPitcherPool} sort={pitcherSort} onSort={col => toggleSort(setPitcherSort, col)} />
       <LeaguePitcherTable league="NL" rows={sortRows(nlPitchers, pitcherSort)} pool={allPitcherPool} sort={pitcherSort} onSort={col => toggleSort(setPitcherSort, col)} />
 
       {/* Section 2: Sportsbook markets — one panel per book, logos not text */}
-      <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Sportsbook Markets</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '28px 0 12px' }}>Sportsbook Markets</h2>
       <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />
       <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />
       <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />

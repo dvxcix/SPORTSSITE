@@ -1,18 +1,18 @@
-.notice { display:flex; align-items:center; gap:9px; margin-bottom:14px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border)); border-radius:14px; color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,var(--surface-2)); font-size:12px; font-weight:750; }
-.noticeError { border-color:rgba(251,113,133,.24); color:#fb7185; background:rgba(251,113,133,.07); }
-.card { position:relative; overflow:hidden; margin-bottom:14px; padding:20px; border:1px solid var(--border); border-radius:20px; background:var(--surface); }
+.notice { display:flex; align-items:center; gap:9px; margin-bottom:14px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border)); border-radius:14px; color:var(--accent); background:color-mix(in srgb,var(--accent-fill) 8%,var(--surface-2)); font-size:12px; font-weight:650; }
+.noticeError { border-color:rgba(251,113,133,.24); color:var(--red); background:rgba(251,113,133,.07); }
+.card { position:relative; overflow:hidden; margin-bottom:14px; padding:20px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .cardAccent { border-color:color-mix(in srgb,var(--accent) 24%,var(--border)); }
 .card h3 { margin:0 0 5px; color:var(--text-1); font-size:14px; font-weight:600; }
 .card p { max-width:720px; color:var(--text-2); font-size:13px; line-height:1.55; }
 .planHead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .card .eyebrow { color:var(--text-2); font-size:12px; font-weight:600; }
 .status { display:inline-flex; align-items:center; gap:5px; color:var(--accent); font-size:12px; font-weight:600; }
-.statusWarn { color:#facc15; }
-.statusError { color:#fb7185; }
+.statusWarn { color:var(--gold); }
+.statusError { color:var(--red); }
 .card .planName { margin:7px 0 3px; color:var(--text-1); font-size:30px; font-weight:600; letter-spacing:-.02em; }
 .actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
 .primary,.secondary { display:inline-flex; min-height:44px; align-items:center; justify-content:center; padding:0 14px; border-radius:10px; font-size:13px; font-weight:600; text-decoration:none; transition:border-color var(--motion-fast),background-color var(--motion-fast); }
-.primary { border:1px solid color-mix(in srgb,var(--accent) 70%,white); color:var(--accent-fg); background:var(--accent); }
+.primary { border:1px solid color-mix(in srgb,var(--accent) 70%,white); color:var(--accent-fg); background:var(--accent-fill); }
 .secondary { border:1px solid var(--border-2); color:var(--text-1); background:var(--surface-3); }
 .secondary:hover { border-color:color-mix(in srgb,var(--accent) 30%,var(--border)); }
 @media(max-width:600px){.card{padding:16px;border-radius:17px}.card .planName{font-size:26px}.planHead{align-items:flex-start}.status{max-width:142px;text-align:right}}

@@ -39,7 +39,7 @@ export function SuggestedUsers({ users, currentUserId }: {
           </Link>
           <div className="ss-suggested-copy">
             <div className="ss-suggested-name">
-              <Link href={`/profile/${u.username}`} className="text-sm font-bold text-white hover:underline truncate">
+              <Link href={`/profile/${u.username}`} className="text-sm font-bold text-[var(--text-1)] hover:underline truncate">
                 {u.display_name || u.username}
               </Link>
               {u.is_verified && <BadgeCheck size={14} aria-label="Verified" className="ss-suggested-verified" />}

@@ -37,16 +37,16 @@ function NflGameRefresh({ jobName }: { jobName: string }) {
   }
 
   return <div className="flex flex-col gap-1">
-    <label className="text-[10px] text-zinc-400">
+    <label className="text-[12px] text-[var(--text-2)]">
       NFL game ID
       <input value={gameId} onChange={event => setGameId(event.target.value)} disabled={running}
-        className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"/>
+        className="mt-1 w-full rounded-lg border border-[rgba(var(--line-rgb),0.1)] bg-transparent px-2 py-1.5 text-xs text-[var(--text-1)]"/>
     </label>
     <button type="button" onClick={() => void refresh()} disabled={running || !gameId.trim()}
-      className="rounded-lg border border-white/10 px-2 py-1.5 text-[10px] font-black text-zinc-300 hover:border-lime-300/30 hover:text-lime-300 disabled:opacity-50">
+      className="rounded-lg border border-[rgba(var(--line-rgb),0.1)] px-2 py-1.5 text-[12px] font-semibold text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--accent)] disabled:opacity-50">
       {running ? 'Refreshing picks…' : 'Refresh one NFL game'}
     </button>
-    {message && <p role="status" className="text-[10px] text-zinc-400">{message}</p>}
+    {message && <p role="status" className="text-[12px] text-[var(--text-2)]">{message}</p>}
   </div>
 }
 
@@ -69,9 +69,9 @@ function PipelineAction({ jobName, action, label }: { jobName: string; action: '
     } catch { setState('error') }
   }
   return <div>
-    <button type="button" onClick={() => void retry()} disabled={state === 'loading' || state === 'queued'} className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-black transition ${state === 'error' ? 'border-red-400/25 text-red-300' : 'border-white/10 text-zinc-400 hover:border-lime-300/30 hover:text-lime-300'}`}>
+    <button type="button" onClick={() => void retry()} disabled={state === 'loading' || state === 'queued'} className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[12px] font-semibold transition ${state === 'error' ? 'border-[color-mix(in_srgb,var(--red)_25%,transparent)] text-[var(--red)]' : 'border-[rgba(var(--line-rgb),0.1)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--accent)]'}`}>
       {state === 'loading' ? <LoaderCircle size={12} className="animate-spin"/> : state === 'queued' ? <Check size={12}/> : <RotateCcw size={12}/>} {state === 'queued' ? 'Queued' : state === 'error' ? 'Retry failed' : label}
     </button>
-    {result && <p role="status" className="mt-1 text-[10px] text-zinc-400">{result}</p>}
+    {result && <p role="status" className="mt-1 text-[12px] text-[var(--text-2)]">{result}</p>}
   </div>
 }

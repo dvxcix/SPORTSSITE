@@ -19,7 +19,7 @@
 }
 .page :global(.ss-message-sections button[aria-selected=true]) { color: var(--text-1); }
 
-.page :global(.ss-message-sections b) { font-size: 10px; }
+.page :global(.ss-message-sections b) { font-size: 12px; }
 .page :global(.ss-message-search-input) { min-height: 44px; font-size: 16px; }
 .page :global(.ss-message-request-actions button) { min-height: 44px; font-size: 12px; font-weight: 600; }
 .page :global(.ss-message-request-error) { font-size: 12px; }

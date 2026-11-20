@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
           <div className="ss-auth-success">
             <CheckCircle2 size={26} aria-hidden="true" />
             <strong>Check your email</strong>
-            <p>We sent a password reset link to <span className="text-white font-medium">{email}</span>.</p>
+            <p>We sent a password reset link to <span className="text-[var(--text-1)] font-medium">{email}</span>.</p>
             <Link href="/auth/login" className="ss-auth-link mt-4 inline-block">Back to sign in</Link>
           </div>
         ) : (

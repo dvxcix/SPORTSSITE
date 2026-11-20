@@ -31,12 +31,12 @@ export function PageFollowButton({ userId, pageId, initialFollowing }: {
   return (
     <div className="grid justify-items-end gap-1">
       <button type="button" onClick={toggle} disabled={loading} aria-pressed={following}
-        className={`h-9 px-4 text-sm rounded-xl font-black transition-all disabled:opacity-60 ${
-          following ? 'border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400' : 'bg-green-500 hover:bg-green-400 text-black'
+        className={`h-9 px-4 text-sm rounded-xl font-semibold transition-all disabled:opacity-60 ${
+          following ? 'border border-[var(--border-2)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--red)_50%,transparent)] hover:text-[var(--red)]' : 'bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)]'
         }`}>
         {loading ? 'Saving…' : following ? 'Following' : 'Follow'}
       </button>
-      {error && <button type="button" onClick={toggle} className="text-[10px] font-bold text-red-400" role="alert">Not saved · retry</button>}
+      {error && <button type="button" onClick={toggle} className="text-[12px] font-bold text-[var(--red)]" role="alert">Not saved · retry</button>}
     </div>
   )
 }

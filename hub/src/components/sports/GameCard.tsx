@@ -27,12 +27,12 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: isLive ? 'var(--red)' : 'var(--text-3)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: isLive ? 'var(--red)' : 'var(--text-3)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}>
             {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />}
             {label}
           </span>
           {comp?.broadcasts?.[0]?.names?.[0] && (
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{comp.broadcasts[0].names[0]}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{comp.broadcasts[0].names[0]}</span>
           )}
         </div>
 
@@ -43,15 +43,15 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
                 <SafeImage src={team.team.logo} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {team.team.shortDisplayName || team.team.name}
                 </p>
                 {team.records?.[0] && (
-                  <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{team.records[0].summary}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{team.records[0].summary}</p>
                 )}
               </div>
               {state !== 'pre' && (
-                <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums', minWidth: 30, textAlign: 'right' }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums', minWidth: 30, textAlign: 'right' }}>
                   {team.score ?? '0'}
                 </span>
               )}
@@ -60,14 +60,14 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
         </div>
 
         {comp?.odds?.[0] && (
-          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)', display: 'flex', gap: 12 }}>
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-3)', display: 'flex', gap: 12 }}>
             <span>Spread: <strong style={{ color: 'var(--text-2)' }}>{comp.odds[0].details}</strong></span>
             <span>O/U: <strong style={{ color: 'var(--text-2)' }}>{comp.odds[0].overUnder}</strong></span>
           </div>
         )}
 
         {comp?.venue && (
-          <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 6 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
             📍 {comp.venue.fullName}
           </p>
         )}
@@ -93,7 +93,7 @@ export function GameCardCompact({ game, sport }: { game: ESPNGame; sport: SportK
           cursor: 'pointer', transition: 'border-color 140ms, background 140ms',
         }}
       >
-        <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</p>
         {[away, home].map((t, i) => t && (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: i === 0 ? 4 : 0 }}>
             {t.team.logo && <SafeImage src={t.team.logo} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />}
@@ -101,7 +101,7 @@ export function GameCardCompact({ game, sport }: { game: ESPNGame; sport: SportK
               {t.team.abbreviation}
             </span>
             {state !== 'pre' && (
-              <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>{t.score ?? 0}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{t.score ?? 0}</span>
             )}
           </div>
         ))}

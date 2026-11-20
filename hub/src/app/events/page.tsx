@@ -34,9 +34,9 @@ export default async function EventsPage() {
         <div className="grid gap-3 lg:grid-cols-2">{(upcoming ?? []).map((event: any) => <EventCard key={event.id} event={event} />)}</div>
       ) : (
         <ProductPanel padded className="text-center">
-          <CalendarDays className="mx-auto text-zinc-600" size={28} />
-          <p className="mt-3 font-black text-white">Nothing scheduled yet</p>
-          {user && <Link href="/events/create" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-black"><Plus size={14} /> Create event</Link>}
+          <CalendarDays className="mx-auto text-[var(--text-3)]" size={28} />
+          <p className="mt-3 font-semibold text-[var(--text-1)]">Nothing scheduled yet</p>
+          {user && <Link href="/events/create" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-fill)] px-4 py-2.5 text-xs font-semibold text-[var(--accent-fg)]"><Plus size={14} /> Create event</Link>}
         </ProductPanel>
       )}
       {(past?.length ?? 0) > 0 && <><ProductSectionHeader title="Recent" /><div className="grid gap-3 lg:grid-cols-2">{(past ?? []).map((event: any) => <EventCard key={event.id} event={event} past />)}</div></>}

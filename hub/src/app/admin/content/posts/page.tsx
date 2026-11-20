@@ -60,32 +60,32 @@ export default async function AdminPostsPage({
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-black text-white">Manage Posts</h1>
-        <span className="text-sm text-zinc-500">{posts?.length ?? 0} results{(posts?.length ?? 0) === 100 ? ' (capped, narrow your filters)' : ''}</span>
+        <h1 className="text-xl font-semibold text-[var(--text-1)]">Manage Posts</h1>
+        <span className="text-sm text-[var(--text-3)]">{posts?.length ?? 0} results{(posts?.length ?? 0) === 100 ? ' (capped, narrow your filters)' : ''}</span>
       </div>
 
       {/* Filters */}
       <form className="flex flex-wrap items-end gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Search</label>
-          <Search size={14} className="absolute left-3 top-1/2 mt-1 -translate-y-1/2 text-zinc-500" />
+          <label className="block text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Search</label>
+          <Search size={14} className="absolute left-3 top-1/2 mt-1 -translate-y-1/2 text-[var(--text-3)]" />
           <input name="q" defaultValue={q} placeholder="Author or content…"
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">From</label>
+          <label className="block text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">From</label>
           <input type="date" name="from" defaultValue={from}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">To</label>
+          <label className="block text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">To</label>
           <input type="date" name="to" defaultValue={to}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Sort</label>
+          <label className="block text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Sort</label>
           <select name="sort" defaultValue={sort}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-green-500/50">
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]">
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
             <option value="most_liked">Most liked</option>
@@ -93,64 +93,64 @@ export default async function AdminPostsPage({
           </select>
         </div>
         {type && <input type="hidden" name="type" value={type} />}
-        <button type="submit" className="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors">
+        <button type="submit" className="bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-sm font-bold px-4 py-2 rounded-xl transition-colors">
           Apply
         </button>
         {(q || from || to || type || sort !== 'newest') && (
-          <Link href="/admin/content/posts" className="text-xs font-bold text-zinc-500 hover:text-white px-2 py-2">Clear</Link>
+          <Link href="/admin/content/posts" className="text-xs font-bold text-[var(--text-3)] hover:text-[var(--text-1)] px-2 py-2">Clear</Link>
         )}
       </form>
 
-      <div className="flex gap-1 mb-4">
+      <div className="flex flex-wrap gap-1 mb-4">
         <Link href={qs({ type: undefined })}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!type ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/60'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!type ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
           All types
         </Link>
         {TYPES.map(t => (
           <Link key={t} href={qs({ type: t })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${type === t ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/60'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${type === t ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
             {t}
           </Link>
         ))}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800">
+          <thead className="border-b border-[var(--border)]">
             <tr className="text-left">
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Author</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Content</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Type</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Engagement</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Date</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Actions</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Author</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Content</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Type</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Engagement</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Date</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[var(--border)]">
             {(posts ?? []).length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-zinc-500 text-sm">No posts match these filters</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-[var(--text-3)] text-sm">No posts match these filters</td></tr>
             )}
             {(posts ?? []).map((p: any) => (
-              <tr key={p.id} className="hover:bg-zinc-800/40 transition-colors">
-                <td className="px-4 py-3 text-xs text-zinc-400">
+              <tr key={p.id} className="hover:bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)] transition-colors">
+                <td className="px-4 py-3 text-xs text-[var(--text-2)]">
                   {p.author?.username ? (
-                    <Link href={`/profile/${p.author.username}`} className="hover:text-white hover:underline" target="_blank">@{p.author.username}</Link>
+                    <Link href={`/profile/${p.author.username}`} className="hover:text-[var(--text-1)] hover:underline" target="_blank">@{p.author.username}</Link>
                   ) : '—'}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-300 max-w-xs">
+                <td className="px-4 py-3 text-sm text-[var(--text-2)] max-w-xs">
                   <Link href={`/posts/${p.id}`} target="_blank" className="hover:underline">
-                    <p className="line-clamp-2">{p.content ? <EmojiText text={p.content} /> : <span className="text-zinc-600 italic">(no text)</span>}</p>
+                    <p className="line-clamp-2">{p.content ? <EmojiText text={p.content} /> : <span className="text-[var(--text-3)] italic">(no text)</span>}</p>
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[10px] font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+                  <span className="text-[12px] font-bold bg-[var(--surface-2)] text-[var(--text-2)] px-2 py-0.5 rounded-full">
                     {p.post_type}{p.sport ? ` · ${p.sport}` : ''}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-zinc-500">
+                <td className="px-4 py-3 text-xs text-[var(--text-3)]">
                   ❤️ {p.reaction_count} · 💬 {p.comment_count} · 🔁 {p.repost_count}
                 </td>
-                <td className="px-4 py-3 text-xs text-zinc-500">{new Date(p.created_at).toLocaleString()}</td>
+                <td className="px-4 py-3 text-xs text-[var(--text-3)]">{new Date(p.created_at).toLocaleString()}</td>
                 <td className="px-4 py-3">
                   <AdminPostActions postId={p.id} />
                 </td>

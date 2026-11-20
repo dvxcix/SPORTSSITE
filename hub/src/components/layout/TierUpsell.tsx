@@ -18,14 +18,14 @@ export function TierUpsell({ requiredTier, label }: { requiredTier: Tier; label:
       }}>
         <Lock size={24} color="var(--text-3)" />
       </div>
-      <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>
+      <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>
         {signInOnly ? `Sign in to use ${label}` : `Unlock ${label} with Ultimate`}
       </h1>
       <p style={{ fontSize: 13, color: 'var(--text-3)', maxWidth: 320, lineHeight: 1.5, marginBottom: 20 }}>
         {signInOnly ? 'Create a free account or sign in to continue.' : `Get Ultimate for ${label} and the rest of the research and community tools.`}
       </p>
       <Link href={signInOnly ? '/auth/login' : '/pricing'} style={{
-        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
+        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-fill)',
         padding: '9px 18px', borderRadius: 10, textDecoration: 'none',
       }}>
         {signInOnly ? 'Sign in' : 'View membership'}

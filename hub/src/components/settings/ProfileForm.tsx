@@ -143,17 +143,17 @@ export function ProfileForm({ profile }: { profile: any }) {
     }
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all"
   const completionItems = [form.avatar_url, form.banner_url, form.display_name, form.bio, form.location, form.website, form.favorite_teams.length, form.favorite_players.length]
   const completion = Math.round((completionItems.filter(Boolean).length / completionItems.length) * 100)
 
   return (
     <form className="space-y-6" onSubmit={save}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-white">Profile completion</h2><strong className="text-sm font-semibold tabular-nums text-white">{completion}%</strong></div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${completion}%` }} /></div>
+        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-[var(--text-1)]">Profile completion</h2><strong className="text-sm font-semibold tabular-nums text-[var(--text-1)]">{completion}%</strong></div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><div className="h-full rounded-full bg-[var(--accent-fill)]" style={{ width: `${completion}%` }} /></div>
       </section>
 
       <section className="ss-profile-editor-preview">
@@ -213,39 +213,39 @@ export function ProfileForm({ profile }: { profile: any }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Display Name</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Display Name</label>
           <input aria-label="Display name" value={form.display_name} maxLength={60} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Your name" className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Username</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Username</label>
           <input aria-label="Username" value={form.username} maxLength={30} autoCapitalize="none" spellCheck={false} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} placeholder="username" className={inputClass} />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-1.5">Bio</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Bio</label>
         <textarea aria-label="Bio" value={form.bio} maxLength={280} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Tell people who you are…" className={inputClass + ' resize-none'} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Location</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Location</label>
           <input aria-label="Location" value={form.location} maxLength={80} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Website</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Website</label>
           <input type="url" aria-label="Website" value={form.website} maxLength={500} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Sports</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Favorite Sports</label>
         <div className="flex flex-wrap gap-2">
           {SPORTS.filter(s => !MLB_HIBERNATING || profile?.account_type === 'admin' || s !== 'MLB').map(s => {
             const logo = sportLogoUrl(s)
             return (
               <button key={s} type="button" aria-pressed={form.favorite_sports.includes(s)} onClick={() => toggleSport(s)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_sports.includes(s) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_sports.includes(s) ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
                 {form.favorite_sports.includes(s) && <Check size={10} />}
                 {logo && <SafeImage src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
                 {s}
@@ -258,11 +258,11 @@ export function ProfileForm({ profile }: { profile: any }) {
       <FavoritePicker teams={form.favorite_teams} players={form.favorite_players} sports={form.favorite_sports} allowNba={true} onTeamsChange={teams => setForm(current => ({ ...current, favorite_teams: teams }))} onPlayersChange={players => setForm(current => ({ ...current, favorite_players: players }))}/>
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Sportsbooks You Use</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Sportsbooks You Use</label>
         <div className="flex flex-wrap gap-2">
           {SPORTSBOOKS.map(b => (
             <button key={b.key} type="button" aria-pressed={form.sportsbooks.includes(b.key)} onClick={() => toggleSportsbook(b.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sportsbooks.includes(b.key) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sportsbooks.includes(b.key) ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
               <BookLogo vendor={b.key} size={14} />
               {b.label}
             </button>
@@ -278,7 +278,7 @@ export function ProfileForm({ profile }: { profile: any }) {
 
       {platforms.length > 0 && (
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-2">Public social links</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Public social links</label>
           <div className="space-y-2">
             {platforms.map(p => {
               return (
@@ -300,7 +300,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       )}
 
       <button type="submit" disabled={saving || !!uploading}
-        className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all ${saved ? 'bg-green-600 text-white' : 'bg-green-500 hover:bg-green-400 text-black'} disabled:opacity-60`}>
+        className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${saved ? 'bg-[var(--green-fill)] text-[var(--on-status)]' : 'bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)]'} disabled:opacity-60`}>
         {saved ? <><Check size={16} /> Saved!</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Save Profile'}
       </button>
     </form>

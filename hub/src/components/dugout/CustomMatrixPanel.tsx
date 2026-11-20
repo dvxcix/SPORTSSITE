@@ -352,7 +352,7 @@ export function RatioMovementFields({ operator, value, onPatch }: {
   }
   return (
     <>
-      <select aria-label="Displayed ratio movement" className="ss-input" value={mode} onChange={e => applyMode(e.target.value as RatioMovementMode)} style={{ fontSize: 11, padding: '5px 6px', width: 156 }}>
+      <select aria-label="Displayed ratio movement" className="ss-input" value={mode} onChange={e => applyMode(e.target.value as RatioMovementMode)} style={{ fontSize: 12, padding: '5px 6px', width: 156 }}>
         <option value="down_at_least">Moved down by at least</option>
         <option value="down_exactly">Moved down exactly</option>
         <option value="up_at_least">Moved up by at least</option>
@@ -366,10 +366,10 @@ export function RatioMovementFields({ operator, value, onPatch }: {
           value={value == null ? '' : amount}
           onChange={e => setAmount(e.target.value === '' ? null : Number(e.target.value))}
           title="Uses the two-decimal ratio shown on TheDugout. Example: 0.71 to 0.70 is down 0.01."
-          style={{ fontSize: 11, padding: '5px 6px', width: 78 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 78 }}
         />
       )}
-      <span style={{ fontSize: 9, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>displayed ratio</span>
+      <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>displayed ratio</span>
     </>
   )
 }
@@ -414,7 +414,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
   const needsAmount = direction === 'increased' || direction === 'decreased' || direction === 'moved'
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>FROM</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>FROM</span>
       <select
         aria-label="Market movement base window"
         className="ss-input" value={base}
@@ -422,7 +422,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
           const nextBase = e.target.value as MmWindowKey
           onPatch({ mm_base_window: nextBase, mm_compare_windows: compare.filter(w => w !== nextBase) })
         }}
-        style={{ fontSize: 11, padding: '5px 6px', width: 66 }}
+        style={{ fontSize: 12, padding: '5px 6px', width: 66 }}
       >
         {MM_WINDOWS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
       </select>
@@ -431,7 +431,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
         aria-label="Market movement direction"
         className="ss-input" value={direction ?? 'decreased'}
         onChange={e => onPatch({ mm_direction: e.target.value as MmTrendDirection })}
-        style={{ fontSize: 11, padding: '5px 6px', width: 160 }}
+        style={{ fontSize: 12, padding: '5px 6px', width: 160 }}
       >
         {(Object.keys(MM_DIRECTION_LABEL) as MmTrendDirection[]).map(d => <option key={d} value={d}>{MM_DIRECTION_LABEL[d]}</option>)}
       </select>
@@ -443,7 +443,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
             className="ss-input" value={amountMode ?? 'at_least'}
             onChange={e => onPatch({ mm_amount_mode: e.target.value as 'at_least' | 'exactly' })}
             title="Whether the amount below is a minimum (2 or more) or an exact match (exactly 2)"
-            style={{ fontSize: 11, padding: '5px 6px', width: 92 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 92 }}
           >
             <option value="at_least">At least</option>
             <option value="exactly">Exactly</option>
@@ -454,12 +454,12 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
             title={amountMode === 'exactly' ? 'Exact rank move required — leave blank for any move at all in this direction' : 'Minimum move required — leave blank for any move at all in this direction'}
             value={amount ?? ''}
             onChange={e => onPatch({ value: e.target.value === '' ? null : Math.abs(Number(e.target.value)) })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 84 }}
           />
         </>
       )}
 
-      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>IN</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>IN</span>
       <div style={{ display: 'flex', gap: 3 }}>
         {MM_WINDOWS.filter(w => w.key !== base).map(w => {
           const on = compare.includes(w.key)
@@ -471,7 +471,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
               key={w.key}
               onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
               style={{
-                fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
                 color: on ? 'var(--accent)' : 'var(--text-3)',
                 background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
                 border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
@@ -489,7 +489,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
           className="ss-input" value={matchMode ?? 'any'}
           onChange={e => onPatch({ mm_match_mode: e.target.value as 'any' | 'all' })}
           title="Whether the trend needs to hold in ANY of the checked windows, or ALL of them"
-          style={{ fontSize: 10, padding: '4px 5px', width: 150 }}
+          style={{ fontSize: 12, padding: '4px 5px', width: 150 }}
         >
           <option value="any">True in any checked window</option>
           <option value="all">True in every checked window</option>
@@ -515,7 +515,7 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
   const compare = compareWindows ?? []
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>MOVEMENT FROM</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>MOVEMENT FROM</span>
       <select
         aria-label="Movement base window"
         className="ss-input" value={base}
@@ -523,11 +523,11 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
           const nextBase = e.target.value as MmWindowKey
           onPatch({ mm_base_window: nextBase, mm_compare_windows: compare.filter(w => w !== nextBase) })
         }}
-        style={{ fontSize: 11, padding: '5px 6px', width: 66 }}
+        style={{ fontSize: 12, padding: '5px 6px', width: 66 }}
       >
         {MM_WINDOWS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
       </select>
-      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>VS</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>VS</span>
       <div style={{ display: 'flex', gap: 3 }}>
         {MM_WINDOWS.filter(w => w.key !== base).map(w => {
           const on = compare.includes(w.key)
@@ -539,7 +539,7 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
               key={w.key}
               onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
               style={{
-                fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
                 color: on ? 'var(--accent)' : 'var(--text-3)',
                 background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
                 border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
@@ -636,7 +636,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null,
           })
         }}
-        style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+        style={{ fontSize: 12, padding: '5px 6px', width: 110 }}
       >
         {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
       </select>
@@ -663,7 +663,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             ...(field_key === 'mm_move' && !factor.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
           })
         }}
-        style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
+        style={{ fontSize: 12, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
@@ -680,7 +680,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           aria-label="Boolean condition value"
           className="ss-input" value={factor.value === 0 ? '0' : '1'}
           onChange={e => onChange({ ...factor, operator: 'eq', value: Number(e.target.value) })}
-          style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 100 }}
         >
           <option value="1">Yes</option>
           <option value="0">No</option>
@@ -704,7 +704,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                   : {}),
               })
             }}
-            style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 170 }}
           >
             <option value="gte">{OPERATOR_LABEL.gte}</option>
             <option value="lte">{OPERATOR_LABEL.lte}</option>
@@ -758,7 +758,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 aria-label="Tie scope"
                 className="ss-input" value={factor.tie_scope ?? 'team'}
                 onChange={e => onChange({ ...factor, tie_scope: e.target.value as MatrixFactor['tie_scope'] })}
-                style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+                style={{ fontSize: 12, padding: '5px 6px', width: 130 }}
               >
                 <option value="team">Same team</option>
                 <option value="game">Either team</option>
@@ -768,7 +768,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 className="ss-input" value={factor.tie_direction ?? 'all'}
                 onChange={e => onChange({ ...factor, tie_direction: e.target.value === 'all' ? null : e.target.value as MatrixFactor['tie_direction'] })}
                 title="When more than one pair/group ties at different values, which one to keep"
-                style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+                style={{ fontSize: 12, padding: '5px 6px', width: 170 }}
               >
                 <option value="all">Keep every tied group</option>
                 <option value="highest">Keep the highest-tied group</option>
@@ -781,7 +781,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
               className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
               value={factor.value ?? ''}
               onChange={e => onChange({ ...factor, value: e.target.value === '' ? null : Number(e.target.value) })}
-              style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+              style={{ fontSize: 12, padding: '5px 6px', width: 84 }}
             />
           )}
         </>
@@ -807,7 +807,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             })
           }}
           title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
-          style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 100 }}
         >
           {/* 'custom' (an arbitrary exact date range) removed for pitchlog_stat
               (2026-07-24) — it was the one recency choice the daily precompute
@@ -843,7 +843,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           a member picks otherwise. */}
       {factor.category === 'odds' && MULTI_BOOK_FIELDS[factor.field_key] && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>BOOKS</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>BOOKS</span>
           {MULTI_BOOK_FIELDS[factor.field_key].map(b => {
             const selected = factor.books?.length ? factor.books : ['fanduel']
             const on = selected.includes(b.key)
@@ -872,7 +872,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             aria-label="Sportsbook match requirement"
             className="ss-input" value={factor.books_min_count == null ? 'all' : 'atLeast'}
             onChange={e => onChange({ ...factor, books_min_count: e.target.value === 'atLeast' ? (factor.books?.length ?? 1) : null })}
-            style={{ fontSize: 10, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
+            style={{ fontSize: 12, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
           >
             <option value="all">True for every book picked</option>
             <option value="atLeast">True for at least N picked</option>
@@ -883,7 +883,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
               className="ss-input" type="number" min={1} max={(factor.books?.length ?? 1) || 1}
               value={factor.books_min_count}
               onChange={e => onChange({ ...factor, books_min_count: Math.max(1, Number(e.target.value) || 1) })}
-              style={{ fontSize: 10, padding: '4px 5px', width: 44 }}
+              style={{ fontSize: 12, padding: '4px 5px', width: 44 }}
             />
           )}
         </div>
@@ -897,7 +897,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           chain runs out, everyone still tied stays highlighted. */}
       {factor.operator === 'tied' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>
             TIEBREAKER{factor.tiebreakers.length !== 1 ? 'S' : ''} — RANK TIED PLAYERS BY
           </span>
           {factor.tiebreakers.map((tb, i) => (
@@ -910,7 +910,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           <button
             type="button"
             onClick={() => onChange({ ...factor, tiebreakers: [...factor.tiebreakers, newTiebreaker()] })}
-            style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 0', alignSelf: 'flex-start' }}
+            style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 0', alignSelf: 'flex-start' }}
           >
             + Add {factor.tiebreakers.length ? 'fallback tiebreaker' : 'tiebreaker'}
           </button>
@@ -957,7 +957,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
             recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null,
           })
         }}
-        style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+        style={{ fontSize: 12, padding: '4px 5px', width: 100 }}
       >
         {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
       </select>
@@ -972,7 +972,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
             ...(field_key === 'mm_move' && !tb.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
           })
         }}
-        style={{ fontSize: 10, padding: '4px 5px', minWidth: 130, flex: '1 1 130px' }}
+        style={{ fontSize: 12, padding: '4px 5px', minWidth: 130, flex: '1 1 130px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
@@ -990,7 +990,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
           className="ss-input" value={tb.recency ?? 'season'}
           onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
           title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
-          style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+          style={{ fontSize: 12, padding: '4px 5px', width: 100 }}
         >
           {/* Same Bat Speed / Squared-Up% exception as FactorRow's own
               recency select — see recencyOptionsFor above. */}
@@ -1028,7 +1028,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         aria-label="Tiebreaker direction"
         className="ss-input" value={tb.direction}
         onChange={e => onChange({ ...tb, direction: e.target.value as MatrixTiebreaker['direction'] })}
-        style={{ fontSize: 10, padding: '4px 5px', width: 120 }}
+        style={{ fontSize: 12, padding: '4px 5px', width: 120 }}
       >
         <option value="highest">Highest</option>
         <option value="lowest">Lowest</option>
@@ -1039,7 +1039,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
       {tb.direction === 'closest_zero' && (
         <label
           title="Off (default): a literal 0 never wins — right for a field like DIV where 0 usually means no line/no data. On: 0 competes and can win — right for a field like MM where 0 is a real 'no movement' reading."
-          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
         >
           <input
             type="checkbox" checked={tb.zero_eligible === true}
@@ -1056,7 +1056,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
         value={tb.tolerance ?? ''}
         onChange={e => onChange({ ...tb, tolerance: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-        style={{ fontSize: 10, padding: '4px 5px', width: 80 }}
+        style={{ fontSize: 12, padding: '4px 5px', width: 80 }}
       />
 
       <button type="button" onClick={onRemove} aria-label="Remove tie-breaker" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
@@ -1189,7 +1189,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           tabIndex={-1}
         >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <span id="matrix-editor-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
+          <span id="matrix-editor-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
           <button aria-label="Close Matrix editor" onClick={onClose} type="button" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
         </div>
 
@@ -1206,10 +1206,10 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
                   boxShadow: matrixType === t ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 800, color: matrixType === t ? 'var(--accent)' : 'var(--text-2)' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: matrixType === t ? 'var(--accent)' : 'var(--text-2)' }}>
                   {t === 'classic' ? 'Classic' : 'Pipeline'}
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                   {t === 'classic' ? 'All Elements must match' : 'A step-by-step narrowing chain'}
                 </span>
               </button>
@@ -1277,12 +1277,12 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Elements ({factors.length})</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>Elements ({factors.length})</span>
               <button
                 type="button"
                 onClick={() => setFactors([...factors, newFactor()])}
                 style={{
-                  marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                  marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700,
                   color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer',
                 }}
               >
@@ -1354,9 +1354,9 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
     <div style={{ padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, opacity: deleting ? 0.5 : matrix.enabled ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: matrix.color, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matrix.name}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matrix.name}</span>
         {matrix.matrix_type === 'pipeline' && (
-          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.03em', color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 999, padding: '2px 6px', flexShrink: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 999, padding: '2px 6px', flexShrink: 0 }}>
             PIPELINE
           </span>
         )}
@@ -1371,13 +1371,13 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
         >
           <span style={{
             position: 'absolute', top: 2, left: matrix.enabled ? 15 : 2, width: 13, height: 13, borderRadius: '50%',
-            background: '#fff', transition: 'left 0.15s',
+            background: 'var(--surface-2)', transition: 'left 0.15s',
           }} />
         </button>
         <button type="button" onClick={onEdit} aria-label={`Edit ${matrix.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Pencil size={13} /></button>
         <button type="button" onClick={del} aria-label={`Delete ${matrix.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Trash2 size={13} /></button>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
         {matrix.matrix_type === 'pipeline'
           ? <>{matrix.pipeline_steps.length} step{matrix.pipeline_steps.length === 1 ? '' : 's'} · {matrix.pipeline_scope === 'game' ? 'either team' : 'same team'}</>
           : <>{matrix.factors.length} Element{matrix.factors.length === 1 ? '' : 's'} · {matrix.match_mode === 'all' ? 'match all' : `match ${matrix.match_any_count ?? 1}+`}</>
@@ -1385,13 +1385,13 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
         {!matrix.enabled && <> · <span style={{ color: 'var(--text-3)' }}>off</span></>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-        <span style={{ fontSize: 10, fontFamily: "'SF Mono',monospace", color: 'var(--text-2)', background: 'var(--surface-2)', padding: '3px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>
+        <span style={{ fontSize: 12, fontFamily: "'SF Mono',monospace", color: 'var(--text-2)', background: 'var(--surface-2)', padding: '3px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>
           {matrix.element_code}
         </span>
-        <button type="button" onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button type="button" onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: copied ? 'var(--accent)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
           {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? 'Copied' : 'Copy'}
         </button>
-        <button type="button" onClick={onShare} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px' }}>
+        <button type="button" onClick={onShare} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px' }}>
           <Share2 size={11} /> Share
         </button>
       </div>
@@ -1475,12 +1475,12 @@ export function MatrixButton() {
         style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 999,
           background: 'var(--surface)', color: 'var(--text-1)', border: '1px solid var(--border-2)', cursor: 'grab',
-          fontSize: 13, fontWeight: 800, boxShadow: '0 4px 16px rgba(0,0,0,0.35)', userSelect: 'none', ...fab.style,
+          fontSize: 13, fontWeight: 700, boxShadow: '0 4px 16px rgba(0,0,0,0.35)', userSelect: 'none', ...fab.style,
         }}
       >
         <Grid3x3 size={15} /> Matrix
         {matrices.length > 0 && (
-          <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{matrices.length}</span>
+          <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 999, padding: '1px 7px', fontSize: 12 }}>{matrices.length}</span>
         )}
       </button>
 
@@ -1488,7 +1488,7 @@ export function MatrixButton() {
         open={open}
         onClose={() => setOpen(false)}
         labelledBy="custom-matrix-panel-title"
-        backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
         panelStyle={{
           width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out', outline: 'none',
@@ -1496,10 +1496,10 @@ export function MatrixButton() {
       >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-              <span id="custom-matrix-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span id="custom-matrix-panel-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Grid3x3 size={16} /> Custom Matrix
               </span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{matrices.length}/10</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{matrices.length}/10</span>
               <button type="button" data-modal-autofocus aria-label="Close custom matrix" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
 
@@ -1510,7 +1510,7 @@ export function MatrixButton() {
                 disabled={matrices.length >= 10}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '9px 0', marginBottom: 12, borderRadius: 8, fontSize: 12, fontWeight: 800,
+                  padding: '9px 0', marginBottom: 12, borderRadius: 8, fontSize: 12, fontWeight: 700,
                   color: matrices.length >= 10 ? 'var(--text-3)' : 'var(--accent-fg)',
                   background: matrices.length >= 10 ? 'var(--surface-2)' : 'var(--accent)',
                   border: 'none', cursor: matrices.length >= 10 ? 'not-allowed' : 'pointer',
@@ -1539,22 +1539,22 @@ export function MatrixButton() {
               )}
 
               <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-                <button type="button" onClick={() => router.push('/marketplace')} className="ss-btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, padding: '8px 12px', marginBottom: 12, color: 'var(--accent)' }}>
+                <button type="button" onClick={() => router.push('/marketplace')} className="ss-btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, padding: '8px 12px', marginBottom: 12, color: 'var(--accent)' }}>
                   <ShoppingBag size={13} /> Browse Matrix Marketplace
                 </button>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6 }}>Import a shared Element Code</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Import a shared Element Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input
                     aria-label="Shared Element Code"
                     className="ss-input" placeholder="EL-XXXX-XXXX" value={importCode}
                     onChange={e => setImportCode(e.target.value.toUpperCase())}
-                    style={{ flex: 1, fontSize: 11, padding: '7px 8px', fontFamily: "'SF Mono',monospace" }}
+                    style={{ flex: 1, fontSize: 12, padding: '7px 8px', fontFamily: "'SF Mono',monospace" }}
                   />
-                  <button type="button" onClick={doImport} disabled={importing || matrices.length >= 10} className="ss-btn-ghost" style={{ fontSize: 11, padding: '7px 12px' }}>
+                  <button type="button" onClick={doImport} disabled={importing || matrices.length >= 10} className="ss-btn-ghost" style={{ fontSize: 12, padding: '7px 12px' }}>
                     {importing ? '…' : 'Import'}
                   </button>
                 </div>
-                {importError && <div role="alert" style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{importError}</div>}
+                {importError && <div role="alert" style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{importError}</div>}
               </div>
             </div>
       </ModalSurface>

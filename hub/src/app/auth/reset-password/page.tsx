@@ -98,14 +98,14 @@ export default function ResetPasswordPage() {
     <AuthShell eyebrow="Account recovery" title="Set a new password" description="Choose a strong password you don’t use elsewhere.">
         {linkStatus === 'checking' ? (
           <div className="ss-auth-status" role="status">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-lime-300/25 border-t-lime-300" aria-hidden="true" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[color-mix(in_srgb,var(--accent)_25%,transparent)] border-t-lime-300" aria-hidden="true" />
             <p>Verifying your reset link…</p>
           </div>
         ) : linkStatus === 'invalid' ? (
           <div className="ss-auth-card text-center">
-            <AlertTriangle size={26} className="mx-auto text-rose-400" aria-hidden="true" />
-            <strong className="text-white">Link didn’t work</strong>
-            <p className="text-xs leading-relaxed text-zinc-400">{linkError}</p>
+            <AlertTriangle size={26} className="mx-auto text-[var(--red)]" aria-hidden="true" />
+            <strong className="text-[var(--text-1)]">Link didn’t work</strong>
+            <p className="text-xs leading-relaxed text-[var(--text-2)]">{linkError}</p>
             <Link href="/auth/forgot-password" className="ss-auth-submit">
               Request a new link
             </Link>

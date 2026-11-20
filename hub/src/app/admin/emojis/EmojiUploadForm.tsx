@@ -127,63 +127,63 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
 
   return (
     <div className="space-y-6">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       {/* Category management */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Categories</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-3">Categories</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {categories.map(c => (
-            <div key={c.id} className="flex items-center gap-1.5 bg-zinc-800 rounded-full pl-3 pr-1 py-1">
-              <span className="text-xs font-bold text-white">{c.name}</span>
-              <span className="text-[10px] text-zinc-500">{emojis.filter(e => e.category_id === c.id).length}</span>
-              <button type="button" onClick={() => removeCategory(c.id)} aria-label={`Delete ${c.name} emoji category`} className="text-zinc-500 hover:text-red-400 p-1">
+            <div key={c.id} className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-full pl-3 pr-1 py-1">
+              <span className="text-xs font-bold text-[var(--text-1)]">{c.name}</span>
+              <span className="text-[12px] text-[var(--text-3)]">{emojis.filter(e => e.category_id === c.id).length}</span>
+              <button type="button" onClick={() => removeCategory(c.id)} aria-label={`Delete ${c.name} emoji category`} className="text-[var(--text-3)] hover:text-[var(--red)] p-1">
                 <Trash2 size={11} />
               </button>
             </div>
           ))}
-          {categories.length === 0 && <p className="text-xs text-zinc-600">No categories yet — add one below.</p>}
+          {categories.length === 0 && <p className="text-xs text-[var(--text-3)]">No categories yet — add one below.</p>}
         </div>
         <div className="flex gap-2">
           <input aria-label="New emoji category name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCategory()}
             placeholder="New category name (e.g. MLB, NBA)…"
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+            className="flex-1 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           <button type="button" onClick={addCategory} disabled={addingCategory || !newCategoryName.trim()}
-            className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white text-xs font-bold px-3 rounded-lg transition-colors">
+            className="flex items-center gap-1 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] text-xs font-bold px-3 rounded-lg transition-colors">
             <Plus size={13} /> Add
           </button>
         </div>
       </div>
 
       {/* Upload */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
         <div className="flex gap-3 items-end flex-wrap">
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Code</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Code</label>
             <div className="flex items-center gap-1">
-              <span className="text-zinc-500 text-sm">:</span>
+              <span className="text-[var(--text-3)] text-sm">:</span>
               <input aria-label="Emoji shortcode" value={code} onChange={e => setCode(e.target.value.toLowerCase())}
                 placeholder="ath"
-                className="w-28 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
-              <span className="text-zinc-500 text-sm">:</span>
+                className="w-28 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
+              <span className="text-[var(--text-3)] text-sm">:</span>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Category</label>
             <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
-              className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50">
+              className="bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]">
               <option value="">Uncategorized</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Image</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Image</label>
             <input aria-label="Emoji image" type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
-              className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+              className="text-xs text-[var(--text-2)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--surface-2)] file:text-[var(--text-1)] hover:file:bg-[var(--surface-3)]" />
           </div>
           <button type="button" onClick={upload} disabled={uploading || !code.trim() || !file}
-            className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+            className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
             {uploading ? 'Uploading…' : 'Add Emoji'}
           </button>
         </div>
@@ -192,11 +192,11 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
       {/* Emoji list, grouped by category */}
       <div className="space-y-5">
         {emojis.length === 0 ? (
-          <p className="text-sm text-zinc-600">No custom emojis yet.</p>
+          <p className="text-sm text-[var(--text-3)]">No custom emojis yet.</p>
         ) : (
           grouped.map(group => (
             <div key={group.label}>
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">{group.label} · {group.items.length}</p>
+              <p className="text-xs font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">{group.label} · {group.items.length}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {group.items.map(e => (
                   editingId === e.id ? (
@@ -208,13 +208,13 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
                       onCancel={() => setEditingId(null)}
                     />
                   ) : (
-                    <div key={e.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
+                    <div key={e.id} className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2">
                       <SafeImage src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
-                      <span className="text-sm text-zinc-300 font-mono truncate flex-1">:{e.code}:</span>
-                      <button type="button" onClick={() => setEditingId(e.id)} className="text-zinc-500 hover:text-white shrink-0" aria-label={`Edit ${e.code} emoji`}>
+                      <span className="text-sm text-[var(--text-2)] font-mono truncate flex-1">:{e.code}:</span>
+                      <button type="button" onClick={() => setEditingId(e.id)} className="text-[var(--text-3)] hover:text-[var(--text-1)] shrink-0" aria-label={`Edit ${e.code} emoji`}>
                         <Pencil size={13} />
                       </button>
-                      <button type="button" onClick={() => remove(e.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Delete ${e.code} emoji`}>
+                      <button type="button" onClick={() => remove(e.id)} className="text-[var(--text-3)] hover:text-[var(--red)] shrink-0" aria-label={`Delete ${e.code} emoji`}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -256,38 +256,38 @@ function EmojiEditRow({ emoji, categories, onSave, onCancel }: {
   }
 
   return (
-    <div className="col-span-2 sm:col-span-3 bg-zinc-900 border border-green-500/40 rounded-xl p-3 space-y-2">
+    <div className="col-span-2 sm:col-span-3 bg-[var(--surface)] border border-[color-mix(in_srgb,var(--green)_40%,transparent)] rounded-xl p-3 space-y-2">
       <div className="flex gap-3 items-end flex-wrap">
         <SafeImage src={preview} alt="" className="w-9 h-9 object-contain rounded shrink-0" />
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Code</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Code</label>
           <div className="flex items-center gap-1">
-            <span className="text-zinc-500 text-sm">:</span>
+            <span className="text-[var(--text-3)] text-sm">:</span>
             <input value={code} onChange={e => setCode(e.target.value.toLowerCase())}
-              className="w-28 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
-            <span className="text-zinc-500 text-sm">:</span>
+              className="w-28 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
+            <span className="text-[var(--text-3)] text-sm">:</span>
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Category</label>
           <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50">
+            className="bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]">
             <option value="">Uncategorized</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Replace image (optional)</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Replace image (optional)</label>
           <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
-            className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+            className="text-xs text-[var(--text-2)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--surface-2)] file:text-[var(--text-1)] hover:file:bg-[var(--surface-3)]" />
         </div>
       </div>
       <div className="flex gap-2">
         <button onClick={save} disabled={saving || !code.trim()}
-          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
           {saving ? 'Saving…' : 'Save'}
         </button>
-        <button onClick={onCancel} className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-4 py-2 rounded-xl transition-colors">
+        <button onClick={onCancel} className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-4 py-2 rounded-xl transition-colors">
           Cancel
         </button>
       </div>

@@ -37,7 +37,7 @@ function PlaneVisual({ player }: { player: MechanicsPlayer }) {
   return (
     <div className={styles.planeVisual} aria-label={`Recent attack angle ${angle} degrees`}>
       <svg viewBox="0 0 260 120" role="img">
-        <defs><linearGradient id="plane" x1="0" x2="1"><stop stopColor="#a6ff3f"/><stop offset="1" stopColor="#47d7ff"/></linearGradient></defs>
+        <defs><linearGradient id="plane" x1="0" x2="1"><stop stopColor="var(--accent)"/><stop offset="1" stopColor="#47d7ff"/></linearGradient></defs>
         <path className={styles.zoneBand} d="M20 78 C85 61 145 48 240 35 L240 58 C155 67 90 78 20 98Z" />
         <path className={styles.swingPath} d={`M18 98 Q105 ${y} 242 ${Math.max(18, y - 15)}`} />
         <circle cx="181" cy={Math.max(22, y - 4)} r="6" fill="url(#plane)" />

@@ -1,0 +1,1560 @@
+{
+  "files": 311,
+  "changes": [
+    {
+      "file": "src/app/activity/activity.module.css",
+      "beforeBytes": 2180,
+      "afterBytes": 2186
+    },
+    {
+      "file": "src/app/admin/audit/page.tsx",
+      "beforeBytes": 5081,
+      "afterBytes": 5175
+    },
+    {
+      "file": "src/app/admin/badges/BadgeManager.tsx",
+      "beforeBytes": 20375,
+      "afterBytes": 21514
+    },
+    {
+      "file": "src/app/admin/browserbase/page.tsx",
+      "beforeBytes": 20616,
+      "afterBytes": 21313
+    },
+    {
+      "file": "src/app/admin/changelog/ChangelogManager.tsx",
+      "beforeBytes": 12744,
+      "afterBytes": 13515
+    },
+    {
+      "file": "src/app/admin/changelog/page.tsx",
+      "beforeBytes": 1401,
+      "afterBytes": 1421
+    },
+    {
+      "file": "src/app/admin/contact-recap/ContactRecapStudio.tsx",
+      "beforeBytes": 17714,
+      "afterBytes": 18952
+    },
+    {
+      "file": "src/app/admin/content/blogs/page.tsx",
+      "beforeBytes": 3348,
+      "afterBytes": 3595
+    },
+    {
+      "file": "src/app/admin/content/posts/page.tsx",
+      "beforeBytes": 8387,
+      "afterBytes": 9084
+    },
+    {
+      "file": "src/app/admin/content/stories/page.tsx",
+      "beforeBytes": 3955,
+      "afterBytes": 4155
+    },
+    {
+      "file": "src/app/admin/creators/AdminCreators.module.css",
+      "beforeBytes": 5971,
+      "afterBytes": 5989
+    },
+    {
+      "file": "src/app/admin/design-system/DesignSystemLab.tsx",
+      "beforeBytes": 6335,
+      "afterBytes": 6360
+    },
+    {
+      "file": "src/app/admin/design-system/page.tsx",
+      "beforeBytes": 686,
+      "afterBytes": 692
+    },
+    {
+      "file": "src/app/admin/discord/compose/ComposeEmbedForm.tsx",
+      "beforeBytes": 10261,
+      "afterBytes": 10500
+    },
+    {
+      "file": "src/app/admin/discord/compose/page.tsx",
+      "beforeBytes": 1101,
+      "afterBytes": 1135
+    },
+    {
+      "file": "src/app/admin/discord/DiscordBotManager.tsx",
+      "beforeBytes": 22589,
+      "afterBytes": 24091
+    },
+    {
+      "file": "src/app/admin/discord/page.tsx",
+      "beforeBytes": 1689,
+      "afterBytes": 1748
+    },
+    {
+      "file": "src/app/admin/emojis/EmojiUploadForm.tsx",
+      "beforeBytes": 15541,
+      "afterBytes": 16433
+    },
+    {
+      "file": "src/app/admin/emojis/page.tsx",
+      "beforeBytes": 1590,
+      "afterBytes": 1617
+    },
+    {
+      "file": "src/app/admin/events/page.tsx",
+      "beforeBytes": 2833,
+      "afterBytes": 3021
+    },
+    {
+      "file": "src/app/admin/fanduel-import/FanduelImportForm.tsx",
+      "beforeBytes": 14018,
+      "afterBytes": 14722
+    },
+    {
+      "file": "src/app/admin/fanduel-import/page.tsx",
+      "beforeBytes": 1857,
+      "afterBytes": 1920
+    },
+    {
+      "file": "src/app/admin/forum/page.tsx",
+      "beforeBytes": 2404,
+      "afterBytes": 2557
+    },
+    {
+      "file": "src/app/admin/groups/page.tsx",
+      "beforeBytes": 3255,
+      "afterBytes": 3488
+    },
+    {
+      "file": "src/app/admin/hr-intelligence/HrIntelligence.module.css",
+      "beforeBytes": 22803,
+      "afterBytes": 23028
+    },
+    {
+      "file": "src/app/admin/market-dna/MarketDnaLab.tsx",
+      "beforeBytes": 45837,
+      "afterBytes": 48364
+    },
+    {
+      "file": "src/app/admin/marketplace/page.tsx",
+      "beforeBytes": 5966,
+      "afterBytes": 6413
+    },
+    {
+      "file": "src/app/admin/matrix-backtest/MatrixBacktestForm.tsx",
+      "beforeBytes": 8118,
+      "afterBytes": 8596
+    },
+    {
+      "file": "src/app/admin/matrix-backtest/page.tsx",
+      "beforeBytes": 1085,
+      "afterBytes": 1105
+    },
+    {
+      "file": "src/app/admin/mgm-import/MgmImportForm.tsx",
+      "beforeBytes": 9403,
+      "afterBytes": 10066
+    },
+    {
+      "file": "src/app/admin/mgm-import/page.tsx",
+      "beforeBytes": 1695,
+      "afterBytes": 1758
+    },
+    {
+      "file": "src/app/admin/mlb-archive/page.tsx",
+      "beforeBytes": 9499,
+      "afterBytes": 9520
+    },
+    {
+      "file": "src/app/admin/monetization/page.tsx",
+      "beforeBytes": 5996,
+      "afterBytes": 6242
+    },
+    {
+      "file": "src/app/admin/nfl-access/NflAccessManager.tsx",
+      "beforeBytes": 8296,
+      "afterBytes": 8376
+    },
+    {
+      "file": "src/app/admin/nfl-access/page.tsx",
+      "beforeBytes": 698,
+      "afterBytes": 701
+    },
+    {
+      "file": "src/app/admin/notifications/page.tsx",
+      "beforeBytes": 5916,
+      "afterBytes": 6456
+    },
+    {
+      "file": "src/app/admin/page.tsx",
+      "beforeBytes": 18742,
+      "afterBytes": 19072
+    },
+    {
+      "file": "src/app/admin/pages/page.tsx",
+      "beforeBytes": 2637,
+      "afterBytes": 2847
+    },
+    {
+      "file": "src/app/admin/pikkit-import/page.tsx",
+      "beforeBytes": 1483,
+      "afterBytes": 1532
+    },
+    {
+      "file": "src/app/admin/pikkit-import/PikkitImportForm.tsx",
+      "beforeBytes": 8463,
+      "afterBytes": 8988
+    },
+    {
+      "file": "src/app/admin/pipeline-health/page.tsx",
+      "beforeBytes": 29691,
+      "afterBytes": 31027
+    },
+    {
+      "file": "src/app/admin/pipeline-health/PipelineRetryButton.tsx",
+      "beforeBytes": 3878,
+      "afterBytes": 4028
+    },
+    {
+      "file": "src/app/admin/product-audit/LiveQualityQueue.tsx",
+      "beforeBytes": 2473,
+      "afterBytes": 2494
+    },
+    {
+      "file": "src/app/admin/product-audit/ProductAuditClient.tsx",
+      "beforeBytes": 10827,
+      "afterBytes": 11093
+    },
+    {
+      "file": "src/app/admin/product-audit/RoadmapProgress.tsx",
+      "beforeBytes": 3348,
+      "afterBytes": 3392
+    },
+    {
+      "file": "src/app/admin/reports/page.tsx",
+      "beforeBytes": 10388,
+      "afterBytes": 11088
+    },
+    {
+      "file": "src/app/admin/settings/ai/page.tsx",
+      "beforeBytes": 2019,
+      "afterBytes": 2122
+    },
+    {
+      "file": "src/app/admin/settings/custom-code/page.tsx",
+      "beforeBytes": 423,
+      "afterBytes": 443
+    },
+    {
+      "file": "src/app/admin/settings/email/page.tsx",
+      "beforeBytes": 9628,
+      "afterBytes": 9913
+    },
+    {
+      "file": "src/app/admin/settings/features/FeatureRolloutManager.module.css",
+      "beforeBytes": 3254,
+      "afterBytes": 3252
+    },
+    {
+      "file": "src/app/admin/settings/general/page.tsx",
+      "beforeBytes": 315,
+      "afterBytes": 328
+    },
+    {
+      "file": "src/app/admin/settings/payments/page.tsx",
+      "beforeBytes": 3058,
+      "afterBytes": 3151
+    },
+    {
+      "file": "src/app/admin/settings/social-login/page.tsx",
+      "beforeBytes": 1272,
+      "afterBytes": 1336
+    },
+    {
+      "file": "src/app/admin/site-banner/page.tsx",
+      "beforeBytes": 1373,
+      "afterBytes": 1393
+    },
+    {
+      "file": "src/app/admin/site-banner/SiteBannerManager.tsx",
+      "beforeBytes": 7828,
+      "afterBytes": 8323
+    },
+    {
+      "file": "src/app/admin/social-platforms/page.tsx",
+      "beforeBytes": 1435,
+      "afterBytes": 1462
+    },
+    {
+      "file": "src/app/admin/social-platforms/SocialPlatformManager.tsx",
+      "beforeBytes": 10182,
+      "afterBytes": 10979
+    },
+    {
+      "file": "src/app/admin/users/banned/page.tsx",
+      "beforeBytes": 3870,
+      "afterBytes": 4048
+    },
+    {
+      "file": "src/app/admin/users/deletions/page.tsx",
+      "beforeBytes": 3475,
+      "afterBytes": 3739
+    },
+    {
+      "file": "src/app/admin/users/online/page.tsx",
+      "beforeBytes": 3805,
+      "afterBytes": 3984
+    },
+    {
+      "file": "src/app/admin/users/page.tsx",
+      "beforeBytes": 6162,
+      "afterBytes": 6501
+    },
+    {
+      "file": "src/app/admin/whop-renewal-shape/RenewalShapeForm.tsx",
+      "beforeBytes": 2650,
+      "afterBytes": 2722
+    },
+    {
+      "file": "src/app/auth/forgot-password/page.tsx",
+      "beforeBytes": 2490,
+      "afterBytes": 2500
+    },
+    {
+      "file": "src/app/auth/login/page.tsx",
+      "beforeBytes": 8570,
+      "afterBytes": 8588
+    },
+    {
+      "file": "src/app/auth/register/page.tsx",
+      "beforeBytes": 13502,
+      "afterBytes": 13520
+    },
+    {
+      "file": "src/app/auth/reset-password/page.tsx",
+      "beforeBytes": 6853,
+      "afterBytes": 6874
+    },
+    {
+      "file": "src/app/blog/my/page.tsx",
+      "beforeBytes": 3385,
+      "afterBytes": 3574
+    },
+    {
+      "file": "src/app/blog/page.tsx",
+      "beforeBytes": 5008,
+      "afterBytes": 5099
+    },
+    {
+      "file": "src/app/blog/[slug]/page.tsx",
+      "beforeBytes": 8149,
+      "afterBytes": 8440
+    },
+    {
+      "file": "src/app/channels/page.tsx",
+      "beforeBytes": 4029,
+      "afterBytes": 4205
+    },
+    {
+      "file": "src/app/community/page.tsx",
+      "beforeBytes": 7646,
+      "afterBytes": 7649
+    },
+    {
+      "file": "src/app/community.css",
+      "beforeBytes": 37857,
+      "afterBytes": 38230
+    },
+    {
+      "file": "src/app/creators/apply/CreatorApply.module.css",
+      "beforeBytes": 17709,
+      "afterBytes": 17801
+    },
+    {
+      "file": "src/app/creators/CreatorsMarketplace.module.css",
+      "beforeBytes": 6777,
+      "afterBytes": 6828
+    },
+    {
+      "file": "src/app/creators/offers/[productId]/CreatorOffer.module.css",
+      "beforeBytes": 3682,
+      "afterBytes": 3733
+    },
+    {
+      "file": "src/app/creators/payouts/CreatorPayouts.module.css",
+      "beforeBytes": 4056,
+      "afterBytes": 4084
+    },
+    {
+      "file": "src/app/creators/studio/CreatorAnalyticsDashboard.module.css",
+      "beforeBytes": 4590,
+      "afterBytes": 4607
+    },
+    {
+      "file": "src/app/creators/studio/CreatorStudio.module.css",
+      "beforeBytes": 8236,
+      "afterBytes": 8285
+    },
+    {
+      "file": "src/app/creators/studio/ScheduledPostPlanner.module.css",
+      "beforeBytes": 6389,
+      "afterBytes": 6411
+    },
+    {
+      "file": "src/app/creators/[username]/CreatorStorefront.module.css",
+      "beforeBytes": 5269,
+      "afterBytes": 5311
+    },
+    {
+      "file": "src/app/dugout/dugout-page.module.css",
+      "beforeBytes": 3221,
+      "afterBytes": 3249
+    },
+    {
+      "file": "src/app/events/page.tsx",
+      "beforeBytes": 4649,
+      "afterBytes": 4685
+    },
+    {
+      "file": "src/app/events/[id]/page.tsx",
+      "beforeBytes": 5535,
+      "afterBytes": 5608
+    },
+    {
+      "file": "src/app/forum/page.tsx",
+      "beforeBytes": 2788,
+      "afterBytes": 2881
+    },
+    {
+      "file": "src/app/forum/thread/[id]/page.tsx",
+      "beforeBytes": 7177,
+      "afterBytes": 7316
+    },
+    {
+      "file": "src/app/forum/[category]/page.tsx",
+      "beforeBytes": 3488,
+      "afterBytes": 3587
+    },
+    {
+      "file": "src/app/global-error.tsx",
+      "beforeBytes": 1528,
+      "afterBytes": 1583
+    },
+    {
+      "file": "src/app/globals.css",
+      "beforeBytes": 255418,
+      "afterBytes": 256604
+    },
+    {
+      "file": "src/app/groups/page.tsx",
+      "beforeBytes": 4917,
+      "afterBytes": 5042
+    },
+    {
+      "file": "src/app/groups/[slug]/GroupPage.module.css",
+      "beforeBytes": 4574,
+      "afterBytes": 4602
+    },
+    {
+      "file": "src/app/leaderboard/Leaderboard.module.css",
+      "beforeBytes": 2178,
+      "afterBytes": 2184
+    },
+    {
+      "file": "src/app/leaderboard/LeaderboardClient.tsx",
+      "beforeBytes": 14078,
+      "afterBytes": 14096
+    },
+    {
+      "file": "src/app/messages/messages.module.css",
+      "beforeBytes": 1140,
+      "afterBytes": 1140
+    },
+    {
+      "file": "src/app/messages/[username]/page.tsx",
+      "beforeBytes": 2472,
+      "afterBytes": 2489
+    },
+    {
+      "file": "src/app/missions/missions.module.css",
+      "beforeBytes": 4533,
+      "afterBytes": 4569
+    },
+    {
+      "file": "src/app/nba/error.tsx",
+      "beforeBytes": 418,
+      "afterBytes": 438
+    },
+    {
+      "file": "src/app/nba/loading.tsx",
+      "beforeBytes": 242,
+      "afterBytes": 257
+    },
+    {
+      "file": "src/app/nba/players/[id]/page.tsx",
+      "beforeBytes": 6991,
+      "afterBytes": 6998
+    },
+    {
+      "file": "src/app/nfl/players/[id]/page.tsx",
+      "beforeBytes": 20798,
+      "afterBytes": 21041
+    },
+    {
+      "file": "src/app/onboarding/onboarding.module.css",
+      "beforeBytes": 2138,
+      "afterBytes": 2138
+    },
+    {
+      "file": "src/app/pages/page.tsx",
+      "beforeBytes": 3718,
+      "afterBytes": 3849
+    },
+    {
+      "file": "src/app/pages/[slug]/page.tsx",
+      "beforeBytes": 5551,
+      "afterBytes": 5762
+    },
+    {
+      "file": "src/app/preview/[sport]/preview.module.css",
+      "beforeBytes": 14189,
+      "afterBytes": 14746
+    },
+    {
+      "file": "src/app/pricing/PricingCheckoutButton.tsx",
+      "beforeBytes": 9639,
+      "afterBytes": 9664
+    },
+    {
+      "file": "src/app/pricing/PricingClient.module.css",
+      "beforeBytes": 7031,
+      "afterBytes": 7039
+    },
+    {
+      "file": "src/app/profile/[username]/page.tsx",
+      "beforeBytes": 27124,
+      "afterBytes": 28248
+    },
+    {
+      "file": "src/app/settings/blocked/page.tsx",
+      "beforeBytes": 1831,
+      "afterBytes": 1851
+    },
+    {
+      "file": "src/app/settings/membership/CancelMembershipButton.tsx",
+      "beforeBytes": 2078,
+      "afterBytes": 2184
+    },
+    {
+      "file": "src/app/settings/membership/MembershipSettings.module.css",
+      "beforeBytes": 2091,
+      "afterBytes": 2107
+    },
+    {
+      "file": "src/app/settings/privacy/page.tsx",
+      "beforeBytes": 1704,
+      "afterBytes": 1788
+    },
+    {
+      "file": "src/app/settings/SettingsOverview.module.css",
+      "beforeBytes": 1482,
+      "afterBytes": 1482
+    },
+    {
+      "file": "src/app/sports/scores.module.css",
+      "beforeBytes": 1208,
+      "afterBytes": 1208
+    },
+    {
+      "file": "src/app/sports/[sport]/[gameId]/GameDetailClient.tsx",
+      "beforeBytes": 41630,
+      "afterBytes": 41640
+    },
+    {
+      "file": "src/app/sports/[sport]/[gameId]/MLBGameClient.tsx",
+      "beforeBytes": 52271,
+      "afterBytes": 52317
+    },
+    {
+      "file": "src/app/spray-charts/SprayChartsExplorer.module.css",
+      "beforeBytes": 13992,
+      "afterBytes": 14480
+    },
+    {
+      "file": "src/app/spray-charts/SprayChartsExplorer.tsx",
+      "beforeBytes": 23537,
+      "afterBytes": 23557
+    },
+    {
+      "file": "src/app/the-paint/full-odds-board.module.css",
+      "beforeBytes": 4434,
+      "afterBytes": 4668
+    },
+    {
+      "file": "src/app/the-paint/heatmap.module.css",
+      "beforeBytes": 1964,
+      "afterBytes": 2008
+    },
+    {
+      "file": "src/app/the-paint/paint.module.css",
+      "beforeBytes": 72911,
+      "afterBytes": 75376
+    },
+    {
+      "file": "src/app/the-paint/PaintEntitySelect.module.css",
+      "beforeBytes": 2755,
+      "afterBytes": 2841
+    },
+    {
+      "file": "src/app/the-paint/PaintMatchup.module.css",
+      "beforeBytes": 677,
+      "afterBytes": 709
+    },
+    {
+      "file": "src/app/the-paint/PaintMovement.tsx",
+      "beforeBytes": 11295,
+      "afterBytes": 11301
+    },
+    {
+      "file": "src/app/the-paint/PaintShotChart.tsx",
+      "beforeBytes": 8688,
+      "afterBytes": 8724
+    },
+    {
+      "file": "src/app/the-paint/PaintTracking.tsx",
+      "beforeBytes": 11681,
+      "afterBytes": 11698
+    },
+    {
+      "file": "src/app/the-paint/PaintVisuals.tsx",
+      "beforeBytes": 5592,
+      "afterBytes": 5631
+    },
+    {
+      "file": "src/app/the-paint/research-dials.module.css",
+      "beforeBytes": 2681,
+      "afterBytes": 2744
+    },
+    {
+      "file": "src/app/the-paint/research-polish.module.css",
+      "beforeBytes": 6040,
+      "afterBytes": 6428
+    },
+    {
+      "file": "src/app/the-paint/slateHeader.module.css",
+      "beforeBytes": 4539,
+      "afterBytes": 4767
+    },
+    {
+      "file": "src/app/the-paint/table-controls.module.css",
+      "beforeBytes": 716,
+      "afterBytes": 728
+    },
+    {
+      "file": "src/app/the-paint/workload.module.css",
+      "beforeBytes": 1457,
+      "afterBytes": 1506
+    },
+    {
+      "file": "src/app/the-sideline/error.tsx",
+      "beforeBytes": 473,
+      "afterBytes": 503
+    },
+    {
+      "file": "src/app/the-sideline/ladderBoard.module.css",
+      "beforeBytes": 4431,
+      "afterBytes": 4581
+    },
+    {
+      "file": "src/app/the-sideline/NflGameData.tsx",
+      "beforeBytes": 6418,
+      "afterBytes": 6682
+    },
+    {
+      "file": "src/app/the-sideline/nflLastSeen.module.css",
+      "beforeBytes": 861,
+      "afterBytes": 888
+    },
+    {
+      "file": "src/app/the-sideline/nflOddsBoard.module.css",
+      "beforeBytes": 4688,
+      "afterBytes": 4896
+    },
+    {
+      "file": "src/app/the-sideline/page.tsx",
+      "beforeBytes": 7756,
+      "afterBytes": 7834
+    },
+    {
+      "file": "src/app/the-sideline/sideline.module.css",
+      "beforeBytes": 51635,
+      "afterBytes": 53002
+    },
+    {
+      "file": "src/app/the-sideline/sidelineBoard.module.css",
+      "beforeBytes": 49098,
+      "afterBytes": 50006
+    },
+    {
+      "file": "src/app/the-sideline/sidelineCheatsheets.module.css",
+      "beforeBytes": 18513,
+      "afterBytes": 19096
+    },
+    {
+      "file": "src/app/the-sideline/sidelineNavigation.module.css",
+      "beforeBytes": 7580,
+      "afterBytes": 7719
+    },
+    {
+      "file": "src/app/the-sideline/sidelineResearch.module.css",
+      "beforeBytes": 7961,
+      "afterBytes": 8239
+    },
+    {
+      "file": "src/app/the-sideline/touchdownTracker.module.css",
+      "beforeBytes": 7980,
+      "afterBytes": 8266
+    },
+    {
+      "file": "src/components/admin/AdminCommandPalette.tsx",
+      "beforeBytes": 6869,
+      "afterBytes": 6885
+    },
+    {
+      "file": "src/components/admin/AdminCreatorActions.tsx",
+      "beforeBytes": 2005,
+      "afterBytes": 2005
+    },
+    {
+      "file": "src/components/admin/AdminDeleteRowAction.tsx",
+      "beforeBytes": 1559,
+      "afterBytes": 1638
+    },
+    {
+      "file": "src/components/admin/AdminDeletionActions.tsx",
+      "beforeBytes": 2796,
+      "afterBytes": 2977
+    },
+    {
+      "file": "src/components/admin/AdminEmailTestButton.tsx",
+      "beforeBytes": 1121,
+      "afterBytes": 1137
+    },
+    {
+      "file": "src/components/admin/AdminForumActions.tsx",
+      "beforeBytes": 2380,
+      "afterBytes": 2525
+    },
+    {
+      "file": "src/components/admin/AdminGeneralSettings.tsx",
+      "beforeBytes": 4465,
+      "afterBytes": 4687
+    },
+    {
+      "file": "src/components/admin/AdminKeyValueSettings.tsx",
+      "beforeBytes": 4021,
+      "afterBytes": 4250
+    },
+    {
+      "file": "src/components/admin/AdminPageActions.tsx",
+      "beforeBytes": 1931,
+      "afterBytes": 2071
+    },
+    {
+      "file": "src/components/admin/AdminPostActions.tsx",
+      "beforeBytes": 1125,
+      "afterBytes": 1204
+    },
+    {
+      "file": "src/components/admin/AdminReportActions.tsx",
+      "beforeBytes": 2014,
+      "afterBytes": 2119
+    },
+    {
+      "file": "src/components/admin/AdminShell.tsx",
+      "beforeBytes": 4739,
+      "afterBytes": 4743
+    },
+    {
+      "file": "src/components/admin/AdminSidebar.tsx",
+      "beforeBytes": 8758,
+      "afterBytes": 8771
+    },
+    {
+      "file": "src/components/admin/AdminStatCard.tsx",
+      "beforeBytes": 1571,
+      "afterBytes": 1574
+    },
+    {
+      "file": "src/components/admin/AdminUserActions.tsx",
+      "beforeBytes": 5105,
+      "afterBytes": 5488
+    },
+    {
+      "file": "src/components/admin/AdminUserRow.tsx",
+      "beforeBytes": 7871,
+      "afterBytes": 8303
+    },
+    {
+      "file": "src/components/admin/AdminUserSupportActions.tsx",
+      "beforeBytes": 4025,
+      "afterBytes": 4174
+    },
+    {
+      "file": "src/components/admin/CustomCodeEditor.tsx",
+      "beforeBytes": 2352,
+      "afterBytes": 2558
+    },
+    {
+      "file": "src/components/admin/MonetizationSettingsForm.tsx",
+      "beforeBytes": 2595,
+      "afterBytes": 2673
+    },
+    {
+      "file": "src/components/admin/TerminateMembershipTool.tsx",
+      "beforeBytes": 3060,
+      "afterBytes": 3352
+    },
+    {
+      "file": "src/components/allstar/AllStarClient.tsx",
+      "beforeBytes": 57967,
+      "afterBytes": 58032
+    },
+    {
+      "file": "src/components/auth/AuthExperience.module.css",
+      "beforeBytes": 7456,
+      "afterBytes": 7517
+    },
+    {
+      "file": "src/components/batter-cost/BatterCostClient.tsx",
+      "beforeBytes": 47482,
+      "afterBytes": 47492
+    },
+    {
+      "file": "src/components/blog/AIBlogWriter.tsx",
+      "beforeBytes": 7148,
+      "afterBytes": 7447
+    },
+    {
+      "file": "src/components/blog/BlogEditor.tsx",
+      "beforeBytes": 10084,
+      "afterBytes": 10507
+    },
+    {
+      "file": "src/components/blog/BlogLikeButton.tsx",
+      "beforeBytes": 1516,
+      "afterBytes": 1653
+    },
+    {
+      "file": "src/components/BookLogo.tsx",
+      "beforeBytes": 5026,
+      "afterBytes": 5098
+    },
+    {
+      "file": "src/components/chat/DMConversationTools.module.css",
+      "beforeBytes": 2882,
+      "afterBytes": 2882
+    },
+    {
+      "file": "src/components/chat/NewDMForm.tsx",
+      "beforeBytes": 5332,
+      "afterBytes": 5366
+    },
+    {
+      "file": "src/components/contact/ContactFlightStage.module.css",
+      "beforeBytes": 10375,
+      "afterBytes": 10674
+    },
+    {
+      "file": "src/components/contact/ContactFlightStage.tsx",
+      "beforeBytes": 10721,
+      "afterBytes": 10739
+    },
+    {
+      "file": "src/components/daily-recap/DailyRecapClient.tsx",
+      "beforeBytes": 4338,
+      "afterBytes": 4383
+    },
+    {
+      "file": "src/components/dugout/AffinityMatchupScore.tsx",
+      "beforeBytes": 11745,
+      "afterBytes": 11749
+    },
+    {
+      "file": "src/components/dugout/CustomMatrixPanel.tsx",
+      "beforeBytes": 84881,
+      "afterBytes": 84900
+    },
+    {
+      "file": "src/components/dugout/DugoutClient.tsx",
+      "beforeBytes": 398746,
+      "afterBytes": 398970
+    },
+    {
+      "file": "src/components/dugout/GameWeatherCard.tsx",
+      "beforeBytes": 13966,
+      "afterBytes": 13979
+    },
+    {
+      "file": "src/components/dugout/MarketBaselineRead.module.css",
+      "beforeBytes": 5303,
+      "afterBytes": 5331
+    },
+    {
+      "file": "src/components/dugout/MatchupPitchBreakdown.tsx",
+      "beforeBytes": 43651,
+      "afterBytes": 43682
+    },
+    {
+      "file": "src/components/dugout/MyPicksPanel.tsx",
+      "beforeBytes": 6791,
+      "afterBytes": 6789
+    },
+    {
+      "file": "src/components/dugout/PipelineBuilder.tsx",
+      "beforeBytes": 45713,
+      "afterBytes": 45722
+    },
+    {
+      "file": "src/components/dugout/PipelineSummary.tsx",
+      "beforeBytes": 5937,
+      "afterBytes": 5938
+    },
+    {
+      "file": "src/components/dugout/PlayerRow.module.css",
+      "beforeBytes": 2642,
+      "afterBytes": 2648
+    },
+    {
+      "file": "src/components/dugout/PostBetModal.tsx",
+      "beforeBytes": 7304,
+      "afterBytes": 7308
+    },
+    {
+      "file": "src/components/dugout/RecentFormSplits.tsx",
+      "beforeBytes": 4726,
+      "afterBytes": 4727
+    },
+    {
+      "file": "src/components/dugout/ShareWatchlistModal.module.css",
+      "beforeBytes": 3480,
+      "afterBytes": 3481
+    },
+    {
+      "file": "src/components/dugout/SlateEdgeOverlay.module.css",
+      "beforeBytes": 48123,
+      "afterBytes": 48642
+    },
+    {
+      "file": "src/components/dugout/WatchlistPanel.tsx",
+      "beforeBytes": 17819,
+      "afterBytes": 17851
+    },
+    {
+      "file": "src/components/events/CreateEventForm.tsx",
+      "beforeBytes": 6235,
+      "afterBytes": 6477
+    },
+    {
+      "file": "src/components/events/EventRSVPButtons.tsx",
+      "beforeBytes": 2237,
+      "afterBytes": 2329
+    },
+    {
+      "file": "src/components/forum/NewThreadForm.tsx",
+      "beforeBytes": 3823,
+      "afterBytes": 3902
+    },
+    {
+      "file": "src/components/forum/ThreadReplyForm.tsx",
+      "beforeBytes": 3757,
+      "afterBytes": 3772
+    },
+    {
+      "file": "src/components/groups/CreateGroupForm.tsx",
+      "beforeBytes": 9534,
+      "afterBytes": 9812
+    },
+    {
+      "file": "src/components/groups/GroupChannelManager.module.css",
+      "beforeBytes": 4868,
+      "afterBytes": 4903
+    },
+    {
+      "file": "src/components/groups/GroupChannelWorkspace.module.css",
+      "beforeBytes": 2262,
+      "afterBytes": 2272
+    },
+    {
+      "file": "src/components/groups/GroupInviteResponse.tsx",
+      "beforeBytes": 2577,
+      "afterBytes": 2717
+    },
+    {
+      "file": "src/components/groups/GroupJoinButton.tsx",
+      "beforeBytes": 1842,
+      "afterBytes": 1943
+    },
+    {
+      "file": "src/components/groups/GroupMemberManager.module.css",
+      "beforeBytes": 2492,
+      "afterBytes": 2498
+    },
+    {
+      "file": "src/components/groups/GroupMemberManager.tsx",
+      "beforeBytes": 4110,
+      "afterBytes": 4137
+    },
+    {
+      "file": "src/components/groups/GroupMemberOnboarding.module.css",
+      "beforeBytes": 6478,
+      "afterBytes": 6537
+    },
+    {
+      "file": "src/components/groups/GroupRoleManager.module.css",
+      "beforeBytes": 5270,
+      "afterBytes": 5296
+    },
+    {
+      "file": "src/components/groups/GroupSettingsForm.tsx",
+      "beforeBytes": 8974,
+      "afterBytes": 9323
+    },
+    {
+      "file": "src/components/layout/ChangelogPopupBody.tsx",
+      "beforeBytes": 3594,
+      "afterBytes": 3595
+    },
+    {
+      "file": "src/components/layout/GameLockedUpsell.tsx",
+      "beforeBytes": 1948,
+      "afterBytes": 1953
+    },
+    {
+      "file": "src/components/layout/GlobalCommandPalette.module.css",
+      "beforeBytes": 3170,
+      "afterBytes": 3193
+    },
+    {
+      "file": "src/components/layout/MaintenanceScreen.tsx",
+      "beforeBytes": 1614,
+      "afterBytes": 1619
+    },
+    {
+      "file": "src/components/layout/mobileResearch.module.css",
+      "beforeBytes": 3462,
+      "afterBytes": 3635
+    },
+    {
+      "file": "src/components/layout/page-state.module.css",
+      "beforeBytes": 1958,
+      "afterBytes": 1962
+    },
+    {
+      "file": "src/components/layout/researchNavigation.module.css",
+      "beforeBytes": 1959,
+      "afterBytes": 1961
+    },
+    {
+      "file": "src/components/layout/RightSidebar.tsx",
+      "beforeBytes": 5606,
+      "afterBytes": 5759
+    },
+    {
+      "file": "src/components/layout/Sidebar.tsx",
+      "beforeBytes": 22498,
+      "afterBytes": 22517
+    },
+    {
+      "file": "src/components/layout/SiteBanner.tsx",
+      "beforeBytes": 4107,
+      "afterBytes": 4107
+    },
+    {
+      "file": "src/components/layout/TierUpsell.tsx",
+      "beforeBytes": 1672,
+      "afterBytes": 1677
+    },
+    {
+      "file": "src/components/layout/TopBar.tsx",
+      "beforeBytes": 46605,
+      "afterBytes": 46623
+    },
+    {
+      "file": "src/components/marketing/InfoPageShell.module.css",
+      "beforeBytes": 3655,
+      "afterBytes": 3655
+    },
+    {
+      "file": "src/components/marketing/LandingPage.module.css",
+      "beforeBytes": 13728,
+      "afterBytes": 13840
+    },
+    {
+      "file": "src/components/marketplace/CreateListingForm.tsx",
+      "beforeBytes": 4541,
+      "afterBytes": 4788
+    },
+    {
+      "file": "src/components/marketplace/MatrixMarketplace.module.css",
+      "beforeBytes": 29323,
+      "afterBytes": 30092
+    },
+    {
+      "file": "src/components/nba/NbaAccessFallback.tsx",
+      "beforeBytes": 791,
+      "afterBytes": 811
+    },
+    {
+      "file": "src/components/nba/nbaEntity.module.css",
+      "beforeBytes": 4376,
+      "afterBytes": 4376
+    },
+    {
+      "file": "src/components/nba/nbaEntityMetrics.module.css",
+      "beforeBytes": 3625,
+      "afterBytes": 3750
+    },
+    {
+      "file": "src/components/nba/nbaMatrix.module.css",
+      "beforeBytes": 1579,
+      "afterBytes": 1664
+    },
+    {
+      "file": "src/components/odds-terminal/odds-terminal.module.css",
+      "beforeBytes": 33714,
+      "afterBytes": 34002
+    },
+    {
+      "file": "src/components/odds-terminal/OddsTerminalClient.tsx",
+      "beforeBytes": 40488,
+      "afterBytes": 40497
+    },
+    {
+      "file": "src/components/onboarding/OnboardingFlow.tsx",
+      "beforeBytes": 30854,
+      "afterBytes": 30872
+    },
+    {
+      "file": "src/components/pages/CreatePageForm.tsx",
+      "beforeBytes": 5342,
+      "afterBytes": 5630
+    },
+    {
+      "file": "src/components/pages/PageFollowButton.tsx",
+      "beforeBytes": 1653,
+      "afterBytes": 1754
+    },
+    {
+      "file": "src/components/pages/PageSettingsForm.tsx",
+      "beforeBytes": 8600,
+      "afterBytes": 9136
+    },
+    {
+      "file": "src/components/pitcher-report/MatchupTables.tsx",
+      "beforeBytes": 29639,
+      "afterBytes": 29648
+    },
+    {
+      "file": "src/components/pitcher-report/PitcherReportClient.tsx",
+      "beforeBytes": 36423,
+      "afterBytes": 36427
+    },
+    {
+      "file": "src/components/players/BattedBallSprayChart.module.css",
+      "beforeBytes": 10623,
+      "afterBytes": 10746
+    },
+    {
+      "file": "src/components/players/BattedBallSprayChart.tsx",
+      "beforeBytes": 18663,
+      "afterBytes": 18692
+    },
+    {
+      "file": "src/components/players/BatterMatchupExplorer.tsx",
+      "beforeBytes": 12605,
+      "afterBytes": 12605
+    },
+    {
+      "file": "src/components/players/PitchList.tsx",
+      "beforeBytes": 11948,
+      "afterBytes": 11948
+    },
+    {
+      "file": "src/components/players/PitchZoneHeatmap.tsx",
+      "beforeBytes": 7039,
+      "afterBytes": 7039
+    },
+    {
+      "file": "src/components/players/PlayerPageClient.tsx",
+      "beforeBytes": 44520,
+      "afterBytes": 44520
+    },
+    {
+      "file": "src/components/players/PlayerPicker.tsx",
+      "beforeBytes": 4754,
+      "afterBytes": 4754
+    },
+    {
+      "file": "src/components/players/ZoneGrid.tsx",
+      "beforeBytes": 5244,
+      "afterBytes": 5244
+    },
+    {
+      "file": "src/components/players/ZoneScoreCard.tsx",
+      "beforeBytes": 4783,
+      "afterBytes": 4784
+    },
+    {
+      "file": "src/components/product/EntityPage.module.css",
+      "beforeBytes": 6256,
+      "afterBytes": 6312
+    },
+    {
+      "file": "src/components/product/GameDetail.module.css",
+      "beforeBytes": 2832,
+      "afterBytes": 2842
+    },
+    {
+      "file": "src/components/product/ProductPage.module.css",
+      "beforeBytes": 5019,
+      "afterBytes": 5044
+    },
+    {
+      "file": "src/components/product/ResearchControls.module.css",
+      "beforeBytes": 3316,
+      "afterBytes": 3321
+    },
+    {
+      "file": "src/components/profile/FavoriteEntityButton.tsx",
+      "beforeBytes": 2699,
+      "afterBytes": 2781
+    },
+    {
+      "file": "src/components/profile/FavoritePicker.tsx",
+      "beforeBytes": 8947,
+      "afterBytes": 9320
+    },
+    {
+      "file": "src/components/profile/FavoritesSection.tsx",
+      "beforeBytes": 3100,
+      "afterBytes": 3235
+    },
+    {
+      "file": "src/components/profile/ProfileActions.tsx",
+      "beforeBytes": 1170,
+      "afterBytes": 1215
+    },
+    {
+      "file": "src/components/profile/ProfileStats.tsx",
+      "beforeBytes": 604,
+      "afterBytes": 659
+    },
+    {
+      "file": "src/components/research/MechanicsLab.module.css",
+      "beforeBytes": 10600,
+      "afterBytes": 10968
+    },
+    {
+      "file": "src/components/research/MechanicsLab.tsx",
+      "beforeBytes": 11474,
+      "afterBytes": 11480
+    },
+    {
+      "file": "src/components/research/ResearchGameWorkspace.module.css",
+      "beforeBytes": 22174,
+      "afterBytes": 22686
+    },
+    {
+      "file": "src/components/research/ResearchHub.module.css",
+      "beforeBytes": 14601,
+      "afterBytes": 14772
+    },
+    {
+      "file": "src/components/research/ResearchWorkspaceClient.module.css",
+      "beforeBytes": 11701,
+      "afterBytes": 11788
+    },
+    {
+      "file": "src/components/research/WorkspaceCollaboration.module.css",
+      "beforeBytes": 5843,
+      "afterBytes": 5868
+    },
+    {
+      "file": "src/components/research/WorkspaceMarketCard.module.css",
+      "beforeBytes": 2986,
+      "afterBytes": 3008
+    },
+    {
+      "file": "src/components/search/SearchClient.tsx",
+      "beforeBytes": 38451,
+      "afterBytes": 39292
+    },
+    {
+      "file": "src/components/security/MfaGate.tsx",
+      "beforeBytes": 3799,
+      "afterBytes": 3901
+    },
+    {
+      "file": "src/components/settings/AccountDeletionControl.tsx",
+      "beforeBytes": 4340,
+      "afterBytes": 4607
+    },
+    {
+      "file": "src/components/settings/AccountSettingsForm.tsx",
+      "beforeBytes": 6316,
+      "afterBytes": 6736
+    },
+    {
+      "file": "src/components/settings/AdminGeneralSettings.tsx",
+      "beforeBytes": 3187,
+      "afterBytes": 3354
+    },
+    {
+      "file": "src/components/settings/BlockedUsersList.tsx",
+      "beforeBytes": 2234,
+      "afterBytes": 2258
+    },
+    {
+      "file": "src/components/settings/CustomCodeEditor.tsx",
+      "beforeBytes": 2207,
+      "afterBytes": 2329
+    },
+    {
+      "file": "src/components/settings/DataExportControl.tsx",
+      "beforeBytes": 2899,
+      "afterBytes": 2953
+    },
+    {
+      "file": "src/components/settings/MutedUsersList.tsx",
+      "beforeBytes": 2037,
+      "afterBytes": 2068
+    },
+    {
+      "file": "src/components/settings/ProfileForm.tsx",
+      "beforeBytes": 17338,
+      "afterBytes": 17776
+    },
+    {
+      "file": "src/components/settings/PushNotificationToggle.tsx",
+      "beforeBytes": 4584,
+      "afterBytes": 4613
+    },
+    {
+      "file": "src/components/settings/SecuritySettingsForm.tsx",
+      "beforeBytes": 8152,
+      "afterBytes": 8597
+    },
+    {
+      "file": "src/components/shared/OddsBadges.tsx",
+      "beforeBytes": 2667,
+      "afterBytes": 2667
+    },
+    {
+      "file": "src/components/sideline/nflMatrix.module.css",
+      "beforeBytes": 7634,
+      "afterBytes": 8068
+    },
+    {
+      "file": "src/components/slate/MatchupExperience.module.css",
+      "beforeBytes": 17819,
+      "afterBytes": 17919
+    },
+    {
+      "file": "src/components/slate/PitcherVsLineup.tsx",
+      "beforeBytes": 18883,
+      "afterBytes": 18890
+    },
+    {
+      "file": "src/components/slate/SlateBreakdownClient.module.css",
+      "beforeBytes": 1740,
+      "afterBytes": 1746
+    },
+    {
+      "file": "src/components/social/BlockUserButton.tsx",
+      "beforeBytes": 3040,
+      "afterBytes": 3180
+    },
+    {
+      "file": "src/components/social/CreateStoryForm.tsx",
+      "beforeBytes": 6083,
+      "afterBytes": 6385
+    },
+    {
+      "file": "src/components/social/EmojiPicker.module.css",
+      "beforeBytes": 1794,
+      "afterBytes": 1805
+    },
+    {
+      "file": "src/components/social/FollowButton.tsx",
+      "beforeBytes": 2742,
+      "afterBytes": 2747
+    },
+    {
+      "file": "src/components/social/NotificationsList.module.css",
+      "beforeBytes": 1619,
+      "afterBytes": 1616
+    },
+    {
+      "file": "src/components/social/PickComposer.module.css",
+      "beforeBytes": 6493,
+      "afterBytes": 6515
+    },
+    {
+      "file": "src/components/social/PostCard.tsx",
+      "beforeBytes": 3698,
+      "afterBytes": 3996
+    },
+    {
+      "file": "src/components/social/PostCardClient.tsx",
+      "beforeBytes": 75258,
+      "afterBytes": 75272
+    },
+    {
+      "file": "src/components/social/ReportModal.tsx",
+      "beforeBytes": 4008,
+      "afterBytes": 4257
+    },
+    {
+      "file": "src/components/social/ShareImageModal.tsx",
+      "beforeBytes": 7315,
+      "afterBytes": 7314
+    },
+    {
+      "file": "src/components/social/SlateEdgeEvidenceCard.module.css",
+      "beforeBytes": 5985,
+      "afterBytes": 6012
+    },
+    {
+      "file": "src/components/social/SlateEdgeShareModal.module.css",
+      "beforeBytes": 2435,
+      "afterBytes": 2435
+    },
+    {
+      "file": "src/components/social/StoriesViewer.tsx",
+      "beforeBytes": 5999,
+      "afterBytes": 6015
+    },
+    {
+      "file": "src/components/social/SuggestedUsers.tsx",
+      "beforeBytes": 2592,
+      "afterBytes": 2602
+    },
+    {
+      "file": "src/components/sports/GameCard.tsx",
+      "beforeBytes": 5361,
+      "afterBytes": 5362
+    },
+    {
+      "file": "src/components/sports/MLBGameCard.tsx",
+      "beforeBytes": 5673,
+      "afterBytes": 5674
+    },
+    {
+      "file": "src/components/sports/MLBScoreRow.tsx",
+      "beforeBytes": 5902,
+      "afterBytes": 5902
+    },
+    {
+      "file": "src/components/sports/NFLQuarterScore.tsx",
+      "beforeBytes": 1245,
+      "afterBytes": 1245
+    },
+    {
+      "file": "src/components/sports/NFLScoreRow.module.css",
+      "beforeBytes": 1244,
+      "afterBytes": 1244
+    },
+    {
+      "file": "src/components/sports/ParkFieldSvg.tsx",
+      "beforeBytes": 3008,
+      "afterBytes": 3080
+    },
+    {
+      "file": "src/components/sports/PlayerAvatar.tsx",
+      "beforeBytes": 6516,
+      "afterBytes": 6495
+    },
+    {
+      "file": "src/components/sports/StrikeZonePlot.tsx",
+      "beforeBytes": 11797,
+      "afterBytes": 11806
+    },
+    {
+      "file": "src/components/SportsbookMark.module.css",
+      "beforeBytes": 457,
+      "afterBytes": 475
+    },
+    {
+      "file": "src/components/synergy/SynergyClient.tsx",
+      "beforeBytes": 9842,
+      "afterBytes": 9845
+    },
+    {
+      "file": "src/components/the-public/ThePublicClient.tsx",
+      "beforeBytes": 28885,
+      "afterBytes": 28892
+    },
+    {
+      "file": "src/components/ui/animated-tooltip.tsx",
+      "beforeBytes": 3181,
+      "afterBytes": 3224
+    },
+    {
+      "file": "src/components/ui/background-beams.tsx",
+      "beforeBytes": 9982,
+      "afterBytes": 10020
+    },
+    {
+      "file": "src/components/ui/badge.tsx",
+      "beforeBytes": 1599,
+      "afterBytes": 1752
+    },
+    {
+      "file": "src/components/ui/button.tsx",
+      "beforeBytes": 2415,
+      "afterBytes": 2433
+    },
+    {
+      "file": "src/components/ui/card-hover-effect.tsx",
+      "beforeBytes": 2593,
+      "afterBytes": 2687
+    },
+    {
+      "file": "src/components/ui/DataGrid.module.css",
+      "beforeBytes": 4033,
+      "afterBytes": 4033
+    },
+    {
+      "file": "src/components/ui/FeedbackProvider.module.css",
+      "beforeBytes": 4674,
+      "afterBytes": 4672
+    },
+    {
+      "file": "src/components/ui/hero-highlight.tsx",
+      "beforeBytes": 4505,
+      "afterBytes": 4529
+    },
+    {
+      "file": "src/components/ui/MechanicsScoreRing.module.css",
+      "beforeBytes": 1088,
+      "afterBytes": 1148
+    },
+    {
+      "file": "src/components/ui/Modal.tsx",
+      "beforeBytes": 2349,
+      "afterBytes": 2377
+    },
+    {
+      "file": "src/components/ui/SlipSurgeScoreLabel.module.css",
+      "beforeBytes": 529,
+      "afterBytes": 541
+    },
+    {
+      "file": "src/components/ui/Switch.tsx",
+      "beforeBytes": 2612,
+      "afterBytes": 2624
+    },
+    {
+      "file": "src/components/weather/WeatherLabClient.tsx",
+      "beforeBytes": 29613,
+      "afterBytes": 29603
+    }
+  ]
+}

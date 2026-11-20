@@ -67,20 +67,20 @@ export function NewDMForm({ users, forwardMessageId }: { users: User[]; forwardM
             <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} />
             <div className="ss-new-dm-person-copy">
               <div className="flex items-center gap-1.5">
-                <p className="font-bold text-white text-sm">{u.display_name || u.username}</p>
-                {u.is_verified && <span className="text-green-400 text-xs">✓</span>}
+                <p className="font-bold text-[var(--text-1)] text-sm">{u.display_name || u.username}</p>
+                {u.is_verified && <span className="text-[var(--green)] text-xs">✓</span>}
               </div>
-              <p className="text-xs text-zinc-500">@{u.username}</p>
+              <p className="text-xs text-[var(--text-3)]">@{u.username}</p>
             </div>
             {mode === 'group' ? <span className="ss-new-dm-check">{selectedIds.includes(u.id) ? <Check size={14}/> : null}</span> : <ArrowUpRight size={15} />}
           </button>
         ))}
         {q && filtered.length === 0 && (
-          <p className="text-center text-zinc-500 text-sm py-8" role="status">No users found for “{q}”</p>
+          <p className="text-center text-[var(--text-3)] text-sm py-8" role="status">No users found for “{q}”</p>
         )}
       </div>
       {mode === 'group' && <div className="ss-new-dm-group-action"><button type="button" onClick={() => void createGroup()} disabled={!groupName.trim() || selectedIds.length < 2 || creatingGroup}>{creatingGroup ? <Loader2 className="animate-spin" size={15}/> : <Users size={15}/>}Create group</button></div>}
-      {error ? <p role="alert" className="px-4 pb-4 text-xs text-red-400">{error}</p> : null}
+      {error ? <p role="alert" className="px-4 pb-4 text-xs text-[var(--red)]">{error}</p> : null}
     </div>
   )
 }

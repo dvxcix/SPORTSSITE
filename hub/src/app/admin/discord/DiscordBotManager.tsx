@@ -21,7 +21,7 @@ const TIERS: { key: 'free' | 'basic' | 'advanced' | 'ultimate'; label: string }[
   { key: 'ultimate', label: 'Ultimate' },
 ]
 
-const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 font-mono'
+const inputClass = 'w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] font-mono'
 
 type ContactAlertHealth = {
   ready: boolean
@@ -227,140 +227,140 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
 
   return (
     <div className="space-y-6">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-        <p className="text-sm font-bold text-white">MLB slate command</p>
-        <p className="text-xs text-zinc-400">Inspect the global command list, then remove only the MLB slate command. Two-factor verification is required.</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+        <p className="text-sm font-bold text-[var(--text-1)]">MLB slate command</p>
+        <p className="text-xs text-[var(--text-2)]">Inspect the global command list, then remove only the MLB slate command. Two-factor verification is required.</p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={inspectSlate} disabled={slateChecking} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{slateChecking ? 'Checking…' : 'Inspect command'}</button>
-          {slateCommand?.slateId && <button type="button" onClick={removeSlate} disabled={slateChecking} className="rounded-lg border border-amber-700 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Remove MLB slate</button>}
+          <button type="button" onClick={inspectSlate} disabled={slateChecking} className="rounded-lg border border-[var(--border-2)] px-3 py-2 text-xs font-bold text-[var(--text-1)] disabled:opacity-50">{slateChecking ? 'Checking…' : 'Inspect command'}</button>
+          {slateCommand?.slateId && <button type="button" onClick={removeSlate} disabled={slateChecking} className="rounded-lg border border-[var(--gold)] px-3 py-2 text-xs font-bold text-[var(--gold)] disabled:opacity-50">Remove MLB slate</button>}
         </div>
-        {slateCommand && <p className="text-xs text-zinc-400">{slateCommand.slateId ? 'MLB slate is registered.' : 'MLB slate is not registered.'} {slateCommand.otherCount} other commands found.</p>}
-        {slateMessage && <p role="status" className="text-xs text-zinc-300">{slateMessage}</p>}
+        {slateCommand && <p className="text-xs text-[var(--text-2)]">{slateCommand.slateId ? 'MLB slate is registered.' : 'MLB slate is not registered.'} {slateCommand.otherCount} other commands found.</p>}
+        {slateMessage && <p role="status" className="text-xs text-[var(--text-2)]">{slateMessage}</p>}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">One-time setup (do this first)</p>
-        <ol className="text-sm text-zinc-400 space-y-1.5 list-decimal list-inside">
-          <li>Create an app at <span className="font-mono text-zinc-300">discord.com/developers/applications</span>, add a Bot, copy its token.</li>
-          <li>In Vercel, set env vars: <span className="font-mono text-zinc-300">DISCORD_BOT_TOKEN</span>, <span className="font-mono text-zinc-300">DISCORD_APPLICATION_ID</span>, <span className="font-mono text-zinc-300">DISCORD_PUBLIC_KEY</span>.</li>
-          <li>In the app's "General Information" tab, set Interactions Endpoint URL to your site's <span className="font-mono text-zinc-300">/api/discord/interactions</span>.</li>
-          <li>Invite the bot to your server with the <span className="font-mono text-zinc-300">bot</span> + <span className="font-mono text-zinc-300">applications.commands</span> scopes and Manage Roles / Send Messages / Embed Links permissions.</li>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">One-time setup (do this first)</p>
+        <ol className="text-sm text-[var(--text-2)] space-y-1.5 list-decimal list-inside">
+          <li>Create an app at <span className="font-mono text-[var(--text-2)]">discord.com/developers/applications</span>, add a Bot, copy its token.</li>
+          <li>In Vercel, set env vars: <span className="font-mono text-[var(--text-2)]">DISCORD_BOT_TOKEN</span>, <span className="font-mono text-[var(--text-2)]">DISCORD_APPLICATION_ID</span>, <span className="font-mono text-[var(--text-2)]">DISCORD_PUBLIC_KEY</span>.</li>
+          <li>In the app's "General Information" tab, set Interactions Endpoint URL to your site's <span className="font-mono text-[var(--text-2)]">/api/discord/interactions</span>.</li>
+          <li>Invite the bot to your server with the <span className="font-mono text-[var(--text-2)]">bot</span> + <span className="font-mono text-[var(--text-2)]">applications.commands</span> scopes and Manage Roles / Send Messages / Embed Links permissions.</li>
           <li>Drag the bot's own role ABOVE any tier role below in Server Settings → Roles, or role grants will silently fail.</li>
           <li>Fill in the IDs below (Discord → enable Developer Mode → right-click a channel/role → Copy ID), then Save, then Register Commands.</li>
         </ol>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-zinc-400">Enabled</label>
+          <label className="text-xs font-bold text-[var(--text-2)]">Enabled</label>
           <Toggle checked={enabled} onChange={setEnabled} ariaLabel="Enable Discord bot" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Server (Guild) ID</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Server (Guild) ID</label>
           <input value={guildId} onChange={e => setGuildId(e.target.value)} placeholder="123456789012345678" className={inputClass} />
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-[radial-gradient(circle_at_top_right,rgba(163,255,63,0.10),transparent_34%),linear-gradient(135deg,rgba(24,24,27,0.98),rgba(9,9,11,0.98))]">
-        <div className="flex flex-col gap-3 border-b border-zinc-800/80 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex flex-col gap-3 border-b border-[color-mix(in_srgb,var(--border)_80%,transparent)] p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${alertHealth?.ready ? 'bg-green-400 shadow-[0_0_14px_rgba(163,255,63,0.8)]' : 'bg-amber-400'}`} />
-              <h2 className="text-base font-black text-white">Instant contact delivery</h2>
+              <span className={`h-2.5 w-2.5 rounded-full ${alertHealth?.ready ? 'bg-[var(--green-fill)] shadow-[0_0_14px_rgba(163,255,63,0.8)]' : 'bg-[var(--gold-fill)]'}`} />
+              <h2 className="text-base font-semibold text-[var(--text-1)]">Instant contact delivery</h2>
             </div>
-            <p className="mt-1 text-xs text-zinc-400">Live feed wakeups, durable recovery, branded media render and checked Discord delivery.</p>
+            <p className="mt-1 text-xs text-[var(--text-2)]">Live feed wakeups, durable recovery, branded media render and checked Discord delivery.</p>
           </div>
           <button onClick={loadAlertHealth} disabled={loadingAlertHealth}
-            className="self-start rounded-lg border border-zinc-700 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-zinc-500 disabled:opacity-50">
+            className="self-start rounded-lg border border-[var(--border-2)] bg-[color-mix(in_srgb,var(--surface)_80%,transparent)] px-3 py-2 text-xs font-bold text-[var(--text-1)] transition hover:border-[var(--border-2)] disabled:opacity-50">
             {loadingAlertHealth ? 'Checking...' : 'Refresh health'}
           </button>
         </div>
 
         <div className="space-y-5 p-5">
-          {alertHealthError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{alertHealthError}</div>}
+          {alertHealthError && <div className="rounded-xl border border-[color-mix(in_srgb,var(--red)_20%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3 text-sm text-[var(--red)]">{alertHealthError}</div>}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              ['Pending', alertHealth?.queue.pending ?? 0, 'text-amber-300'],
+              ['Pending', alertHealth?.queue.pending ?? 0, 'text-[var(--gold)]'],
               ['Rendering', alertHealth?.queue.processing ?? 0, 'text-cyan-300'],
-              ['Failed', alertHealth?.queue.failed ?? 0, 'text-red-300'],
-              ['Delivered', alertHealth?.queue.succeeded ?? 0, 'text-green-300'],
+              ['Failed', alertHealth?.queue.failed ?? 0, 'text-[var(--red)]'],
+              ['Delivered', alertHealth?.queue.succeeded ?? 0, 'text-[var(--green)]'],
             ].map(([label, value, color]) => (
-              <div key={String(label)} className="rounded-xl border border-zinc-800 bg-black/20 p-3">
-                <div className={`text-xl font-black ${color}`}>{value}</div>
-                <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">{label}</div>
+              <div key={String(label)} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                <div className={`text-xl font-semibold ${color}`}>{value}</div>
+                <div className="mt-0.5 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--text-3)]">{label}</div>
               </div>
             ))}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-zinc-800 bg-black/20 p-4">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-white">Home runs</p>
-                  <p className="mt-1 text-xs text-zinc-500">Channel {alertHealth?.channels.hr.id ?? 'not configured'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-1)]">Home runs</p>
+                  <p className="mt-1 text-xs text-[var(--text-3)]">Channel {alertHealth?.channels.hr.id ?? 'not configured'}</p>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${alertHealth?.channels.hr.configured ? 'bg-green-400/10 text-green-300' : 'bg-amber-400/10 text-amber-300'}`}>
+                <span className={`rounded-full px-2 py-1 text-[12px] font-semibold uppercase ${alertHealth?.channels.hr.configured ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]'}`}>
                   {alertHealth?.channels.hr.configured ? 'Ready' : 'Missing'}
                 </span>
               </div>
               <button onClick={() => sendAlertTest('hr')} disabled={testingAlert !== null || !alertHealth?.channels.hr.configured}
-                className="mt-4 w-full rounded-lg bg-green-400 px-3 py-2.5 text-xs font-black text-black transition hover:bg-green-300 disabled:cursor-not-allowed disabled:opacity-35">
+                className="mt-4 w-full rounded-lg bg-[var(--accent-fill)] px-3 py-2.5 text-xs font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-fill)] disabled:cursor-not-allowed disabled:opacity-35">
                 {testingAlert === 'hr' ? 'Rendering and sending...' : 'Send HR test'}
               </button>
             </div>
 
-            <div className="rounded-xl border border-zinc-800 bg-black/20 p-4">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-white">Near home runs</p>
-                  <p className="mt-1 text-xs text-zinc-500">Channel {alertHealth?.channels.nearHr.id ?? 'not configured'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-1)]">Near home runs</p>
+                  <p className="mt-1 text-xs text-[var(--text-3)]">Channel {alertHealth?.channels.nearHr.id ?? 'not configured'}</p>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${alertHealth?.channels.nearHr.configured ? 'bg-orange-400/10 text-orange-300' : 'bg-amber-400/10 text-amber-300'}`}>
+                <span className={`rounded-full px-2 py-1 text-[12px] font-semibold uppercase ${alertHealth?.channels.nearHr.configured ? 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]' : 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]'}`}>
                   {alertHealth?.channels.nearHr.configured ? 'Ready' : 'Missing'}
                 </span>
               </div>
               <button onClick={() => sendAlertTest('near_hr')} disabled={testingAlert !== null || !alertHealth?.channels.nearHr.configured}
-                className="mt-4 w-full rounded-lg bg-orange-400 px-3 py-2.5 text-xs font-black text-black transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-35">
+                className="mt-4 w-full rounded-lg bg-[var(--gold-fill)] px-3 py-2.5 text-xs font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--gold-fill)] disabled:cursor-not-allowed disabled:opacity-35">
                 {testingAlert === 'near_hr' ? 'Rendering and sending...' : 'Send near-HR test'}
               </button>
             </div>
           </div>
 
-          {testResult && <div className={`rounded-xl border px-4 py-3 text-xs ${testResult.startsWith('Test failed') ? 'border-red-500/20 bg-red-500/10 text-red-300' : 'border-green-500/20 bg-green-500/10 text-green-200'}`}>{testResult}</div>}
+          {testResult && <div className={`rounded-xl border px-4 py-3 text-xs ${testResult.startsWith('Test failed') ? 'border-[color-mix(in_srgb,var(--red)_20%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]' : 'border-[color-mix(in_srgb,var(--green)_20%,transparent)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]'}`}>{testResult}</div>}
 
-          <div className="rounded-xl border border-zinc-800 bg-black/20">
-            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wider text-white">Recent deliveries</p>
-                <p className="mt-0.5 text-[11px] text-zinc-500">Latest success {compactTime(alertHealth?.latestSuccessAt ?? null)} - recovery {alertHealth?.recoverySchedule ?? 'every minute'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-1)]">Recent deliveries</p>
+                <p className="mt-0.5 text-[12px] text-[var(--text-3)]">Latest success {compactTime(alertHealth?.latestSuccessAt ?? null)} - recovery {alertHealth?.recoverySchedule ?? 'every minute'}</p>
               </div>
             </div>
-            <div className="divide-y divide-zinc-800/80">
+            <div className="divide-y divide-[color-mix(in_srgb,var(--border)_80%,transparent)]">
               {(alertHealth?.recent ?? []).slice(0, 6).map(row => (
                 <div key={row.id} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-xs sm:grid-cols-[1fr_100px_80px] sm:items-center">
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-zinc-200">{row.batterName ?? 'Contact alert'} - {row.kind === 'home_run' ? 'HR' : row.kind === 'near_hr' ? 'Near-HR' : 'Alert'}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-zinc-500">{compactTime(row.createdAt)}{row.lastError ? ` - ${row.lastError}` : ''}</p>
+                    <p className="truncate font-bold text-[var(--text-1)]">{row.batterName ?? 'Contact alert'} - {row.kind === 'home_run' ? 'HR' : row.kind === 'near_hr' ? 'Near-HR' : 'Alert'}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-[var(--text-3)]">{compactTime(row.createdAt)}{row.lastError ? ` - ${row.lastError}` : ''}</p>
                   </div>
-                  <span className={`justify-self-end rounded-full px-2 py-1 text-[10px] font-black uppercase ${row.status === 'succeeded' ? 'bg-green-400/10 text-green-300' : row.status === 'failed' ? 'bg-red-400/10 text-red-300' : 'bg-amber-400/10 text-amber-300'}`}>{row.status}</span>
-                  <span className="hidden text-right font-mono text-zinc-400 sm:block">{compactLatency(row.latencyMs)}</span>
+                  <span className={`justify-self-end rounded-full px-2 py-1 text-[12px] font-semibold uppercase ${row.status === 'succeeded' ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : row.status === 'failed' ? 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]' : 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]'}`}>{row.status}</span>
+                  <span className="hidden text-right font-mono text-[var(--text-2)] sm:block">{compactLatency(row.latencyMs)}</span>
                 </div>
               ))}
-              {!loadingAlertHealth && !(alertHealth?.recent.length) && <div className="px-4 py-6 text-center text-xs text-zinc-500">No contact alerts have been queued yet.</div>}
+              {!loadingAlertHealth && !(alertHealth?.recent.length) && <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">No contact alerts have been queued yet.</div>}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Alert Channels</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">Alert Channels</p>
         {ALERT_TYPES.map(a => (
           <div key={a.key}>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">
-              {a.label} {!a.live && <span className="text-zinc-600 font-normal">(mapping ready — wiring in a fast follow)</span>}
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">
+              {a.label} {!a.live && <span className="text-[var(--text-3)] font-normal">(mapping ready — wiring in a fast follow)</span>}
             </label>
             <input
               value={alertChannels[a.key] ?? ''}
@@ -372,11 +372,11 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
         ))}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Tier → Role Sync</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">Tier → Role Sync</p>
         {TIERS.map(t => (
           <div key={t.key}>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">{t.label} role</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">{t.label} role</label>
             <input
               value={tierRoles[t.key] ?? ''}
               onChange={e => setTierRoles(prev => ({ ...prev, [t.key]: e.target.value }))}
@@ -389,23 +389,23 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
 
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={save} disabled={saving}
-          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-5 py-2.5 rounded-xl text-sm transition-colors">
+          className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
           {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save Config'}
         </button>
         <button onClick={registerCommands} disabled={registering}
-          className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors border border-zinc-700">
+          className="bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] font-bold px-5 py-2.5 rounded-xl text-sm transition-colors border border-[var(--border-2)]">
           {registering ? 'Registering…' : 'Register Slash Commands'}
         </button>
-        {registerResult && <span className="text-xs text-zinc-400">{registerResult}</span>}
+        {registerResult && <span className="text-xs text-[var(--text-2)]">{registerResult}</span>}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={syncAllRoles} disabled={syncingRoles}
-          className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors border border-zinc-700">
+          className="bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] font-bold px-5 py-2.5 rounded-xl text-sm transition-colors border border-[var(--border-2)]">
           {syncingRoles ? 'Syncing…' : 'Sync All Member Roles'}
         </button>
-        <span className="text-xs text-zinc-500">One-time (or run-whenever) backfill for members who linked Discord before role sync went live.</span>
-        {syncRolesResult && <span className="text-xs text-zinc-400">{syncRolesResult}</span>}
+        <span className="text-xs text-[var(--text-3)]">One-time (or run-whenever) backfill for members who linked Discord before role sync went live.</span>
+        {syncRolesResult && <span className="text-xs text-[var(--text-2)]">{syncRolesResult}</span>}
       </div>
     </div>
   )

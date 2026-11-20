@@ -83,7 +83,7 @@ export function SiteBanner() {
             href={banner.link_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 800, flexShrink: 0 }}
+            style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 700, flexShrink: 0 }}
           >
             {banner.link_label?.trim() || 'Learn more'} →
           </a>

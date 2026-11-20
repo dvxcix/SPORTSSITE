@@ -148,8 +148,8 @@ function BullpenBadge({ teamAbbr, bullpen }: { teamAbbr: string; bullpen: TeamBu
   return (
     <Tooltip
       content={
-        <div style={{ fontSize: 11, lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 800, marginBottom: 2 }}>{teamAbbr} Bullpen — {TIER_LABEL[bullpen.tier] ?? bullpen.tier}</div>
+        <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>{teamAbbr} Bullpen — {TIER_LABEL[bullpen.tier] ?? bullpen.tier}</div>
           <div>ERA: {bullpen.era ?? '—'}</div>
           <div>vs LHB OPS: {bullpen.opsVsLhb ?? '—'} · vs RHB OPS: {bullpen.opsVsRhb ?? '—'}</div>
           <div>HR/9: {bullpen.hrPer9 ?? '—'}</div>
@@ -158,7 +158,7 @@ function BullpenBadge({ teamAbbr, bullpen }: { teamAbbr: string; bullpen: TeamBu
     >
       <span
         style={{
-          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, cursor: 'default',
+          fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 6, cursor: 'default',
           border: `1px solid ${color}`, color, background: `${color}1a`,
         }}
       >
@@ -318,7 +318,7 @@ export function MatchupPitchBreakdown({
   }, [batterHandFilter, batterRows, batterScope, bullpen.relievers, expandedPitch, onSpraySelectionChange, pinnedPitchTypes, pitcherAffinity.similar, pitcherId, sprayRows])
 
   if (pitcherRows === null || batterRows === null) {
-    return <div style={{ fontSize: 11, color: 'var(--text-3)', padding: '8px 0' }}>Loading real pitch-log matchup data…</div>
+    return <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>Loading real pitch-log matchup data…</div>
   }
 
   // ── Pitcher's own arsenal — recency window, then optionally narrowed to
@@ -430,8 +430,8 @@ export function MatchupPitchBreakdown({
         >
           <PlayerAvatar headshot={mlbHeadshot(pitcherId)} teamLogo={getTeamLogoUrl(pitcherTeamAbbr)} teamAbbr={pitcherTeamAbbr} name={pitcherName} size={32} />
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{pitcherName}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: HAND_COLOR[pitcherHand] }}>{pitcherHand}HP</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{pitcherName}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: HAND_COLOR[pitcherHand] }}>{pitcherHand}HP</div>
           </div>
         </Link>
         <BullpenBadge teamAbbr={pitcherTeamAbbr} bullpen={bullpen.bullpen} />
@@ -440,14 +440,14 @@ export function MatchupPitchBreakdown({
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>ARSENAL FILTER</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>ARSENAL FILTER</span>
         {HAND_FILTERS_BATTER_SIDE.map(o => <ToggleBtn key={o.key} active={pitcherHandFilter === o.key} onClick={() => setPitcherHandFilter(o.key)}>{o.label}</ToggleBtn>)}
       </div>
 
       {/* Pitcher's real arsenal — full stat-column set, same as Slate
           Breakdown's own pitcher mix table. */}
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 16 }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <SortableTH label="Pitch" colKey="pitch" sort={pitSort} onSort={onSortPit} align="left" />
@@ -456,7 +456,7 @@ export function MatchupPitchBreakdown({
           </thead>
           <tbody>
             {sortedPitRows.length === 0 ? (
-              <tr><td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 11 }}>No tracked pitches in this window.</td></tr>
+              <tr><td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 12 }}>No tracked pitches in this window.</td></tr>
             ) : sortedPitRows.map(r => {
               const isOpen = expandedPitcherPitch === r.pitchType
               return (
@@ -468,7 +468,7 @@ export function MatchupPitchBreakdown({
                     <td style={{ padding: '6px 8px', fontWeight: 700, color: isOpen ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
                       <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitchType), marginRight: 6, verticalAlign: 'middle' }} />
                       {pitchLabel(r.pitchType)}
-                      <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
+                      <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
                     </td>
                     {PITCHER_STAT_COLS.map(c => {
                       const v = (r.stats as any)[c.key]
@@ -482,20 +482,20 @@ export function MatchupPitchBreakdown({
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
+                      <td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(var(--contrast-rgb),0.02)' }}>
                         {r.rows.length === 0 ? (
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{pitcherName} has no tracked pitches of this type in the current window.</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{pitcherName} has no tracked pitches of this type in the current window.</div>
                         ) : (
                           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                             <div>
                               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
                                 {ZONE_METRICS.map(m => <ToggleBtn key={m.key} active={zoneMetric === m.key} onClick={() => setZoneMetric(m.key)}>{m.label}</ToggleBtn>)}
                               </div>
-                              <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE</div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE</div>
                               <ZoneGrid rows={r.rows} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
                             </div>
                             <div style={{ flex: 1, minWidth: 320 }}>
-                              <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
                                 {r.rows.length} INDIVIDUAL PITCH{r.rows.length === 1 ? '' : 'ES'} · ALL BATTERS FACED
                               </div>
                               <PitchList rows={r.rows} maxHeight={220} />
@@ -522,15 +522,15 @@ export function MatchupPitchBreakdown({
         <div style={{ marginBottom: 16 }}>
           <Tooltip
             content={
-              <div style={{ fontSize: 11, lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 800, marginBottom: 2 }}>Most similar to {batterName}</div>
+              <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Most similar to {batterName}</div>
                 {batterAffinity.similar.slice(0, 8).map(s => (
                   <div key={s.key}>{s.name} — {(s.matchScore * 100).toFixed(0)}%</div>
                 ))}
               </div>
             }
           >
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6, cursor: 'default' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6, cursor: 'default' }}>
               VS HITTERS SIMILAR TO {batterName.toUpperCase()} ({batterAffinity.similar.length})
             </div>
           </Tooltip>
@@ -541,8 +541,8 @@ export function MatchupPitchBreakdown({
               ['HR', i0(similarHitterStats.hr)], ['K', i0(similarHitterStats.k)], ['BB', i0(similarHitterStats.bb)],
             ] as [string, string][]).map(([label, value]) => (
               <div key={label} style={{ padding: '5px 9px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 56 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
-                <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -556,8 +556,8 @@ export function MatchupPitchBreakdown({
         >
           <PlayerAvatar headshot={mlbHeadshot(batterId)} teamLogo={getTeamLogoUrl(batterTeamAbbr)} teamAbbr={batterTeamAbbr} name={batterName} size={28} />
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{batterName}</div>
-            {batterBats && <div style={{ fontSize: 10, fontWeight: 700, color: HAND_COLOR[batterBats === 'L' ? 'L' : 'R'] }}>{batterBats}HB</div>}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{batterName}</div>
+            {batterBats && <div style={{ fontSize: 12, fontWeight: 700, color: HAND_COLOR[batterBats === 'L' ? 'L' : 'R'] }}>{batterBats}HB</div>}
           </div>
         </Link>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
@@ -565,25 +565,25 @@ export function MatchupPitchBreakdown({
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>OPPOSING HAND</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>OPPOSING HAND</span>
         {HAND_FILTERS_PITCHER_SIDE.map(o => <ToggleBtn key={o.key} active={batterHandFilter === o.key} onClick={() => setBatterHandFilter(o.key)}>{o.label}</ToggleBtn>)}
         {pinnedPitchTypes.length > 0 && (
           <button
             type="button"
             onClick={() => setPinnedPitchTypes([])}
-            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
           >
             <PinOff size={11} /> Clear {pinnedPitchTypes.length} spray pin{pinnedPitchTypes.length === 1 ? '' : 's'}
           </button>
         )}
       </div>
       {batterScope === 'vsTeam' && (
-        <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
           {bullpen.relievers.length === 0 ? `No current reliever ratings on file for ${pitcherTeamAbbr}.` : `Every tracked pitch vs. ${pitcherTeamAbbr}'s ${bullpen.relievers.length} rated reliever${bullpen.relievers.length === 1 ? '' : 's'}.`}
         </div>
       )}
       {batterScope === 'vsSimilarArsenal' && (
-        <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
           {pitcherAffinity.similar.length === 0 ? `No similar-arsenal data on file for ${pitcherName}.` : `Every tracked pitch vs. ${pitcherAffinity.similar.length} pitcher${pitcherAffinity.similar.length === 1 ? '' : 's'} with a real Statcast contact-quality profile similar to ${pitcherName}'s.`}
         </div>
       )}
@@ -597,8 +597,8 @@ export function MatchupPitchBreakdown({
           const heatStyle = col && !col.noHeat ? heat((batterOverall as any)[key], batPoolByCol[key], col.dir) : {}
           return (
             <div key={label} style={{ padding: '5px 9px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 56, ...heatStyle }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
-              <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{value}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
             </div>
           )
         })}
@@ -612,13 +612,13 @@ export function MatchupPitchBreakdown({
           scope is actually about one specific arm rather than a pooled
           bullpen. */}
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <SortableTH label="Pitch" colKey="pitch" sort={batPitchSort} onSort={onSortBatPitch} align="left" />
               {BATTER_STAT_COLS.map(c => <SortableTH key={c.key} label={c.label} colKey={c.key} sort={batPitchSort} onSort={onSortBatPitch} />)}
               {SAVANT_ONLY_COLS.map(c => (
-                <th key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                <th key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
                   {c.label}
                 </th>
               ))}
@@ -626,7 +626,7 @@ export function MatchupPitchBreakdown({
           </thead>
           <tbody>
             {sortedBatPitchRows.length === 0 ? (
-              <tr><td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 11 }}>No tracked pitches in this window.</td></tr>
+              <tr><td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 12 }}>No tracked pitches in this window.</td></tr>
             ) : sortedBatPitchRows.map(r => {
               const isOpen = expandedPitch === r.pitchType
               return (
@@ -652,7 +652,7 @@ export function MatchupPitchBreakdown({
                       </button>
                       <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitchType), marginRight: 6, verticalAlign: 'middle' }} />
                       {pitchLabel(r.pitchType)}
-                      <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
+                      <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
                     </td>
                     {BATTER_STAT_COLS.map(c => {
                       const v = (r.batterStats as any)[c.key]
@@ -675,9 +675,9 @@ export function MatchupPitchBreakdown({
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
+                      <td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(var(--contrast-rgb),0.02)' }}>
                         {r.batterRowsForPitch.length === 0 ? (
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No tracked pitches of this type in the current window.</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>No tracked pitches of this type in the current window.</div>
                         ) : (
                           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                             <div>
@@ -686,19 +686,19 @@ export function MatchupPitchBreakdown({
                               </div>
                               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                                 <div>
-                                  <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{batterName}&apos;S ZONE</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{batterName}&apos;S ZONE</div>
                                   <ZoneGrid rows={r.batterRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'} cellSize={44} />
                                 </div>
                                 {r.pitcherRowsForPitch.length > 0 && (
                                   <div>
-                                    <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE — THIS PITCH</div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE — THIS PITCH</div>
                                     <ZoneGrid rows={r.pitcherRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
                                   </div>
                                 )}
                               </div>
                             </div>
                             <div style={{ flex: 1, minWidth: 320 }}>
-                              <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
                                 {r.batterRowsForPitch.length} INDIVIDUAL PITCH{r.batterRowsForPitch.length === 1 ? '' : 'ES'}
                               </div>
                               <PitchList rows={r.batterRowsForPitch} maxHeight={220} />

@@ -49,11 +49,11 @@ export function RecentFormSplits({ batterId, pitcherHand }: { batterId: number; 
 
   return (
     <div style={{ minWidth: 260, marginTop: 14 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
         RECENT FORM &amp; SPLITS
       </div>
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>WINDOW</th>

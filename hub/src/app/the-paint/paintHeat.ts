@@ -33,10 +33,7 @@ export function nbaHeatStyle(value: HeatValue, midpoint = 50, tone: NbaHeatTone 
   if (!finite(value)) return undefined
   const bounded = clamp(value)
   const distance = Math.min(1, Math.abs(bounded - midpoint) / (bounded < midpoint ? midpoint : 100 - midpoint))
-  const palette = tone === 'volume' ? [[38, 49, 83], [34, 70, 91], [20, 109, 105]] : [[118, 43, 61], [45, 55, 69], [48, 115, 71]]
-  const start = palette[1], end = bounded < midpoint ? palette[0] : palette[2]
-  const rgb = start.map((channel, index) => Math.round(channel + (end[index] - channel) * distance)).join(' ')
   const tint = tone === 'volume' ? bounded < midpoint ? [137, 174, 247] : [115, 228, 201] : bounded < midpoint ? [233, 128, 145] : [169, 223, 116]
   const accent = [165, 180, 199].map((channel, index) => Math.round(channel + (tint[index] - channel) * distance)).join(' ')
-  return { '--heat-rgb': accent, '--heat-strength': (.28 + distance * .3).toFixed(3), '--heat-fill': `rgb(${rgb})`, '--heat-ink': '#f4f8fc' } as CSSProperties
+  return { '--heat-rgb': accent, '--heat-strength': (.12 + distance * .2).toFixed(3), '--heat-fill': `color-mix(in srgb, rgb(${tint.join(' ')}) ${Math.round(10 + distance * 23)}%, var(--surface))`, '--heat-ink': 'var(--text-1)' } as CSSProperties
 }

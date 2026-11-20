@@ -1,27 +1,29 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { WatchlistProvider } from '@/context/WatchlistContext'
-import { WatchlistButton } from '@/components/dugout/WatchlistPanel'
-import { MyPicksButton } from '@/components/dugout/MyPicksPanel'
-import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
-import { NflMatrixButton } from '@/components/sideline/NflMatrixButton'
 import { DesktopCommandBar } from './DesktopCommandBar'
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
-import { DesktopExperience } from '@/components/desktop/DesktopExperience'
-import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
 import { NetworkStatus } from './NetworkStatus'
 import { UtilityDock } from './UtilityDock'
 import { MobileDock } from './MobileDock'
 import { MfaGate } from '@/components/security/MfaGate'
-import { GlobalCommandPalette } from './GlobalCommandPalette'
 import { ContextHandoff } from './ContextHandoff'
 import { ProductTelemetry } from './ProductTelemetry'
 import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { getProductArea } from './navigationConfig'
+
+const WatchlistButton=dynamic(()=>import('@/components/dugout/WatchlistPanel').then(module=>module.WatchlistButton),{ssr:false})
+const MyPicksButton=dynamic(()=>import('@/components/dugout/MyPicksPanel').then(module=>module.MyPicksButton),{ssr:false})
+const MatrixButton=dynamic(()=>import('@/components/dugout/CustomMatrixPanel').then(module=>module.MatrixButton),{ssr:false})
+const NflMatrixButton=dynamic(()=>import('@/components/sideline/NflMatrixButton').then(module=>module.NflMatrixButton),{ssr:false})
+const DesktopExperience=dynamic(()=>import('@/components/desktop/DesktopExperience').then(module=>module.DesktopExperience),{ssr:false})
+const DesktopNavigation=dynamic(()=>import('@/components/desktop/DesktopNavigation').then(module=>module.DesktopNavigation),{ssr:false})
+const GlobalCommandPalette=dynamic(()=>import('./GlobalCommandPalette').then(module=>module.GlobalCommandPalette),{ssr:false})
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // Keep context stable across streamed route changes, including transitions
@@ -32,7 +34,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const isAdmin = path.startsWith('/admin')
-  const isAuthPage = path.startsWith('/auth/')
+  const isAuthPage = path.startsWith('/auth/') || path === '/onboarding'
   const isLandingPage = path === '/'
   const productArea = getProductArea(path)
   // Sidebar is a fixed-width column on desktop but an off-canvas drawer

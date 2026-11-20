@@ -42,27 +42,27 @@ export function GroupInviteResponse({ inviteId, invitedByUsername }: {
   }
 
   if (declined) {
-    return <p className="text-sm text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">Invite declined.</p>
+    return <p className="text-sm text-[var(--text-3)] bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">Invite declined.</p>
   }
 
   return (
-    <div className="bg-zinc-900 border border-green-500/30 rounded-xl px-4 py-3">
+    <div className="bg-[var(--surface)] border border-[color-mix(in_srgb,var(--green)_30%,transparent)] rounded-xl px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-300">
+        <p className="text-sm text-[var(--text-2)]">
           {invitedByUsername ? `@${invitedByUsername} invited` : "You've been invited"} you to join this private group.
         </p>
         <div className="flex gap-2 shrink-0">
           <button type="button" onClick={decline} disabled={loading}
-            className="text-xs font-bold border border-zinc-700 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+            className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text-1)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
             Decline
           </button>
           <button type="button" onClick={accept} disabled={loading}
-            className="text-xs font-bold bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+            className="text-xs font-bold bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
             Accept
           </button>
         </div>
       </div>
-      {error && <p className="text-xs text-red-400 mt-2" role="alert">{error}</p>}
+      {error && <p className="text-xs text-[var(--red)] mt-2" role="alert">{error}</p>}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, Calendar, BookOpen, ShoppingBag,
@@ -23,6 +23,7 @@ import { researchToolActive, researchNavigationHref, resolveResearchSport, resea
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nbaResearchNavigation } from './navigationConfig'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { UpdateCenter } from './UpdateCenter'
 import navigationStyles from './researchNavigation.module.css'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
@@ -38,6 +39,7 @@ const NBA_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png'
 // of truth for anything reading the sidebar's width statically.
 const SIDEBAR_W = 220
 const SIDEBAR_W_COLLAPSED = 64
+const hydrationSubscribe=()=>()=>{}
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
@@ -103,10 +105,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const sidelineMode = searchParams.get('mode') ?? ''
   const paintView = searchParams.get('view') ?? ''
   const { profile } = useAuth()
-  const { allowed: nflAccess } = useNflAccess()
+  const hydrated=useSyncExternalStore(hydrationSubscribe,()=>true,()=>false)
+  const { allowed: nflAllowed } = useNflAccess()
+  const nflAccess=hydrated&&nflAllowed
   const { sport, chooseSport } = useResearchSport(path)
-  const nbaAccess = hasNbaAccess(profile)
-  const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
+  const nbaAccess = hydrated&&hasNbaAccess(profile)
+  const mlbAccess = !MLB_HIBERNATING || hydrated&&profile?.account_type === 'admin'
   const selectedSport = resolveResearchSport(sport, nflAccess, mlbAccess)
   const [menuSearch, setMenuSearch] = useState('')
   const drawerRef = useRef<HTMLElement>(null)
@@ -210,7 +214,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     <>
       {/* Backdrop — mobile only, dismisses the drawer on tap outside it */}
       {open && (
-        <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-black/60" aria-hidden="true" />
+        <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-[var(--overlay)]" aria-hidden="true" />
       )}
       <aside
         ref={drawerRef}
@@ -259,10 +263,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain', flexShrink: 0 }} /></Link>
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
               Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
             </div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
               SPORTS | PICKS | SOCIAL
             </div>
           </div>
@@ -299,7 +303,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         {isCollapsed ? <ChevronRight size={14} /> : (
           <>
             <ChevronLeft size={14} />
-            <span style={{ fontSize: 11, fontWeight: 600 }}>Collapse</span>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>Collapse</span>
           </>
         )}
       </button>
@@ -325,7 +329,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 {item.logo
                   ? <SafeImage src={item.logo} alt="" title={isCollapsed && !item.nbaOnly ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
                   : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--text-3)', flexShrink: 0 }} />}
-                {!isCollapsed && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)' }}>{item.section}</span>}
+                {!isCollapsed && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{item.section}</span>}
               </div>
             )
           }
@@ -354,8 +358,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               {!isCollapsed && locked && <LockKeyhole size={13} className={navigationStyles.lock} aria-hidden="true" />}
               {!isCollapsed && item.badge && (
                 <span style={{
-                  fontSize: 9, fontWeight: 900, letterSpacing: '0.04em',
-                  background: item.badgeColor ?? 'var(--red)', color: '#fff',
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                  background: item.badgeColor ?? 'var(--red)', color: 'var(--text-1)',
                   padding: '2px 5px', borderRadius: 99,
                 }}>
                   {item.badge}
@@ -375,6 +379,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
+        <UpdateCenter compact={isCollapsed} />
         <Link href="/settings" prefetch={false} className="ss-sidebar-settings" aria-label={isCollapsed ? 'Settings & Help' : undefined} style={{
           display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
           minHeight: 44,

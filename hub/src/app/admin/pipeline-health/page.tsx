@@ -220,19 +220,19 @@ export default async function PipelineHealthPage() {
       <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-400"><Activity size={14} /> Operations</div>
-          <h1 className="text-2xl font-black text-white">Pipeline health</h1>
-          <p className="mt-1 text-sm text-zinc-400">Live execution status for production-critical data, alerts and billing jobs.</p>
+          <h1 className="text-2xl font-semibold text-[var(--text-1)]">Pipeline health</h1>
+          <p className="mt-1 text-sm text-[var(--text-2)]">Live execution status for production-critical data, alerts and billing jobs.</p>
         </div>
-        <p className="text-right text-xs text-zinc-500">Release <span className="font-mono text-zinc-300">{process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? 'local'}</span><br/>Refreshes with the page</p>
+        <p className="text-right text-xs text-[var(--text-3)]">Release <span className="font-mono text-[var(--text-2)]">{process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? 'local'}</span><br/>Refreshes with the page</p>
       </div>
 
-      {error && <div className="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><XCircle size={16} /> Health data could not be loaded.</div>}
+      {error && <div className="mb-5 flex items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--red)_30%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] p-4 text-sm text-[var(--red)]"><XCircle size={16} /> Health data could not be loaded.</div>}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Healthy</p><p className="mt-1 text-2xl font-black text-emerald-400">{healthy}</p></div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Waiting upstream</p><p className="mt-1 text-2xl font-black text-amber-300">{deferred}</p></div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Needs attention</p><p className="mt-1 text-2xl font-black text-amber-400">{problems}</p></div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Instrumented</p><p className="mt-1 text-2xl font-black text-white">{TRACKED_PIPELINES.length}</p></div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Healthy</p><p className="mt-1 text-2xl font-semibold text-[var(--green)]">{healthy}</p></div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Waiting upstream</p><p className="mt-1 text-2xl font-semibold text-[var(--gold)]">{deferred}</p></div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Needs attention</p><p className="mt-1 text-2xl font-semibold text-[var(--gold)]">{problems}</p></div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Instrumented</p><p className="mt-1 text-2xl font-semibold text-[var(--text-1)]">{TRACKED_PIPELINES.length}</p></div>
       </div>
 
       <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Operational queues">
@@ -248,30 +248,30 @@ export default async function PipelineHealthPage() {
       </div>
 
       {browserbaseUsage && browserbasePlan && (
-        <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-500/20 bg-zinc-900/60">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+        <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-500/20 bg-[color-mix(in_srgb,var(--surface)_60%,transparent)]">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400">Browser automation budget</p>
-              <h2 className="mt-1 text-base font-black text-white">Browserbase monthly usage</h2>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-cyan-400">Browser automation budget</p>
+              <h2 className="mt-1 text-base font-semibold text-[var(--text-1)]">Browserbase monthly usage</h2>
             </div>
-            <div className="flex items-center gap-3"><p className="text-xs text-zinc-500">Cached for 5 minutes</p><Link href="/admin/browserbase" className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-cyan-300 transition hover:border-cyan-400/50 hover:text-cyan-200">Open cost center</Link></div>
+            <div className="flex items-center gap-3"><p className="text-xs text-[var(--text-3)]">Cached for 5 minutes</p><Link href="/admin/browserbase" className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-cyan-300 transition hover:border-cyan-400/50 hover:text-cyan-200">Open cost center</Link></div>
           </div>
-          <div className="grid gap-px bg-zinc-800 sm:grid-cols-3">
+          <div className="grid gap-px bg-[var(--surface-2)] sm:grid-cols-3">
             <BudgetMetric label="Browser hours" value={`${browserbasePlan.browserHours.toFixed(1)} / 500`} detail={`${browserbasePlan.browserHoursRemaining.toFixed(1)} included hours remain`} percent={browserbasePlan.browserPercent} />
             <BudgetMetric label="Proxy transfer" value={`${browserbasePlan.proxyGigabytes.toFixed(2)} / 5 GB`} detail={`${browserbasePlan.proxyGigabytesRemaining.toFixed(2)} included GB remain`} percent={browserbasePlan.proxyPercent} />
             <BudgetMetric label="Running sessions" value={String(browserbaseUsage.runningSessions)} detail={browserbaseUsage.runningSessions === 0 ? 'No browser currently billing' : 'Inspect if this remains nonzero'} percent={browserbaseUsage.runningSessions > 0 ? 100 : 0} />
           </div>
           {browserbaseUsage.byWorkflow.length > 0 && (
             <div className="overflow-x-auto px-5 py-4">
-              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">Retained-session attribution</div>
-              <div className="min-w-[560px] divide-y divide-zinc-800 text-xs">
+              <div className="mb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--text-3)]">Retained-session attribution</div>
+              <div className="min-w-[560px] divide-y divide-[var(--border)] text-xs">
                 {browserbaseUsage.byWorkflow.slice(0, 8).map(workflow => (
-                  <div key={workflow.name} className="grid grid-cols-[minmax(220px,1fr)_80px_100px_90px_90px] gap-3 py-2 text-zinc-300">
-                    <span className="truncate font-mono text-zinc-200">{workflow.name}</span>
+                  <div key={workflow.name} className="grid grid-cols-[minmax(220px,1fr)_80px_100px_90px_90px] gap-3 py-2 text-[var(--text-2)]">
+                    <span className="truncate font-mono text-[var(--text-1)]">{workflow.name}</span>
                     <span>{workflow.sessions} runs</span>
                     <span>{(workflow.browserMinutes / 60).toFixed(2)} hours</span>
                     <span>{(workflow.proxyBytes / 1_000_000_000).toFixed(3)} GB</span>
-                    <span className={workflow.errors + workflow.timedOut > 0 ? 'text-amber-300' : 'text-emerald-400'}>{workflow.errors + workflow.timedOut} failed</span>
+                    <span className={workflow.errors + workflow.timedOut > 0 ? 'text-[var(--gold)]' : 'text-[var(--green)]'}>{workflow.errors + workflow.timedOut} failed</span>
                   </div>
                 ))}
               </div>
@@ -281,14 +281,14 @@ export default async function PipelineHealthPage() {
       )}
 
       {integrity && (
-        <section className={`mb-6 rounded-2xl border p-5 ${integrity.status === 'failed' ? 'border-red-500/30 bg-red-500/8' : integrity.status === 'warning' ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/25 bg-emerald-500/8'}`}>
+        <section className={`mb-6 rounded-2xl border p-5 ${integrity.status === 'failed' ? 'border-[color-mix(in_srgb,var(--red)_30%,transparent)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)]' : integrity.status === 'warning' ? 'border-[color-mix(in_srgb,var(--gold)_30%,transparent)] bg-[color-mix(in_srgb,var(--gold)_8%,transparent)]' : 'border-[color-mix(in_srgb,var(--green)_25%,transparent)] bg-[color-mix(in_srgb,var(--green)_8%,transparent)]'}`}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">Canonical data audit</div>
-              <h2 className="mt-1 text-lg font-black text-white">Statcast integrity through {integrity.through_date}</h2>
-              <p className="mt-1 text-sm text-zinc-300">Every completed game, pitch event, source-to-column mapping, classification flag, and Statcast category is reconciled.</p>
+              <div className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-2)]">Canonical data audit</div>
+              <h2 className="mt-1 text-lg font-semibold text-[var(--text-1)]">Statcast integrity through {integrity.through_date}</h2>
+              <p className="mt-1 text-sm text-[var(--text-2)]">Every completed game, pitch event, source-to-column mapping, classification flag, and Statcast category is reconciled.</p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${integrity.status === 'failed' ? 'bg-red-500/15 text-red-300' : integrity.status === 'warning' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{integrity.status}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${integrity.status === 'failed' ? 'bg-[color-mix(in_srgb,var(--red)_15%,transparent)] text-[var(--red)]' : integrity.status === 'warning' ? 'bg-[color-mix(in_srgb,var(--gold)_15%,transparent)] text-[var(--gold)]' : 'bg-[color-mix(in_srgb,var(--green)_15%,transparent)] text-[var(--green)]'}`}>{integrity.status}</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <IntegrityMetric label="Pitch events" value={integrity.checks?.pitch_log?.rows ?? 0} />
@@ -298,29 +298,29 @@ export default async function PipelineHealthPage() {
             <IntegrityMetric label="Source unavailable" value={sourceUnavailable} />
             <IntegrityMetric label="Pipeline gaps" value={integrity.summary?.failures ?? 0} danger={(integrity.summary?.failures ?? 0) > 0} />
           </div>
-          <div className="mt-3 space-y-1 text-xs text-zinc-500">
+          <div className="mt-3 space-y-1 text-xs text-[var(--text-3)]">
             <p>Official MLB final-game gaps: {integrity.checks?.official_schedule?.final_games_without_pitch_log ?? 0}. Stored schedule gaps: {integrity.checks?.game_coverage?.scheduled_games_without_pitch_log ?? 0}.</p>
             <p>Source unavailable counts are genuine MLB/Statcast omissions, displayed as unavailable rather than zero. HR event coverage gaps: {integrity.checks?.home_run_enrichment?.missing_detail_events ?? 0}. Canonical detail fallbacks: {integrity.checks?.home_run_enrichment?.canonical_fallback_home_runs ?? 0}. Every MLB home run has a detail record; a fallback preserves the canonical event when Savant has not published its separate park projection.</p>
           </div>
         </section>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
-        <div className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+      <div className="overflow-x-auto rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)]">
+        <div className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-[var(--border)] px-5 py-3 text-[12px] font-bold uppercase tracking-wider text-[var(--text-3)]">
           <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Next run</span><span>Action</span>
         </div>
         {rows.map(({ pipeline, run, evidence, state }) => {
           const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' || state === 'deferred' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
-          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'deferred' ? 'text-amber-300' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' || state === 'timed_out' ? 'text-red-400' : 'text-amber-400'
+          const tone = state === 'succeeded' ? 'text-[var(--green)]' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'deferred' ? 'text-[var(--gold)]' : state === 'waiting' ? 'text-[var(--text-3)]' : state === 'failed' || state === 'timed_out' ? 'text-[var(--red)]' : 'text-[var(--gold)]'
           const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state === 'deferred' ? 'Deferred' : state
           const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
           const ageMinutes = run?.started_at ? Math.max(1, (Date.now() - new Date(run.started_at).getTime()) / 60_000) : 0
           return (
-            <div key={pipeline.name} className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
-              <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className={`mt-1 truncate text-xs ${state === 'deferred' ? 'text-amber-200' : 'text-red-300'}`} title={run.error}>{run.error}</div>}{state === 'deferred' && run?.details?.requiredThroughDate && <div className="mt-1 text-[11px] text-zinc-500">Required through {run.details.requiredThroughDate}{run.details.stage ? ` · ${run.details.stage}` : ''}</div>}</div>
+            <div key={pipeline.name} className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-[color-mix(in_srgb,var(--border)_70%,transparent)] px-5 py-4 text-sm last:border-0">
+              <div className="min-w-0"><div className="font-semibold text-[var(--text-1)]">{pipeline.label}</div><div className="mt-0.5 text-xs text-[var(--text-3)]">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className={`mt-1 truncate text-xs ${state === 'deferred' ? 'text-[var(--gold)]' : 'text-[var(--red)]'}`} title={run.error}>{run.error}</div>}{state === 'deferred' && run?.details?.requiredThroughDate && <div className="mt-1 text-[12px] text-[var(--text-3)]">Required through {run.details.requiredThroughDate}{run.details.stage ? ` · ${run.details.stage}` : ''}</div>}</div>
               <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
-              <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
-              <div className="text-xs text-zinc-400"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-zinc-600">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms, run.status) : 'No duration'}</span></div>
+              <div className="text-[var(--text-2)]">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
+              <div className="text-xs text-[var(--text-2)]"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-[var(--text-3)]">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms, run.status) : 'No duration'}</span></div>
               <PipelineRetryButton jobName={pipeline.name}/>
             </div>
           )
@@ -331,13 +331,13 @@ export default async function PipelineHealthPage() {
 }
 
 function IntegrityMetric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
-  return <div className="rounded-xl border border-white/8 bg-black/20 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p><p className={`mt-1 text-xl font-black ${danger ? 'text-red-300' : 'text-white'}`}>{value.toLocaleString()}</p></div>
+  return <div className="rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] px-4 py-3"><p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-3)]">{label}</p><p className={`mt-1 text-xl font-semibold ${danger ? 'text-[var(--red)]' : 'text-[var(--text-1)]'}`}>{value.toLocaleString()}</p></div>
 }
 
 function BudgetMetric({ label, value, detail, percent }: { label: string; value: string; detail: string; percent: number }) {
   const bounded = Math.max(0, Math.min(100, percent))
-  const tone = percent >= 85 ? 'bg-red-400' : percent >= 65 ? 'bg-amber-300' : 'bg-emerald-400'
-  return <div className="bg-zinc-950/70 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{label}</p><p className="mt-1 text-xl font-black text-white">{value}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-800"><div className={`h-full rounded-full ${tone}`} style={{ width: `${bounded}%` }}/></div><p className="mt-2 text-xs text-zinc-500">{detail}</p></div>
+  const tone = percent >= 85 ? 'bg-[var(--red-fill)]' : percent >= 65 ? 'bg-[var(--gold-fill)]' : 'bg-[var(--green-fill)]'
+  return <div className="bg-[color-mix(in_srgb,var(--bg)_70%,transparent)] p-4"><p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{label}</p><p className="mt-1 text-xl font-semibold text-[var(--text-1)]">{value}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"><div className={`h-full rounded-full ${tone}`} style={{ width: `${bounded}%` }}/></div><p className="mt-2 text-xs text-[var(--text-3)]">{detail}</p></div>
 }
 
 function QueueCard({ icon: Icon, label, value, detail, tone, href }: {
@@ -348,7 +348,7 @@ function QueueCard({ icon: Icon, label, value, detail, tone, href }: {
   tone: 'success' | 'warning' | 'danger' | 'neutral'
   href?: string
 }) {
-  const color = tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-400' : tone === 'danger' ? 'text-red-400' : 'text-zinc-300'
-  const content = <><div className="flex items-center justify-between"><p className="text-xs font-bold text-zinc-500">{label}</p><Icon size={16} className={color} /></div><p className={`mt-2 text-2xl font-black ${color}`}>{value}</p><p className="mt-1 text-xs text-zinc-500">{detail}</p></>
-  return href ? <Link href={href} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">{content}</Link> : <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">{content}</div>
+  const color = tone === 'success' ? 'text-[var(--green)]' : tone === 'warning' ? 'text-[var(--gold)]' : tone === 'danger' ? 'text-[var(--red)]' : 'text-[var(--text-2)]'
+  const content = <><div className="flex items-center justify-between"><p className="text-xs font-bold text-[var(--text-3)]">{label}</p><Icon size={16} className={color} /></div><p className={`mt-2 text-2xl font-semibold ${color}`}>{value}</p><p className="mt-1 text-xs text-[var(--text-3)]">{detail}</p></>
+  return href ? <Link href={href} className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4 transition-colors hover:border-[var(--border-2)] hover:bg-[var(--surface)]">{content}</Link> : <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4">{content}</div>
 }

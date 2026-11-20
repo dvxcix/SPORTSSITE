@@ -181,7 +181,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
         {player.headshot ? (
           <div className={styles.avatar}><SafeImage src={player.headshot} alt={player.display_name} /></div>
         ) : (
-          <div className={`${styles.avatar} grid place-items-center text-2xl font-black text-[var(--text-3)]`}>
+          <div className={`${styles.avatar} grid place-items-center text-2xl font-semibold text-[var(--text-3)]`}>
             {player.position || '—'}
           </div>
         )}
@@ -228,7 +228,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
                 <div key={cat} className={styles.metricCard}>
                   <div className={styles.metricLabel}>{DVP_LABELS[cat] ?? cat}</div>
                   <div className={`${styles.metricValue} tabular-nums`}>{num(row.avg_allowed, 1)}/gm</div>
-                  <div className={`${styles.metricDelta} tabular-nums ${pctDiff == null ? 'text-[var(--text-3)]' : favorable ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className={`${styles.metricDelta} tabular-nums ${pctDiff == null ? 'text-[var(--text-3)]' : favorable ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                     {pctDiff != null ? `${pctDiff > 0 ? '+' : ''}${pctDiff.toFixed(1)}% vs avg` : '—'}
                   </div>
                 </div>
@@ -258,7 +258,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           <h2 className={styles.panelHeading}>Season performance</h2>
           <div className={styles.tableWrap}><table className={styles.dataTable}>
             <thead>
-              <tr className="text-zinc-500 text-xs uppercase text-left">
+              <tr className="text-[var(--text-3)] text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>
                 <th className="pb-2 font-semibold text-center">G</th>
                 {isQb ? (
@@ -288,30 +288,30 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
             </thead>
             <tbody>
               {seasonStats.map(row => (
-                <tr key={String(row.season)} className="border-t border-zinc-800">
-                  <td className="py-2 text-white font-semibold">{String(row.season)}</td>
-                  <td className="py-2 text-center text-zinc-300 tabular-nums">{row.games != null ? String(row.games) : '—'}</td>
+                <tr key={String(row.season)} className="border-t border-[var(--border)]">
+                  <td className="py-2 text-[var(--text-1)] font-semibold">{String(row.season)}</td>
+                  <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{row.games != null ? String(row.games) : '—'}</td>
                   {isQb ? (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.completions)}/{num(row.attempts)}</td>
-                      <td className="py-2 text-center text-white font-semibold tabular-nums">{num(row.passing_yards)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.passing_tds)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.interceptions)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.completions)}/{num(row.attempts)}</td>
+                      <td className="py-2 text-center text-[var(--text-1)] font-semibold tabular-nums">{num(row.passing_yards)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.passing_tds)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.interceptions)}</td>
                     </>
                   ) : isRb ? (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.carries)}</td>
-                      <td className="py-2 text-center text-white font-semibold tabular-nums">{num(row.rushing_yards)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.rushing_tds)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.receptions)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.receiving_yards)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.carries)}</td>
+                      <td className="py-2 text-center text-[var(--text-1)] font-semibold tabular-nums">{num(row.rushing_yards)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.rushing_tds)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.receptions)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.receiving_yards)}</td>
                     </>
                   ) : (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.receptions)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.targets)}</td>
-                      <td className="py-2 text-center text-white font-semibold tabular-nums">{num(row.receiving_yards)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.receiving_tds)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.receptions)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.targets)}</td>
+                      <td className="py-2 text-center text-[var(--text-1)] font-semibold tabular-nums">{num(row.receiving_yards)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.receiving_tds)}</td>
                     </>
                   )}
                 </tr>
@@ -327,7 +327,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           <div className={styles.metricRail}>
             {recentGames.map((g, i) => (
               <div key={i} className={styles.metricCard}>
-                <div className="text-[10px] text-zinc-500 mb-2 flex items-center gap-1">
+                <div className="text-[12px] text-[var(--text-3)] mb-2 flex items-center gap-1">
                   <span>{String(g.season)} Wk {String(g.week)}</span>
                   {g.opponent_team ? (
                     <>
@@ -367,7 +367,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           <h2 className={styles.panelHeading}>Next Gen Stats · recent games</h2>
           <div className={styles.tableWrap}><table className={styles.dataTable}>
             <thead>
-              <tr className="text-zinc-500 text-xs uppercase text-left">
+              <tr className="text-[var(--text-3)] text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>
                 <th className="pb-2 font-semibold text-center">Wk</th>
                 {isQb ? (
@@ -393,26 +393,26 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
             </thead>
             <tbody>
               {ngsRows.map((row, i) => (
-                <tr key={i} className="border-t border-zinc-800">
-                  <td className="py-2 text-white font-semibold">{String(row.season)}</td>
-                  <td className="py-2 text-center text-zinc-300 tabular-nums">{String(row.week)}</td>
+                <tr key={i} className="border-t border-[var(--border)]">
+                  <td className="py-2 text-[var(--text-1)] font-semibold">{String(row.season)}</td>
+                  <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{String(row.week)}</td>
                   {isQb ? (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.avg_time_to_throw, 2)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.completion_percentage_above_expectation, 1)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.avg_intended_air_yards, 1)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.avg_time_to_throw, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.completion_percentage_above_expectation, 1)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.avg_intended_air_yards, 1)}</td>
                     </>
                   ) : isRb ? (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.efficiency, 2)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.rush_yards_over_expected, 1)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.rush_yards_over_expected_per_att, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.efficiency, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.rush_yards_over_expected, 1)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.rush_yards_over_expected_per_att, 2)}</td>
                     </>
                   ) : (
                     <>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.avg_separation, 2)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.avg_cushion, 2)}</td>
-                      <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.avg_yac_above_expectation, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.avg_separation, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.avg_cushion, 2)}</td>
+                      <td className="py-2 text-center text-[var(--text-2)] tabular-nums">{num(row.avg_yac_above_expectation, 2)}</td>
                     </>
                   )}
                 </tr>

@@ -72,66 +72,66 @@ export function PageSettingsForm({ page }: { page: any }) {
     }
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all"
 
   return (
     <form className="ss-flow-form" onSubmit={save}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       <div className="ss-flow-card">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Page Name *</label>
           <input aria-label="Page name" value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Description</label>
           <textarea aria-label="Page description" value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputClass + ' resize-none'} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Category</label>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map(c => (
               <button key={c} type="button" aria-pressed={form.category === c} onClick={() => setForm(f => ({ ...f, category: c }))}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${form.category === c ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${form.category === c ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
                 {c}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Icon</label>
           <div className="flex flex-wrap gap-2">
             {EMOJIS.map(e => (
               <button key={e} type="button" aria-pressed={form.emoji === e} onClick={() => setForm(f => ({ ...f, emoji: e }))}
-                className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.emoji === e ? 'bg-zinc-700 ring-2 ring-green-500' : 'bg-zinc-800 hover:bg-zinc-700'}`}>
+                className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.emoji === e ? 'bg-[var(--surface-3)] ring-2 ring-green-500' : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'}`}>
                 {e}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Sport</label>
           <div className="flex flex-wrap gap-1.5">{SPORTS.map(sport => {
             const value = sport === 'General' ? '' : sport
             const active = form.sport === value
             const logo = sportLogoUrl(sport)
-            return <button key={sport} type="button" aria-pressed={active} onClick={() => setForm(f => ({ ...f, sport: value }))} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-all ${active ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+            return <button key={sport} type="button" aria-pressed={active} onClick={() => setForm(f => ({ ...f, sport: value }))} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-all ${active ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
               {logo && <Image src={logo} alt="" width={14} height={14} className="object-contain" />}{sport}
             </button>
           })}</div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Avatar Image URL</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Avatar Image URL</label>
           <input type="url" aria-label="Page avatar image URL" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner Image URL</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Banner Image URL</label>
           <input type="url" aria-label="Page banner image URL" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-white">Published</p>
-            <p className="text-xs text-zinc-500">Unpublish to hide this page from everyone but you</p>
+            <p className="text-sm font-medium text-[var(--text-1)]">Published</p>
+            <p className="text-xs text-[var(--text-3)]">Unpublish to hide this page from everyone but you</p>
           </div>
           <Switch checked={form.is_published} onChange={checked => setForm(f => ({ ...f, is_published: checked }))} ariaLabel="Published" />
         </div>
@@ -142,17 +142,17 @@ export function PageSettingsForm({ page }: { page: any }) {
       </button>
 
       <div className="ss-danger-card">
-        <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
-        <p className="text-xs text-zinc-500 mb-3">Permanently delete this page and all its posts. This cannot be undone.</p>
+        <h3 className="font-bold text-[var(--red)] mb-2">Danger Zone</h3>
+        <p className="text-xs text-[var(--text-3)] mb-3">Permanently delete this page and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={deletePage} disabled={deleting} className="bg-red-500 hover:bg-red-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+            <button type="button" onClick={deletePage} disabled={deleting} className="bg-[var(--red-fill)] hover:bg-[var(--red-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
               {deleting ? 'Deleting…' : 'Yes, delete this page'}
             </button>
-            <button type="button" onClick={() => setConfirmingDelete(false)} className="text-zinc-400 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
+            <button type="button" onClick={() => setConfirmingDelete(false)} className="text-[var(--text-2)] hover:text-[var(--text-1)] font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
           </div>
         ) : (
-          <button type="button" onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+          <button type="button" onClick={() => setConfirmingDelete(true)} className="border border-[color-mix(in_srgb,var(--red)_50%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] font-bold px-4 py-2 rounded-xl text-sm transition-colors">
             <Trash2 size={14} /> Delete page
           </button>
         )}

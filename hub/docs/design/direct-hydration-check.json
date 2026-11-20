@@ -1,0 +1,11 @@
+{
+  "origin": "http://127.0.0.1:4181",
+  "checked": [
+    "NBA board in dark",
+    "Saved light theme reload",
+    "390px light theme reload",
+    "NBA availability view"
+  ],
+  "developmentErrors": [],
+  "note": "The direct development checks reproduced no hydration error. Earlier rapid multi-tab production captures emitted React 418 warnings; this is not a live-data release certification."
+}

@@ -24,9 +24,9 @@ export default async function BlockedUsersPage() {
 
   return (
     <SettingsShell active="/settings/blocked" title="Muted and blocked" description="Control which accounts can reach you and which voices appear in your feed.">
-      <h2 className="mb-2 text-xs font-black uppercase tracking-wider text-zinc-500">Muted accounts</h2>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">Muted accounts</h2>
       <MutedUsersList currentUserId={user.id} initialMuted={muted??[]} />
-      <h2 className="mb-2 mt-6 text-xs font-black uppercase tracking-wider text-zinc-500">Blocked accounts</h2>
+      <h2 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">Blocked accounts</h2>
       <BlockedUsersList currentUserId={user.id} initialBlocked={blocked} />
     </SettingsShell>
   )

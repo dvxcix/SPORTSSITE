@@ -23,7 +23,7 @@
 
 .gameRail::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 42%, var(--border-2));
+  background: color-mix(in srgb, var(--accent-fill) 42%, var(--border-2));
 }
 
 .railArrow {
@@ -52,16 +52,16 @@
 .atSign,
 .tbd {
   color: var(--text-3);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .matchupLabel {
   color: var(--text-1);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
-.tbd { font-size: 9px; }
+.tbd { font-size: 12px; }
 
 @media (max-width: 720px) {
   .gamePicker {

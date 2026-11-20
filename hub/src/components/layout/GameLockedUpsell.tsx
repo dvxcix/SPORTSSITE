@@ -20,7 +20,7 @@ export function GameLockedUpsell({ label, featuredMatchup }: { label: string; fe
       }}>
         <Lock size={20} color="var(--text-3)" />
       </div>
-      <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>
         This game is Ultimate-only
       </h2>
       <p style={{ fontSize: 13, color: 'var(--text-3)', maxWidth: 340, lineHeight: 1.5, marginBottom: 18 }}>
@@ -29,7 +29,7 @@ export function GameLockedUpsell({ label, featuredMatchup }: { label: string; fe
           : <>Upgrade to Ultimate to unlock {label} for every game, every day.</>}
       </p>
       <Link href="/pricing" style={{
-        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
+        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-fill)',
         padding: '9px 18px', borderRadius: 10, textDecoration: 'none',
       }}>
         Upgrade to Ultimate

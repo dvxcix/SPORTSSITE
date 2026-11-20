@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
@@ -20,7 +24,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@slipsurge/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@slipsurge/core/*": [
+        "./packages/core/src/*"
+      ]
     }
   },
   "include": [
@@ -29,7 +41,13 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next-private-ui-review/types/**/*.ts",
+    ".next-private-ui-review/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "mobile", "packages"]
+  "exclude": [
+    "node_modules",
+    "mobile",
+    "packages"
+  ]
 }

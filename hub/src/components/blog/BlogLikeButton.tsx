@@ -31,7 +31,7 @@ export function BlogLikeButton({ blogId, likes, initialLiked = false }: { blogId
   return (
     <button onClick={toggle} disabled={busy} aria-pressed={liked} aria-label={liked ? 'Unlike article' : 'Like article'}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold border transition-all ${
-        liked ? 'border-red-500/50 text-red-400 bg-red-500/10' : 'border-zinc-700 text-zinc-400 hover:border-red-500/30 hover:text-red-400'
+        liked ? 'border-[color-mix(in_srgb,var(--red)_50%,transparent)] text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'border-[var(--border-2)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--red)_30%,transparent)] hover:text-[var(--red)]'
       } disabled:opacity-60`}>
       <Heart size={13} className={liked ? 'fill-current' : ''} /> {count}
     </button>

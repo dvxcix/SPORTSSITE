@@ -50,7 +50,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   if (variant === 'text') {
     return (
       <button onClick={toggle} disabled={loading}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: blocked ? 'var(--text-3)' : 'var(--red, #f87171)' }}>
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: blocked ? 'var(--text-3)' : 'var(--red, #f87171)' }}>
         {failed ? 'Try again' : label}
       </button>
     )
@@ -59,10 +59,10 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   if (variant === 'button') {
     return (
       <button onClick={toggle} disabled={loading}
-        className={`flex items-center gap-1.5 h-9 px-4 text-sm rounded-xl font-black transition-all disabled:opacity-60 ${
+        className={`flex items-center gap-1.5 h-9 px-4 text-sm rounded-xl font-semibold transition-all disabled:opacity-60 ${
           blocked
-            ? 'border border-zinc-700 text-zinc-300 hover:border-green-500/50 hover:text-green-400'
-            : 'border border-red-500/30 text-red-400 hover:bg-red-500/10'
+            ? 'border border-[var(--border-2)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] hover:text-[var(--green)]'
+            : 'border border-[color-mix(in_srgb,var(--red)_30%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]'
         }`}>
         {failed ? 'Try again' : blocked ? <><UserCheck size={14} /> Unblock</> : confirming ? 'Confirm block?' : <><UserX size={14} /> Block</>}
       </button>

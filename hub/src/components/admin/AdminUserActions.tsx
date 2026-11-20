@@ -68,7 +68,7 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
         onChange={e => setGrantedTier(e.target.value)}
         disabled={loading}
         title="Manually grant a tier — separate from a real Whop purchase, never overwritten by one"
-        className="text-[10px] font-bold px-1.5 py-1 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 outline-none"
+        className="text-[12px] font-bold px-1.5 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] border border-[var(--border-2)] outline-none"
       >
         <option value="">No grant</option>
         <option value="basic">Grant Basic</option>
@@ -76,33 +76,33 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
         <option value="ultimate">Grant Ultimate</option>
       </select>
       <button onClick={toggleVerify} disabled={loading}
-        className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isVerified ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' : 'bg-zinc-800 text-zinc-500 hover:text-white'}`}>
+        className={`text-[12px] font-bold px-2 py-1 rounded-lg transition-colors ${isVerified ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)] hover:bg-[color-mix(in_srgb,var(--green)_20%,transparent)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)]'}`}>
         {isVerified ? '✓ Verified' : 'Verify'}
       </button>
       {currentType !== 'admin' && (
         <button onClick={() => setType('admin')} disabled={loading}
-          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-500 hover:text-white transition-colors">
+          className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors">
           Make Admin
         </button>
       )}
       {currentType !== 'creator' && (
         <button onClick={() => setType('creator')} disabled={loading}
-          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-500 hover:text-yellow-400 transition-colors">
+          className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] hover:text-yellow-400 transition-colors">
           Make Creator
         </button>
       )}
       {currentType !== 'user' && (
         <button onClick={() => setType('user')} disabled={loading}
-          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-500 hover:text-white transition-colors">
+          className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors">
           Reset
         </button>
       )}
       <button onClick={toggleBan} disabled={loading}
-        className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isBanned ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-zinc-800 text-zinc-500 hover:text-red-400'}`}>
+        className={`text-[12px] font-bold px-2 py-1 rounded-lg transition-colors ${isBanned ? 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_20%,transparent)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--red)]'}`}>
         {isBanned ? 'Unban' : 'Ban'}
       </button>
       <button onClick={deleteUser} disabled={loading}
-        className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+        className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_20%,transparent)] transition-colors">
         Delete
       </button>
     </div>

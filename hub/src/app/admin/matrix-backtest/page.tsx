@@ -13,8 +13,8 @@ export default async function MatrixBacktestPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-1">Matrix Pipeline Backtest</h1>
-      <p className="text-sm text-zinc-500 mb-6">
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Matrix Pipeline Backtest</h1>
+      <p className="text-sm text-[var(--text-3)] mb-6">
         Admin-only. Runs a saved Matrix (classic or pipeline) against real completed slates — reconstructs the exact odds/season-average/pick-count inputs it would have seen, runs the real matching engine, and grades the result against real box score home runs.
       </p>
       <MatrixBacktestForm />

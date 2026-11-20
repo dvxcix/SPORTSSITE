@@ -123,7 +123,7 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
       <div className={styles.history}>
         {recentPayouts.length === 0 ? <div className={styles.empty}>No payout activity yet.</div> : recentPayouts.map(event => (
           <div className={styles.row} key={event.id}>
-            <div><strong>{String(event.event_type).replaceAll('_', ' ')}</strong><span>{new Date(event.created_at).toLocaleDateString()}</span></div>
+            <div><strong>{String(event.event_type).replaceAll('_', ' ')}</strong><span>{new Date(event.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</span></div>
             <div><strong>{event.amount == null ? 'Recorded' : `${String(event.currency || 'usd').toUpperCase()} ${Number(event.amount).toFixed(2)}`}</strong><span>{event.status || 'processed'}</span></div>
           </div>
         ))}

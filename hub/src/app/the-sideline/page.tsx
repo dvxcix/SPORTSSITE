@@ -31,14 +31,14 @@ export const metadata: Metadata = {
 
 function PregameResearchNotice({ lens }: { lens: { status: string; headline: string; headlineDetail: string } }) {
   if (lens.status !== 'awaiting-data' || lens.headline !== 'Pregame research unavailable') return null
-  return <section role="status" className="mx-3 my-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm">
+  return <section role="status" className="mx-3 my-3 rounded-xl border border-[color-mix(in_srgb,var(--gold)_30%,transparent)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] px-4 py-3 text-sm">
     <strong>{lens.headline}</strong>
-    <p className="mt-1 text-slate-300">{lens.headlineDetail}</p>
+    <p className="mt-1 text-[var(--text-2)]">{lens.headlineDetail}</p>
   </section>
 }
 
 export default async function SidelinePage({ searchParams }: {
-  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[]; preview?: string | string[]; player?: string | string[]; line?: string | string[] }>
+  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; view?: string | string[]; sample?: string | string[]; at?: string | string[]; preview?: string | string[]; player?: string | string[]; line?: string | string[] }>
 }) {
   const gate = await requireNflAccess()
   if (gate.error?.status === 503) throw new AuthTemporarilyUnavailableError()
@@ -106,5 +106,5 @@ export default async function SidelinePage({ searchParams }: {
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
   if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialCapture={requestedCapture} initialPreview={preview} /></>
+  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
 }

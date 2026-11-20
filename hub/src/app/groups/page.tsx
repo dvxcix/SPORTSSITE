@@ -32,12 +32,12 @@ export default async function GroupsPage() {
 
       {creator && <section className="mt-8">
         <ProductSectionHeader title="Your communities" meta={`${owned.length} total`}/>
-        {owned.length ? <div className="grid gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <ProductPanel padded className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-black text-white">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 text-sm font-black text-lime-300">Create community <ArrowRight size={15}/></Link></ProductPanel>}
+        {owned.length ? <div className="grid gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <ProductPanel padded className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-semibold text-[var(--text-1)]">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">Create community <ArrowRight size={15}/></Link></ProductPanel>}
       </section>}
 
       <section className="mt-10">
         <ProductSectionHeader title="Public groups" meta="Discover"/>
-        {discover.length ? <div className="grid gap-3 md:grid-cols-2">{discover.map(group => <GroupCard key={group.id} group={group} />)}</div> : <div className="rounded-2xl border border-white/8 bg-white/[.025] p-10 text-center"><Users className="mx-auto text-zinc-600"/><p className="mt-3 font-bold text-zinc-300">No public groups yet</p><p className="mt-1 text-sm text-zinc-600">Creator communities will appear here as they launch.</p></div>}
+        {discover.length ? <div className="grid gap-3 md:grid-cols-2">{discover.map(group => <GroupCard key={group.id} group={group} />)}</div> : <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-10 text-center"><Users className="mx-auto text-[var(--text-3)]"/><p className="mt-3 font-bold text-[var(--text-2)]">No public groups yet</p><p className="mt-1 text-sm text-[var(--text-3)]">Creator communities will appear here as they launch.</p></div>}
       </section>
     </ProductPageShell>
   )
@@ -45,7 +45,7 @@ export default async function GroupsPage() {
 
 function GroupCard({ group, owner = false }: { group: GroupCardData; owner?: boolean }) {
   return <Link href={`/groups/${group.slug}`} className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--border-2)] hover:bg-[var(--surface-2)]">
-    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/8 bg-white/5 text-2xl"><SafeImage src={group.avatar_url} alt="" className="h-full w-full object-cover" fallback={group.emoji || '⚡'} /></div>
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.05)] text-2xl"><SafeImage src={group.avatar_url} alt="" className="h-full w-full object-cover" fallback={group.emoji || '⚡'} /></div>
     <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-semibold text-[var(--text-1)]">{group.name}</h3>{owner && <span className="text-xs font-medium text-[var(--text-2)]">Owner</span>}{group.access_type !== 'free' && <span className="flex items-center gap-1 text-xs font-medium text-[var(--text-2)]"><LockKeyhole size={12}/> Paid</span>}</div><p className="mt-1 truncate text-sm text-[var(--text-2)]">{group.description || 'Creator community'}</p><p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-3)]"><span className="flex items-center gap-1"><Users size={12}/>{group.member_count ?? 0}</span><span className="flex items-center gap-1"><MessageSquareText size={12}/> Channel included</span></p></div><ArrowRight size={16} className="text-[var(--text-3)]"/>
   </Link>
 }

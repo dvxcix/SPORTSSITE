@@ -49,12 +49,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   return (
     <ProductPageShell narrow>
       <CommunityNav />
-      <Link href={`/forum/${thread.category?.slug}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 transition hover:text-white"><ArrowLeft size={13} /> {thread.category?.name || 'Discussions'}</Link>
+      <Link href={`/forum/${thread.category?.slug}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-[var(--text-3)] transition hover:text-[var(--text-1)]"><ArrowLeft size={13} /> {thread.category?.name || 'Discussions'}</Link>
       <header className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
         <p className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--text-2)]"><MessageSquareText size={14}/> Thread</p>
         <div className="flex items-start gap-2">
-          {thread.is_pinned && <Pin size={14} className="text-green-400 mt-1 shrink-0" />}
-          {thread.is_locked && <Lock size={14} className="text-zinc-500 mt-1 shrink-0" />}
+          {thread.is_pinned && <Pin size={14} className="text-[var(--green)] mt-1 shrink-0" />}
+          {thread.is_locked && <Lock size={14} className="text-[var(--text-3)] mt-1 shrink-0" />}
           <h1 className="text-2xl font-semibold leading-tight text-[var(--text-1)] sm:text-3xl">{thread.title}</h1>
         </div>
       </header>
@@ -64,14 +64,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         <div className="flex items-center gap-3 mb-3">
           <Link href={`/profile/${thread.author?.username}`}><MemberAvatar src={thread.author?.avatar_url} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} /></Link>
           <div>
-            <p className="text-sm font-bold text-white flex items-center gap-1">
+            <p className="text-sm font-bold text-[var(--text-1)] flex items-center gap-1">
               {thread.author?.display_name || thread.author?.username}
-              {thread.author?.is_verified && <span className="text-green-400 text-xs">✓</span>}
+              {thread.author?.is_verified && <span className="text-[var(--green)] text-xs">✓</span>}
             </p>
-            <p className="text-xs text-zinc-500">{new Date(thread.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            <p className="text-xs text-[var(--text-3)]">{new Date(thread.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
           </div>
         </div>
-        {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={thread.content} /></p>}
+        {thread.content && <p className="text-sm text-[var(--text-2)] leading-relaxed whitespace-pre-wrap"><LinkifiedText text={thread.content} /></p>}
         <ForumReactions targetId={thread.id} targetType="forum_thread" userId={user?.id} ownerId={thread.author_id} initialReactions={reactionsByTarget.get(thread.id) ?? []} returnPath={returnPath} />
       </article>
 
@@ -84,14 +84,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               <div className="flex items-center gap-3 mb-3">
                 <Link href={`/profile/${r.author?.username}`}><MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} /></Link>
                 <div>
-                  <p className="text-sm font-bold text-white flex items-center gap-1">
+                  <p className="text-sm font-bold text-[var(--text-1)] flex items-center gap-1">
                     {r.author?.display_name || r.author?.username}
-                    {r.author?.is_verified && <span className="text-green-400 text-xs">✓</span>}
+                    {r.author?.is_verified && <span className="text-[var(--green)] text-xs">✓</span>}
                   </p>
-                  <p className="text-xs text-zinc-500">#{i + 1} · {new Date(r.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-[var(--text-3)]">#{i + 1} · {new Date(r.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</p>
                 </div>
               </div>
-              {r.is_deleted ? <p className="ss-chat-deleted">Reply deleted</p> : <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={r.content || ''} />{r.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
+              {r.is_deleted ? <p className="ss-chat-deleted">Reply deleted</p> : <p className="text-sm text-[var(--text-2)] leading-relaxed whitespace-pre-wrap"><LinkifiedText text={r.content || ''} />{r.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
               <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} ownerId={r.author_id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
               {!r.is_deleted ? <ForumReplyActions replyId={r.id} authorId={r.author_id} currentUserId={user?.id} threadId={thread.id} threadAuthorId={thread.author_id} content={r.content || ''} /> : null}
             </article>
@@ -102,13 +102,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {!thread.is_locked && user && <ThreadReplyForm userId={user.id} threadId={thread.id} threadAuthorId={thread.author_id} />}
       {!thread.is_locked && !user && (
         <ProductPanel padded className="text-center">
-          <p className="text-sm text-zinc-400 mb-3">Sign in to reply</p>
-          <Link href={`/auth/login?next=/forum/thread/${thread.id}`} className="inline-block bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2 rounded-xl text-sm transition-colors">Sign In</Link>
+          <p className="text-sm text-[var(--text-2)] mb-3">Sign in to reply</p>
+          <Link href={`/auth/login?next=/forum/thread/${thread.id}`} className="inline-block bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] font-semibold px-6 py-2 rounded-xl text-sm transition-colors">Sign In</Link>
         </ProductPanel>
       )}
       {thread.is_locked && (
         <ProductPanel padded className="text-center">
-          <p className="text-sm text-zinc-500 flex items-center justify-center gap-2"><Lock size={14} /> This thread is locked</p>
+          <p className="text-sm text-[var(--text-3)] flex items-center justify-center gap-2"><Lock size={14} /> This thread is locked</p>
         </ProductPanel>
       )}
     </ProductPageShell>

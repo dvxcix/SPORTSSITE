@@ -24,24 +24,24 @@ export function CustomCodeEditor({ initial }: { initial: Record<string, string> 
     setSaving(false)
   }
 
-  const taClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 font-mono outline-none focus:border-green-500/50 transition-all resize-y"
+  const taClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-3 text-sm text-[var(--text-1)] font-mono outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all resize-y"
 
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Custom CSS</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Custom CSS</label>
         <textarea value={css} onChange={e => setCss(e.target.value)} rows={8} placeholder="/* your custom CSS */" className={taClass} />
       </div>
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Custom JavaScript</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Custom JavaScript</label>
         <textarea value={js} onChange={e => setJs(e.target.value)} rows={8} placeholder="// your custom JS" className={taClass} />
       </div>
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Custom &lt;head&gt; HTML</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Custom &lt;head&gt; HTML</label>
         <textarea value={headHtml} onChange={e => setHeadHtml(e.target.value)} rows={5} placeholder="<!-- meta tags, scripts, etc. -->" className={taClass} />
       </div>
       <button onClick={save} disabled={saving}
-        className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
+        className="flex items-center gap-2 bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors">
         {saved ? <><Check size={13} /> Saved!</> : saving ? 'Saving…' : 'Save Code'}
       </button>
     </div>

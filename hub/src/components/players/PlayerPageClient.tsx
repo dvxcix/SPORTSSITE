@@ -63,7 +63,7 @@ export const cardStyle: React.CSSProperties = {
 }
 export const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
-  fontWeight: 800,
+  fontWeight: 700,
   color: 'var(--text-2)',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
@@ -74,7 +74,7 @@ export const sectionTitleStyle: React.CSSProperties = {
   flexWrap: 'wrap',
 }
 export const windowTag: React.CSSProperties = {
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 700,
   color: 'var(--text-3)',
   textTransform: 'none',
@@ -90,8 +90,8 @@ export function StatGrid({ pairs }: { pairs: [string, string, React.CSSPropertie
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
       {pairs.map(([label, value, heatStyle]) => (
         <div key={label} style={{ padding: heatStyle ? '6px 8px' : 0, borderRadius: 8, ...heatStyle }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-1)' }}>{value}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>{value}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
         </div>
       ))}
     </div>
@@ -109,7 +109,7 @@ export function HandBadge({ hand }: { hand: string | null }) {
     <span
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 18, height: 18, borderRadius: '50%', fontSize: 10, fontWeight: 900,
+        width: 18, height: 18, borderRadius: '50%', fontSize: 12, fontWeight: 700,
         color, border: `1px solid ${color}`, background: `${color}18`, flexShrink: 0,
       }}
     >
@@ -172,7 +172,7 @@ export function ToggleBtn({ active, onClick, children }: { active: boolean; onCl
     <button
       onClick={onClick}
       style={{
-        fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+        fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
         border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
         background: active ? 'var(--accent-dim)' : 'var(--surface-2)',
         color: active ? 'var(--accent)' : 'var(--text-3)',
@@ -187,7 +187,7 @@ export function DimChip({ label, active, onClick }: { label: string; active: boo
     <button
       onClick={onClick}
       style={{
-        fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+        fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
         border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
         background: active ? 'var(--accent-dim)' : 'transparent',
         color: active ? 'var(--accent)' : 'var(--text-3)',
@@ -408,7 +408,7 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
         )}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'none', letterSpacing: 0, marginRight: 2 }}>Group by:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'none', letterSpacing: 0, marginRight: 2 }}>Group by:</span>
         {config.dims.map(d => (
           <DimChip key={d.key} label={d.label} active={groupBy.includes(d.key)} onClick={() => toggleDim(d.key)} />
         ))}

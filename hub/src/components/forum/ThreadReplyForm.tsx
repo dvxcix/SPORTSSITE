@@ -53,10 +53,10 @@ export function ThreadReplyForm({ userId, threadId, threadAuthorId, parentReplyI
 
   return (
     <form className={compact ? 'ss-forum-nested-reply' : 'ss-flow-card mt-4'} onSubmit={reply}>
-      <p className="mb-2 text-xs font-black uppercase tracking-[.12em] text-zinc-400">Reply</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-[var(--text-2)]">Reply</p>
       <MentionInput ref={textareaRef} value={content} onValueChange={setContent} currentUserId={userId} placeholder="Write a reply…" rows={4}
         maxLength={5000} className="ss-flow-input mb-3 w-full resize-none" />
-      {error && <p role="alert" className="mb-2 text-xs text-red-400">{error}</p>}
+      {error && <p role="alert" className="mb-2 text-xs text-[var(--red)]">{error}</p>}
       <div className="flex items-center justify-between">
         <div className="ss-flow-media-tools"><EmojiPicker onSelect={insertAtCursor} /><GifPicker onSelect={url => insertAtCursor(` ${url} `)} /></div>
         <div className="flex items-center gap-2">{onCancel ? <button type="button" className="ss-flow-secondary" onClick={onCancel}>Cancel</button> : null}<button type="submit" disabled={submitting || !content.trim()}

@@ -107,7 +107,7 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
       {/* Status badge */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <span style={{
-          fontSize: 12, fontWeight: 800, letterSpacing: '0.06em',
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
           color: isLive ? 'var(--red)' : stateStr === 'post' ? 'var(--text-3)' : 'var(--accent)',
           display: 'inline-flex', alignItems: 'center', gap: 6,
         }}>
@@ -131,10 +131,10 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
             />
           )}
-          <p style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.1 }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.1 }}>
             {away?.team?.shortDisplayName ?? away?.team?.abbreviation}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>{away?.records?.[0]?.summary}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{away?.records?.[0]?.summary}</p>
         </div>
 
         {/* Score */}
@@ -143,7 +143,7 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-3)' }}>vs</p>
           ) : (
             <p style={{
-              fontSize: 54, fontWeight: 900, color: 'var(--text-1)',
+              fontSize: 54, fontWeight: 700, color: 'var(--text-1)',
               fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.04em', lineHeight: 1,
             }}>
               {away?.score ?? 0}
@@ -162,10 +162,10 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
             />
           )}
-          <p style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.1 }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.1 }}>
             {home?.team?.shortDisplayName ?? home?.team?.abbreviation}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>{home?.records?.[0]?.summary}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{home?.records?.[0]?.summary}</p>
         </div>
       </div>
 
@@ -174,11 +174,11 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: 32 }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 3 }}>Spread</p>
-            <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{odds.details}</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{odds.details}</p>
           </div>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 3 }}>O/U</p>
-            <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{odds.overUnder}</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{odds.overUnder}</p>
           </div>
         </div>
       )}
@@ -186,12 +186,12 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
       {/* Meta */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginTop: 10 }}>
         {venue && (
-          <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
             <MapPin size={12} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />{venue.fullName}{venue.address?.city ? ` · ${venue.address.city}${venue.address.state ? `, ${venue.address.state}` : ''}` : ''}
           </p>
         )}
         {(comp as any).broadcasts?.[0]?.names?.[0] && (
-          <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
             <Tv size={12} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />{(comp as any).broadcasts[0].names[0]}
           </p>
         )}
@@ -217,14 +217,14 @@ function WinProbBar({ summary, teamMap }: { summary: ESPNSummary | null; teamMap
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {away?.logo && <TeamLogo logo={away.logo} name={away.abbr} size={22} />}
-          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-2)' }}>{awayPct}%</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{awayPct}%</span>
         </div>
         <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'var(--border)', overflow: 'hidden', display: 'flex' }}>
           <div style={{ width: `${awayPct}%`, background: away?.color ? `#${away.color}` : 'var(--accent)', transition: 'width 0.5s ease' }} />
           <div style={{ flex: 1, background: home?.color ? `#${home.color}` : 'var(--text-3)' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-2)' }}>{homePct}%</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{homePct}%</span>
           {home?.logo && <TeamLogo logo={home.logo} name={home.abbr} size={22} />}
         </div>
       </div>
@@ -265,10 +265,10 @@ function Leaders({ summary, sport }: { summary: ESPNSummary | null; sport: Sport
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <PlayerAvatar sport={sport} teamAbbr={r.teamAbbr} headshot={r.headshot} teamLogo={r.teamLogo} name={r.name} size={46} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</p>
-              <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.category}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{r.category}</p>
             </div>
-            <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--accent)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</p>
           </div>
         ))}
       </div>
@@ -340,21 +340,21 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
               ))}
             </div>
           )}
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
             {play.awayScore}–{play.homeScore}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>·</span>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{play.period?.displayValue}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>·</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{play.period?.displayValue}</span>
           {play.clock?.displayValue && (
             <>
-              <span style={{ fontSize: 10, color: 'var(--text-3)' }}>·</span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{play.clock.displayValue}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>·</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{play.clock.displayValue}</span>
             </>
           )}
         </div>
         {isScore && (
           <span style={{
-            fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
+            fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
             background: 'rgba(180,255,77,0.12)', color: 'var(--accent)',
             border: '1px solid rgba(180,255,77,0.25)',
           }}>🎯 SCORE</span>
@@ -385,7 +385,7 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Play title */}
           <p style={{
-            fontSize: 14, fontWeight: 800, lineHeight: 1.25,
+            fontSize: 14, fontWeight: 700, lineHeight: 1.25,
             color: isScore ? 'var(--accent)' : 'var(--text-1)',
             marginBottom: 4,
           }}>
@@ -406,7 +406,7 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
               {secondaryHeadshot && (
                 <SafeImage src={secondaryHeadshot} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               )}
-              <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
                 <span style={{ fontWeight: 600 }}>{secondaryAthlete.shortName ?? secondaryAthlete.displayName}</span>
                 {secondaryStatLine && <span> · {secondaryStatLine}</span>}
               </p>
@@ -450,7 +450,7 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
                 fontSize: 13, color: 'var(--text-2)',
               }}
             >
-              {emoji} <span style={{ fontSize: 11, fontWeight: 700 }}>{data.count}</span>
+              {emoji} <span style={{ fontSize: 12, fontWeight: 700 }}>{data.count}</span>
             </button>
           ))}
         </div>
@@ -469,7 +469,7 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
             >{e}</button>
           ))}
           {!isLoggedIn && (
-            <Link href="/auth/login" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Sign in →</Link>
+            <Link href="/auth/login" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Sign in →</Link>
           )}
         </div>
       )}
@@ -513,7 +513,7 @@ function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact
             {f === 'all' ? 'All Plays' : '🎯 Scoring Only'}
           </button>
         ))}
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>{displayed.length} plays</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-3)' }}>{displayed.length} plays</span>
       </div>
       <div>
         {[...displayed].reverse().map(play => (
@@ -556,13 +556,13 @@ function BoxScore({ summary, sport }: { summary: ESPNSummary | null; sport: Spor
           {/* Team headers */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-2)' }}>{teams[0]?.team?.abbreviation}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>{teams[0]?.team?.abbreviation}</span>
               <TeamLogo logo={teams[0]?.team?.logo} name={teams[0]?.team?.abbreviation} size={28} />
             </div>
             <div />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <TeamLogo logo={teams[1]?.team?.logo} name={teams[1]?.team?.abbreviation} size={28} />
-              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-2)' }}>{teams[1]?.team?.abbreviation}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>{teams[1]?.team?.abbreviation}</span>
             </div>
           </div>
           {teams[0]?.statistics?.slice(0, 10).map((stat, i) => (
@@ -570,9 +570,9 @@ function BoxScore({ summary, sport }: { summary: ESPNSummary | null; sport: Spor
               display: 'grid', gridTemplateColumns: '1fr auto 1fr',
               padding: '8px 0', borderTop: '1px solid var(--border)', alignItems: 'center',
             }}>
-              <p style={{ textAlign: 'right', fontSize: 14, fontWeight: 800, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{stat.displayValue}</p>
-              <p style={{ padding: '0 14px', fontSize: 10, fontWeight: 600, color: 'var(--text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{stat.label}</p>
-              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{teams[1]?.statistics?.[i]?.displayValue ?? '—'}</p>
+              <p style={{ textAlign: 'right', fontSize: 14, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{stat.displayValue}</p>
+              <p style={{ padding: '0 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{stat.label}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{teams[1]?.statistics?.[i]?.displayValue ?? '—'}</p>
             </div>
           ))}
         </div>
@@ -605,14 +605,14 @@ function BoxScore({ summary, sport }: { summary: ESPNSummary | null; sport: Spor
 
           {players[teamIdx]?.statistics?.map(statGroup => (
             <div key={statGroup.name} style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{statGroup.name}</p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{statGroup.name}</p>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 320 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: 'var(--text-3)', fontWeight: 600, fontSize: 10 }}>PLAYER</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: 'var(--text-3)', fontWeight: 600, fontSize: 12 }}>PLAYER</th>
                       {statGroup.labels?.map((lbl: string) => (
-                        <th key={lbl} style={{ textAlign: 'center', padding: '4px 6px', color: 'var(--text-3)', fontWeight: 600, fontSize: 10, minWidth: 34 }}>{lbl}</th>
+                        <th key={lbl} style={{ textAlign: 'center', padding: '4px 6px', color: 'var(--text-3)', fontWeight: 600, fontSize: 12, minWidth: 34 }}>{lbl}</th>
                       ))}
                     </tr>
                   </thead>
@@ -634,7 +634,7 @@ function BoxScore({ summary, sport }: { summary: ESPNSummary | null; sport: Spor
                               <div>
                                 <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{a.athlete.displayName}</p>
                                 {a.athlete.position?.abbreviation && (
-                                  <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{a.athlete.position.abbreviation}</p>
+                                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{a.athlete.position.abbreviation}</p>
                                 )}
                               </div>
                             </div>
@@ -670,8 +670,8 @@ function CommunityPicksTab({ picks, sport, gameId }: {
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 20 }}>Be the first to post your take on this game</p>
         <Link href={`/feed?pick=true&game=${gameId}&sport=${sport}`} style={{
           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-          borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)',
-          fontSize: 13, fontWeight: 800, textDecoration: 'none',
+          borderRadius: 99, background: 'var(--accent-fill)', color: 'var(--accent-fg)',
+          fontSize: 13, fontWeight: 700, textDecoration: 'none',
         }}>
           <TrendingUp size={14} /> Post Your Pick
         </Link>
@@ -684,8 +684,8 @@ function CommunityPicksTab({ picks, sport, gameId }: {
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>{picks.length} community picks</p>
         <Link href={`/feed?pick=true&game=${gameId}&sport=${sport}`} style={{
-          padding: '6px 14px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)',
-          fontSize: 11, fontWeight: 800, textDecoration: 'none',
+          padding: '6px 14px', borderRadius: 99, background: 'var(--accent-fill)', color: 'var(--accent-fg)',
+          fontSize: 12, fontWeight: 700, textDecoration: 'none',
         }}>+ Add Pick</Link>
       </div>
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -714,20 +714,20 @@ function SummaryTab({ plays, gameStatus }: { plays: ESPNPlay[]; gameStatus: { st
     <div style={{ padding: '16px' }}>
       {/* Last play */}
       <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
-        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Last Play</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Last Play</p>
         <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{plays[plays.length - 1]?.text}</p>
       </div>
 
       {/* Scoring plays */}
       {scoringPlays.length > 0 && (
         <div>
-          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Scoring Summary</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Scoring Summary</p>
           {scoringPlays.map(p => (
             <div key={p.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>🎯</span>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 13, color: 'var(--text-1)', fontWeight: 600, lineHeight: 1.3 }}>{p.text}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
                   {p.period?.displayValue} · {p.clock?.displayValue}
                   <span style={{ marginLeft: 8, fontWeight: 700, color: 'var(--text-2)' }}>{p.awayScore}–{p.homeScore}</span>
                 </p>
@@ -832,7 +832,7 @@ export function GameDetailClient({
       {nflDetails && <>
         <NFLQuarterScore rows={nflDetails.quarters} />
         <Link href={`/the-sideline?date=${nflDetails.date}&game=${encodeURIComponent(gameId)}`} className={styles.back}>Open The Sideline →</Link>
-        {nflDetails.updatedAt && <p style={{ color: 'var(--text-3)', fontSize: 11, margin: '8px 0' }}>Play-by-play and stats updated <time dateTime={nflDetails.updatedAt}>{new Date(nflDetails.updatedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET</time></p>}
+        {nflDetails.updatedAt && <p style={{ color: 'var(--text-3)', fontSize: 12, margin: '8px 0' }}>Play-by-play and stats updated <time dateTime={nflDetails.updatedAt}>{new Date(nflDetails.updatedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET</time></p>}
       </>}
 
       {/* Win prob */}

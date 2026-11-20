@@ -16,7 +16,7 @@ export function AdminCreatorActions({ applicationId, userId }: { applicationId: 
     if (!response.ok) { notify({ title: 'Decision not saved', message: payload.error || 'Please try again.', tone: 'error' }); return }
     setDone(decision)
   }
-  if (done) return <p style={{ color: done === 'approved' ? 'var(--green)' : 'var(--red)', fontWeight: 800 }}>{done === 'approved' ? 'Approved. Payment onboarding is now available.' : 'Application rejected.'}</p>
+  if (done) return <p style={{ color: done === 'approved' ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{done === 'approved' ? 'Approved. Payment onboarding is now available.' : 'Application rejected.'}</p>
   return <div style={{ display: 'grid', gap: 8 }}>
     {rejecting && <input className="ss-input" value={reason} onChange={event => setReason(event.target.value)} placeholder="Reason shown to the applicant" maxLength={500} />}
     <div style={{ display: 'flex', gap: 8 }}>

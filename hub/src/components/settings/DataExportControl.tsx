@@ -47,16 +47,16 @@ export function DataExportControl() {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       {available ? (
-        <a href={`/api/account/data-export/${available.id}/download`} className="inline-flex items-center gap-2 rounded-xl bg-lime-400 px-3 py-2 text-xs font-black text-black hover:bg-lime-300">
+        <a href={`/api/account/data-export/${available.id}/download`} className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-fill)] px-3 py-2 text-xs font-semibold text-[var(--accent-fg)] hover:bg-[var(--accent-fill)]">
           <Download size={14} /> Download JSON export
         </a>
       ) : (
-        <button onClick={requestExport} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/35 hover:text-white disabled:opacity-50">
+        <button onClick={requestExport} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-2)] px-3 py-2 text-xs font-bold text-[var(--text-1)] hover:border-[color-mix(in_srgb,var(--accent)_35%,transparent)] hover:text-[var(--text-1)] disabled:opacity-50">
           {loading ? <LoaderCircle size={14} className="animate-spin" /> : <Download size={14} />} Prepare data export
         </button>
       )}
-      {requests[0]?.status === 'delivered' && !available ? <span className="inline-flex items-center gap-1 text-[11px] text-zinc-500"><Check size={12} /> Last export downloaded</span> : null}
-      {error ? <span className="text-[11px] text-red-400">{error}</span> : null}
+      {requests[0]?.status === 'delivered' && !available ? <span className="inline-flex items-center gap-1 text-[12px] text-[var(--text-3)]"><Check size={12} /> Last export downloaded</span> : null}
+      {error ? <span className="text-[12px] text-[var(--red)]">{error}</span> : null}
     </div>
   )
 }

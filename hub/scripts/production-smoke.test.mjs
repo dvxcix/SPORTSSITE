@@ -58,7 +58,8 @@ test('public discovery and authentication boundaries stay aligned', async () => 
 test('root failures retain a branded recovery path', async () => {
   const globalError = await read('src/app/global-error.tsx')
   const segmentError = await read('src/app/error.tsx')
-  assert.ok(globalError.includes('<html lang="en">'))
+  assert.match(globalError, /<html\b[^>]*\blang="en"/)
+  assert.ok(globalError.includes('ThemeProvider') && globalError.includes('ThemeToggle'))
   assert.ok(globalError.includes('onClick={reset}'))
   assert.ok(!segmentError.includes("console.error('SlipSurge page error', error)"))
 })
@@ -102,7 +103,10 @@ test('contextual tooltips remain portaled, branded, and touch-safe', async () =>
   assert.ok(tooltip.includes('ss-tooltip-team-mark'), 'team logos are missing from tooltip visuals')
   assert.ok(styles.includes('.ss-tooltip-art.is-image { overflow: visible;'), 'sportsbook badges are clipped by player portraits')
   assert.match(styles, /\.ss-tooltip-book-badge[\s\S]*?border-radius: 50%/, 'sportsbook badges must remain circular')
-  assert.ok(tooltip.includes('MutationObserver'), 'legacy title attributes are not upgraded')
+  assert.ok(tooltip.includes('document.addEventListener("mouseover", show, true)'), 'legacy titles need delegated pointer discovery')
+  assert.ok(tooltip.includes('document.addEventListener("focusin", show, true)'), 'legacy titles need keyboard discovery')
+  assert.ok(!tooltip.includes('new MutationObserver'), 'streamed server markup must not be rewritten before hydration')
+  assert.ok(tooltip.includes('suppressed.target.setAttribute'), 'a suppressed native title must be restored on exit')
   assert.ok(tooltip.includes('role="tooltip"'), 'tooltip semantics are missing')
   assert.ok(!tooltip.includes('onTouchStart='), 'tooltips must not intercept mobile actions')
   assert.ok(layout.includes('<NativeTooltipProvider />'), 'the global tooltip provider is not mounted')
@@ -2084,7 +2088,7 @@ test('Sideline expanded boards stay roster-anchored and viewport-contained', asy
   assert.match(styles, /\.page \{[\s\S]*?overflow-x: clip;/)
   assert.match(styles, /\.tableScroller \{[\s\S]*?overflow-x: auto;[\s\S]*?overscroll-behavior-x: contain;/)
   assert.match(styles, /\.boardTable \{[\s\S]*?width: 100%;[\s\S]*?min-width: 100%;[\s\S]*?table-layout: fixed;/)
-  assert.match(styles, /\.playerModal \{[\s\S]*?height: 100dvh;[\s\S]*?border-radius: 20px 0 0 20px;/)
+  assert.match(styles, /\.playerModal \{[\s\S]*?height: 100dvh;[\s\S]*?border-radius: 14px 0 0 14px;/)
 })
 
 test('social GIF discovery is server-backed and custom emoji shortcodes render across public surfaces', async () => {

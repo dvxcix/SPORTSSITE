@@ -53,28 +53,28 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
     }
   }
 
-  const inputClass = "w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-lime-400/50"
+  const inputClass = "w-full rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--overlay)] px-4 py-3 text-sm text-[var(--text-1)] outline-none transition placeholder:text-[var(--text-3)] focus:border-[color-mix(in_srgb,var(--accent)_50%,transparent)]"
 
   return (
     <div className="space-y-6">
-      {error && <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+      {error && <div role="alert" className="rounded-xl border border-[color-mix(in_srgb,var(--red)_25%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><Mail size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Verified identity</p><p className="mt-1 truncate text-[11px] text-zinc-500">{profile?.email || 'Account email'}</p></div>
-        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><KeyRound size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Password access</p><p className="mt-1 text-[11px] text-zinc-500">Change it securely below</p></div>
-        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><ShieldCheck size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Privacy controls</p><p className="mt-1 text-[11px] text-zinc-500">Manage visibility and messages</p></div>
+        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><Mail size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Verified identity</p><p className="mt-1 truncate text-[12px] text-[var(--text-3)]">{profile?.email || 'Account email'}</p></div>
+        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><KeyRound size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Password access</p><p className="mt-1 text-[12px] text-[var(--text-3)]">Change it securely below</p></div>
+        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><ShieldCheck size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Privacy controls</p><p className="mt-1 text-[12px] text-[var(--text-3)]">Manage visibility and messages</p></div>
       </div>
       <form className="ss-settings-card" onSubmit={updateEmail}>
-        <h2 className="mb-3 font-black text-white">Email address</h2>
+        <h2 className="mb-3 font-semibold text-[var(--text-1)]">Email address</h2>
         <input type="email" aria-label="Email address" value={email} required maxLength={254} autoComplete="email" onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />
         <button type="submit" disabled={saving !== null || !email.trim()} className="ss-settings-primary">
           {saved === 'email' ? <><Check size={13} /> Saved</> : saving === 'email' ? <><Loader2 size={13} className="animate-spin" /> Updating…</> : 'Update email'}
         </button>
       </form>
       <section className="ss-settings-card">
-        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h2 className="font-black text-white">Your data</h2><p className="mt-1 text-xs leading-5 text-zinc-500">Download a private copy of your account data.</p><DataExportControl /></div></div>
+        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] text-[var(--accent)]"><Database size={17} /></span><div><h2 className="font-semibold text-[var(--text-1)]">Your data</h2><p className="mt-1 text-xs leading-5 text-[var(--text-3)]">Download a private copy of your account data.</p><DataExportControl /></div></div>
       </section>
       <form className="ss-settings-card" onSubmit={updatePassword}>
-        <h2 className="mb-3 font-black text-white">Change password</h2>
+        <h2 className="mb-3 font-semibold text-[var(--text-1)]">Change password</h2>
         <div className="space-y-3">
           <input type="password" aria-label="New password" value={newPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setNewPassword(e.target.value)} placeholder="New password" className={inputClass} />
           <input type="password" aria-label="Confirm new password" value={confirmPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={inputClass} />
@@ -83,9 +83,9 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
           {saved === 'password' ? <><Check size={13} /> Updated</> : saving === 'password' ? <><Loader2 size={13} className="animate-spin" /> Updating…</> : 'Change password'}
         </button>
       </form>
-      <section className="ss-settings-card !border-red-500/20">
-        <h2 className="mb-2 font-black text-red-400">Delete account</h2>
-        <p className="text-xs text-zinc-500 mb-3">
+      <section className="ss-settings-card !border-[color-mix(in_srgb,var(--red)_20%,transparent)]">
+        <h2 className="mb-2 font-semibold text-[var(--red)]">Delete account</h2>
+        <p className="text-xs text-[var(--text-3)] mb-3">
           Permanently delete your account and all your data. This cannot be undone. We'll email you to confirm before anything is removed.
         </p>
         <AccountDeletionControl hasPaidTier={hasPaidTier} />

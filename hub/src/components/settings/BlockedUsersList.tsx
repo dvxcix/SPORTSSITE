@@ -27,7 +27,7 @@ export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUse
     return (
       <div className="ss-settings-card py-16 text-center">
         <p className="text-4xl mb-3">🚫</p>
-        <p className="text-zinc-400 font-medium">You haven't blocked anyone</p>
+        <p className="text-[var(--text-2)] font-medium">You haven't blocked anyone</p>
       </div>
     )
   }
@@ -39,8 +39,8 @@ export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUse
           <Link href={`/profile/${u.username}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
             <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} />
             <div className="min-w-0">
-              <p className="font-bold text-white text-sm truncate">{u.display_name || u.username}</p>
-              <p className="text-xs text-zinc-500 truncate">@{u.username}</p>
+              <p className="font-bold text-[var(--text-1)] text-sm truncate">{u.display_name || u.username}</p>
+              <p className="text-xs text-[var(--text-3)] truncate">@{u.username}</p>
             </div>
           </Link>
           <button onClick={() => unblock(u.id)} disabled={pendingId === u.id}

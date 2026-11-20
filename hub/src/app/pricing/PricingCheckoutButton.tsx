@@ -81,12 +81,12 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight, prev
         onClick={startCheckout}
         disabled={loading}
         size="lg"
-        className="w-full bg-[#B4FF4D] text-black hover:bg-[#A3EE3C]"
+        className="w-full bg-[#B4FF4D] text-[var(--accent-fg)] hover:bg-[#A3EE3C]"
         style={highlight ? { boxShadow: '0 0 0 3px rgba(180,255,77,0.15)' } : undefined}
       >
         {loading ? 'Loading…' : label}
       </Button>
-      {error && <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>{error}</p>}
+      {error && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{error}</p>}
       {checkoutConfigurationId && createPortal(
         // The overlay itself is the ONE scrollable element (not a flex-
         // centered overlay wrapping a separately-scrollable card) — on
@@ -118,7 +118,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight, prev
           aria-modal="true"
           aria-label="Secure checkout"
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+            position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 1000,
             overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
           }}
         >
@@ -142,7 +142,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight, prev
             boxSizing: 'border-box',
           }}>
             <div style={{
-              background: '#06070A',
+              background: 'var(--surface)',
               borderRadius: isMobile ? 0 : 16,
               maxWidth: isMobile ? 'none' : 480,
               width: '100%',
@@ -183,7 +183,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight, prev
                   />
                 </Checkout>
               </WhopElements>
-              {error && <p role="alert" style={{ color: '#f87171', marginTop: 12 }}>{error}</p>}
+              {error && <p role="alert" style={{ color: 'var(--red)', marginTop: 12 }}>{error}</p>}
               {purchaseUrl && <a href={purchaseUrl} style={{ display: 'block', marginTop: 16, color: 'var(--text-3)', fontSize: 13 }}>Continue securely on Whop</a>}
             </div>
           </div>

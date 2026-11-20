@@ -173,14 +173,14 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           onPointerDown={e => dragControls?.start(e)}
           style={{ color: 'var(--text-3)', cursor: dragControls ? 'grab' : 'default', flexShrink: 0, touchAction: 'none' }}
         />
-        <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
         <span style={{
-          fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
           color: KIND_COLOR[step.kind], background: 'var(--surface-3)', border: `1px solid ${KIND_COLOR[step.kind]}`,
         }}>
           {KIND_LABEL[step.kind].toUpperCase()}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC[step.kind]}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{KIND_DESC[step.kind]}</span>
         <button type="button" onClick={onRemove} aria-label={`Remove ${KIND_LABEL[step.kind]} step ${index + 1}`} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
           <X size={14} />
         </button>
@@ -191,7 +191,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           aria-label="Pipeline category"
           className="ss-input" value={step.category}
           onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
-          style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 110 }}
         >
           {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
         </select>
@@ -217,7 +217,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
             })
           }}
-          style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
+          style={{ fontSize: 12, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
         >
           {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
         </select>
@@ -234,7 +234,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             aria-label="Boolean condition value"
             className="ss-input" value={step.value === 0 ? '0' : '1'}
             onChange={e => onChange({ ...step, operator: 'eq', value: Number(e.target.value) })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 100 }}
           >
             <option value="1">Yes</option>
             <option value="0">No</option>
@@ -258,7 +258,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                     : {}),
                 })
               }}
-              style={{ fontSize: 11, padding: '5px 6px', width: 190 }}
+              style={{ fontSize: 12, padding: '5px 6px', width: 190 }}
             >
               <option value="gte">At least</option>
               <option value="lte">At most</option>
@@ -314,7 +314,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
                 value={step.value ?? ''}
                 onChange={e => onChange({ ...step, value: e.target.value === '' ? null : Number(e.target.value) })}
-                style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+                style={{ fontSize: 12, padding: '5px 6px', width: 84 }}
               />
             )}
           </>
@@ -339,7 +339,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               })
             }}
             title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
-            style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 100 }}
           >
             {/* '_delta' options only for Bat Speed/Squared-Up% — see
                 CustomMatrixPanel.tsx's recencyOptionsFor/DELTA_DISPLAYED_FIELDS:
@@ -381,7 +381,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             aria-label="Pipeline rank direction"
             className="ss-input" value={step.direction ?? 'highest'}
             onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 130 }}
           >
             <option value="highest">Highest</option>
             <option value="lowest">Lowest</option>
@@ -393,7 +393,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         {step.kind === 'rank' && step.direction === 'closest_zero' && (
           <label
             title="Off (default): a literal 0 never wins — right for a field like DIV where 0 usually means no line/no data. On: 0 competes and can win — right for a field like MM where 0 is a real 'no movement' reading."
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
           >
             <input
               type="checkbox" checked={step.zero_eligible === true}
@@ -409,7 +409,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             className="ss-input" value={step.direction ?? 'all'}
             onChange={e => onChange({ ...step, direction: e.target.value === 'all' ? null : e.target.value as 'highest' | 'lowest' })}
             title="When more than one pair/group ties at different values, which one to keep"
-            style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 170 }}
           >
             <option value="all">Keep every tied group</option>
             <option value="highest">Keep the highest-tied group</option>
@@ -425,14 +425,14 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
             value={step.tolerance ?? ''}
             onChange={e => onChange({ ...step, tolerance: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 90 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 90 }}
           />
         )}
       </div>
 
       {multiBookFilter && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 22, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>BOOKS</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>BOOKS</span>
           {multiBookFilter.map(b => {
             const selected = step.books?.length ? step.books : ['fanduel']
             const on = selected.includes(b.key)
@@ -461,7 +461,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             aria-label="Sportsbook match requirement"
             className="ss-input" value={step.books_min_count == null ? 'all' : 'atLeast'}
             onChange={e => onChange({ ...step, books_min_count: e.target.value === 'atLeast' ? (step.books?.length ?? 1) : null })}
-            style={{ fontSize: 10, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
+            style={{ fontSize: 12, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
           >
             <option value="all">True for every book picked</option>
             <option value="atLeast">True for at least N picked</option>
@@ -472,7 +472,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               className="ss-input" type="number" min={1} max={(step.books?.length ?? 1) || 1}
               value={step.books_min_count}
               onChange={e => onChange({ ...step, books_min_count: Math.max(1, Number(e.target.value) || 1) })}
-              style={{ fontSize: 10, padding: '4px 5px', width: 44 }}
+              style={{ fontSize: 12, padding: '4px 5px', width: 44 }}
             />
           )}
         </div>
@@ -509,37 +509,37 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
           onPointerDown={e => dragControls?.start(e)}
           style={{ color: 'var(--text-3)', cursor: dragControls ? 'grab' : 'default', flexShrink: 0, touchAction: 'none' }}
         />
-        <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
         <span style={{
-          fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
           color: KIND_COLOR.unless, background: 'var(--surface-3)', border: `1px solid ${KIND_COLOR.unless}`,
         }}>
           UNLESS
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC.unless}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{KIND_DESC.unless}</span>
         <button type="button" onClick={onRemove} aria-label={`Remove unless step ${index + 1}`} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
           <X size={14} />
         </button>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>SEARCH FOR THE EXCEPTION ON</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>SEARCH FOR THE EXCEPTION ON</span>
         <select
           aria-label="Exception search scope"
           className="ss-input" value={step.condition_scope ?? 'team'}
           onChange={e => onChange({ ...step, condition_scope: e.target.value as 'team' | 'game' })}
-          style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 130 }}
         >
           <option value="team">Same team</option>
           <option value="game">Either team</option>
         </select>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em', marginLeft: 8 }}>WHEN FOUND</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em', marginLeft: 8 }}>WHEN FOUND</span>
         <select
           aria-label="Exception result behavior"
           className="ss-input" value={step.unless_mode ?? 'replace'}
           onChange={e => onChange({ ...step, unless_mode: e.target.value as MatrixPipelineStep['unless_mode'] })}
           title="What happens to the normal pool once the exception condition below is found"
-          style={{ fontSize: 11, padding: '5px 6px', width: 190 }}
+          style={{ fontSize: 12, padding: '5px 6px', width: 190 }}
         >
           <option value="replace">Replace with the exception</option>
           <option value="add">Add the exception too</option>
@@ -547,7 +547,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
         </select>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22, fontSize: 10, color: 'var(--text-3)', cursor: 'pointer', userSelect: 'none' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22, fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', userSelect: 'none' }}>
         <input
           type="checkbox" checked={step.uses_anchor === true}
           onChange={e => onChange({ ...step, uses_anchor: e.target.checked })}
@@ -558,12 +558,12 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
 
       {step.uses_anchor === true && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
           <select
             aria-label="Exception anchor category"
             className="ss-input" value={step.category}
             onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
-            style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+            style={{ fontSize: 12, padding: '5px 6px', width: 110 }}
           >
             {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
           </select>
@@ -577,7 +577,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
                 ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
               })
             }}
-            style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
+            style={{ fontSize: 12, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
           >
             {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
           </select>
@@ -593,7 +593,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
               className="ss-input" value={step.recency ?? 'season'}
               onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
               title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
-              style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+              style={{ fontSize: 12, padding: '5px 6px', width: 100 }}
             >
               {recencyOptionsFor(step.category, step.field_key).map(r => (
                 <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
@@ -627,7 +627,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
       )}
 
       <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.05em', marginBottom: 6 }}>IF THIS IS TRUE</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.05em', marginBottom: 6 }}>IF THIS IS TRUE</div>
         <StepList
           steps={step.condition_steps ?? []}
           onChange={condition_steps => onChange({ ...step, condition_steps })}
@@ -637,12 +637,12 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
       </div>
 
       {step.unless_mode === 'suppress' ? (
-        <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>
+        <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
           Highlighting is suppressed entirely for this pool once the condition above is found — nobody gets highlighted.
         </div>
       ) : (
         <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.05em', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.05em', marginBottom: 6 }}>
             {step.unless_mode === 'add' ? 'THEN ALSO HIGHLIGHT' : 'THEN DO THIS INSTEAD'}
           </div>
           <StepList
@@ -712,7 +712,7 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
         onClick={() => (open ? setOpen(false) : openMenu())}
         disabled={disabled}
         style={{
-          display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700,
           color: disabled ? 'var(--text-3)' : 'var(--accent)', background: disabled ? 'var(--surface-2)' : 'var(--accent-dim)',
           border: 'none', borderRadius: 6, padding: '5px 9px', cursor: disabled ? 'not-allowed' : 'pointer',
         }}
@@ -739,8 +739,8 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
               >
-                <span style={{ fontSize: 11, fontWeight: 800, color: KIND_COLOR[kind] }}>{KIND_LABEL[kind]}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC[kind]}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: KIND_COLOR[kind] }}>{KIND_LABEL[kind]}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{KIND_DESC[kind]}</span>
               </button>
             ))}
           </div>
@@ -764,7 +764,7 @@ function StepList({ steps, onChange, allowUnless, hasAnchor, showHeader = true, 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-        {showHeader && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Steps ({steps.length})</span>}
+        {showHeader && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>Steps ({steps.length})</span>}
         <div style={{ marginLeft: showHeader ? 'auto' : 0 }}>
           <AddStepMenu
             disabled={steps.length >= MAX_PIPELINE_STEPS} allowUnless={allowUnless}
@@ -810,7 +810,7 @@ function StepListItem({ step, index, hasAnchor, showJoin, onChange, onRemove }: 
     <Reorder.Item value={step} as="div" dragListener={false} dragControls={dragControls} style={{ listStyle: 'none' }}>
       {showJoin && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '1px 0 7px 14px' }}>
-          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--text-3)' }}>JOIN</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)' }}>JOIN</span>
           <div role="group" aria-label="Join this filter with the previous filter" style={{ display: 'inline-flex', padding: 2, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)' }}>
             {(['and', 'or'] as const).map(mode => {
               const active = (step.join_mode ?? 'and') === mode
@@ -826,8 +826,8 @@ function StepListItem({ step, index, hasAnchor, showJoin, onChange, onRemove }: 
                     padding: '5px 10px',
                     background: active ? (mode === 'or' ? 'rgba(67, 201, 255, 0.15)' : 'rgba(168, 255, 58, 0.14)') : 'transparent',
                     color: active ? (mode === 'or' ? '#68d7ff' : 'var(--accent)') : 'var(--text-3)',
-                    fontSize: 10,
-                    fontWeight: 900,
+                    fontSize: 12,
+                    fontWeight: 700,
                     cursor: 'pointer',
                   }}
                 >
@@ -836,7 +836,7 @@ function StepListItem({ step, index, hasAnchor, showJoin, onChange, onRemove }: 
               )
             })}
           </div>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
             {step.join_mode === 'or' ? 'either condition can qualify' : 'both conditions must qualify'}
           </span>
         </div>

@@ -84,20 +84,20 @@ export async function RightSidebar() {
       {trending.length > 0 && (
         <div className="ss-feed-rail-card ss-trending-card p-4">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={14} className="text-green-400" />
-            <span className="text-sm font-black text-white">Trending</span>
+            <TrendingUp size={14} className="text-[var(--green)]" />
+            <span className="text-sm font-semibold text-[var(--text-1)]">Trending</span>
           </div>
           <div className="ss-trending-list space-y-1">
             {trending.map((t, i) => (
               <Link key={t.tag} href={`/hashtag/${t.tag.toLowerCase()}`}
                 className="ss-trending-item flex items-center justify-between px-2 py-2 rounded-lg transition-colors group">
                 <div>
-                  <p className="text-xs text-zinc-500 group-hover:text-zinc-400">#{i + 1} · Trending</p>
-                  <p className="text-sm font-bold text-white group-hover:text-green-400 transition-colors">#{t.tag}</p>
-                  <p className="text-xs text-zinc-600">{formatPostCount(t.count)} posts</p>
+                  <p className="text-xs text-[var(--text-3)] group-hover:text-[var(--text-2)]">#{i + 1} · Trending</p>
+                  <p className="text-sm font-bold text-[var(--text-1)] group-hover:text-[var(--green)] transition-colors">#{t.tag}</p>
+                  <p className="text-xs text-[var(--text-3)]">{formatPostCount(t.count)} posts</p>
                 </div>
                 {t.hot && (
-                  <span className="text-[10px] font-black text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded-full">HOT</span>
+                  <span className="text-[12px] font-semibold text-[var(--gold)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] px-1.5 py-0.5 rounded-full">HOT</span>
                 )}
               </Link>
             ))}
@@ -109,11 +109,11 @@ export async function RightSidebar() {
       {suggested.length > 0 && (
         <div className="ss-feed-rail-card ss-follow-card p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Users size={14} className="text-blue-400" />
-            <span className="text-sm font-black text-white">Who to follow</span>
+            <Users size={14} className="text-[var(--blue)]" />
+            <span className="text-sm font-semibold text-[var(--text-1)]">Who to follow</span>
           </div>
           <SuggestedUsers users={suggested} currentUserId={user?.id ?? null} />
-          <Link href="/creators" className="block text-xs text-green-400 hover:underline mt-3 text-center">
+          <Link href="/creators" className="block text-xs text-[var(--green)] hover:underline mt-3 text-center">
             Show more
           </Link>
         </div>
@@ -121,12 +121,12 @@ export async function RightSidebar() {
 
       {/* Footer */}
       <div className="px-2">
-        <p className="text-[10px] text-zinc-700 leading-relaxed">
-          SlipSurge · <Link href="/about" className="hover:text-zinc-500">About</Link>{' '}·{' '}
-          <Link href="/settings/privacy" className="hover:text-zinc-500">Privacy</Link>{' '}·{' '}
-          <Link href="/settings" className="hover:text-zinc-500">Settings</Link>
+        <p className="text-[12px] text-[var(--text-3)] leading-relaxed">
+          SlipSurge · <Link href="/about" className="hover:text-[var(--text-3)]">About</Link>{' '}·{' '}
+          <Link href="/settings/privacy" className="hover:text-[var(--text-3)]">Privacy</Link>{' '}·{' '}
+          <Link href="/settings" className="hover:text-[var(--text-3)]">Settings</Link>
         </p>
-        <p className="text-[10px] text-zinc-600 mt-1">© 2026 SlipSurge</p>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">© 2026 SlipSurge</p>
       </div>
     </aside>
   )

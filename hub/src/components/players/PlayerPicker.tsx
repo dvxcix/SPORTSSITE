@@ -59,7 +59,7 @@ export function PlayerPicker({ options, value, onChange, placeholder }: {
         ) : (
           <span style={{ flex: 1, textAlign: 'left', color: 'var(--text-3)' }}>{placeholder}</span>
         )}
-        <span style={{ color: 'var(--text-3)', fontSize: 10 }}>▾</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>▾</span>
       </button>
 
       {open && (
@@ -100,7 +100,7 @@ export function PlayerPicker({ options, value, onChange, placeholder }: {
             >
               <PlayerAvatar headshot={mlbHeadshot(o.id)} teamLogo={getTeamLogoUrl(o.teamAbbr)} teamAbbr={o.teamAbbr} name={o.name} size={24} />
               <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-              <span style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0 }}>{o.count}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{o.count}</span>
             </div>
           ))}
           {filtered.length === 0 && <div style={{ padding: '10px', fontSize: 12, color: 'var(--text-3)' }}>No matches.</div>}

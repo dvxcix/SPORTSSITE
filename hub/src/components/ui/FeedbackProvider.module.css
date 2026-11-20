@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--layer-modal);
-  background: rgba(2, 4, 8, 0.78);
+  background: var(--overlay);
   backdrop-filter: blur(10px);
   animation: feedbackFade 140ms ease-out;
 }
@@ -20,11 +20,11 @@
   transform: translate(-50%, -50%);
   overflow: auto;
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-2));
-  border-radius: 20px;
+  border-radius: 14px;
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 42%),
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent-fill) 10%, transparent), transparent 42%),
     color-mix(in srgb, var(--surface) 96%, black);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62), inset 0 1px rgba(255, 255, 255, 0.035);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62), inset 0 1px var(--text-3);
   outline: none;
   animation: feedbackEnter 180ms cubic-bezier(.2, .8, .2, 1);
 }
@@ -42,7 +42,7 @@
 }
 
 .dialogCopy { min-width: 0; }
-.title { color: var(--text-1); font-size: 17px; font-weight: 850; letter-spacing: -0.02em; }
+.title { color: var(--text-1); font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
 .message { margin-top: 5px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
 
 .actions {
@@ -62,8 +62,8 @@
 
 .promptForm label {
   color: var(--text-2);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -95,10 +95,10 @@
   padding: 0 15px;
   border: 1px solid rgba(255, 77, 106, 0.45);
   border-radius: 10px;
-  color: white;
-  background: linear-gradient(135deg, #ff4d6a, #c92747);
+  color: var(--text-1);
+  background: linear-gradient(135deg, var(--red), #c92747);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   transition: transform 120ms ease, filter 120ms ease;
 }
 
@@ -135,13 +135,13 @@
 .toastCopy span { color: var(--text-2); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .dismiss { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; color: var(--text-3); }
 .dismiss:hover { color: var(--text-1); background: var(--surface-3); }
-.success { color: #55e39b; border-color: rgba(85, 227, 155, 0.28); }
-.warning { color: #ffc857; border-color: rgba(255, 200, 87, 0.3); }
-.error { color: #ff6b7f; border-color: rgba(255, 107, 127, 0.32); }
+.success { color: var(--green); border-color: rgba(85, 227, 155, 0.28); }
+.warning { color: var(--gold); border-color: rgba(255, 200, 87, 0.3); }
+.error { color: var(--red); border-color: rgba(255, 107, 127, 0.32); }
 .default { color: var(--accent); }
 
 @media (max-width: 767px) {
-  .dialog { padding: 18px; border-radius: 18px; }
+  .dialog { padding: 18px; border-radius: 14px; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; }
   .actions > * { justify-content: center; width: 100%; }
   .toastRegion { right: 14px; bottom: calc(var(--mobile-dock-clearance) + 12px); }

@@ -525,10 +525,10 @@ export function OnboardingFlow({
                         <Loader2
                           size={22}
                           className="animate-spin"
-                          color="#fff"
+                          color="var(--text-1)"
                         />
                       ) : (
-                        <Upload size={22} color="#fff" />
+                        <Upload size={22} color="var(--text-1)" />
                       )}
                     </div>
                   </button>

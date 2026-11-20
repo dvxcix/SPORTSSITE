@@ -5,8 +5,8 @@ import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { EmojiText } from '@/components/social/EmojiText'
 
-const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 font-mono'
-const labelClass = 'block text-xs font-bold text-zinc-400 mb-1.5'
+const inputClass = 'w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] font-mono'
+const labelClass = 'block text-xs font-bold text-[var(--text-2)] mb-1.5'
 
 type Channel = { id: string; name: string }
 
@@ -48,7 +48,7 @@ function ImageField({ label, value, onChange }: { label: string; value: string; 
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="shrink-0 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-lg border border-zinc-700"
+          className="shrink-0 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] text-xs font-bold px-3 py-2 rounded-lg border border-[var(--border-2)]"
         >
           {uploading ? '…' : 'Upload'}
         </button>
@@ -114,7 +114,7 @@ export function ComposeEmbedForm() {
   return (
     <div className="grid lg:grid-cols-2 gap-6">
       <div className="space-y-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
           <div>
             <label className={labelClass}>Channel</label>
             <select value={channelId} onChange={e => setChannelId(e.target.value)} className={inputClass}>
@@ -128,8 +128,8 @@ export function ComposeEmbedForm() {
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Embed</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">Embed</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>Header / author name</label>
@@ -137,7 +137,7 @@ export function ComposeEmbedForm() {
             </div>
             <div>
               <label className={labelClass}>Accent color</label>
-              <input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-[38px] w-full bg-zinc-800 border border-zinc-700 rounded-lg cursor-pointer" />
+              <input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-[38px] w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg cursor-pointer" />
             </div>
           </div>
           <ImageField label="Header icon" value={authorIconUrl} onChange={setAuthorIconUrl} />
@@ -168,20 +168,20 @@ export function ComposeEmbedForm() {
           <button
             onClick={send}
             disabled={sending || !channelId}
-            className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-5 py-2.5 rounded-xl text-sm transition-colors"
+            className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors"
           >
             {sending ? 'Posting…' : 'Post to Discord'}
           </button>
-          {result && <span className={`text-xs ${result.startsWith('Error') ? 'text-red-400' : 'text-zinc-400'}`}>{result}</span>}
+          {result && <span className={`text-xs ${result.startsWith('Error') ? 'text-[var(--red)]' : 'text-[var(--text-2)]'}`}>{result}</span>}
         </div>
       </div>
 
       <div className="lg:sticky lg:top-6 self-start">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Preview</p>
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">Preview</p>
         <div className="bg-[#313338] rounded-lg p-4 space-y-2">
           {content && <p className="text-[#dbdee1] text-sm whitespace-pre-wrap break-words"><EmojiText text={content} /></p>}
           {hasEmbed && (
-            <div className="flex rounded overflow-hidden max-w-[440px]" style={{ background: '#2b2d31' }}>
+            <div className="flex rounded overflow-hidden max-w-[440px]" style={{ background: 'var(--surface-2)' }}>
               <div className="w-1 shrink-0" style={{ background: color }} />
               <div className="p-3 min-w-0 flex-1">
                 {authorName && (
@@ -211,7 +211,7 @@ export function ComposeEmbedForm() {
               </div>
             </div>
           )}
-          {!content && !hasEmbed && <p className="text-zinc-600 text-sm italic">Nothing to preview yet</p>}
+          {!content && !hasEmbed && <p className="text-[var(--text-3)] text-sm italic">Nothing to preview yet</p>}
         </div>
       </div>
     </div>

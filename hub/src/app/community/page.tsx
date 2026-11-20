@@ -51,7 +51,7 @@ export default async function CommunityPage() {
             </Link>
           ))}
         </div>
-      ) : <ProductPanel padded className="text-center"><Users size={24} className="mx-auto text-[var(--text-3)]" /><p className="mt-3 text-sm font-black text-[var(--text-1)]">Communities are being prepared</p></ProductPanel>}
+      ) : <ProductPanel padded className="text-center"><Users size={24} className="mx-auto text-[var(--text-3)]" /><p className="mt-3 text-sm font-semibold text-[var(--text-1)]">Communities are being prepared</p></ProductPanel>}
 
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,.8fr)]">
         <section className="min-w-0">

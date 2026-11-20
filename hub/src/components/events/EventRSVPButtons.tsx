@@ -34,13 +34,13 @@ export function EventRSVPButtons({ userId, eventId, initialRsvp }: {
   return (
     <div className="flex flex-wrap gap-2">
       {([
-        { s: 'going' as const, label: "I'm Going", icon: Check, activeColor: 'bg-green-500 text-black' },
-        { s: 'interested' as const, label: 'Interested', icon: Star, activeColor: 'bg-yellow-500 text-black' },
-        { s: 'not_going' as const, label: "Can't Go", icon: X, activeColor: 'bg-zinc-600 text-white' },
+        { s: 'going' as const, label: "I'm Going", icon: Check, activeColor: 'bg-[var(--accent-fill)] text-[var(--accent-fg)]' },
+        { s: 'interested' as const, label: 'Interested', icon: Star, activeColor: 'bg-yellow-500 text-[var(--accent-fg)]' },
+        { s: 'not_going' as const, label: "Can't Go", icon: X, activeColor: 'bg-[var(--surface-3)] text-[var(--text-1)]' },
       ]).map(({ s, label, icon: Icon, activeColor }) => (
         <button key={s} type="button" onClick={() => select(s)} disabled={loading} aria-pressed={rsvp === s}
           className={`flex min-h-11 min-w-[100px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
-            rsvp === s ? `${activeColor} border-transparent` : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
+            rsvp === s ? `${activeColor} border-transparent` : 'border-[var(--border-2)] text-[var(--text-2)] hover:border-[var(--border-2)] hover:text-[var(--text-1)]'
           }`}>
           <Icon size={13} /> {label}
         </button>

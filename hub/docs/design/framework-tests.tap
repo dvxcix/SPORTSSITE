@@ -1,0 +1,14 @@
+✔ dark text and action roles meet normal-text contrast (0.9636ms)
+✔ light text and action roles meet normal-text contrast (0.3031ms)
+✔ heatmaps use the shared theme surface and text roles at both extremes (0.3776ms)
+✔ filled primary controls keep readable labels across feature stylesheets (222.4862ms)
+✔ private review cannot be enabled for production or Vercel (0.6678ms)
+✔ illustrative research fixtures satisfy the real board contracts (22.7136ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 893.2161

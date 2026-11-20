@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -451,6 +452,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         </button>
       )}
 
+      <ThemeToggle />
       {/* Search */}
       <form ref={searchRef} onSubmit={handleSearch} className="ss-topbar-search">
         <Search size={14} style={{
@@ -499,7 +501,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     className="notif-dropdown-item">
                     <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={26} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{t.name}</span>
-                    {t.gamePk && <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--red)' }}>LIVE</span>}
+                    {t.gamePk && <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>LIVE</span>}
                   </button>
                 ))}
                 {mlbAccess && quickResults.players.map(p => (
@@ -509,7 +511,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null} name={p.name} size={26} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{[p.position, p.teamName].filter(Boolean).join(' · ')}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{[p.position, p.teamName].filter(Boolean).join(' · ')}</div>
                     </div>
                   </button>
                 ))}
@@ -519,7 +521,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     className="notif-dropdown-item">
                     <SafeImage src={t.team_logo_espn} alt={t.team_abbr} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{t.team_name}</span>
-                    <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--text-3)' }}>NFL</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>NFL</span>
                   </button>
                 ))}
                 {quickResults.nflPlayers.map(p => (
@@ -529,7 +531,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <SafeImage src={p.headshot} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.display_name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>{p.position}</span>
                         {p.position && p.latest_team && <span>·</span>}
                         {p.latest_team && <NflTeamLogo abbr={p.latest_team} logoUrl={p.team_logo_espn} size={12} />}
@@ -542,14 +544,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 44, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }} className="notif-dropdown-item">
                     <TeamLogo logo={team.logo} name={team.name} size={28}/>
                     <span style={{ minWidth: 0, flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{team.name}</span>
-                    <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)' }}>NBA</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>NBA</span>
                   </button>
                 ))}
                 {nbaAccess && quickResults.nbaPlayers.map(player => (
                   <button type="button" key={`nba-player-${player.id}`} onClick={() => goTo(`/nba/players/${player.id}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }} className="notif-dropdown-item">
                     <PlayerAvatar playerId={player.id} sport="nba" teamAbbr={player.teamAbbr} headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={30}/>
-                    <span style={{ minWidth: 0, flex: 1 }}><span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span><span style={{ fontSize: 10, color: 'var(--text-3)' }}>{[player.position, player.teamName].filter(Boolean).join(' · ')}</span></span>
+                    <span style={{ minWidth: 0, flex: 1 }}><span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span><span style={{ fontSize: 12, color: 'var(--text-3)' }}>{[player.position, player.teamName].filter(Boolean).join(' · ')}</span></span>
                   </button>
                 ))}
                 {visibleQuickUsers.map(u => (
@@ -558,14 +560,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     className="notif-dropdown-item">
                     <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={26} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{u.display_name || u.username}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{u.username}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>@{u.username}</span>
                   </button>
                 ))}
                 {visibleQuickPosts.map(p => (
                   <button type="button" key={`post-${p.id}`} onClick={() => goTo(`/posts/${p.id}`)}
                     style={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>@{p.author?.username}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>@{p.author?.username}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><EmojiText text={p.content || ''} /></span>
                   </button>
                 ))}
@@ -596,8 +598,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 {visibleUnread > 0 && (
                   <span style={{
                     position: 'absolute', top: -4, right: -4,
-                    background: 'var(--red)', color: '#fff',
-                    fontSize: 9, fontWeight: 900, borderRadius: 99,
+                    background: 'var(--red-fill)', color: 'var(--on-status)',
+                    fontSize: 11, fontWeight: 700, borderRadius: 99,
                     padding: '1px 4px', minWidth: 16, textAlign: 'center',
                     border: '2px solid var(--surface)',
                   }}>
@@ -769,8 +771,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             </Link>
             <Link href="/auth/register" style={{
               padding: '7px 14px', borderRadius: 8,
-              fontSize: 12, fontWeight: 800, color: 'var(--accent-fg)',
-              background: 'var(--accent)', textDecoration: 'none',
+              fontSize: 12, fontWeight: 700, color: 'var(--accent-fg)',
+              background: 'var(--accent-fill)', textDecoration: 'none',
               transition: 'background 130ms',
             }}
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = '#C8FF6A')}

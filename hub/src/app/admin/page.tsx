@@ -131,16 +131,16 @@ export default async function AdminDashboard() {
         {stats.map(stat => <AdminStatCard key={stat.label} {...stat} />)}
       </section>
 
-      <section className="relative overflow-hidden rounded-3xl border border-[color-mix(in_srgb,var(--accent)_22%,var(--border))] bg-[radial-gradient(circle_at_10%_0,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_35rem),var(--surface-raised)] p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" aria-labelledby="operations-heading">
+      <section className="relative overflow-hidden rounded-3xl border border-[color-mix(in_srgb,var(--accent)_22%,var(--border))] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" aria-labelledby="operations-heading">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70" />
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--accent)]">Operational inbox</p>
-            <h2 id="operations-heading" className="mt-1 text-lg font-black text-[var(--text-1)]">What needs attention</h2>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Operational inbox</p>
+            <h2 id="operations-heading" className="mt-1 text-lg font-semibold text-[var(--text-1)]">What needs attention</h2>
             <p className="mt-1 text-xs text-[var(--text-3)]">Live queues from moderation, creator operations, privacy, delivery, and production jobs.</p>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-2)]">
-            <span className={`size-2 rounded-full ${actionTotal > 0 ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,.8)]' : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]'}`} />
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--text-2)]">
+            <span className={`size-2 rounded-full ${actionTotal > 0 ? 'bg-[var(--gold-fill)] shadow-[0_0_10px_rgba(251,191,36,.8)]' : 'bg-[var(--green-fill)] shadow-[0_0_10px_rgba(52,211,153,.8)]'}`} />
             {actionTotal > 0 ? `${actionTotal} open signals` : 'All clear'}
           </span>
         </div>
@@ -152,8 +152,8 @@ export default async function AdminDashboard() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
         <section className={sectionClass} aria-labelledby="quick-actions-heading">
           <div className="border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">Workspaces</p>
-            <h2 id="quick-actions-heading" className="mt-1 text-base font-black text-[var(--text-primary)]">Run the platform</h2>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Workspaces</p>
+            <h2 id="quick-actions-heading" className="mt-1 text-base font-semibold text-[var(--text-primary)]">Run the platform</h2>
           </div>
           <div className="grid gap-px bg-[var(--border-subtle)] sm:grid-cols-2">
             <WorkspaceLink href="/admin/users" icon={Users} label="Members" detail="Accounts, access, tiers, and restrictions" />
@@ -168,7 +168,7 @@ export default async function AdminDashboard() {
 
         <section className={sectionClass} aria-labelledby="pipeline-snapshot-heading">
           <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">Production</p><h2 id="pipeline-snapshot-heading" className="mt-1 text-base font-black text-[var(--text-primary)]">Pipeline snapshot</h2></div>
+            <div><p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Production</p><h2 id="pipeline-snapshot-heading" className="mt-1 text-base font-semibold text-[var(--text-primary)]">Pipeline snapshot</h2></div>
             <Link href="/admin/pipeline-health" className="text-xs font-extrabold text-[var(--accent-primary)] hover:underline">Details</Link>
           </div>
           <div className="divide-y divide-[var(--border-subtle)]">
@@ -176,11 +176,11 @@ export default async function AdminDashboard() {
               const healthy = state === 'succeeded' || state === 'running'
               return (
                 <div key={pipeline.name} className="flex min-h-14 items-center gap-3 px-4 py-3 sm:px-5">
-                  <span className={`grid size-8 shrink-0 place-items-center rounded-xl ${healthy ? 'bg-emerald-400/10 text-emerald-400' : state === 'unknown' ? 'bg-zinc-500/10 text-zinc-500' : 'bg-amber-400/10 text-amber-400'}`}>
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-xl ${healthy ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : state === 'unknown' ? 'bg-[color-mix(in_srgb,var(--surface-3)_10%,transparent)] text-[var(--text-3)]' : 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]'}`}>
                     {healthy ? <CheckCircle2 size={15} aria-hidden="true" /> : <Activity size={15} aria-hidden="true" />}
                   </span>
-                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-[var(--text-1)]">{pipeline.label}</p><p className="mt-0.5 truncate text-[10px] text-[var(--text-3)]">{pipeline.area} · {pipeline.schedule}</p></div>
-                  <div className="shrink-0 text-right"><p className={`text-[10px] font-black uppercase ${healthy ? 'text-emerald-400' : 'text-amber-400'}`}>{state}</p><p className="mt-0.5 text-[9px] text-[var(--text-3)]">{run ? relativeTime(run.started_at) : 'No signal'}</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-[var(--text-1)]">{pipeline.label}</p><p className="mt-0.5 truncate text-[12px] text-[var(--text-3)]">{pipeline.area} · {pipeline.schedule}</p></div>
+                  <div className="shrink-0 text-right"><p className={`text-[12px] font-semibold uppercase ${healthy ? 'text-[var(--green)]' : 'text-[var(--gold)]'}`}>{state}</p><p className="mt-0.5 text-[11px] text-[var(--text-3)]">{run ? relativeTime(run.started_at) : 'No signal'}</p></div>
                 </div>
               )
             })}
@@ -196,13 +196,13 @@ export default async function AdminDashboard() {
               const name = user.display_name || user.username || 'Unnamed user'
               return (
                 <div key={user.id} className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)] sm:px-5">
-                  <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--surface-overlay)] text-xs font-black text-[var(--text-primary)]">
+                  <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--surface-overlay)] text-xs font-semibold text-[var(--text-primary)]">
                     {user.avatar_url ? <Image src={user.avatar_url} alt="" fill sizes="40px" className="object-cover" unoptimized /> : name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-[var(--text-primary)]">{name}</p><p className="truncate text-xs text-[var(--text-muted)]">@{user.username || 'pending'}</p></div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {user.account_type && user.account_type !== 'user' ? <Badge variant={user.account_type === 'admin' ? 'danger' : 'popular'}>{user.account_type}</Badge> : null}
-                    <time className="text-[10px] tabular-nums text-[var(--text-muted)]">{relativeTime(user.created_at)}</time>
+                    <time className="text-[12px] tabular-nums text-[var(--text-muted)]">{relativeTime(user.created_at)}</time>
                   </div>
                 </div>
               )
@@ -215,7 +215,7 @@ export default async function AdminDashboard() {
           <div className="divide-y divide-[var(--border-subtle)]">
             {recentPosts.length > 0 ? recentPosts.map(post => (
               <article key={post.id} className="px-4 py-3 transition-colors hover:bg-[var(--surface-hover)] sm:px-5">
-                <div className="mb-1 flex items-center justify-between gap-3"><p className="truncate text-xs font-bold text-[var(--accent-primary)]">@{post.author?.username || 'unknown'}</p><time className="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{relativeTime(post.created_at)}</time></div>
+                <div className="mb-1 flex items-center justify-between gap-3"><p className="truncate text-xs font-bold text-[var(--accent-primary)]">@{post.author?.username || 'unknown'}</p><time className="shrink-0 text-[12px] tabular-nums text-[var(--text-muted)]">{relativeTime(post.created_at)}</time></div>
                 <p className="line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]"><EmojiText text={post.content || 'Post has no text content.'} /></p>
               </article>
             )) : <EmptyRow label="No recent posts" />}
@@ -228,11 +228,11 @@ export default async function AdminDashboard() {
 
 function QueueCard({ icon: Icon, label, value, detail, href, tone }: { icon: LucideIcon; label: string; value: number; detail: string; href: string; tone: 'warning' | 'danger' }) {
   const active = value > 0
-  const toneClass = !active ? 'text-emerald-400 bg-emerald-400/10' : tone === 'danger' ? 'text-red-400 bg-red-400/10' : 'text-amber-400 bg-amber-400/10'
+  const toneClass = !active ? 'text-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)]' : tone === 'danger' ? 'text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'text-[var(--gold)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)]'
   return (
-    <Link href={href} className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[var(--border)] bg-black/15 p-3.5 transition hover:-translate-y-0.5 hover:border-[var(--border-2)] hover:bg-[var(--surface-2)] sm:p-4">
+    <Link href={href} className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition hover:-translate-y-0.5 hover:border-[var(--border-2)] hover:bg-[var(--surface-2)] sm:p-4">
       <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneClass}`}><Icon size={17} aria-hidden="true" /></span>
-      <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-xs text-[var(--text-1)] sm:text-sm">{label}</strong><b className={`text-xl tabular-nums ${active ? tone === 'danger' ? 'text-red-400' : 'text-amber-400' : 'text-emerald-400'}`}>{value}</b></span><span className="mt-1 block text-[10px] leading-4 text-[var(--text-3)] sm:text-xs">{active ? detail : 'Queue is clear'}</span></span>
+      <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-xs text-[var(--text-1)] sm:text-sm">{label}</strong><b className={`text-xl tabular-nums ${active ? tone === 'danger' ? 'text-[var(--red)]' : 'text-[var(--gold)]' : 'text-[var(--green)]'}`}>{value}</b></span><span className="mt-1 block text-[12px] leading-4 text-[var(--text-3)] sm:text-xs">{active ? detail : 'Queue is clear'}</span></span>
       <ArrowRight size={14} aria-hidden="true" className="shrink-0 text-[var(--text-3)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" />
     </Link>
   )
@@ -251,7 +251,7 @@ function WorkspaceLink({ href, icon: Icon, label, detail }: { href: string; icon
 function SectionHeader({ title, href }: { title: string; href: string }) {
   return (
     <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3 sm:px-5">
-      <h2 className="text-sm font-black text-[var(--text-primary)]">{title}</h2>
+      <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
       <Link href={href} className="group flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-bold text-[var(--accent-primary)] transition-colors hover:bg-[var(--accent-muted)]">View all <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" /></Link>
     </div>
   )

@@ -32,7 +32,7 @@ export const BATTER_SCOPES = [
 function PitchTypeCell({ pitchType }: { pitchType: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-fill)', flexShrink: 0 }} />
       {pitchLabel(pitchType)}
     </span>
   )
@@ -190,19 +190,19 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>
             PITCH MIX — {mix.length} pitch{mix.length === 1 ? '' : 'es'} tracked
           </span>
           {pinnedPitches.size > 0 && (
             <span
               onClick={() => setPinnedPitches(new Set())}
-              style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+              style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
             >
               BATTERS FILTERED TO {mixLabel(pinnedPitches)} — CLEAR
             </span>
           )}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 8 }}>Click a pitch row to pin it — the batter table below drills down to just that pitch (or pitches).</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Click a pitch row to pin it — the batter table below drills down to just that pitch (or pitches).</div>
         <div style={{ overflowX: 'auto', marginBottom: 20 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
@@ -240,7 +240,7 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Zone color by:</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Zone color by:</span>
           {ZONE_METRICS.map(m => <ToggleBtn key={m.key} active={zoneMetric === m.key} onClick={() => setZoneMetric(m.key)}>{m.label}</ToggleBtn>)}
         </div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -310,8 +310,8 @@ function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, filter
       <tr style={{ borderTop: '1px solid var(--border)', cursor: 'pointer', opacity: loaded ? 1 : 0.5 }} onClick={onToggle}>
         <td style={{ padding: '6px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'var(--text-3)', width: 14, flexShrink: 0 }}>{expanded ? '▾' : '▸'}</span>
-            <span style={{ fontSize: 9, color: 'var(--text-3)', width: 12, flexShrink: 0 }}>{player.batting_order}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', width: 14, flexShrink: 0 }}>{expanded ? '▾' : '▸'}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', width: 12, flexShrink: 0 }}>{player.batting_order}</span>
             <HandBadge hand={player.bats} />
             <PlayerLink mlbId={player.mlb_id} name={player.name} teamAbbr={player.team} size={22} />
           </div>
@@ -334,11 +334,11 @@ function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, filter
             ) : (
               <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>ZONE</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>ZONE</div>
                   <ZoneGrid rows={filteredRows} metric={zoneMetric} dir={zoneDir} cellSize={44} />
                 </div>
                 <div style={{ flex: 1, minWidth: 320 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>
                     {filteredRows.length} INDIVIDUAL PITCH{filteredRows.length === 1 ? '' : 'ES'}
                   </div>
                   <PitchList rows={filteredRows} />

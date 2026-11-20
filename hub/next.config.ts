@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { contentSecurityPolicy } from "@whop/elements";
+import { withPrivateDesignReview } from './review/config';
 
 const privateRoutes = [
   '/the-paint/:path*',
@@ -125,4 +126,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPrivateDesignReview(nextConfig);

@@ -7,15 +7,15 @@ function InfieldDetail({ secondary }: { secondary: string }) {
   return (
     <>
       <path d={SAND_DIAMOND} fill={secondary} fillOpacity={0.8} stroke={secondary} strokeOpacity={1} strokeWidth={0.75} />
-      <g fill="none" stroke="#fff" strokeWidth={0.75} opacity={0.85}>
-        <path d="M122.5,174.7c-1.5,1.5-1.5,3.9,0,5.4s3.9,1.5,5.4,0c1.5-1.5,1.5-3.9,0-5.4C126.5,173.2,124,173.2,122.5,174.7z" fill="#fff" />
-        <path d="M123.2,176.6h4v1.6h-4V176.6z" fill="#fff" />
+      <g fill="none" stroke="var(--text-1)" strokeWidth={0.75} opacity={0.85}>
+        <path d="M122.5,174.7c-1.5,1.5-1.5,3.9,0,5.4s3.9,1.5,5.4,0c1.5-1.5,1.5-3.9,0-5.4C126.5,173.2,124,173.2,122.5,174.7z" fill="var(--text-1)" />
+        <path d="M123.2,176.6h4v1.6h-4V176.6z" fill="var(--text-1)" />
         <path d="M125.2,203.2l-97.1-97.1" />
         <path d="M125.2,203.2l97.1-97.2" />
-        <rect x="99.2" y="175.1" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -95.3473 122.8833)" fill="#fff" />
-        <rect x="148.1" y="175.2" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -81.1078 157.4629)" fill="#fff" />
-        <rect x="123.7" y="148.6" width="3" height="3" transform="matrix(0.707 -0.7073 0.7073 0.707 -69.4796 132.5406)" fill="#fff" />
-        <polygon points="126.7,201.8 125.2,203.4 123.7,201.8 123.7,200.3 126.7,200.3" fill="#fff" />
+        <rect x="99.2" y="175.1" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -95.3473 122.8833)" fill="var(--surface-2)" />
+        <rect x="148.1" y="175.2" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -81.1078 157.4629)" fill="var(--surface-2)" />
+        <rect x="123.7" y="148.6" width="3" height="3" transform="matrix(0.707 -0.7073 0.7073 0.707 -69.4796 132.5406)" fill="var(--surface-2)" />
+        <polygon points="126.7,201.8 125.2,203.4 123.7,201.8 123.7,200.3 126.7,200.3" fill="var(--text-1)" />
       </g>
     </>
   )

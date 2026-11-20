@@ -40,7 +40,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
-          'fixed inset-0 z-[calc(var(--layer-popover)-1)] bg-black/70 backdrop-blur-sm transition-opacity lg:hidden',
+          'fixed inset-0 z-[calc(var(--layer-popover)-1)] bg-[var(--overlay)] backdrop-blur-sm transition-opacity lg:hidden',
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       />
@@ -98,7 +98,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-semibold">{group.label}</span>
-                      <span className="mt-0.5 block truncate text-[11px] font-normal text-[var(--text-2)]">{group.description}</span>
+                      <span className="mt-0.5 block truncate text-[12px] font-normal text-[var(--text-2)]">{group.description}</span>
                     </span>
                     <ChevronDown size={14} aria-hidden="true" className={cn('shrink-0 transition-transform', !isOpen && '-rotate-90')} />
                   </button>
@@ -121,13 +121,13 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                                 : 'border border-transparent text-[var(--text-2)] hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--text-1)]',
                             )}
                           >
-                            {active ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--accent)]" /> : null}
+                            {active ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--accent-fill)]" /> : null}
                             <span className={cn('grid size-8 shrink-0 place-items-center rounded-lg', active ? 'bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]' : 'bg-[var(--surface-3)] text-[var(--text-3)] group-hover/link:text-[var(--accent)]')}>
                               <Icon size={15} aria-hidden="true" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-xs font-semibold">{link.label}</span>
-                              <span className="mt-0.5 block truncate text-[11px] text-[var(--text-2)]">{link.description}</span>
+                              <span className="mt-0.5 block truncate text-[12px] text-[var(--text-2)]">{link.description}</span>
                             </span>
                           </Link>
                         )
@@ -141,7 +141,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
               <div className="rounded-2xl border border-dashed border-[var(--border-2)] px-4 py-10 text-center">
                 <Search size={18} aria-hidden="true" className="mx-auto mb-2 text-[var(--text-3)]" />
                 <p className="text-xs font-bold text-[var(--text-2)]">No tools found</p>
-                <p className="mt-1 text-[10px] text-[var(--text-3)]">Try a page name or task.</p>
+                <p className="mt-1 text-[12px] text-[var(--text-3)]">Try a page name or task.</p>
               </div>
             ) : null}
           </div>

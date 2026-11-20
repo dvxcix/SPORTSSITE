@@ -20,26 +20,26 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   return (
-    <article className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-all">
+    <article className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--border-2)] transition-all">
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-zinc-700 shrink-0 flex items-center justify-center text-white font-bold text-sm">
+        <div className="w-10 h-10 rounded-full bg-[var(--surface-3)] shrink-0 flex items-center justify-center text-[var(--text-1)] font-bold text-sm">
           {post.author.name[0]}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-white text-sm">{post.author.name}</span>
-            {post.author.verified && <span className="text-green-400 text-xs">✓</span>}
+            <span className="font-bold text-[var(--text-1)] text-sm">{post.author.name}</span>
+            {post.author.verified && <span className="text-[var(--green)] text-xs">✓</span>}
             {post.author.tier === 'pro' && <Badge variant="pick">PRO</Badge>}
-            <span className="text-zinc-500 text-xs">@{post.author.handle}</span>
-            <span className="text-zinc-600 text-xs ml-auto">{post.createdAt}</span>
+            <span className="text-[var(--text-3)] text-xs">@{post.author.handle}</span>
+            <span className="text-[var(--text-3)] text-xs ml-auto">{post.createdAt}</span>
           </div>
 
-          <p className="mt-1.5 text-sm text-zinc-200 leading-relaxed"><LinkifiedText text={post.content} /></p>
+          <p className="mt-1.5 text-sm text-[var(--text-1)] leading-relaxed"><LinkifiedText text={post.content} /></p>
 
           {post.pick && (
             <div className={`mt-3 rounded-lg border p-3 ${
-              post.pick.result === 'win' ? 'border-green-500/30 bg-green-500/5' :
-              post.pick.result === 'loss' ? 'border-red-500/30 bg-red-500/5' :
+              post.pick.result === 'win' ? 'border-[color-mix(in_srgb,var(--green)_30%,transparent)] bg-[color-mix(in_srgb,var(--green)_5%,transparent)]' :
+              post.pick.result === 'loss' ? 'border-[color-mix(in_srgb,var(--red)_30%,transparent)] bg-[color-mix(in_srgb,var(--red)_5%,transparent)]' :
               'border-yellow-500/30 bg-yellow-500/5'
             }`}>
               <div className="flex items-center gap-2 mb-1">
@@ -47,28 +47,28 @@ export function PostCard({ post }: PostCardProps) {
                 <span className="text-xs font-bold text-yellow-400 uppercase tracking-wide">Pick</span>
                 {post.pick.result && (
                   <span className={`ml-auto text-xs font-bold ${
-                    post.pick.result === 'win' ? 'text-green-400' :
-                    post.pick.result === 'loss' ? 'text-red-400' : 'text-zinc-400'
+                    post.pick.result === 'win' ? 'text-[var(--green)]' :
+                    post.pick.result === 'loss' ? 'text-[var(--red)]' : 'text-[var(--text-2)]'
                   }`}>
                     {post.pick.result === 'win' ? '✓ WIN' : post.pick.result === 'loss' ? '✗ LOSS' : 'PENDING'}
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-white">{post.pick.team}</p>
-              <p className="text-xs text-zinc-400">{post.pick.line} · <span className="font-mono">{post.pick.odds}</span></p>
+              <p className="text-sm font-semibold text-[var(--text-1)]">{post.pick.team}</p>
+              <p className="text-xs text-[var(--text-2)]">{post.pick.line} · <span className="font-mono">{post.pick.odds}</span></p>
             </div>
           )}
 
           <div className="flex items-center gap-5 mt-3">
-            <button className="flex items-center gap-1.5 text-zinc-500 hover:text-red-400 transition-colors text-xs">
+            <button className="flex items-center gap-1.5 text-[var(--text-3)] hover:text-[var(--red)] transition-colors text-xs">
               <Heart size={14} />
               <span>{post.reactions.likes}</span>
             </button>
-            <button className="flex items-center gap-1.5 text-zinc-500 hover:text-blue-400 transition-colors text-xs">
+            <button className="flex items-center gap-1.5 text-[var(--text-3)] hover:text-[var(--blue)] transition-colors text-xs">
               <MessageCircle size={14} />
               <span>{post.reactions.comments}</span>
             </button>
-            <button className="flex items-center gap-1.5 text-zinc-500 hover:text-green-400 transition-colors text-xs">
+            <button className="flex items-center gap-1.5 text-[var(--text-3)] hover:text-[var(--green)] transition-colors text-xs">
               <Repeat2 size={14} />
               <span>{post.reactions.reposts}</span>
             </button>

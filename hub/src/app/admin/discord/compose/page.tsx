@@ -13,9 +13,9 @@ export default async function AdminDiscordComposePage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <a href="/admin/discord" className="text-xs text-zinc-500 hover:text-zinc-300 mb-2 inline-block">← Discord Bot</a>
-      <h1 className="text-xl font-black text-white mb-1">Post to Discord</h1>
-      <p className="text-sm text-zinc-500 mb-6">
+      <a href="/admin/discord" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] mb-2 inline-block">← Discord Bot</a>
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Post to Discord</h1>
+      <p className="text-sm text-[var(--text-3)] mb-6">
         Posts as the SlipSurge bot, not your personal account — build a rich embed (header, images, banner, links)
         and send it to any channel the bot can see.
       </p>

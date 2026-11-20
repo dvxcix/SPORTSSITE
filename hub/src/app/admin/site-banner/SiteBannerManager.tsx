@@ -59,12 +59,12 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
 
   return (
     <div className="space-y-6">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       {/* Live preview — same markup/logic as the real SiteBanner component */}
       <div>
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Preview</p>
-        <div className="rounded-xl overflow-hidden border border-zinc-800">
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">Preview</p>
+        <div className="rounded-xl overflow-hidden border border-[var(--border)]">
           {message.trim() ? (
             <div style={{ position: 'relative', background: bgColor, color: textColor }}>
               <div style={{
@@ -73,7 +73,7 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
               }}>
                 <span><LinkifiedText text={message} /></span>
                 {linkUrl.trim() && (
-                  <span style={{ textDecoration: 'underline', fontWeight: 800 }}>{linkLabel.trim() || 'Learn more'} →</span>
+                  <span style={{ textDecoration: 'underline', fontWeight: 700 }}>{linkLabel.trim() || 'Learn more'} →</span>
                 )}
               </div>
               {dismissible && (
@@ -83,15 +83,15 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
               )}
             </div>
           ) : (
-            <div className="bg-zinc-900 px-4 py-3 text-sm text-zinc-600 text-center">Nothing to show — write a message below.</div>
+            <div className="bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-3)] text-center">Nothing to show — write a message below.</div>
           )}
         </div>
-        {!isActive && <p className="text-xs text-zinc-600 mt-1.5">Inactive — this preview is what it'll look like once you flip it on, not what's live right now.</p>}
+        {!isActive && <p className="text-xs text-[var(--text-3)] mt-1.5">Inactive — this preview is what it'll look like once you flip it on, not what's live right now.</p>}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Message</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Message</label>
           <textarea
             ref={textareaRef}
             value={message}
@@ -99,39 +99,39 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
             placeholder="🚧 We're doing scheduled maintenance — some features may be unavailable."
             rows={2}
             maxLength={280}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none"
+            className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none"
           />
           <div className="flex items-center justify-between mt-1.5">
             <EmojiPicker onSelect={insertAtCursor} />
-            <span className="text-xs text-zinc-600">{message.length}/280</span>
+            <span className="text-xs text-[var(--text-3)]">{message.length}/280</span>
           </div>
         </div>
 
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[160px]">
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Link URL (optional)</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Link URL (optional)</label>
             <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://…"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
           <div className="flex-1 min-w-[140px]">
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Link label</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Link label</label>
             <input value={linkLabel} onChange={e => setLinkLabel(e.target.value)} placeholder="Learn more"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Colors</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Colors</label>
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)}
-                className="w-9 h-9 rounded-lg border border-zinc-700 bg-zinc-800 cursor-pointer" />
-              <span className="text-xs text-zinc-500">Background</span>
+                className="w-9 h-9 rounded-lg border border-[var(--border-2)] bg-[var(--surface-2)] cursor-pointer" />
+              <span className="text-xs text-[var(--text-3)]">Background</span>
             </div>
             <div className="flex items-center gap-2">
               <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)}
-                className="w-9 h-9 rounded-lg border border-zinc-700 bg-zinc-800 cursor-pointer" />
-              <span className="text-xs text-zinc-500">Text</span>
+                className="w-9 h-9 rounded-lg border border-[var(--border-2)] bg-[var(--surface-2)] cursor-pointer" />
+              <span className="text-xs text-[var(--text-3)]">Text</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {BANNER_PRESETS.map(p => (
@@ -140,7 +140,7 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
                   type="button"
                   onClick={() => { setBgColor(p.bg); setTextColor(p.text) }}
                   title={p.label}
-                  className="w-7 h-7 rounded-full border-2 border-zinc-700 hover:border-white transition-colors"
+                  className="w-7 h-7 rounded-full border-2 border-[var(--border-2)] hover:border-[var(--border-3)] transition-colors"
                   style={{ background: p.bg }}
                 />
               ))}
@@ -154,7 +154,7 @@ export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner
         </div>
 
         <button onClick={save} disabled={saving}
-          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-5 py-2.5 rounded-xl text-sm transition-colors">
+          className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
           {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save Banner'}
         </button>
       </div>

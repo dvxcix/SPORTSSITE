@@ -268,7 +268,7 @@ export function SearchClient() {
       <ProductHero icon={<Search size={21} />} eyebrow="Discover" title="Search SlipSurge" description="Players, teams, members, posts, and picks in one search." />
       {/* Search input */}
       <div className="relative mb-6">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
         <input
           autoFocus
           value={q}
@@ -278,43 +278,43 @@ export function SearchClient() {
           aria-label="Search SlipSurge"
           aria-busy={loading}
           placeholder="Search players, teams, picks, users…"
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-24 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 focus:ring-1 ring-green-500/20 transition-all"
+          className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-10 pr-24 py-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] focus:ring-1 ring-green-500/20 transition-all"
         />
-        {currentUserId && q.trim() ? <button type="button" className="ss-search-save" disabled={savingSearch} onClick={saveSearch}>{savingSearch || loading ? <span aria-label={savingSearch ? 'Saving search' : 'Searching'} role="status" className="h-3.5 w-3.5 rounded-full border-2 border-zinc-600 border-t-green-400 animate-spin"/> : savedSearches.some(item => item.query.toLowerCase() === q.trim().toLowerCase() && item.result_tab === tab) ? <BookmarkCheck size={14}/> : <Bookmark size={14}/>}<span>Save</span></button> : loading ? <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-zinc-600 border-t-green-400 rounded-full animate-spin"/> : null}
+        {currentUserId && q.trim() ? <button type="button" className="ss-search-save" disabled={savingSearch} onClick={saveSearch}>{savingSearch || loading ? <span aria-label={savingSearch ? 'Saving search' : 'Searching'} role="status" className="h-3.5 w-3.5 rounded-full border-2 border-[var(--border-2)] border-t-green-400 animate-spin"/> : savedSearches.some(item => item.query.toLowerCase() === q.trim().toLowerCase() && item.result_tab === tab) ? <BookmarkCheck size={14}/> : <Bookmark size={14}/>}<span>Save</span></button> : loading ? <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--border-2)] border-t-green-400 rounded-full animate-spin"/> : null}
       </div>
-      {saveError && <p role="alert" className="-mt-3 mb-4 text-xs font-semibold text-red-400">{saveError}</p>}
+      {saveError && <p role="alert" className="-mt-3 mb-4 text-xs font-semibold text-[var(--red)]">{saveError}</p>}
 
       {!q.trim() && (
         <div className="space-y-6">
           {savedSearches.length > 0 && <section aria-labelledby="saved-searches-heading">
-            <h2 id="saved-searches-heading" className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-400"><Bookmark size={14}/> Saved searches</h2>
+            <h2 id="saved-searches-heading" className="mb-3 flex items-center gap-2 text-sm font-bold text-[var(--text-2)]"><Bookmark size={14}/> Saved searches</h2>
             <div className="ss-saved-searches">{savedSearches.map(item => <div key={item.id}><button type="button" onClick={() => void openSavedSearch(item)}><BookmarkCheck size={13}/><span><strong>{item.query}</strong><small>{item.result_tab === 'all' ? 'All results' : item.result_tab.toUpperCase()}</small></span></button><button type="button" aria-label={`Remove saved search ${item.query}`} onClick={() => void removeSavedSearch(item.id)}><X size={12}/></button></div>)}</div>
           </section>}
           {recentSearches.length > 0 && <section aria-labelledby="recent-searches-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 id="recent-searches-heading" className="flex items-center gap-2 text-sm font-bold text-zinc-400"><Clock3 size={14} /> Recent</h2>
-              <button type="button" onClick={clearRecentSearches} className="text-xs font-bold text-zinc-500 transition hover:text-white">Clear</button>
+              <h2 id="recent-searches-heading" className="flex items-center gap-2 text-sm font-bold text-[var(--text-2)]"><Clock3 size={14} /> Recent</h2>
+              <button type="button" onClick={clearRecentSearches} className="text-xs font-bold text-[var(--text-3)] transition hover:text-[var(--text-1)]">Clear</button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {recentSearches.map(item => <span key={item} className="inline-flex items-center overflow-hidden rounded-full border border-zinc-800 bg-zinc-900">
-                <button type="button" onClick={() => setQ(item)} className="px-3 py-1.5 text-sm text-zinc-300 transition hover:text-white">{item}</button>
+              {recentSearches.map(item => <span key={item} className="inline-flex items-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]">
+                <button type="button" onClick={() => setQ(item)} className="px-3 py-1.5 text-sm text-[var(--text-2)] transition hover:text-[var(--text-1)]">{item}</button>
                 <button type="button" aria-label={`Remove ${item} from recent searches`} onClick={() => {
                   const next = recentSearches.filter(value => value !== item)
                   setRecentSearches(next)
                   window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next))
-                }} className="grid min-h-8 min-w-8 place-items-center border-l border-zinc-800 text-zinc-600 transition hover:text-white"><X size={12} /></button>
+                }} className="grid min-h-8 min-w-8 place-items-center border-l border-[var(--border)] text-[var(--text-3)] transition hover:text-[var(--text-1)]"><X size={12} /></button>
               </span>)}
             </div>
           </section>}
           <section aria-labelledby="trending-searches-heading">
-          <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-[var(--text-2)] mb-3 flex items-center gap-2">
             <TrendingUp size={14} /> <span id="trending-searches-heading">Trending</span>
           </h2>
           <div className="flex flex-wrap gap-2">
             {TRENDING_TAGS.map(tag => (
               <button key={tag} onClick={() => setQ(tag)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-sm text-zinc-300 hover:border-green-500/50 hover:text-white transition-all">
-                <Hash size={12} className="text-green-400" /> {tag}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-full text-sm text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] hover:text-[var(--text-1)] transition-all">
+                <Hash size={12} className="text-[var(--green)]" /> {tag}
               </button>
             ))}
           </div>
@@ -325,10 +325,10 @@ export function SearchClient() {
       {q.trim() && hasResults && (
         <>
           {/* Tabs */}
-          <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 scrollbar-hide">
+          <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 scrollbar-hide">
             {([['all', 'All'], ...(mlbAccess ? [['mlb', 'MLB']] : []), ['nfl', 'NFL'], ...(nbaAllowed ? [['nba', 'NBA']] : []), ['community', 'Community'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as [SearchTab, string][]).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
-                className={`min-w-16 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                className={`min-w-16 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${tab === k ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}>
                 {l}
               </button>
             ))}
@@ -337,7 +337,7 @@ export function SearchClient() {
           {/* MLB players & teams */}
           {showMlb && (players.length > 0 || teams.length > 0) && (
             <div className="mb-6">
-              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--text-3)] uppercase tracking-wider mb-3">
                 <Activity size={12} /> MLB
               </h3>
               <div className="space-y-2">
@@ -346,12 +346,12 @@ export function SearchClient() {
                     className="ss-search-result flex items-center gap-3 p-3">
                     <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={40} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{t.name}</p>
-                      <p className="text-xs text-zinc-500">{t.gamePk ? 'Playing today · tap for live game' : 'Team'}</p>
+                      <p className="font-bold text-[var(--text-1)] text-sm truncate">{t.name}</p>
+                      <p className="text-xs text-[var(--text-3)]">{t.gamePk ? 'Playing today · tap for live game' : 'Team'}</p>
                     </div>
                     {t.gamePk && (
-                      <span className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> LIVE
+                      <span className="text-[12px] font-semibold text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--red-fill)] animate-pulse" /> LIVE
                       </span>
                     )}
                   </Link>
@@ -366,8 +366,8 @@ export function SearchClient() {
                         size={44}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-white text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-zinc-500 truncate">
+                        <p className="font-bold text-[var(--text-1)] text-sm truncate">{p.name}</p>
+                        <p className="text-xs text-[var(--text-3)] truncate">
                           {p.position && <span>{p.position}</span>}
                           {p.position && p.teamName && <span> · </span>}
                           {p.teamName}
@@ -376,7 +376,7 @@ export function SearchClient() {
                     </Link>
                     <div className="flex gap-1.5 shrink-0">
                       <Link href={`/dugout?highlight=${p.mlbId}`}
-                        className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">
+                        className="text-[12px] font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg transition-colors">
                         Dugout
                       </Link>
                       {/* Only shown when this exact player is a probable
@@ -387,13 +387,13 @@ export function SearchClient() {
                           regardless would just land on an empty state. */}
                       {p.isProbableStarter && (
                         <Link href={`/pitcher-report?date=${mlbDate ?? ''}&pitcherId=${p.mlbId}`}
-                          className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">
+                          className="text-[12px] font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg transition-colors">
                           Pitcher Report
                         </Link>
                       )}
                       {p.gamePk && (
                         <Link href={`/sports/mlb/${p.gamePk}`}
-                          className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black px-2.5 py-1.5 rounded-lg transition-colors">
+                          className="text-[12px] font-bold bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] px-2.5 py-1.5 rounded-lg transition-colors">
                           Live
                         </Link>
                       )}
@@ -406,7 +406,7 @@ export function SearchClient() {
 
           {showCommunity && (groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0) && (
             <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500"><LayoutGrid size={12}/> Community</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-3)]"><LayoutGrid size={12}/> Community</h3>
               <div className="grid gap-2 sm:grid-cols-2">
                 {groups.map(group => <CommunitySearchResult key={`group-${group.id}`} href={`/groups/${group.slug}`} item={group} label={`${group.count} members`} />)}
                 {pages.map(page => <CommunitySearchResult key={`page-${page.id}`} href={`/pages/${page.slug}`} item={page} label={`${page.count} followers`} />)}
@@ -419,7 +419,7 @@ export function SearchClient() {
           {/* NFL players & teams */}
           {showNfl && (nflPlayers.length > 0 || nflTeams.length > 0) && (
             <div className="mb-6">
-              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--text-3)] uppercase tracking-wider mb-3">
                 🏈 NFL
               </h3>
               <div className="space-y-2">
@@ -429,11 +429,11 @@ export function SearchClient() {
                     {t.team_logo_espn ? (
                       <SafeImage src={t.team_logo_espn} alt={t.team_abbr} className="h-10 w-10 shrink-0 object-contain" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 shrink-0" />
+                      <div className="w-10 h-10 rounded-full bg-[var(--surface-2)] shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{t.team_name}</p>
-                      <p className="text-xs text-zinc-500">Team</p>
+                      <p className="font-bold text-[var(--text-1)] text-sm truncate">{t.team_name}</p>
+                      <p className="text-xs text-[var(--text-3)]">Team</p>
                     </div>
                   </Link>
                 ))}
@@ -443,13 +443,13 @@ export function SearchClient() {
                     {p.headshot ? (
                       <SafeImage src={p.headshot} alt={p.display_name} className="h-11 w-11 shrink-0 rounded-full object-cover" />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-500 shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-xs text-[var(--text-3)] shrink-0">
                         {p.position || '—'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{p.display_name}</p>
-                      <p className="text-xs text-zinc-500 truncate flex items-center gap-1">
+                      <p className="font-bold text-[var(--text-1)] text-sm truncate">{p.display_name}</p>
+                      <p className="text-xs text-[var(--text-3)] truncate flex items-center gap-1">
                         {p.position && <span>{p.position}</span>}
                         {p.position && p.latest_team && <span>·</span>}
                         {p.latest_team && <NflTeamLogo abbr={p.latest_team} logoUrl={p.team_logo_espn} size={14} />}
@@ -462,13 +462,13 @@ export function SearchClient() {
           )}
 
           {showNba && (nbaPlayers.length > 0 || nbaTeams.length > 0) && <section className="mb-6" aria-label="NBA search results">
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400"><SafeImage src={sportLogoUrl('NBA')} alt="" className="h-5 w-5 object-contain"/>NBA</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-2)]"><SafeImage src={sportLogoUrl('NBA')} alt="" className="h-5 w-5 object-contain"/>NBA</h3>
             <div className="space-y-2">
               {nbaTeams.map(team => <Link key={`team-${team.id}`} href={`/nba/teams/${team.id}`} className="ss-search-result flex items-center gap-3 p-3">
-                <TeamLogo logo={team.logo} name={team.name} size={40}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{team.name}</p><p className="text-xs text-zinc-400">Team profile</p></div><ArrowRight size={16} aria-hidden="true"/>
+                <TeamLogo logo={team.logo} name={team.name} size={40}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-[var(--text-1)]">{team.name}</p><p className="text-xs text-[var(--text-2)]">Team profile</p></div><ArrowRight size={16} aria-hidden="true"/>
               </Link>)}
               {nbaPlayers.map(player => <Link key={`player-${player.id}`} href={`/nba/players/${player.id}`} className="ss-search-result flex items-center gap-3 p-3">
-                <PlayerAvatar sport="nba" teamAbbr={player.teamAbbr} headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={44}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-white">{player.name}</p><p className="truncate text-xs text-zinc-400">{[player.position, player.teamName].filter(Boolean).join(' · ')}</p></div><ArrowRight size={16} aria-hidden="true"/>
+                <PlayerAvatar sport="nba" teamAbbr={player.teamAbbr} headshot={player.headshot} teamLogo={player.teamLogo} name={player.name} size={44}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-[var(--text-1)]">{player.name}</p><p className="truncate text-xs text-[var(--text-2)]">{[player.position, player.teamName].filter(Boolean).join(' · ')}</p></div><ArrowRight size={16} aria-hidden="true"/>
               </Link>)}
             </div>
           </section>}
@@ -476,7 +476,7 @@ export function SearchClient() {
           {/* Users */}
           {showUsers && visibleUsers.length > 0 && (
             <div className="mb-6">
-              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--text-3)] uppercase tracking-wider mb-3">
                 <Users size={12} /> Users
               </h3>
               <div className="space-y-2">
@@ -486,17 +486,17 @@ export function SearchClient() {
                     <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} tone={u.account_type === 'creator' ? 'creator' : 'default'} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white text-sm truncate">{u.display_name || u.username}</span>
+                        <span className="font-bold text-[var(--text-1)] text-sm truncate">{u.display_name || u.username}</span>
                         <UserBadges userId={u.id} size={13} />
-                        {u.is_verified && <BadgeCheck size={14} className="text-green-400" aria-label="Verified" />}
-                        {u.account_type === 'creator' && <span className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full">PRO</span>}
+                        {u.is_verified && <BadgeCheck size={14} className="text-[var(--green)]" aria-label="Verified" />}
+                        {u.account_type === 'creator' && <span className="text-[12px] font-bold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full">PRO</span>}
                       </div>
-                      <p className="text-xs text-zinc-500">@{u.username} · {u.follower_count ?? 0} followers</p>
+                      <p className="text-xs text-[var(--text-3)]">@{u.username} · {u.follower_count ?? 0} followers</p>
                     </div>
                     {u.pick_record && (
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-green-400">{u.pick_record.wins}W</p>
-                        <p className="text-xs text-zinc-500">{u.pick_record.losses}L</p>
+                        <p className="text-xs font-bold text-[var(--green)]">{u.pick_record.wins}W</p>
+                        <p className="text-xs text-[var(--text-3)]">{u.pick_record.losses}L</p>
                       </div>
                     )}
                   </Link>
@@ -508,7 +508,7 @@ export function SearchClient() {
           {/* Posts / Picks */}
           {((showPosts && visiblePosts.length > 0) || (showPicks && picks.length > 0)) && (
             <div>
-              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--text-3)] uppercase tracking-wider mb-3">
                 <Zap size={12} /> {showPicks ? 'Picks' : 'Posts'}
               </h3>
               <div className="space-y-2">
@@ -524,23 +524,23 @@ export function SearchClient() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <MemberAvatar src={p.author?.avatar_url} name={p.author?.display_name || p.author?.username || 'Member'} size={24} />
-                      <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">
+                      <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)]">
                         @{p.author?.username}
                       </Link>
                       {p.sport && (
                         sportLogoUrl(p.sport)
                           ? <SafeImage src={sportLogoUrl(p.sport)} alt={p.sport} className="h-3.5 w-3.5 shrink-0 object-contain" />
-                          : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
+                          : <span className="text-[12px] font-bold text-[var(--blue)] bg-[color-mix(in_srgb,var(--blue)_10%,transparent)] px-1.5 py-0.5 rounded-full">{p.sport}</span>
                       )}
-                      {p.post_type === 'parlay' && <span className="text-[10px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
+                      {p.post_type === 'parlay' && <span className="text-[12px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
                     </div>
-                    <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2"><LinkifiedText text={p.content || ''} /></p>
+                    <p className="text-sm text-[var(--text-1)] leading-relaxed line-clamp-2"><LinkifiedText text={p.content || ''} /></p>
                     {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />
                         <TeamMark sport={p.sport} team={p.pick_data.team} size={16} />
-                        <span className="text-zinc-500">{p.pick_data.line}</span>
-                        <span className="font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
+                        <span className="text-[var(--text-3)]">{p.pick_data.line}</span>
+                        <span className="font-mono font-bold text-[var(--text-2)]">{p.pick_data.odds}</span>
                       </div>
                     )}
                   </div>
@@ -551,14 +551,14 @@ export function SearchClient() {
         </>
       )}
 
-      {q.trim() && showNba && nbaError && <p role="status" className="mb-4 text-sm text-zinc-400">{nbaError}</p>}
-      {q.trim() && blockLookupFailed && <p role="status" className="mb-4 text-sm text-zinc-400">Member and post results are temporarily unavailable.</p>}
+      {q.trim() && showNba && nbaError && <p role="status" className="mb-4 text-sm text-[var(--text-2)]">{nbaError}</p>}
+      {q.trim() && blockLookupFailed && <p role="status" className="mb-4 text-sm text-[var(--text-2)]">Member and post results are temporarily unavailable.</p>}
 
       {q.trim() && !loading && !hasResults && !nbaError && !blockLookupFailed && (
         <div className="text-center py-16">
           <p className="text-3xl mb-3">🔍</p>
-          <p className="text-zinc-400 font-medium">No results for "{q}"</p>
-          <p className="text-zinc-600 text-sm mt-1">Try a different search term</p>
+          <p className="text-[var(--text-2)] font-medium">No results for "{q}"</p>
+          <p className="text-[var(--text-3)] text-sm mt-1">Try a different search term</p>
         </div>
       )}
     </ProductPageShell>
@@ -566,5 +566,5 @@ export function SearchClient() {
 }
 
 function CommunitySearchResult({ href, item, label }: { href: string; item: CommunityResult; label: string }) {
-  return <Link href={href} className="ss-search-result group flex min-w-0 items-center gap-3 p-3"><span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-white/[.04] text-lg"><SafeImage src={item.avatar_url} alt="" className="h-full w-full object-cover" fallback={item.emoji || '⚡'}/></span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-white">{item.name}</strong><small className="mt-0.5 block truncate text-[11px] text-zinc-500">{item.description || label}</small><em className="mt-1 block text-[9px] font-bold not-italic text-zinc-600">{label}</em></span><ArrowRight size={14} className="shrink-0 text-zinc-700 transition group-hover:translate-x-0.5 group-hover:text-lime-300"/></Link>
+  return <Link href={href} className="ss-search-result group flex min-w-0 items-center gap-3 p-3"><span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.04)] text-lg"><SafeImage src={item.avatar_url} alt="" className="h-full w-full object-cover" fallback={item.emoji || '⚡'}/></span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-[var(--text-1)]">{item.name}</strong><small className="mt-0.5 block truncate text-[12px] text-[var(--text-3)]">{item.description || label}</small><em className="mt-1 block text-[11px] font-bold not-italic text-[var(--text-3)]">{label}</em></span><ArrowRight size={14} className="shrink-0 text-[var(--text-3)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent)]"/></Link>
 }

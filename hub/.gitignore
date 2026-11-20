@@ -48,3 +48,8 @@ next-env.d.ts
 # local browser authentication and visual QA artifacts
 /.auth/
 /.responsive-captures/
+/review/dev-server.log
+/review/optimized-server.log
+/docs/design/evidence/
+/.next-ui-build-check/
+/.next-private-ui-review/

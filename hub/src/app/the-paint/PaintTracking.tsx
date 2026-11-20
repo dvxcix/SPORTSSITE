@@ -18,7 +18,7 @@ const format=(value:number|null,percentage:boolean)=>value==null?'—':number(va
 function TrackingTrend({values}:{values:(number|null)[]}){
  const known=values.filter((value):value is number=>value!=null),low=Math.min(0,...known),high=Math.max(low+1,...known)
  const path=values.map((value,index)=>value==null?'':(index>0&&values[index-1]!=null?'L':'M')+(5+index/Math.max(1,values.length-1)*130)+','+(33-(value-low)/(high-low)*28)).join(' ')
- return <svg className={styles.trackingTrend} viewBox="0 0 140 38" role="img" aria-label={'Observed game values, oldest to newest: '+values.map(value=>value??'unknown').join(', ')}><path d={path} fill="none" stroke="#b4ff4d" strokeWidth="1.8"/>{values.map((value,index)=>value==null?null:<circle key={index} cx={5+index/Math.max(1,values.length-1)*130} cy={33-(value-low)/(high-low)*28} r="2" fill="#b4ff4d"></circle>)}</svg>
+ return <svg className={styles.trackingTrend} viewBox="0 0 140 38" role="img" aria-label={'Observed game values, oldest to newest: '+values.map(value=>value??'unknown').join(', ')}><path d={path} fill="none" stroke="var(--accent)" strokeWidth="1.8"/>{values.map((value,index)=>value==null?null:<circle key={index} cx={5+index/Math.max(1,values.length-1)*130} cy={33-(value-low)/(high-low)*28} r="2" fill="var(--accent-fill)"></circle>)}</svg>
 }
 export function PaintTracking({board,players,initialMetric='usage_percentage',open}:{board:PaintBoard;players:PaintPlayer[];initialMetric?:string;open?:(id:number,metric:string)=>void}){
   const oddsMode = useNbaOddsMode()

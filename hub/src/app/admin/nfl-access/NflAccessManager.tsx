@@ -71,12 +71,12 @@ export function NflAccessManager() {
       <p id="nfl-search-hint" className="mt-2 text-xs text-[var(--text-3)]">Type at least 2 characters. Administrators already have access.</p>
       {search.length >= 2 && <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-[var(--border)]" aria-label="Matching members">
         {searching || search !== debouncedQuery ? <p role="status" className="p-4 text-sm">Searching members…</p>
-          : searchError ? <p role="alert" className="p-4 text-sm text-red-400">{searchError.message}</p>
+          : searchError ? <p role="alert" className="p-4 text-sm text-[var(--red)]">{searchError.message}</p>
           : !matches?.users.length ? <p className="p-4 text-sm text-[var(--text-2)]">No matching members.</p>
           : matches.users.map(member => <div key={member.id} className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-3 last:border-0">
             <MemberIdentity member={member} />
             <button type="button" disabled={pending !== null || member.granted} onClick={() => change(member, true)}
-              className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent)] px-3 text-xs font-bold text-black disabled:opacity-50"
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-fill)] px-3 text-xs font-bold text-[var(--accent-fg)] disabled:opacity-50"
               aria-label={member.granted ? `@${member.username} already has access` : `Grant NFL access to @${member.username}`}>
               {pending === member.id ? <LoaderCircle size={15} className="animate-spin" /> : member.granted ? <Check size={15} /> : <UserPlus size={15} />}
               {member.granted ? 'Added' : 'Grant access'}
@@ -85,20 +85,20 @@ export function NflAccessManager() {
       </div>}
     </section>
     {notice && <p role="status" className="rounded-xl bg-[var(--accent-dim)] p-3 text-sm text-[var(--accent)]">{notice}</p>}
-    {mutationError && <p role="alert" className="rounded-xl border border-red-500/30 p-3 text-sm text-red-400">{mutationError}</p>}
+    {mutationError && <p role="alert" className="rounded-xl border border-[color-mix(in_srgb,var(--red)_30%,transparent)] p-3 text-sm text-[var(--red)]">{mutationError}</p>}
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
       <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-4">
         <h2 className="text-sm font-bold">Approved testers</h2>
         <span className="rounded-full bg-[var(--accent-dim)] px-3 py-1 text-xs text-[var(--accent)]">{data?.count ?? '—'}</span>
       </header>
       {isLoading ? <p role="status" className="p-5 text-sm">Loading testers…</p>
-        : error ? <div role="alert" className="p-5"><p className="text-sm text-red-400">{error.message}</p><button className="mt-2 min-h-11 text-sm underline" onClick={() => mutate()}>Retry</button></div>
+        : error ? <div role="alert" className="p-5"><p className="text-sm text-[var(--red)]">{error.message}</p><button className="mt-2 min-h-11 text-sm underline" onClick={() => mutate()}>Retry</button></div>
         : !data?.grants.length ? <div className="space-y-2 p-8 text-center text-[var(--text-2)]"><ShieldCheck size={26} className="mx-auto" /><p className="text-sm font-semibold">No testers added yet</p><p className="text-xs">Search for a member above to grant NFL-only access.</p></div>
         : <ul>{data.grants.map(grant => <li key={grant.user_id} className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-4 last:border-0">
-          <div className="min-w-0"><MemberIdentity member={grant.member} /><p className="mt-2 pl-[52px] text-xs text-[var(--text-3)]">Added {new Date(grant.granted_at).toLocaleDateString()}</p></div>
+          <div className="min-w-0"><MemberIdentity member={grant.member} /><p className="mt-2 pl-[52px] text-xs text-[var(--text-3)]">Added {new Date(grant.granted_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</p></div>
           <button type="button" disabled={pending !== null} onClick={() => change(grant.member, false)}
             aria-label={`Revoke NFL access for @${grant.member.username}`}
-            className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--border)] px-3 text-xs font-bold text-[var(--text-2)] hover:border-red-400 hover:text-red-400 disabled:opacity-50">
+            className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--border)] px-3 text-xs font-bold text-[var(--text-2)] hover:border-[var(--red)] hover:text-[var(--red)] disabled:opacity-50">
             {pending === grant.user_id ? <LoaderCircle size={15} className="animate-spin" /> : <X size={15} />}Revoke
           </button>
         </li>)}</ul>}

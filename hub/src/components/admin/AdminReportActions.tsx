@@ -36,11 +36,11 @@ export function AdminReportActions({ reportId, currentStatus }: { reportId: stri
   return (
     <div className="flex gap-2 shrink-0">
       <button onClick={() => update('dismissed')} disabled={loading}
-        className="text-xs font-bold border border-zinc-700 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+        className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text-1)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
         Dismiss
       </button>
       <button onClick={() => update('actioned')} disabled={loading}
-        className="text-xs font-bold border border-red-500/50 text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+        className="text-xs font-bold border border-[color-mix(in_srgb,var(--red)_50%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
         Action
       </button>
     </div>

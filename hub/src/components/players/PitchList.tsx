@@ -108,7 +108,7 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
           {activeFilters.size > 0 && (
             <button
               onClick={() => setActiveFilters(new Set())}
-              style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer' }}
+              style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer' }}
             >
               Clear
             </button>
@@ -116,7 +116,7 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
         </div>
       )}
       <div style={{ maxHeight, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>
               <SortableTH label="Date" colKey="game_date" sort={sort} onSort={onSort} align="left" />

@@ -132,7 +132,7 @@ type Grade = { bg: string; border: string; text: string; checkmark: boolean; val
 // as soon as it happens, live or final — only the negative/zero case needed
 // to wait for the final verdict.
 function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null, isVoid?: boolean): Grade | null {
-  if (isVoid) return { bg: 'rgba(120,130,140,0.10)', border: 'rgba(120,130,140,0.35)', text: 'var(--text-3)', checkmark: false, value: 0, isVoid: true }
+  if (isVoid) return { bg: 'rgba(120,130,140,0.10)', border: 'var(--border-3)', text: 'var(--text-3)', checkmark: false, value: 0, isVoid: true }
   if (gameStatus !== 'Live' && gameStatus !== 'Final') return null
   if (!outcome) return null
   const value: number = outcome[cat.outcomeKey] ?? 0
@@ -170,7 +170,7 @@ function HitLineChip({ hl, books }: { hl: HitLine; books: string[] }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 6,
-      background: 'rgba(180,255,77,0.12)', border: '1px solid rgba(180,255,77,0.35)', fontSize: 10, fontWeight: 800,
+      background: 'rgba(180,255,77,0.12)', border: '1px solid rgba(180,255,77,0.35)', fontSize: 12, fontWeight: 700,
     }}>
       <span style={{ color: 'var(--accent)' }}>{hl.label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
@@ -212,9 +212,9 @@ function GameSelector({ games, value, onChange }: { games: GameOption[]; value: 
         {selected ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <TeamLogo logo={getTeamLogoUrl(selected.awayAbbr)} name={selected.awayAbbr} size={22} />
-            <span style={{ color: 'var(--text-3)', fontSize: 11, fontWeight: 800 }}>@</span>
+            <span style={{ color: 'var(--text-3)', fontSize: 12, fontWeight: 700 }}>@</span>
             <TeamLogo logo={getTeamLogoUrl(selected.homeAbbr)} name={selected.homeAbbr} size={22} />
-            <span style={{ marginLeft: 4, color: 'var(--text-3)', fontSize: 11, fontWeight: 700 }}>{timeStr(selected.gameDate)}</span>
+            <span style={{ marginLeft: 4, color: 'var(--text-3)', fontSize: 12, fontWeight: 700 }}>{timeStr(selected.gameDate)}</span>
           </span>
         ) : (
           <span>All Games</span>
@@ -242,7 +242,7 @@ function GameSelector({ games, value, onChange }: { games: GameOption[]; value: 
               aria-selected={value === g.gameKey}
             >
               <TeamLogo logo={getTeamLogoUrl(g.awayAbbr)} name={g.awayAbbr} size={22} />
-              <span style={{ color: 'var(--text-3)', fontSize: 11, fontWeight: 800 }}>@</span>
+              <span style={{ color: 'var(--text-3)', fontSize: 12, fontWeight: 700 }}>@</span>
               <TeamLogo logo={getTeamLogoUrl(g.homeAbbr)} name={g.homeAbbr} size={22} />
               <span style={{ marginLeft: 4, color: 'var(--text-2)', fontSize: 12, fontWeight: 700 }}>{timeStr(g.gameDate)}</span>
             </button>
@@ -465,7 +465,7 @@ export function ThePublicClient({ date }: { date: string }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 26, textAlign: 'center', fontSize: 16, fontWeight: 900, color: i < 3 ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
+              <div style={{ width: 26, textAlign: 'center', fontSize: 16, fontWeight: 700, color: i < 3 ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
                 {i + 1}
               </div>
               <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -475,8 +475,8 @@ export function ThePublicClient({ date }: { date: string }) {
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   minWidth: grade.isVoid ? 'auto' : 30, height: 30, padding: grade.isVoid ? '0 10px' : undefined,
-                  borderRadius: 8, fontSize: grade.isVoid ? 11 : 14, fontWeight: 900,
-                  color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
+                  borderRadius: 8, fontSize: grade.isVoid ? 11 : 14, fontWeight: 700,
+                  color: grade.text, background: 'rgba(var(--contrast-rgb),0.2)', border: `1px solid ${grade.border}`,
                   whiteSpace: 'nowrap',
                 }}>
                   {grade.isVoid ? '⚠️ VOID' : grade.checkmark ? '✅' : grade.pending ? '·' : grade.value}

@@ -56,46 +56,46 @@ export function CreateEventForm({ userId }: { userId: string }) {
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       <div className="ss-flow-card">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Event Title *</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Event Title *</label>
           <input aria-label="Event title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Yankees Watch Party, NFL Draft Night…" maxLength={100} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Description</label>
           <textarea aria-label="Event description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} maxLength={1000} className={inputClass + ' resize-none'} placeholder="What's happening?" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Start Date & Time *</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Start Date & Time *</label>
             <input type="datetime-local" aria-label="Event start date and time" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">End Date & Time</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">End Date & Time</label>
             <input type="datetime-local" aria-label="Event end date and time" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className={inputClass} />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Location</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Location</label>
           <input aria-label="Event location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Address or venue name" className={inputClass} />
         </div>
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.07] bg-black/20 p-3.5">
-          <div><p className="text-sm font-bold text-white">Online event</p><p className="mt-0.5 text-xs text-zinc-500">Show a join link on the event page</p></div>
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(var(--line-rgb),0.07)] bg-[var(--surface)] p-3.5">
+          <div><p className="text-sm font-bold text-[var(--text-1)]">Online event</p><p className="mt-0.5 text-xs text-[var(--text-3)]">Show a join link on the event page</p></div>
           <Switch checked={form.is_online} onChange={checked => setForm(f => ({ ...f, is_online: checked }))} ariaLabel="Online event" />
         </div>
         {form.is_online && <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Event Link *</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Event Link *</label>
           <input type="url" aria-label="Event link" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" maxLength={500} className={inputClass} />
         </div>}
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Sport</label>
           <div className="flex flex-wrap gap-1.5">
             {SPORTS.map(s => {
               const logo = sportLogoUrl(s)
               return (
                 <button key={s} type="button" onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}
-                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border transition-all ${(form.sport === s || (s === 'General' && !form.sport)) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border transition-all ${(form.sport === s || (s === 'General' && !form.sport)) ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
                   {logo && <Image src={logo} alt="" width={14} height={14} className="object-contain" />}
                   {s}
                 </button>

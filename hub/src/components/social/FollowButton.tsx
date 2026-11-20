@@ -64,7 +64,7 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing, co
     >
       {loading ? 'Saving…' : following ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
     </button>
-    {failed && <span role="alert" className="text-[10px] font-bold text-red-400">Try again</span>}
+    {failed && <span role="alert" className="text-[12px] font-bold text-[var(--red)]">Try again</span>}
     </span>
   )
 }

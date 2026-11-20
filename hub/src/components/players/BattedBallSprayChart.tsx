@@ -295,7 +295,7 @@ export function BattedBallSprayChart({ rows, playerName, projection, compact = f
             {selected && replay > 0 && (
               <g key={`${selectedKey}:${replay}`} className={styles.replayBall}>
                 <path d={`M125 202 Q125 ${Math.max(40, Number(selected.hc_y) - 36)} ${Number(selected.hc_x)} ${Number(selected.hc_y)}`} fill="none" stroke={resultColor(selected)} strokeWidth={0.8} strokeDasharray="2 2" opacity={0.45} />
-                <circle r="2.5" fill="#fff" stroke={resultColor(selected)} strokeWidth="1">
+                <circle r="2.5" fill="var(--text-1)" stroke={resultColor(selected)} strokeWidth="1">
                   <animateMotion dur="760ms" fill="freeze" path={`M125 202 Q125 ${Math.max(40, Number(selected.hc_y) - 36)} ${Number(selected.hc_x)} ${Number(selected.hc_y)}`} />
                 </circle>
               </g>
@@ -333,7 +333,7 @@ export function BattedBallSprayChart({ rows, playerName, projection, compact = f
       </div>
 
       <footer className={styles.footer}>
-        <div className={styles.legend}><span><i style={{ background: '#a3ff3f' }} /> HR</span><span><i style={{ background: '#ff9f43' }} /> Near HR</span><span><i style={{ background: '#30e6d0' }} /> Single</span><span><i style={{ background: '#49a8ff' }} /> Double</span><span><i style={{ background: '#d78cff' }} /> Triple</span><span><i style={{ background: '#a6b0c4' }} /> Out</span></div>
+        <div className={styles.legend}><span><i style={{ background: 'var(--accent-fill)' }} /> HR</span><span><i style={{ background: '#ff9f43' }} /> Near HR</span><span><i style={{ background: '#30e6d0' }} /> Single</span><span><i style={{ background: '#49a8ff' }} /> Double</span><span><i style={{ background: '#d78cff' }} /> Triple</span><span><i style={{ background: 'var(--surface-3)' }} /> Out</span></div>
         <p>{projection ? `Historic Statcast contact locations overlaid on today's ${currentPark.name} shape and weather.` : 'Official Statcast coordinates and scoring. Park outlines are visual context and never determine the result.'}</p>
       </footer>
     </section>

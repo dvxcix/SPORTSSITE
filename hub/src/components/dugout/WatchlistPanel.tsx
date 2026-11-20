@@ -61,21 +61,21 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
           </div>
         )}
-        <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginTop: 1 }}>{item.prop_label}</div>
+        <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginTop: 1 }}>{item.prop_label}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
           {item.book && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 5, padding: '2px 6px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 5, padding: '2px 6px' }}>
               <BookLogo vendor={item.book} size={13} /> {oStr(item.odds)}
             </span>
           )}
           {Object.entries(item.odds_by_book || {}).filter(([b]) => b !== item.book).map(([book, odds]) => (
-            <span key={book} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)' }}>
+            <span key={book} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)' }}>
               <BookLogo vendor={book} size={11} /> {oStr(odds)}
             </span>
           ))}
         </div>
         {item.status === 'posted' && (
-          <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', marginTop: 4, letterSpacing: '0.04em' }}>POSTED TO FEED</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginTop: 4, letterSpacing: '0.04em' }}>POSTED TO FEED</div>
         )}
       </div>
       {!selectMode && (
@@ -84,8 +84,8 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             <button
               onClick={() => onPostSingle(item)}
               style={{
-                fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6, ...(item.sport.toLowerCase() === 'nba' ? { minHeight: 44, minWidth: 54 } : {}),
-                background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 6, ...(item.sport.toLowerCase() === 'nba' ? { minHeight: 44, minWidth: 54 } : {}),
+                background: 'var(--accent-fill)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
               }}
             >
               Post
@@ -95,7 +95,7 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             disabled={removing}
             onClick={async () => { setRemoving(true); try { await wl.remove(item.id) } finally { setRemoving(false) } }}
             style={{
-              fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
+              fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
               background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)', cursor: 'pointer',
             }}
           >
@@ -184,9 +184,9 @@ export function WatchlistButton() {
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '12px 16px', borderRadius: 999,
-          background: 'var(--accent)', color: 'var(--accent-fg)',
+          background: 'var(--accent-fill)', color: 'var(--accent-fg)',
           border: 'none', cursor: 'grab',
-          fontSize: 13, fontWeight: 800,
+          fontSize: 13, fontWeight: 700,
           boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
           userSelect: 'none',
           ...fab.style,
@@ -195,7 +195,7 @@ export function WatchlistButton() {
         <span style={{ fontSize: 15 }}>★</span> Watchlist
         {pendingItems.length > 0 && (
           <span style={{
-            background: 'rgba(0,0,0,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11,
+            background: 'rgba(var(--contrast-rgb),0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 12,
           }}>{pendingItems.length}</span>
         )}
       </button>
@@ -204,7 +204,7 @@ export function WatchlistButton() {
         open={open && !modalLegs && !sharing}
         onClose={() => setOpen(false)}
         labelledBy="watchlist-panel-title"
-        backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
         panelStyle={{
           width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
           borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
@@ -213,14 +213,14 @@ export function WatchlistButton() {
       >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
-              <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>★ My Watchlist</span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
+              <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>★ My Watchlist</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
               <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             {postedId && <div role="status" aria-atomic="true" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 12px 12px', padding: '8px 10px', border: '1px solid var(--border-2)', borderRadius: 9, background: 'var(--accent-dim)' }}>
               <CheckCircle2 size={17} color="var(--accent)" aria-hidden="true"/>
               <strong style={{ fontSize: 12, color: 'var(--text-1)' }}>Pick posted</strong>
-              <Link href={`/posts/${encodeURIComponent(postedId)}`} onClick={() => setOpen(false)} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 36, marginLeft: 'auto', color: 'var(--accent)', fontSize: 12, fontWeight: 800 }}>View pick</Link>
+              <Link href={`/posts/${encodeURIComponent(postedId)}`} onClick={() => setOpen(false)} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 36, marginLeft: 'auto', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>View pick</Link>
               <button type="button" aria-label="Dismiss posting confirmation" onClick={() => setPostedId(null)} style={{ display: 'grid', placeItems: 'center', minWidth: 36, minHeight: 36, border: 0, background: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={14}/></button>
             </div>}
             {pendingItems.length > 0 && (
@@ -230,7 +230,7 @@ export function WatchlistButton() {
                     onClick={() => setSharing(true)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
-                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
                       background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer',
                     }}
                   >
@@ -241,7 +241,7 @@ export function WatchlistButton() {
                   <button
                     onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
                     style={{
-                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
                       background: selectMode ? 'var(--surface-2)' : 'var(--accent-dim)',
                       color: selectMode ? 'var(--text-2)' : 'var(--accent)',
                       border: '1px solid var(--border-2)', cursor: 'pointer',
@@ -254,7 +254,7 @@ export function WatchlistButton() {
                   <button
                     onClick={toggleSelectAll}
                     style={{
-                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
                       background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer',
                     }}
                   >
@@ -264,18 +264,18 @@ export function WatchlistButton() {
                 {!selectMode && (
                   confirmingClearAll ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Remove all {pendingItems.length}?</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Remove all {pendingItems.length}?</span>
                       <button
                         disabled={clearingAll}
                         onClick={clearAll}
-                        style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--red)', color: '#fff', border: 'none', cursor: clearingAll ? 'default' : 'pointer', opacity: clearingAll ? 0.6 : 1 }}
+                        style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--red-fill)', color: 'var(--on-status)', border: 'none', cursor: clearingAll ? 'default' : 'pointer', opacity: clearingAll ? 0.6 : 1 }}
                       >
                         {clearingAll ? 'Clearing…' : 'Yes, clear all'}
                       </button>
                       <button
                         disabled={clearingAll}
                         onClick={() => setConfirmingClearAll(false)}
-                        style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer' }}
+                        style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer' }}
                       >
                         Cancel
                       </button>
@@ -284,7 +284,7 @@ export function WatchlistButton() {
                     <button
                       onClick={() => setConfirmingClearAll(true)}
                       style={{
-                        marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                        marginLeft: 'auto', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
                         background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border-2)', cursor: 'pointer',
                       }}
                     >
@@ -315,11 +315,11 @@ export function WatchlistButton() {
             {selectMode && selectedItems.length > 0 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
                 {booksMismatch ? (
-                  <p style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600, marginBottom: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginBottom: 8 }}>
                     All parlay legs must be from the same sportsbook — you've selected {[...selectedBooks].join(', ')}.
                   </p>
                 ) : (
-                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
                     {selectedItems.length} leg{selectedItems.length > 1 ? 's' : ''} selected{selectedItems.length === 1 ? ' — pick at least one more' : ''}
                   </p>
                 )}
@@ -330,7 +330,7 @@ export function WatchlistButton() {
                     width: '100%', padding: '9px', borderRadius: 8, border: 'none',
                     background: booksMismatch || selectedItems.length < 2 ? 'var(--surface-3)' : 'var(--accent)',
                     color: booksMismatch || selectedItems.length < 2 ? 'var(--text-3)' : 'var(--accent-fg)',
-                    fontWeight: 800, fontSize: 12, cursor: booksMismatch || selectedItems.length < 2 ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: 12, cursor: booksMismatch || selectedItems.length < 2 ? 'not-allowed' : 'pointer',
                   }}
                 >
                   Build {selectedItems.length}-Leg Parlay

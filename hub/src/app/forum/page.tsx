@@ -25,25 +25,25 @@ export default async function ForumPage() {
         {(categories ?? []).map((cat: any) => (
           <Link key={cat.id} href={`/forum/${cat.slug}`}
             className="ss-forum-category group">
-            <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-2xl shrink-0">
               {cat.icon}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="font-bold text-white">{cat.name}</p>
+                <p className="font-bold text-[var(--text-1)]">{cat.name}</p>
                 {cat.sport && (
                   sportLogoUrl(cat.sport)
                     ? <Image src={sportLogoUrl(cat.sport)!} alt={cat.sport} width={14} height={14} className="object-contain" />
-                    : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{cat.sport}</span>
+                    : <span className="text-[12px] font-bold text-[var(--blue)] bg-[color-mix(in_srgb,var(--blue)_10%,transparent)] px-1.5 py-0.5 rounded-full">{cat.sport}</span>
                 )}
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">{cat.description}</p>
+              <p className="text-xs text-[var(--text-3)] mt-0.5">{cat.description}</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-sm font-bold text-white">{cat.thread_count ?? 0}</p>
-              <p className="text-xs text-zinc-600">threads</p>
+              <p className="text-sm font-bold text-[var(--text-1)]">{cat.thread_count ?? 0}</p>
+              <p className="text-xs text-[var(--text-3)]">threads</p>
             </div>
-            <ArrowRight size={15} className="shrink-0 text-zinc-700 transition group-hover:translate-x-1 group-hover:text-lime-300" />
+            <ArrowRight size={15} className="shrink-0 text-[var(--text-3)] transition group-hover:translate-x-1 group-hover:text-[var(--accent)]" />
           </Link>
         ))}
       </div> : <PageState kind="empty" title="No discussions yet" message="Start the first conversation for the community." actionLabel={user ? 'Create a thread' : 'Sign in to participate'} actionHref={user ? '/forum/new' : '/auth/login?next=/forum/new'} />}

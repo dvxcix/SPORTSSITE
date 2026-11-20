@@ -313,7 +313,7 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
               {selected ? <g key={`selected-flight-${selected.id}`} className={styles.selectedFlight}>
                 <path d={selectedFlightPath} pathLength="1" fill="none" stroke={resultColor(selected.kind)} strokeWidth="1.6" strokeLinecap="round" filter="url(#slate-spray-glow)"/>
                 <circle cx={selected.hcX} cy={selected.hcY} r="5.5" fill="none" stroke={resultColor(selected.kind)} strokeWidth=".9"/>
-                <circle r="2.8" fill={resultColor(selected.kind)} stroke="#fff" strokeWidth=".65" filter="url(#slate-spray-glow)"><animateMotion dur="1.1s" fill="freeze" path={selectedFlightPath}/></circle>
+                <circle r="2.8" fill={resultColor(selected.kind)} stroke="var(--text-1)" strokeWidth=".65" filter="url(#slate-spray-glow)"><animateMotion dur="1.1s" fill="freeze" path={selectedFlightPath}/></circle>
               </g> : null}
               {visible.map(event => {
                 const active = selected?.id === event.id
@@ -339,7 +339,7 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
             </div> : null}
           </aside>
         </div>
-        <footer><div><span><i style={{ background: '#a3ff3f' }}/> Home run</span><span><i style={{ background: '#ff9f43' }}/> Near HR</span><span><i style={{ background: '#38d9ff' }}/> Hit</span><span><i style={{ background: '#8b96aa' }}/> Out</span><span><i style={{ background: '#b894ff' }}/> Other BIP</span></div><small>{sourceCounts.statcast} Statcast · {sourceCounts.mlb_live} live · {sourceCounts.bearing_projection} projected</small></footer>
+        <footer><div><span><i style={{ background: 'var(--accent-fill)' }}/> Home run</span><span><i style={{ background: '#ff9f43' }}/> Near HR</span><span><i style={{ background: '#38d9ff' }}/> Hit</span><span><i style={{ background: 'var(--surface-3)' }}/> Out</span><span><i style={{ background: '#b894ff' }}/> Other BIP</span></div><small>{sourceCounts.statcast} Statcast · {sourceCounts.mlb_live} live · {sourceCounts.bearing_projection} projected</small></footer>
       </section>
 
       <ContactFlightStage events={flightEvents} title={!allPlayers && playerIds.length === 1 ? `${players.find(player => player.id === playerIds[0])?.name ?? 'Player'} Flight Replay` : 'Game Contact Flight'} eyebrow="Selected game and filters" tone="all" />

@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import Link from 'next/link'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { useAuth } from '@/context/AuthContext'
@@ -77,6 +78,7 @@ export function DesktopCommandBar() {
         <kbd>Ctrl K</kbd>
       </button>
 
+      <ThemeToggle />
       <div className="ss-desktop-connection" data-online={online} title={online ? 'Connected' : 'Offline'}>
         {online ? <Wifi size={12} /> : <WifiOff size={12} />}
         <span>{online ? 'Live' : 'Offline'}</span>

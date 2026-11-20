@@ -15,11 +15,11 @@ export default async function AdminSocialPlatformsPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-1">Connected Account Platforms</h1>
-      <p className="text-sm text-zinc-500 mb-6">
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Connected Account Platforms</h1>
+      <p className="text-sm text-[var(--text-3)] mb-6">
         These are the "connect your account" options members see in Settings — each one just captures a handle/username
         (no OAuth, nothing verified) and shows it as a badge on their profile. If you set a URL template with{' '}
-        <code className="text-zinc-300 mx-1">{'{handle}'}</code> in it, the badge links out to that profile; leave it
+        <code className="text-[var(--text-2)] mx-1">{'{handle}'}</code> in it, the badge links out to that profile; leave it
         blank for platforms with no public profile URL (e.g. Discord).
       </p>
       <SocialPlatformManager userId={user.id} initialPlatforms={platforms ?? []} />

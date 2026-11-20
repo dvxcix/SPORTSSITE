@@ -14,41 +14,41 @@ export default async function AdminGroupsPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-6">Manage Groups</h1>
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-6">Manage Groups</h1>
       {(groups?.length ?? 0) === 0 ? (
-        <div className="text-center py-20 text-zinc-500 text-sm">No groups yet</div>
+        <div className="text-center py-20 text-[var(--text-3)] text-sm">No groups yet</div>
       ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800">
+            <thead className="border-b border-[var(--border)]">
               <tr className="text-left">
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Group</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Owner</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Sport</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Visibility</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Members</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Actions</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Group</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Owner</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Sport</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Visibility</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Members</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-[var(--border)]">
               {(groups ?? []).map((g: any) => (
-                <tr key={g.id} className="hover:bg-zinc-800/40 transition-colors">
+                <tr key={g.id} className="hover:bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-sm overflow-hidden shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-sm overflow-hidden shrink-0">
                         {g.avatar_url ? <SafeImage src={g.avatar_url} alt="" className="w-full h-full object-cover" /> : (g.emoji || g.name?.[0] || '?')}
                       </div>
-                      <p className="font-medium text-white">{g.name}</p>
+                      <p className="font-medium text-[var(--text-1)]">{g.name}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-zinc-400">@{g.owner?.username}</td>
-                  <td className="px-4 py-3 text-xs text-zinc-500">{g.sport || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-2)]">@{g.owner?.username}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-3)]">{g.sport || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${g.is_public ? 'bg-green-500/10 text-green-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                    <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${g.is_public ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
                       {g.is_public ? 'Public' : 'Private'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-zinc-500">{g.member_count ?? 0}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-3)]">{g.member_count ?? 0}</td>
                   <td className="px-4 py-3">
                     <AdminDeleteRowAction table="groups" id={g.id} confirmLabel="this group" />
                   </td>

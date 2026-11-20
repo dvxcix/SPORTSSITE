@@ -22,7 +22,7 @@ export function AdminPostActions({ postId }: { postId: string }) {
 
   return (
     <button onClick={deletePost} disabled={loading}
-      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40">
+      className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_20%,transparent)] transition-colors disabled:opacity-40">
       Delete
     </button>
   )

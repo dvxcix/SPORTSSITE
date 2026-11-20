@@ -28,17 +28,17 @@ const STATE_META: Record<
   complete: {
     label: "Shared",
     icon: Check,
-    className: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
+    className: "border-[color-mix(in_srgb,var(--green)_25%,transparent)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]",
   },
   partial: {
     label: "Partial",
     icon: CircleDashed,
-    className: "border-amber-400/25 bg-amber-400/10 text-amber-300",
+    className: "border-[color-mix(in_srgb,var(--gold)_25%,transparent)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]",
   },
   missing: {
     label: "Missing",
     icon: TriangleAlert,
-    className: "border-rose-400/25 bg-rose-400/10 text-rose-300",
+    className: "border-[color-mix(in_srgb,var(--red)_25%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]",
   },
 };
 
@@ -50,7 +50,7 @@ function StateCell({ state }: { state: AuditState }) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2 text-[10px] font-black",
+        "inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2 text-[12px] font-semibold",
         meta.className,
       )}
       title={meta.label}
@@ -111,10 +111,10 @@ export function ProductAuditClient({
         sortValue: (route) => route.label,
         cell: (route) => (
           <div className="min-w-0">
-            <p className="text-xs font-black text-[var(--text-1)]">
+            <p className="text-xs font-semibold text-[var(--text-1)]">
               {route.label}
             </p>
-            <p className="mt-0.5 font-mono text-[9px] text-[var(--text-3)]">
+            <p className="mt-0.5 font-mono text-[11px] text-[var(--text-3)]">
               {route.route} · {route.family}
             </p>
           </div>
@@ -160,11 +160,11 @@ export function ProductAuditClient({
             <div className="ml-auto flex w-28 items-center gap-2">
               <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]">
                 <span
-                  className="block h-full rounded-full bg-[var(--accent)]"
+                  className="block h-full rounded-full bg-[var(--accent-fill)]"
                   style={{ width: `${completion}%` }}
                 />
               </span>
-              <b className="w-8 text-right font-mono text-[10px] text-[var(--text-2)]">
+              <b className="w-8 text-right font-mono text-[12px] text-[var(--text-2)]">
                 {completion}%
               </b>
             </div>
@@ -291,9 +291,9 @@ export function ProductAuditClient({
                   onClick={() => setPriority(value)}
                   aria-pressed={priority === value}
                   className={cn(
-                    "min-h-8 rounded-lg px-3 text-[10px] font-black transition",
+                    "min-h-8 rounded-lg px-3 text-[12px] font-semibold transition",
                     priority === value
-                      ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                      ? "bg-[var(--accent-fill)] text-[var(--accent-fg)]"
                       : "text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]",
                   )}
                 >
@@ -313,7 +313,7 @@ export function ProductAuditClient({
         empty={
           <div>
             <Search size={20} className="mx-auto text-[var(--text-3)]" />
-            <p className="mt-2 text-sm font-black text-[var(--text-1)]">
+            <p className="mt-2 text-sm font-semibold text-[var(--text-1)]">
               No matching routes
             </p>
             <p className="mt-1 text-xs text-[var(--text-3)]">
@@ -337,18 +337,18 @@ function Summary({
 }) {
   const colors = {
     default: "text-[var(--text-1)]",
-    success: "text-emerald-300",
-    warning: "text-amber-300",
-    danger: "text-rose-300",
+    success: "text-[var(--green)]",
+    warning: "text-[var(--gold)]",
+    danger: "text-[var(--red)]",
   };
   return (
     <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
-      <p className="text-[9px] font-black uppercase tracking-[.14em] text-[var(--text-3)]">
+      <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[var(--text-3)]">
         {label}
       </p>
       <strong
         className={cn(
-          "mt-2 block text-2xl font-black tabular-nums",
+          "mt-2 block text-2xl font-semibold tabular-nums",
           colors[tone],
         )}
       >

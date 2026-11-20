@@ -11,7 +11,7 @@ export function NFLQuarterScore({ rows }: { rows: NflQuarterRow[] }) {
       </tr></thead>
       <tbody>{rows.map(row => <tr key={row.team} style={{ borderTop: '1px solid var(--border)' }}>
         <th scope="row" style={{ padding: 12 }}><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><TeamLogo logo={row.logo} name={row.team} size={22} />{row.team}</span></th>
-        {row.periods.map((score, i) => <td key={i}>{score ?? '—'}</td>)}<td style={{ fontWeight: 800 }}>{row.total}</td>
+        {row.periods.map((score, i) => <td key={i}>{score ?? '—'}</td>)}<td style={{ fontWeight: 700 }}>{row.total}</td>
       </tr>)}</tbody>
     </table>
   </div>

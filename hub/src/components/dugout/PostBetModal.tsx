@@ -45,9 +45,9 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   }
 
   return (
-    <ModalSurface open onClose={() => { if (!submitting.current) onClose() }} labelledBy="post-bet-title" backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+    <ModalSurface open onClose={() => { if (!submitting.current) onClose() }} labelledBy="post-bet-title" backdropStyle={{ background: 'var(--overlay)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
+          <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
           <button type="button" disabled={posting} onClick={() => { if (!submitting.current) onClose() }} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: posting ? 'default' : 'pointer' }}><X size={16} /></button>
         </div>
 
@@ -57,9 +57,9 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
               <PlayerAvatar sport={l.sport} headshot={l.headshot_url} teamLogo={sportTeamLogoUrl(l.sport, l.team)} teamAbbr={l.team} name={l.player_name} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{l.player_name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.prop_label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{l.prop_label}</div>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{formatOdds(l.odds)}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{formatOdds(l.odds)}</span>
             </div>
           ))}
         </div>
@@ -67,10 +67,10 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 8, marginBottom: 12 }}>
           {legs[0].book && <BookLogo vendor={legs[0].book} size={16} />}
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{isParlay ? 'Combined odds' : 'Odds'}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 900, color: 'var(--accent)', fontFamily: 'monospace' }}>{combined != null ? formatOdds(combined) : '—'}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>{combined != null ? formatOdds(combined) : '—'}</span>
         </div>
 
-        <label htmlFor="post-bet-wager" style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700 }}>Wager (optional)</label>
+        <label htmlFor="post-bet-wager" style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700 }}>Wager (optional)</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 10 }}>
           <span style={{ fontSize: 14, color: 'var(--text-3)' }}>$</span>
           <input
@@ -91,13 +91,13 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
 
         {nbaOnly && (
           <div style={{ marginBottom: 12 }}>
-            <label htmlFor="post-bet-audience" style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', fontWeight: 700, marginBottom: 4 }}>Audience</label>
+            <label htmlFor="post-bet-audience" style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', fontWeight: 700, marginBottom: 4 }}>Audience</label>
             <select id="post-bet-audience" value={visibility} disabled={posting} onChange={event => setVisibility(event.target.value as typeof visibility)} style={{ width: '100%', minHeight: 44, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, padding: '8px 10px', color: 'var(--text-1)', fontSize: 14 }}>
               <option value="private">Only me</option>
               <option value="followers">Followers</option>
               <option value="public">Everyone</option>
             </select>
-            {visibility === 'private' && <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '6px 0 0' }}>Only-me picks stay private and are excluded from public records.</p>}
+            {visibility === 'private' && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 0' }}>Only-me picks stay private and are excluded from public records.</p>}
           </div>
         )}
         {error && <p role="alert" style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
@@ -106,7 +106,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
           type="button"
           onClick={submit}
           disabled={posting || combined == null}
-          style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', fontWeight: 800, fontSize: 13, cursor: posting ? 'default' : 'pointer', opacity: posting || combined == null ? 0.7 : 1 }}
+          style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: 'var(--accent-fill)', color: 'var(--accent-fg)', fontWeight: 700, fontSize: 13, cursor: posting ? 'default' : 'pointer', opacity: posting || combined == null ? 0.7 : 1 }}
         >
           {posting ? 'Posting…' : isParlay ? 'Post Parlay' : 'Post Pick'}
         </button>

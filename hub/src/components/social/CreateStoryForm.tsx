@@ -76,19 +76,19 @@ export function CreateStoryForm({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-4">
-      <label className="block text-xs font-bold text-zinc-400">Sport
-        <select aria-label="Story sport" value={sport} onChange={event => setSport(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white">
+      <label className="block text-xs font-bold text-[var(--text-2)]">Sport
+        <select aria-label="Story sport" value={sport} onChange={event => setSport(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-1)]">
           <option value="">All sports</option>{[...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'].map(league => <option key={league} value={league}>{league}</option>)}
         </select>
       </label>
       {/* Toggle */}
-      <div className="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+      <div className="flex gap-2 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
         <button onClick={() => setType('text')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'text' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'text' ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)]'}`}>
           <Type size={14} /> Text
         </button>
         <button onClick={() => setType('image')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'image' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'image' ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)]'}`}>
           <Upload size={14} /> Photo
         </button>
       </div>
@@ -98,7 +98,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
         style={{ background: preview ? '#000' : bg }}>
         {preview
           ? <SafeImage src={preview} alt="Story preview" className="w-full h-full object-cover" />
-          : <p className="text-white text-center text-xl font-bold px-4 break-words">{text || 'Your story preview'}</p>
+          : <p className="text-[var(--text-1)] text-center text-xl font-bold px-4 break-words">{text || 'Your story preview'}</p>
         }
       </div>
 
@@ -106,28 +106,28 @@ export function CreateStoryForm({ userId }: { userId: string }) {
         <div className="space-y-3">
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
             placeholder={mlbAccess ? 'Share your MLB, NFL or NBA moment…' : 'Share your NFL or NBA moment…'}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
+            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-2">Background Color</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Background Color</label>
             <div className="flex gap-2">
               {['#111111','#1a1a2e','#16213e','#0f3460','#1a472a','#4a1942'].map(c => (
                 <button key={c} onClick={() => setBg(c)} style={{ background: c }}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${bg === c ? 'border-white' : 'border-transparent'}`} />
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${bg === c ? 'border-[var(--border-3)]' : 'border-transparent'}`} />
               ))}
             </div>
           </div>
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-700 rounded-xl py-8 cursor-pointer hover:border-green-500/50 transition-colors">
-          <Upload size={24} className="text-zinc-500 mb-2" />
-          <span className="text-sm text-zinc-500">Tap to upload photo</span>
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--border-2)] rounded-xl py-8 cursor-pointer hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-colors">
+          <Upload size={24} className="text-[var(--text-3)] mb-2" />
+          <span className="text-sm text-[var(--text-3)]">Tap to upload photo</span>
           <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
         </label>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--red)]">{error}</p>}
       <button onClick={post} disabled={submitting || (type === 'text' ? !text.trim() : !file)}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
+        className="w-full bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold py-3 rounded-xl transition-colors">
         {submitting ? 'Posting…' : 'Share Story'}
       </button>
     </div>

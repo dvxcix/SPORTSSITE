@@ -19,7 +19,7 @@ const RECENCY_OPTIONS = [
 ] as const
 
 const dateInputStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 6,
+  fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6,
   border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)',
 }
 
@@ -131,33 +131,33 @@ export function BatterMatchupExplorer({ rows, myName, todayOpponent }: { rows: B
         {RECENCY_OPTIONS.map(o => (
           <ToggleBtn key={o.key} active={!usingCustomRange && recency === o.key} onClick={() => { setRecency(o.key); setDateFrom(''); setDateTo('') }}>{o.label}</ToggleBtn>
         ))}
-        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>or custom range:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 6 }}>or custom range:</span>
         <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={dateInputStyle} />
-        <span style={{ color: 'var(--text-3)', fontSize: 11 }}>–</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>–</span>
         <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={dateInputStyle} />
         {usingCustomRange && <ToggleBtn active={false} onClick={() => { setDateFrom(''); setDateTo('') }}>Clear</ToggleBtn>}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Pitcher hand:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Pitcher hand:</span>
         <DimChip label="All" active={handSel === 'all'} onClick={() => setHandSel('all')} />
         <DimChip label="vs RHP" active={handSel === 'R'} onClick={() => setHandSel('R')} />
         <DimChip label="vs LHP" active={handSel === 'L'} onClick={() => setHandSel('L')} />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Game:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Game:</span>
         <DimChip label="All" active={dayNightSel === 'all'} onClick={() => setDayNightSel('all')} />
         <DimChip label="Day" active={dayNightSel === 'day'} onClick={() => setDayNightSel('day')} />
         <DimChip label="Night" active={dayNightSel === 'night'} onClick={() => setDayNightSel('night')} />
-        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. pitcher:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 6 }}>Vs. pitcher:</span>
         <PlayerPicker options={opponents} value={opponentSel} onChange={setOpponentSel} placeholder="All pitchers" />
         {todayOpponent && opponentSel === todayOpponent.pitcherId && (
-          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px' }}>
             TODAY&apos;S MATCHUP
           </span>
         )}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Inning:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Inning:</span>
         <DimChip label="All" active={inningSel === 'all'} onClick={() => setInningSel('all')} />
         {innings.map(inn => (
           <DimChip key={inn} label={String(inn)} active={inningSel === inn} onClick={() => setInningSel(inn)} />
@@ -187,7 +187,7 @@ export function BatterMatchupExplorer({ rows, myName, todayOpponent }: { rows: B
               </thead>
               <tbody>
                 {/* Pinned "All Pitches" summary row — never sorted, never heat-colored (it's an aggregate, not a peer of the pitch-type rows below it) */}
-                <tr style={{ borderBottom: '2px solid var(--border-2)', fontWeight: 800 }}>
+                <tr style={{ borderBottom: '2px solid var(--border-2)', fontWeight: 700 }}>
                   <td style={{ padding: '6px 8px', color: 'var(--text-1)' }}>All Pitches</td>
                   {TABLE_COLS.map(c => (
                     <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)' }}>

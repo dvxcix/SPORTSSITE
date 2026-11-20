@@ -129,7 +129,7 @@ export function StrikeZonePlot({ pitches, batSide, width = 130, height = 160 }: 
           <g key={p.index ?? i}>
             {isLast && <circle cx={x} cy={y} r={11} fill="none" stroke={color} strokeWidth={1.5} opacity={0.6} />}
             <circle cx={x} cy={y} r={8} fill={color} stroke="var(--bg)" strokeWidth={1.5} opacity={isLast ? 1 : 0.85} />
-            <text x={x} y={y + 3} textAnchor="middle" fontSize={9} fontWeight={800} fill="#fff">
+            <text x={x} y={y + 3} textAnchor="middle" fontSize={9} fontWeight={800} fill="var(--text-1)">
               {i + 1}
             </text>
           </g>

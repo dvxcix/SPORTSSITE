@@ -45,15 +45,15 @@ function GameStatusChip({ game }: { game?: SynergyGame }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <TeamLogo logo={getTeamLogoUrl(game.awayAbbr)} name={game.awayAbbr} size={20} />
-      <span style={{ color: 'var(--text-3)', fontSize: 10, fontWeight: 800 }}>@</span>
+      <span style={{ color: 'var(--text-3)', fontSize: 12, fontWeight: 700 }}>@</span>
       <TeamLogo logo={getTeamLogoUrl(game.homeAbbr)} name={game.homeAbbr} size={20} />
-      {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
+      {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)' }} />}
       {(isLive || isFinal) ? (
-        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace" }}>
           {game.awayScore ?? 0}–{game.homeScore ?? 0}
         </span>
       ) : game.gameDate ? (
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', fontFamily: "'SF Mono',monospace" }}>{timeStr(game.gameDate)}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', fontFamily: "'SF Mono',monospace" }}>{timeStr(game.gameDate)}</span>
       ) : null}
     </div>
   )
@@ -205,7 +205,7 @@ export function SynergyClient() {
           <div key={`${m.batterId}-${m.pitcherId}-${m.gameKey}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <GameStatusChip game={gameByKey[m.gameKey]} />
-              {!m.lineupConfirmed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.04em' }}>PROJECTED LINEUP</span>}
+              {!m.lineupConfirmed && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.04em' }}>PROJECTED LINEUP</span>}
             </div>
             <AffinityMatchupCards
               batterId={m.batterId} batterName={m.batterName} batterTeamAbbr={m.batterTeamAbbr} batterBats={m.batterBats}

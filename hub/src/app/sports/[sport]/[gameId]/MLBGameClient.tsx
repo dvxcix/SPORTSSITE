@@ -35,7 +35,7 @@ interface Props {
 
 function TeamLogo({ id, name, size = 36 }: { id: number; name: string; size?: number }) {
   const fallback = (
-    <div style={{ width: size, height: size, borderRadius: size * 0.22, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 800, color: 'var(--text-3)', flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: size * 0.22, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>
       {name?.[0]}
     </div>
   )
@@ -64,29 +64,29 @@ function Scoreboard({ feed }: { feed: MLBGameFeed }) {
         {/* Away */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
           <TeamLogo id={away.id} name={away.name} size={52} />
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', textAlign: 'center' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', textAlign: 'center' }}>
             {away.teamName || away.name}
           </p>
-          {away.record && <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{away.record.wins}-{away.record.losses}</p>}
+          {away.record && <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{away.record.wins}-{away.record.losses}</p>}
         </div>
 
         {/* Score */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
           {(isLive || isFinal) ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 44, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{awayRuns}</span>
+              <span style={{ fontSize: 44, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{awayRuns}</span>
               <span style={{ fontSize: 20, color: 'var(--text-3)', fontWeight: 300 }}>-</span>
-              <span style={{ fontSize: 44, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{homeRuns}</span>
+              <span style={{ fontSize: 44, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{homeRuns}</span>
             </div>
           ) : (
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-2)' }}>vs</p>
           )}
-          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: isLive ? 'rgba(255,77,106,0.12)' : 'var(--surface-2)', color: isLive ? 'var(--red)' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: isLive ? 'rgba(255,77,106,0.12)' : 'var(--surface-2)', color: isLive ? 'var(--red)' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
             {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />}
             {inningLabel}
           </span>
           {isLive && (
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               {ls.balls ?? 0}-{ls.strikes ?? 0} · {ls.outs ?? 0} out{ls.outs !== 1 ? 's' : ''}
             </span>
           )}
@@ -95,26 +95,26 @@ function Scoreboard({ feed }: { feed: MLBGameFeed }) {
         {/* Home */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
           <TeamLogo id={home.id} name={home.name} size={52} />
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', textAlign: 'center' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', textAlign: 'center' }}>
             {home.teamName || home.name}
           </p>
-          {home.record && <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{home.record.wins}-{home.record.losses}</p>}
+          {home.record && <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{home.record.wins}-{home.record.losses}</p>}
         </div>
       </div>
 
       {/* Meta */}
       <div style={{ display: 'flex', gap: 16, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
         {gameData.venue?.name && (
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>📍 {gameData.venue.name}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>📍 {gameData.venue.name}</span>
         )}
         {gameData.weather && (
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>🌤 {gameData.weather.temp}°F · {gameData.weather.condition}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>🌤 {gameData.weather.temp}°F · {gameData.weather.condition}</span>
         )}
         {gameData.weather?.wind && (
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>💨 {gameData.weather.wind}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>💨 {gameData.weather.wind}</span>
         )}
         {gameData.probablePitchers?.away && (
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Pitchers: {gameData.probablePitchers.away.fullName} vs {gameData.probablePitchers.home?.fullName}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Pitchers: {gameData.probablePitchers.away.fullName} vs {gameData.probablePitchers.home?.fullName}</span>
         )}
       </div>
     </div>
@@ -139,7 +139,7 @@ function Linescore({ feed }: { feed: MLBGameFeed }) {
             {innings.map(inn => (
               <th key={inn.num} style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-3)', fontWeight: 700, minWidth: 28 }}>{inn.num}</th>
             ))}
-            <th style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-3)', fontWeight: 800 }}>R</th>
+            <th style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-3)', fontWeight: 700 }}>R</th>
             <th style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-3)', fontWeight: 700 }}>H</th>
             <th style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-3)', fontWeight: 700 }}>E</th>
           </tr>
@@ -154,7 +154,7 @@ function Linescore({ feed }: { feed: MLBGameFeed }) {
                 <td style={{ padding: '8px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <TeamLogo id={teamId} name={abbr} size={20} />
-                    <span style={{ fontWeight: 800, color: 'var(--text-1)' }}>{abbr}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>{abbr}</span>
                   </div>
                 </td>
                 {innings.map(inn => {
@@ -165,7 +165,7 @@ function Linescore({ feed }: { feed: MLBGameFeed }) {
                     </td>
                   )
                 })}
-                <td style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{totals.runs}</td>
+                <td style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>{totals.runs}</td>
                 <td style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-2)' }}>{totals.hits}</td>
                 <td style={{ padding: '8px 8px', textAlign: 'center', color: 'var(--text-2)' }}>{totals.errors}</td>
               </tr>
@@ -198,7 +198,7 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid rgba(180,255,77,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
-      <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Current At-Bat</p>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Current At-Bat</p>
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Batter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -210,14 +210,14 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
             size={44}
           />
           <div>
-            <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{batter.fullName}</p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)' }}>Batting</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{batter.fullName}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Batting</p>
           </div>
         </div>
 
         {/* vs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>vs</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>vs</span>
           <PlayerAvatar
             headshot={mlbHeadshot(pitcher.id)}
             teamLogo={mlbTeamLogo(feed.gameData.teams[currentPlay.about.isTopInning ? 'home' : 'away'].id)}
@@ -226,18 +226,18 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
             size={44}
           />
           <div>
-            <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{pitcher.fullName}</p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)' }}>Pitching</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{pitcher.fullName}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Pitching</p>
           </div>
         </div>
 
         {/* Count + Base diamond + live strike zone */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginLeft: 'auto' }}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em' }}>
+            <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em' }}>
               {count.balls}-{count.strikes}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{count.outs} out{count.outs !== 1 ? 's' : ''}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{count.outs} out{count.outs !== 1 ? 's' : ''}</p>
           </div>
           <BaseDiamond
             first={hasFirst} second={hasSecond} third={hasThird}
@@ -261,9 +261,9 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
             <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{fmt(lastPitch.pitchData.startSpeed, 1)} mph</span>
           )}
           {lastPitch.pitchData?.spinRate && (
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{Math.round(lastPitch.pitchData.spinRate)} rpm</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{Math.round(lastPitch.pitchData.spinRate)} rpm</span>
           )}
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{pitchOutcomeLabel(lastPitch)}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pitchOutcomeLabel(lastPitch)}</span>
         </div>
       )}
 
@@ -274,11 +274,11 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
             const i = pitches.length - 1 - ri
             const code = p.details.type?.code ?? ''
             return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                 <span style={{
                   width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, fontWeight: 800, color: '#fff',
+                  fontSize: 11, fontWeight: 700, color: 'var(--text-1)',
                   background: pitchOutcomeColor(p),
                 }}>{i + 1}</span>
                 <span style={{ color: 'var(--text-2)', fontWeight: 600, width: 70, flexShrink: 0 }}>{pitchLabel(code)}</span>
@@ -303,8 +303,8 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
                 showTeam={false}
               />
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>On deck</p>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>{offense.onDeck.fullName}</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>On deck</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{offense.onDeck.fullName}</p>
               </div>
             </div>
           )}
@@ -318,8 +318,8 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
                 showTeam={false}
               />
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In the hole</p>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>{offense.inHole.fullName}</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In the hole</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{offense.inHole.fullName}</p>
               </div>
             </div>
           )}
@@ -404,18 +404,18 @@ function PlayRow({
     >
       {/* Inning header — score state */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, color: isScoringPlay ? 'var(--accent)' : 'var(--text-3)', letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: isScoringPlay ? 'var(--accent)' : 'var(--text-3)', letterSpacing: '0.04em' }}>
           {play.about.isTopInning ? '▲' : '▼'} {play.about.inning}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>·</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>·</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
           {play.result.awayScore}–{play.result.homeScore}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>·</span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>·</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
           {play.count.outs} out{play.count.outs !== 1 ? 's' : ''}
         </span>
-        <span style={{ fontSize: 9, color: 'var(--text-3)', marginLeft: 'auto' }}>{expanded ? '▲ less' : '▼ details'}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>{expanded ? '▲ less' : '▼ details'}</span>
       </div>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -431,7 +431,7 @@ function PlayRow({
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Event title — lime green for scoring plays */}
-          <p style={{ fontSize: 14, fontWeight: 900, color: isScoringPlay ? 'var(--accent)' : 'var(--text-1)', marginBottom: 3, lineHeight: 1.25 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: isScoringPlay ? 'var(--accent)' : 'var(--text-1)', marginBottom: 3, lineHeight: 1.25 }}>
             {(play.result.description ?? '').length > 80
               ? play.result.description!.slice(0, 80).trimEnd() + '…'
               : (play.result.description ?? 'In progress…')}
@@ -441,7 +441,7 @@ function PlayRow({
           {milestones.length > 0 && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
               {milestones.map((m, i) => (
-                <span key={i} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(180,255,77,0.1)', color: 'var(--accent)', border: '1px solid rgba(180,255,77,0.25)' }}>
+                <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(180,255,77,0.1)', color: 'var(--accent)', border: '1px solid rgba(180,255,77,0.25)' }}>
                   {m}
                 </span>
               ))}
@@ -450,7 +450,7 @@ function PlayRow({
 
           {/* Batter stats line */}
           {batterStats && (
-            <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
               <strong style={{ color: 'var(--text-2)' }}>{batter.fullName.split(' ').pop()}</strong>
               {' '}·{' '}
               {batterStats.hits ?? 0}/{batterStats.atBats ?? 0}
@@ -467,7 +467,7 @@ function PlayRow({
               alt={pitcher.fullName}
               style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: 'var(--surface-2)' }}
             />
-            <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
               <strong style={{ color: 'var(--text-2)' }}>{pitcher.fullName.split(' ').pop()}</strong>
               {pitcherStats && (
                 <>
@@ -485,22 +485,22 @@ function PlayRow({
             <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: pitchColor(pitchCode), display: 'inline-block' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>{pitchLabel(pitchCode)}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{pitchLabel(pitchCode)}</span>
               </div>
               {lastPitch.pitchData?.startSpeed && (
-                <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>{fmt(lastPitch.pitchData.startSpeed, 1)} mph</span>
+                <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 600 }}>{fmt(lastPitch.pitchData.startSpeed, 1)} mph</span>
               )}
               {lastPitch.pitchData?.spinRate && (
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{Math.round(lastPitch.pitchData.spinRate)} rpm</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{Math.round(lastPitch.pitchData.spinRate)} rpm</span>
               )}
               {lastPitch.hitData?.launchSpeed && (
-                <span style={{ fontSize: 11, color: 'var(--text-2)' }}>EV {fmt(lastPitch.hitData.launchSpeed, 1)} mph</span>
+                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>EV {fmt(lastPitch.hitData.launchSpeed, 1)} mph</span>
               )}
               {lastPitch.hitData?.launchAngle !== undefined && (
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>LA {fmt(lastPitch.hitData.launchAngle, 1)}°</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>LA {fmt(lastPitch.hitData.launchAngle, 1)}°</span>
               )}
               {lastPitch.hitData?.totalDistance && (
-                <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>{Math.round(lastPitch.hitData.totalDistance)} ft</span>
+                <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{Math.round(lastPitch.hitData.totalDistance)} ft</span>
               )}
             </div>
           )}
@@ -525,7 +525,7 @@ function PlayRow({
                   </Tooltip>
                 )
               })}
-              <span style={{ fontSize: 9, color: 'var(--text-3)', marginLeft: 4 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 4 }}>
                 {pitches.length} pitch{pitches.length !== 1 ? 'es' : ''}
               </span>
             </div>
@@ -549,7 +549,7 @@ function PlayRow({
               transition: 'all 120ms',
             }}>
               <span>{emoji}</span>
-              {(r?.count ?? 0) > 0 && <span style={{ fontSize: 11, fontWeight: 700 }}>{r!.count}</span>}
+              {(r?.count ?? 0) > 0 && <span style={{ fontSize: 12, fontWeight: 700 }}>{r!.count}</span>}
             </button>
           )
         })}
@@ -561,7 +561,7 @@ function PlayRow({
         <div onClick={e => e.stopPropagation()} style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {(play.matchup.postOnFirst || play.matchup.postOnSecond || play.matchup.postOnThird) && (
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
                 Runners on base
               </p>
               <BaseDiamond
@@ -573,7 +573,7 @@ function PlayRow({
           )}
           {pitches.length > 0 && (
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
                 Pitch locations
               </p>
               <StrikeZonePlot pitches={pitches} batSide={play.matchup.batSide?.code as 'L' | 'R'} width={110} height={135} />
@@ -583,18 +583,18 @@ function PlayRow({
           <div style={{ flex: 1, minWidth: 200 }}>
             {pitches.length > 0 && (
               <>
-                <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
                   Every pitch
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
                   {pitches.map((p, i) => {
                     const code = p.details.type?.code ?? ''
                     return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                         <span style={{
                           width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 8, fontWeight: 800, color: '#fff',
+                          fontSize: 11, fontWeight: 700, color: 'var(--text-1)',
                           background: pitchOutcomeColor(p),
                         }}>{i + 1}</span>
                         <span style={{ color: 'var(--text-2)', fontWeight: 600, width: 70, flexShrink: 0 }}>{pitchLabel(code)}</span>
@@ -609,15 +609,15 @@ function PlayRow({
 
             {hasRunnerMovement && (
               <>
-                <p style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
                   Baserunners
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {play.runners!.map((r, i) => (
-                    <div key={i} style={{ fontSize: 11, color: 'var(--text-2)' }}>
+                    <div key={i} style={{ fontSize: 12, color: 'var(--text-2)' }}>
                       <strong style={{ color: 'var(--text-1)' }}>{r.details.runner.fullName}</strong>
                       {': '}{r.details.event}
-                      {r.movement.isOut && <span style={{ color: '#f87171', fontWeight: 700 }}> (out)</span>}
+                      {r.movement.isOut && <span style={{ color: 'var(--red)', fontWeight: 700 }}> (out)</span>}
                     </div>
                   ))}
                 </div>
@@ -724,7 +724,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
       </div>
 
       {/* Batting */}
-      <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Batting</p>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Batting</p>
       <div style={{ overflowX: 'auto', marginBottom: 20 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
@@ -755,7 +755,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
                         <p style={{ fontSize: 12, fontWeight: 700, color: isCurrentBatter ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
                           {p.person.fullName}
                         </p>
-                        <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{p.position?.abbreviation}</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{p.position?.abbreviation}</p>
                       </div>
                     </div>
                   </td>
@@ -772,7 +772,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
       </div>
 
       {/* Pitching */}
-      <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pitching</p>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pitching</p>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
@@ -806,7 +806,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
                         <p style={{ fontSize: 12, fontWeight: 700, color: isCurrentPitcher ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
                           {p.person.fullName}
                         </p>
-                        <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{p.seasonStats?.pitching?.era ? `ERA ${p.seasonStats.pitching.era}` : ''}</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{p.seasonStats?.pitching?.era ? `ERA ${p.seasonStats.pitching.era}` : ''}</p>
                       </div>
                     </div>
                   </td>
@@ -828,7 +828,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
       {feed.liveData.decisions && (
         <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 10, fontSize: 12, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {feed.liveData.decisions.winner && (
-            <span style={{ color: 'var(--text-2)' }}>W: <strong style={{ color: '#4ade80' }}>{feed.liveData.decisions.winner.fullName}</strong></span>
+            <span style={{ color: 'var(--text-2)' }}>W: <strong style={{ color: 'var(--green)' }}>{feed.liveData.decisions.winner.fullName}</strong></span>
           )}
           {feed.liveData.decisions.loser && (
             <span style={{ color: 'var(--text-2)' }}>L: <strong style={{ color: 'var(--red)' }}>{feed.liveData.decisions.loser.fullName}</strong></span>
@@ -974,13 +974,13 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
           {/* Probable pitchers / decisions */}
           {feed.liveData.decisions?.winner && (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Decisions</p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Decisions</p>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 {feed.liveData.decisions.winner && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <PlayerAvatar headshot={mlbHeadshot(feed.liveData.decisions.winner.id)} teamLogo={undefined} name={feed.liveData.decisions.winner.fullName} size={36} showTeam={false} />
                     <div>
-                      <p style={{ fontSize: 11, color: '#4ade80', fontWeight: 800 }}>WIN</p>
+                      <p style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>WIN</p>
                       <p style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 700 }}>{feed.liveData.decisions.winner.fullName}</p>
                     </div>
                   </div>
@@ -989,7 +989,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <PlayerAvatar headshot={mlbHeadshot(feed.liveData.decisions.loser.id)} teamLogo={undefined} name={feed.liveData.decisions.loser.fullName} size={36} showTeam={false} />
                     <div>
-                      <p style={{ fontSize: 11, color: 'var(--red)', fontWeight: 800 }}>LOSS</p>
+                      <p style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>LOSS</p>
                       <p style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 700 }}>{feed.liveData.decisions.loser.fullName}</p>
                     </div>
                   </div>
@@ -998,7 +998,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <PlayerAvatar headshot={mlbHeadshot(feed.liveData.decisions.save.id)} teamLogo={undefined} name={feed.liveData.decisions.save.fullName} size={36} showTeam={false} />
                     <div>
-                      <p style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 800 }}>SAVE</p>
+                      <p style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>SAVE</p>
                       <p style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 700 }}>{feed.liveData.decisions.save.fullName}</p>
                     </div>
                   </div>
@@ -1010,13 +1010,13 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
           {/* Last 5 scoring plays */}
           {(feed.liveData.plays.scoringPlays?.length ?? 0) > 0 && (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Scoring Plays</p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Scoring Plays</p>
               {(feed.liveData.plays.scoringPlays ?? []).map(idx => {
                 const play = feed.liveData.plays.allPlays[idx]
                 if (!play) return null
                 return (
                   <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', paddingBottom: 10, marginBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 4 }} />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-fill)', flexShrink: 0, marginTop: 4 }} />
                     <div>
                       <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>
                         {play.about.isTopInning ? '▲' : '▼'}{play.about.inning} · {play.result.awayScore}-{play.result.homeScore}

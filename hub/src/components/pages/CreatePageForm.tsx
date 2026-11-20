@@ -50,52 +50,52 @@ export function CreatePageForm({ userId }: { userId: string }) {
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       <div className="ss-flow-card">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Page Name *</label>
           <input aria-label="Page name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Yankees Daily, MLB Picks Central…"
             maxLength={60}
             className="ss-flow-input" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Description</label>
           <textarea aria-label="Page description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
             placeholder="What is this page about?"
             maxLength={280}
             className="ss-flow-input resize-none" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Category</label>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map(c => (
               <button key={c} type="button" aria-pressed={form.category === c} onClick={() => setForm(f => ({ ...f, category: c }))}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${form.category === c ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${form.category === c ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
                 {c}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Icon</label>
           <div className="flex flex-wrap gap-2">
             {['⭐', '🏈', '⚾', '🏀', '🏒', '⚽', '🎯', '🔥', '💰', '📊'].map(e => (
               <button key={e} type="button" aria-pressed={form.emoji === e} onClick={() => setForm(f => ({ ...f, emoji: e }))}
-                className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.emoji === e ? 'bg-zinc-700 ring-2 ring-green-500' : 'bg-zinc-800 hover:bg-zinc-700'}`}>
+                className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.emoji === e ? 'bg-[var(--surface-3)] ring-2 ring-green-500' : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'}`}>
                 {e}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Sport</label>
           <div className="flex flex-wrap gap-1.5">
             {SPORTS.map(sport => {
               const value = sport === 'General' ? '' : sport
               const active = form.sport === value
               const logo = sportLogoUrl(sport)
-              return <button key={sport} type="button" aria-pressed={active} onClick={() => setForm(f => ({ ...f, sport: value }))} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-all ${active ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+              return <button key={sport} type="button" aria-pressed={active} onClick={() => setForm(f => ({ ...f, sport: value }))} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-all ${active ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
                 {logo && <Image src={logo} alt="" width={14} height={14} className="object-contain" />}{sport}
               </button>
             })}

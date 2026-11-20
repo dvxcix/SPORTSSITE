@@ -6,10 +6,10 @@ export function ProfileStats({ stats }: { stats: { value: string; label: string;
       {stats.map(s => (
         <div
           key={s.label}
-          className="rounded-xl border border-white/[.075] bg-white/[.025] p-4"
+          className="rounded-xl border border-[rgba(var(--line-rgb),0.075)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"
         >
-          <p className={`text-xl font-semibold leading-none tabular-nums sm:text-2xl ${s.accent ? 'text-lime-300' : 'text-white'}`}>{s.value}</p>
-          <p className="mt-2 text-xs text-zinc-400">{s.label}</p>
+          <p className={`text-xl font-semibold leading-none tabular-nums sm:text-2xl ${s.accent ? 'text-[var(--accent)]' : 'text-[var(--text-1)]'}`}>{s.value}</p>
+          <p className="mt-2 text-xs text-[var(--text-2)]">{s.label}</p>
         </div>
       ))}
     </div>

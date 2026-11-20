@@ -41,8 +41,8 @@ export function AdminDeletionActions({ requestId, status }: { requestId: string;
 
   return <div className="flex flex-wrap gap-2">
     {status === 'pending' ? <button disabled={loading} onClick={() => update('reviewing')} className="rounded-lg border border-cyan-400/30 px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-400/10 disabled:opacity-40">Review</button> : null}
-    <button disabled={loading} onClick={() => update('blocked')} className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10 disabled:opacity-40">Block</button>
-    <button disabled={loading} onClick={() => update('scheduled')} className="rounded-lg border border-red-400/30 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-400/10 disabled:opacity-40">Schedule</button>
-    <button disabled={loading} onClick={() => update('canceled')} className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-bold text-zinc-400 hover:text-white disabled:opacity-40">Cancel</button>
+    <button disabled={loading} onClick={() => update('blocked')} className="rounded-lg border border-[color-mix(in_srgb,var(--gold)_30%,transparent)] px-3 py-1.5 text-xs font-bold text-[var(--gold)] hover:bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] disabled:opacity-40">Block</button>
+    <button disabled={loading} onClick={() => update('scheduled')} className="rounded-lg border border-[color-mix(in_srgb,var(--red)_30%,transparent)] px-3 py-1.5 text-xs font-bold text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] disabled:opacity-40">Schedule</button>
+    <button disabled={loading} onClick={() => update('canceled')} className="rounded-lg border border-[var(--border-2)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-40">Cancel</button>
   </div>
 }

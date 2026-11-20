@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
+import localFont from 'next/font/local'
 import Script from 'next/script'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import './community.css'
+import './framework.css'
+import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { themeBootstrap } from '@/lib/appearance'
+import { PublicThemeControl } from '@/components/theme/PublicThemeControl'
+import { DesignReviewRibbon } from '@/components/theme/DesignReviewRibbon'
 import { AuthProvider } from '@/context/AuthContext'
 import { PostLiveProvider } from '@/context/PostLiveContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
@@ -13,7 +18,7 @@ import { ChangelogPopup } from '@/components/layout/ChangelogPopup'
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider'
 import { NativeTooltipProvider } from '@/components/ui/tooltip-card'
 
-const geist = Geist({ subsets: ['latin'] })
+const geist = localFont({ src: '../../public/fonts/Geist.woff2', weight: '100 900', display: 'swap', variable: '--font-geist' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.slipsurge.com'),
@@ -59,8 +64,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geist.className} bg-zinc-950 text-white antialiased`}>
+    <html lang="en" className="dark" data-theme="dark" suppressHydrationWarning>
+      <body className={`${geist.className} ${geist.variable} antialiased`}>
+        <Script id="ss-appearance" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <ThemeProvider>
+        <PublicThemeControl />
+        {process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && <DesignReviewRibbon />}
         <NativeTooltipProvider />
         <FeedbackProvider>
           <SiteBanner />
@@ -73,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </PostLiveProvider>
           </AuthProvider>
         </FeedbackProvider>
-        <Analytics />
+        {process.env.NEXT_PUBLIC_DESIGN_REVIEW !== '1' && <><Analytics />
         <SpeedInsights />
         {/* X (Twitter) conversion tracking pixel — afterInteractive per
             next/script's own guidance for third-party analytics tags, same
@@ -84,6 +93,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
 twq('config','re01u');`}
         </Script>
+        </>}
+        </ThemeProvider>
       </body>
     </html>
   )

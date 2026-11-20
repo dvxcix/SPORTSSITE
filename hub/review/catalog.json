@@ -1,0 +1,1148 @@
+[
+  {
+    "name": "Settings",
+    "href": "/settings",
+    "group": "Account & preferences",
+    "source": "src/app/settings/page.tsx"
+  },
+  {
+    "name": "Settings / Account",
+    "href": "/settings/account",
+    "group": "Account & preferences",
+    "source": "src/app/settings/account/page.tsx"
+  },
+  {
+    "name": "Settings / Blocked",
+    "href": "/settings/blocked",
+    "group": "Account & preferences",
+    "source": "src/app/settings/blocked/page.tsx"
+  },
+  {
+    "name": "Settings / Connections",
+    "href": "/settings/connections",
+    "group": "Account & preferences",
+    "source": "src/app/settings/connections/page.tsx"
+  },
+  {
+    "name": "Settings / Interests",
+    "href": "/settings/interests",
+    "group": "Account & preferences",
+    "source": "src/app/settings/interests/page.tsx"
+  },
+  {
+    "name": "Settings / Membership",
+    "href": "/settings/membership",
+    "group": "Account & preferences",
+    "source": "src/app/settings/membership/page.tsx"
+  },
+  {
+    "name": "Settings / Notifications",
+    "href": "/settings/notifications",
+    "group": "Account & preferences",
+    "source": "src/app/settings/notifications/page.tsx"
+  },
+  {
+    "name": "Settings / Privacy",
+    "href": "/settings/privacy",
+    "group": "Account & preferences",
+    "source": "src/app/settings/privacy/page.tsx"
+  },
+  {
+    "name": "Settings / Profile",
+    "href": "/settings/profile",
+    "group": "Account & preferences",
+    "source": "src/app/settings/profile/page.tsx"
+  },
+  {
+    "name": "Settings / Security",
+    "href": "/settings/security",
+    "group": "Account & preferences",
+    "source": "src/app/settings/security/page.tsx"
+  },
+  {
+    "name": "Auth / Desktop / Complete",
+    "href": "/auth/desktop/complete",
+    "group": "Account entry",
+    "source": "src/app/auth/desktop/complete/page.tsx"
+  },
+  {
+    "name": "Auth / Desktop / Start",
+    "href": "/auth/desktop/start",
+    "group": "Account entry",
+    "source": "src/app/auth/desktop/start/page.tsx"
+  },
+  {
+    "name": "Auth / Forgot Password",
+    "href": "/auth/forgot-password",
+    "group": "Account entry",
+    "source": "src/app/auth/forgot-password/page.tsx"
+  },
+  {
+    "name": "Auth / Login",
+    "href": "/auth/login",
+    "group": "Account entry",
+    "source": "src/app/auth/login/page.tsx"
+  },
+  {
+    "name": "Auth / Register",
+    "href": "/auth/register",
+    "group": "Account entry",
+    "source": "src/app/auth/register/page.tsx"
+  },
+  {
+    "name": "Auth / Reset Password",
+    "href": "/auth/reset-password",
+    "group": "Account entry",
+    "source": "src/app/auth/reset-password/page.tsx"
+  },
+  {
+    "name": "Auth / Whop / Complete",
+    "href": "/auth/whop/complete",
+    "group": "Account entry",
+    "source": "src/app/auth/whop/complete/page.tsx"
+  },
+  {
+    "name": "Onboarding",
+    "href": "/onboarding",
+    "group": "Account entry",
+    "source": "src/app/onboarding/page.tsx"
+  },
+  {
+    "name": "Admin",
+    "href": "/admin",
+    "group": "Administration",
+    "source": "src/app/admin/page.tsx"
+  },
+  {
+    "name": "Admin / Ads",
+    "href": "/admin/ads",
+    "group": "Administration",
+    "source": "src/app/admin/ads/page.tsx"
+  },
+  {
+    "name": "Admin / Audit",
+    "href": "/admin/audit",
+    "group": "Administration",
+    "source": "src/app/admin/audit/page.tsx"
+  },
+  {
+    "name": "Admin / Badges",
+    "href": "/admin/badges",
+    "group": "Administration",
+    "source": "src/app/admin/badges/page.tsx"
+  },
+  {
+    "name": "Admin / Browserbase",
+    "href": "/admin/browserbase",
+    "group": "Administration",
+    "source": "src/app/admin/browserbase/page.tsx"
+  },
+  {
+    "name": "Admin / Changelog",
+    "href": "/admin/changelog",
+    "group": "Administration",
+    "source": "src/app/admin/changelog/page.tsx"
+  },
+  {
+    "name": "Admin / Contact Recap",
+    "href": "/admin/contact-recap",
+    "group": "Administration",
+    "source": "src/app/admin/contact-recap/page.tsx"
+  },
+  {
+    "name": "Admin / Content / Blogs",
+    "href": "/admin/content/blogs",
+    "group": "Administration",
+    "source": "src/app/admin/content/blogs/page.tsx"
+  },
+  {
+    "name": "Admin / Content / Posts",
+    "href": "/admin/content/posts",
+    "group": "Administration",
+    "source": "src/app/admin/content/posts/page.tsx"
+  },
+  {
+    "name": "Admin / Content / Reports",
+    "href": "/admin/content/reports",
+    "group": "Administration",
+    "source": "src/app/admin/content/reports/page.tsx"
+  },
+  {
+    "name": "Admin / Content / Stories",
+    "href": "/admin/content/stories",
+    "group": "Administration",
+    "source": "src/app/admin/content/stories/page.tsx"
+  },
+  {
+    "name": "Admin / Creators",
+    "href": "/admin/creators",
+    "group": "Administration",
+    "source": "src/app/admin/creators/page.tsx"
+  },
+  {
+    "name": "Admin / Design System",
+    "href": "/admin/design-system",
+    "group": "Administration",
+    "source": "src/app/admin/design-system/page.tsx"
+  },
+  {
+    "name": "Admin / Discord",
+    "href": "/admin/discord",
+    "group": "Administration",
+    "source": "src/app/admin/discord/page.tsx"
+  },
+  {
+    "name": "Admin / Discord / Compose",
+    "href": "/admin/discord/compose",
+    "group": "Administration",
+    "source": "src/app/admin/discord/compose/page.tsx"
+  },
+  {
+    "name": "Admin / Emojis",
+    "href": "/admin/emojis",
+    "group": "Administration",
+    "source": "src/app/admin/emojis/page.tsx"
+  },
+  {
+    "name": "Admin / Events",
+    "href": "/admin/events",
+    "group": "Administration",
+    "source": "src/app/admin/events/page.tsx"
+  },
+  {
+    "name": "Admin / Fanduel Import",
+    "href": "/admin/fanduel-import",
+    "group": "Administration",
+    "source": "src/app/admin/fanduel-import/page.tsx"
+  },
+  {
+    "name": "Admin / Forum",
+    "href": "/admin/forum",
+    "group": "Administration",
+    "source": "src/app/admin/forum/page.tsx"
+  },
+  {
+    "name": "Admin / Groups",
+    "href": "/admin/groups",
+    "group": "Administration",
+    "source": "src/app/admin/groups/page.tsx"
+  },
+  {
+    "name": "Admin / Hr Intelligence",
+    "href": "/admin/hr-intelligence",
+    "group": "Administration",
+    "source": "src/app/admin/hr-intelligence/page.tsx"
+  },
+  {
+    "name": "Admin / Jobs",
+    "href": "/admin/jobs",
+    "group": "Administration",
+    "source": "src/app/admin/jobs/page.tsx"
+  },
+  {
+    "name": "Admin / Live",
+    "href": "/admin/live",
+    "group": "Administration",
+    "source": "src/app/admin/live/page.tsx"
+  },
+  {
+    "name": "Admin / Market Dna",
+    "href": "/admin/market-dna",
+    "group": "Administration",
+    "source": "src/app/admin/market-dna/page.tsx"
+  },
+  {
+    "name": "Admin / Marketplace",
+    "href": "/admin/marketplace",
+    "group": "Administration",
+    "source": "src/app/admin/marketplace/page.tsx"
+  },
+  {
+    "name": "Admin / Matrix Backtest",
+    "href": "/admin/matrix-backtest",
+    "group": "Administration",
+    "source": "src/app/admin/matrix-backtest/page.tsx"
+  },
+  {
+    "name": "Admin / Mgm Import",
+    "href": "/admin/mgm-import",
+    "group": "Administration",
+    "source": "src/app/admin/mgm-import/page.tsx"
+  },
+  {
+    "name": "Admin / Mlb Archive",
+    "href": "/admin/mlb-archive",
+    "group": "Administration",
+    "source": "src/app/admin/mlb-archive/page.tsx"
+  },
+  {
+    "name": "Admin / Monetization",
+    "href": "/admin/monetization",
+    "group": "Administration",
+    "source": "src/app/admin/monetization/page.tsx"
+  },
+  {
+    "name": "Admin / Nfl Access",
+    "href": "/admin/nfl-access",
+    "group": "Administration",
+    "source": "src/app/admin/nfl-access/page.tsx"
+  },
+  {
+    "name": "Admin / Notifications",
+    "href": "/admin/notifications",
+    "group": "Administration",
+    "source": "src/app/admin/notifications/page.tsx"
+  },
+  {
+    "name": "Admin / Pages",
+    "href": "/admin/pages",
+    "group": "Administration",
+    "source": "src/app/admin/pages/page.tsx"
+  },
+  {
+    "name": "Admin / Pikkit Import",
+    "href": "/admin/pikkit-import",
+    "group": "Administration",
+    "source": "src/app/admin/pikkit-import/page.tsx"
+  },
+  {
+    "name": "Admin / Pipeline Health",
+    "href": "/admin/pipeline-health",
+    "group": "Administration",
+    "source": "src/app/admin/pipeline-health/page.tsx"
+  },
+  {
+    "name": "Admin / Product Audit",
+    "href": "/admin/product-audit",
+    "group": "Administration",
+    "source": "src/app/admin/product-audit/page.tsx"
+  },
+  {
+    "name": "Admin / Reports",
+    "href": "/admin/reports",
+    "group": "Administration",
+    "source": "src/app/admin/reports/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Ai",
+    "href": "/admin/settings/ai",
+    "group": "Administration",
+    "source": "src/app/admin/settings/ai/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Custom Code",
+    "href": "/admin/settings/custom-code",
+    "group": "Administration",
+    "source": "src/app/admin/settings/custom-code/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Email",
+    "href": "/admin/settings/email",
+    "group": "Administration",
+    "source": "src/app/admin/settings/email/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Features",
+    "href": "/admin/settings/features",
+    "group": "Administration",
+    "source": "src/app/admin/settings/features/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / General",
+    "href": "/admin/settings/general",
+    "group": "Administration",
+    "source": "src/app/admin/settings/general/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Payments",
+    "href": "/admin/settings/payments",
+    "group": "Administration",
+    "source": "src/app/admin/settings/payments/page.tsx"
+  },
+  {
+    "name": "Admin / Settings / Social Login",
+    "href": "/admin/settings/social-login",
+    "group": "Administration",
+    "source": "src/app/admin/settings/social-login/page.tsx"
+  },
+  {
+    "name": "Admin / Site Banner",
+    "href": "/admin/site-banner",
+    "group": "Administration",
+    "source": "src/app/admin/site-banner/page.tsx"
+  },
+  {
+    "name": "Admin / Social Platforms",
+    "href": "/admin/social-platforms",
+    "group": "Administration",
+    "source": "src/app/admin/social-platforms/page.tsx"
+  },
+  {
+    "name": "Admin / Users",
+    "href": "/admin/users",
+    "group": "Administration",
+    "source": "src/app/admin/users/page.tsx"
+  },
+  {
+    "name": "Admin / Users / Banned",
+    "href": "/admin/users/banned",
+    "group": "Administration",
+    "source": "src/app/admin/users/banned/page.tsx"
+  },
+  {
+    "name": "Admin / Users / Deletions",
+    "href": "/admin/users/deletions",
+    "group": "Administration",
+    "source": "src/app/admin/users/deletions/page.tsx"
+  },
+  {
+    "name": "Admin / Users / Online",
+    "href": "/admin/users/online",
+    "group": "Administration",
+    "source": "src/app/admin/users/online/page.tsx"
+  },
+  {
+    "name": "Admin / Users / Verify",
+    "href": "/admin/users/verify",
+    "group": "Administration",
+    "source": "src/app/admin/users/verify/page.tsx"
+  },
+  {
+    "name": "Admin / Whop Renewal Shape",
+    "href": "/admin/whop-renewal-shape",
+    "group": "Administration",
+    "source": "src/app/admin/whop-renewal-shape/page.tsx"
+  },
+  {
+    "name": "Bookmarks",
+    "href": "/bookmarks",
+    "group": "Community",
+    "source": "src/app/bookmarks/page.tsx"
+  },
+  {
+    "name": "Channels",
+    "href": "/channels",
+    "group": "Community",
+    "source": "src/app/channels/page.tsx"
+  },
+  {
+    "name": "Channels / Nba",
+    "href": "/channels/nba",
+    "group": "Community",
+    "source": "src/app/channels/[slug]/page.tsx"
+  },
+  {
+    "name": "Community",
+    "href": "/community",
+    "group": "Community",
+    "source": "src/app/community/page.tsx"
+  },
+  {
+    "name": "Events",
+    "href": "/events",
+    "group": "Community",
+    "source": "src/app/events/page.tsx"
+  },
+  {
+    "name": "Events / 00000000 0000 4000 8000 000000000901",
+    "href": "/events/00000000-0000-4000-8000-000000000901",
+    "group": "Community",
+    "source": "src/app/events/[id]/page.tsx"
+  },
+  {
+    "name": "Events / Create",
+    "href": "/events/create",
+    "group": "Community",
+    "source": "src/app/events/create/page.tsx"
+  },
+  {
+    "name": "Feed",
+    "href": "/feed",
+    "group": "Community",
+    "source": "src/app/feed/page.tsx"
+  },
+  {
+    "name": "Forum",
+    "href": "/forum",
+    "group": "Community",
+    "source": "src/app/forum/page.tsx"
+  },
+  {
+    "name": "Forum / Nba",
+    "href": "/forum/nba",
+    "group": "Community",
+    "source": "src/app/forum/[category]/page.tsx"
+  },
+  {
+    "name": "Forum / New",
+    "href": "/forum/new",
+    "group": "Community",
+    "source": "src/app/forum/new/page.tsx"
+  },
+  {
+    "name": "Forum / Thread / 00000000 0000 4000 8000 000000000711",
+    "href": "/forum/thread/00000000-0000-4000-8000-000000000711",
+    "group": "Community",
+    "source": "src/app/forum/thread/[id]/page.tsx"
+  },
+  {
+    "name": "Groups",
+    "href": "/groups",
+    "group": "Community",
+    "source": "src/app/groups/page.tsx"
+  },
+  {
+    "name": "Groups / Create",
+    "href": "/groups/create",
+    "group": "Community",
+    "source": "src/app/groups/create/page.tsx"
+  },
+  {
+    "name": "Groups / Nba Lounge",
+    "href": "/groups/nba-lounge",
+    "group": "Community",
+    "source": "src/app/groups/[slug]/page.tsx"
+  },
+  {
+    "name": "Groups / Nba Lounge / Settings",
+    "href": "/groups/nba-lounge/settings",
+    "group": "Community",
+    "source": "src/app/groups/[slug]/settings/page.tsx"
+  },
+  {
+    "name": "Hashtag / NBA",
+    "href": "/hashtag/NBA",
+    "group": "Community",
+    "source": "src/app/hashtag/[tag]/page.tsx"
+  },
+  {
+    "name": "Messages",
+    "href": "/messages",
+    "group": "Community",
+    "source": "src/app/messages/page.tsx"
+  },
+  {
+    "name": "Messages / Group / 00000000 0000 4000 8000 000000000101",
+    "href": "/messages/group/00000000-0000-4000-8000-000000000101",
+    "group": "Community",
+    "source": "src/app/messages/group/[id]/page.tsx"
+  },
+  {
+    "name": "Messages / Jordan Review",
+    "href": "/messages/jordan-review",
+    "group": "Community",
+    "source": "src/app/messages/[username]/page.tsx"
+  },
+  {
+    "name": "Messages / New",
+    "href": "/messages/new",
+    "group": "Community",
+    "source": "src/app/messages/new/page.tsx"
+  },
+  {
+    "name": "Notifications",
+    "href": "/notifications",
+    "group": "Community",
+    "source": "src/app/notifications/page.tsx"
+  },
+  {
+    "name": "Pages",
+    "href": "/pages",
+    "group": "Community",
+    "source": "src/app/pages/page.tsx"
+  },
+  {
+    "name": "Pages / Create",
+    "href": "/pages/create",
+    "group": "Community",
+    "source": "src/app/pages/create/page.tsx"
+  },
+  {
+    "name": "Pages / Slate Notes",
+    "href": "/pages/slate-notes",
+    "group": "Community",
+    "source": "src/app/pages/[slug]/page.tsx"
+  },
+  {
+    "name": "Pages / Slate Notes / Settings",
+    "href": "/pages/slate-notes/settings",
+    "group": "Community",
+    "source": "src/app/pages/[slug]/settings/page.tsx"
+  },
+  {
+    "name": "Posts / 00000000 0000 4000 8000 000000000101",
+    "href": "/posts/00000000-0000-4000-8000-000000000101",
+    "group": "Community",
+    "source": "src/app/posts/[id]/page.tsx"
+  },
+  {
+    "name": "Profile / Jordan Review",
+    "href": "/profile/jordan-review",
+    "group": "Community",
+    "source": "src/app/profile/[username]/page.tsx"
+  },
+  {
+    "name": "Stories / Create",
+    "href": "/stories/create",
+    "group": "Community",
+    "source": "src/app/stories/create/page.tsx"
+  },
+  {
+    "name": "Creators",
+    "href": "/creators",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/page.tsx"
+  },
+  {
+    "name": "Creators / Apply",
+    "href": "/creators/apply",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/apply/page.tsx"
+  },
+  {
+    "name": "Creators / Jordan Review",
+    "href": "/creators/jordan-review",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/[username]/page.tsx"
+  },
+  {
+    "name": "Creators / Offers / Review Offer",
+    "href": "/creators/offers/review-offer",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/offers/[productId]/page.tsx"
+  },
+  {
+    "name": "Creators / Payouts",
+    "href": "/creators/payouts",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/payouts/page.tsx"
+  },
+  {
+    "name": "Creators / Studio",
+    "href": "/creators/studio",
+    "group": "Creators & marketplace",
+    "source": "src/app/creators/studio/page.tsx"
+  },
+  {
+    "name": "Marketplace",
+    "href": "/marketplace",
+    "group": "Creators & marketplace",
+    "source": "src/app/marketplace/page.tsx"
+  },
+  {
+    "name": "Marketplace / 00000000 0000 4000 8000 000000000101",
+    "href": "/marketplace/00000000-0000-4000-8000-000000000101",
+    "group": "Creators & marketplace",
+    "source": "src/app/marketplace/[id]/page.tsx"
+  },
+  {
+    "name": "Marketplace / Sell",
+    "href": "/marketplace/sell",
+    "group": "Creators & marketplace",
+    "source": "src/app/marketplace/sell/page.tsx"
+  },
+  {
+    "name": "Nba",
+    "href": "/nba",
+    "group": "NBA",
+    "source": "src/app/nba/page.tsx"
+  },
+  {
+    "name": "Nba / Players / 900110",
+    "href": "/nba/players/900110",
+    "group": "NBA",
+    "source": "src/app/nba/players/[id]/page.tsx"
+  },
+  {
+    "name": "Nba / Teams / 2",
+    "href": "/nba/teams/2",
+    "group": "NBA",
+    "source": "src/app/nba/teams/[id]/page.tsx"
+  },
+  {
+    "name": "The Paint",
+    "href": "/the-paint",
+    "group": "NBA",
+    "source": "src/app/the-paint/page.tsx"
+  },
+  {
+    "name": "Player drawer · Court",
+    "href": "/the-paint?player=900110&panel=court",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Player drawer · Ladder",
+    "href": "/the-paint?player=900110&panel=ladder",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Player drawer · Markets",
+    "href": "/the-paint?player=900110&panel=markets",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Player drawer · Movement",
+    "href": "/the-paint?player=900110&panel=movement",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Player drawer · Tracking",
+    "href": "/the-paint?player=900110&panel=tracking",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Player drawer · Trends",
+    "href": "/the-paint?player=900110&panel=trends",
+    "group": "NBA · player panels",
+    "source": "src/app/the-paint/PaintPlayerPanel.tsx"
+  },
+  {
+    "name": "Availability",
+    "href": "/the-paint?view=availability",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Cheatsheets",
+    "href": "/the-paint?view=cheatsheets",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Market divergence",
+    "href": "/the-paint?view=divergence",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Defense vs position",
+    "href": "/the-paint?view=dvp",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "First basket",
+    "href": "/the-paint?view=first-basket",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Game markets",
+    "href": "/the-paint?view=game-markets",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Ladder lab",
+    "href": "/the-paint?view=ladders",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Matchup lab",
+    "href": "/the-paint?view=matchup",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Market movement",
+    "href": "/the-paint?view=movement",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Player odds",
+    "href": "/the-paint?view=odds",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Full odds board",
+    "href": "/the-paint?view=odds-board",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "The Public",
+    "href": "/the-paint?view=public",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Research board",
+    "href": "/the-paint?view=research",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "SlipSurge Score",
+    "href": "/the-paint?view=score",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Slate edge",
+    "href": "/the-paint?view=slate",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Tracking",
+    "href": "/the-paint?view=tracking",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Usage",
+    "href": "/the-paint?view=usage",
+    "group": "NBA · tool views",
+    "source": "src/app/the-paint/PaintBoardClient.tsx"
+  },
+  {
+    "name": "Nfl / Players / Review Nfl 0",
+    "href": "/nfl/players/review-nfl-0",
+    "group": "NFL",
+    "source": "src/app/nfl/players/[id]/page.tsx"
+  },
+  {
+    "name": "Nfl / Teams / KC",
+    "href": "/nfl/teams/KC",
+    "group": "NFL",
+    "source": "src/app/nfl/teams/[abbr]/page.tsx"
+  },
+  {
+    "name": "The Sideline",
+    "href": "/the-sideline",
+    "group": "NFL",
+    "source": "src/app/the-sideline/page.tsx"
+  },
+  {
+    "name": "All columns",
+    "href": "/the-sideline?view=all",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Game Day",
+    "href": "/the-sideline?view=core",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Custom columns",
+    "href": "/the-sideline?view=custom",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Full odds board",
+    "href": "/the-sideline?view=odds-board",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Player props",
+    "href": "/the-sideline?view=props",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Team context",
+    "href": "/the-sideline?view=team",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Touchdowns",
+    "href": "/the-sideline?view=touchdowns",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Tracking",
+    "href": "/the-sideline?view=tracking",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Usage",
+    "href": "/the-sideline?view=usage",
+    "group": "NFL · board views",
+    "source": "src/app/the-sideline/SidelineBoardClient.tsx"
+  },
+  {
+    "name": "Cheatsheets",
+    "href": "/the-sideline?mode=cheatsheets",
+    "group": "NFL · tool views",
+    "source": "src/app/the-sideline/page.tsx"
+  },
+  {
+    "name": "Markets",
+    "href": "/the-sideline?mode=markets",
+    "group": "NFL · tool views",
+    "source": "src/app/the-sideline/page.tsx"
+  },
+  {
+    "name": "Public",
+    "href": "/the-sideline?mode=public",
+    "group": "NFL · tool views",
+    "source": "src/app/the-sideline/page.tsx"
+  },
+  {
+    "name": "Research",
+    "href": "/the-sideline?mode=research",
+    "group": "NFL · tool views",
+    "source": "src/app/the-sideline/page.tsx"
+  },
+  {
+    "name": "Welcome",
+    "href": "/",
+    "group": "Platform",
+    "source": "src/app/page.tsx"
+  },
+  {
+    "name": "About",
+    "href": "/about",
+    "group": "Platform",
+    "source": "src/app/about/page.tsx"
+  },
+  {
+    "name": "Activity",
+    "href": "/activity",
+    "group": "Platform",
+    "source": "src/app/activity/page.tsx"
+  },
+  {
+    "name": "Allstar2026",
+    "href": "/allstar2026",
+    "group": "Platform",
+    "source": "src/app/allstar2026/page.tsx"
+  },
+  {
+    "name": "Blog",
+    "href": "/blog",
+    "group": "Platform",
+    "source": "src/app/blog/page.tsx"
+  },
+  {
+    "name": "Blog / A Better Workspace",
+    "href": "/blog/a-better-workspace",
+    "group": "Platform",
+    "source": "src/app/blog/[slug]/page.tsx"
+  },
+  {
+    "name": "Blog / Create",
+    "href": "/blog/create",
+    "group": "Platform",
+    "source": "src/app/blog/create/page.tsx"
+  },
+  {
+    "name": "Blog / Create / Ai",
+    "href": "/blog/create/ai",
+    "group": "Platform",
+    "source": "src/app/blog/create/ai/page.tsx"
+  },
+  {
+    "name": "Blog / Edit / 00000000 0000 4000 8000 000000000801",
+    "href": "/blog/edit/00000000-0000-4000-8000-000000000801",
+    "group": "Platform",
+    "source": "src/app/blog/edit/[id]/page.tsx"
+  },
+  {
+    "name": "Blog / My",
+    "href": "/blog/my",
+    "group": "Platform",
+    "source": "src/app/blog/my/page.tsx"
+  },
+  {
+    "name": "Daily Recap",
+    "href": "/daily-recap",
+    "group": "Platform",
+    "source": "src/app/daily-recap/page.tsx"
+  },
+  {
+    "name": "Design Review",
+    "href": "/design-review",
+    "group": "Platform",
+    "source": "src/app/design-review/page.tsx"
+  },
+  {
+    "name": "Explore",
+    "href": "/explore",
+    "group": "Platform",
+    "source": "src/app/explore/page.tsx"
+  },
+  {
+    "name": "Faq",
+    "href": "/faq",
+    "group": "Platform",
+    "source": "src/app/faq/page.tsx"
+  },
+  {
+    "name": "Leaderboard",
+    "href": "/leaderboard",
+    "group": "Platform",
+    "source": "src/app/leaderboard/page.tsx"
+  },
+  {
+    "name": "Missions",
+    "href": "/missions",
+    "group": "Platform",
+    "source": "src/app/missions/page.tsx"
+  },
+  {
+    "name": "Odds Terminal",
+    "href": "/odds-terminal",
+    "group": "Platform",
+    "source": "src/app/odds-terminal/page.tsx"
+  },
+  {
+    "name": "Picks",
+    "href": "/picks",
+    "group": "Platform",
+    "source": "src/app/picks/page.tsx"
+  },
+  {
+    "name": "Preview / Nba",
+    "href": "/preview/nba",
+    "group": "Platform",
+    "source": "src/app/preview/[sport]/page.tsx"
+  },
+  {
+    "name": "Pricing",
+    "href": "/pricing",
+    "group": "Platform",
+    "source": "src/app/pricing/page.tsx"
+  },
+  {
+    "name": "Privacy",
+    "href": "/privacy",
+    "group": "Platform",
+    "source": "src/app/privacy/page.tsx"
+  },
+  {
+    "name": "Pro",
+    "href": "/pro",
+    "group": "Platform",
+    "source": "src/app/pro/page.tsx"
+  },
+  {
+    "name": "Research",
+    "href": "/research",
+    "group": "Platform",
+    "source": "src/app/research/page.tsx"
+  },
+  {
+    "name": "Responsible Gambling",
+    "href": "/responsible-gambling",
+    "group": "Platform",
+    "source": "src/app/responsible-gambling/page.tsx"
+  },
+  {
+    "name": "Scores",
+    "href": "/scores",
+    "group": "Platform",
+    "source": "src/app/scores/page.tsx"
+  },
+  {
+    "name": "Search",
+    "href": "/search",
+    "group": "Platform",
+    "source": "src/app/search/page.tsx"
+  },
+  {
+    "name": "Sports",
+    "href": "/sports",
+    "group": "Platform",
+    "source": "src/app/sports/page.tsx"
+  },
+  {
+    "name": "Sports / Nba / 900001",
+    "href": "/sports/nba/900001",
+    "group": "Platform",
+    "source": "src/app/sports/[sport]/[gameId]/page.tsx"
+  },
+  {
+    "name": "Support",
+    "href": "/support",
+    "group": "Platform",
+    "source": "src/app/support/page.tsx"
+  },
+  {
+    "name": "Terms",
+    "href": "/terms",
+    "group": "Platform",
+    "source": "src/app/terms/page.tsx"
+  },
+  {
+    "name": "The Public",
+    "href": "/the-public",
+    "group": "Platform",
+    "source": "src/app/the-public/page.tsx"
+  },
+  {
+    "name": "Workspace",
+    "href": "/workspace",
+    "group": "Platform",
+    "source": "src/app/workspace/page.tsx"
+  },
+  {
+    "name": "Batter Cost",
+    "href": "/batter-cost",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/batter-cost/page.tsx"
+  },
+  {
+    "name": "Dugout",
+    "href": "/dugout",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/dugout/page.tsx"
+  },
+  {
+    "name": "Mlb / Teams / 00000000 0000 4000 8000 000000000101",
+    "href": "/mlb/teams/00000000-0000-4000-8000-000000000101",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/mlb/teams/[id]/page.tsx"
+  },
+  {
+    "name": "Pitcher Report",
+    "href": "/pitcher-report",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/pitcher-report/page.tsx"
+  },
+  {
+    "name": "Players / 00000000 0000 4000 8000 000000000101",
+    "href": "/players/00000000-0000-4000-8000-000000000101",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/players/[id]/page.tsx"
+  },
+  {
+    "name": "Slate Breakdown",
+    "href": "/slate-breakdown",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/slate-breakdown/page.tsx"
+  },
+  {
+    "name": "Spray Charts",
+    "href": "/spray-charts",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/spray-charts/page.tsx"
+  },
+  {
+    "name": "Synergy",
+    "href": "/synergy",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/synergy/page.tsx"
+  },
+  {
+    "name": "Weather Lab",
+    "href": "/weather-lab",
+    "group": "Seasonal tools (hidden from members)",
+    "source": "src/app/weather-lab/page.tsx"
+  }
+]

@@ -95,12 +95,12 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
         <defs><filter id={`contact-glow-${svgId}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
         <path className={styles.flightGlow} d={path} fill="none" stroke={stroke} strokeWidth="5.5" strokeLinecap="round" opacity=".18" filter={`url(#contact-glow-${svgId})`} />
         <path className={styles.flight} d={path} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" filter={`url(#contact-glow-${svgId})`} />
-        <circle className={styles.runner} r="3.1" fill={stroke} stroke="#fff" strokeWidth=".8" filter={`url(#contact-glow-${svgId})`}>
+        <circle className={styles.runner} r="3.1" fill={stroke} stroke="var(--text-1)" strokeWidth=".8" filter={`url(#contact-glow-${svgId})`}>
           <animateMotion dur={`${1.2 / speed}s`} fill="freeze" path={path} keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines=".16 1 .3 1" />
         </circle>
         <circle className={styles.landingRingOne} cx={current.hcX} cy={current.hcY} r="4.2" fill="none" stroke={stroke} strokeWidth="1" />
         <circle className={styles.landingRingTwo} cx={current.hcX} cy={current.hcY} r="4.2" fill="none" stroke={stroke} strokeWidth=".8" />
-        <circle className={styles.ball} cx={current.hcX} cy={current.hcY} r="4.2" fill={stroke} stroke="#fff" strokeWidth="1" filter={`url(#contact-glow-${svgId})`} />
+        <circle className={styles.ball} cx={current.hcX} cy={current.hcY} r="4.2" fill={stroke} stroke="var(--text-1)" strokeWidth="1" filter={`url(#contact-glow-${svgId})`} />
       </ParkFieldSvg>
       <div className={styles.identity}>
         <div className={styles.headshot} style={{ '--team': getTeamColor(current.batterTeam) } as CSSProperties}>

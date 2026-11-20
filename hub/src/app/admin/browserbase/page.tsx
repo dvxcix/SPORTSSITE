@@ -30,7 +30,7 @@ export default async function BrowserbaseOperationsPage() {
     return (
       <div className="mx-auto w-full max-w-[1480px] space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <AdminPageHeader title="Browser automation" description="Browserbase cost, sessions, workflows, and extraction health." icon={Cloud} />
-        <div className="rounded-3xl border border-red-500/25 bg-red-500/10 p-6 text-sm text-red-200">
+        <div className="rounded-3xl border border-[color-mix(in_srgb,var(--red)_25%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] p-6 text-sm text-[var(--red)]">
           Browserbase usage could not be loaded. Confirm the production API key and project ID, then inspect runtime logs.
         </div>
       </div>
@@ -60,15 +60,15 @@ export default async function BrowserbaseOperationsPage() {
         )}
       />
 
-      <section className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 ${safetyBlocked ? 'border-red-500/35 bg-red-500/10' : 'border-emerald-500/25 bg-emerald-500/8'}`}>
+      <section className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 ${safetyBlocked ? 'border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'border-[color-mix(in_srgb,var(--green)_25%,transparent)] bg-[color-mix(in_srgb,var(--green)_8%,transparent)]'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${safetyBlocked ? 'bg-red-500/15 text-red-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+            <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${safetyBlocked ? 'bg-[color-mix(in_srgb,var(--red)_15%,transparent)] text-[var(--red)]' : 'bg-[color-mix(in_srgb,var(--green)_15%,transparent)] text-[var(--green)]'}`}>
               {safetyBlocked ? <ShieldAlert size={20} aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
             </span>
             <div>
-              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${safetyBlocked ? 'text-red-300' : 'text-emerald-300'}`}>Spending alerts · Monitoring only</p>
-              <h2 className="mt-1 text-lg font-black text-[var(--text-1)]">{safetyBlocked ? 'Spending alert threshold exceeded' : 'Usage is below the alert thresholds'}</h2>
+              <p className={`text-[12px] font-semibold uppercase tracking-[0.18em] ${safetyBlocked ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>Spending alerts · Monitoring only</p>
+              <h2 className="mt-1 text-lg font-semibold text-[var(--text-1)]">{safetyBlocked ? 'Spending alert threshold exceeded' : 'Usage is below the alert thresholds'}</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-2)]">
                 {proxyBlocked ? 'Proxy transfer crossed the alert threshold. ' : ''}
                 {browserBlocked ? 'Browser time crossed the alert threshold. ' : ''}
@@ -101,10 +101,10 @@ export default async function BrowserbaseOperationsPage() {
                   <time className="font-bold tabular-nums text-[var(--text-2)]">{shortDate(day.date)}</time>
                   <div className="h-7 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-overlay)]" title={`${day.sessions} sessions · ${day.errors} failed`}>
                     <div className={`flex h-full min-w-1 items-center rounded-lg px-2 ${day.errors > 0 ? 'bg-gradient-to-r from-amber-500/55 to-red-500/55' : 'bg-gradient-to-r from-cyan-500/45 to-[var(--accent)]/65'}`} style={{ width: `${width}%` }}>
-                      <span className="truncate text-[9px] font-black text-white/85">{day.sessions} runs</span>
+                      <span className="truncate text-[11px] font-semibold text-[var(--text-1)]">{day.sessions} runs</span>
                     </div>
                   </div>
-                  <span className="text-right font-black tabular-nums text-[var(--text-1)]">{formatGb(day.proxyBytes)} GB</span>
+                  <span className="text-right font-semibold tabular-nums text-[var(--text-1)]">{formatGb(day.proxyBytes)} GB</span>
                 </div>
               )
             }) : <Empty label="No retained sessions in this cycle." />}
@@ -112,8 +112,8 @@ export default async function BrowserbaseOperationsPage() {
         </div>
 
         <div className={`${panel} p-4 sm:p-5`}>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent)]">Billing reconciliation</p>
-          <h2 className="mt-1 text-base font-black text-[var(--text-1)]">Can every byte be explained?</h2>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Billing reconciliation</p>
+          <h2 className="mt-1 text-base font-semibold text-[var(--text-1)]">Can every byte be explained?</h2>
           <div className="mt-5 space-y-4">
             <ReconcileRow label="Provider-reported proxy" value={`${plan.proxyGigabytes.toFixed(3)} GB`} icon={Cloud} />
             <ReconcileRow label="Retained sessions since UTC month start" value={`${formatGb(usage.attributedProxyBytes)} GB`} icon={DatabaseZap} />
@@ -128,7 +128,7 @@ export default async function BrowserbaseOperationsPage() {
         <PanelHeader eyebrow="Retained-session usage" title="Usage by extractor" detail="Sorted by proxy transfer from retained sessions since UTC month start. This does not allocate the provider bill." />
         <div className="overflow-x-auto">
           <div className="min-w-[980px]">
-            <div className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">
+            <div className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-3)]">
               <span>Extractor</span><span>Sessions</span><span>Proxy</span><span>Per run</span><span>Browser</span><span>Failures</span>
             </div>
             <div className="divide-y divide-[var(--border-subtle)]">
@@ -136,12 +136,12 @@ export default async function BrowserbaseOperationsPage() {
                 const failed = workflow.errors + workflow.timedOut
                 return (
                   <div key={workflow.name} className="grid grid-cols-[minmax(210px,1.5fr)_100px_110px_110px_110px_100px] items-center gap-3 px-5 py-3 text-xs text-[var(--text-2)]">
-                    <div className="min-w-0"><p className="truncate font-mono font-bold text-[var(--text-1)]">{workflow.name}</p><p className="mt-0.5 text-[9px] text-[var(--text-3)]">Last seen {dateTime(workflow.lastSeenAt)}</p></div>
+                    <div className="min-w-0"><p className="truncate font-mono font-bold text-[var(--text-1)]">{workflow.name}</p><p className="mt-0.5 text-[11px] text-[var(--text-3)]">Last seen {dateTime(workflow.lastSeenAt)}</p></div>
                     <span className="tabular-nums">{workflow.sessions.toLocaleString()}</span>
-                    <span className="font-black tabular-nums text-[var(--text-1)]">{formatGb(workflow.proxyBytes)} GB</span>
+                    <span className="font-semibold tabular-nums text-[var(--text-1)]">{formatGb(workflow.proxyBytes)} GB</span>
                     <span className="tabular-nums">{formatMb(workflow.proxyBytes / Math.max(1, workflow.sessions))} MB</span>
                     <span className="tabular-nums">{(workflow.browserMinutes / 60).toFixed(2)} h</span>
-                    <span className={`font-bold tabular-nums ${failed > 0 ? 'text-amber-300' : 'text-emerald-400'}`}>{failed}</span>
+                    <span className={`font-bold tabular-nums ${failed > 0 ? 'text-[var(--gold)]' : 'text-[var(--green)]'}`}>{failed}</span>
                   </div>
                 )
               })}
@@ -170,23 +170,23 @@ export default async function BrowserbaseOperationsPage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className={`${panel} p-4 sm:p-5`}>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent)]">Outcome distribution</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Outcome distribution</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {Object.entries(usage.byStatus).toSorted(([left], [right]) => left.localeCompare(right)).map(([status, count]) => (
               <div key={status} className="min-w-28 rounded-xl border border-[var(--border)] bg-[var(--surface-overlay)] px-3 py-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-[var(--text-3)]">{status.replaceAll('_', ' ')}</p>
-                <p className="mt-1 text-lg font-black tabular-nums text-[var(--text-1)]">{count.toLocaleString()}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{status.replaceAll('_', ' ')}</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums text-[var(--text-1)]">{count.toLocaleString()}</p>
               </div>
             ))}
           </div>
         </div>
         <div className={`${panel} p-4 sm:p-5`}>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent)]">Region distribution</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Region distribution</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {Object.entries(usage.byRegion).toSorted(([left], [right]) => left.localeCompare(right)).map(([region, count]) => (
               <div key={region} className="min-w-32 rounded-xl border border-[var(--border)] bg-[var(--surface-overlay)] px-3 py-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-[var(--text-3)]">{region}</p>
-                <p className="mt-1 text-lg font-black tabular-nums text-[var(--text-1)]">{count.toLocaleString()}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{region}</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums text-[var(--text-1)]">{count.toLocaleString()}</p>
               </div>
             ))}
           </div>
@@ -197,7 +197,7 @@ export default async function BrowserbaseOperationsPage() {
         <PanelHeader eyebrow="Forensics" title="Recent sessions" detail="Use workflow, status, bytes, duration, region, and keep-alive state to identify runaway or unusually expensive runs." />
         <div className="overflow-x-auto">
           <div className="min-w-[1040px]">
-            <div className="grid grid-cols-[90px_minmax(220px,1fr)_110px_160px_100px_100px_100px_90px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">
+            <div className="grid grid-cols-[90px_minmax(220px,1fr)_110px_160px_100px_100px_100px_90px] gap-3 border-b border-[var(--border)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-3)]">
               <span>Session</span><span>Workflow</span><span>Status</span><span>Started</span><span>Duration</span><span>Proxy</span><span>Region</span><span>Keep alive</span>
             </div>
             <div className="divide-y divide-[var(--border-subtle)]">
@@ -210,7 +210,7 @@ export default async function BrowserbaseOperationsPage() {
                   <span className="tabular-nums">{session.browserMinutes.toFixed(1)} min</span>
                   <span className="font-bold tabular-nums">{formatMb(session.proxyBytes)} MB</span>
                   <span>{session.region}</span>
-                  <span className={session.keepAlive ? 'font-black text-amber-300' : 'text-[var(--text-3)]'}>{session.keepAlive ? 'Yes' : 'No'}</span>
+                  <span className={session.keepAlive ? 'font-semibold text-[var(--gold)]' : 'text-[var(--text-3)]'}>{session.keepAlive ? 'Yes' : 'No'}</span>
                 </div>
               ))}
             </div>
@@ -222,29 +222,29 @@ export default async function BrowserbaseOperationsPage() {
 }
 
 function PanelHeader({ eyebrow, title, detail }: { eyebrow: string; title: string; detail: string }) {
-  return <div className="border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent)]">{eyebrow}</p><h2 className="mt-1 text-base font-black text-[var(--text-1)]">{title}</h2><p className="mt-1 text-xs leading-5 text-[var(--text-3)]">{detail}</p></div>
+  return <div className="border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5"><p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">{eyebrow}</p><h2 className="mt-1 text-base font-semibold text-[var(--text-1)]">{title}</h2><p className="mt-1 text-xs leading-5 text-[var(--text-3)]">{detail}</p></div>
 }
 
 function GuardRail({ label, value, used, tripped }: { label: string; value: string; used: string; tripped: boolean }) {
-  return <div className="rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[9px] font-black uppercase tracking-wider text-[var(--text-3)]">{label}</p><p className="mt-1 font-black text-[var(--text-1)]">{value}</p><p className={tripped ? 'mt-1 text-[10px] font-bold text-red-300' : 'mt-1 text-[10px] text-[var(--text-3)]'}>{used}</p></div>
+  return <div className="rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface)] p-3"><p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{label}</p><p className="mt-1 font-semibold text-[var(--text-1)]">{value}</p><p className={tripped ? 'mt-1 text-[12px] font-bold text-[var(--red)]' : 'mt-1 text-[12px] text-[var(--text-3)]'}>{used}</p></div>
 }
 
 function ReconcileRow({ label, value, icon: Icon, danger = false }: { label: string; value: string; icon: LucideIcon; danger?: boolean }) {
-  return <div className="flex items-center gap-3"><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${danger ? 'bg-red-500/10 text-red-300' : 'bg-[var(--surface-overlay)] text-[var(--accent)]'}`}><Icon size={15} aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="text-xs text-[var(--text-3)]">{label}</p><p className={`mt-0.5 font-black tabular-nums ${danger ? 'text-red-300' : 'text-[var(--text-1)]'}`}>{value}</p></div></div>
+  return <div className="flex items-center gap-3"><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${danger ? 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]' : 'bg-[var(--surface-overlay)] text-[var(--accent)]'}`}><Icon size={15} aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="text-xs text-[var(--text-3)]">{label}</p><p className={`mt-0.5 font-semibold tabular-nums ${danger ? 'text-[var(--red)]' : 'text-[var(--text-1)]'}`}>{value}</p></div></div>
 }
 
 function MiniPanel({ icon: Icon, title, value, detail, danger = false }: { icon: LucideIcon; title: string; value: string; detail: string; danger?: boolean }) {
-  return <div className={`${panel} flex items-center gap-3 p-4 sm:p-5`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${danger ? 'bg-amber-400/10 text-amber-300' : 'bg-[var(--accent-dim)] text-[var(--accent)]'}`}><Icon size={17} aria-hidden="true" /></span><div><p className="text-[10px] font-black uppercase tracking-wider text-[var(--text-3)]">{title}</p><p className="mt-1 text-lg font-black text-[var(--text-1)]">{value}</p><p className="mt-1 text-xs text-[var(--text-3)]">{detail}</p></div></div>
+  return <div className={`${panel} flex items-center gap-3 p-4 sm:p-5`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${danger ? 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]' : 'bg-[var(--accent-dim)] text-[var(--accent)]'}`}><Icon size={17} aria-hidden="true" /></span><div><p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{title}</p><p className="mt-1 text-lg font-semibold text-[var(--text-1)]">{value}</p><p className="mt-1 text-xs text-[var(--text-3)]">{detail}</p></div></div>
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const tone = status === 'COMPLETED' ? 'bg-emerald-400/10 text-emerald-300' : status === 'RUNNING' ? 'bg-cyan-400/10 text-cyan-300' : status === 'PENDING' ? 'bg-amber-400/10 text-amber-300' : 'bg-red-400/10 text-red-300'
-  return <span className={`w-fit rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${tone}`}>{status}</span>
+  const tone = status === 'COMPLETED' ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : status === 'RUNNING' ? 'bg-cyan-400/10 text-cyan-300' : status === 'PENDING' ? 'bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] text-[var(--gold)]' : 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]'
+  return <span className={`w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wider ${tone}`}>{status}</span>
 }
 
 function QuotaCard({ label, allowance, status, measured = false }: { label: string; allowance: string | number; status: string; measured?: boolean }) {
-  const badge = measured ? 'bg-cyan-400/10 text-cyan-300' : 'bg-emerald-400/10 text-emerald-300'
-  return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-overlay)] p-4"><div className="flex items-center justify-between gap-2"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-3)]">{label}</p><span className={'rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ' + badge}>{measured ? 'Live meter' : 'Code audit'}</span></div><p className="mt-3 text-xl font-black tabular-nums text-[var(--text-1)]">{allowance}<span className="ml-1 text-[10px] font-bold uppercase text-[var(--text-3)]">included</span></p><p className="mt-1 text-xs text-[var(--text-2)]">{status}</p></div>
+  const badge = measured ? 'bg-cyan-400/10 text-cyan-300' : 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]'
+  return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-overlay)] p-4"><div className="flex items-center justify-between gap-2"><p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-3)]">{label}</p><span className={'rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wider ' + badge}>{measured ? 'Live meter' : 'Code audit'}</span></div><p className="mt-3 text-xl font-semibold tabular-nums text-[var(--text-1)]">{allowance}<span className="ml-1 text-[12px] font-bold uppercase text-[var(--text-3)]">included</span></p><p className="mt-1 text-xs text-[var(--text-2)]">{status}</p></div>
 }
 
 function Empty({ label }: { label: string }) {

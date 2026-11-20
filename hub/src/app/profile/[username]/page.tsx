@@ -75,9 +75,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   if (isBlocked) {
     return (
       <div className="max-w-2xl mx-auto text-center py-24 px-4">
-        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><UserRoundX size={24} /></span>
-        <p className="text-white font-bold">This profile isn't available</p>
-        <p className="text-zinc-500 text-sm mt-1">You or @{profile.username} have blocked each other.</p>
+        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.035)] text-[var(--text-2)]"><UserRoundX size={24} /></span>
+        <p className="text-[var(--text-1)] font-bold">This profile isn't available</p>
+        <p className="text-[var(--text-3)] text-sm mt-1">You or @{profile.username} have blocked each other.</p>
       </div>
     )
   }
@@ -164,7 +164,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
-      <div className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[var(--surface)]">
+      <div className="overflow-hidden rounded-[28px] border border-[rgba(var(--line-rgb),0.09)] bg-[var(--surface)]">
       {/* Banner */}
       <div className="h-44 sm:h-60 bg-[var(--surface-2)] relative overflow-hidden">
         {profile.banner_url && <SafeImage src={profile.banner_url} alt="" className="h-full w-full object-cover" />}
@@ -180,12 +180,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <ProfileActions username={profile.username} />
             {isOwnProfile ? (
             <a href="/settings/profile"
-              className="inline-flex items-center h-9 px-4 text-sm rounded-xl border border-zinc-700 text-white hover:bg-zinc-800 font-bold transition-colors">
+              className="inline-flex items-center h-9 px-4 text-sm rounded-xl border border-[var(--border-2)] text-[var(--text-1)] hover:bg-[var(--surface-2)] font-bold transition-colors">
               Edit Profile
             </a>
           ) : authUser ? (
             <div className="flex items-center gap-2">
-              <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[.1] bg-black/35 px-3 text-xs font-black text-zinc-300 transition hover:-translate-y-px hover:border-lime-400/30 hover:text-white"><MessageCircle size={14}/> Message</Link>
+              <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--overlay)] px-3 text-xs font-semibold text-[var(--text-2)] transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--text-1)]"><MessageCircle size={14}/> Message</Link>
               <FollowButton
                 currentUserId={authUser.id}
                 targetUserId={profile.id}
@@ -201,7 +201,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             </div>
           ) : (
             <a href="/auth/login"
-              className="inline-flex items-center h-9 px-4 text-sm rounded-xl bg-green-500 hover:bg-green-400 text-black font-black transition-colors">
+              className="inline-flex items-center h-9 px-4 text-sm rounded-xl bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] font-semibold transition-colors">
               Follow
             </a>
             )}
@@ -211,26 +211,26 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <div className="space-y-3">
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{profile.display_name || profile.username}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-1)] sm:text-3xl">{profile.display_name || profile.username}</h1>
             <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
-            {profile.is_verified && <BadgeCheck size={18} className="text-lime-400" aria-label="Verified" />}
+            {profile.is_verified && <BadgeCheck size={18} className="text-[var(--accent)]" aria-label="Verified" />}
             {isCreatorProfile && (
-              <span className="text-xs font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>
+              <span className="text-xs font-semibold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>
             )}
           </div>
-          <p className="text-sm text-zinc-500">@{profile.username}</p>
+          <p className="text-sm text-[var(--text-3)]">@{profile.username}</p>
 
-          {profile.bio && <p className="max-w-2xl text-[15px] text-zinc-300 leading-7">{profile.bio}</p>}
-          {isOwnProfile && !profile.bio && <Link href="/settings/profile" className="inline-flex max-w-xl items-center gap-2 rounded-xl border border-dashed border-lime-400/25 bg-lime-400/[.04] px-3 py-2 text-xs font-bold text-zinc-400 hover:text-lime-300"><Sparkles size={14} /> Add a bio so people know what you cover</Link>}
+          {profile.bio && <p className="max-w-2xl text-[15px] text-[var(--text-2)] leading-7">{profile.bio}</p>}
+          {isOwnProfile && !profile.bio && <Link href="/settings/profile" className="inline-flex max-w-xl items-center gap-2 rounded-xl border border-dashed border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_4%,transparent)] px-3 py-2 text-xs font-bold text-[var(--text-2)] hover:text-[var(--accent)]"><Sparkles size={14} /> Add a bio so people know what you cover</Link>}
 
           {/* Meta */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-zinc-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[var(--text-2)]">
             {profile.location && (
               <span className="flex items-center gap-1"><MapPin size={12} />{profile.location}</span>
             )}
             {profile.website && (
               <a href={profile.website} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1 text-green-400 hover:underline">
+                className="flex items-center gap-1 text-[var(--green)] hover:underline">
                 <LinkIcon size={12} />{profile.website.replace(/^https?:\/\//, '')}
               </a>
             )}
@@ -249,10 +249,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <div className="flex flex-wrap items-center gap-2 pt-0.5">
               {connectedAccounts.map((a: any) => {
                 const content = (
-                  <span className="flex items-center gap-1.5 rounded-full border border-white/[.09] bg-white/[.035] py-1 pl-1.5 pr-2.5 text-xs font-bold text-zinc-300 shadow-[inset_0_1px_rgba(255,255,255,.035)]">
+                  <span className="flex items-center gap-1.5 rounded-full border border-[rgba(var(--line-rgb),0.09)] bg-[rgba(var(--contrast-rgb),0.035)] py-1 pl-1.5 pr-2.5 text-xs font-bold text-[var(--text-2)] shadow-[inset_0_1px_rgba(255,255,255,.035)]">
                     <SafeImage src={a.icon_url} alt={a.name} className="h-4 w-4 object-contain" />
                     {a.handle}
-                    {a.isVerified && <BadgeCheck size={13} className="text-green-500" />}
+                    {a.isVerified && <BadgeCheck size={13} className="text-[var(--green)]" />}
                   </span>
                 )
                 return a.href ? (
@@ -262,7 +262,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 )
               })}
               {(profile.sportsbooks ?? []).map((book: string) => (
-                <span key={book} className="flex items-center rounded-full border border-white/[.09] bg-white/[.035] p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)]" title={book}>
+                <span key={book} className="flex items-center rounded-full border border-[rgba(var(--line-rgb),0.09)] bg-[rgba(var(--contrast-rgb),0.035)] p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)]" title={book}>
                   <BookLogo vendor={book} size={14} />
                 </span>
               ))}
@@ -291,15 +291,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       </div>
 
       {isCreatorProfile && (
-        <section className="mx-4 mb-5 overflow-hidden rounded-2xl border border-white/[.09] bg-[var(--surface-2)]">
-          <div className="flex flex-col gap-4 border-b border-white/[0.07] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-300"><Store size={18} /></span><div><p className="text-xs text-zinc-400">Creator community</p><h2 className="text-base font-semibold text-white">Join {profile.display_name || profile.username}</h2></div></div>
-            <div className="flex gap-2">{isOwnProfile && <Link href="/creators/studio" className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/40 hover:text-white"><Sparkles size={14} /> Creator Studio</Link>}<Link href={`/creators/${profile.username}`} className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-3 py-2 text-xs font-black text-zinc-950 hover:bg-lime-300">View storefront <ArrowRight size={14} /></Link></div>
+        <section className="mx-4 mb-5 overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.09)] bg-[var(--surface-2)]">
+          <div className="flex flex-col gap-4 border-b border-[rgba(var(--line-rgb),0.07)] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-[rgba(var(--line-rgb),0.1)] text-[var(--text-2)]"><Store size={18} /></span><div><p className="text-xs text-[var(--text-2)]">Creator community</p><h2 className="text-base font-semibold text-[var(--text-1)]">Join {profile.display_name || profile.username}</h2></div></div>
+            <div className="flex gap-2">{isOwnProfile && <Link href="/creators/studio" className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-2)] px-3 py-2 text-xs font-bold text-[var(--text-1)] hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--text-1)]"><Sparkles size={14} /> Creator Studio</Link>}<Link href={`/creators/${profile.username}`} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-fill)] px-3 py-2 text-xs font-semibold text-[var(--accent-fg)] hover:bg-[var(--accent-fill)]">View storefront <ArrowRight size={14} /></Link></div>
           </div>
           <div className="grid gap-3 p-4 sm:grid-cols-2">
-            {(creatorProducts ?? []).map(product => <Link href={`/creators/offers/${product.id}`} key={product.id} className="rounded-xl border border-white/[0.08] bg-black/25 p-3 hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-white">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{product.description || 'Premium creator access on SlipSurge.'}</p></div><strong className="whitespace-nowrap text-sm text-lime-300">${Number(product.price).toFixed(2)}</strong></div></Link>)}
-            {(creatorGroups ?? []).map(group => <Link href={`/groups/${group.slug}`} key={group.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-3 transition hover:-translate-y-px hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-900 text-lg">{group.emoji || <Users size={16} />}</span><div className="min-w-0"><p className="truncate text-sm font-black text-white">{group.name}</p><p className="text-xs text-zinc-500">{group.member_count ?? 0} members · {group.access_type === 'paid' ? 'Member access' : 'Open community'}</p></div></Link>)}
-            {(creatorProducts?.length ?? 0) === 0 && (creatorGroups?.length ?? 0) === 0 && <div className="sm:col-span-2 rounded-xl border border-dashed border-zinc-800 p-5 text-center text-xs text-zinc-500">This creator is setting up their first community and membership.</div>}
+            {(creatorProducts ?? []).map(product => <Link href={`/creators/offers/${product.id}`} key={product.id} className="rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] p-3 hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_4%,transparent)]"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-[var(--text-1)]">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-2)]">{product.description || 'Premium creator access on SlipSurge.'}</p></div><strong className="whitespace-nowrap text-sm text-[var(--accent)]">${Number(product.price).toFixed(2)}</strong></div></Link>)}
+            {(creatorGroups ?? []).map(group => <Link href={`/groups/${group.slug}`} key={group.id} className="flex items-center gap-3 rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] p-3 transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_4%,transparent)]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--surface)] text-lg">{group.emoji || <Users size={16} />}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--text-1)]">{group.name}</p><p className="text-xs text-[var(--text-3)]">{group.member_count ?? 0} members · {group.access_type === 'paid' ? 'Member access' : 'Open community'}</p></div></Link>)}
+            {(creatorProducts?.length ?? 0) === 0 && (creatorGroups?.length ?? 0) === 0 && <div className="sm:col-span-2 rounded-xl border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-3)]">This creator is setting up their first community and membership.</div>}
           </div>
         </section>
       )}
@@ -307,18 +307,18 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <AchievementsSection achievements={achievements} />
       <FavoritesSection teams={visibleProfile.favorite_teams ?? []} players={visibleProfile.favorite_players ?? []} sports={visibleProfile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} />
 
-      <div className="border-t border-white/[.07]" />
+      <div className="border-t border-[rgba(var(--line-rgb),0.07)]" />
 
       {canViewContent ? (
         <>
           {/* Tabs */}
-          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/[.075] bg-black/25 p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] [scrollbar-width:none] sm:mx-6">
+          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-[rgba(var(--line-rgb),0.075)] bg-[var(--surface)] p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] [scrollbar-width:none] sm:mx-6">
             {TABS.map(t => (
               <Link
                 key={t.key}
                 href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
-                className={`relative min-w-[78px] flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-black transition duration-200 sm:text-sm ${
-                  tab === t.key ? 'bg-white/[.085] text-white shadow-[inset_0_1px_rgba(255,255,255,.06),0_7px_20px_rgba(0,0,0,.22)]' : 'text-zinc-500 hover:bg-white/[.035] hover:text-zinc-300'
+                className={`relative min-w-[78px] flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-semibold transition duration-200 sm:text-sm ${
+                  tab === t.key ? 'bg-[rgba(var(--contrast-rgb),0.085)] text-[var(--text-1)] shadow-[inset_0_1px_rgba(255,255,255,.06),0_7px_20px_rgba(0,0,0,.22)]' : 'text-[var(--text-3)] hover:bg-[rgba(var(--contrast-rgb),0.035)] hover:text-[var(--text-2)]'
                 }`}
               >
                 {tab === t.key && <span className="absolute inset-x-6 -bottom-1.5 h-px bg-gradient-to-r from-transparent via-lime-300 to-transparent" />}
@@ -332,31 +332,31 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             {tab === 'replies' ? (
               <div className="space-y-2">
                 {replies.length ? replies.map(reply => (
-                  <Link key={reply.id} href={`/posts/${reply.post_id}`} className="group block rounded-2xl border border-white/[.075] bg-white/[.018] p-4 transition hover:border-lime-400/25 hover:bg-white/[.035]">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500"><MessageCircleReply size={13} className="text-lime-300"/><span>Replied to {reply.post?.author?.display_name || `@${reply.post?.author?.username || 'a post'}`}</span><time className="ml-auto">{new Date(reply.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time></div>
-                    <p className="mt-2 text-sm leading-6 text-zinc-200"><LinkifiedText text={reply.content} /></p>
-                    {reply.post?.content ? <p className="mt-3 line-clamp-2 border-l-2 border-white/[.09] pl-3 text-xs leading-5 text-zinc-500"><LinkifiedText text={reply.post.content} /></p> : null}
+                  <Link key={reply.id} href={`/posts/${reply.post_id}`} className="group block rounded-2xl border border-[rgba(var(--line-rgb),0.075)] bg-[rgba(var(--contrast-rgb),0.018)] p-4 transition hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] hover:bg-[rgba(var(--contrast-rgb),0.035)]">
+                    <div className="flex items-center gap-2 text-[12px] font-bold text-[var(--text-3)]"><MessageCircleReply size={13} className="text-[var(--accent)]"/><span>Replied to {reply.post?.author?.display_name || `@${reply.post?.author?.username || 'a post'}`}</span><time className="ml-auto">{new Date(reply.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time></div>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-1)]"><LinkifiedText text={reply.content} /></p>
+                    {reply.post?.content ? <p className="mt-3 line-clamp-2 border-l-2 border-[rgba(var(--line-rgb),0.09)] pl-3 text-xs leading-5 text-[var(--text-3)]"><LinkifiedText text={reply.post.content} /></p> : null}
                   </Link>
                 )) : <ProfileEmpty icon={<MessageCircleReply size={24}/>} title="No replies yet" />}
               </div>
             ) : tab === 'communities' ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {communities.length ? communities.map(entry => (
-                  <Link key={entry.group?.id} href={`/groups/${entry.group?.slug}`} className="flex min-h-24 items-center gap-3 rounded-2xl border border-white/[.075] bg-white/[.018] p-4 transition hover:-translate-y-px hover:border-lime-400/25 hover:bg-white/[.035]">
-                    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/[.08] bg-black/30 text-xl"><SafeImage src={entry.group?.avatar_url} alt="" className="h-full w-full object-cover" fallback={entry.group?.emoji || '⚡'}/></span>
-                    <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-white">{entry.group?.name}</strong><small className="mt-1 block line-clamp-1 text-[11px] text-zinc-500">{entry.group?.description || `${entry.group?.member_count ?? 0} members`}</small><em className="mt-2 block text-[9px] font-black uppercase not-italic tracking-wider text-lime-300">{entry.role}</em></span>
-                    <ArrowRight size={14} className="text-zinc-600"/>
+                  <Link key={entry.group?.id} href={`/groups/${entry.group?.slug}`} className="flex min-h-24 items-center gap-3 rounded-2xl border border-[rgba(var(--line-rgb),0.075)] bg-[rgba(var(--contrast-rgb),0.018)] p-4 transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] hover:bg-[rgba(var(--contrast-rgb),0.035)]">
+                    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--overlay)] text-xl"><SafeImage src={entry.group?.avatar_url} alt="" className="h-full w-full object-cover" fallback={entry.group?.emoji || '⚡'}/></span>
+                    <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-[var(--text-1)]">{entry.group?.name}</strong><small className="mt-1 block line-clamp-1 text-[12px] text-[var(--text-3)]">{entry.group?.description || `${entry.group?.member_count ?? 0} members`}</small><em className="mt-2 block text-[11px] font-semibold uppercase not-italic tracking-wider text-[var(--accent)]">{entry.role}</em></span>
+                    <ArrowRight size={14} className="text-[var(--text-3)]"/>
                   </Link>
                 )) : <div className="sm:col-span-2"><ProfileEmpty icon={<UsersRound size={24}/>} title="No public communities yet" /></div>}
               </div>
             ) : mappedPosts.length === 0 && !hasMore ? (
-              <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center">
-                <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><MessageSquareText size={24} /></span>
-                <p className="font-bold text-zinc-300">
+              <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-[rgba(var(--line-rgb),0.1)] bg-[rgba(var(--contrast-rgb),0.018)] px-5 py-14 text-center">
+                <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.035)] text-[var(--text-2)]"><MessageSquareText size={24} /></span>
+                <p className="font-bold text-[var(--text-2)]">
                   {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : tab === 'media' ? 'No media posted yet' : 'No posts yet'}
                 </p>
                 {isOwnProfile && tab === 'all' && (
-                  <p className="text-zinc-600 text-sm mt-1">Share your first pick on the <a href="/feed" className="text-green-400 hover:underline">feed</a></p>
+                  <p className="text-[var(--text-3)] text-sm mt-1">Share your first pick on the <a href="/feed" className="text-[var(--green)] hover:underline">feed</a></p>
                 )}
               </div>
             ) : (
@@ -373,9 +373,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         </>
       ) : (
         <div className="px-4 py-16 text-center">
-          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><LockKeyhole size={24} /></span>
-          <p className="text-white font-bold">This account is private</p>
-          <p className="text-zinc-500 text-sm mt-1">Follow @{profile.username} to see their posts and picks.</p>
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.035)] text-[var(--text-2)]"><LockKeyhole size={24} /></span>
+          <p className="text-[var(--text-1)] font-bold">This account is private</p>
+          <p className="text-[var(--text-3)] text-sm mt-1">Follow @{profile.username} to see their posts and picks.</p>
         </div>
       )}
       </div>
@@ -384,5 +384,5 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 }
 
 function ProfileEmpty({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center"><span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400">{icon}</span><p className="font-bold text-zinc-300">{title}</p></div>
+  return <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-[rgba(var(--line-rgb),0.1)] bg-[rgba(var(--contrast-rgb),0.018)] px-5 py-14 text-center"><span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.035)] text-[var(--text-2)]">{icon}</span><p className="font-bold text-[var(--text-2)]">{title}</p></div>
 }

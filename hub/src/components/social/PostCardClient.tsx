@@ -650,7 +650,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               <div className="ss-post-header">
                 <div className="ss-post-author-line">
                   <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
-                  <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 850, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
+                  <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
                   </ProfileHoverTarget>
@@ -663,7 +663,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   </Link>
                   <span style={{ color: 'var(--text-4)', fontSize: 12 }}>·</span>
                   <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at, displayNowMs)}</span>
-                  {isPrivate && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)', fontSize: 11 }}><LockKeyhole size={12} aria-hidden="true"/>Only me</span>}
+                  {isPrivate && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)', fontSize: 12 }}><LockKeyhole size={12} aria-hidden="true"/>Only me</span>}
                 </div>
 
                 {/* More menu */}
@@ -766,7 +766,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         Cancel
                       </button>
                       <button onClick={saveEditPost}
-                        style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#000' }}>
+                        style={{ background: 'var(--accent-fill)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>
                         Save
                       </button>
                     </div>
@@ -807,19 +807,19 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <TrendingUp size={13} style={{ color: 'var(--gold)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.06em' }}>PICK</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em' }}>PICK</span>
                     {post.sport && (
                       sportLogoUrl(post.sport)
                         ? <SafeImage src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 12, height: 12, objectFit: 'contain' }} />
-                        : <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{post.sport}</span>
+                        : <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{post.sport}</span>
                     )}
                     {pickResult && pickResult !== 'pending' && (
-                      <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 900, color: pickResult === 'win' ? 'var(--green)' : pickResult === 'loss' ? 'var(--red)' : 'var(--text-3)' }}>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: pickResult === 'win' ? 'var(--green)' : pickResult === 'loss' ? 'var(--red)' : 'var(--text-3)' }}>
                         {pickResult === 'win' ? '✓ WIN' : pickResult === 'loss' ? '✗ LOSS' : 'PUSH'}
                       </span>
                     )}
                     {(!pickResult || pickResult === 'pending') && (
-                      <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>Pending</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>Pending</span>
                     )}
                   </div>
 
@@ -830,16 +830,16 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                           <PlayerAvatar playerId={leg.player_id} sport={leg.sport ?? post.sport} headshot={leg.headshot_url} teamLogo={sportTeamLogoUrl(leg.sport ?? post.sport, leg.team)} teamAbbr={leg.team} name={leg.player_name} size={30} />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</p>
-                            <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)' }}>
                               <TeamMark sport={leg.sport ?? post.sport} team={leg.team} size={12} />
                               · {leg.prop_label ?? leg.line}
                             </p>
                           </div>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>
                             {leg.odds != null ? (Number(leg.odds) > 0 ? `+${leg.odds}` : leg.odds) : '—'}
                           </span>
                           {leg.result && leg.result !== 'pending' && (
-                            <span style={{ fontSize: 10, fontWeight: 900, color: leg.result === 'win' ? 'var(--green)' : leg.result === 'loss' ? 'var(--red)' : 'var(--text-3)' }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: leg.result === 'win' ? 'var(--green)' : leg.result === 'loss' ? 'var(--red)' : 'var(--text-3)' }}>
                               {leg.result === 'win' ? '✓' : leg.result === 'loss' ? '✗' : '–'}
                             </span>
                           )}
@@ -847,7 +847,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                       ))}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 6, marginTop: 2, borderTop: '1px solid var(--border)' }}>
                         {post.pick_data.book && <BookLogo vendor={post.pick_data.book} size={16} />}
-                        <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 900, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                        <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>
                           {post.pick_data.combined_odds != null ? (Number(post.pick_data.combined_odds) > 0 ? `+${post.pick_data.combined_odds}` : post.pick_data.combined_odds) : ''}
                         </span>
                       </div>
@@ -864,14 +864,14 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         size={42}
                       />
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{post.pick_data.player_name}</p>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{post.pick_data.player_name}</p>
                         <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>
                           <TeamMark sport={post.sport} team={post.pick_data.team} size={13} />
                           · {post.pick_data.prop_label ?? post.pick_data.line}
                         </p>
                         <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
                           {post.pick_data.odds != null && (
-                            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>
                               {Number(post.pick_data.odds) > 0 ? `+${post.pick_data.odds}` : post.pick_data.odds}
                             </span>
                           )}
@@ -881,23 +881,23 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     </div>
                   ) : (
                     <>
-                      <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}><TeamMark sport={post.sport} team={post.pick_data.team} size={22} /><span>{post.pick_data.team}</span></p>
+                      <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}><TeamMark sport={post.sport} team={post.pick_data.team} size={22} /><span>{post.pick_data.team}</span></p>
                       <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
                         <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{post.pick_data.line}</span>
                         {post.pick_data.odds && <>
-                          <span style={{ color: 'var(--border-3)', fontSize: 10 }}>·</span>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{post.pick_data.odds}</span>
+                          <span style={{ color: 'var(--border-3)', fontSize: 12 }}>·</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{post.pick_data.odds}</span>
                         </>}
                         {post.pick_data.book && <>
-                          <span style={{ color: 'var(--border-3)', fontSize: 10 }}>·</span>
-                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{post.pick_data.book}</span>
+                          <span style={{ color: 'var(--border-3)', fontSize: 12 }}>·</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{post.pick_data.book}</span>
                         </>}
                       </div>
                     </>
                   )}
 
                   {(post.pick_data.wager_amount != null || post.pick_data.potential_payout != null) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
                       {post.pick_data.wager_amount != null && <span>Wager <strong style={{ color: 'var(--text-1)' }}>{fmtUsd(Number(post.pick_data.wager_amount))}</strong></span>}
                       {post.pick_data.potential_payout != null && <span>To win <strong style={{ color: 'var(--green)' }}>{fmtUsd(Number(post.pick_data.potential_payout) - Number(post.pick_data.wager_amount ?? 0))}</strong></span>}
                     </div>
@@ -937,7 +937,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                       </button>
                     )
                   })}
-                  <p style={{ fontSize: 11, color: 'var(--text-3)', paddingTop: 4 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', paddingTop: 4 }}>
                     {totalPollVotes} vote{totalPollVotes !== 1 ? 's' : ''} ·{' '}
                     {pollEnded ? 'Poll ended' : `Ends ${new Date(post.poll_data.ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                   </p>
@@ -1043,7 +1043,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['top', 'new'] as const).map(s => (
                   <button key={s} onClick={() => setCommentSort(s)} style={{
-                    padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                    padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${commentSort === s ? 'var(--accent)' : 'var(--border)'}`,
                     background: commentSort === s ? 'var(--accent-dim)' : 'transparent',
                     color: commentSort === s ? 'var(--accent)' : 'var(--text-3)',
@@ -1198,18 +1198,18 @@ function CommentItem({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{node.author?.display_name || node.author?.username}</span>
             <UserBadges userId={node.author_id} size={12} />
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               {timeAgo(node.created_at, nowMs)}{isEdited && ` · edited ${timeAgo(node.updated_at, nowMs)}`}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {isOwn ? (
                 <>
-                  <button onClick={() => onStartEdit(node)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
-                  <button onClick={() => onDelete(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
+                  <button onClick={() => onStartEdit(node)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
+                  <button onClick={() => onDelete(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
                 </>
               ) : currentUserId && (
                 <>
-                  <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
+                  <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
                   {node.author_id && node.author?.username && (
                     <BlockUserButton
                       currentUserId={currentUserId}
@@ -1233,8 +1233,8 @@ function CommentItem({
                 style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
                 autoFocus
               />
-              <button onClick={() => onSaveEdit(node.id)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
-              <button onClick={onCancelEdit} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => onSaveEdit(node.id)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
+              <button onClick={onCancelEdit} style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
             </div>
           ) : (
             <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}><LinkifiedText text={node.content} /></p>
@@ -1243,17 +1243,17 @@ function CommentItem({
             <button
               onClick={() => onToggleLike(node.id, node.liked_by_me)}
               disabled={!currentUserId}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: currentUserId ? 'pointer' : 'default', fontSize: 11, fontWeight: 700, color: node.liked_by_me ? 'var(--red)' : 'var(--text-3)' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: currentUserId ? 'pointer' : 'default', fontSize: 12, fontWeight: 700, color: node.liked_by_me ? 'var(--red)' : 'var(--text-3)' }}>
               <Heart size={12} fill={node.liked_by_me ? 'currentColor' : 'none'} />
               {node.reaction_count > 0 ? node.reaction_count : ''}
             </button>
             {currentUserId && (
-              <button onClick={() => onStartReply(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+              <button onClick={() => onStartReply(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
                 Reply
               </button>
             )}
             {node.replies.length > 0 && (
-              <button onClick={() => onToggleCollapsed(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+              <button onClick={() => onToggleCollapsed(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
                 {collapsed ? `Show ${node.replies.length} repl${node.replies.length === 1 ? 'y' : 'ies'}` : `Hide repl${node.replies.length === 1 ? 'y' : 'ies'}`}
               </button>
             )}

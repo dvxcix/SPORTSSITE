@@ -100,13 +100,13 @@ export function PushNotificationToggle() {
 
   return (
     <div className="ss-settings-card mb-4 flex items-center gap-3 !p-4">
-      {status === 'on' ? <BellRing size={18} className="shrink-0 text-lime-300" />
-        : <Bell size={18} className="shrink-0 text-zinc-500" />}
+      {status === 'on' ? <BellRing size={18} className="shrink-0 text-[var(--accent)]" />
+        : <Bell size={18} className="shrink-0 text-[var(--text-3)]" />}
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-bold text-white">
+        <p className="text-[13px] font-bold text-[var(--text-1)]">
           {isSlipSurgeDesktop() ? 'Desktop notifications' : 'Push notifications'}
         </p>
-        <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+        <p className="mt-0.5 text-xs leading-5 text-[var(--text-3)]">
           {status === 'denied'
             ? isSlipSurgeDesktop()
               ? 'Blocked by Windows. Enable SlipSurge in Settings > System > Notifications.'
@@ -115,7 +115,7 @@ export function PushNotificationToggle() {
             ? 'Enabled on this device/browser.'
             : 'Get notified on this device even when SlipSurge isn\'t open.'}
         </p>
-        {error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
+        {error && <p role="alert" className="mt-1 text-xs text-[var(--red)]">{error}</p>}
       </div>
       {status !== 'denied' && (
         <button

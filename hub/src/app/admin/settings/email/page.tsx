@@ -60,9 +60,9 @@ export default async function AdminEmailSettingsPage() {
       />
 
       {!allReady && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/8 p-4 text-sm text-amber-100">
-          <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" size={17} aria-hidden="true" />
-          <div><p className="font-extrabold">Email delivery is not fully instrumented.</p><p className="mt-1 text-xs leading-5 text-amber-100/70">Add the missing environment values shown below, then redeploy. Secrets are never displayed here.</p></div>
+        <div className="flex items-start gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--gold)_25%,transparent)] bg-[color-mix(in_srgb,var(--gold)_8%,transparent)] p-4 text-sm text-[var(--gold)]">
+          <AlertTriangle className="mt-0.5 shrink-0 text-[var(--gold)]" size={17} aria-hidden="true" />
+          <div><p className="font-extrabold">Email delivery is not fully instrumented.</p><p className="mt-1 text-xs leading-5 text-[color-mix(in_srgb,var(--gold)_70%,transparent)]">Add the missing environment values shown below, then redeploy. Secrets are never displayed here.</p></div>
         </div>
       )}
 
@@ -73,15 +73,15 @@ export default async function AdminEmailSettingsPage() {
         <StatusCard icon={KeyRound} label="Auth templates" ready={authTemplatesReady} detail={authTemplatesReady ? 'Hosted templates verified' : 'Hosted templates not verified'} />
         <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-between"><p className="text-xs font-extrabold text-[var(--text-secondary)]">Last 7 days</p><Activity size={16} className="text-[var(--accent-primary)]" /></div>
-          <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">{sent ?? 0} sent</p>
-          <p className={`mt-1 text-xs ${(failed ?? 0) + (webhookFailures ?? 0) > 0 ? 'text-red-300' : 'text-emerald-300'}`}>{failed ?? 0} delivery failures · {webhookFailures ?? 0} webhook failures</p>
+          <p className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{sent ?? 0} sent</p>
+          <p className={`mt-1 text-xs ${(failed ?? 0) + (webhookFailures ?? 0) > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>{failed ?? 0} delivery failures · {webhookFailures ?? 0} webhook failures</p>
         </div>
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] shadow-[var(--shadow-card)]">
         <div className="border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--accent-primary)]">Template gallery</p>
-          <h2 className="mt-1 text-base font-black text-[var(--text-primary)]">Production email previews</h2>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--accent-primary)]">Template gallery</p>
+          <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Production email previews</h2>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">Rendered from the same shared shell used by live sends.</p>
         </div>
         <div className="grid gap-px bg-[var(--border-subtle)] sm:grid-cols-2 xl:grid-cols-4">
@@ -96,7 +96,7 @@ export default async function AdminEmailSettingsPage() {
 
       <section className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] shadow-[var(--shadow-card)]">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-muted)]">Delivery ledger</p><h2 className="mt-1 text-base font-black text-[var(--text-primary)]">Recent notification emails</h2></div>
+          <div><p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Delivery ledger</p><h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Recent notification emails</h2></div>
           <span className="text-xs text-[var(--text-muted)]">Latest 40 attempts</span>
         </div>
         {recent.length === 0 ? (
@@ -104,14 +104,14 @@ export default async function AdminEmailSettingsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-xs">
-              <thead className="border-b border-[var(--border-subtle)] text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]"><tr><th className="px-5 py-3">Time</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Provider event</th><th className="px-4 py-3">Provider ID</th><th className="px-5 py-3">Detail</th></tr></thead>
+              <thead className="border-b border-[var(--border-subtle)] text-[12px] uppercase tracking-[0.14em] text-[var(--text-muted)]"><tr><th className="px-5 py-3">Time</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Provider event</th><th className="px-4 py-3">Provider ID</th><th className="px-5 py-3">Detail</th></tr></thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">
                 {recent.map(item => (
                   <tr key={item.id} className="text-[var(--text-secondary)]">
                     <td className="whitespace-nowrap px-5 py-3">{new Date(item.attempted_at).toLocaleString()}</td>
-                    <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 font-extrabold ${item.status === 'sent' ? 'bg-emerald-400/10 text-emerald-300' : item.status === 'failed' ? 'bg-red-400/10 text-red-300' : 'bg-zinc-400/10 text-zinc-300'}`}>{item.status}</span></td>
-                    <td className="px-4 py-3 font-mono text-[11px]">{item.provider_event || 'API accepted'}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-[var(--text-muted)]" title={item.provider_message_id || undefined}>{item.provider_message_id ? `${item.provider_message_id.slice(0, 12)}…` : item.provider_status || '—'}</td>
+                    <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 font-extrabold ${item.status === 'sent' ? 'bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : item.status === 'failed' ? 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]' : 'bg-[color-mix(in_srgb,var(--surface-3)_10%,transparent)] text-[var(--text-2)]'}`}>{item.status}</span></td>
+                    <td className="px-4 py-3 font-mono text-[12px]">{item.provider_event || 'API accepted'}</td>
+                    <td className="px-4 py-3 font-mono text-[12px] text-[var(--text-muted)]" title={item.provider_message_id || undefined}>{item.provider_message_id ? `${item.provider_message_id.slice(0, 12)}…` : item.provider_status || '—'}</td>
                     <td className="max-w-sm truncate px-5 py-3 text-[var(--text-muted)]" title={item.error || undefined}>{item.error || 'No error reported'}</td>
                   </tr>
                 ))}
@@ -127,8 +127,8 @@ export default async function AdminEmailSettingsPage() {
 function StatusCard({ icon: Icon, label, ready, detail }: { icon: typeof Send; label: string; ready: boolean; detail: string }) {
   return (
     <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-card)]">
-      <div className="flex items-center justify-between"><p className="text-xs font-extrabold text-[var(--text-secondary)]">{label}</p><Icon size={16} className={ready ? 'text-emerald-400' : 'text-amber-400'} /></div>
-      <p className={`mt-3 text-lg font-black ${ready ? 'text-emerald-300' : 'text-amber-300'}`}>{ready ? 'Ready' : 'Needs setup'}</p>
+      <div className="flex items-center justify-between"><p className="text-xs font-extrabold text-[var(--text-secondary)]">{label}</p><Icon size={16} className={ready ? 'text-[var(--green)]' : 'text-[var(--gold)]'} /></div>
+      <p className={`mt-3 text-lg font-semibold ${ready ? 'text-[var(--green)]' : 'text-[var(--gold)]'}`}>{ready ? 'Ready' : 'Needs setup'}</p>
       <p className="mt-1 text-xs text-[var(--text-muted)]">{detail}</p>
     </div>
   )

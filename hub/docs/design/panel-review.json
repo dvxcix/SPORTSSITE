@@ -1,0 +1,189 @@
+[
+  {
+    "name": "NBA Matrix builder",
+    "href": "/the-paint",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 201,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "201-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "201-desktop-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NFL column editor",
+    "href": "/the-sideline",
+    "group": "Panels & controls",
+    "device": "mobile",
+    "index": 202,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "202-mobile-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "202-mobile-light.png"
+      }
+    ]
+  },
+  {
+    "name": "What’s new drawer",
+    "href": "/the-paint",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 203,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "203-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "203-desktop-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NFL player research drawer",
+    "href": "/the-sideline",
+    "group": "Panels & controls",
+    "device": "mobile",
+    "index": 204,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "204-mobile-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "204-mobile-light.png"
+      }
+    ]
+  },
+  {
+    "name": "Admin update editor",
+    "href": "/admin/changelog",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 205,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "205-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "205-desktop-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NFL tools menu",
+    "href": "/the-sideline",
+    "group": "Panels & controls",
+    "device": "mobile",
+    "index": 207,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "207-mobile-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "207-mobile-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NBA Matrix panel",
+    "href": "/the-paint",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 200,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "200-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "200-desktop-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NFL Matrix panel",
+    "href": "/the-sideline",
+    "group": "Panels & controls",
+    "device": "mobile",
+    "index": 208,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "208-mobile-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "208-mobile-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NFL Matrix builder",
+    "href": "/the-sideline",
+    "group": "Panels & controls",
+    "device": "mobile",
+    "index": 209,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "209-mobile-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "209-mobile-light.png"
+      }
+    ]
+  },
+  {
+    "name": "Member update popup preview",
+    "href": "/admin/changelog",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 206,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "206-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "206-desktop-light.png"
+      }
+    ]
+  },
+  {
+    "name": "NBA player research drawer",
+    "href": "/the-paint?player=900110&panel=trends",
+    "group": "Panels & controls",
+    "device": "desktop",
+    "index": 210,
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "210-desktop-dark.png"
+      },
+      {
+        "theme": "light",
+        "file": "210-desktop-light.png"
+      }
+    ]
+  }
+]

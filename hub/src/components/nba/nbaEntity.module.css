@@ -2,11 +2,11 @@
 .actions a { display:inline-flex; gap:8px; align-items:center; min-height:42px; padding:10px 14px; border:1px solid var(--border); border-radius:10px; color:var(--text-1); background:var(--surface-2); font-size:12px; font-weight:700; transition:background 140ms ease,border-color 140ms ease; }
 .actions a:hover { background:var(--surface-3); border-color:var(--accent); }
 .sectionHeading { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:0 0 18px; }
-.sectionHeading h2 { margin:0; font-size:15px; color:var(--text-1); font-weight:800; }
-.sectionHeading>span,.note { color:var(--text-3); font-size:11px; }
+.sectionHeading h2 { margin:0; font-size:15px; color:var(--text-1); font-weight:700; }
+.sectionHeading>span,.note { color:var(--text-3); font-size:12px; }
 .sectionHeading select,.sectionHeading input { min-width:0; max-width:100%; min-height:40px; padding:8px 11px; color:var(--text-1); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; font-size:12px; }
 .teamRail,.opponent,.rosterPlayer { display:inline-flex; align-items:center; gap:8px; }
-.opponent small { display:block; color:var(--text-3); font-size:10px; margin-top:2px; }
+.opponent small { display:block; color:var(--text-3); font-size:12px; margin-top:2px; }
 .rosterPlayer { min-height:44px; color:var(--text-1); }
 .roster { min-width:0; }
 .roster td:first-child { width:76%; }
@@ -16,14 +16,14 @@
 .sortable th[aria-sort="ascending"] svg { transform:rotate(180deg); }
 .sortable th[aria-sort]:not([aria-sort="none"]) { color:var(--accent); }
 .high,.low { display:inline-block; min-width:35px; padding:4px; border-radius:6px; text-align:center; font-variant-numeric:tabular-nums; }
-.high { color:#c5f7a7; background:#39502c70; }
-.low { color:#f1b8bd; background:#612e374a; }
+.high { color:var(--accent); background:#39502c70; }
+.low { color:var(--red); background:#612e374a; }
 .tabs { display:flex; gap:4px; }
 .tabs button,.seasonButton { padding:8px 10px; border:1px solid transparent; border-radius:8px; color:var(--text-2); background:none; font-size:12px; font-weight:700; cursor:pointer; }
 .tabs button[aria-pressed="true"],.seasonButton[aria-pressed="true"] { background:var(--accent-dim); border-color:color-mix(in srgb,var(--accent) 35%,transparent); color:var(--accent); }
 .gameList { display:grid; gap:8px; }
 .game { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--surface-1); }
-.gameDate { flex:0 0 72px; color:var(--text-3); font-size:11px; }
+.gameDate { flex:0 0 72px; color:var(--text-3); font-size:12px; }
 .gameTeams { min-width:0; display:flex; flex:1; align-items:center; justify-content:center; gap:14px; }
 .gameTeams span { display:inline-flex; align-items:center; gap:7px; color:var(--text-1); font-size:12px; font-weight:700; }
 .gameTeams small { color:var(--text-3); }
@@ -34,6 +34,6 @@
 .srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
 .iconLink { display:inline-flex; align-items:center; justify-content:center; min-width:36px; min-height:36px; border-radius:8px; }
 .scrollRegion:focus-visible,.iconLink:focus-visible,.teamRail a:focus-visible,.sortable th button:focus-visible,.tabs button:focus-visible,.seasonButton:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-@media(max-width:640px) { .game { padding:10px; gap:8px; }.gameTeams { gap:8px; }.gameTeams span { flex-direction:column; font-size:10px; }.gameDate { flex-basis:62px; }.sectionHeading input { width:100%; }.actions a { flex:1 0 auto; justify-content:center; }.roster td { padding:9px 5px; }.rosterPlayer { gap:7px; }.rosterPlayer strong { font-size:12px; } }
+@media(max-width:640px) { .game { padding:10px; gap:8px; }.gameTeams { gap:8px; }.gameTeams span { flex-direction:column; font-size:12px; }.gameDate { flex-basis:62px; }.sectionHeading input { width:100%; }.actions a { flex:1 0 auto; justify-content:center; }.roster td { padding:9px 5px; }.rosterPlayer { gap:7px; }.rosterPlayer strong { font-size:12px; } }
 @media(prefers-reduced-motion:reduce) { .actions a { transition:none; } }
 @media(max-width:640px) { .iconLink,.teamRail a { min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; }.sortable th button,.tabs button,.seasonButton { min-height:44px; min-width:44px; }.actions a { min-height:44px; }.sectionHeading select,.sectionHeading input { min-height:44px; } }

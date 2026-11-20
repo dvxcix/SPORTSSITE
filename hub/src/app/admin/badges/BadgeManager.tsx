@@ -130,30 +130,30 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
 
   return (
     <div className="space-y-6">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       {/* Create */}
       <div className="ss-badge-create-panel">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">New Badge</p>
+        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">New Badge</p>
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[160px]">
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Name</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Name</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Beta Tester"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
           <div className="flex-1 min-w-[220px]">
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description (shown on hover)</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Description (shown on hover)</label>
             <input value={description} onChange={e => setDescription(e.target.value)} placeholder="One of our first 120 beta testers"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Icon</label>
             <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
-              className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+              className="text-xs text-[var(--text-2)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--surface-2)] file:text-[var(--text-1)] hover:file:bg-[var(--surface-3)]" />
           </div>
         </div>
         <button onClick={createBadge} disabled={uploading || !name.trim() || !description.trim() || !file}
-          className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          className="flex items-center gap-1.5 bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
           <Plus size={14} /> {uploading ? 'Creating…' : 'Create Badge'}
         </button>
       </div>
@@ -161,7 +161,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
       {/* List */}
       <div className="ss-badge-admin-grid">
         {badges.length === 0 ? (
-          <p className="text-sm text-zinc-600">No badges yet.</p>
+          <p className="text-sm text-[var(--text-3)]">No badges yet.</p>
         ) : (
           badges.map(b => {
             const members = membersByBadge(b.id)
@@ -172,22 +172,22 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
                 <div className="ss-badge-admin-summary">
                   <span className="ss-badge-admin-icon"><SafeImage src={b.icon_url} alt={b.name} /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-[var(--text-1)] truncate flex items-center gap-1.5">
                       {b.name}
-                      {b.card_image_url && <Sparkles size={12} className="text-green-400 shrink-0" />}
+                      {b.card_image_url && <Sparkles size={12} className="text-[var(--green)] shrink-0" />}
                     </p>
-                    <p className="text-xs text-zinc-500 truncate">{b.description}</p>
+                    <p className="text-xs text-[var(--text-3)] truncate">{b.description}</p>
                   </div>
-                  <span className="text-xs text-zinc-500 shrink-0">{members.length} member{members.length === 1 ? '' : 's'}</span>
+                  <span className="text-xs text-[var(--text-3)] shrink-0">{members.length} member{members.length === 1 ? '' : 's'}</span>
                   <button type="button" onClick={() => { setEditing(isEditing ? null : b.id); setExpanded(null) }}
-                    className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
+                    className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
                     <Pencil size={12} /> Edit
                   </button>
                   <button type="button" onClick={() => { setExpanded(isOpen ? null : b.id); setEditing(null) }} aria-expanded={isOpen}
-                    className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
+                    className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
                     {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Members
                   </button>
-                  <button type="button" onClick={() => deleteBadge(b.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Delete ${b.name} badge`}>
+                  <button type="button" onClick={() => deleteBadge(b.id)} className="text-[var(--text-3)] hover:text-[var(--red)] shrink-0" aria-label={`Delete ${b.name} badge`}>
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -232,40 +232,40 @@ function BadgeEditPanel({ badge, onSave, onCancel }: {
   }
 
   return (
-    <div className="border-t border-zinc-800 p-3 space-y-3">
+    <div className="border-t border-[var(--border)] p-3 space-y-3">
       <div className="flex gap-3 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Name</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Name</label>
           <input value={name} onChange={e => setName(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+            className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         </div>
         <div className="flex-1 min-w-[220px]">
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description (shown on hover)</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Description (shown on hover)</label>
           <input value={description} onChange={e => setDescription(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+            className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon (leave blank to keep current)</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Icon (leave blank to keep current)</label>
           <input type="file" accept="image/*" onChange={e => setIconFile(e.target.files?.[0] ?? null)}
-            className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+            className="text-xs text-[var(--text-2)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--surface-2)] file:text-[var(--text-1)] hover:file:bg-[var(--surface-3)]" />
         </div>
       </div>
 
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-2">
-        <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer">
+      <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+        <label className="flex items-center gap-2 text-sm font-bold text-[var(--text-1)] cursor-pointer">
           <input type="checkbox" checked={hasCard} onChange={e => setHasCard(e.target.checked)} className="accent-green-500" />
-          <Sparkles size={13} className="text-green-400" />
+          <Sparkles size={13} className="text-[var(--green)]" />
           Also show as a card in profile Achievements
         </label>
         {hasCard && (
           <div className="flex items-center gap-3 pl-6">
-            {cardPreview && <SafeImage src={cardPreview} alt="" className="w-16 h-auto rounded border border-zinc-800" />}
+            {cardPreview && <SafeImage src={cardPreview} alt="" className="w-16 h-auto rounded border border-[var(--border)]" />}
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">
+              <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">
                 {badge.card_image_url ? 'Replace card image' : 'Upload card image'}
               </label>
               <input type="file" accept="image/*" onChange={e => setCardFile(e.target.files?.[0] ?? null)}
-                className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+                className="text-xs text-[var(--text-2)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--surface-2)] file:text-[var(--text-1)] hover:file:bg-[var(--surface-3)]" />
             </div>
           </div>
         )}
@@ -273,10 +273,10 @@ function BadgeEditPanel({ badge, onSave, onCancel }: {
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving || !name.trim() || !description.trim() || (hasCard && !badge.card_image_url && !cardFile)}
-          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
-        <button onClick={onCancel} className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-4 py-2 rounded-xl transition-colors">
+        <button onClick={onCancel} className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] px-4 py-2 rounded-xl transition-colors">
           Cancel
         </button>
       </div>
@@ -312,31 +312,31 @@ function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
   useEffect(() => { search('') }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="border-t border-zinc-800 p-3 space-y-3">
+    <div className="border-t border-[var(--border)] p-3 space-y-3">
       <button onClick={() => onAwardAll(badge.id)}
-        className="w-full flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+        className="w-full flex items-center justify-center gap-1.5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-bold px-3 py-2 rounded-lg transition-colors">
         <Users size={13} /> Award to All Members
       </button>
       <div className="flex gap-2">
         <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && search(q)}
           placeholder="Search to narrow the list…"
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+          className="flex-1 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
         <button onClick={() => search(q)} disabled={searching}
-          className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 rounded-lg transition-colors disabled:opacity-40">
+          className="bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-bold px-3 rounded-lg transition-colors disabled:opacity-40">
           Search
         </button>
       </div>
-      {searching && results.length === 0 && <p className="text-xs text-zinc-600 text-center py-2">Loading members…</p>}
+      {searching && results.length === 0 && <p className="text-xs text-[var(--text-3)] text-center py-2">Loading members…</p>}
       {results.length > 0 && (
         <div className="space-y-1 max-h-64 overflow-y-auto">
           {results.map(u => (
-            <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800/60">
-              <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white">
+            <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]">
+              <div className="w-7 h-7 rounded-full bg-[var(--surface-3)] shrink-0 overflow-hidden flex items-center justify-center text-[12px] font-bold text-[var(--text-1)]">
                 {u.avatar_url ? <SafeImage src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
               </div>
-              <span className="text-sm text-white flex-1 truncate">{u.display_name || u.username} <span className="text-zinc-500">@{u.username}</span></span>
+              <span className="text-sm text-[var(--text-1)] flex-1 truncate">{u.display_name || u.username} <span className="text-[var(--text-3)]">@{u.username}</span></span>
               <button onClick={() => onAward(badge.id, u)} disabled={memberIds.has(u.id)}
-                className="flex items-center gap-1 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-black px-2.5 py-1 rounded-lg transition-colors shrink-0">
+                className="flex items-center gap-1 text-xs font-bold bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:bg-[var(--surface-3)] disabled:text-[var(--accent-fg)] text-[var(--accent-fg)] px-2.5 py-1 rounded-lg transition-colors shrink-0">
                 <UserPlus size={11} /> {memberIds.has(u.id) ? 'Has it' : 'Award'}
               </button>
             </div>
@@ -345,18 +345,18 @@ function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
       )}
 
       <div>
-        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Currently has this badge</p>
+        <p className="text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">Currently has this badge</p>
         {members.length === 0 ? (
-          <p className="text-xs text-zinc-600">No one yet.</p>
+          <p className="text-xs text-[var(--text-3)]">No one yet.</p>
         ) : (
           <div className="space-y-1">
             {members.map(m => m.user && (
-              <div key={m.user.id} className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-zinc-800/60">
-                <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white">
+              <div key={m.user.id} className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]">
+                <div className="w-6 h-6 rounded-full bg-[var(--surface-3)] shrink-0 overflow-hidden flex items-center justify-center text-[11px] font-bold text-[var(--text-1)]">
                   {m.user.avatar_url ? <SafeImage src={m.user.avatar_url} alt="" className="w-full h-full object-cover" /> : (m.user.display_name || m.user.username)[0].toUpperCase()}
                 </div>
-                <span className="text-xs text-zinc-300 flex-1 truncate">@{m.user.username}</span>
-                <button type="button" onClick={() => onRevoke(badge.id, m.user!.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Revoke ${badge.name} from ${m.user!.display_name || m.user!.username}`}>
+                <span className="text-xs text-[var(--text-2)] flex-1 truncate">@{m.user.username}</span>
+                <button type="button" onClick={() => onRevoke(badge.id, m.user!.id)} className="text-[var(--text-3)] hover:text-[var(--red)] shrink-0" aria-label={`Revoke ${badge.name} from ${m.user!.display_name || m.user!.username}`}>
                   <X size={13} />
                 </button>
               </div>

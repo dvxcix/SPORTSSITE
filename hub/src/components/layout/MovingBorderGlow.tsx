@@ -35,7 +35,7 @@ function MovingDot({ duration = 3000, rx = 7, ry = 7 }: { duration?: number; rx?
       <motion.div style={{ position: 'absolute', top: 0, left: 0, transform }}>
         <div style={{
           width: 26, height: 26, borderRadius: '50%',
-          background: 'radial-gradient(circle, #fff6d6 0%, #f5d576 45%, transparent 75%)',
+          background: 'radial-gradient(circle, var(--surface-3) 0%, #f5d576 45%, transparent 75%)',
         }} />
       </motion.div>
     </>

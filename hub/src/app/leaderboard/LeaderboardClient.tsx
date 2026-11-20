@@ -41,7 +41,7 @@ function StreakBadge({ streak }: { streak: number }) {
   const abs = Math.abs(streak)
   return (
     <span style={{
-      fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99,
+      fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99,
       background: isHot ? 'rgba(180,255,77,0.12)' : 'rgba(255,77,106,0.12)',
       color: isHot ? 'var(--accent)' : 'var(--red)',
       border: `1px solid ${isHot ? 'rgba(180,255,77,0.25)' : 'rgba(255,77,106,0.25)'}`,
@@ -57,7 +57,7 @@ function RecentDots({ results }: { results: ('W' | 'L' | 'P')[] }) {
     <div style={{ display: 'flex', gap: 3 }}>
       {results.slice(0, 5).map((r, i) => (
         <span key={i} style={{
-          width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 800,
+          width: 14, height: 14, borderRadius: '50%', fontSize: 11, fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: r === 'W' ? 'rgba(74,222,128,0.15)' : r === 'L' ? 'rgba(255,77,106,0.15)' : 'rgba(255,200,0,0.15)',
           color: r === 'W' ? '#4ade80' : r === 'L' ? 'var(--red)' : '#ffc800',
@@ -89,14 +89,14 @@ function PodiumCard({ user, rank }: { user: UserRow; rank: 1 | 2 | 3 }) {
       >
         <span style={{ fontSize: isFirst ? 28 : 22, marginBottom: 10 }}>{medal}</span>
         <Avatar user={user} size={isFirst ? 56 : 44} />
-        <p style={{ fontSize: isFirst ? 13 : 12, fontWeight: 800, color: 'var(--text-1)', marginTop: 10, lineHeight: 1.2 }}>
+        <p style={{ fontSize: isFirst ? 13 : 12, fontWeight: 700, color: 'var(--text-1)', marginTop: 10, lineHeight: 1.2 }}>
           {user.display_name || user.username}
         </p>
-        <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>@{user.username}</p>
-        <p style={{ fontSize: isFirst ? 16 : 13, fontWeight: 900, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-2)', marginTop: 8 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>@{user.username}</p>
+        <p style={{ fontSize: isFirst ? 16 : 13, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-2)', marginTop: 8 }}>
           {graded > 0 ? `${user.winPct}%` : 'No picks'}
         </p>
-        <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
           {user.wins}W-{user.losses}L
         </p>
       </div>
@@ -121,39 +121,39 @@ function RankRow({ user, rank }: { user: UserRow; rank: number }) {
           borderRadius: 14, transition: 'all 130ms',
         }}
       >
-        <span style={{ width: 32, textAlign: 'center', fontSize: rank <= 3 ? 18 : 13, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{rankLabel}</span>
+        <span style={{ width: 32, textAlign: 'center', fontSize: rank <= 3 ? 18 : 13, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>{rankLabel}</span>
         <Avatar user={user} size={38} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.display_name || user.username}
             </p>
             <UserBadges userId={user.id} size={13} />
-            {user.is_verified && <span style={{ color: '#4ade80', fontSize: 12, flexShrink: 0 }}>✓</span>}
+            {user.is_verified && <span style={{ color: 'var(--green)', fontSize: 12, flexShrink: 0 }}>✓</span>}
             {user.account_type === 'creator' && (
-              <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99, background: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.15)', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: 'rgba(168,85,247,0.15)', color: 'var(--purple)', border: '1px solid rgba(168,85,247,0.15)', flexShrink: 0 }}>
                 PRO
               </span>
             )}
             <StreakBadge streak={user.streak} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-            <p style={{ fontSize: 11, color: 'var(--text-3)' }}>@{user.username}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>@{user.username}</p>
             <RecentDots results={user.recentResults} />
           </div>
         </div>
         <div className={styles.record}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 900, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
               {graded > 0 ? `${user.winPct}%` : '---'}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>WIN%</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>WIN%</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
               {user.wins}-{user.losses}{user.pushes > 0 ? `-${user.pushes}` : ''}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{user.total} picks</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>{user.total} picks</p>
           </div>
         </div>
       </div>
@@ -179,19 +179,19 @@ function WeekRow({ user, rank }: { user: UserRow; rank: number }) {
           borderRadius: 14, transition: 'all 130ms',
         }}
       >
-        <span style={{ width: 28, textAlign: 'center', fontSize: 13, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>#{rank}</span>
+        <span style={{ width: 28, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>#{rank}</span>
         <Avatar user={user} size={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user.display_name || user.username}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)' }}>@{user.username}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>@{user.username}</p>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 900, color: winPct >= 55 ? '#4ade80' : 'var(--text-2)' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: winPct >= 55 ? '#4ade80' : 'var(--text-2)' }}>
             {graded > 0 ? `${winPct}%` : '---'}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{w.wins}W-{w.losses}L this wk</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{w.wins}W-{w.losses}L this wk</p>
         </div>
       </div>
     </Link>
@@ -330,8 +330,8 @@ function EmptyState({ label = 'Be the first to drop picks and climb the board.' 
       <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>{label}</p>
       <Link href="/picks" style={{
         display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-        borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)',
-        fontSize: 13, fontWeight: 800, textDecoration: 'none',
+        borderRadius: 99, background: 'var(--accent-fill)', color: 'var(--accent-fg)',
+        fontSize: 13, fontWeight: 700, textDecoration: 'none',
       }}>
         <TrendingUp size={14} />
         Drop Your First Pick

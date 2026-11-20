@@ -87,11 +87,11 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
       onClose={onClose}
       labelledBy="share-pick-title"
       describedBy="share-pick-description"
-      backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 'var(--layer-modal)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(8px)' }}
+      backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(8px)' }}
       panelStyle={{ width: 'min(420px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 18, outline: 'none' }}
     >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div><h2 id="share-pick-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>Share pick</h2><p id="share-pick-description" className="sr-only">Download or share this pick card.</p></div>
+          <div><h2 id="share-pick-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Share pick</h2><p id="share-pick-description" className="sr-only">Download or share this pick card.</p></div>
           <button type="button" data-modal-autofocus aria-label="Close share menu" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
         </div>
 
@@ -123,9 +123,9 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
           <ShareOptionBtn label="Copy Link" onClick={copyLink}
             icon={copied ? <Check size={18} /> : <Link2 size={18} />} bg="var(--surface-2)" fg={copied ? 'var(--green)' : 'var(--text-1)'} />
           <ShareOptionBtn label="X" onClick={shareToX}
-            icon={<span style={{ fontSize: 16, fontWeight: 900, lineHeight: 1 }}>𝕏</span>} bg="#000" fg="#fff" />
+            icon={<span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>𝕏</span>} bg="#000" fg="#fff" />
           <ShareOptionBtn label="Reddit" onClick={shareToReddit}
-            icon={<span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1 }}>reddit</span>} bg="#FF4500" fg="#fff" />
+            icon={<span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1 }}>reddit</span>} bg="#FF4500" fg="#fff" />
           <ShareOptionBtn label="Text" onClick={shareToSms}
             icon={<MessageSquare size={18} />} bg="#2ED573" fg="#052e16" />
           <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'}
@@ -154,7 +154,7 @@ function ShareOptionBtn({ icon, label, onClick, bg, fg, busy }: {
       }}>
         {icon}
       </span>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>{label}</span>
     </button>
   )
 }

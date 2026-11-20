@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ExternalLink, Menu, Search, ShieldCheck } from 'lucide-react'
@@ -40,7 +41,7 @@ export function AdminShell({ email, children }: { email: string; children: React
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-2)]">
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-2)]">
               <span>{group}</span><span aria-hidden="true">/</span><span className="truncate">{title}</span>
             </div>
             <p className="mt-0.5 truncate text-sm font-semibold text-[var(--text-1)] sm:text-base">{title}</p>
@@ -49,7 +50,7 @@ export function AdminShell({ email, children }: { email: string; children: React
           <button type="button" onClick={() => setCommandOpen(true)} className="hidden min-h-10 min-w-52 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-xs font-semibold text-[var(--text-3)] transition hover:border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] hover:bg-[var(--surface-2)] hover:text-[var(--text-2)] md:flex xl:min-w-64">
             <Search size={14} aria-hidden="true" />
             <span className="min-w-0 flex-1 truncate">Search admin tools</span>
-            <kbd className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[9px] font-black text-[var(--text-3)]">Ctrl K</kbd>
+            <kbd className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">Ctrl K</kbd>
           </button>
           <button type="button" aria-label="Search admin tools" onClick={() => setCommandOpen(true)} className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition-colors hover:text-[var(--accent)] md:hidden">
             <Search size={17} aria-hidden="true" />
@@ -57,8 +58,9 @@ export function AdminShell({ email, children }: { email: string; children: React
 
           <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 xl:flex">
             <ShieldCheck size={14} aria-hidden="true" className="shrink-0 text-[var(--accent)]" />
-            <span className="max-w-44 truncate text-[10px] font-bold text-[var(--text-2)]">{email}</span>
+            <span className="max-w-44 truncate text-[12px] font-bold text-[var(--text-2)]">{email}</span>
           </div>
+          <ThemeToggle />
           <Link href="/" aria-label="Open SlipSurge" className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_32%,var(--border-2))] hover:text-[var(--accent)]">
             <ExternalLink size={16} aria-hidden="true" />
           </Link>

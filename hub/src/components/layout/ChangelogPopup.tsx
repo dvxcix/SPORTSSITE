@@ -44,7 +44,7 @@ export function ChangelogPopup() {
   }
 
   return (
-    <Modal onClose={dismiss} maxWidth={440} zIndex={300}>
+    <Modal onClose={dismiss} maxWidth={520} zIndex={300} label="What's new in SlipSurge">
       <ChangelogPopupBody
         title={current.title}
         description={current.description}

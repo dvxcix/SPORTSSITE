@@ -40,12 +40,12 @@ export function GroupJoinButton({ groupId, initialMember }: {
   return (
     <div className="grid justify-items-end gap-1.5">
       <button type="button" onClick={toggle} disabled={loading} aria-pressed={member}
-        className={`text-xs font-black px-4 py-2 rounded-lg transition-all disabled:opacity-60 ${
-          member ? 'border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400' : 'bg-green-500 hover:bg-green-400 text-black'
+        className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all disabled:opacity-60 ${
+          member ? 'border border-[var(--border-2)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--red)_50%,transparent)] hover:text-[var(--red)]' : 'bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)]'
         }`}>
         {loading ? 'Saving…' : member ? 'Leave Group' : 'Join Group'}
       </button>
-      {error && <p className="max-w-52 text-right text-[10px] text-red-400" role="alert">{error} Try again.</p>}
+      {error && <p className="max-w-52 text-right text-[12px] text-[var(--red)]" role="alert">{error} Try again.</p>}
     </div>
   )
 }

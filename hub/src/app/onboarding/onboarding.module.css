@@ -46,7 +46,7 @@
 .page :global(.ss-onboarding-benefit span) { color: var(--text-2); font-size: 12px; font-weight: 600; }
 .page :global(.ss-onboarding-primary) { box-shadow: none; }
 .page :global(.ss-onboarding-banner) { background: var(--surface-3); }
-.page :global(.ss-onboarding-banner-action) { min-height: 40px; font-size: 11px; }
+.page :global(.ss-onboarding-banner-action) { min-height: 40px; font-size: 12px; }
 .page :global(.ss-onboarding-player-results > button) { min-height: 44px; }
 .page :global(.ss-onboarding-player-results b),
 .page :global(.ss-onboarding-player-chips b),
@@ -56,7 +56,7 @@
 .page :global(.ss-onboarding-player-results > p),
 .page :global(.ss-onboarding-groups small),
 .page :global(.ss-onboarding-summary small),
-.page :global(.ss-onboarding-destination small) { color: var(--text-2); font-size: 11px; }
+.page :global(.ss-onboarding-destination small) { color: var(--text-2); font-size: 12px; }
 
 @media (max-width: 540px) {
   .page :global(.ss-onboarding-benefit) { flex-direction: row; text-align: left; }

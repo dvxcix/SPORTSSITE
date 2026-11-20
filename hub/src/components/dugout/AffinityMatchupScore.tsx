@@ -65,15 +65,15 @@ function EvidenceCard({
       <Link href={`/players/${mlbId}`} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}>
         <PlayerAvatar headshot={mlbHeadshot(mlbId)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={name} size={40} />
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-          <div style={{ fontSize: 9, fontWeight: 700, color: HAND_COLOR[hand] }}>{handLabel}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: HAND_COLOR[hand] }}>{handLabel}</div>
         </div>
       </Link>
 
       {distinctPitchTypes.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
           {distinctPitchTypes.map(pt => (
-            <span key={pt} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 8, color: 'var(--text-3)' }}>
+            <span key={pt} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-3)' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: pitchColor(pt), flexShrink: 0 }} />
               {pitchLabel(pt)}
             </span>
@@ -82,17 +82,17 @@ function EvidenceCard({
       )}
 
       <div onClick={() => evidence.length > 0 && onToggle()} style={{ cursor: evidence.length > 0 ? 'pointer' : 'default' }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: evidence.length > 0 ? '#4ade80' : 'var(--text-1)', lineHeight: 1 }}>{evidence.length}</div>
-        <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: evidence.length > 0 ? '#4ade80' : 'var(--text-1)', lineHeight: 1 }}>{evidence.length}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
           {headline}{evidence.length > 0 ? (expanded ? ' ▲' : ' ▾') : ''}
         </div>
       </div>
 
       <div style={{ marginTop: 6 }}>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>AFFINITY MATCHUP </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>AFFINITY MATCHUP </span>
         <span
           style={{
-            fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 5,
+            fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 5,
             border: `1px solid ${SCORE_COLOR(score)}`, color: SCORE_COLOR(score), background: `${SCORE_COLOR(score)}1a`,
           }}
         >

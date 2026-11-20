@@ -52,8 +52,8 @@ export default async function AdminUsersPage({
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-black text-white">Manage Users</h1>
-        <span className="text-sm text-zinc-500">{users.length} results</span>
+        <h1 className="text-xl font-semibold text-[var(--text-1)]">Manage Users</h1>
+        <span className="text-sm text-[var(--text-3)]">{users.length} results</span>
       </div>
 
       <TerminateMembershipTool />
@@ -61,16 +61,16 @@ export default async function AdminUsersPage({
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
           <form>
             <input name="q" defaultValue={q} placeholder="Search users…"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </form>
         </div>
         <div className="flex gap-1">
           {[['', 'All'], ['user', 'Users'], ['creator', 'Creators'], ['admin', 'Admins']].map(([val, label]) => (
             <a key={val} href={val ? `/admin/users?type=${val}` : '/admin/users'}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${type === val || (!type && !val) ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/60'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${type === val || (!type && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
               {label}
             </a>
           ))}
@@ -78,7 +78,7 @@ export default async function AdminUsersPage({
         <div className="flex gap-1">
           {[['', 'All Tiers'], ['free', 'Free'], ['basic', 'Basic'], ['advanced', 'Advanced'], ['ultimate', 'Ultimate']].map(([val, label]) => (
             <a key={val} href={val ? `/admin/users?tier=${val}` : '/admin/users'}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${tierFilter === val || (!tierFilter && !val) ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/60'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${tierFilter === val || (!tierFilter && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
               {label}
             </a>
           ))}
@@ -86,21 +86,21 @@ export default async function AdminUsersPage({
       </div>
 
       {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden overflow-x-auto">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800">
+          <thead className="border-b border-[var(--border)]">
             <tr className="text-left">
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">User</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Type</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Tier</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Connections</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Email</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Followers</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Joined</th>
-              <th className="px-4 py-3 text-xs font-bold text-zinc-500">Actions</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">User</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Type</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Tier</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Connections</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Email</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Followers</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Joined</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[var(--border)]">
             {users.map(u => {
               const rawTier: Tier = (u.tier as Tier) ?? 'free'
               const displayTier = effectiveTier(rawTier, u.discord_advanced_claimed, u.admin_granted_tier as Tier | null)

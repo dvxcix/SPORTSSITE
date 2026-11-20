@@ -34,7 +34,7 @@ export function Switch({ checked, onChange, label, disabled, ariaLabel, size = '
         style={{
           position: 'absolute', top: 2, left: 2,
           width: dimensions.thumb, height: dimensions.thumb, borderRadius: '50%',
-          background: '#fff',
+          background: 'var(--surface-2)',
           transform: `translateX(${checked ? dimensions.travel : 0}px)`,
           transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1), background 0.2s ease',
           boxShadow: '0 1px 3px rgba(0,0,0,0.35)',

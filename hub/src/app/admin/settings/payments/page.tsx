@@ -32,22 +32,22 @@ export default function AdminPaymentsSettingsPage() {
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6 flex items-start gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><WalletCards size={19} /></span>
-        <div><h1 className="text-xl font-black text-white">Whop payments</h1><p className="mt-1 text-sm text-zinc-400">SlipSurge uses Whop exclusively for platform memberships, creator checkout, billing, and payouts.</p></div>
+        <span className="grid h-10 w-10 place-items-center rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]"><WalletCards size={19} /></span>
+        <div><h1 className="text-xl font-semibold text-[var(--text-1)]">Whop payments</h1><p className="mt-1 text-sm text-[var(--text-2)]">SlipSurge uses Whop exclusively for platform memberships, creator checkout, billing, and payouts.</p></div>
       </div>
 
       <div className="grid gap-4">
-        {groups.map(group => <section key={group.title} className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-          <header className="border-b border-zinc-800 px-4 py-3"><h2 className="text-sm font-bold text-white">{group.title}</h2><p className="mt-1 text-xs text-zinc-500">{group.description}</p></header>
-          <div className="divide-y divide-zinc-800">{group.checks.map(check => <div key={check.envVar} className="flex items-center justify-between gap-4 px-4 py-3.5">
+        {groups.map(group => <section key={group.title} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+          <header className="border-b border-[var(--border)] px-4 py-3"><h2 className="text-sm font-bold text-[var(--text-1)]">{group.title}</h2><p className="mt-1 text-xs text-[var(--text-3)]">{group.description}</p></header>
+          <div className="divide-y divide-[var(--border)]">{group.checks.map(check => <div key={check.envVar} className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white">{check.label}</p>
-              <p className="mt-0.5 truncate font-mono text-xs text-zinc-500">{check.envVar}</p>
+              <p className="text-sm font-medium text-[var(--text-1)]">{check.label}</p>
+              <p className="mt-0.5 truncate font-mono text-xs text-[var(--text-3)]">{check.envVar}</p>
             </div>
             {check.present ? (
-              <span className="flex items-center gap-1.5 text-xs font-bold text-green-400"><CheckCircle2 size={14} /> Configured</span>
+              <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--green)]"><CheckCircle2 size={14} /> Configured</span>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs font-bold text-red-400"><XCircle size={14} /> Missing</span>
+              <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--red)]"><XCircle size={14} /> Missing</span>
             )}
           </div>)}</div>
         </section>)}

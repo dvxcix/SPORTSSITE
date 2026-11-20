@@ -6,16 +6,16 @@ import { SafeImage } from '@/components/ui/SafeImage'
 // (copied from mlb-party's asset set) — remote sportsbook favicons are
 // unreliable to hotlink (many block cross-origin fetches or 404 silently).
 const BOOKS: Record<string, { favicon: string; initials: string; bg: string; color: string }> = {
-  fanduel:    { favicon: '/sportsbooks/fanduel.ico',    initials: 'FD',  bg: '#1493FF', color: '#fff' },
-  draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#fff' },
-  betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#000' },
+  fanduel:    { favicon: '/sportsbooks/fanduel.ico',    initials: 'FD',  bg: '#1493FF', color: 'var(--text-1)' },
+  draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: 'var(--text-1)' },
+  betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: 'var(--text-1)' },
   caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
-  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#fff' },
-  pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
+  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: 'var(--text-1)' },
+  pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: 'var(--text-1)' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
-  fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
-  betparx:    { favicon: '/sportsbooks/betparx.png',    initials: 'BP', bg: '#a900ff', color: '#fff' },
-  ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: '#fff' },
+  fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: 'var(--text-1)' },
+  betparx:    { favicon: '/sportsbooks/betparx.png',    initials: 'BP', bg: '#a900ff', color: 'var(--text-1)' },
+  ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: 'var(--text-1)' },
   kalshi:     { favicon: 'https://kalshi.com/Kalshi_Favicon.png?v=20260807', initials: 'K', bg: '#014737', color: '#00DD94' },
   polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#2E5CFF' },
 }
@@ -85,7 +85,7 @@ export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number 
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       width: size, height: size, borderRadius: 3,
       background: book.bg, fontSize: size * 0.38, lineHeight: 1,
-      fontWeight: 900, color: book.color, fontFamily: 'monospace',
+      fontWeight: 700, color: book.color, fontFamily: 'monospace',
       flexShrink: 0, verticalAlign: 'middle', letterSpacing: '-0.02em',
     }}>
       {book.initials}

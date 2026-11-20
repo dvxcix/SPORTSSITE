@@ -17,7 +17,7 @@ function TeamLogoImg({ abbr, size = 18 }: { abbr: string; size?: number }) {
   const [err, setErr] = useState(false)
   const url = getTeamLogoUrl(abbr)
   if (!url || err) return (
-    <span className="inline-flex items-center justify-center rounded-full bg-zinc-700 text-[8px] font-black text-zinc-300" style={{ width: size, height: size }}>
+    <span className="inline-flex items-center justify-center rounded-full bg-[var(--surface-3)] text-[11px] font-semibold text-[var(--text-2)]" style={{ width: size, height: size }}>
       {abbr.slice(0, 2)}
     </span>
   )
@@ -48,42 +48,42 @@ function GamePicker({ games, loading, error, value, onChange }: {
         type="button"
         onClick={() => !disabled && setOpen(v => !v)}
         disabled={disabled}
-        className="w-full flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-green-500/50 transition-all disabled:opacity-50"
+        className="w-full flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all disabled:opacity-50"
       >
         {selected ? (
           <>
             <TeamLogoImg abbr={selected.awayAbbr} />
-            <span className="text-zinc-500">@</span>
+            <span className="text-[var(--text-3)]">@</span>
             <TeamLogoImg abbr={selected.homeAbbr} />
             <span className="ml-1">{selected.awayAbbr} @ {selected.homeAbbr}{selected.gameNum > 1 ? ` (G${selected.gameNum})` : ''}</span>
           </>
         ) : (
-          <span className="text-zinc-600">
+          <span className="text-[var(--text-3)]">
             {loading ? 'Loading today\'s games…' : games.length === 0 ? 'No games found for this date' : 'Select a game…'}
           </span>
         )}
-        <span className="ml-auto text-zinc-500 text-xs">▾</span>
+        <span className="ml-auto text-[var(--text-3)] text-xs">▾</span>
       </button>
 
       {open && !disabled && (
-        <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl py-1">
+        <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl shadow-xl py-1">
           {games.map(g => (
             <button
               key={g.gameKey}
               type="button"
               onClick={() => { onChange(g.gameKey); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-white hover:bg-zinc-700 transition-colors text-left"
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors text-left"
             >
               <TeamLogoImg abbr={g.awayAbbr} />
-              <span className="text-zinc-500">@</span>
+              <span className="text-[var(--text-3)]">@</span>
               <TeamLogoImg abbr={g.homeAbbr} />
               <span className="ml-1">{g.awayTeam} @ {g.homeTeam}</span>
-              {g.gameNum > 1 && <span className="ml-auto text-[10px] font-bold text-amber-400">GAME {g.gameNum}</span>}
+              {g.gameNum > 1 && <span className="ml-auto text-[12px] font-bold text-[var(--gold)]">GAME {g.gameNum}</span>}
             </button>
           ))}
         </div>
       )}
-      {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+      {error && <p className="text-xs text-[var(--red)] mt-1">{error}</p>}
     </div>
   )
 }
@@ -149,37 +149,37 @@ export function PikkitImportForm() {
     }
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all"
 
   return (
     <div className="space-y-4">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       {result && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
+        <div className="bg-[color-mix(in_srgb,var(--green)_10%,transparent)] border border-[color-mix(in_srgb,var(--green)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--green)]">
           Imported {result.rowsImported} player picks — {Object.entries(result.marketSummary).map(([m, c]) => `${m}: ${c}`).join(', ')}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Game Date</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Game Date</label>
           <input type="date" value={gameDate} onChange={e => setGameDate(e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Game</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Game</label>
           <GamePicker games={games} loading={loadingGames} error={gamesError} value={selectedGameKey} onChange={setSelectedGameKey} />
         </div>
       </div>
 
       {selectedGame && (
-        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl px-4 py-2.5 text-xs text-zinc-400">
-          Importing for <strong className="text-white">{selectedGame.awayTeam} @ {selectedGame.homeTeam}</strong>
-          {selectedGame.gameNum > 1 && <span className="text-amber-400"> — Game {selectedGame.gameNum} of a doubleheader</span>}
+        <div className="bg-[color-mix(in_srgb,var(--surface-2)_50%,transparent)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-2)]">
+          Importing for <strong className="text-[var(--text-1)]">{selectedGame.awayTeam} @ {selectedGame.homeTeam}</strong>
+          {selectedGame.gameNum > 1 && <span className="text-[var(--gold)]"> — Game {selectedGame.gameNum} of a doubleheader</span>}
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-1.5">Pasted JSON from bookmarklet</label>
+        <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Pasted JSON from bookmarklet</label>
         <textarea
           value={json}
           onChange={e => setJson(e.target.value)}
@@ -192,7 +192,7 @@ export function PikkitImportForm() {
       <button
         onClick={submit}
         disabled={submitting || !json.trim() || !gameDate || !selectedGame}
-        className="w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all bg-green-500 hover:bg-green-400 text-black disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] disabled:opacity-40"
       >
         {submitting ? 'Importing…' : !selectedGame ? 'Select a game first' : 'Import Picks'}
       </button>

@@ -32,11 +32,11 @@ export function AdminPageActions({ pageId, isVerified }: { pageId: string; isVer
   return (
     <div className="flex gap-1">
       <button type="button" onClick={verify} disabled={loading} aria-label={isVerified ? 'Remove page verification' : 'Verify page'} aria-pressed={isVerified}
-        className={`p-1.5 rounded-lg transition-colors ${isVerified ? 'text-green-400 bg-green-400/10' : 'text-zinc-500 hover:text-green-400 hover:bg-green-400/10'}`}>
+        className={`p-1.5 rounded-lg transition-colors ${isVerified ? 'text-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)]' : 'text-[var(--text-3)] hover:text-[var(--green)] hover:bg-[color-mix(in_srgb,var(--green)_10%,transparent)]'}`}>
         <CheckCircle size={13} />
       </button>
       <button type="button" onClick={del} disabled={loading} aria-label="Delete page"
-        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+        className="p-1.5 text-[var(--text-3)] hover:text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] rounded-lg transition-colors">
         <Trash2 size={13} />
       </button>
     </div>

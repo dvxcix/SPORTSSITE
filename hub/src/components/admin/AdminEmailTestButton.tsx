@@ -15,7 +15,7 @@ export function AdminEmailTestButton({ disabled = false }: { disabled?: boolean 
 
   const label = state === 'sending' ? 'Sending…' : state === 'sent' ? 'Test sent' : state === 'failed' ? 'Send failed' : 'Send me a test'
   return (
-    <button type="button" onClick={sendTest} disabled={disabled || state === 'sending'} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border-accent)] bg-[var(--accent-muted)] px-4 text-xs font-black text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)] hover:text-black disabled:cursor-not-allowed disabled:opacity-45">
+    <button type="button" onClick={sendTest} disabled={disabled || state === 'sending'} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border-accent)] bg-[var(--accent-muted)] px-4 text-xs font-semibold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)] hover:text-[var(--accent-fg)] disabled:cursor-not-allowed disabled:opacity-45">
       <Send size={14} aria-hidden="true" /> {label}
     </button>
   )

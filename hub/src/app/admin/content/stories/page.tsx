@@ -15,50 +15,50 @@ export default async function AdminStoriesPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-6">Manage Stories</h1>
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-6">Manage Stories</h1>
       {(stories?.length ?? 0) === 0 ? (
-        <div className="text-center py-20 text-zinc-500 text-sm">No stories yet</div>
+        <div className="text-center py-20 text-[var(--text-3)] text-sm">No stories yet</div>
       ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800">
+            <thead className="border-b border-[var(--border)]">
               <tr className="text-left">
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Author</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Content</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Type</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Views</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Expires</th>
-                <th className="px-4 py-3 text-xs font-bold text-zinc-500">Actions</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Author</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Content</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Type</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Views</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Expires</th>
+                <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-[var(--border)]">
               {(stories ?? []).map((s: any) => {
                 const expired = s.expires_at && new Date(s.expires_at) < new Date()
                 return (
-                  <tr key={s.id} className="hover:bg-zinc-800/40 transition-colors">
-                    <td className="px-4 py-3 text-xs text-zinc-400">@{s.author?.username}</td>
+                  <tr key={s.id} className="hover:bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)] transition-colors">
+                    <td className="px-4 py-3 text-xs text-[var(--text-2)]">@{s.author?.username}</td>
                     <td className="px-4 py-3 max-w-xs">
                       {s.media_url ? (
                         <div className="flex items-center gap-2">
                           {s.media_type === 'image' ? (
                             <SafeImage src={s.media_url} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
                           ) : (
-                            <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded shrink-0">{s.media_type}</span>
+                            <span className="text-[12px] bg-[var(--surface-2)] px-2 py-0.5 rounded shrink-0">{s.media_type}</span>
                           )}
-                          <p className="text-xs text-zinc-400 line-clamp-2">{s.caption}</p>
+                          <p className="text-xs text-[var(--text-2)] line-clamp-2">{s.caption}</p>
                         </div>
                       ) : (
-                        <p className="text-xs text-zinc-400 line-clamp-2"><EmojiText text={s.content || ''} /></p>
+                        <p className="text-xs text-[var(--text-2)] line-clamp-2"><EmojiText text={s.content || ''} /></p>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-[10px] font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+                      <span className="text-[12px] font-bold bg-[var(--surface-2)] text-[var(--text-2)] px-2 py-0.5 rounded-full">
                         {s.story_type || 'media'}{s.sport ? ` · ${s.sport}` : ''}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">{s.view_count ?? 0}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-3)]">{s.view_count ?? 0}</td>
                     <td className="px-4 py-3 text-xs">
-                      <span className={expired ? 'text-zinc-600' : 'text-green-400'}>
+                      <span className={expired ? 'text-[var(--text-3)]' : 'text-[var(--green)]'}>
                         {expired ? 'Expired' : s.expires_at ? new Date(s.expires_at).toLocaleString() : '—'}
                       </span>
                     </td>

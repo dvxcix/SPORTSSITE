@@ -1,6 +1,6 @@
 .page { min-height: 100dvh; color: var(--text-1); background: var(--bg); }
 .nav { position: sticky; z-index: 20; top: 0; display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 0 clamp(16px, 4vw, 34px); border-bottom: 1px solid var(--border); background: var(--surface); }
-.brand { display: flex; align-items: center; gap: 8px; color: var(--text-1); font-size: 15px; font-weight: 800; letter-spacing: -.03em; }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--text-1); font-size: 15px; font-weight: 700; letter-spacing: -.03em; }
 .brand img { width: 28px; height: 28px; object-fit: contain; }
 .brand span span { color: var(--accent); }
 .back { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text-2); background: var(--surface-2); font-size: 12px; font-weight: 600; }
@@ -10,7 +10,7 @@
 .eyebrow { display: block; margin-bottom: 8px; color: var(--text-2); font-size: 12px; font-weight: 600; }
 .hero h1 { color: var(--text-1); font-size: clamp(30px, 5vw, 46px); font-weight: 600; letter-spacing: -.03em; line-height: 1.08; }
 .hero p { max-width: 650px; margin-top: 12px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
-.content { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+.content { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .section { padding: 4px 0 24px; scroll-margin-top: 90px; }
 .section + .section { padding-top: 24px; border-top: 1px solid var(--border); }
 .section:last-child { padding-bottom: 4px; }

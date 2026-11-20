@@ -13,12 +13,12 @@ export function MaintenanceScreen({ label }: { label: string }) {
       }}>
         <Wrench size={24} color="var(--text-3)" />
       </div>
-      <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>{label} is offline for now</h1>
+      <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>{label} is offline for now</h1>
       <p style={{ fontSize: 13, color: 'var(--text-3)', maxWidth: 320, lineHeight: 1.5, marginBottom: 20 }}>
         This section is temporarily unavailable while we work on it. Check back soon.
       </p>
       <Link href="/feed" style={{
-        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
+        fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-fill)',
         padding: '9px 18px', borderRadius: 10, textDecoration: 'none',
       }}>
         Back to Feed

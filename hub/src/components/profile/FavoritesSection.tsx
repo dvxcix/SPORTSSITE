@@ -11,15 +11,15 @@ export async function FavoritesSection({ teams, players, sports = [], mlbAccess 
   const visibleTeams = [...new Map(normalizeFavoriteTeams(teams, allowNba).flatMap(key => { const team = resolveFavoriteTeam(key, catalog, sports); return team && (mlbAccess || team.sport !== 'mlb') ? [[team.key, team] as const] : [] })).values()]
   const visiblePlayers = normalizeFavoritePlayers(players, allowNba).filter(player => mlbAccess || favoritePlayerSport(player) !== 'mlb')
   if (!visibleTeams.length && !visiblePlayers.length) return null
-  return <section className="mx-4 my-5 space-y-6 overflow-hidden rounded-[22px] border border-white/[.08] bg-white/[.018] p-4 sm:mx-6 sm:p-5">
-    {visibleTeams.length > 0 && <div><h2 className="mb-3 text-sm font-semibold text-white">Favorite teams</h2><div className="flex flex-wrap gap-2">{visibleTeams.map(team => {
-      const className = 'flex items-center gap-2 rounded-xl border border-white/[.08] bg-black/30 py-2 pl-2 pr-3 transition duration-200 hover:-translate-y-px hover:border-lime-400/25 hover:bg-lime-400/[.045]'
-      const content = <><SafeImage src={team.logo} alt="" className="size-8 shrink-0 object-contain"/><span className="text-xs font-bold text-white">{team.name}</span></>
+  return <section className="mx-4 my-5 space-y-6 overflow-hidden rounded-[22px] border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.018)] p-4 sm:mx-6 sm:p-5">
+    {visibleTeams.length > 0 && <div><h2 className="mb-3 text-sm font-semibold text-[var(--text-1)]">Favorite teams</h2><div className="flex flex-wrap gap-2">{visibleTeams.map(team => {
+      const className = 'flex items-center gap-2 rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--overlay)] py-2 pl-2 pr-3 transition duration-200 hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_4.5%,transparent)]'
+      const content = <><SafeImage src={team.logo} alt="" className="size-8 shrink-0 object-contain"/><span className="text-xs font-bold text-[var(--text-1)]">{team.name}</span></>
       return team.href ? <Link key={team.key} href={team.href} className={className}>{content}</Link> : <span key={team.key} className={className}>{content}</span>
     })}</div></div>}
-    {visiblePlayers.length > 0 && <div><h2 className="mb-3 text-sm font-semibold text-white">Favorite players</h2><div className="flex flex-wrap gap-3">{visiblePlayers.map(player => {
+    {visiblePlayers.length > 0 && <div><h2 className="mb-3 text-sm font-semibold text-[var(--text-1)]">Favorite players</h2><div className="flex flex-wrap gap-3">{visiblePlayers.map(player => {
       const artwork = favoritePlayerImages(player), sport = favoritePlayerSport(player)
-      return <Link key={favoritePlayerKey(player)} href={favoritePlayerHref(player)} className="flex min-w-[168px] items-center gap-2.5 rounded-xl border border-white/[.08] bg-black/30 px-3 py-2.5 transition duration-200 hover:-translate-y-0.5 hover:border-lime-400/35 hover:bg-lime-400/[.055]"><PlayerAvatar playerId={'player_id' in player ? player.player_id : null} headshot={artwork.headshot} teamLogo={artwork.logo} teamAbbr={player.team} sport={sport} name={player.name} size={36}/><span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{player.name}</span><span className="text-xs text-zinc-400">{sport.toUpperCase()}</span></span></Link>
+      return <Link key={favoritePlayerKey(player)} href={favoritePlayerHref(player)} className="flex min-w-[168px] items-center gap-2.5 rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--overlay)] px-3 py-2.5 transition duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_35%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_5.5%,transparent)]"><PlayerAvatar playerId={'player_id' in player ? player.player_id : null} headshot={artwork.headshot} teamLogo={artwork.logo} teamAbbr={player.team} sport={sport} name={player.name} size={36}/><span className="min-w-0"><span className="block truncate text-xs font-bold text-[var(--text-1)]">{player.name}</span><span className="text-xs text-[var(--text-2)]">{sport.toUpperCase()}</span></span></Link>
     })}</div></div>}
   </section>
 }

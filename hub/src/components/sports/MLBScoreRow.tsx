@@ -13,7 +13,7 @@ function Logo({ id, name, size = 32 }: { id: number; name: string; size?: number
   // less room for the flexible away/home sections) without any JS/media query.
   const dim = `clamp(${size - 8}px, 7vw, ${size}px)`
   if (err || !id) return (
-    <div style={{ width: dim, height: dim, borderRadius: 4, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.38, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>
+    <div style={{ width: dim, height: dim, borderRadius: 4, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.38, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>
       {name?.[0] ?? '?'}
     </div>
   )
@@ -69,10 +69,10 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
             <p style={{ fontSize: 13, fontWeight: awayWin ? 900 : 700, color: awayWin ? 'var(--text-1)' : isPre ? 'var(--text-2)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {away.team.teamName || away.team.name}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{away.leagueRecord.wins}-{away.leagueRecord.losses}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{away.leagueRecord.wins}-{away.leagueRecord.losses}</p>
           </div>
           {!isPre && (
-            <span style={{ fontSize: 22, fontWeight: 900, color: awayWin ? 'var(--text-1)' : 'var(--text-3)', fontVariantNumeric: 'tabular-nums', marginLeft: 'auto', paddingRight: 8, minWidth: 28, textAlign: 'right' }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: awayWin ? 'var(--text-1)' : 'var(--text-3)', fontVariantNumeric: 'tabular-nums', marginLeft: 'auto', paddingRight: 8, minWidth: 28, textAlign: 'right' }}>
               {away.score ?? 0}
             </span>
           )}
@@ -80,11 +80,11 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
 
         {/* Status center */}
         <div className="ss-score-status w-[64px] sm:w-[100px]" style={{ flexShrink: 0, textAlign: 'center', padding: '0 8px' }}>
-          <p style={{ fontSize: 11, fontWeight: 800, color: isLive ? 'var(--red)' : isFinal ? 'var(--text-3)' : 'var(--text-2)', letterSpacing: '0.02em' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: isLive ? 'var(--red)' : isFinal ? 'var(--text-3)' : 'var(--text-2)', letterSpacing: '0.02em' }}>
             {isFinal ? 'Final' : isLive ? label : label}
           </p>
           {isLive && ls?.balls !== undefined && (
-            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>
               {ls.balls}-{ls.strikes} · {ls.outs} out{ls.outs !== 1 ? 's' : ''}
             </p>
           )}
@@ -93,7 +93,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
         {/* Home team */}
         <div className="ss-score-team ss-score-team-home" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end', minWidth: 0 }}>
           {!isPre && (
-            <span style={{ fontSize: 22, fontWeight: 900, color: homeWin ? 'var(--text-1)' : 'var(--text-3)', fontVariantNumeric: 'tabular-nums', paddingLeft: 8, minWidth: 28, textAlign: 'left' }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: homeWin ? 'var(--text-1)' : 'var(--text-3)', fontVariantNumeric: 'tabular-nums', paddingLeft: 8, minWidth: 28, textAlign: 'left' }}>
               {home.score ?? 0}
             </span>
           )}
@@ -101,7 +101,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
             <p style={{ fontSize: 13, fontWeight: homeWin ? 900 : 700, color: homeWin ? 'var(--text-1)' : isPre ? 'var(--text-2)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {home.team.teamName || home.team.name}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'right' }}>{home.leagueRecord.wins}-{home.leagueRecord.losses}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'right' }}>{home.leagueRecord.wins}-{home.leagueRecord.losses}</p>
           </div>
           <Logo id={home.team.id} name={home.team.name} size={28} />
         </div>
@@ -111,7 +111,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
             (the game detail page has full venue info). */}
         <div className="hidden sm:block" style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingLeft: 12 }}>
           {isPre && game.venue?.name && (
-            <p style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{game.venue.name}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{game.venue.name}</p>
           )}
         </div>
       </div>

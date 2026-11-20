@@ -9,6 +9,10 @@
   ],
   "scripts": {
     "dev": "next dev",
+    "dev:ui-review": "node scripts/start-ui-review.mjs",
+    "build:ui-review": "node scripts/start-ui-review.mjs build",
+    "start:ui-review": "node scripts/start-ui-review.mjs start",
+    "test:ui-framework": "node --import tsx --test scripts/ui-framework.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -58,16 +58,16 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  if (loading) return <div className="text-sm text-zinc-500 py-8 text-center">Loading…</div>
+  if (loading) return <div className="text-sm text-[var(--text-3)] py-8 text-center">Loading…</div>
 
   return (
     <div className="space-y-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]">
         {fields.map(f => (
           <div key={f.key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <label className="text-sm font-medium text-white">{f.label}</label>
-              {f.hint && <p className="text-xs text-zinc-500 mt-0.5">{f.hint}</p>}
+              <label className="text-sm font-medium text-[var(--text-1)]">{f.label}</label>
+              {f.hint && <p className="text-xs text-[var(--text-3)] mt-0.5">{f.hint}</p>}
             </div>
             {f.type === 'toggle' ? (
               <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} ariaLabel={f.label} />
@@ -76,15 +76,15 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
                 type={f.type}
                 value={String(values[f.key] ?? '')}
                 onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                className="w-full shrink-0 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-left text-sm text-white outline-none focus:border-green-500/50 sm:w-56 sm:py-1.5 sm:text-right"
+                className="w-full shrink-0 rounded-lg border border-[var(--border-2)] bg-[var(--surface-2)] px-3 py-2 text-left text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] sm:w-56 sm:py-1.5 sm:text-right"
               />
             )}
           </div>
         ))}
       </div>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       <button onClick={save} disabled={saving}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-2.5 rounded-xl transition-colors">
+        className="w-full bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold py-2.5 rounded-xl transition-colors">
         {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}
       </button>
     </div>

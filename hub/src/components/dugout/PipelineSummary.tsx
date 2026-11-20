@@ -96,13 +96,13 @@ export function PipelineSummary({ steps }: { steps: MatrixPipelineStep[] }) {
   }
   return (
     <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-1)', padding: '10px 12px', background: 'var(--accent-dim)', border: '1px solid var(--border-2)', borderRadius: 8 }}>
-      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>YOUR FORMULA</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>YOUR FORMULA</span>
       {steps.map((step, index) => {
         const connector = index > 0 ? connectorFor(steps, index) : null
         return (
           <React.Fragment key={index}>
             {connector && (
-              <span style={{ color: connector === '→' ? 'var(--text-3)' : 'var(--accent)', margin: '0 6px', fontWeight: 900 }}>
+              <span style={{ color: connector === '→' ? 'var(--text-3)' : 'var(--accent)', margin: '0 6px', fontWeight: 700 }}>
                 {connector}
               </span>
             )}

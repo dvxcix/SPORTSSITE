@@ -72,10 +72,10 @@ export default async function MlbArchivePage({ searchParams }: { searchParams: P
   const researchDisplay = rawResearch.length <= 1_000_000 ? rawResearch : ''
 
   return <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 text-[var(--text-1)] sm:px-6">
-    <header><p className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">Admin research</p><h1 className="mt-2 text-2xl font-black">MLB archive</h1><p className="mt-2 text-sm text-[var(--text-2)]">Browse saved pregame observations by date and game. No live imports are run here.</p></header>
+    <header><p className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">Admin research</p><h1 className="mt-2 text-2xl font-semibold">MLB archive</h1><p className="mt-2 text-sm text-[var(--text-2)]">Browse saved pregame observations by date and game. No live imports are run here.</p></header>
     <form className="flex flex-wrap items-end gap-3" action="/admin/mlb-archive">
       <label className="grid gap-1 text-xs font-semibold">Date<input type="date" name="date" defaultValue={date} className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" /></label>
-      <button className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-bold text-black" type="submit">View date</button>
+      <button className="rounded-md bg-[var(--accent-fill)] px-4 py-2 text-sm font-bold text-[var(--accent-fg)]" type="submit">View date</button>
     </form>
     {!games.length ? <p className="text-sm text-[var(--text-2)]">No saved game snapshots are available for this date.</p> : <>
       <nav aria-label="Saved games" className="flex flex-wrap gap-2">{games.map(game => <Link key={game.game_pk} href={`/admin/mlb-archive?date=${encodeURIComponent(date)}&game=${encodeURIComponent(game.game_pk)}`} aria-current={game.game_pk === selected?.game_pk ? 'page' : undefined} className="rounded-md border border-[var(--border)] px-3 py-2 text-sm">{game.away_abbr ?? 'Away'} @ {game.home_abbr ?? 'Home'} · {game.game_pk}</Link>)}</nav>

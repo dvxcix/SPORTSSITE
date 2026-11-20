@@ -19,12 +19,12 @@
 .page :global(.ss-scores-date span),
 .page :global(.ss-scores-column-headings) {
   color: var(--text-2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
 }
-.page :global(.ss-scores-date small) { font-size: 10px; letter-spacing: 0; }
+.page :global(.ss-scores-date small) { font-size: 12px; letter-spacing: 0; }
 .page :global(.ss-scores-date[data-selected='true']) { box-shadow: none; }
 .page :global(.ss-scores-date[data-selected='true'] span),
 .page :global(.ss-scores-date[data-selected='true'] small) { color: var(--accent-fg); }

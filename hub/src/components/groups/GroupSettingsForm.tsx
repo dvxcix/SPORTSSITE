@@ -78,7 +78,7 @@ export function GroupSettingsForm({ group }: { group: any }) {
 
   return (
     <form className="ss-flow-form" onSubmit={save}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
       <section className="ss-flow-card">
         <div>
@@ -92,7 +92,7 @@ export function GroupSettingsForm({ group }: { group: any }) {
         <div>
           <label>Community rules</label>
           <textarea aria-label="Community rules" value={form.rules} maxLength={4000} onChange={e => setForm(f => ({ ...f, rules: e.target.value }))} rows={7} className={inputClass + ' resize-y'} placeholder="Add the rules members accept when they join." />
-          <p className="mt-1 text-right text-[10px] text-zinc-600">{form.rules.length}/4000</p>
+          <p className="mt-1 text-right text-[12px] text-[var(--text-3)]">{form.rules.length}/4000</p>
         </div>
         <div>
           <label>Sport</label>
@@ -103,8 +103,8 @@ export function GroupSettingsForm({ group }: { group: any }) {
                 <button key={s} type="button" aria-pressed={form.sport === s || (s === 'General' && !form.sport)} onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}
                   className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border transition-all ${
                     (form.sport === s || (s === 'General' && !form.sport))
-                      ? 'border-green-500 bg-green-500/10 text-green-400'
-                      : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'
+                      ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]'
+                      : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'
                   }`}>
                   {logo && <Image src={logo} alt="" width={14} height={14} />}
                   {s}
@@ -117,13 +117,13 @@ export function GroupSettingsForm({ group }: { group: any }) {
           <label>Community appearance</label>
           <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
             <label className="relative flex h-32 cursor-pointer items-center justify-center overflow-hidden bg-gradient-to-br from-lime-400/15 via-cyan-400/5 to-transparent">
-              {form.banner_url ? <Image src={form.banner_url} alt="Community banner" fill unoptimized className="object-cover" /> : <span className="flex items-center gap-2 text-xs font-bold text-zinc-400"><ImagePlus size={16} /> Add banner</span>}
-              {uploading === 'banner' && <span className="absolute inset-0 grid place-items-center bg-black/60"><Loader2 size={18} className="animate-spin" /></span>}
+              {form.banner_url ? <Image src={form.banner_url} alt="Community banner" fill unoptimized className="object-cover" /> : <span className="flex items-center gap-2 text-xs font-bold text-[var(--text-2)]"><ImagePlus size={16} /> Add banner</span>}
+              {uploading === 'banner' && <span className="absolute inset-0 grid place-items-center bg-[var(--overlay)]"><Loader2 size={18} className="animate-spin" /></span>}
               <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('banner', event.target.files?.[0])} />
             </label>
-            <label className="absolute bottom-4 left-5 grid h-20 w-20 cursor-pointer place-items-center overflow-hidden rounded-2xl border-4 border-[var(--surface)] bg-[var(--surface-3)] text-zinc-400 shadow-xl">
+            <label className="absolute bottom-4 left-5 grid h-20 w-20 cursor-pointer place-items-center overflow-hidden rounded-2xl border-4 border-[var(--surface)] bg-[var(--surface-3)] text-[var(--text-2)] shadow-xl">
               {form.avatar_url ? <Image src={form.avatar_url} alt="Community avatar" fill unoptimized className="object-cover" /> : <Camera size={22} />}
-              {uploading === 'avatar' && <span className="absolute inset-0 grid place-items-center bg-black/60"><Loader2 size={18} className="animate-spin" /></span>}
+              {uploading === 'avatar' && <span className="absolute inset-0 grid place-items-center bg-[var(--overlay)]"><Loader2 size={18} className="animate-spin" /></span>}
               <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('avatar', event.target.files?.[0])} />
             </label>
             <div className="h-11" />
@@ -131,8 +131,8 @@ export function GroupSettingsForm({ group }: { group: any }) {
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-white">Public group</p>
-            <p className="text-xs text-zinc-500">Anyone can find and join without an invite</p>
+            <p className="text-sm font-medium text-[var(--text-1)]">Public group</p>
+            <p className="text-xs text-[var(--text-3)]">Anyone can find and join without an invite</p>
           </div>
           <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
         </div>
@@ -144,17 +144,17 @@ export function GroupSettingsForm({ group }: { group: any }) {
       </button>
 
       <section className="ss-danger-card">
-        <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
-        <p className="text-xs text-zinc-500 mb-3">Permanently delete this group and all its posts. This cannot be undone.</p>
+        <h3 className="font-bold text-[var(--red)] mb-2">Danger Zone</h3>
+        <p className="text-xs text-[var(--text-3)] mb-3">Permanently delete this group and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={deleteGroup} disabled={deleting} className="bg-red-500 hover:bg-red-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+            <button type="button" onClick={deleteGroup} disabled={deleting} className="bg-[var(--red-fill)] hover:bg-[var(--red-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
               {deleting ? 'Deleting…' : 'Yes, delete this group'}
             </button>
-            <button type="button" onClick={() => setConfirmingDelete(false)} className="text-zinc-400 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
+            <button type="button" onClick={() => setConfirmingDelete(false)} className="text-[var(--text-2)] hover:text-[var(--text-1)] font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
           </div>
         ) : (
-          <button type="button" onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+          <button type="button" onClick={() => setConfirmingDelete(true)} className="border border-[color-mix(in_srgb,var(--red)_50%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] font-bold px-4 py-2 rounded-xl text-sm transition-colors">
             <Trash2 size={14} /> Delete group
           </button>
         )}

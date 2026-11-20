@@ -72,19 +72,19 @@ export function AIBlogWriter({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-white/[.08] bg-gradient-to-br from-white/[.045] to-white/[.015] shadow-[0_24px_80px_rgba(0,0,0,.25)]">
+    <div className="overflow-hidden rounded-[24px] border border-[rgba(var(--line-rgb),0.08)] bg-gradient-to-br from-white/[.045] to-white/[.015] shadow-[0_24px_80px_rgba(0,0,0,.25)]">
       {!draft ? (
         <div className="space-y-5 p-4 sm:p-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">What should the article be about?</label>
+              <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">What should the article be about?</label>
               <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3}
                 placeholder="e.g. 'Best value bets in the MLB this week' or 'How I built a 60% win rate on spread bets'"
                 className="ss-flow-input min-h-28 resize-none" />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
+                <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Sport</label>
                 <select value={sport} onChange={e => setSport(e.target.value)}
                   className="ss-flow-input">
                   <option value="">Any</option>
@@ -92,7 +92,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-bold text-zinc-400 mb-1.5">Tone</label>
+                <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Tone</label>
                 <select value={tone} onChange={e => setTone(e.target.value)}
                   className="ss-flow-input">
                   <option value="analytical">Analytical</option>
@@ -106,16 +106,16 @@ export function AIBlogWriter({ userId }: { userId: string }) {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-[.14em] text-zinc-500">Starting points</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[.14em] text-[var(--text-3)]">Starting points</p>
             {SUGGESTIONS.map(s => (
               <button key={s} onClick={() => setPrompt(s)}
-                className="flex w-full items-center gap-2 rounded-xl border border-white/[.07] bg-black/20 px-3 py-2.5 text-left text-xs text-zinc-400 transition hover:border-lime-400/20 hover:bg-white/[.04] hover:text-white">
+                className="flex w-full items-center gap-2 rounded-xl border border-[rgba(var(--line-rgb),0.07)] bg-[var(--surface)] px-3 py-2.5 text-left text-xs text-[var(--text-2)] transition hover:border-[color-mix(in_srgb,var(--accent)_20%,transparent)] hover:bg-[rgba(var(--contrast-rgb),0.04)] hover:text-[var(--text-1)]">
                 <ArrowRight size={10} /> {s}
               </button>
             ))}
           </div>
 
-          {generationError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{generationError}</div>}
+          {generationError && <div className="rounded-xl border border-[color-mix(in_srgb,var(--red)_20%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3 text-sm text-[var(--red)]">{generationError}</div>}
           <button onClick={generate} disabled={generating || !prompt.trim()}
             className="ss-settings-primary !min-h-11 w-full justify-center disabled:opacity-40">
             {generating ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate Article</>}
@@ -123,12 +123,12 @@ export function AIBlogWriter({ userId }: { userId: string }) {
         </div>
       ) : (
         <div className="space-y-4 p-4 sm:p-6">
-          <div className="rounded-xl border border-lime-400/20 bg-lime-400/[.07] p-4">
-            <p className="text-xs font-bold text-lime-300">Draft ready. Review every detail before publishing.</p>
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent)_7.000000000000001%,transparent)] p-4">
+            <p className="text-xs font-bold text-[var(--accent)]">Draft ready. Review every detail before publishing.</p>
           </div>
           <div className="space-y-3">
             <input value={draft.title} onChange={e => setDraft(d => d ? { ...d, title: e.target.value } : d)}
-              className="w-full border-0 border-b border-white/[.08] bg-transparent pb-3 text-2xl font-black tracking-[-.03em] text-white outline-none focus:border-lime-400/40" />
+              className="w-full border-0 border-b border-[rgba(var(--line-rgb),0.08)] bg-transparent pb-3 text-2xl font-semibold tracking-[-.03em] text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--accent)_40%,transparent)]" />
             <input value={draft.excerpt} onChange={e => setDraft(d => d ? { ...d, excerpt: e.target.value } : d)}
               placeholder="Excerpt…"
               className="ss-flow-input" />
@@ -137,7 +137,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
               className="ss-flow-input min-h-[360px] resize-y font-mono leading-7" />
           </div>
           {saveError && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{saveError}</div>
+            <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{saveError}</div>
           )}
           <div className="flex gap-3">
             <button onClick={() => setDraft(null)} className="ss-settings-secondary flex-1 justify-center">

@@ -76,7 +76,6 @@ export function PlayerAvatar({
         width: size,
         height: size,
         flexShrink: 0,
-        filter: 'drop-shadow(0 8px 16px rgba(0,0,0,.24))',
         ...style,
       }}
     >
@@ -86,17 +85,17 @@ export function PlayerAvatar({
         style={{
           width: size,
           height: size,
-          borderRadius: '50%',
+          borderRadius: Math.max(8,Math.round(size*.24)),
           overflow: 'hidden',
           background: isNba || league === 'nfl' || showHeadshot ? sportTeamBackground(league, teamAbbr) : 'var(--accent-dim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: size * 0.32,
-          fontWeight: 800,
-          color: 'var(--accent)',
-          border: '1px solid color-mix(in srgb, white 17%, var(--border))',
-          boxShadow: 'inset 0 1px rgba(255,255,255,.12), 0 0 0 2px rgba(255,255,255,.025)',
+          fontWeight: 700,
+          color: 'var(--on-dark)',
+          border: '1px solid var(--border-2)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         {showHeadshot ? (
@@ -178,8 +177,8 @@ export function TeamLogo({
         justifyContent: 'center',
         overflow: 'hidden',
         flexShrink: 0,
-        border: '1px solid rgba(255,255,255,.065)',
-        boxShadow: 'inset 0 1px rgba(255,255,255,.04), 0 7px 18px rgba(0,0,0,.18)',
+        border: '1px solid rgba(var(--line-rgb),0.08)',
+        boxShadow: 'inset 0 1px var(--text-3), 0 7px 18px rgba(0,0,0,.18)',
         ...style,
       }}
     >
@@ -191,7 +190,7 @@ export function TeamLogo({
           style={{ width: '85%', height: '85%', objectFit: 'contain' }}
         />
       ) : (
-        <span style={{ fontSize: size * 0.3, fontWeight: 800, color: 'var(--text-3)' }}>{abbr}</span>
+        <span style={{ fontSize: size * 0.3, fontWeight: 700, color: 'var(--text-3)' }}>{abbr}</span>
       )}
     </div>
   )

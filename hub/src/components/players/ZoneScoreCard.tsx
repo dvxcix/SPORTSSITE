@@ -102,10 +102,10 @@ export function ZoneScoreCard({ pageRole, myName, myRows, opponentId, opponentNa
               ...heat(c.combined, combinedValues, dir),
             }}
           >
-            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
               {c.combined == null ? '—' : `${c.combined >= 0 ? '+' : ''}${c.combined.toFixed(2)}`}
             </span>
-            <span style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{c.batterCount}b · {c.pitcherCount}p</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{c.batterCount}b · {c.pitcherCount}p</span>
           </div>
         ))}
       </div>

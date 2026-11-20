@@ -57,47 +57,47 @@ export default async function AdminMarketplacePage() {
     <div className="mx-auto max-w-6xl p-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-lime-400">ULTIMATE COMMUNITY</p>
-          <h1 className="mt-1 text-xl font-black text-white">Matrix Marketplace</h1>
-          <p className="mt-1 text-sm text-zinc-500">Review shared Matrix publications. Removing a post never deletes the member&apos;s original Matrix.</p>
+          <p className="text-[12px] font-semibold tracking-[0.2em] text-[var(--accent)]">ULTIMATE COMMUNITY</p>
+          <h1 className="mt-1 text-xl font-semibold text-[var(--text-1)]">Matrix Marketplace</h1>
+          <p className="mt-1 text-sm text-[var(--text-3)]">Review shared Matrix publications. Removing a post never deletes the member&apos;s original Matrix.</p>
         </div>
-        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-bold text-zinc-400">{listings.length} publications</span>
+        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)]">{listings.length} publications</span>
       </div>
 
       {listings.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 py-20 text-center text-sm text-zinc-500">No Matrix publications yet.</div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] py-20 text-center text-sm text-[var(--text-3)]">No Matrix publications yet.</div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)]">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
-              <thead className="border-b border-zinc-800 bg-black/20">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface)]">
                 <tr className="text-left">
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Publication</th>
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Member</th>
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Type</th>
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Adds</th>
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Status</th>
-                  <th className="px-4 py-3 text-xs font-bold text-zinc-500">Action</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Publication</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Member</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Type</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Adds</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Status</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-[var(--border)]">
                 {listings.map(listing => (
-                  <tr key={listing.id} className="transition-colors hover:bg-zinc-800/35">
+                  <tr key={listing.id} className="transition-colors hover:bg-[color-mix(in_srgb,var(--surface-2)_35%,transparent)]">
                     <td className="max-w-md px-4 py-3">
-                      <p className="font-bold text-white">{listing.title}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{listing.description || 'No description provided.'}</p>
+                      <p className="font-bold text-[var(--text-1)]">{listing.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-[var(--text-3)]">{listing.description || 'No description provided.'}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-400">@{listing.author?.username || 'unknown'}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-zinc-800 px-2 py-1 text-[10px] font-black uppercase text-zinc-300">{listing.matrix_type}</span></td>
-                    <td className="px-4 py-3 font-mono text-xs text-zinc-300">{listing.copy_count}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-2)]">@{listing.author?.username || 'unknown'}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-[var(--surface-2)] px-2 py-1 text-[12px] font-semibold uppercase text-[var(--text-2)]">{listing.matrix_type}</span></td>
+                    <td className="px-4 py-3 font-mono text-xs text-[var(--text-2)]">{listing.copy_count}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${listing.status === 'published' ? 'bg-lime-400/10 text-lime-400' : listing.status === 'removed' ? 'bg-red-500/10 text-red-400' : 'bg-zinc-800 text-zinc-500'}`}>{listing.status}</span>
+                      <span className={`rounded-full px-2 py-1 text-[12px] font-semibold uppercase ${listing.status === 'published' ? 'bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]' : listing.status === 'removed' ? 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'}`}>{listing.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <form action={moderateMatrixListing}>
                         <input type="hidden" name="id" value={listing.id} />
                         <input type="hidden" name="status" value={listing.status === 'removed' ? 'published' : 'removed'} />
-                        <button type="submit" className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black transition-colors ${listing.status === 'removed' ? 'bg-lime-400/10 text-lime-400 hover:bg-lime-400/20' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}>
+                        <button type="submit" className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors ${listing.status === 'removed' ? 'bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_20%,transparent)]' : 'bg-[color-mix(in_srgb,var(--red)_10%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_20%,transparent)]'}`}>
                           {listing.status === 'removed' ? 'Restore' : 'Remove'}
                         </button>
                       </form>

@@ -25,8 +25,8 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     return (
       <div className="max-w-2xl mx-auto text-center py-24 px-4">
         <p className="text-4xl mb-3">🚫</p>
-        <p className="text-white font-bold">You can't message this person</p>
-        <p className="text-zinc-500 text-sm mt-1">You or @{partner.username} have blocked each other.</p>
+        <p className="text-[var(--text-1)] font-bold">You can't message this person</p>
+        <p className="text-[var(--text-3)] text-sm mt-1">You or @{partner.username} have blocked each other.</p>
       </div>
     )
   }

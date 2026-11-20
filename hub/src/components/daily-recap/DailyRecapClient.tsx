@@ -78,7 +78,7 @@ export function DailyRecapClient() {
 
   return (
     <div className="min-w-0">
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-2.5 sm:p-3">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] p-2.5 sm:p-3">
         <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
           <button onClick={() => setDate(d => addDays(d, -1))} style={navBtnStyle}>←</button>
           <input
@@ -91,7 +91,7 @@ export function DailyRecapClient() {
         </div>
       </div>
 
-      {error && <div style={{ color: '#f87171', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>}
       {!error && data === null && <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>}
       {!error && data !== null && <div className="min-w-0"><DailyRecapTable data={data} date={date} /></div>}
     </div>

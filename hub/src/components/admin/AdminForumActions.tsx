@@ -34,15 +34,15 @@ export function AdminForumActions({ threadId, isPinned, isLocked }: {
   return (
     <div className="flex gap-1 shrink-0">
       <button type="button" onClick={() => act({ is_pinned: !isPinned })} disabled={loading} aria-label={isPinned ? 'Unpin thread' : 'Pin thread'} aria-pressed={isPinned}
-        className={`p-1.5 rounded-lg transition-colors ${isPinned ? 'text-green-400 bg-green-400/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>
+        className={`p-1.5 rounded-lg transition-colors ${isPinned ? 'text-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)]'}`}>
         <Pin size={13} />
       </button>
       <button type="button" onClick={() => act({ is_locked: !isLocked })} disabled={loading} aria-label={isLocked ? 'Unlock thread' : 'Lock thread'} aria-pressed={isLocked}
-        className={`p-1.5 rounded-lg transition-colors ${isLocked ? 'text-yellow-400 bg-yellow-400/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>
+        className={`p-1.5 rounded-lg transition-colors ${isLocked ? 'text-yellow-400 bg-yellow-400/10' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)]'}`}>
         <Lock size={13} />
       </button>
       <button type="button" onClick={del} disabled={loading} aria-label="Delete thread"
-        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+        className="p-1.5 text-[var(--text-3)] hover:text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)] rounded-lg transition-colors">
         <Trash2 size={13} />
       </button>
     </div>

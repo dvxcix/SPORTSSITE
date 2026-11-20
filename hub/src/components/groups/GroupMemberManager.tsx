@@ -50,7 +50,7 @@ export function GroupMemberManager({ groupId, initialMembers, canChangeSystemRol
         {member.role === 'owner' ? <span className={styles.owner}><Check size={12}/> Owner</span> : <>
           {canChangeSystemRoles ? <select value={member.role} disabled={busy === member.user_id} onChange={event => setRole(member, event.target.value as Exclude<Role, 'owner'>)} aria-label={`Role for ${member.user?.username}`}>
             {ROLES.map(role => <option value={role.id} key={role.id}>{role.label}</option>)}
-          </select> : <span className="flex min-h-8 items-center rounded-lg border border-white/10 px-2 text-[9px] font-extrabold capitalize text-zinc-500">{member.role}</span>}
+          </select> : <span className="flex min-h-8 items-center rounded-lg border border-[rgba(var(--line-rgb),0.1)] px-2 text-[11px] font-extrabold capitalize text-[var(--text-3)]">{member.role}</span>}
           <button type="button" disabled={busy === member.user_id} onClick={() => remove(member)} aria-label={`Remove ${member.user?.username}`}><UserMinus size={15}/></button>
         </>}
       </article>)}

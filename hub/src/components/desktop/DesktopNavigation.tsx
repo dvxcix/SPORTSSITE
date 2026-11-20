@@ -16,6 +16,7 @@ import { researchHome, researchSportForPath, resolveResearchSport, researchToolA
 import { useResearchSport } from '@/components/layout/useResearchSport'
 import { ResearchSportSwitcher } from '@/components/layout/ResearchSportSwitcher'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { UpdateCenter } from '@/components/layout/UpdateCenter'
 import navigationStyles from '@/components/layout/researchNavigation.module.css'
 
 export function DesktopNavigation() {
@@ -98,6 +99,7 @@ export function DesktopNavigation() {
               )
             })}
           </nav>
+          <UpdateCenter compact={contextCollapsed} />
           <div className="ss-desktop-account-card">
             <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
               <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />

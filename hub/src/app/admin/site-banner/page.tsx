@@ -16,8 +16,8 @@ export default async function AdminSiteBannerPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-1">Site Banner</h1>
-      <p className="text-sm text-zinc-500 mb-6">
+      <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Site Banner</h1>
+      <p className="text-sm text-[var(--text-3)] mb-6">
         A sticky announcement bar across the top of every page (public pages included, before sign-in) — maintenance
         notices, launch/beta announcements, whatever needs to be seen. Only one can be active at a time. Members can
         dismiss it for their session if you leave it dismissible; editing the message brings it back for anyone who

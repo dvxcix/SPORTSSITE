@@ -93,7 +93,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
   return (
     <div className="space-y-6">
       {!draft && (
-        <button onClick={startNew} className="bg-green-500 hover:bg-green-400 text-black font-black px-5 py-2.5 rounded-xl text-sm transition-colors">
+        <button onClick={startNew} className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
           + New Entry
         </button>
       )}
@@ -104,8 +104,8 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
               popup renders, so this is never a hand-copied approximation
               that could drift from what a member actually sees. */}
           <div>
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Preview</p>
-            <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[var(--surface)]" style={{ maxWidth: 440 }}>
+            <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">Preview</p>
+            <div className="rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--surface)]" style={{ maxWidth: 440 }}>
               <ChangelogPopupBody
                 title={draft.title}
                 description={draft.description}
@@ -119,54 +119,54 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             <button
               type="button"
               onClick={() => setShowFullPreview(true)}
-              className="mt-2 text-xs font-bold text-green-400 hover:text-green-300"
+              className="mt-2 text-xs font-bold text-[var(--green)] hover:text-[var(--green)]"
             >
               Preview as popup (full-screen, exactly as a member sees it) →
             </button>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-          {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+          {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Title</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Title</label>
             <input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Custom Matrix Columns"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">What changed</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">What changed</label>
             <textarea value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
               placeholder="What shipped, in plain terms a member would recognize."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">How to use it (optional)</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">How to use it (optional)</label>
             <textarea value={draft.how_to_use} onChange={e => setDraft({ ...draft, how_to_use: e.target.value })} rows={3}
               placeholder="Step-by-step, if it's not obvious from the description alone."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Screenshots</label>
+            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Screenshots</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {draft.screenshot_urls.map(url => (
                 <div key={url} className="relative">
-                  <SafeImage src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-zinc-700" />
-                  <button type="button" onClick={() => removeScreenshot(url)} aria-label="Remove screenshot" className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-white">
+                  <SafeImage src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-[var(--border-2)]" />
+                  <button type="button" onClick={() => removeScreenshot(url)} aria-label="Remove screenshot" className="absolute -top-1.5 -right-1.5 bg-[var(--surface)] border border-[var(--border-2)] rounded-full p-0.5 text-[var(--text-2)] hover:text-[var(--text-1)]">
                     <X size={10} />
                   </button>
                 </div>
               ))}
             </div>
             <input type="file" accept="image/*" multiple disabled={uploading} onChange={e => handleFiles(e.target.files)}
-              className="text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-300 file:text-xs" />
-            {uploading && <p className="text-xs text-zinc-500 mt-1">Uploading…</p>}
+              className="text-xs text-[var(--text-2)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--surface-2)] file:text-[var(--text-2)] file:text-xs" />
+            {uploading && <p className="text-xs text-[var(--text-3)] mt-1">Uploading…</p>}
           </div>
 
           <fieldset>
-            <legend className="block text-xs font-bold text-zinc-400 mb-1.5">Audience</legend>
+            <legend className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Audience</legend>
             <div className="grid grid-cols-2 gap-2">
               {([
                 ['all', 'All members', 'Visible to every signed-in member'],
@@ -179,10 +179,10 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
                     type="button"
                     aria-pressed={selected}
                     onClick={() => setDraft({ ...draft, audience_tier: value })}
-                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${selected ? 'border-green-500/60 bg-green-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}
+                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${selected ? 'border-[color-mix(in_srgb,var(--green)_60%,transparent)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)]' : 'border-[var(--border-2)] bg-[var(--surface-2)] hover:border-[var(--border-2)]'}`}
                   >
-                    <span className={`block text-xs font-black ${selected ? 'text-green-400' : 'text-white'}`}>{label}</span>
-                    <span className="mt-0.5 block text-[10px] leading-4 text-zinc-500">{detail}</span>
+                    <span className={`block text-xs font-semibold ${selected ? 'text-[var(--green)]' : 'text-[var(--text-1)]'}`}>{label}</span>
+                    <span className="mt-0.5 block text-[12px] leading-4 text-[var(--text-3)]">{detail}</span>
                   </button>
                 )
               })}
@@ -192,10 +192,10 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
           <Toggle checked={draft.is_active} onChange={v => setDraft({ ...draft, is_active: v })} label="Active" />
 
           <div className="flex gap-2">
-            <button onClick={save} disabled={saving} className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-5 py-2.5 rounded-xl text-sm transition-colors">
+            <button onClick={save} disabled={saving} className="bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
               {saving ? 'Saving…' : 'Save Entry'}
             </button>
-            <button onClick={() => setDraft(null)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-zinc-400 hover:text-white transition-colors">
+            <button onClick={() => setDraft(null)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">
               Cancel
             </button>
           </div>
@@ -204,7 +204,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
       )}
 
       {showFullPreview && draft && (
-        <Modal onClose={() => setShowFullPreview(false)} maxWidth={440} zIndex={300}>
+        <Modal onClose={() => setShowFullPreview(false)} maxWidth={520} zIndex={300} label="What's new in SlipSurge">
           <ChangelogPopupBody
             title={draft.title}
             description={draft.description}
@@ -218,18 +218,18 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
       )}
 
       <div className="space-y-2">
-        {entries.length === 0 && <p className="text-sm text-zinc-600">No entries yet.</p>}
+        {entries.length === 0 && <p className="text-sm text-[var(--text-3)]">No entries yet.</p>}
         {entries.map(entry => (
-          <div key={entry.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div key={entry.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white truncate">{entry.title}</p>
-              <p className="text-xs text-zinc-500 truncate">{entry.description}</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">{new Date(entry.created_at).toLocaleDateString()} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
+              <p className="text-sm font-bold text-[var(--text-1)] truncate">{entry.title}</p>
+              <p className="text-xs text-[var(--text-3)] truncate">{entry.description}</p>
+              <p className="text-[12px] text-[var(--text-3)] mt-0.5">{new Date(entry.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} ariaLabel={`${entry.title} active`} />
-              <button onClick={() => startEdit(entry)} className="text-xs font-bold text-zinc-400 hover:text-white">Edit</button>
-              <button onClick={() => remove(entry)} className="text-xs font-bold text-red-400/80 hover:text-red-400">Delete</button>
+              <button onClick={() => startEdit(entry)} className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)]">Edit</button>
+              <button onClick={() => remove(entry)} className="text-xs font-bold text-[color-mix(in_srgb,var(--red)_80%,transparent)] hover:text-[var(--red)]">Delete</button>
             </div>
           </div>
         ))}

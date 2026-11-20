@@ -1,64 +1,64 @@
 .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:16px;align-items:start}
-.sidebar,.comparePanel,.libraryPanel,.notesPanel{border:1px solid color-mix(in srgb,var(--border) 86%,var(--accent) 14%);border-radius:18px;background:linear-gradient(155deg,color-mix(in srgb,var(--surface) 97%,var(--accent) 3%),var(--surface));box-shadow:0 18px 54px rgba(0,0,0,.2);overflow:hidden}
+.sidebar,.comparePanel,.libraryPanel,.notesPanel{border:1px solid color-mix(in srgb,var(--border) 86%,var(--accent) 14%);border-radius:14px;background:linear-gradient(155deg,color-mix(in srgb,var(--surface) 97%,var(--accent-fill) 3%),var(--surface));box-shadow:0 18px 54px rgba(0,0,0,.2);overflow:hidden}
 .sidebar{grid-column:1/-1;display:grid;grid-template-columns:190px 250px minmax(0,1fr);align-items:center;overflow:visible}
 .main{display:grid;gap:16px;min-width:0}
 .notesPanel{position:sticky;top:82px;max-height:calc(100dvh - 100px);overflow:auto}
 .panelHeader{min-height:68px;padding:14px 17px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);color:var(--text-2)}
 .sidebar>.panelHeader{height:100%;border:0;border-right:1px solid var(--border)}
 .panelHeader h2{margin:2px 0 0;color:var(--text);font-size:17px;letter-spacing:-.025em}
-.eyebrow{display:block;color:var(--text-3);font-size:9px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+.eyebrow{display:block;color:var(--text-3);font-size:12px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
 .createRow{display:grid;grid-template-columns:1fr 40px;gap:8px;padding:12px;border-right:1px solid var(--border)}
-.createRow input,.search,.noteComposer input,.noteComposer textarea,.noteComposer select{border:1px solid var(--border);background:color-mix(in srgb,var(--surface-2) 92%,#101827);color:var(--text);border-radius:11px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+.createRow input,.search,.noteComposer input,.noteComposer textarea,.noteComposer select{border:1px solid var(--border);background:color-mix(in srgb,var(--surface-2) 92%,var(--surface-2));color:var(--text);border-radius:11px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
 .createRow input:focus,.noteComposer input:focus,.noteComposer textarea:focus,.noteComposer select:focus,.search:focus-within{border-color:color-mix(in srgb,var(--accent) 58%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 10%,transparent)}
 .createRow input{width:100%;padding:10px 11px}
-.createRow button,.headerActions button,.noteComposer button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid color-mix(in srgb,var(--accent) 55%,var(--border));border-radius:10px;background:var(--accent);color:var(--accent-fg);font-size:12px;font-weight:900;padding:8px 11px;cursor:pointer}
+.createRow button,.headerActions button,.noteComposer button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid color-mix(in srgb,var(--accent) 55%,var(--border));border-radius:10px;background:var(--accent-fill);color:var(--accent-fg);font-size:12px;font-weight:700;padding:8px 11px;cursor:pointer}
 .createRow button:disabled,.headerActions button:disabled,.noteComposer button:disabled{opacity:.5;cursor:not-allowed}
 .workspaceList{display:flex;gap:8px;min-width:0;padding:12px;overflow-x:auto;scrollbar-width:thin}
 .workspaceButton,.workspaceActive,.matrixButton,.matrixActive{display:flex;align-items:center;gap:9px;text-align:left;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--text-2);padding:9px 11px;cursor:pointer}
 .workspaceButton,.workspaceActive{min-width:150px;max-width:220px}
 .workspaceButton:hover,.matrixButton:hover{background:var(--surface-2);color:var(--text)}
-.workspaceActive,.matrixActive{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 13%,var(--surface-2)),var(--surface-2));color:var(--text);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--accent) 70%,transparent)}
-.workspaceButton span,.workspaceActive span{flex:1;overflow:hidden;font-size:13px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
-.workspaceButton small,.workspaceActive small,.matrixButton small,.matrixActive small{color:var(--text-3);font-size:9px}
+.workspaceActive,.matrixActive{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--accent-fill) 13%,var(--surface-2)),var(--surface-2));color:var(--text);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--accent) 70%,transparent)}
+.workspaceButton span,.workspaceActive span{flex:1;overflow:hidden;font-size:13px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.workspaceButton small,.workspaceActive small,.matrixButton small,.matrixActive small{color:var(--text-3);font-size:12px}
 .matrixSection{grid-column:1/-1;display:flex;align-items:center;gap:7px;min-width:0;padding:9px 12px;border-top:1px solid var(--border);overflow-x:auto}
 .matrixSection>.eyebrow{position:sticky;left:0;z-index:1;flex:0 0 auto;padding-right:9px;background:var(--surface)}
 .matrixButton,.matrixActive{flex:0 0 auto;padding:7px 9px}
 .matrixButton>span:nth-child(2),.matrixActive>span:nth-child(2){display:grid}
-.matrixButton strong,.matrixActive strong{font-size:11px}.matrixDot{width:6px;height:22px;border-radius:999px}
-.headerActions{display:flex;align-items:center;gap:7px}.headerActions>span{font-size:11px;font-weight:850;color:var(--text-3)}
-.headerActions .dangerButton{background:transparent;color:#fb7185;border-color:color-mix(in srgb,#fb7185 34%,var(--border));padding:8px}
+.matrixButton strong,.matrixActive strong{font-size:12px}.matrixDot{width:6px;height:22px;border-radius:999px}
+.headerActions{display:flex;align-items:center;gap:7px}.headerActions>span{font-size:12px;font-weight:700;color:var(--text-3)}
+.headerActions .dangerButton{background:transparent;color:var(--red);border-color:color-mix(in srgb,var(--red) 34%,var(--border));padding:8px}
 .evidenceList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:14px}
 .libraryPanel:first-child{min-height:330px}
-.libraryPanel:first-child .emptyTray{min-height:260px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 42%)}
+.libraryPanel:first-child .emptyTray{min-height:260px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent-fill) 7%,transparent),transparent 42%)}
 .compareGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
-.compareCard{position:relative;min-width:0;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,var(--surface-2),color-mix(in srgb,var(--surface) 88%,#101827));padding:14px}
+.compareCard{position:relative;min-width:0;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,var(--surface-2),color-mix(in srgb,var(--surface) 88%,var(--surface-2)));padding:14px}
 .remove{position:absolute;right:9px;top:9px;display:grid;place-items:center;width:27px;height:27px;border:1px solid var(--border);border-radius:8px;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--text-3);cursor:pointer}
-.remove:hover{border-color:#fb7185;color:#fb7185}
+.remove:hover{border-color:var(--red);color:var(--red)}
 .player{display:flex;align-items:center;gap:10px;padding-right:25px}.player>div:last-child{display:grid;min-width:0}
-.player strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player span{font-size:10px;color:var(--text-3)}
-.market{min-height:30px;margin:13px 0 10px;color:var(--text-2);font-size:11px;line-height:1.35}
+.player strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player span{font-size:12px;color:var(--text-3)}
+.market{min-height:30px;margin:13px 0 10px;color:var(--text-2);font-size:12px;line-height:1.35}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.metrics span{display:grid;gap:3px;padding:8px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 80%,transparent)}
-.metrics small{font-size:8px;color:var(--text-3);text-transform:uppercase}.metrics b{font-size:12px;overflow:hidden;text-overflow:ellipsis}
-.itemNote{margin:9px 0 0;color:var(--text-3);font-size:10px;line-height:1.4}
+.metrics small{font-size:12px;color:var(--text-3);text-transform:uppercase}.metrics b{font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.itemNote{margin:9px 0 0;color:var(--text-3);font-size:12px;line-height:1.4}
 .emptyTray{min-height:190px;display:grid;place-items:center;align-content:center;gap:7px;padding:22px;color:var(--text-3);text-align:center}
 .emptyTray svg{color:color-mix(in srgb,var(--accent) 70%,var(--text-3))}
-.emptyTray strong{color:var(--text-2);font-size:14px}.emptyTray span{max-width:360px;font-size:11px;line-height:1.5}
+.emptyTray strong{color:var(--text-2);font-size:14px}.emptyTray span{max-width:360px;font-size:12px;line-height:1.5}
 .search{display:flex;align-items:center;gap:7px;padding:9px 11px;min-width:240px}.search input{min-width:0;width:100%;border:0;background:transparent;color:var(--text);outline:none;font-size:12px}
 .itemList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:14px;max-height:420px;overflow:auto}
 .itemButton,.itemSelected{min-width:0;display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:13px;background:var(--surface-2);color:var(--text);text-align:left;padding:10px;cursor:pointer}
 .itemButton:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));transform:translateY(-1px)}
-.itemSelected{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 11%,var(--surface-2)),var(--surface-2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 8%,transparent)}
-.itemIdentity{display:grid;min-width:0;flex:1}.itemIdentity strong,.itemIdentity small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.itemIdentity strong{font-size:12px}.itemIdentity small{font-size:9px;color:var(--text-3)}
-.itemPrice{font-size:11px;font-weight:900;color:var(--accent)}.selectMark{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--surface);color:var(--text-3)}.itemSelected .selectMark{background:var(--accent);color:var(--accent-fg)}
+.itemSelected{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--accent-fill) 11%,var(--surface-2)),var(--surface-2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 8%,transparent)}
+.itemIdentity{display:grid;min-width:0;flex:1}.itemIdentity strong,.itemIdentity small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.itemIdentity strong{font-size:12px}.itemIdentity small{font-size:12px;color:var(--text-3)}
+.itemPrice{font-size:12px;font-weight:700;color:var(--accent)}.selectMark{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--surface);color:var(--text-3)}.itemSelected .selectMark{background:var(--accent-fill);color:var(--accent-fg)}
 .noteComposer{display:grid;gap:8px;padding:13px}.noteComposer input,.noteComposer textarea,.noteComposer select{width:100%;padding:10px 11px;font-size:12px}.noteComposer textarea{min-height:110px;resize:vertical;line-height:1.5}.noteComposer>div{display:grid;grid-template-columns:1fr auto;gap:8px}
 .notesList{display:grid;gap:8px;padding:0 13px 13px}.noteCard{border:1px solid var(--border);border-radius:13px;background:var(--surface-2);padding:11px}
-.noteTop{display:flex;justify-content:space-between;gap:8px}.noteTop>div:first-child{display:flex;align-items:center;gap:6px;min-width:0}.noteTop strong{font-size:12px}.noteTop span{padding:2px 6px;border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent);font-size:8px;font-weight:900}
+.noteTop{display:flex;justify-content:space-between;gap:8px}.noteTop>div:first-child{display:flex;align-items:center;gap:6px;min-width:0}.noteTop strong{font-size:12px}.noteTop span{padding:2px 6px;border-radius:6px;background:color-mix(in srgb,var(--accent-fill) 10%,var(--surface));color:var(--accent);font-size:12px;font-weight:700}
 .noteTop>div:last-child{display:flex;gap:4px}.noteTop button{display:grid;place-items:center;width:27px;height:27px;border:0;border-radius:8px;background:transparent;color:var(--text-3);cursor:pointer}.noteTop button:hover,.noteTop .pinned{background:var(--surface);color:var(--accent)}
-.noteCard p{margin:8px 0;color:var(--text-2);font-size:11px;line-height:1.5;white-space:pre-wrap}.noteCard time{font-size:9px;color:var(--text-3)}
-.message{position:sticky;bottom:10px;margin:0 12px 12px;padding:10px 11px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:10px;background:color-mix(in srgb,var(--accent) 11%,var(--surface));color:var(--text);font-size:11px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.emptyMini{padding:12px;color:var(--text-3);font-size:11px;text-align:center}
+.noteCard p{margin:8px 0;color:var(--text-2);font-size:12px;line-height:1.5;white-space:pre-wrap}.noteCard time{font-size:12px;color:var(--text-3)}
+.message{position:sticky;bottom:10px;margin:0 12px 12px;padding:10px 11px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:10px;background:color-mix(in srgb,var(--accent-fill) 11%,var(--surface));color:var(--text);font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.emptyMini{padding:12px;color:var(--text-3);font-size:12px;text-align:center}
 .spin{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-.noteEditor{display:grid;gap:7px}.noteEditor input,.noteEditor textarea{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:8px;font-size:11px;outline:none}.noteEditor textarea{min-height:86px;resize:vertical;line-height:1.45}.noteEditor>div{display:flex;justify-content:flex-end;gap:6px}.noteEditor button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);padding:6px 8px;font-size:10px;font-weight:750}.noteEditor button:last-child{border-color:color-mix(in srgb,var(--accent) 42%,var(--border));background:var(--accent);color:var(--accent-fg)}
+.noteEditor{display:grid;gap:7px}.noteEditor input,.noteEditor textarea{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:8px;font-size:12px;outline:none}.noteEditor textarea{min-height:86px;resize:vertical;line-height:1.45}.noteEditor>div{display:flex;justify-content:flex-end;gap:6px}.noteEditor button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);padding:6px 8px;font-size:12px;font-weight:650}.noteEditor button:last-child{border-color:color-mix(in srgb,var(--accent) 42%,var(--border));background:var(--accent-fill);color:var(--accent-fg)}
 @media(max-width:1180px){.layout{grid-template-columns:1fr}.notesPanel{position:static;max-height:none}.itemList{grid-template-columns:repeat(2,minmax(0,1fr))}.evidenceList{grid-template-columns:1fr}}
 @media(max-width:800px),(max-width:1024px) and (any-pointer:coarse){
  .layout{grid-template-columns:1fr;padding-bottom:calc(var(--mobile-dock-clearance) + 10px)}
@@ -76,6 +76,6 @@
 @media(prefers-reduced-motion:reduce){.spin{animation:none}.itemButton{transition:none}}
 
 .windowPicker{display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
-.windowPicker button{min-width:28px;padding:5px 6px;border:0;border-radius:7px;background:transparent;color:var(--text-3);font-size:8px;font-weight:900;cursor:pointer}
-.windowPicker button[data-active=true]{background:var(--accent);color:var(--accent-fg);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+.windowPicker button{min-width:28px;padding:5px 6px;border:0;border-radius:7px;background:transparent;color:var(--text-3);font-size:12px;font-weight:700;cursor:pointer}
+.windowPicker button[data-active=true]{background:var(--accent-fill);color:var(--accent-fg);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
 @media(max-width:800px),(max-width:1024px) and (any-pointer:coarse){.headerActions{width:100%;flex-wrap:wrap}.windowPicker{order:-1;margin-right:auto}.compareGrid{padding:10px}}

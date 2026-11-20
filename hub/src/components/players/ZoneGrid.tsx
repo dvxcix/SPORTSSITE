@@ -78,7 +78,7 @@ export function ZoneGrid({ rows, metric, dir, cellSize = 68 }: {
               ...heat(v, coreValues, dir),
             }}
           >
-            <span style={{ fontSize: cellSize < 50 ? 11 : 13, fontWeight: 800, color: 'var(--text-1)' }}>{fmt(v, metric)}</span>
+            <span style={{ fontSize: cellSize < 50 ? 11 : 13, fontWeight: 700, color: 'var(--text-1)' }}>{fmt(v, metric)}</span>
             <span style={{ fontSize: cellSize < 50 ? 8 : 9, color: 'var(--text-3)', marginTop: 2 }}>{c.count}p</span>
           </div>
         )
@@ -95,7 +95,7 @@ export function ChaseZoneStats({ rows }: { rows: PitchLogRow[] }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CHASE ZONE (OUT OF ZONE)</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CHASE ZONE (OUT OF ZONE)</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {[
           ['Pitches', String(chaseStats.count)],
@@ -103,8 +103,8 @@ export function ChaseZoneStats({ rows }: { rows: PitchLogRow[] }) {
           ['Whiff%', chaseStats.whiff_pct == null ? '—' : `${chaseStats.whiff_pct.toFixed(1)}%`],
         ].map(([label, value]) => (
           <div key={label} style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 84 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{value}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
           </div>
         ))}
       </div>

@@ -906,7 +906,7 @@ function PlayerAvatar({ mlbId, size = 24, teamAbbr, name }: { mlbId: number | nu
 // banner's height, not at the very top.
 const STH: React.CSSProperties = {
   padding: '4px 2px', textAlign: 'center',
-  fontSize: 9, fontWeight: 700, color: 'var(--text-2)',
+  fontSize: 11, fontWeight: 700, color: 'var(--text-2)',
   letterSpacing: '0.04em', textTransform: 'uppercase',
   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   background: 'var(--bg)', borderBottom: '2px solid var(--border)',
@@ -916,13 +916,13 @@ const STH: React.CSSProperties = {
 }
 const STD: React.CSSProperties = {
   padding: '3px 2px', textAlign: 'center',
-  fontSize: 10, color: 'var(--text-1)',
+  fontSize: 12, color: 'var(--text-1)',
   fontFamily: "'SF Mono',ui-monospace,monospace",
   whiteSpace: 'nowrap',
-  borderBottom: '1px solid rgba(255,255,255,0.04)',
+  borderBottom: '1px solid rgba(var(--line-rgb),0.08)',
 }
 const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', top: 'var(--dugout-header-top, 0px)', zIndex: 6 }
-const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.04)' }
+const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(var(--line-rgb),0.08)', borderBottom: '1px solid rgba(var(--line-rgb),0.08)' }
 
 type SortState = { col: string; dir: 'desc' | 'asc' } | null
 // A single sticky-mode entry — `rank` is its 1-based priority in the active
@@ -1132,17 +1132,17 @@ function TH({
       <Tooltip content={title ?? ''}>
         <span style={{ display: 'block', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {label}{active ? (dir === 'desc' ? '▼' : '▲') : ''}
-          {active && rank != null && <sup style={{ fontSize: 7, marginLeft: 1 }}>{rank}</sup>}
+          {active && rank != null && <sup style={{ fontSize: 11, marginLeft: 1 }}>{rank}</sup>}
         </span>
       </Tooltip>
       {pickSortKey && (
         <Tooltip content="Sort by community pick count on this line">
           <div
             onClick={e => { e.stopPropagation(); onPickSort?.(pickSortKey) }}
-            style={{ fontSize: 7, fontWeight: 900, lineHeight: 1, marginTop: 1, cursor: 'pointer', color: pickActive ? 'var(--accent)' : 'var(--text-3)' }}
+            style={{ fontSize: 11, fontWeight: 700, lineHeight: 1, marginTop: 1, cursor: 'pointer', color: pickActive ? 'var(--accent)' : 'var(--text-3)' }}
           >
             PICKS{pickActive ? (pickDir === 'desc' ? '▼' : '▲') : ''}
-            {pickActive && pickRank != null && <sup style={{ fontSize: 6, marginLeft: 1 }}>{pickRank}</sup>}
+            {pickActive && pickRank != null && <sup style={{ fontSize: 11, marginLeft: 1 }}>{pickRank}</sup>}
           </div>
         </Tooltip>
       )}
@@ -1203,13 +1203,13 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
         padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)',
-        cursor: wl.signedIn ? 'pointer' : 'default', fontSize: 10,
+        cursor: wl.signedIn ? 'pointer' : 'default', fontSize: 12,
         color: saved ? 'var(--accent)' : 'var(--text-2)', fontWeight: saved ? 700 : 600,
       }}
     >
       <BookLogo vendor="fanduel" size={12} />
       {oppPitcher.name} — {label} {oStr(odds)}
-      {saved && <span style={{ fontSize: 9 }}>★ saved</span>}
+      {saved && <span style={{ fontSize: 11 }}>★ saved</span>}
     </div>
   )
 
@@ -1342,7 +1342,7 @@ function PlayerDrillDown({
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: 9, color: 'var(--text-3)' }}>No pitcher data</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No pitcher data</div>
         )}
 
         {/* Bat tracking — same StatTile grid as Pitcher Report's own
@@ -1352,7 +1352,7 @@ function PlayerDrillDown({
           const g = (k: keyof BatterRow) => pool.map(p => p[k] as number | null)
           return (
           <div className="dg-drilldown-section dg-tracking-section" style={{ minWidth: 320 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
               BAT TRACKING
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
@@ -1371,7 +1371,7 @@ function PlayerDrillDown({
               <StatTile label="IDLAA" value={row.s_iaa != null ? `${(row.s_iaa * 100).toFixed(1)}%` : '—'} title="Ideal attack angle rate" heatStyle={heat(row.s_iaa, g('s_iaa'), 'hi')} />
               <StatTile label="TILT" value={f1(row.s_tlt)} title="Swing tilt" />
             </div>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               <StatTile label="BRL%" value={ppRaw(row.s_brl)} title="Barrel batted rate — season" heatStyle={heat(row.s_brl, g('s_brl'), 'hi')} />
               <StatTile label="L1·BRL" value={ppRaw(row.l1_brl)} title="Barrel rate — last 1 game played" heatStyle={heat(row.l1_brl, g('l1_brl'), 'hi')} />
@@ -1561,7 +1561,7 @@ function OddsCell({
         <Tooltip content={badge.title}>
           <div
             onClick={badge.onClick ? (e) => { e.stopPropagation(); badge.onClick!(e) } : undefined}
-            style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, cursor: badge.onClick ? 'pointer' : 'help' }}
+            style={{ fontSize: 11, fontWeight: 700, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, cursor: badge.onClick ? 'pointer' : 'help' }}
           >
             {badge.label}
           </div>
@@ -1570,12 +1570,12 @@ function OddsCell({
       <span>
         {display ?? oStr(odds)}
         {hasDelta && (
-          <span style={{ marginLeft: 2, fontSize: 8, color: odds! < openOdds! ? '#4ade80' : '#f87171' }}>
+          <span style={{ marginLeft: 2, fontSize: 11, color: odds! < openOdds! ? '#4ade80' : '#f87171' }}>
             {odds! < openOdds! ? '▼' : '▲'}
           </span>
         )}
       </span>
-      {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
+      {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 11 }}>★</span>}
       {openOdds != null && (
         <small className="dg-market-open" aria-label={`Opening price ${oStr(openOdds)}`}>
           <span>OPEN</span>
@@ -1761,9 +1761,9 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
     ? { label: '🥇', color: '#fde047', title: `First HR of the game${hits.length > 1 ? ` (${hits.length} HRs today)` : ''} — click for details`, onClick: () => onShowHr?.() }
     : undefined
   const saBadge = hasHr
-    ? { label: hits.length > 1 ? `🔥×${hits.length}` : '🔥', color: '#fb923c', title: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`, onClick: () => onShowHr?.() }
+    ? { label: hits.length > 1 ? `🔥×${hits.length}` : '🔥', color: 'var(--gold)', title: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`, onClick: () => onShowHr?.() }
     : row.near_hr
-      ? { label: '🎯', color: '#fbbf24', title: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`, onClick: () => onShowHr?.() }
+      ? { label: '🎯', color: 'var(--gold)', title: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`, onClick: () => onShowHr?.() }
       : undefined
 
   // Every actual column cell, exactly as always rendered — unchanged from
@@ -1822,11 +1822,11 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
               confuse with a genuine Matrix highlight at a glance while
               backtesting. This rail is just the batting order + hand now. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, flexShrink: 0 }}>
-            <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right' }}>{row.batting_order}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', width: 10, textAlign: 'right' }}>{row.batting_order}</span>
             <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
               <span
                 style={{
-                  flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                  flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 11, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
                   color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
                 }}
@@ -1860,7 +1860,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 visible; the row just gets a little taller when it needs to. */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left', flexWrap: 'wrap', rowGap: 2,
-              fontSize: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif",
+              fontSize: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif",
             }}>
               <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>{row.position}</span>
               <span style={{ color: 'var(--text-4)' }}>·</span>
@@ -1870,8 +1870,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
               {hasLiveMatchup && (
                 <Tooltip content="Strong recent pitch-matchup edge.">
                   <span style={{
-                    display: 'inline-flex', alignItems: 'center', fontSize: 9, flexShrink: 0, lineHeight: 1,
-                    color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
+                    display: 'inline-flex', alignItems: 'center', fontSize: 11, flexShrink: 0, lineHeight: 1,
+                    color: 'var(--green)', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
                     padding: '1px 3px', borderRadius: 3, cursor: 'help',
                   }}>⚡</span>
                 </Tooltip>
@@ -1879,8 +1879,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
               {row.is_money_sa_rbi && (
                 <Tooltip content="HR/RBI market value flag.">
                   <span style={{
-                    display: 'inline-flex', alignItems: 'center', fontSize: 9, flexShrink: 0, lineHeight: 1,
-                    color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+                    display: 'inline-flex', alignItems: 'center', fontSize: 11, flexShrink: 0, lineHeight: 1,
+                    color: 'var(--gold)', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
                     padding: '1px 3px', borderRadius: 3, cursor: 'help',
                   }}>💰</span>
                 </Tooltip>
@@ -1965,7 +1965,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <td style={SDIV_D} />
 
       {/* pk */}
-      <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 12, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
         {row.pk?.picks != null ? (
           <PickBadge picks={row.pk.picks} movement={row.pk.movement} label="HR" compact />
         ) : '—'}
@@ -2025,16 +2025,16 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         row={row} gameInfo={gameInfo} propKey="singles" book="fanduel" odds={row.sng_fd} openOdds={row.sngFd_open}
         style={{
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sng_fd, g('sng_fd')),
-          ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderLeft: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
+          ...(row.is_pwr ? { borderTop: '2px solid var(--gold)', borderBottom: '2px solid var(--gold)', borderLeft: '2px solid var(--gold)', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
-        badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power markets align.' } : undefined}
+        badge={row.is_pwr ? { label: '⚡PWR', color: 'var(--gold)', title: 'Power markets align.' } : undefined}
         pickCount={row.pkSingles?.picks ?? null} pickMovement={row.pkSingles?.movement ?? null}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="doubles" book="fanduel" odds={row.dbl_fd} openOdds={row.dblFd_open}
         style={{
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.dbl_fd, g('dbl_fd')),
-          ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b' } : {}),
+          ...(row.is_pwr ? { borderTop: '2px solid var(--gold)', borderBottom: '2px solid var(--gold)' } : {}),
         }}
         pickCount={row.pkDoubles?.picks ?? null} pickMovement={row.pkDoubles?.movement ?? null}
       />
@@ -2042,7 +2042,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         row={row} gameInfo={gameInfo} propKey="triples" book="fanduel" odds={row.tri_fd} openOdds={row.triFd_open}
         style={{
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.tri_fd, g('tri_fd')),
-          ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderRight: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
+          ...(row.is_pwr ? { borderTop: '2px solid var(--gold)', borderBottom: '2px solid var(--gold)', borderRight: '2px solid var(--gold)', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
         pickCount={row.pkTriples?.picks ?? null} pickMovement={row.pkTriples?.movement ?? null}
       />
@@ -2072,7 +2072,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           }} />
           <span style={{
             color: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : row.hit_status === 'PASS' ? '#f87171' : 'var(--text-3)',
-            fontWeight: 850,
+            fontWeight: 700,
           }}>
             {row.hit_rank ?? '-'}
           </span>
@@ -2241,40 +2241,40 @@ function HrEventCard({ hit, ordinal, total }: { hit: any; ordinal: number; total
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: total > 1 ? 10 : 0 }}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, color: hit.is_first_hr_of_game ? '#fde047' : '#4ade80', background: hit.is_first_hr_of_game ? 'rgba(253,224,71,0.15)' : 'rgba(74,222,128,0.12)', padding: '3px 8px', borderRadius: 5 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: hit.is_first_hr_of_game ? '#fde047' : '#4ade80', background: hit.is_first_hr_of_game ? 'rgba(253,224,71,0.15)' : 'rgba(74,222,128,0.12)', padding: '3px 8px', borderRadius: 5 }}>
           🔥 {hit.is_first_hr_of_game ? 'FIRST HR OF GAME' : total > 1 ? `HR #${ordinal}` : 'HOME RUN'}
         </span>
-        {isLaser110 && <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 110+</span>}
-        {!isLaser110 && isLaser105 && <span style={{ fontSize: 10, fontWeight: 800, color: '#fb923c', background: 'rgba(251,146,60,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 105+</span>}
-        {isMoonshot && <span style={{ fontSize: 10, fontWeight: 800, color: '#a78bfa', background: 'rgba(167,139,250,0.12)', padding: '3px 8px', borderRadius: 5 }}>🌙 MOONSHOT</span>}
+        {isLaser110 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', background: 'rgba(248,113,113,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 110+</span>}
+        {!isLaser110 && isLaser105 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', background: 'rgba(251,146,60,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 105+</span>}
+        {isMoonshot && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple)', background: 'rgba(167,139,250,0.12)', padding: '3px 8px', borderRadius: 5 }}>🌙 MOONSHOT</span>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Exit Velo</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Exit Velo</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{ev != null ? `${ev} mph` : '—'}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Distance</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Distance</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{dist != null ? `${dist} ft` : '—'}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Launch Angle</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{la != null ? `${la}°` : '—'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Launch Angle</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{la != null ? `${la}°` : '—'}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inning</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{hit.half === 'top' ? '▲' : '▼'}{hit.inning}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inning</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{hit.half === 'top' ? '▲' : '▼'}{hit.inning}</div>
         </div>
       </div>
 
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-        <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Pitcher</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Pitcher</div>
         <div style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 600 }}>{hit.pitcher_name || '—'}</div>
       </div>
 
       {hit.desc && (
-        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-2)', fontStyle: 'italic' }}>{hit.desc}</div>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-2)', fontStyle: 'italic' }}>{hit.desc}</div>
       )}
     </div>
   )
@@ -2297,7 +2297,7 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
       onClose={onClose}
       labelledBy="dugout-hr-popup-title"
       backdropClassName="dugout-modal-backdrop"
-      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      backdropStyle={{ background: 'var(--overlay)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
       panelClassName="dugout-mobile-sheet"
       panelStyle={{ width: 360, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
     >
@@ -2305,8 +2305,8 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
           <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
             <PlayerAvatar mlbId={row.mlb_id} size={36} teamAbbr={row.team} name={row.name} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div id="dugout-hr-popup-title" style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{row.name}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+              <div id="dugout-hr-popup-title" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{row.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                 {row.team} · {row.position}{hasHr && hits.length > 1 ? ` · ${hits.length} HRs today` : ''}
               </div>
             </div>
@@ -2322,38 +2322,38 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
           {!hasHr && near && (
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12 }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', background: 'rgba(251,191,36,0.12)', padding: '3px 8px', borderRadius: 5 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', background: 'rgba(251,191,36,0.12)', padding: '3px 8px', borderRadius: 5 }}>
                   🎯 NEAR MISS — would've left {near.parks_hr_count} park{near.parks_hr_count === 1 ? '' : 's'}
                 </span>
-                {nLaser110 && <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 110+</span>}
-                {!nLaser110 && nLaser105 && <span style={{ fontSize: 10, fontWeight: 800, color: '#fb923c', background: 'rgba(251,146,60,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 105+</span>}
-                {nMoon && <span style={{ fontSize: 10, fontWeight: 800, color: '#a78bfa', background: 'rgba(167,139,250,0.12)', padding: '3px 8px', borderRadius: 5 }}>🌙 MOONSHOT</span>}
+                {nLaser110 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', background: 'rgba(248,113,113,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 110+</span>}
+                {!nLaser110 && nLaser105 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', background: 'rgba(251,146,60,0.12)', padding: '3px 8px', borderRadius: 5 }}>⚡ LASER 105+</span>}
+                {nMoon && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple)', background: 'rgba(167,139,250,0.12)', padding: '3px 8px', borderRadius: 5 }}>🌙 MOONSHOT</span>}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 <div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Exit Velo</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{nEv != null ? `${nEv} mph` : '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Exit Velo</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{nEv != null ? `${nEv} mph` : '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Distance</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{nDist != null ? `${nDist} ft` : '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Distance</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{nDist != null ? `${nDist} ft` : '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Launch Angle</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{near.launch_angle != null ? `${near.launch_angle}°` : '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Launch Angle</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{near.launch_angle != null ? `${near.launch_angle}°` : '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inning</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)' }}>{near.half_inning === 'top' ? '▲' : '▼'}{near.inning}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inning</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{near.half_inning === 'top' ? '▲' : '▼'}{near.inning}</div>
                 </div>
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Pitcher</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Pitcher</div>
                 <div style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 600 }}>{near.pitcher_name || '—'}</div>
                 {near.pitch_type && (
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{near.pitch_type}{near.pitch_speed != null ? ` · ${near.pitch_speed} mph` : ''}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{near.pitch_type}{near.pitch_speed != null ? ` · ${near.pitch_speed} mph` : ''}</div>
                 )}
               </div>
             </div>
@@ -2396,15 +2396,15 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
       onClose={onClose}
       labelledBy="dugout-hr-board-title"
       backdropClassName="dugout-modal-backdrop"
-      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      backdropStyle={{ background: 'var(--overlay)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
       panelClassName="dugout-mobile-sheet dugout-leaderboard-sheet"
       panelStyle={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
     >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(74,222,128,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>🔥</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div id="dugout-hr-board-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Home Runs</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{hits.length} HR{hits.length === 1 ? '' : 's'} across the slate. Select a player to open that game.</div>
+            <div id="dugout-hr-board-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>Today's Home Runs</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{hits.length} HR{hits.length === 1 ? '' : 's'} across the slate. Select a player to open that game.</div>
           </div>
           <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close today's home runs" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
@@ -2412,7 +2412,7 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
           {([['ev', 'Exit Velo'], ['dist', 'Distance'], ['time', 'Time']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setSortBy(key)} style={{
-              padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              padding: '4px 10px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
               border: sortBy === key ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: sortBy === key ? 'var(--accent-dim)' : 'transparent',
               color: sortBy === key ? 'var(--accent)' : 'var(--text-3)',
@@ -2440,13 +2440,13 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{h.player_name}</span>
-                    {h.is_first_hr_of_game && <span style={{ fontSize: 9, fontWeight: 800, color: '#fde047' }}>1ST</span>}
-                    {isLaser110 && <span style={{ fontSize: 9, fontWeight: 800, color: '#f87171' }}>⚡110+</span>}
-                    {isLaser105 && <span style={{ fontSize: 9, fontWeight: 800, color: '#fb923c' }}>⚡105+</span>}
-                    {isMoonshot && <span style={{ fontSize: 9, fontWeight: 800, color: '#a78bfa' }}>🌙</span>}
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h.player_name}</span>
+                    {h.is_first_hr_of_game && <span style={{ fontSize: 11, fontWeight: 700, color: '#fde047' }}>1ST</span>}
+                    {isLaser110 && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>⚡110+</span>}
+                    {isLaser105 && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>⚡105+</span>}
+                    {isMoonshot && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--purple)' }}>🌙</span>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>
                     <span>{h._team ?? ''} · off</span>
                     {/* Small enough (14px) that it doesn't grow the row height
                         beyond this text line's own — same ask as the batter
@@ -2469,18 +2469,18 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                       whichever stat is actually being sorted on. */}
                   {sortBy === 'dist' ? (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
                     </>
                   ) : sortBy === 'time' ? (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{h.hr_time ? new Date(h.hr_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{h.hr_time ? new Date(h.hr_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
                     </>
                   )}
                 </div>
@@ -2528,15 +2528,15 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
       onClose={onClose}
       labelledBy="dugout-near-hr-board-title"
       backdropClassName="dugout-modal-backdrop"
-      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      backdropStyle={{ background: 'var(--overlay)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
       panelClassName="dugout-mobile-sheet dugout-leaderboard-sheet"
       panelStyle={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
     >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(251,146,60,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>😮</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div id="dugout-near-hr-board-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left another park. Select a player to open that game.</div>
+            <div id="dugout-near-hr-board-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left another park. Select a player to open that game.</div>
           </div>
           <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close today's near home runs" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
@@ -2544,7 +2544,7 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
           {([['ev', 'Exit Velo'], ['dist', 'Distance'], ['time', 'Time']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setSortBy(key)} style={{
-              padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              padding: '4px 10px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
               border: sortBy === key ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: sortBy === key ? 'var(--accent-dim)' : 'transparent',
               color: sortBy === key ? 'var(--accent)' : 'var(--text-3)',
@@ -2574,13 +2574,13 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{n.batter_name}</span>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-2)' }}>{n.result || '—'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{n.batter_name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>{n.result || '—'}</span>
                     {parks != null && (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: closeCall ? '#f87171' : 'var(--text-3)' }}>{parks}/30 parks</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: closeCall ? '#f87171' : 'var(--text-3)' }}>{parks}/30 parks</span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>
                     <span>{n._team ?? ''} · off</span>
                     {n.pitcher_mlb_id ? (
                       <Link href={`/players/${n.pitcher_mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', flexShrink: 0 }}>
@@ -2595,18 +2595,18 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {sortBy === 'dist' ? (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
                     </>
                   ) : sortBy === 'time' ? (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{n.captured_at ? new Date(n.captured_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{n.captured_at ? new Date(n.captured_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
                     </>
                   )}
                 </div>
@@ -2669,12 +2669,12 @@ function PitcherLinkChip({ pitcher, teamAbbr }: { pitcher: { id: number; name: s
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
       >
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>vs</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>vs</span>
         <SharedPlayerAvatar headshot={mlbHeadshot(pitcher.id)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={pitcher.name} size={22} />
         {/* Same L=blue/R=orange hand convention used everywhere else in
             this app (batter-hand badges, Pitcher Report's starter cards). */}
-        <span style={{ fontSize: 10, fontWeight: 800, color: pitcher.hand === 'L' ? '#60a5fa' : '#fb923c' }}>{pitcher.hand}HP</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)' }}>{pitcher.name}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: pitcher.hand === 'L' ? '#60a5fa' : '#fb923c' }}>{pitcher.hand}HP</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{pitcher.name}</span>
       </Link>
     </Tooltip>
   )
@@ -2695,7 +2695,7 @@ function StatcastWindowToggle({ value, onChange, compact = false, ariaLabel = 'S
 }) {
   return (
     <div className={`dugout-window-toggle${compact ? ' is-team-header' : ''}`} role="group" aria-label={ariaLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>{compact ? 'View' : 'Statcast'}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>{compact ? 'View' : 'Statcast'}</span>
       {(['l1', 'l3', 'l5', 'l10'] as const).map(w => (
         <button
           key={w}
@@ -2704,7 +2704,7 @@ function StatcastWindowToggle({ value, onChange, compact = false, ariaLabel = 'S
           aria-label={`Show ${STATCAST_WINDOW_LABEL[w]} data`}
           aria-pressed={value === w}
           style={{
-            padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, cursor: 'pointer',
+            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
             border: `1px solid ${value === w ? 'var(--accent)' : 'transparent'}`,
             background: value === w ? 'rgba(180,255,77,0.14)' : 'transparent',
             color: value === w ? 'var(--accent)' : 'var(--text-2)',
@@ -3156,7 +3156,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
 
   const moveBtnStyle = (disabled: boolean): React.CSSProperties => ({
     background: 'none', border: 'none', color: disabled ? 'var(--text-4)' : 'var(--text-3)',
-    cursor: disabled ? 'default' : 'pointer', fontSize: 10, lineHeight: 1, padding: 2,
+    cursor: disabled ? 'default' : 'pointer', fontSize: 12, lineHeight: 1, padding: 2,
   })
 
   return (
@@ -3165,24 +3165,24 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
       onClose={onClose}
       labelledBy="dugout-columns-title"
       backdropClassName="dugout-modal-backdrop"
-      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      backdropStyle={{ background: 'var(--overlay)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
       panelClassName="dugout-mobile-sheet dugout-columns-sheet"
       panelStyle={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
     >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
           <div>
-            <div id="dugout-columns-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show, hide, and reorder the data that matters to you.</div>
+            <div id="dugout-columns-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>Customize Columns</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Show, hide, and reorder the data that matters to you.</div>
           </div>
           <button type="button" data-modal-autofocus onClick={onClose} disabled={saving} aria-label="Close column settings" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
         <fieldset disabled={saving} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
         <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Quick layouts</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Quick layouts</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {([['compact', 'Compact'], ['markets', 'Markets'], ['power', 'Power'], ['statcast', 'Statcast']] as const).map(([key, label]) => (
-              <button key={key} type="button" onClick={() => applyPreset(key)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>{label}</button>
+              <button key={key} type="button" onClick={() => applyPreset(key)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
             ))}
           </div>
           <label style={{ position: 'relative', display: 'block', marginBottom: 14 }}>
@@ -3195,10 +3195,10 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
               style={{ width: '100%', height: 34, padding: '0 10px 0 32px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 12, outline: 'none' }}
             />
           </label>
-          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Hide a whole section</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Hide a whole section</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {DUGOUT_GROUP_ORDER.map(group => (
-              <label key={group} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer' }}>
+              <label key={group} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer' }}>
                 <Switch
                   checked={!hiddenGroups.has(group)}
                   ariaLabel={`Show ${DUGOUT_GROUP_LABELS[group] ?? group} section`}
@@ -3217,14 +3217,14 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
         <div style={{ padding: 16 }}>
           {columnQuery.trim() ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 4 }}>{searchResults.length} matching {searchResults.length === 1 ? 'column' : 'columns'}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>{searchResults.length} matching {searchResults.length === 1 ? 'column' : 'columns'}</div>
               {searchResults.map(col => {
                 const visible = !hiddenGroups.has(col.group) && !hiddenColumns.has(col.key)
                 return (
                   <div key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 7, background: 'var(--surface-2)' }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--text-2)' }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--text-2)' }}>
                       {DUGOUT_COLUMN_LABELS[col.key] ?? col.key}
-                      <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
+                      <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
                     </span>
                     <Switch checked={visible} onChange={value => setColumnVisible(col.key, value)} ariaLabel={`Show ${DUGOUT_COLUMN_LABELS[col.key] ?? col.key} column`} />
                   </div>
@@ -3237,7 +3237,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
           ) : runs.map((run, runIndex) => (
             <div key={`${run.group}-${runIndex}`} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)' }}>{DUGOUT_GROUP_LABELS[run.group]}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>{DUGOUT_GROUP_LABELS[run.group]}</span>
                 <div style={{ display: 'flex', gap: 2 }}>
                   <button disabled={runIndex === 0} onClick={() => moveRun(runIndex, -1)} title="Move this whole section up" style={moveBtnStyle(runIndex === 0)}>▲ section</button>
                   <button disabled={runIndex === runs.length - 1} onClick={() => moveRun(runIndex, 1)} title="Move this whole section down" style={moveBtnStyle(runIndex === runs.length - 1)}>▼ section</button>
@@ -3254,7 +3254,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
                         <button disabled={i === visibleOrder.length - 1} onClick={() => moveColumn(key, 1)} title="Move down" style={moveBtnStyle(i === visibleOrder.length - 1)}>▼</button>
                         <button disabled={i === visibleOrder.length - 1} onClick={() => moveColumnToEdge(key, 'bottom')} title="Move to bottom" style={moveBtnStyle(i === visibleOrder.length - 1)}>⤓</button>
                       </div>
-                      <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
+                      <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
                       <Switch
                         checked={!hiddenColumns.has(key)}
                         ariaLabel={`Show ${DUGOUT_COLUMN_LABELS[key] ?? key} column`}
@@ -3269,15 +3269,15 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
 
           {!columnQuery.trim() && hiddenColumnList.length > 0 && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', marginBottom: 6 }}>Hidden columns</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6 }}>Hidden columns</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {hiddenColumnList.map(key => {
                   const col = colByKey.get(key)!
                   return (
                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', opacity: 0.7 }}>
-                      <span style={{ flex: 1, fontSize: 11, color: 'var(--text-3)' }}>
+                      <span style={{ flex: 1, fontSize: 12, color: 'var(--text-3)' }}>
                         {DUGOUT_COLUMN_LABELS[key] ?? key}
-                        <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
                       </span>
                       <Switch
                         checked={false}
@@ -3302,11 +3302,11 @@ function ColumnCustomizePanel({ prefs, onSave, onClose, saving, error }: {
           <button
             onClick={() => { setHiddenGroups(new Set()); setHiddenColumns(new Set()); setOrder(DUGOUT_ALL_COLUMNS.map(c => c.key)) }}
             disabled={saving}
-            style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', background: 'none', color: 'var(--text-3)' }}
+            style={{ fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', background: 'none', color: 'var(--text-3)' }}
           >
             Reset to default
           </button>
-          <button onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 800, cursor: 'pointer', border: '1px solid var(--accent)', borderRadius: 8, padding: '7px 16px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+          <button onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--accent)', borderRadius: 8, padding: '7px 16px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
@@ -3916,7 +3916,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           aria-pressed={stickyMode}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
             border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
             background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
             color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
@@ -3930,7 +3930,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <button
             onClick={() => setStickyCols([])}
             aria-label="Clear sticky column sorting"
-            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
           >
             ✕
           </button>
@@ -3947,7 +3947,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             aria-pressed={highlightMode}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
               border: `1px solid ${highlightMode ? activeHlColor : 'var(--border)'}`,
               background: highlightMode ? `${activeHlColor}22` : 'var(--surface)',
               color: highlightMode ? activeHlColor : 'var(--text-2)',
@@ -3980,7 +3980,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 <button
                   onClick={() => setCellHighlights({})}
                   aria-label="Clear all cell highlights"
-                  style={{ marginLeft: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
+                  style={{ marginLeft: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
                 >
                   ✕
                 </button>
@@ -3999,7 +3999,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           aria-pressed={eraserMode}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
             border: `1px solid ${eraserMode ? '#f87171' : 'var(--border)'}`,
             background: eraserMode ? 'rgba(248,113,113,0.12)' : 'var(--surface)',
             color: eraserMode ? '#f87171' : 'var(--text-2)',
@@ -4013,7 +4013,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <button
             onClick={() => setErasedIds(new Set())}
             aria-label="Restore all erased player rows"
-            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
           >
             ✕
           </button>
@@ -4025,7 +4025,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           type="button"
           onClick={() => onDensityChange(density === 'compact' ? 'comfortable' : 'compact')}
           aria-label={`Use ${density === 'compact' ? 'comfortable' : 'compact'} table density`}
-          style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+          style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
         >
           {density === 'compact' ? 'Compact' : 'Comfort'}
         </button>
@@ -4080,14 +4080,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <div className="dg-team-identity" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <button type="button" className="dg-team-collapse" onClick={() => toggleTeamCollapsed(abbr)} aria-expanded={!collapsedTeams.has(abbr)} aria-label={`${collapsedTeams.has(abbr) ? 'Expand' : 'Collapse'} ${abbr}`}><ChevronUp size={15} /></button>
         <TeamLogo abbr={abbr} size={28} />
-        <span className="dg-team-name" style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
+        <span className="dg-team-name" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
         {side === 'home' && !game.homeLineupConfirmed && (
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
             {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
           </span>
         )}
         {side === 'away' && !game.awayLineupConfirmed && (
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
             {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
           </span>
         )}
@@ -4269,7 +4269,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className={`dugout-board-enter${expanded ? ' has-inspector' : ''}`} style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
-      {game.researchSnapshot?.frozen && game.researchSnapshot?.observedAt && !game.researchSnapshot?.unavailable && <p style={{ color: 'var(--text-3)', fontSize: 11, padding: '4px 12px' }}>Pregame research frozen · observed {new Date(game.researchSnapshot.observedAt).toLocaleString()}</p>}
+      {game.researchSnapshot?.frozen && game.researchSnapshot?.observedAt && !game.researchSnapshot?.unavailable && <p style={{ color: 'var(--text-3)', fontSize: 12, padding: '4px 12px' }}>Pregame research frozen · observed {new Date(game.researchSnapshot.observedAt).toLocaleString()}</p>}
       {game.researchSnapshot?.unavailable && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12, padding: '8px 12px' }}>Pregame research snapshot unavailable. Paper/MM is unavailable; archived prices and dated stats remain visible.</p>}
       {game.customPitchlogUnavailable && <p role="status" style={{ color: 'var(--text-2)', fontSize: 12, padding: '8px 12px' }}>Custom pitch-log Matrix inputs were not captured before start. Those highlights are unavailable.</p>}
       <section ref={commandBarRef} className="dugout-command-bar" aria-label="Dugout board controls">
@@ -4326,13 +4326,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <nav className="dugout-timeline-phases" data-count={timelinePhaseIndices.length} aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
       {activeSortKeys.length > 0 && (
         <div className="dugout-redundant-sort-summary" aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
           {activeSortKeys.map((entry, index) => (
-            <button key={entry.col} type="button" onClick={() => toggleSort(entry.col)} title="Click to change or remove this sort" style={{ border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
+            <button key={entry.col} type="button" onClick={() => toggleSort(entry.col)} title="Click to change or remove this sort" style={{ border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
               {activeSortKeys.length > 1 ? `${index + 1}. ` : ''}{DUGOUT_COLUMN_LABELS[entry.col] ?? entry.col} {entry.dir === 'desc' ? '↓' : '↑'}
             </button>
           ))}
-          <button type="button" onClick={() => { setSort(null); setStickyCols([]) }} style={{ marginLeft: 'auto', border: 0, background: 'none', color: 'var(--text-3)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>Clear</button>
+          <button type="button" onClick={() => { setSort(null); setStickyCols([]) }} style={{ marginLeft: 'auto', border: 0, background: 'none', color: 'var(--text-3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Clear</button>
         </div>
       )}
       <div className="dugout-jump-menu" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
@@ -4349,7 +4349,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 setViewPreset(preset)
                 requestAnimationFrame(() => tableScrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' }))
               }}
-              style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+              style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
             >
               {preset[0].toUpperCase() + preset.slice(1)} <small>{columnCount}</small>
             </button>
@@ -4360,7 +4360,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           type="button"
           onClick={() => setTourStep(0)}
           aria-label="Start the Dugout table walkthrough"
-          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 7, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '4px 8px', fontSize: 9, fontWeight: 850, cursor: 'pointer' }}
+          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 7, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
         >
           <BookOpen size={12} aria-hidden="true" /> Take the table tour
         </button>
@@ -4588,14 +4588,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </div>
     )}
     {horizontalState.canGoLeft && (
-      <button className="dugout-return-player" type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
+      <button className="dugout-return-player" type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
         <ChevronLeft size={13} aria-hidden="true" /> Player
       </button>
     )}
     {activeTourStep && tourStep != null && (
       <aside className="dugout-table-tour" role="dialog" aria-modal="false" aria-label="Dugout table walkthrough" style={{ position: 'fixed', right: 22, bottom: 22, zIndex: 1200, width: 'min(390px, calc(100vw - 24px))', overflow: 'hidden', border: '1px solid color-mix(in srgb, var(--accent) 52%, var(--border))', borderRadius: 16, background: 'color-mix(in srgb, var(--surface) 96%, transparent)', backdropFilter: 'blur(18px)', boxShadow: '0 24px 70px rgba(0,0,0,.58), 0 0 30px color-mix(in srgb, var(--accent) 12%, transparent)' }}>
         <div style={{ height: 3, background: 'var(--surface-2)' }}>
-          <div style={{ width: `${((tourStep + 1) / tableTourSteps.length) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #38bdf8)', transition: 'width 220ms ease' }} />
+          <div style={{ width: `${((tourStep + 1) / tableTourSteps.length) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-fill), var(--blue))', transition: 'width 220ms ease' }} />
         </div>
         <div style={{ padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -4603,17 +4603,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               {activeTourStep.icon === 'pointer' ? <MousePointerClick size={21} /> : activeTourStep.icon === 'book' ? <BookOpen size={21} /> : activeTourStep.icon === 'users' ? <Users size={21} /> : activeTourStep.icon === 'market' ? <BarChart3 size={21} /> : activeTourStep.icon === 'activity' ? <Activity size={21} /> : <BarChart3 size={21} />}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{activeTourStep.label}</div>
-              <div style={{ marginTop: 3, fontSize: 15, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.2 }}>{activeTourStep.title}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{activeTourStep.label}</div>
+              <div style={{ marginTop: 3, fontSize: 15, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.2 }}>{activeTourStep.title}</div>
             </div>
             <button type="button" onClick={() => setTourStep(null)} aria-label="Close table walkthrough" style={{ width: 28, height: 28, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)', color: 'var(--text-3)', cursor: 'pointer' }}><X size={14} /></button>
           </div>
-          <p style={{ margin: '12px 0 0', fontSize: 11, lineHeight: 1.65, color: 'var(--text-2)' }}>{activeTourStep.body}</p>
+          <p style={{ margin: '12px 0 0', fontSize: 12, lineHeight: 1.65, color: 'var(--text-2)' }}>{activeTourStep.body}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 14 }}>
             {tableTourSteps.map((step, index) => <span key={step.key} aria-hidden="true" style={{ width: index === tourStep ? 18 : 5, height: 5, borderRadius: 999, background: index <= tourStep ? 'var(--accent)' : 'var(--border)', transition: 'all 180ms ease' }} />)}
-            <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{tourStep + 1} of {tableTourSteps.length}</span>
-            <button type="button" disabled={tourStep === 0} onClick={() => setTourStep(step => step == null ? 0 : Math.max(0, step - 1))} style={{ marginLeft: 'auto', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: tourStep === 0 ? 'var(--text-4)' : 'var(--text-2)', padding: '6px 10px', fontSize: 10, fontWeight: 800, cursor: tourStep === 0 ? 'default' : 'pointer' }}>Back</button>
-            <button type="button" onClick={() => tourStep === tableTourSteps.length - 1 ? setTourStep(null) : setTourStep(tourStep + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent)', color: '#06100a', padding: '6px 12px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>{tourStep === tableTourSteps.length - 1 ? 'Finish' : 'Next'}</button>
+            <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--text-3)' }}>{tourStep + 1} of {tableTourSteps.length}</span>
+            <button type="button" disabled={tourStep === 0} onClick={() => setTourStep(step => step == null ? 0 : Math.max(0, step - 1))} style={{ marginLeft: 'auto', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: tourStep === 0 ? 'var(--text-4)' : 'var(--text-2)', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: tourStep === 0 ? 'default' : 'pointer' }}>Back</button>
+            <button type="button" onClick={() => tourStep === tableTourSteps.length - 1 ? setTourStep(null) : setTourStep(tourStep + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent-fill)', color: 'var(--text-1)', padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tourStep === tableTourSteps.length - 1 ? 'Finish' : 'Next'}</button>
           </div>
         </div>
       </aside>
@@ -4865,7 +4865,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
           ['--dugout-header-top' as string]: '0px',
         }}
       >
-        <table className="dugout-dense-table" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+        <table className="dugout-dense-table" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', fontSize: 12, width: 'max-content', minWidth: '100%' }}>
           <tbody>
             <tr>{renderedHeaderCells}</tr>
           {displayRows.map(({ row, oppPitcher, pitcherTeamAbbr, gameInfo, pool }) => {
@@ -5284,7 +5284,7 @@ export function DugoutClient({ date }: { date: string }) {
     <div aria-live="polite" aria-busy="true" style={{ display: 'grid', gap: 10, minHeight: 280 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
         <div style={{ width: 24, height: 24, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-        <div><div style={{ fontSize: 13, fontWeight: 850, color: 'var(--text-1)' }}>Loading The Dugout</div><div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Preparing games, lineups, markets, and Statcast.</div></div>
+        <div><div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Loading The Dugout</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Preparing games, lineups, markets, and Statcast.</div></div>
       </div>
       {[0, 1, 2].map(index => <div key={index} style={{ height: index === 0 ? 46 : 62, borderRadius: 10, border: '1px solid var(--border)', background: 'linear-gradient(100deg, var(--surface) 25%, var(--surface-2) 45%, var(--surface) 65%)', backgroundSize: '220% 100%', animation: 'dugout-skeleton 1.4s ease-in-out infinite' }} />)}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes dugout-skeleton{0%{background-position:100% 0}100%{background-position:-100% 0}}`}</style>
@@ -5293,16 +5293,16 @@ export function DugoutClient({ date }: { date: string }) {
 
   if (err && !data) return (
     <div role="alert" style={{ display: 'grid', justifyItems: 'center', gap: 10, textAlign: 'center', padding: '44px 20px', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 12, background: 'rgba(248,113,113,0.06)' }}>
-      <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>The Dugout could not load</div>
-      <div style={{ maxWidth: 520, fontSize: 11, color: 'var(--text-3)' }}>{err}</div>
-      <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '7px 14px', fontSize: 11, fontWeight: 850, cursor: 'pointer' }}>Try again</button>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>The Dugout could not load</div>
+      <div style={{ maxWidth: 520, fontSize: 12, color: 'var(--text-3)' }}>{err}</div>
+      <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Try again</button>
     </div>
   )
   if (!data?.games?.length) return (
     <div style={{ display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', padding: '52px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
-      <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>No games on this slate</div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>There are no Dugout games available for {date}.</div>
-      <Link href="/sports" style={{ marginTop: 4, color: 'var(--accent)', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>View scores</Link>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>No games on this slate</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>There are no Dugout games available for {date}.</div>
+      <Link href="/sports" style={{ marginTop: 4, color: 'var(--accent)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>View scores</Link>
     </div>
   )
 
@@ -5335,13 +5335,13 @@ export function DugoutClient({ date }: { date: string }) {
   return (
     <div>
       {staleSnapshot && (
-        <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 11px', marginBottom: 12, border: '1px solid rgba(251,191,36,.28)', borderRadius: 9, background: 'rgba(251,191,36,.07)', color: '#fcd34d', fontSize: 10, fontWeight: 750 }}>
+        <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 11px', marginBottom: 12, border: '1px solid rgba(251,191,36,.28)', borderRadius: 9, background: 'rgba(251,191,36,.07)', color: '#fcd34d', fontSize: 12, fontWeight: 750 }}>
           <span>Showing the last board loaded in this session. Live movement is paused.</span>
-          <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ flex: 'none', minHeight: 30, padding: '0 9px', border: '1px solid rgba(251,191,36,.35)', borderRadius: 7, background: 'transparent', color: 'inherit', fontSize: 9, fontWeight: 900 }}>Reconnect</button>
+          <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ flex: 'none', minHeight: 30, padding: '0 9px', border: '1px solid rgba(251,191,36,.35)', borderRadius: 7, background: 'transparent', color: 'inherit', fontSize: 11, fontWeight: 700 }}>Reconnect</button>
         </div>
       )}
       {!hasStats && (
-        <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 11, color: '#f87171' }}>
+        <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--red)' }}>
           Statcast data is temporarily unavailable. Odds remain available.
         </div>
       )}
@@ -5364,14 +5364,14 @@ export function DugoutClient({ date }: { date: string }) {
             style={{
               minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
               border: '1.5px solid rgba(167,139,250,0.5)', background: 'rgba(167,139,250,0.16)', color: '#c4b5fd',
-              fontSize: 12, fontWeight: 850,
+              fontSize: 12, fontWeight: 700,
             }}
           >
             <Ban size={14} aria-hidden="true" /> No Home Run
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--purple)', fontFamily: 'monospace' }}>
               {oStr(active.noHr.fanduel)}
               {active.noHr.openingFanduel != null && active.noHr.openingFanduel !== active.noHr.fanduel && (
-                <span style={{ marginLeft: 3, fontSize: 10, color: active.noHr.fanduel < active.noHr.openingFanduel ? '#4ade80' : '#f87171' }}>
+                <span style={{ marginLeft: 3, fontSize: 12, color: active.noHr.fanduel < active.noHr.openingFanduel ? '#4ade80' : '#f87171' }}>
                   {active.noHr.fanduel < active.noHr.openingFanduel ? '▼' : '▲'}
                 </span>
               )}
@@ -5382,32 +5382,32 @@ export function DugoutClient({ date }: { date: string }) {
         {hrCount > 0 && (
           <button className="dugout-summary-action" aria-label={`Open today's ${hrCount} home runs`} onClick={() => { setShowNearHrBoard(false); setShowHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
-            border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
-            fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: 'var(--green)',
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}>
             <Flame size={14} aria-hidden="true" /> Home Runs
-            <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{hrCount}</span>
+            <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 12 }}>{hrCount}</span>
           </button>
         )}
 
         {nearHrCount > 0 && (
           <button className="dugout-summary-action" aria-label={`Open today's ${nearHrCount} near home runs`} onClick={() => { setShowHrBoard(false); setShowNearHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
-            border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: '#fb923c',
-            fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: 'var(--gold)',
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}>
             <Sparkles size={14} aria-hidden="true" /> Near HRs
-            <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{nearHrCount}</span>
+            <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 12 }}>{nearHrCount}</span>
           </button>
         )}
 
         <button className="dugout-summary-action" aria-label="Open full-slate Slate Edge" onClick={() => { setShowHrBoard(false); setShowNearHrBoard(false); setShowSlateEdge(true) }} style={{
           minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
           border: '1px solid color-mix(in srgb, var(--accent) 48%, var(--border))', background: 'var(--accent-dim)', color: 'var(--accent)',
-          fontSize: 12, fontWeight: 850, cursor: 'pointer',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
         }}>
           <BarChart3 size={14} aria-hidden="true" /> Slate Edge
-          <span style={{ background: 'color-mix(in srgb, var(--accent) 20%, transparent)', borderRadius: 999, padding: '1px 7px', fontSize: 10 }}>Full slate</span>
+          <span style={{ background: 'color-mix(in srgb, var(--accent-fill) 20%, transparent)', borderRadius: 999, padding: '1px 7px', fontSize: 12 }}>Full slate</span>
         </button>
 
         {/* Per-account column customization — applies across every game's
@@ -5416,7 +5416,7 @@ export function DugoutClient({ date }: { date: string }) {
         <button className="dugout-summary-action dugout-columns-launch" onClick={() => setShowColumnPanel(true)} style={{
           minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9, marginLeft: 'auto',
           border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)',
-          fontSize: 12, fontWeight: 800, cursor: 'pointer',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
         }}>
           <Settings2 size={14} aria-hidden="true" /> Columns
         </button>
@@ -5435,7 +5435,7 @@ export function DugoutClient({ date }: { date: string }) {
       <section className="dugout-game-selector" aria-label="Game selector" style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 13, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{ minHeight: 38, padding: '7px 9px 7px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 7 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '0.02em' }}>
               <span className="dugout-games-label">Games</span>
               <span className="dugout-active-matchup" aria-label={`${active.awayAbbr} at ${active.homeAbbr}`}>
                 <TeamLogo abbr={active.awayAbbr} size={22} />
@@ -5443,10 +5443,10 @@ export function DugoutClient({ date }: { date: string }) {
                 <TeamLogo abbr={active.homeAbbr} size={22} />
               </span>
             </span>
-            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button type="button" className="md:hidden" onClick={() => setShowGamePicker(true)} aria-label="Open all games" style={{ height: 25, padding: '0 9px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 9, fontWeight: 850, cursor: 'pointer' }}>All games</button>
+            <button type="button" className="md:hidden" onClick={() => setShowGamePicker(true)} aria-label="Open all games" style={{ height: 25, padding: '0 9px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>All games</button>
             <button type="button" title="Previous game (Alt + Left Arrow)" disabled={activeGameIndex === 0} onClick={() => setActiveGame(games[activeGameIndex - 1]?.gameKey ?? active.gameKey)} aria-label="Previous game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === 0 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === 0 ? 'default' : 'pointer' }}>
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
@@ -5479,17 +5479,17 @@ export function DugoutClient({ date }: { date: string }) {
                   opacity: g.locked ? 0.68 : 1, transition: 'border-color 140ms, background 140ms, transform 140ms, box-shadow 140ms',
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.awayAbbr} size={20} /><span style={{ fontSize: 10, fontWeight: 850, color: 'var(--text-2)' }}>{g.awayAbbr}</span></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.awayAbbr} size={20} /><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{g.awayAbbr}</span></span>
                 <span style={{ gridRow: '1 / span 2', gridColumn: 2, minWidth: 36, display: 'grid', justifyItems: 'end', alignContent: 'center', gap: 3 }}>
-                  {isLive && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 900, color: '#fb7185', letterSpacing: '0.05em' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />LIVE</span>}
-                  {isFin && <span style={{ fontSize: 8, fontWeight: 850, color: 'var(--text-3)', letterSpacing: '0.04em' }}>FINAL</span>}
-                  {!isLive && !isFin && gameTime && <span style={{ fontSize: 9, fontWeight: 800, color: isAct ? 'var(--accent)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>{gameTime}</span>}
-                  {(isLive || isFin) && <span style={{ fontSize: 13, fontWeight: 900, fontFamily: 'monospace', color: isAct ? 'var(--text-1)' : 'var(--text-2)' }}>{g.awayScore}<span style={{ padding: '0 3px', color: 'var(--text-4)' }}>–</span>{g.homeScore}</span>}
-                  {g.gameNum > 1 && <span style={{ fontSize: 8, fontWeight: 900, color: '#f59e0b' }}>G{g.gameNum}</span>}
+                  {isLive && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.05em' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)', boxShadow: '0 0 8px var(--red)' }} />LIVE</span>}
+                  {isFin && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>FINAL</span>}
+                  {!isLive && !isFin && gameTime && <span style={{ fontSize: 11, fontWeight: 700, color: isAct ? 'var(--accent)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>{gameTime}</span>}
+                  {(isLive || isFin) && <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: isAct ? 'var(--text-1)' : 'var(--text-2)' }}>{g.awayScore}<span style={{ padding: '0 3px', color: 'var(--text-4)' }}>–</span>{g.homeScore}</span>}
+                  {g.gameNum > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>G{g.gameNum}</span>}
                   {g.locked && <Lock size={10} color="var(--text-3)" />}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.homeAbbr} size={20} /><span style={{ fontSize: 10, fontWeight: 850, color: 'var(--text-2)' }}>{g.homeAbbr}</span></span>
-                {isAct && <span aria-hidden="true" style={{ position: 'absolute', left: 10, right: 10, bottom: 0, height: 2, borderRadius: '2px 2px 0 0', background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)' }} />}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.homeAbbr} size={20} /><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{g.homeAbbr}</span></span>
+                {isAct && <span aria-hidden="true" style={{ position: 'absolute', left: 10, right: 10, bottom: 0, height: 2, borderRadius: '2px 2px 0 0', background: 'var(--accent-fill)', boxShadow: '0 0 10px var(--accent)' }} />}
               </button>
             )
           })}
@@ -5537,12 +5537,12 @@ export function DugoutClient({ date }: { date: string }) {
         onClose={() => setShowGamePicker(false)}
         labelledBy="dugout-game-picker-title"
         backdropClassName="dugout-modal-backdrop"
-        backdropStyle={{ zIndex: 1000, alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}
+        backdropStyle={{ zIndex: 1000, alignItems: 'flex-end', background: 'var(--overlay)', padding: 10 }}
         panelClassName="dugout-mobile-sheet dugout-game-picker-sheet"
         panelStyle={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}
       >
             <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-              <div><div id="dugout-game-picker-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
+              <div><div id="dugout-game-picker-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
               <button type="button" data-modal-autofocus onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
             </div>
             <div className="dugout-game-picker-filters" aria-label="Filter games">
@@ -5555,7 +5555,7 @@ export function DugoutClient({ date }: { date: string }) {
                 return (
                   <button key={game.gameKey} type="button" onClick={() => { setActiveGame(game.gameKey); setShowGamePicker(false) }} aria-pressed={selected} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center', padding: '11px 12px', borderRadius: 11, border: selected ? '1px solid var(--accent)' : '1px solid var(--border)', background: selected ? 'var(--accent-dim)' : 'var(--surface-2)', color: 'var(--text-1)', cursor: 'pointer', textAlign: 'left' }}>
                     <span className="dugout-picker-matchup" style={{ display: 'grid', gap: 7 }}><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.awayAbbr} size={22} /><strong>{game.awayAbbr}</strong></span><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.homeAbbr} size={22} /><strong>{game.homeAbbr}</strong></span></span>
-                    <span style={{ display: 'grid', justifyItems: 'end', gap: 4, fontSize: 10, color: 'var(--text-3)' }}><span>{game.status === 'Live' ? 'LIVE' : game.status === 'Final' ? 'FINAL' : time}</span>{(game.status === 'Live' || game.status === 'Final') && <strong style={{ color: 'var(--text-1)', fontFamily: 'monospace', fontSize: 13 }}>{game.awayScore}–{game.homeScore}</strong>}</span>
+                    <span style={{ display: 'grid', justifyItems: 'end', gap: 4, fontSize: 12, color: 'var(--text-3)' }}><span>{game.status === 'Live' ? 'LIVE' : game.status === 'Final' ? 'FINAL' : time}</span>{(game.status === 'Live' || game.status === 'Final') && <strong style={{ color: 'var(--text-1)', fontFamily: 'monospace', fontSize: 13 }}>{game.awayScore}–{game.homeScore}</strong>}</span>
                   </button>
                 )
               })}
@@ -5563,7 +5563,7 @@ export function DugoutClient({ date }: { date: string }) {
             </div>
       </ModalSurface>
 
-      <div className="dugout-header-help" style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
+      <div className="dugout-header-help" style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
         Select any column header for details.
       </div>
 

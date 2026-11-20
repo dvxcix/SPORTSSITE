@@ -57,7 +57,7 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
 
   return (
     <form className="ss-flow-form" onSubmit={submit}>
-      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
       <section className="ss-flow-card">
         <div><label>Category</label><select aria-label="Discussion category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="ss-flow-input">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
         <div><label>Title <span>*</span></label><input aria-label="Discussion title" value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="Start with a clear title" className="ss-flow-input" /></div>

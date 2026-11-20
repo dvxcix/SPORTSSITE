@@ -102,12 +102,12 @@ export function StoriesViewer({ stories, initialIndex, onClose }: StoriesViewerP
         </header>
 
         {story.story_type === 'text' || !story.media_url
-          ? <div className="ss-story-media" style={{ display: 'grid', placeItems: 'center', padding: 32, background: /^#[0-9a-f]{6}$/i.test(story.bg_color ?? '') ? story.bg_color! : '#111111' }}><p style={{ color: 'white', fontSize: 26, fontWeight: 800, textAlign: 'center', overflowWrap: 'anywhere' }}>{story.content}</p></div>
+          ? <div className="ss-story-media" style={{ display: 'grid', placeItems: 'center', padding: 32, background: /^#[0-9a-f]{6}$/i.test(story.bg_color ?? '') ? story.bg_color! : '#111111' }}><p style={{ color: 'var(--text-1)', fontSize: 26, fontWeight: 700, textAlign: 'center', overflowWrap: 'anywhere' }}>{story.content}</p></div>
           : story.media_url.match(/\.(mp4|webm)$/i)
           ? <video ref={videoRef} key={story.id} src={story.media_url} className="ss-story-media" autoPlay muted playsInline onLoadedMetadata={event => setDurationMs(Math.min(15000, Math.max(3000, event.currentTarget.duration * 1000)))} />
           : <SafeImage src={story.media_url} alt="" className="ss-story-media" />
         }
-        {story.media_url && story.story_type !== 'text' && story.content && <p style={{ position: 'absolute', bottom: 32, left: 20, right: 20, padding: 12, borderRadius: 12, color: 'white', background: 'rgba(0,0,0,.7)', overflowWrap: 'anywhere' }}>{story.content}</p>}
+        {story.media_url && story.story_type !== 'text' && story.content && <p style={{ position: 'absolute', bottom: 32, left: 20, right: 20, padding: 12, borderRadius: 12, color: 'var(--text-1)', background: 'var(--overlay)', overflowWrap: 'anywhere' }}>{story.content}</p>}
 
         {current > 0 && (
           <button type="button" onClick={() => move(-1)} className="ss-story-arrow is-left" aria-label="Previous story">

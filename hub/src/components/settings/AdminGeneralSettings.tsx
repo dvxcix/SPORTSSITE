@@ -27,21 +27,21 @@ export function AdminGeneralSettings({ initial }: { initial: Record<string, stri
     setSaving(false)
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] transition-all"
 
   return (
     <div className="space-y-6">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Site Name</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Site Name</label>
           <input value={values.site_name} onChange={e => setValues(v => ({ ...v, site_name: e.target.value }))} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Tagline</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Tagline</label>
           <input value={values.site_tagline} onChange={e => setValues(v => ({ ...v, site_tagline: e.target.value }))} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Contact Email</label>
+          <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Contact Email</label>
           <input value={values.contact_email} onChange={e => setValues(v => ({ ...v, contact_email: e.target.value }))} className={inputClass} />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -49,8 +49,8 @@ export function AdminGeneralSettings({ initial }: { initial: Record<string, stri
             { key: 'allow_registration', label: 'Allow Registration' },
             { key: 'maintenance_mode', label: 'Maintenance Mode' },
           ].map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between bg-zinc-800 rounded-xl px-4 py-3">
-              <span className="text-sm font-bold text-white">{label}</span>
+            <div key={key} className="flex items-center justify-between bg-[var(--surface-2)] rounded-xl px-4 py-3">
+              <span className="text-sm font-bold text-[var(--text-1)]">{label}</span>
               <Switch
                 checked={values[key as keyof typeof values] === 'true'}
                 onChange={checked => setValues(v => ({ ...v, [key]: checked ? 'true' : 'false' }))}
@@ -61,7 +61,7 @@ export function AdminGeneralSettings({ initial }: { initial: Record<string, stri
         </div>
       </div>
       <button onClick={save} disabled={saving}
-        className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
+        className="flex items-center gap-2 bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors">
         {saved ? <><Check size={13} /> Saved!</> : saving ? 'Saving…' : 'Save Settings'}
       </button>
     </div>

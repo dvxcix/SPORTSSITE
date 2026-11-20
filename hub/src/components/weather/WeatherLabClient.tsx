@@ -142,9 +142,9 @@ export function WindCanvas({ deg, mph, color, orientationDeg }: { deg: number | 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-      <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,.68)' }}>CF</div>
-      <div style={{ position: 'absolute', top: '45%', left: 5, fontSize: 7, fontWeight: 800, color: 'rgba(255,255,255,.45)' }}>LF</div>
-      <div style={{ position: 'absolute', top: '45%', right: 5, fontSize: 7, fontWeight: 800, color: 'rgba(255,255,255,.45)' }}>RF</div>
+      <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>CF</div>
+      <div style={{ position: 'absolute', top: '45%', left: 5, fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>LF</div>
+      <div style={{ position: 'absolute', top: '45%', right: 5, fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>RF</div>
     </div>
   )
 }
@@ -194,7 +194,7 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
     >
       <div
         onClick={e => e.stopPropagation()}
@@ -209,7 +209,7 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
                   filter: isDarkTeamLogo(game.awayAbbr) ? LOGO_WHITE_FILTER : undefined,
                 }} />
               )}
-              <span style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 4px' }}>@</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 4px' }}>@</span>
               {getTeamLogoUrl(game.homeAbbr) && (
                 <SafeImage src={getTeamLogoUrl(game.homeAbbr)} alt={`${game.homeAbbr} logo`} style={{
                   width: 26, height: 26, objectFit: 'contain',
@@ -218,8 +218,8 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
               )}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>{game.park.name} HR History</div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{game.park.city}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{game.park.name} HR History</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{game.park.city}</div>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
@@ -233,14 +233,14 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
           ) : (
             <>
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700,
                 color: data.confirmed ? 'var(--accent)' : '#eab308',
                 background: data.confirmed ? 'var(--accent-dim)' : 'rgba(234,179,8,0.12)',
                 padding: '3px 8px', borderRadius: 99, marginBottom: 12,
               }}>
                 {data.confirmed ? '✓ Confirmed Lineups' : '~ Projected (Active Roster)'}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
                 Career = HRs at this park since {2015} (Statcast era) · Season = HRs at this park in {data.season}
               </div>
 
@@ -261,16 +261,16 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
                       <PlayerAvatar headshot={mlbHeadshot(b.mlbId)} teamLogo={getTeamLogoUrl(b.team)} teamAbbr={b.team} name={b.name} size={36} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{b.team} · {b.position}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{b.team} · {b.position}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 14, alignItems: 'baseline', flexShrink: 0 }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--accent)' }}>{b.career}</div>
-                          <div style={{ fontSize: 8, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CAREER</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{b.career}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CAREER</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 15, fontWeight: 900, color: b.season > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>{b.season}</div>
-                          <div style={{ fontSize: 8, color: 'var(--text-3)', letterSpacing: '0.04em' }}>{data.season}</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: b.season > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>{b.season}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.04em' }}>{data.season}</div>
                         </div>
                       </div>
                     </Link>
@@ -280,12 +280,12 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
 
               {withoutHrs.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 8 }}>NO HRs HERE SINCE 2015</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 8 }}>NO HRs HERE SINCE 2015</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {withoutHrs.map(b => (
                       <Link key={b.mlbId} href={`/players/${b.mlbId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 56, textDecoration: 'none' }}>
                         <PlayerAvatar headshot={mlbHeadshot(b.mlbId)} teamLogo={getTeamLogoUrl(b.team)} teamAbbr={b.team} name={b.name} size={36} style={{ opacity: 0.6 }} />
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{b.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{b.name}</span>
                       </Link>
                     ))}
                   </div>
@@ -355,7 +355,7 @@ function GameCard({ game }: { game: WeatherGame }) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 13, color: 'var(--text-1)' }}>{game.park.name}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace' }}>{gameTime}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'monospace' }}>{gameTime}</div>
         </div>
       </button>
 
@@ -378,13 +378,13 @@ function GameCard({ game }: { game: WeatherGame }) {
                 cursor: 'pointer',
               }}
             >
-              <span style={{ fontSize: 11, fontFamily: 'monospace', color: active ? 'var(--accent)' : 'var(--text-2)', fontWeight: active ? 700 : 500 }}>{hr.label}</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: active ? 'var(--accent)' : 'var(--text-2)', fontWeight: active ? 700 : 500 }}>{hr.label}</span>
               {hr.windDirDeg != null && (
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={heat} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ transform: `rotate(${d}deg)`, opacity: active ? 1 : 0.65 }}>
                   <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
                 </svg>
               )}
-              <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>{hr.windMph != null ? hr.windMph.toFixed(1) : '—'}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace' }}>{hr.windMph != null ? hr.windMph.toFixed(1) : '—'}</span>
             </button>
           )
         })}
@@ -393,20 +393,20 @@ function GameCard({ game }: { game: WeatherGame }) {
       {/* stats row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px 4px' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>WIND</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>WIND</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.windMph != null ? `${h.windMph.toFixed(1)} mph` : '—'}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} → ${dirs.to}` : '-'}</span>
-          <span style={{ fontSize: 9, color: hrWeather.color, fontWeight: 800 }}>{fieldWind ?? '-'}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} → ${dirs.to}` : '-'}</span>
+          <span style={{ fontSize: 11, color: hrWeather.color, fontWeight: 700 }}>{fieldWind ?? '-'}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>{h?.isCurrent ? 'LIVE' : 'FORECAST'}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>{h?.isCurrent ? 'LIVE' : 'FORECAST'}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.tempF != null ? `${Math.round(h.tempF)}°F` : '—'}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)', maxWidth: '12ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)', maxWidth: '12ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {h?.weatherCode != null ? WMO_LABELS[h.weatherCode] ?? '—' : '—'}
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>HUMIDITY</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>HUMIDITY</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.humidity != null ? `${Math.round(h.humidity)}%` : '—'}</span>
         </div>
       </div>
@@ -422,11 +422,11 @@ function GameCard({ game }: { game: WeatherGame }) {
           background: `${hrWeather.color.startsWith('rgb') ? hrWeather.color.replace('rgb(', 'rgba(').replace(')', ',0.14)') : hrWeather.color}`,
           border: `1px solid ${hrWeather.color}`,
         }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>HR WEATHER</span>
-          <span style={{ fontSize: 12, fontWeight: 900, color: hrWeather.color }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>HR WEATHER</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: hrWeather.color }}>
             {hrWeather.score > 0 ? '+' : ''}{hrWeather.score.toFixed(1)}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '20ch' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '20ch' }}>
             {hrWeather.label}
           </span>
         </div>
@@ -476,20 +476,20 @@ function GameCard({ game }: { game: WeatherGame }) {
           {!isSheltered && <WindCanvas deg={h?.windDirDeg ?? null} mph={h?.windMph ?? null} color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)} orientationDeg={game.park.orientationDeg} />}
           {isSheltered && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(20,20,20,0.9)', border: '1px solid #eab308', borderRadius: 8, padding: '6px 10px', boxShadow: '0 0 12px rgba(0,0,0,0.6)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--surface)', border: '1px solid #eab308', borderRadius: 8, padding: '6px 10px', boxShadow: '0 0 12px rgba(0,0,0,0.6)' }}>
                 <span style={{ color: '#eab308', fontSize: 12 }}>ⓘ</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>{game.roofStatus === 'fixed' ? 'Fixed Roof' : 'Roof Closed'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#eab308' }}>{game.roofStatus === 'fixed' ? 'Fixed Roof' : 'Roof Closed'}</span>
               </div>
             </div>
           )}
         </div>
         {game.roofStatus === 'unknown' && (
-          <span style={{ fontSize: 9, color: '#fbbf24', fontWeight: 800 }}>ROOF STATUS PENDING · OUTDOOR FORECAST SHOWN</span>
+          <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700 }}>ROOF STATUS PENDING · OUTDOOR FORECAST SHOWN</span>
         )}
-        <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
           {game.weatherMode === 'live' ? 'Live conditions' : 'Game-time forecast'} · updated {new Date(game.weatherUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{game.park.name}, {game.park.city}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{game.park.name}, {game.park.city}</span>
       </div>
     </div>
   )

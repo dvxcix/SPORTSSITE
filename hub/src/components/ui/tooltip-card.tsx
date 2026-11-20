@@ -10,7 +10,6 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
   ArrowUpDown,
@@ -255,20 +254,16 @@ function TooltipPortal({
   }, [positionSurface]);
 
   return createPortal(
-    <motion.div
+    <div
       ref={surfaceRef}
       id={tooltipId}
       role="tooltip"
       data-placement={position.placement}
       className="ss-tooltip-portal"
-      initial={{ opacity: 0, y: position.placement === "top" ? 5 : -5, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: position.placement === "top" ? 3 : -3, scale: 0.985 }}
-      transition={{ duration: 0.14, ease: [0.2, 0, 0, 1] }}
       style={{ left: position.left, top: position.top }}
     >
       <TooltipVisual content={content} />
-    </motion.div>,
+    </div>,
     document.body,
   );
 }
@@ -322,9 +317,9 @@ export const Tooltip = ({
       aria-describedby={visible ? tooltipId : undefined}
     >
       {children}
-      <AnimatePresence>
+      <>
         {visible && trigger && <TooltipPortal content={content} trigger={trigger} tooltipId={tooltipId} />}
-      </AnimatePresence>
+      </>
     </span>
   );
 };
@@ -341,51 +336,29 @@ export function NativeTooltipProvider() {
   const tooltipId = useId();
 
   useEffect(() => {
-    const migrate = (root: ParentNode) => {
-      const elements: HTMLElement[] = [];
-      if (root instanceof HTMLElement && root.hasAttribute("title")) elements.push(root);
-      root.querySelectorAll?.<HTMLElement>("[title]").forEach((element) => elements.push(element));
-      elements.forEach((element) => {
-        if (element.closest("[data-ss-tooltip-root]")) return;
-        const title = element.getAttribute("title")?.trim();
-        if (!title) return;
-        element.dataset.ssNativeTooltip = title;
-        element.removeAttribute("title");
-        const isControl = element.matches("button,a,input,select,textarea,[role='button']");
-        const hasReadableText = (element.textContent ?? "").trim().length > 1;
-        if (isControl && !hasReadableText && !element.hasAttribute("aria-label")) {
-          element.setAttribute("aria-label", title);
-        }
-      });
-    };
-
-    migrate(document.body);
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === "attributes") migrate(mutation.target as HTMLElement);
-        mutation.addedNodes.forEach((node) => { if (node instanceof HTMLElement) migrate(node); });
-      });
-    });
-    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["title"] });
-
+    // Streamed React boundaries may hydrate after this provider. Touch only
+    // the element the member actually interacts with, and restore it on exit.
+    let suppressed: {target:HTMLElement;title:string}|null=null;
+    const restore=()=>{if(suppressed){suppressed.target.setAttribute('title',suppressed.title);suppressed=null}};
     const findTarget = (eventTarget: EventTarget | null) => {
       if (!(eventTarget instanceof Element)) return null;
-      const target = eventTarget.closest<HTMLElement>("[data-ss-native-tooltip]");
+      const target = suppressed?.target.contains(eventTarget)?suppressed.target:eventTarget.closest<HTMLElement>("[title],[data-ss-native-tooltip]");
       return target?.closest("[data-ss-tooltip-root]") ? null : target;
     };
     const show = (event: Event) => {
       const target = findTarget(event.target);
-      const content = target?.dataset.ssNativeTooltip;
-      if (target && content) setActive({ target, content });
+      const content = target===suppressed?.target?suppressed.title:target?.getAttribute('title')?.trim()||target?.dataset.ssNativeTooltip;
+      if (target && content) {if(target!==suppressed?.target){restore();suppressed={target,title:content};target.removeAttribute('title')};setActive({ target, content });}
     };
     const leave = (event: MouseEvent) => {
       setActive((current) => {
         if (!current) return null;
         if (event.relatedTarget instanceof Node && current.target.contains(event.relatedTarget)) return current;
+        restore();
         return null;
       });
     };
-    const hide = () => setActive(null);
+    const hide = () => {restore();setActive(null)};
 
     document.addEventListener("mouseover", show, true);
     document.addEventListener("mouseout", leave, true);
@@ -395,7 +368,7 @@ export function NativeTooltipProvider() {
     const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
     document.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      observer.disconnect();
+      restore();
       document.removeEventListener("mouseover", show, true);
       document.removeEventListener("mouseout", leave, true);
       document.removeEventListener("focusin", show, true);
@@ -406,8 +379,8 @@ export function NativeTooltipProvider() {
   }, []);
 
   return (
-    <AnimatePresence>
+    <>
       {active && <TooltipPortal content={active.content} trigger={active.target} tooltipId={tooltipId} />}
-    </AnimatePresence>
+    </>
   );
 }

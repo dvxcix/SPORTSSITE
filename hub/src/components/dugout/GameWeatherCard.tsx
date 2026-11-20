@@ -169,7 +169,7 @@ export function GameWeatherCard({
         )}
         {isSheltered && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#eab308' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#eab308' }}>
               {game.roofStatus === 'fixed' ? 'Fixed Roof' : 'Roof Closed'}
             </span>
           </div>
@@ -181,30 +181,30 @@ export function GameWeatherCard({
 
       <div className="dugout-weather-metrics" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 4 }}>
         <div className="is-wind">
-          <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>WIND</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>WIND</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.windMph != null ? `${h.windMph.toFixed(1)} mph` : '—'}</div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '-'}</div>
-          <div style={{ fontSize: 8, color: hrWeather.color, fontWeight: 800 }}>{fieldWind ?? '-'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '-'}</div>
+          <div style={{ fontSize: 11, color: hrWeather.color, fontWeight: 700 }}>{fieldWind ?? '-'}</div>
         </div>
         <div className="is-temp" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>TEMP</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>TEMP</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.tempF != null ? `${Math.round(h.tempF)}°F` : '—'}</div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', maxWidth: '11ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', maxWidth: '11ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {h?.weatherCode != null ? WMO_LABELS[h.weatherCode] ?? '—' : '—'}
           </div>
         </div>
         <div className="is-humidity" style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>HUMIDITY</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>HUMIDITY</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.humidity != null ? `${Math.round(h.humidity)}%` : '—'}</div>
         </div>
       </div>
 
       {game.roofStatus === 'unknown' && (
-        <div style={{ padding: '0 10px 2px', color: '#fbbf24', fontSize: 8, fontWeight: 850, textAlign: 'center' }}>
+        <div style={{ padding: '0 10px 2px', color: 'var(--gold)', fontSize: 11, fontWeight: 700, textAlign: 'center' }}>
           ROOF STATUS PENDING · OUTDOOR FORECAST SHOWN
         </div>
       )}
-      <div style={{ padding: '2px 10px 0', color: 'var(--text-3)', fontSize: 8, textAlign: 'center' }}>
+      <div style={{ padding: '2px 10px 0', color: 'var(--text-3)', fontSize: 11, textAlign: 'center' }}>
         {game.weatherMode === 'live' ? 'Live conditions' : 'Game-time forecast'} · updated {new Date(game.weatherUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
       </div>
 
@@ -213,8 +213,8 @@ export function GameWeatherCard({
           marginTop: 6, padding: '5px 8px', borderRadius: 8, textAlign: 'center', cursor: 'help',
           background: hrWeatherBg, border: `1px solid ${hrWeather.color}`,
         }}>
-          <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>HR WEATHER </span>
-          <span style={{ fontSize: 12, fontWeight: 900, color: hrWeather.color }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>HR WEATHER </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: hrWeather.color }}>
             {hrWeather.score > 0 ? '+' : ''}{hrWeather.score.toFixed(1)}
           </span>
         </div>

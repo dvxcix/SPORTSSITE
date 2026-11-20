@@ -20,13 +20,13 @@ export default async function AdminDiscordPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-black text-white mb-1">Discord Bot</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Discord Bot</h1>
+          <p className="text-sm text-[var(--text-3)]">
             Channel and role mappings for the SlipSurge Discord bot — every ID here is editable without a redeploy.
             The bot's own credentials (token, application ID, public key) live in Vercel env vars, never in this table.
           </p>
         </div>
-        <a href="/admin/discord/compose" className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors border border-zinc-700 whitespace-nowrap">
+        <a href="/admin/discord/compose" className="shrink-0 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-1)] font-bold px-4 py-2.5 rounded-xl text-sm transition-colors border border-[var(--border-2)] whitespace-nowrap">
           Post to Discord →
         </a>
       </div>

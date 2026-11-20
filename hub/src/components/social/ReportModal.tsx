@@ -48,33 +48,33 @@ export function ReportModal({ targetType, targetId, onClose }: {
   }
 
   return (
-    <div role="presentation" className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm">
+    <div role="presentation" className="fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-50 flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm">
         {done ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
-            <p className="font-bold text-white">Report submitted</p>
-            <p className="text-xs text-zinc-400 mt-1">Our team will review it</p>
+            <p className="font-bold text-[var(--text-1)]">Report submitted</p>
+            <p className="text-xs text-[var(--text-2)] mt-1">Our team will review it</p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 id="report-dialog-title" className="font-black text-white flex items-center gap-2"><Flag size={16} className="text-red-400" /> Report</h2>
-              <button type="button" onClick={onClose} aria-label="Close report dialog" className="text-zinc-500 hover:text-white transition-colors"><X size={18} /></button>
+              <h2 id="report-dialog-title" className="font-semibold text-[var(--text-1)] flex items-center gap-2"><Flag size={16} className="text-[var(--red)]" /> Report</h2>
+              <button type="button" onClick={onClose} aria-label="Close report dialog" className="text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-2 mb-4">
               {REASONS.map(r => (
-                <label key={r} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${reason === r ? 'border-red-500/40 bg-red-500/10' : 'border-zinc-800 hover:border-zinc-700'}`}>
+                <label key={r} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${reason === r ? 'border-[color-mix(in_srgb,var(--red)_40%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'border-[var(--border)] hover:border-[var(--border-2)]'}`}>
                   <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-red-500" />
-                  <span className="text-sm text-zinc-300">{r}</span>
+                  <span className="text-sm text-[var(--text-2)]">{r}</span>
                 </label>
               ))}
             </div>
             <textarea aria-label="Additional report details" value={details} onChange={e => setDetails(e.target.value)} placeholder="Additional details (optional)" rows={2}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none mb-4 resize-none" />
-            {error && <p role="alert" className="text-xs text-red-400 mb-3">{error}</p>}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none mb-4 resize-none" />
+            {error && <p role="alert" className="text-xs text-[var(--red)] mb-3">{error}</p>}
             <button type="button" onClick={submit} disabled={submitting || !reason}
-              className="w-full bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white font-black py-2.5 rounded-xl transition-colors">
+              className="w-full bg-[var(--red-fill)] hover:bg-[var(--red-fill)] disabled:opacity-40 text-[var(--on-status)] font-semibold py-2.5 rounded-xl transition-colors">
               {submitting ? 'Submitting…' : 'Submit Report'}
             </button>
           </>

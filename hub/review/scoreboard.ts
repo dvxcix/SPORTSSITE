@@ -1,0 +1,10 @@
+import {games,observedAt} from './nba'
+import {nflGames} from './nfl'
+import type {ESPNGame,ESPNSummary,SportKey} from '../packages/core/src/espn-api'
+export * from '../packages/core/src/espn-api'
+export async function getScoreboard(sport:SportKey):Promise<ESPNGame[]>{
+ const matchups=sport==='nba'?games.map(g=>({id:String(g.id),date:g.datetime!,home:{abbr:g.home_team.abbreviation,name:g.home_team.full_name},away:{abbr:g.visitor_team.abbreviation,name:g.visitor_team.full_name}})):sport==='nfl'?nflGames.map(g=>({id:g.id,date:g.gameday+'T20:20:00Z',home:{abbr:g.home.abbr,name:g.home.name},away:{abbr:g.away.abbr,name:g.away.name}})):[]
+ return matchups.map(g=>({id:g.id,uid:g.id,date:g.date,name:g.away.name+' at '+g.home.name,shortName:g.away.abbr+' @ '+g.home.abbr,status:{clock:0,displayClock:'',period:0,type:{id:'1',name:'STATUS_SCHEDULED',state:'pre',completed:false,description:'Scheduled',detail:'7:30 PM ET',shortDetail:'7:30 PM ET'}},competitions:[{id:g.id,competitors:([['away',g.away],['home',g.home]] as const).map(([side,t],i)=>({id:String(i+1),uid:String(i+1),type:'team',order:i,homeAway:side,team:{id:String(i+1),uid:String(i+1),location:t.name,name:t.name,abbreviation:t.abbr,displayName:t.name,shortDisplayName:t.abbr,color:'004c54',alternateColor:'d4b265',logo:'/review-assets/team-'+t.abbr+'.png'},score:'0',records:[{name:'overall',summary:i?'8–3':'7–4'}]})),odds:[{details:g.home.abbr+' -3.5',overUnder:48.5,spread:-3.5,overOdds:-110,underOdds:-110}],broadcasts:[{market:{type:'National'},names:['Illustrative slate']}],venue:{fullName:'Game day',address:{city:'Local design review',state:''}}}]}))
+}
+export async function getAllScoreboards(){return {nba:await getScoreboard('nba'),nfl:await getScoreboard('nfl'),mlb:[],nhl:[],soccer:[]}}
+export async function getGameSummary(sport:SportKey,id:string):Promise<ESPNSummary|null>{const game=(await getScoreboard(sport)).find(g=>g.id===id);if(!game)return null;return {header:{id,competitions:game.competitions.map(c=>({...c,status:game.status}))},boxscore:{teams:game.competitions[0].competitors.map(c=>({team:c.team,statistics:[]})),players:[]},plays:[],news:[]} as unknown as ESPNSummary}

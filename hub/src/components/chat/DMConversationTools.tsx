@@ -44,7 +44,7 @@ export function DMConversationTools({ mode, messages, pinnedMessageIds, onModeCh
         {visibleMessages.length === 0 ? (
           <div className={styles.empty}><Icon size={22} /><p>{mode === 'search' && query ? 'No matching messages' : mode === 'pins' ? 'No pinned messages' : mode === 'media' ? 'No shared media' : 'No messages yet'}</p></div>
         ) : visibleMessages.map(message => mode === 'media' ? (
-          <button key={message.id} type="button" className={styles.mediaItem} onClick={() => onJump(message.id)} aria-label={`Open media from ${new Date(message.created_at).toLocaleDateString()}`}>
+          <button key={message.id} type="button" className={styles.mediaItem} onClick={() => onJump(message.id)} aria-label={`Open media from ${new Date(message.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})}`}>
             <SafeImage src={message.media_urls?.[0]} alt="" />
           </button>
         ) : (

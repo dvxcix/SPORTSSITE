@@ -141,14 +141,14 @@ function FilterGroup<T extends string>({ label, value, options, onChange }: {
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
       <div style={{ display: 'flex', gap: 4 }}>
         {options.map(o => (
           <button
             key={o.key}
             onClick={() => onChange(o.key)}
             style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 6, cursor: 'pointer',
               border: `1px solid ${value === o.key ? 'var(--accent)' : 'var(--border)'}`,
               background: value === o.key ? 'var(--accent-dim)' : 'var(--surface-2)',
               color: value === o.key ? 'var(--accent)' : 'var(--text-3)',
@@ -467,14 +467,14 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
         {filtersActive && (
           <button
             onClick={resetFilters}
-            style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer' }}
+            style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer' }}
           >
             Clear filters
           </button>
         )}
       </div>
       <div className="batter-cost-table-scroll" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <table className="batter-cost-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <table className="batter-cost-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>
               <SortableTH label="Batter" colKey="name" sort={sort} onSort={onSort} align="left" />
@@ -515,7 +515,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
                     // inset box-shadow instead of a real border — doesn't
                     // add to the cell's box model, so the fixed 130/156px
                     // width classes above stay exact.
-                    ...(b.is_pwr ? { boxShadow: 'inset 0 0 0 2px #f59e0b' } : {}),
+                    ...(b.is_pwr ? { boxShadow: 'inset 0 0 0 2px var(--gold)' } : {}),
                   }}
                 >
                   {/* flexWrap on both lines here (not overflow:hidden) —
@@ -531,7 +531,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
                     {b.is_pwr && (
                       <Tooltip content={PWR_TITLE}>
                         <span style={{
-                          fontSize: 9, fontWeight: 900, color: '#f59e0b', background: 'rgba(245,158,11,0.15)',
+                          fontSize: 11, fontWeight: 700, color: 'var(--gold)', background: 'rgba(245,158,11,0.15)',
                           border: '1px solid rgba(245,158,11,0.4)', borderRadius: 4, padding: '1px 4px',
                           cursor: 'help', flexShrink: 0,
                         }}>⚡PWR</span>
@@ -561,7 +561,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
                       variable-height still, worsening the sticky-column
                       row-desync issue on mobile. Pitcher matchup detail
                       still lives on Dugout/Pitcher Report. */}
-                  <div className="batter-cost-player-position" style={{ marginTop: 3, marginLeft: 27, fontSize: 9, color: 'var(--text-3)' }}>
+                  <div className="batter-cost-player-position" style={{ marginTop: 3, marginLeft: 27, fontSize: 11, color: 'var(--text-3)' }}>
                     {b.position}
                   </div>
                 </td>

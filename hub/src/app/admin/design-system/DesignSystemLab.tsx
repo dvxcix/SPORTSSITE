@@ -24,7 +24,7 @@ function LabSection({ title, description, children }: { title: string; descripti
   return (
     <section className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]">
       <header className="border-b border-[var(--border)] px-5 py-4">
-        <h2 className="text-sm font-black text-[var(--text-1)]">{title}</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-1)]">{title}</h2>
         <p className="mt-1 text-xs text-[var(--text-3)]">{description}</p>
       </header>
       <div className="p-5">{children}</div>
@@ -42,8 +42,8 @@ export function DesignSystemLab() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {SWATCHES.map(([label, color]) => (
             <div key={label} className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
-              <span className="h-9 w-9 shrink-0 rounded-lg border border-white/10" style={{ background: color }} />
-              <div><p className="text-xs font-bold text-[var(--text-1)]">{label}</p><p className="font-mono text-[10px] text-[var(--text-3)]">{color}</p></div>
+              <span className="h-9 w-9 shrink-0 rounded-lg border border-[rgba(var(--line-rgb),0.1)]" style={{ background: color }} />
+              <div><p className="text-xs font-bold text-[var(--text-1)]">{label}</p><p className="font-mono text-[12px] text-[var(--text-3)]">{color}</p></div>
             </div>
           ))}
         </div>
@@ -97,7 +97,7 @@ export function DesignSystemLab() {
       {modalOpen ? (
         <Modal onClose={() => setModalOpen(false)} maxWidth={440} label="Design system modal example" showClose>
           <div className="p-6"><Badge variant="save">Modal standard</Badge>
-            <h2 className="mt-3 text-lg font-black text-[var(--text-1)]">Clear, focused, and keyboard accessible</h2>
+            <h2 className="mt-3 text-lg font-semibold text-[var(--text-1)]">Clear, focused, and keyboard accessible</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">The shared shell handles focus, Escape, backdrop dismissal, layering, and screen-reader naming.</p>
             <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button><Button onClick={() => setModalOpen(false)}>Confirm</Button></div>
           </div>

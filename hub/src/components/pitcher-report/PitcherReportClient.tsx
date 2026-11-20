@@ -439,10 +439,10 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                 >
                   <PlayerAvatar headshot={mlbHeadshot(selected.pitcher.id)} teamLogo={getTeamLogoUrl(selected.teamAbbr)} teamAbbr={selected.teamAbbr} name={selected.pitcher.name} size={44} />
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>
                       {selected.pitcher.name} <span style={{ color: 'var(--accent)' }}>{selected.pitcher.hand}HP</span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                       {selected.teamName} · facing {selected.oppName} · {selected.oppLineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
                     </div>
                   </div>
@@ -453,15 +453,15 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
                   {[3, 5, 10].map(n => (
-                    <button key={n} onClick={() => setLiveN(n)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-2)' }}>Last {n} Starts</button>
+                    <button key={n} onClick={() => setLiveN(n)} style={{ padding: '5px 10px', fontSize: 12, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-2)' }}>Last {n} Starts</button>
                   ))}
                 </div>
-                {liveLoading && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Computing from MLB play-by-play…</span>}
+                {liveLoading && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Computing from MLB play-by-play…</span>}
               </div>
 
-              <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
                 {liveError ? (
-                  <span style={{ color: '#f87171' }}>{liveError}</span>
+                  <span style={{ color: 'var(--red)' }}>{liveError}</span>
                 ) : allRows.length === 0 ? (
                   liveLoading ? 'Computing…' : 'No recent pitch-type data for this pitcher yet.'
                 ) : (
@@ -494,17 +494,17 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
               {allRows.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
                       {pinned.length > 0 ? '📌 Pinned pitches' : showAll ? 'Every pitch vs every batter' : 'Getting hit on these pitches lately'}
                     </div>
                     <button
                       onClick={() => setShowAll(v => !v)}
-                      style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${showAll ? 'var(--accent)' : 'var(--border)'}`, background: showAll ? 'var(--accent)' : 'var(--surface)', color: showAll ? 'var(--accent-fg)' : 'var(--text-2)' }}
+                      style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${showAll ? 'var(--accent)' : 'var(--border)'}`, background: showAll ? 'var(--accent)' : 'var(--surface)', color: showAll ? 'var(--accent-fg)' : 'var(--text-2)' }}
                     >
                       {showAll ? '✓ Showing all pitches' : 'Show all pitches'}
                     </button>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
                     {pinned.length > 0
                       ? `Showing only what you've pinned (${pinned.length}) — unpin everything below to go back to ${showAll ? 'showing every pitch' : 'the auto-picked top 2 per hand'}.`
                       : showAll
@@ -512,7 +512,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                       : 'Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand. Click any row in the tables above to pin it instead — pinning takes over this whole section until you unpin.'}
                   </div>
                   {shownPitches.length === 0 && (
-                    <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }}>
+                    <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }}>
                       No pitch cleared the 10-pitch auto-pick threshold and nothing's pinned yet — click "Show all pitches" above, or click any row in the tables above to pin it.
                     </div>
                   )}
@@ -528,15 +528,15 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                             <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: pitchColor(pitchType) }} />
-                            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{pitchLabel(pitchType)} vs {hand}HB</span>
-                            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{pitchLabel(pitchType)} vs {hand}HB</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                               ({pct(row.hard_hit_pct)} hard-hit · {pct(row.barrel_pct)} barrel · {row.pitches} pitches)
                             </span>
                             {isManual && (
                               <Tooltip content="Unpin">
                                 <button
                                   onClick={() => onTogglePin(hand, pitchType)}
-                                  style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 99, padding: '2px 7px', cursor: 'pointer' }}
+                                  style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 99, padding: '2px 7px', cursor: 'pointer' }}
                                 >
                                   📌 pinned ✕
                                 </button>
@@ -544,7 +544,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                             )}
                           </div>
                           {batters.length === 0 ? (
-                            <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                            <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
                               No {hand}HB batters in {selected.oppLineupConfirmed ? 'the confirmed lineup' : 'the projected lineup'}.
                             </div>
                           ) : (

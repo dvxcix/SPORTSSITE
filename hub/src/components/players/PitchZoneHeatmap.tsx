@@ -11,7 +11,7 @@ import { type PitcherPitchRow } from '@slipsurge/core/batterStatsEngine'
 export type { PitcherPitchRow }
 
 const dateInputStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 6,
+  fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6,
   border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)',
 }
 
@@ -87,22 +87,22 @@ export function PitchZoneHeatmap({ rows, myName, todayOpponent }: { rows: Pitche
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Color by:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Color by:</span>
         {ZONE_METRICS.map(m => <ToggleBtn key={m.key} active={metric === m.key} onClick={() => setMetric(m.key)}>{m.label}</ToggleBtn>)}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Date range:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Date range:</span>
         <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={dateInputStyle} />
-        <span style={{ color: 'var(--text-3)', fontSize: 11 }}>–</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>–</span>
         <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={dateInputStyle} />
         {(dateFrom || dateTo) && <ToggleBtn active={false} onClick={() => { setDateFrom(''); setDateTo('') }}>Clear</ToggleBtn>}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Batter hand:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Batter hand:</span>
         <DimChip label="All" active={handSel === 'all'} onClick={() => setHandSel('all')} />
         <DimChip label="vs LHB" active={handSel === 'L'} onClick={() => setHandSel('L')} />
         <DimChip label="vs RHB" active={handSel === 'R'} onClick={() => setHandSel('R')} />
-        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. batter:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 6 }}>Vs. batter:</span>
         {todayOpponent && todayOpponent.lineupIds.length > 0 && (
           <DimChip
             label={`Today vs ${todayOpponent.teamAbbr}${todayOpponent.confirmed ? '' : ' (Projected)'}`}
@@ -113,7 +113,7 @@ export function PitchZoneHeatmap({ rows, myName, todayOpponent }: { rows: Pitche
         <PlayerPicker options={batters} value={useTodayLineup ? 'all' : batterSel} onChange={selectBatter} placeholder="All batters" />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Pitch:</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Pitch:</span>
         <DimChip label="All" active={pitchTypeSel === 'all'} onClick={() => setPitchTypeSel('all')} />
         {pitchTypes.map(pt => (
           <DimChip key={pt} label={pitchLabel(pt)} active={pitchTypeSel === pt} onClick={() => setPitchTypeSel(pt)} />

@@ -111,7 +111,7 @@ export const COLS: { key: string; label: string; dir?: 'hi' | 'lo' }[] = [
 export function TeamLogoImg({ abbr, size = 20 }: { abbr: string; size?: number }) {
   const [err, setErr] = useState(false)
   const url = getTeamLogoUrl(abbr)
-  if (!url || err) return <span style={{ fontSize: size * 0.5, fontWeight: 800, color: 'var(--text-3)' }}>{abbr}</span>
+  if (!url || err) return <span style={{ fontSize: size * 0.5, fontWeight: 700, color: 'var(--text-3)' }}>{abbr}</span>
   return <SafeImage src={url} alt={`${abbr} logo`} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />
 }
 
@@ -207,7 +207,7 @@ export function StatTile({ label, value, title, heatStyle }: { label: string; va
   return (
     <Tooltip content={title ?? ''}>
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 46, padding: '4px 6px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'help', ...heatStyle }}>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{value}</span>
       </div>
     </Tooltip>
@@ -230,10 +230,10 @@ export function PlayerStatcastDetail({ player, stats, pool }: {
     <tr>
       <td colSpan={13} style={{ padding: '10px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
         {noSplits ? (
-          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No Statcast/bat-tracking data available for {player.name}.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>No Statcast/bat-tracking data available for {player.name}.</div>
         ) : (
           <>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BAT TRACKING <span style={{ fontWeight: 400, textTransform: 'none' }}>· heat-mapped vs the rest of this lineup</span></div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BAT TRACKING <span style={{ fontWeight: 400, textTransform: 'none' }}>· heat-mapped vs the rest of this lineup</span></div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
               <StatTile label="BSPD" value={f1(s.s_spd)} title="Season bat speed" heatStyle={heat(s.s_spd, g('s_spd'))} />
               <StatTile label="R·SPD" value={f1(s.r_spd)} title="Recent bat speed" heatStyle={heat(s.r_spd, g('r_spd'))} />
@@ -254,7 +254,7 @@ export function PlayerStatcastDetail({ player, stats, pool }: {
               <StatTile label="IDLAA" value={pp(s.s_iaa)} title="Ideal attack angle rate" heatStyle={heat(s.s_iaa, g('s_iaa'))} />
               <StatTile label="TILT" value={f1(s.s_tlt)} title="Swing tilt" />
             </div>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: hasOdds ? 10 : 0 }}>
               <StatTile label="BRL%" value={ppRaw(s.s_brl)} title="Barrel batted rate" heatStyle={heat(s.s_brl, g('s_brl'))} />
               <StatTile label="HH%" value={ppRaw(s.s_hh)} title="Hard hit rate" heatStyle={heat(s.s_hh, g('s_hh'))} />
@@ -269,7 +269,7 @@ export function PlayerStatcastDetail({ player, stats, pool }: {
         )}
         {hasOdds && (
           <>
-            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>ANYTIME HR ODDS</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>ANYTIME HR ODDS</div>
             <div style={{ display: 'flex', gap: 10 }}>
               {(['fanduel', 'caesars', 'betmgm'] as const).map(book => (
                 sa[book] != null && (
@@ -300,7 +300,7 @@ export function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
   if (!rows.length) {
     return (
       <div style={{ flex: 1, minWidth: 'min(280px, 100%)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
         <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>No pitches tracked against this side in the window.</div>
       </div>
     )
@@ -315,10 +315,10 @@ export function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
   })
   return (
     <div style={{ flex: 1, minWidth: 'min(320px, 100%)' }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
-      <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 4 }}>Click a pitch to pin its opposing-batter breakdown below</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>Click a pitch to pin its opposing-batter breakdown below</div>
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <SortableTH label="TYPE" colKey="pitch_type" sort={activeSort} onSort={onSort} align="left" />
@@ -406,7 +406,7 @@ export function BatterVsPitchTable({ batters, getRow, pitcherId, pitcherHand, sp
 
   return (
     <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
             <SortableTH label="BATTER" colKey="name" sort={activeSort} onSort={onSort} align="left" />
@@ -427,7 +427,7 @@ export function BatterVsPitchTable({ batters, getRow, pitcherId, pitcherHand, sp
                       <Tooltip content={isExpanded ? 'Hide Statcast/HR odds' : 'Show Statcast/bat-tracking + HR odds'}>
                         <button
                           onClick={() => setExpandedId(isExpanded ? null : batter.mlb_id)}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 20, flexShrink: 0, border: 'none', background: 'none', color: isExpanded ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 9, padding: 0 }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 20, flexShrink: 0, border: 'none', background: 'none', color: isExpanded ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 11, padding: 0 }}
                         >
                           {isExpanded ? '▾' : '▸'}
                         </button>
@@ -448,7 +448,7 @@ export function BatterVsPitchTable({ batters, getRow, pitcherId, pitcherHand, sp
                         <Tooltip content={batter.bats === 'S' ? 'Switch hitter' : batter.bats === 'L' ? 'Bats left' : 'Bats right'}>
                           <span
                             style={{
-                              flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                              flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 11, fontWeight: 700,
                               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
                               color: batter.bats === 'L' ? '#60a5fa' : batter.bats === 'S' ? '#c084fc' : '#fb923c',
                               border: `1px solid ${batter.bats === 'L' ? '#60a5fa' : batter.bats === 'S' ? '#c084fc' : '#fb923c'}`,
@@ -467,14 +467,14 @@ export function BatterVsPitchTable({ batters, getRow, pitcherId, pitcherHand, sp
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, marginLeft: 26 }}>
                             {(['fanduel', 'caesars', 'betmgm'] as const).map(book => sa?.[book] != null && (
                               <Tooltip key={book} content={`Anytime HR — ${book}`}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: 'var(--text-2)' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>
                                   <BookLogo vendor={book} size={10} />{oStr(sa[book])}
                                 </span>
                               </Tooltip>
                             ))}
                             {picks != null && (
                               <Tooltip content={`${picks.toLocaleString()} community Anytime HR picks`}>
-                                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>
                                   📊{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
                                 </span>
                               </Tooltip>

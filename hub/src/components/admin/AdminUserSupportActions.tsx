@@ -34,12 +34,12 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
 
   return (
     <div>
-      <p className="text-zinc-500 font-bold uppercase tracking-wider text-[10px] mb-2">Support Actions</p>
+      <p className="text-[var(--text-3)] font-bold uppercase tracking-wider text-[12px] mb-2">Support Actions</p>
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => call('sendPasswordReset')}
           disabled={loading !== null}
-          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+          className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors disabled:opacity-50"
         >
           {loading === 'sendPasswordReset' ? 'Sending…' : 'Send Password Reset'}
         </button>
@@ -47,7 +47,7 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
           <button
             onClick={() => call('resendVerification')}
             disabled={loading !== null}
-            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+            className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors disabled:opacity-50"
           >
             {loading === 'resendVerification' ? 'Sending…' : 'Resend Verification'}
           </button>
@@ -56,7 +56,7 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
           onClick={() => call('reconcileMembership')}
           disabled={loading !== null}
           title="Re-checks this user's real Whop membership state and corrects their tier if it's out of sync — e.g. a purchase that never reflected, or a tier wrongly reset by an unrelated failed/abandoned signup on the same Whop account."
-          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+          className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors disabled:opacity-50"
         >
           {loading === 'reconcileMembership' ? 'Reconciling…' : 'Reconcile Membership'}
         </button>
@@ -66,19 +66,19 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
             value={newEmail}
             onChange={e => setNewEmail(e.target.value)}
             placeholder="new@email.com"
-            className="text-[11px] px-2 py-1 rounded-lg bg-zinc-900 text-zinc-200 border border-zinc-700 outline-none w-40"
+            className="text-[12px] px-2 py-1 rounded-lg bg-[var(--surface)] text-[var(--text-1)] border border-[var(--border-2)] outline-none w-40"
           />
           <button
             onClick={() => newEmail && call('changeEmail', newEmail)}
             disabled={loading !== null || !newEmail}
-            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+            className="text-[12px] font-bold px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors disabled:opacity-50"
           >
             {loading === 'changeEmail' ? 'Sending…' : 'Send Change-Email Link'}
           </button>
         </div>
       </div>
       {status && (
-        <p className={`mt-1.5 text-[11px] ${status.ok ? 'text-green-400' : 'text-red-400'}`}>{status.message}</p>
+        <p className={`mt-1.5 text-[12px] ${status.ok ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>{status.message}</p>
       )}
     </div>
   )

@@ -29,16 +29,16 @@ export function CancelMembershipButton() {
   if (confirming) {
     return (
       <div>
-        <p className="text-sm text-white mb-3">
+        <p className="text-sm text-[var(--text-1)] mb-3">
           Cancel your subscription? Trial access may end immediately.
         </p>
-        {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+        {error && <p className="text-xs text-[var(--red)] mb-3">{error}</p>}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleConfirm}
             disabled={submitting}
-            className="bg-red-500 hover:bg-red-400 disabled:opacity-60 text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+            className="bg-[var(--red-fill)] hover:bg-[var(--red-fill)] disabled:opacity-60 text-[var(--on-status)] font-bold px-4 py-2 rounded-xl text-sm transition-colors"
           >
             {submitting ? 'Cancelling…' : 'Yes, cancel'}
           </button>
@@ -46,7 +46,7 @@ export function CancelMembershipButton() {
             type="button"
             onClick={() => { setConfirming(false); setError(null) }}
             disabled={submitting}
-            className="border border-zinc-700 text-white hover:bg-zinc-800 disabled:opacity-60 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+            className="border border-[var(--border-2)] text-[var(--text-1)] hover:bg-[var(--surface-2)] disabled:opacity-60 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
           >
             Never mind
           </button>
@@ -59,7 +59,7 @@ export function CancelMembershipButton() {
     <button
       type="button"
       onClick={() => setConfirming(true)}
-      className="border border-zinc-700 text-white hover:bg-zinc-800 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+      className="border border-[var(--border-2)] text-[var(--text-1)] hover:bg-[var(--surface-2)] font-bold px-4 py-2 rounded-xl text-sm transition-colors"
     >
       Cancel subscription
     </button>
