@@ -19,7 +19,7 @@ const captured = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeri
 const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 })
 const percent = (value: number | null | undefined) => value == null ? '—' : `${Math.round(value * 100)}%`
 
-export function PaintGameSummary({ board, teamControl, refreshPrices = false }: { board: PaintBoard; teamControl: ReactNode; refreshPrices?: boolean }) {
+export function PaintGameSummary({ board, teamControl, refreshPrices = false }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean }) {
   const mode = useNbaOddsMode(), id = useId(), rail = useRef<HTMLDivElement>(null)
   const [book, setBook] = useState('draftkings'), [metric, setMetric] = useState<'betShare' | 'moneyShare'>('betShare')
   const [edges, setEdges] = useState({ start: true, end: true }), [retry, setRetry] = useState(0)

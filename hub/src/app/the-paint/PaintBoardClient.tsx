@@ -23,6 +23,7 @@ import { PaintSlateHeader } from './PaintSlateHeader'
 import { PaintBookSelect, PaintTeamSelect } from './PaintEntitySelect'
 import { PaintPickActions } from './PaintPickActions'
 import { PaintMatchup } from './PaintMatchup'
+import { PaintGameSummary } from './PaintGameSummary'
 import { NbaMatrixButton } from '@/components/nba/NbaMatrixButton'
 import { NbaMatrixProvider, NbaMatrixResults } from '@/components/nba/NbaMatrixContext'
 
@@ -235,6 +236,7 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
 
     <PaintSlateHeader date={date} days={days} games={games} gameId={board?.game.id??selectedGameId} onChange={go}/>
     {board&&!switchingMode&&!waitingForFrozen&&<PaintMatchup key={board.game.id} board={board} refreshPrices={view==='odds-board'}/>}
+    {!switchingMode&&(!board||waitingForFrozen)&&games.filter(game=>game.id===(selectedGameId??board?.game.id??games[0]?.id)).map(game=><PaintGameSummary key={game.id} board={{game}} refreshPrices/>)}
     {!switchingMode&&view==='odds-board'&&<>{toolNavigation}<PaintFullOddsBoard finalOutcomes={finalOutcomes} date={date} games={games} selectedMarket={market} selectedBook={vendor} onMarketChange={setMarket} onBookChange={setVendor} phaseCheck={oddsBoardPhase?.date===date&&oddsBoardPhase.mode===oddsMode?oddsBoardPhase:null} onResume={resumeOddsBoard}/></>}
     {switchingMode ? <section className={styles.empty} role="status">Loading {requestedMode === 'live' ? 'live' : 'pregame'} markets…</section> : view==='odds-board' ? null : waitingForFrozen ? <section className={styles.empty} role="status">Pregame research is unavailable while the saved game snapshot loads.</section> : !board ? games.length ? <section className={styles.empty} role="status"><CourtMark/><h2>Research unavailable for this matchup</h2><p>Choose another matchup or date.</p></section> : <section className={styles.empty}><CourtMark/><h2>{scheduleComplete?'No NBA games on this slate':'NBA schedule unavailable'}</h2><p>Choose another date to explore the board.</p></section> : <>
       <div className={styles.context} data-compact={!coreView&&!trendView} data-core={coreView}><div><h2>{workspaceTitle}</h2></div><div className={styles.sampleBadge} aria-label={`Statistics season ${nbaSeason(board.sampleSeason)}`}><span>{nbaSeason(board.sampleSeason)}</span>{board.researchSnapshot?.frozen && <small>Frozen pregame baseline · Observed {new Date(board.researchSnapshot.observedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC{board.researchSnapshot.source === 'recovered-cache' ? ' · Recovered observation' : ''}</small>}</div></div>

@@ -1,4 +1,4 @@
-.summary{min-width:0;margin:18px 0 20px;color:var(--text-1)}
+.summary{container-type:inline-size;min-width:0;margin:18px 0 20px;color:var(--text-1)}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .matchup{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .matchup strong{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650}
@@ -52,3 +52,5 @@
 @media(max-width:760px){.market{flex:0 0 calc((100% - 12px)/2);min-width:260px}.arrows{display:flex}.matchup{gap:5px}.matchup strong{gap:5px}.publicMeta{gap:8px}.publicMeta time{flex-basis:100%}.footer{align-items:flex-start}.shareSwitch{margin-top:0}}
 @media(max-width:520px){.summary{margin:14px 0 18px}.toolbar{flex-wrap:wrap;gap:9px}.actions{gap:5px;flex:1;justify-content:flex-end}.actions>button{min-height:44px;padding-inline:9px}.matchup{flex-basis:100%}.arrows button{height:44px;width:38px}.market{flex-basis:calc(100% - 24px);min-width:0;padding:14px}.rail{gap:10px}.shareSwitch button{min-height:40px}.guide summary{height:44px;width:30px}.footer{gap:5px}.publicMeta{max-width:calc(100% - 140px)}.publicMeta time{font-size:10px;line-height:1.5}.shareLabels small{font-size:12px}.outcomes{gap:10px}}
 @media(prefers-reduced-motion:reduce){.shareTrack>i{transition:none}.rail{scroll-behavior:auto}}
+@container(max-width:720px){.market{flex:0 0 calc((100% - 12px)/2);min-width:260px}.arrows{display:flex}}
+@container(max-width:520px){.market{flex-basis:calc(100% - 24px);min-width:0}}

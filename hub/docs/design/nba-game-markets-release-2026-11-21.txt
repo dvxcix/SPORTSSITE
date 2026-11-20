@@ -7,6 +7,8 @@ carousel with arrow and keyboard controls. The book selector changes real
 prices. Teams retains the original pace/ratings and confirmed-starter links.
 The header also appears on Odds Board, which reads only the selected game's
 existing phase-safe game-price archive rather than a heavy player board.
+A missing player-research snapshot cannot remove the selected game markets;
+the independent header remains available while player research stays unavailable.
 
 The existing pikkit_pregame_overviews archive is now exposed through a gated,
 read-only NBA endpoint. It supplies the observed game pick total, wager total,
@@ -32,7 +34,7 @@ Availability uses the same honest Lineup not confirmed wording as Teams.
 
 Verification
 - New data projection, source query, membership gate, Live isolation, failure
-  separation, cohort switching and matchup isolation: 30/30 focused checks.
+  separation, cohort switching and matchup isolation: 31/31 focused checks.
 - NBA phase, capture continuity, chart, quote, navigation, refresh, entity,
   heatmap, slate and Odds Board regressions: 121/121.
 - Production source smoke: 134/134. Focused ESLint and TypeScript passed.
