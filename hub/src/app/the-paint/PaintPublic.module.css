@@ -1,0 +1,17 @@
+.cards,.mobileSort{display:none}
+@media(max-width:640px){
+ .desktop{display:none}
+ .mobileSort{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;color:var(--text-2);font-size:12px}
+ .mobileSort select{min-height:44px;max-width:70%;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);color:var(--text-1);padding:8px;font:inherit}
+ .cards{display:grid;gap:10px}
+ .card{min-width:0;padding:13px;border:1px solid var(--border-2);border-radius:11px;background:var(--surface-2)}
+ .card header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .card header>button:first-child{flex:1;min-width:0}
+ .card header>button:last-child{flex-shrink:0;width:44px;height:44px}
+ .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+ .metrics>span{display:flex;flex-direction:column;gap:7px;font-variant-numeric:tabular-nums}
+ .metrics small{font-size:11px;color:var(--text-3)}
+ .metrics b{font-size:16px;font-weight:600}
+ .metrics svg{width:17px;height:17px}
+ .card footer{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border-2);padding-top:10px;color:var(--text-3);font-size:11px}
+}

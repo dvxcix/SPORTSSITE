@@ -98,7 +98,8 @@ test('ThePublic renders exact carried deltas, captured time, zero and First Bask
     assert.equal(rows.find(row=>row.textContent?.includes('Steals + Blocks'))?.querySelectorAll('td')[2]?.textContent,'+9')
     assert.ok(ui.host.querySelector('option[value="first_field_goal"]'))
     assert.ok(ui.host.querySelector('option[value="steals_blocks"]'))
-    assert.equal(ui.host.querySelectorAll('[title]').length,0)
+    assert.equal(zero.querySelector('[role="img"]')?.getAttribute('aria-label'),'Observed market picks: 0')
+    assert.equal(ui.host.querySelectorAll('article').length,4,'mobile cards retain all observed markets')
   }finally{await ui.close()}
 })
 for (const scenario of scenarios) {
@@ -148,9 +149,41 @@ test('matchup spread lines display their spread prices rather than moneylines', 
     assert.ok(ui.host.textContent?.includes('+4.5'))
     assert.ok(ui.host.textContent?.includes('-111'))
     assert.ok(ui.host.textContent?.includes('-109'))
-    assert.equal(ui.host.textContent?.includes('+250'), false)
-    assert.equal(ui.host.textContent?.includes('-300'), false)
+    const spread=ui.host.querySelector('article[aria-label="Spread"]')!
+    assert.equal(spread.textContent?.includes('+250'),false)
+    assert.ok(ui.host.querySelector('article[aria-label="Moneyline"]')?.textContent?.includes('+250'))
+    assert.equal(spread.textContent?.includes('-300'),false)
+    assert.ok(ui.host.querySelector('article[aria-label="Moneyline"]')?.textContent?.includes('-300'))
   } finally { await ui.close() }
+})
+
+test('game header switches observed public cohorts and clears them when the matchup changes', async () => {
+  const overview={gameId:123,observedAt:'2026-10-20T12:00:00Z',totalBets:21613,totalHandleDollars:698522.76,splits:[
+    {market:'moneyline',side:'away',betShare:.23,moneyShare:.19},{market:'moneyline',side:'home',betShare:.77,moneyShare:.81},
+  ]}
+  const ui=await harness('PaintMatchup',{board},{overview})
+  try {
+    ui.succeed();await ui.click('Retry')
+    const share=()=>ui.host.querySelector('[aria-label="moneyline public pick share"]')??ui.host.querySelector('[aria-label="moneyline public wager share"]')
+    assert.ok(share()?.textContent?.includes('23%'))
+    await ui.click('Show public wager share')
+    assert.ok(share()?.textContent?.includes('19%'))
+    assert.ok(ui.host.querySelector('[aria-label="Recorded picks: 21,613"]'))
+    assert.equal(ui.host.querySelector('time')?.getAttribute('datetime'),overview.observedAt)
+    await ui.render({board:{...board,game:{...board.game,id:456}}})
+    assert.equal(ui.host.textContent?.includes('21,613'),false,'another matchup cannot inherit public observations')
+    assert.equal(share(),null)
+  } finally {await ui.close()}
+})
+
+test('Odds Board header waits for phase-safe prices and distinguishes a failed read', async () => {
+  const ui=await harness('PaintMatchup',{board:{...board,gameOdds:[{id:1,vendor:'draftkings',moneyline_home_odds:-999,total_value:'220.5',updated_at:'2026-10-20T12:00:00Z'}]},refreshPrices:true},{overview:null,gameOdds:[],pricesUnavailable:true})
+  try {
+    assert.equal(ui.host.textContent?.includes('-999'),false,'a heavy-board price is never a fallback for the independent Odds Board header')
+    ui.succeed();await ui.click('Retry')
+    assert.ok(ui.host.textContent?.includes('Game prices unavailable'))
+    assert.equal(ui.host.textContent?.includes('-999'),false)
+  } finally {await ui.close()}
 })
 
 test('matchup starter portraits match confirmed IDs per team and preserve pending teams', async () => {
@@ -159,7 +192,7 @@ test('matchup starter portraits match confirmed IDs per team and preserve pendin
   const lineup = { ...board, players: [away, home], starters: [away.id, 99999] }
   const ui = await harness('PaintMatchup', { board: lineup }, {})
   try {
-    await ui.click('Matchup')
+    await ui.click('Team matchup details')
     const awayPanel = ui.host.querySelector('[aria-label="Boston Celtics matchup"]')!
     const homePanel = ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
     assert.ok(awayPanel.textContent?.includes('1 confirmed starter'))
@@ -167,15 +200,15 @@ test('matchup starter portraits match confirmed IDs per team and preserve pendin
     assert.equal(player.getAttribute('href'), '/nba/players/11?game=123&mode=pregame')
     assert.equal(player.querySelector('img')?.getAttribute('src'), away.headshot)
     assert.equal(awayPanel.querySelectorAll('li').length, 1, 'unmatched provider IDs do not invent a player')
-    assert.ok(homePanel.textContent?.includes('Starters pending'))
+    assert.ok(homePanel.textContent?.includes('Lineup not confirmed'))
     assert.equal(homePanel.querySelector('footer a'), null)
     assert.equal(ui.host.textContent?.includes('provider'), false)
     await ui.render({ board: { ...lineup, starters: [away.id, home.id] } })
     assert.ok(homePanel.querySelector('a[aria-label="Cade Cunningham, confirmed starter"]'))
     await ui.render({ board: { ...lineup, starters: [] } })
     assert.equal(ui.host.querySelectorAll('footer a').length, 0)
-    assert.ok(awayPanel.textContent?.includes('Starters pending'))
-    assert.ok(homePanel.textContent?.includes('Starters pending'))
+    assert.ok(awayPanel.textContent?.includes('Lineup not confirmed'))
+    assert.ok(homePanel.textContent?.includes('Lineup not confirmed'))
   } finally { await ui.close() }
 })
 

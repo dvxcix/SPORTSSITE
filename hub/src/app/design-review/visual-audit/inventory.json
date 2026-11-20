@@ -3294,7 +3294,7 @@
     "kind": "Page",
     "status": "In progress",
     "batch": null,
-    "notes": "The Court board, Odds Board and all six player sections are approved for rollout. The other 15 NBA workspaces require their individual visual review.",
+    "notes": "The Court board, Odds Board and all six player sections are approved for rollout. The other 15 NBA workspaces require their individual visual review. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
     "checks": {
       "desktopDark": false,
       "desktopLight": false,
@@ -3305,7 +3305,9 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nba-game-markets-release-2026-11-21.txt"
+    ]
   },
   {
     "id": "route:/the-public",
@@ -3407,7 +3409,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3422,7 +3424,8 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
-      "docs/operations/nba-board-accuracy-2026-11-20.txt"
+      "docs/operations/nba-board-accuracy-2026-11-20.txt",
+      "docs/design/nba-game-markets-release-2026-11-21.txt"
     ]
   },
   {
@@ -3433,7 +3436,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3449,7 +3452,8 @@
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
       "page-review/framework-tests.txt · 25 passed",
-      "docs/operations/nba-board-accuracy-2026-11-20.txt"
+      "docs/operations/nba-board-accuracy-2026-11-20.txt",
+      "docs/design/nba-game-markets-release-2026-11-21.txt"
     ]
   },
   {
@@ -3605,20 +3609,22 @@
     "label": "NBA · ThePublic",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "NBA game markets · 2026-11-21",
+    "notes": "Icon counts, a compact desktop table and dedicated phone cards. Search, all sort directions, market filters, original row timestamps, zero counts, deltas and player analysis remain available. Verified in the compiled private review at desktop and phone sizes in both themes; owner approval remains separate.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nba-game-markets-release-2026-11-21.txt"
+    ]
   },
   {
     "id": "nba:divergence",
@@ -3768,6 +3774,29 @@
       "toolAccess": false
     },
     "evidence": []
+  },
+  {
+    "id": "nba-surface:Game markets and public activity",
+    "route": "/the-paint",
+    "label": "NBA · Game market slider and public activity",
+    "group": "NBA",
+    "kind": "Panel",
+    "status": "Review ready",
+    "batch": "NBA game markets · 2026-11-21",
+    "notes": "Visible moneyline, spread and total cards; book selector; keyboard/swipe controls; observed public pick/wager shares and aggregate activity. Independent phase-safe price loading on Odds Board. Existing team metrics and confirmed-starter links remain under Teams. Verified at 320/390/1440px and both themes. Missing captures stay unavailable; exact side counts are never invented.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/nba-game-markets-release-2026-11-21.txt"
+    ]
   },
   {
     "id": "nfl:research",

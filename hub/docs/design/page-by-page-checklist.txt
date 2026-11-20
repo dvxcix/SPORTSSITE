@@ -168,7 +168,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | NBA · Cheatsheets | /the-paint?view=cheatsheets
 [Queued] NBA | NBA · SlipSurge Score | /the-paint?view=score
 [Queued] NBA | NBA · Slate Edge | /the-paint?view=slate
-[Queued] NBA | NBA · ThePublic | /the-paint?view=public
+[Review ready] NBA | NBA · ThePublic | /the-paint?view=public
 [Queued] NBA | NBA · Cross-market | /the-paint?view=divergence
 [Queued] NBA | NBA · Defense × position | /the-paint?view=dvp
 [Queued] NBA | NBA · Player trends | /the-paint?view=usage
@@ -176,6 +176,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | NBA · Matchup Lab | /the-paint?view=matchup
 [Queued] NBA | NBA · Availability | /the-paint?view=availability
 [Queued] NBA | NBA · Game markets | /the-paint?view=game-markets
+[Review ready] NBA | NBA · Game market slider and public activity | /the-paint
 [Review ready] NFL | NFL · The Sideline | /the-sideline
 [Approved] NFL | NFL · Odds Board | /the-sideline?view=odds-board
 [Review ready] NFL | NFL · Cheatsheets | /the-sideline?mode=cheatsheets

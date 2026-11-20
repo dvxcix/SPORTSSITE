@@ -1,0 +1,74 @@
+SlipSurge NBA game markets and public activity — 2026-11-21
+
+What changed
+The selected NBA game's moneyline, spread and over/under now sit above the
+research workspace in three market cards. Phones use a native horizontal
+carousel with arrow and keyboard controls. The book selector changes real
+prices. Teams retains the original pace/ratings and confirmed-starter links.
+The header also appears on Odds Board, which reads only the selected game's
+existing phase-safe game-price archive rather than a heavy player board.
+
+The existing pikkit_pregame_overviews archive is now exposed through a gated,
+read-only NBA endpoint. It supplies the observed game pick total, wager total,
+pick shares and wager shares. Each snapshot shows its own ET capture time.
+These aggregates are separate cohorts from sportsbook prices. No side pick
+counts are derived from the all-market total, and the source's Full/1st Half/
+1st Quarter groups are never presented as bookmakers. No collector, schedule,
+budget, job replay, schema, secret or feature flag was changed.
+
+ThePublic now uses the existing original crowd mark beside counts, a desktop
+table and dedicated phone cards. Player/market filters, every sort direction,
+capture provenance, zero counts, carried deltas and analysis links are retained.
+The component remounts on a research snapshot or odds-mode boundary so previous
+public data cannot carry into a different research scope.
+
+Odds Board phone overflow was traced to absolute screen-reader labels whose
+containing block was the page shell. Its table scrollport now establishes the
+containing block. Before: document width 3267px at a 390px viewport. After:
+document width 380px, with all 3324px of table columns still independently
+scrollable. The same containment applies to NBA research table scrollports and
+the market carousel. No tools or columns were removed to solve this defect.
+Availability uses the same honest Lineup not confirmed wording as Teams.
+
+Verification
+- New data projection, source query, membership gate, Live isolation, failure
+  separation, cohort switching and matchup isolation: 30/30 focused checks.
+- NBA phase, capture continuity, chart, quote, navigation, refresh, entity,
+  heatmap, slate and Odds Board regressions: 121/121.
+- Production source smoke: 134/134. Focused ESLint and TypeScript passed.
+- Optimized private build passed, with live credentials removed and operational
+  mutations blocked. Desktop 1440px and phone 390px inspected in light/dark;
+  additional 320px phone containment checked. Native pan/keyboard arrows, book
+  changes, pick/wager switching, team details, public filtering, sorting, empty
+  state and keyboard access to analysis were exercised in the PC browser.
+- Pregame reads enforce the canonical earliest start and stored cutoff. Future,
+  wrong-game and post-tip observations are rejected. Live never borrows the
+  pregame community snapshot. Failed or missing prices are not filled with a
+  different phase or a stale player-board fallback.
+
+Evidence
+Private compiled review: http://127.0.0.1:4194/the-paint
+Current editable checklist: http://127.0.0.1:4193/design-review/visual-audit
+Ignored local evidence logs: docs/design/evidence/live/nba-markets-*.txt.
+Browser screenshots are saved in the session visualization directory as
+nba-final-*.jpg. The before capture is slipsurge-nba-market-header-before.jpg.
+
+Design reference
+The compact team/market alignment on the viewed X game screen informed the
+placement of odds beside each outcome:
+https://mobbin.com/screens/c6f41164-e395-47af-af4d-3f70de48fa58
+The card carousel, public metric switch and original crowd mark use SlipSurge's
+existing components and theme roles; these are product-specific decisions.
+
+Checklist boundary
+Only ThePublic and the new game-market/public-activity surface move to Review
+ready in this batch. Existing owner-approved rows remain Approved. Remaining
+NBA workspaces, directories and member/admin/community screens keep their
+individual pending status. Shared styling or navigation access does not certify
+every consumer. The inventory now has 233 items: 45 Review ready, 10 Approved,
+1 In progress and 177 Queued. This is not a claim of a 100% complete site.
+The private review/checklist remains disabled on production.
+
+Real member pick placement, matrix writes, social publication and physical-phone
+hardware testing were not performed. No automatic changelog announcement was
+published to members during this release.
