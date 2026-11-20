@@ -240,13 +240,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           transitionTimingFunction: 'ease-out',
           background: 'var(--surface)',
           borderRight: '1px solid var(--border)',
-          // Deliberately still 100vh, not calc(100vh - banner-h) — that
-          // calc would be correct for the desktop sticky case but wrong for
-          // the mobile drawer (fixed, top:0 unchanged, banner sits above
-          // it) which would then fall short of the viewport bottom by the
-          // banner's height. 100vh just means the sticky desktop sidebar's
-          // own box extends a few tens of px past the viewport bottom when
-          // a banner is showing — invisible/harmless, unlike the mobile gap.
+          // Shared chrome accounts for the notice above both the sticky
+          // desktop sidebar and the fixed phone drawer.
           height: 'var(--sidebar-height,100dvh)',
           display: 'flex',
           flexDirection: 'column',

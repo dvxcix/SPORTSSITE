@@ -41,3 +41,6 @@ notice could push the footer partly below the viewport. The follow-up
 subtracts the existing banner height from the desktop admin sidebar and
 offsets its sticky header. Source suite rerun: 134/134. No notice state or
 content is modified. Live verification must confirm full footer visibility.
+Phone follow-up also positions the drawer below the notice and temporarily
+hides the resume card and quick-tools launcher while the drawer is open.
+Their state and resume behavior are retained when navigation closes.
