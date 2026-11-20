@@ -1,0 +1,23 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+
+const target='src/app/design-review/visual-audit/inventory.json'
+const old=fs.existsSync(target)?new Map(JSON.parse(fs.readFileSync(target,'utf8')).map(row=>[row.id,row])):new Map()
+const files=execFileSync('rg',['--files','src/app'],{encoding:'utf8'}).trim().split(/\r?\n/).map(file=>file.replaceAll('\\','/')).filter(file=>file.endsWith('/page.tsx')&&!file.startsWith('src/app/design-review/')).sort()
+const title=value=>value.replace(/\[([^\]]+)\]/g,'$1').replaceAll('-',' ').replace(/\b\w/g,s=>s.toUpperCase())
+const group=route=>route.startsWith('/admin')?'Admin':route.startsWith('/settings')?'Settings':route.startsWith('/auth')||route==='/onboarding'?'Account access':/^\/(the-paint|nba)(\/|$)/.test(route)?'NBA':/^\/(the-sideline|nfl)(\/|$)/.test(route)?'NFL':/^\/(dugout|players|mlb|weather-lab|pitcher-report|slate-breakdown|batter-cost|odds-terminal|synergy|daily-recap|spray-charts|the-public)(\/|$)/.test(route)?'MLB · off-season':/^\/(creators|marketplace|pricing|pro)(\/|$)/.test(route)?'Creators & commerce':/^\/(feed|explore|profile|posts|picks|messages|community|channels|groups|forum|blog|pages|events|bookmarks|notifications|search|hashtag|stories)(\/|$)/.test(route)?'Community':'General'
+const checks={desktopDark:false,desktopLight:false,phoneDark:false,phoneLight:false,keyboard:false,motion:false,states:false,toolAccess:false}
+const rows=[]
+function add(item){rows.push({...item,status:'Queued',batch:null,notes:'',checks:{...checks},evidence:[],...old.get(item.id)})}
+for(const file of files){const route='/'+file.slice('src/app/'.length,-'/page.tsx'.length).split('/').filter(p=>!p.startsWith('(')).join('/');add({id:'route:'+route,route,source:file,label:route==='/'?'Home':title(route.slice(1).replaceAll('/',' · ')),group:group(route),kind:'Page'})}
+const nba=[['research','The Court'],['odds-board','Odds Board'],['odds','Odds comparison'],['ladders','Ladders'],['movement','Market Story'],['first-basket','First basket'],['cheatsheets','Cheatsheets'],['score','SlipSurge Score'],['slate','Slate Edge'],['public','ThePublic'],['divergence','Cross-market'],['dvp','Defense × position'],['usage','Player trends'],['tracking','Game tracking'],['matchup','Matchup Lab'],['availability','Availability'],['game-markets','Game markets']]
+for(const [view,label] of nba)add({id:'nba:'+view,route:'/the-paint?view='+view,label:'NBA · '+label,group:'NBA',kind:'Workspace'})
+for(const [query,label] of [['','The Sideline'],['view=odds-board','Odds Board'],['mode=cheatsheets','Cheatsheets'],['mode=public','The Public'],['mode=markets','Sportsbooks'],['mode=research','Matchup Lab']])add({id:'nfl:'+(query||'research'),route:'/the-sideline'+(query?'?'+query:''),label:'NFL · '+label,group:'NFL',kind:'Workspace'})
+for(const label of ['Overview','Game tracking','Ladders','Market Story','Shots','All odds'])add({id:'nba-drawer:'+label,route:'/the-paint',label:'Player drawer · '+label,group:'NBA',kind:'Panel'})
+for(const label of ['Market Edge','Exact-Line Hits','Explosive Plays','Run Gaps','Defense / DvP'])add({id:'nfl-cheatsheet:'+label,route:'/the-sideline?mode=cheatsheets',label:'Cheatsheets · '+label,group:'NFL',kind:'Panel'})
+for(const label of ['Member identity, avatar rings and badges','Account menu','Global search','Notifications panel','What’s new and release popup','Saved picks drawer','NBA Matrix','NFL Matrix','Player comparison','Post composer','Comments and share','Image and video viewer','Confirmation dialogs','Empty, loading and error states'])add({id:'shared:'+label,route:label.startsWith('Member identity')?'/design-review/identity':null,label,group:'Shared components',kind:'Shared surface'})
+fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,JSON.stringify(rows,null,2)+'\n')
+const totals=Object.fromEntries([...new Set(rows.map(r=>r.group))].map(g=>[g,rows.filter(r=>r.group===g).length]))
+fs.writeFileSync('docs/design/page-by-page-checklist.txt','SlipSurge page-by-page visual review\n\nEvery item requires its own review. A shared CSS change does not certify its consumers.\nChecks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/empty/error; all tools reachable.\nOwner approval and publication are separate from implementation and verification.\nMLB remains hidden/off-season; its pages stay in the inventory.\n\n'+rows.map(r=>`[${r.status}] ${r.group} | ${r.label} | ${r.route??'Shared surface'}`).join('\n')+'\n')
+console.log(JSON.stringify({pages:files.length,total:rows.length,groups:totals}))

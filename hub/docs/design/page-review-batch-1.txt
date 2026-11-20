@@ -1,0 +1,93 @@
+SlipSurge visual review — batch 1 — 20 November 2026
+
+PRIVATE REVIEW
+http://127.0.0.1:4188/design-review/visual-audit
+Branch: codex/page-by-page-visual-review
+Base main: bddfa0182c55b8d877f23a0ccd20bdc3d111b981
+Production was rechecked: the same Git deployment remains READY at www.slipsurge.com.
+This batch has not been published. No database records, access rules, collectors,
+jobs, credentials or feature flags were changed.
+
+REVIEW ORDER
+1. NBA Odds Board: /the-paint?view=odds-board
+2. NFL Odds Board: /the-sideline?view=odds-board
+3. Shared member identity: /design-review/identity
+
+The inventory contains 154 production page routes and 48 workspaces, panels and
+shared surfaces. Only the three items above are ready for owner review. The other
+199 remain queued. Review-ready is not owner approval or full-site certification.
+Each page review must include its own nested panels and states. MLB stays off-season.
+
+CHANGES
+Prices lead each quote. Original SVG count marks replace repeated pick labels.
+Estimated counts retain an approximation sign; missing values remain distinct
+from zero. Signed chart marks retain probability-point and direction meaning in
+accessible labels. One board guide explains the symbols. Opening/earlier prices,
+stale coverage warnings, result grades and exact quote drill-downs remain intact.
+
+Duplicate visible board headings were removed. Phone controls keep accessible
+labels while reducing repeated text. Tablet controls respond to their available
+panel width. The mobile Tools picker retains all 17 NBA and six NFL destinations.
+Permanent The Court/Odds Board and The Sideline/Odds Board switches remain.
+
+Avatar rings now have an isolated stacking context, with the photo above the
+ring and presence above the photo. Photos are not tinted by a theme filter.
+Wide Ultimate artwork retains its proportions. Light theme tier chips use paired
+readable ink/background colours. Badge descriptions work by keyboard and tap.
+
+A read-only live check found 1,227 badge assignments across 1,119 members.
+The old unpaginated read was vulnerable to the documented default response cap:
+https://supabase.com/docs/reference/javascript/v1/select
+The new shared read walks the assignment primary key in pages of 500. A failed
+page cannot publish an empty or partial badge list. Failed refreshes retain the
+last good list, explicit invalidation refreshes mounted identities, and a reused
+row looks up its current member immediately. Existing RLS and assignment rules
+are unchanged. The live REST cap itself was not changed or independently queried.
+
+The shared image component also handles failures that finish before hydration,
+plus later native error events. New source URLs recover; theme changes preserve
+the successfully loaded image node. A bad URL displays the existing fallback.
+It does not fabricate artwork or retry invalid uploads indefinitely.
+
+VERIFICATION
+134/134 production source-contract checks.
+44/44 Odds Board, navigation, phase/access and interaction checks.
+25/25 framework, private-review isolation and sports artwork checks.
+6/6 new badge recovery/pagination, symbols, image recovery and private-route checks.
+Optimized private Next build and TypeScript passed. Scoped ESLint: no warnings/errors.
+
+Browser checks used actual app components with illustrative local data at 320,
+390, 768, 1024 and 1440px, including desktop/phone in both themes. Verified the
+symbol guide, search/empty states, scorer market changes, exact NBA player/line
+drill-down, native workspace choices and horizontal table scrolling with a
+pinned player column. Theme swaps preserved image sources and dimensions.
+Broken avatar and badge examples displayed initials and a labelled fallback.
+Motion fallback was checked in the private preview and the existing CSS media
+guard was retained; the operating system's motion setting was not changed.
+
+The automated interaction tests cover loading, stale/phase failure, denied
+access, unknown versus zero counts, baseline comparisons and pagination errors.
+This is not a live-service end-to-end certification of all 202 review items.
+
+EVIDENCE
+docs/design/evidence/live/page-review/ contains browser measurements, screenshots,
+build output and test logs. It is local evidence, excluded from Git.
+docs/design/odds-board-comparison.html embeds both screenshot panes. The BEFORE
+uses live data and the AFTER uses labelled illustrative data; it compares layout,
+not prices, teams or model outputs. No mark was guessed for the captured BEFORE.
+
+REFERENCES INSPECTED
+Unjuiced: read-only Games, quick look, filters, transitions and delivered CSS.
+This is rendered client behaviour, not access to its private source or models.
+https://app.unjuiced.bet/games
+Uniswap: primary numeric values, signed changes and secondary row information.
+https://mobbin.com/screens/0cc6471e-61cd-4292-ac11-2dbe427269f7
+Fey: restrained financial metric lists; supporting reference, not a copied layout.
+https://mobbin.com/screens/957fd895-354c-4910-acca-d7e3d0a13fd8
+The owner's count icon reference informed the crowd motif; its asset was not used.
+https://loading.io/icon/Az50vD8GYxui
+
+NEXT REVIEW
+The Court core board and its six player drawer sections, followed by the remaining
+NBA workspaces. NFL research, community, settings, commerce, administration,
+public pages and their nested states remain individually queued in the checklist.

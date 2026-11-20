@@ -1,0 +1,16 @@
+.pickCount,.movement{display:inline-flex!important;align-items:center;justify-content:center;gap:5px;position:relative;min-width:0;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums;vertical-align:middle}
+.pickCount{color:var(--text-2)}.pickMark{width:17px;height:17px;flex:none;overflow:visible}.crowd{transform-origin:50% 70%}.surge{color:var(--accent);transform-origin:50% 50%}
+.pickCount:hover .surge,.pickCount:focus-visible .surge{animation:surge-mark 500ms cubic-bezier(.2,.8,.2,1) 1}.pickCount:hover .crowd{animation:crowd-mark 500ms cubic-bezier(.2,.8,.2,1) 1}
+.movement{color:var(--text-2)}.movement[data-direction=shortened]{color:var(--green)}.movement[data-direction=lengthened]{color:var(--red)}.movement svg{flex:none}.movement small{color:inherit!important;font:inherit!important;opacity:.8}
+@keyframes surge-mark{0%,100%{transform:scale(1);opacity:1}45%{transform:scale(1.16);opacity:.7}}@keyframes crowd-mark{0%,100%{transform:translateY(0)}45%{transform:translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.pickCount *{animation:none!important}}
+.boardMeta { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-height:44px; color:var(--text-2); font-size:12px; }
+.boardMeta > span { padding-block:14px; white-space:nowrap; }
+.guide { min-width:0; max-width:600px; }
+.guide summary { display:flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; width:44px; margin-left:auto; border-radius:8px; cursor:pointer; list-style:none; color:var(--text-2); }
+.guide summary::-webkit-details-marker { display:none; }
+.guide summary:hover, .guide[open] summary { background:var(--surface-3); color:var(--text-1); }
+.guide summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.guideBody { display:grid; gap:8px; padding:12px; border:1px solid var(--border-2); border-radius:8px; background:var(--surface-2); }
+.guideBody p { margin:0; padding:0!important; color:var(--text-2); font-size:12px; line-height:1.55; }
+.guideBody svg { display:inline-block; vertical-align:middle; margin-right:4px; }

@@ -1,0 +1,25 @@
+.page { width:min(100%,1120px); margin:auto; padding:32px clamp(16px,3vw,40px) 80px; color:var(--text-1); }
+.header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding-bottom:28px; }
+.header a { display:inline-flex; align-items:center; min-height:44px; color:var(--text-2); font-size:13px; text-decoration:none; }
+.header h1 { margin:8px 0; font-size:28px; font-weight:650; letter-spacing:-.04em; }
+.page p { max-width:620px; margin:8px 0 20px; color:var(--text-2); font-size:13px; line-height:1.6; }
+.section { padding:24px 0; border-top:1px solid var(--border-2); }
+.section h2 { margin:0 0 20px; font-size:16px; font-weight:600; }
+.examples,.tones,.badges,.symbols { display:flex; flex-wrap:wrap; align-items:center; gap:32px; }
+.member { display:flex; align-items:center; gap:14px; min-height:64px; }
+.name { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.member strong { font-size:14px; font-weight:600; }
+.member small { display:block; margin-top:6px; color:var(--text-2); font-size:12px; }
+.rings { display:grid; gap:28px; }
+.rings > div { display:grid; grid-template-columns:72px 1fr; align-items:center; gap:20px; }
+.rings > div > span,.tones > div > span { color:var(--text-2); font-size:12px; }
+.rings > div > div { display:flex; align-items:center; flex-wrap:wrap; gap:28px; padding:6px; }
+.tones > div { display:grid; justify-items:center; gap:14px; padding:6px; }
+.chips { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+.badges > div { display:grid; gap:14px; }
+.badges small { color:var(--text-2); font-size:12px; }
+.symbols { gap:24px; }
+.motion { display:flex; align-items:center; gap:10px; min-height:44px; width:max-content; margin-bottom:20px; color:var(--text-2); font-size:13px; cursor:pointer; }
+.motion input { accent-color:var(--accent); width:18px; height:18px; }
+.page[data-motion=reduce] *, .page[data-motion=reduce] *::before { animation:none!important; transition:none!important; }
+@media(max-width:600px) { .header { flex-direction:column; gap:8px; } .rings > div { grid-template-columns:1fr; gap:12px; } .rings > div > div { gap:22px; } .examples { gap:20px; } }

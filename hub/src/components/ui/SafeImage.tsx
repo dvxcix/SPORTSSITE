@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ImgHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ImgHTMLAttributes, type ReactNode } from 'react'
 
 type SafeImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> & {
   src?: string | null
@@ -18,7 +18,20 @@ function isUsableImageSource(source: string) {
  */
 export function SafeImage({ src, fallback = null, alt, loading = 'lazy', decoding = 'async', onError, ...props }: SafeImageProps) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
+  const image = useRef<HTMLImageElement>(null)
   const failed = Boolean(src && failedSource === src)
+
+  useEffect(() => {
+    const node = image.current
+    if (!node || !src) return
+    const fail = () => setFailedSource(src)
+    // Cached failures can finish before hydration attaches React's handler.
+    // A native listener also covers a later failure without retrying an upload
+    // or resetting a successfully loaded image when its surrounding theme changes.
+    node.addEventListener('error', fail)
+    if (node.complete && node.naturalWidth === 0) fail()
+    return () => node.removeEventListener('error', fail)
+  }, [src])
 
   if (!src || !isUsableImageSource(src) || failed) return <>{fallback}</>
 
@@ -27,6 +40,7 @@ export function SafeImage({ src, fallback = null, alt, loading = 'lazy', decodin
     // eslint-disable-next-line @next/next/no-img-element
     <img
       {...props}
+      ref={image}
       src={src}
       alt={alt}
       loading={loading}

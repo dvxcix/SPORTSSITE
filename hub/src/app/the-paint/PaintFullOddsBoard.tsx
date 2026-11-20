@@ -9,12 +9,13 @@ import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import { nbaBinary, nbaOdds, PAINT_MARKETS, type PaintGame, type PaintMarket } from '@/lib/nbaPaint'
 import type { NbaFinalOutcome } from '@/lib/nbaFinalOutcomes'
 import { nbaFinalValue } from './useNbaFinalOutcomes'
-import { nbaBoardMove,nbaBoardMoveLabel,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
+import { nbaBoardMove,nbaUnpackFullBoard, type NbaFullOddsBoard, type NbaPackedBoard } from '@/lib/nbaFullOddsBoard'
 import { nbaBoardEstimatedPicks } from '@/lib/nbaBoardEstimatedPicks'
 import { NBA_ODDS_BOARD_PHASE_MAX_AGE,nbaOddsBoardPhaseSignature,type NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
 import { canShowLastSeenOdds, ODDS_BOARD_LAST_SEEN_MS } from '@/lib/oddsBoardContinuity'
 import { PaintBookSelect } from './PaintEntitySelect'
 import { PlayerAvatar } from './PaintVisuals'
+import { MarketMovement, OddsBoardGuide, PickCount } from '@/components/research/ResearchMetrics'
 import styles from './full-odds-board.module.css'
 
 type Comparison='opening'|'previous'
@@ -141,13 +142,13 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
   const captureWarning=slate?.games.filter(item=>slate.captureWarning?.includes(item.id)).map(item=>`${item.visitor_team.abbreviation} @ ${item.home_team.abbreviation}`)??[]
   const filterCount=Number(game!=='all')+Number(team!=='all')+Number(comparison!=='opening')+Number(target!=='all')
   return <section className={styles.board}>
-    <h3>Odds Board</h3>
+    <h3 className="sr-only">Odds Board</h3>
     <div className={styles.controlPanel}>
-    <div className={styles.controls}>
-      <label>Market<select aria-label="Odds board market" value={market} onChange={event=>{setMarket(event.target.value as PaintMarket);setTarget('all')}}>{nbaBinary(market)&&<option value={market}>{PAINT_MARKETS.find(item=>item.key===market)?.label??market} · unavailable</option>}{PAINT_MARKETS.filter(item=>!nbaBinary(item.key)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+    <div className={`${styles.controls} ${styles.primaryControls}`}>
+      <label><span className={styles.controlLabel}>Market</span><select aria-label="Odds board market" value={market} onChange={event=>{setMarket(event.target.value as PaintMarket);setTarget('all')}}>{nbaBinary(market)&&<option value={market}>{PAINT_MARKETS.find(item=>item.key===market)?.label??market} · unavailable</option>}{PAINT_MARKETS.filter(item=>!nbaBinary(item.key)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
       <div className={styles.control}><span>Sportsbook</span><div className={styles.bookSelect}><PaintBookSelect label="Odds board sportsbook" value={actualBook} onChange={setBook} books={books.length?books:[actualBook]} allowAll={false}/><span>{bookName(actualBook)}</span></div></div>
-      <label>Sort<select aria-label="Sort odds board" value={sort} onChange={event=>setSort(event.target.value)}><option value="name">Player A–Z</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option></select></label>
-      <label>Player<input aria-label="Find player on odds board" placeholder="Player or team" value={query} onChange={event=>setQuery(event.target.value)}/></label>
+      <label><span className={styles.controlLabel}>Sort</span><select aria-label="Sort odds board" value={sort} onChange={event=>setSort(event.target.value)}><option value="name">Player A–Z</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option></select></label>
+      <label><span className={styles.controlLabel}>Player</span><input aria-label="Find player on odds board" placeholder="Player or team" value={query} onChange={event=>setQuery(event.target.value)}/></label>
     </div>
     <details className={styles.options}>
       <summary>Filters{filterCount>0&&<span> · {filterCount} active</span>}</summary>
@@ -165,16 +166,17 @@ export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onR
       {activeComparison==='opening'&&firstUnavailable.length>0&&<p role="status">{mode==='live'?'First seen':'Opening'} unavailable: {firstUnavailable.join(', ')}.</p>}
       {captureWarning.length>0&&<p role="status">Prices may be out of date: {captureWarning.join(', ')}.</p>}
       {rows.length>0&&rows.every(row=>row.player.publicPicks==null)&&<p role="status">Pick estimates unavailable.</p>}
+      <OddsBoardGuide players={rows.length}/>
       <div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label="NBA milestone odds board" tabIndex={0}><table><thead><tr><th scope="col">Player</th>{columns.map(line=><th scope="col" key={line}>{line}+</th>)}</tr></thead><tbody>{rows.map(row=>{
         const estimates=nbaBoardEstimatedPicks(row.cells,row.player.publicPicks),actual=mode==='pregame'?nbaFinalValue(finalOutcomes,row.player.gameId,row.player.id,row.player.team.id):null
-        return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small>{row.player.publicPicks!=null&&<small>{row.player.publicPicks.toLocaleString('en-US')} observed market picks</small>}{actual!=null&&<small>Final {actual}</small>}</span></div></th>{columns.map(line=>{
+        return <tr key={row.id}><th scope="row"><div className={styles.player}><PlayerAvatar player={{id:row.player.id,team:row.player.team,headshot:row.player.headshot??null}}/><span className={styles.playerText}><strong>{row.player.first_name} {row.player.last_name}</strong><small>{row.player.team.abbreviation}{row.player.position?` · ${row.player.position}`:''}</small>{row.player.publicPicks!=null&&<PickCount value={row.player.publicPicks} observed/>}{actual!=null&&<small>Final {actual}</small>}</span></div></th>{columns.map(line=>{
           const cell=row.cells.find(item=>item.line===line),base=cell?.[activeComparison],change=cell?nbaBoardMove(cell,activeComparison):null,estimate=estimates.get(line)
           return <td key={line} className={!cell||change==null?styles.unknown:change>0?styles.shortenedCell:change<0?styles.lengthenedCell:styles.unchangedCell}>{cell?<div className={styles.quote}>
-            <div className={styles.priceLine}><small>Last seen</small>{lastSeen?<strong>{nbaOdds(cell.current.odds)}</strong>:<Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link>}</div>
+            <div className={styles.priceLine}><small className="sr-only">Last seen</small>{lastSeen?<strong>{nbaOdds(cell.current.odds)}</strong>:<Link prefetch={false} aria-label={`Analyze ${row.player.first_name} ${row.player.last_name} ${line}+ ${PAINT_MARKETS.find(item=>item.key===market)?.label ?? market}, ${bookName(cell.vendor)}, last seen ${nbaOdds(cell.current.odds)}`} href={nbaModeHref(`/the-paint?${new URLSearchParams({date,game:String(cell.gameId),player:String(cell.playerId),market,book:cell.vendor,side:'over',view:'research',panel:'ladder',line:String(line),type:'milestone',contract:'milestone',target:String(line)})}`,mode)}><strong>{nbaOdds(cell.current.odds)}</strong></Link>}</div>
             <div className={styles.priceLine}><small>{activeComparison==='opening'?(mode==='live'?'First seen':'Open'):'Earlier'}</small><b>{base?nbaOdds(base.odds):'—'}</b></div>
-            <span className={change==null?styles.muted:change>0?styles.shorter:change<0?styles.longer:styles.muted}>{nbaBoardMoveLabel(change)}{change!=null&&<small> {change>0?'Shortened':change<0?'Lengthened':'Unchanged'}</small>}</span>
+            <div className={styles.quoteMeta}><MarketMovement value={change}/><PickCount value={estimate} estimated/></div>
             {actual!=null&&<div className={styles.picksLine}><small>Result</small><b>{actual>=line?'Hit':'Miss'}</b></div>}
-            <div className={styles.picksLine}><small>Est. picks</small><b>{estimate==null?'—':estimate.toLocaleString()}</b></div>
+
           </div>:<span className={styles.muted}>—</span>}</td>
         })}</tr>
       })}</tbody></table></div>

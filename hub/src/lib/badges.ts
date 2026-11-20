@@ -1,53 +1,56 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import useSWR, { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 
 export type Badge = { id: string; name: string; icon_url: string; description: string; card_image_url?: string | null }
 
-// Whole assignment table fetched once and cached module-level (same
-// pattern as emoji.ts's custom-emoji cache) — badges show up next to a
-// username on posts, comments, profile headers, leaderboard rows, and
-// search results, which would otherwise mean a per-user query fired from
-// every single one of those render sites on every page. Assignments are
-// admin-managed and change rarely, so a page-load-scoped cache is fine.
-let badgesByUserCache: Map<string, Badge[]> | null = null
-let inflight: Promise<Map<string, Badge[]>> | null = null
+const badgeCacheKey = 'slipsurge/member-badges'
+const noBadges: Badge[] = []
 
-async function fetchAllUserBadges(): Promise<Map<string, Badge[]>> {
-  if (badgesByUserCache) return badgesByUserCache
-  if (!inflight) {
-    inflight = (async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('user_badges')
-        .select('user_id, badge:badges(id, name, icon_url, description, card_image_url)')
-      const map = new Map<string, Badge[]>()
-      for (const row of (data ?? []) as any[]) {
-        if (!row.badge) continue
-        const list = map.get(row.user_id) ?? []
-        list.push(row.badge)
-        map.set(row.user_id, list)
-      }
-      badgesByUserCache = map
-      inflight = null
-      return map
-    })()
+async function fetchAllUserBadges(): Promise<Record<string, Badge[]>> {
+  const client = createClient()
+  const map: Record<string, Badge[]> = Object.create(null)
+  type Assignment = { id:string; user_id:string; badge:Badge|null }
+  let cursor: string | null = null
+  // The assignment table exceeds the API's single-response row limit.
+  // Walk the primary key so inserts cannot shift an offset between pages.
+  for (;;) {
+    let query = client.from('user_badges')
+      .select('id, user_id, badge:badges(id, name, icon_url, description, card_image_url)')
+      .order('id', { ascending:true }).limit(500)
+    if (cursor) query = query.gt('id', cursor)
+    const { data, error } = await query
+    // Do not publish an empty or partial result after any failed page.
+    if (error) throw error
+    const rows = (data ?? []) as unknown as Assignment[]
+    for (const row of rows) {
+      if (!row.badge) continue
+      const list = map[row.user_id] ?? []
+      list.push(row.badge)
+      map[row.user_id] = list
+    }
+    if (rows.length < 500) break
+    const nextCursor = rows[rows.length-1].id
+    if (!nextCursor || nextCursor === cursor) throw new Error('Invalid badge page cursor')
+    cursor = nextCursor
   }
-  return inflight
+  return map
 }
 
 export function invalidateBadgeCache() {
-  badgesByUserCache = null
+  void mutate(badgeCacheKey).catch(() => undefined)
 }
 
 export function useUserBadges(userId: string | null | undefined): Badge[] {
-  const [badges, setBadges] = useState<Badge[]>(userId && badgesByUserCache ? badgesByUserCache.get(userId) ?? [] : [])
-  useEffect(() => {
-    if (!userId) return
-    let cancelled = false
-    fetchAllUserBadges().then(map => { if (!cancelled) setBadges(map.get(userId) ?? []) })
-    return () => { cancelled = true }
-  }, [userId])
-  return badges
+  // All mounted identities share one request. Looking up the current ID
+  // during render prevents the preceding member's badges flashing on reuse.
+  const { data } = useSWR(userId ? badgeCacheKey : null, fetchAllUserBadges, {
+    dedupingInterval: 60_000,
+    focusThrottleInterval: 60_000,
+    shouldRetryOnError: false, // Supabase already retries transient reads.
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  })
+  return userId ? data?.[userId] ?? noBadges : noBadges
 }

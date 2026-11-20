@@ -1,0 +1,209 @@
+SlipSurge page-by-page visual review
+
+Every item requires its own review. A shared CSS change does not certify its consumers.
+Checks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/empty/error; all tools reachable.
+Owner approval and publication are separate from implementation and verification.
+MLB remains hidden/off-season; its pages stay in the inventory.
+
+[Queued] General | About | /about
+[Queued] General | Activity | /activity
+[Queued] Admin | Admin · Ads | /admin/ads
+[Queued] Admin | Admin · Audit | /admin/audit
+[Queued] Admin | Admin · Badges | /admin/badges
+[Queued] Admin | Admin · Browserbase | /admin/browserbase
+[Queued] Admin | Admin · Changelog | /admin/changelog
+[Queued] Admin | Admin · Contact Recap | /admin/contact-recap
+[Queued] Admin | Admin · Content · Blogs | /admin/content/blogs
+[Queued] Admin | Admin · Content · Posts | /admin/content/posts
+[Queued] Admin | Admin · Content · Reports | /admin/content/reports
+[Queued] Admin | Admin · Content · Stories | /admin/content/stories
+[Queued] Admin | Admin · Creators | /admin/creators
+[Queued] Admin | Admin · Design System | /admin/design-system
+[Queued] Admin | Admin · Discord · Compose | /admin/discord/compose
+[Queued] Admin | Admin · Discord | /admin/discord
+[Queued] Admin | Admin · Emojis | /admin/emojis
+[Queued] Admin | Admin · Events | /admin/events
+[Queued] Admin | Admin · Fanduel Import | /admin/fanduel-import
+[Queued] Admin | Admin · Forum | /admin/forum
+[Queued] Admin | Admin · Groups | /admin/groups
+[Queued] Admin | Admin · Hr Intelligence | /admin/hr-intelligence
+[Queued] Admin | Admin · Jobs | /admin/jobs
+[Queued] Admin | Admin · Live | /admin/live
+[Queued] Admin | Admin · Market Dna | /admin/market-dna
+[Queued] Admin | Admin · Marketplace | /admin/marketplace
+[Queued] Admin | Admin · Matrix Backtest | /admin/matrix-backtest
+[Queued] Admin | Admin · Mgm Import | /admin/mgm-import
+[Queued] Admin | Admin · Mlb Archive | /admin/mlb-archive
+[Queued] Admin | Admin · Monetization | /admin/monetization
+[Queued] Admin | Admin · Nfl Access | /admin/nfl-access
+[Queued] Admin | Admin · Notifications | /admin/notifications
+[Queued] Admin | Admin | /admin
+[Queued] Admin | Admin · Pages | /admin/pages
+[Queued] Admin | Admin · Pikkit Import | /admin/pikkit-import
+[Queued] Admin | Admin · Pipeline Health | /admin/pipeline-health
+[Queued] Admin | Admin · Product Audit | /admin/product-audit
+[Queued] Admin | Admin · Reports | /admin/reports
+[Queued] Admin | Admin · Settings · Ai | /admin/settings/ai
+[Queued] Admin | Admin · Settings · Custom Code | /admin/settings/custom-code
+[Queued] Admin | Admin · Settings · Email | /admin/settings/email
+[Queued] Admin | Admin · Settings · Features | /admin/settings/features
+[Queued] Admin | Admin · Settings · General | /admin/settings/general
+[Queued] Admin | Admin · Settings · Payments | /admin/settings/payments
+[Queued] Admin | Admin · Settings · Social Login | /admin/settings/social-login
+[Queued] Admin | Admin · Site Banner | /admin/site-banner
+[Queued] Admin | Admin · Social Platforms | /admin/social-platforms
+[Queued] Admin | Admin · Users · Banned | /admin/users/banned
+[Queued] Admin | Admin · Users · Deletions | /admin/users/deletions
+[Queued] Admin | Admin · Users · Online | /admin/users/online
+[Queued] Admin | Admin · Users | /admin/users
+[Queued] Admin | Admin · Users · Verify | /admin/users/verify
+[Queued] Admin | Admin · Whop Renewal Shape | /admin/whop-renewal-shape
+[Queued] General | Allstar2026 | /allstar2026
+[Queued] Account access | Auth · Desktop · Complete | /auth/desktop/complete
+[Queued] Account access | Auth · Desktop · Start | /auth/desktop/start
+[Queued] Account access | Auth · Forgot Password | /auth/forgot-password
+[Queued] Account access | Auth · Login | /auth/login
+[Queued] Account access | Auth · Register | /auth/register
+[Queued] Account access | Auth · Reset Password | /auth/reset-password
+[Queued] Account access | Auth · Whop · Complete | /auth/whop/complete
+[Queued] MLB · off-season | Batter Cost | /batter-cost
+[Queued] Community | Blog · Slug | /blog/[slug]
+[Queued] Community | Blog · Create · Ai | /blog/create/ai
+[Queued] Community | Blog · Create | /blog/create
+[Queued] Community | Blog · Edit · Id | /blog/edit/[id]
+[Queued] Community | Blog · My | /blog/my
+[Queued] Community | Blog | /blog
+[Queued] Community | Bookmarks | /bookmarks
+[Queued] Community | Channels · Slug | /channels/[slug]
+[Queued] Community | Channels | /channels
+[Queued] Community | Community | /community
+[Queued] Creators & commerce | Creators · Username | /creators/[username]
+[Queued] Creators & commerce | Creators · Apply | /creators/apply
+[Queued] Creators & commerce | Creators · Offers · ProductId | /creators/offers/[productId]
+[Queued] Creators & commerce | Creators | /creators
+[Queued] Creators & commerce | Creators · Payouts | /creators/payouts
+[Queued] Creators & commerce | Creators · Studio | /creators/studio
+[Queued] MLB · off-season | Daily Recap | /daily-recap
+[Queued] MLB · off-season | Dugout | /dugout
+[Queued] Community | Events · Id | /events/[id]
+[Queued] Community | Events · Create | /events/create
+[Queued] Community | Events | /events
+[Queued] Community | Explore | /explore
+[Queued] General | Faq | /faq
+[Queued] Community | Feed | /feed
+[Queued] Community | Forum · Category | /forum/[category]
+[Queued] Community | Forum · New | /forum/new
+[Queued] Community | Forum | /forum
+[Queued] Community | Forum · Thread · Id | /forum/thread/[id]
+[Queued] Community | Groups · Slug | /groups/[slug]
+[Queued] Community | Groups · Slug · Settings | /groups/[slug]/settings
+[Queued] Community | Groups · Create | /groups/create
+[Queued] Community | Groups | /groups
+[Queued] Community | Hashtag · Tag | /hashtag/[tag]
+[Queued] General | Leaderboard | /leaderboard
+[Queued] Creators & commerce | Marketplace · Id | /marketplace/[id]
+[Queued] Creators & commerce | Marketplace | /marketplace
+[Queued] Creators & commerce | Marketplace · Sell | /marketplace/sell
+[Queued] Community | Messages · Username | /messages/[username]
+[Queued] Community | Messages · Group · Id | /messages/group/[id]
+[Queued] Community | Messages · New | /messages/new
+[Queued] Community | Messages | /messages
+[Queued] General | Missions | /missions
+[Queued] MLB · off-season | Mlb · Teams · Id | /mlb/teams/[id]
+[Queued] NBA | Nba | /nba
+[Queued] NBA | Nba · Players · Id | /nba/players/[id]
+[Queued] NBA | Nba · Teams · Id | /nba/teams/[id]
+[Queued] NFL | Nfl · Players · Id | /nfl/players/[id]
+[Queued] NFL | Nfl · Teams · Abbr | /nfl/teams/[abbr]
+[Queued] Community | Notifications | /notifications
+[Queued] MLB · off-season | Odds Terminal | /odds-terminal
+[Queued] Account access | Onboarding | /onboarding
+[Queued] General | Home | /
+[Queued] Community | Pages · Slug | /pages/[slug]
+[Queued] Community | Pages · Slug · Settings | /pages/[slug]/settings
+[Queued] Community | Pages · Create | /pages/create
+[Queued] Community | Pages | /pages
+[Queued] Community | Picks | /picks
+[Queued] MLB · off-season | Pitcher Report | /pitcher-report
+[Queued] MLB · off-season | Players · Id | /players/[id]
+[Queued] Community | Posts · Id | /posts/[id]
+[Queued] General | Preview · Sport | /preview/[sport]
+[Queued] Creators & commerce | Pricing | /pricing
+[Queued] General | Privacy | /privacy
+[Queued] Creators & commerce | Pro | /pro
+[Queued] Community | Profile · Username | /profile/[username]
+[Queued] General | Research | /research
+[Queued] General | Responsible Gambling | /responsible-gambling
+[Queued] General | Scores | /scores
+[Queued] Community | Search | /search
+[Queued] Settings | Settings · Account | /settings/account
+[Queued] Settings | Settings · Blocked | /settings/blocked
+[Queued] Settings | Settings · Connections | /settings/connections
+[Queued] Settings | Settings · Interests | /settings/interests
+[Queued] Settings | Settings · Membership | /settings/membership
+[Queued] Settings | Settings · Notifications | /settings/notifications
+[Queued] Settings | Settings | /settings
+[Queued] Settings | Settings · Privacy | /settings/privacy
+[Queued] Settings | Settings · Profile | /settings/profile
+[Queued] Settings | Settings · Security | /settings/security
+[Queued] MLB · off-season | Slate Breakdown | /slate-breakdown
+[Queued] General | Sports · Sport · GameId | /sports/[sport]/[gameId]
+[Queued] General | Sports | /sports
+[Queued] MLB · off-season | Spray Charts | /spray-charts
+[Queued] Community | Stories · Create | /stories/create
+[Queued] General | Support | /support
+[Queued] MLB · off-season | Synergy | /synergy
+[Queued] General | Terms | /terms
+[Queued] NBA | The Paint | /the-paint
+[Queued] MLB · off-season | The Public | /the-public
+[Queued] NFL | The Sideline | /the-sideline
+[Queued] MLB · off-season | Weather Lab | /weather-lab
+[Queued] General | Workspace | /workspace
+[Queued] NBA | NBA · The Court | /the-paint?view=research
+[Review ready] NBA | NBA · Odds Board | /the-paint?view=odds-board
+[Queued] NBA | NBA · Odds comparison | /the-paint?view=odds
+[Queued] NBA | NBA · Ladders | /the-paint?view=ladders
+[Queued] NBA | NBA · Market Story | /the-paint?view=movement
+[Queued] NBA | NBA · First basket | /the-paint?view=first-basket
+[Queued] NBA | NBA · Cheatsheets | /the-paint?view=cheatsheets
+[Queued] NBA | NBA · SlipSurge Score | /the-paint?view=score
+[Queued] NBA | NBA · Slate Edge | /the-paint?view=slate
+[Queued] NBA | NBA · ThePublic | /the-paint?view=public
+[Queued] NBA | NBA · Cross-market | /the-paint?view=divergence
+[Queued] NBA | NBA · Defense × position | /the-paint?view=dvp
+[Queued] NBA | NBA · Player trends | /the-paint?view=usage
+[Queued] NBA | NBA · Game tracking | /the-paint?view=tracking
+[Queued] NBA | NBA · Matchup Lab | /the-paint?view=matchup
+[Queued] NBA | NBA · Availability | /the-paint?view=availability
+[Queued] NBA | NBA · Game markets | /the-paint?view=game-markets
+[Queued] NFL | NFL · The Sideline | /the-sideline
+[Review ready] NFL | NFL · Odds Board | /the-sideline?view=odds-board
+[Queued] NFL | NFL · Cheatsheets | /the-sideline?mode=cheatsheets
+[Queued] NFL | NFL · The Public | /the-sideline?mode=public
+[Queued] NFL | NFL · Sportsbooks | /the-sideline?mode=markets
+[Queued] NFL | NFL · Matchup Lab | /the-sideline?mode=research
+[Queued] NBA | Player drawer · Overview | /the-paint
+[Queued] NBA | Player drawer · Game tracking | /the-paint
+[Queued] NBA | Player drawer · Ladders | /the-paint
+[Queued] NBA | Player drawer · Market Story | /the-paint
+[Queued] NBA | Player drawer · Shots | /the-paint
+[Queued] NBA | Player drawer · All odds | /the-paint
+[Queued] NFL | Cheatsheets · Market Edge | /the-sideline?mode=cheatsheets
+[Queued] NFL | Cheatsheets · Exact-Line Hits | /the-sideline?mode=cheatsheets
+[Queued] NFL | Cheatsheets · Explosive Plays | /the-sideline?mode=cheatsheets
+[Queued] NFL | Cheatsheets · Run Gaps | /the-sideline?mode=cheatsheets
+[Queued] NFL | Cheatsheets · Defense / DvP | /the-sideline?mode=cheatsheets
+[Review ready] Shared components | Member identity, avatar rings and badges | /design-review/identity
+[Queued] Shared components | Account menu | Shared surface
+[Queued] Shared components | Global search | Shared surface
+[Queued] Shared components | Notifications panel | Shared surface
+[Queued] Shared components | What’s new and release popup | Shared surface
+[Queued] Shared components | Saved picks drawer | Shared surface
+[Queued] Shared components | NBA Matrix | Shared surface
+[Queued] Shared components | NFL Matrix | Shared surface
+[Queued] Shared components | Player comparison | Shared surface
+[Queued] Shared components | Post composer | Shared surface
+[Queued] Shared components | Comments and share | Shared surface
+[Queued] Shared components | Image and video viewer | Shared surface
+[Queued] Shared components | Confirmation dialogs | Shared surface
+[Queued] Shared components | Empty, loading and error states | Shared surface

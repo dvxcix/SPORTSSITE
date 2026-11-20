@@ -10,6 +10,7 @@ import styles from './sidelineNavigation.module.css'
 import { scheduleWeekKey, scheduleWeekLabel, type SidelineScheduleDay } from './scheduleNavigation'
 import { researchToolHref } from '@/components/layout/researchNavigation'
 import { ResearchBoardTabs } from '@/components/layout/ResearchBoardTabs'
+import { ResearchWorkspacePicker } from '@/components/layout/ResearchWorkspacePicker'
 
 function shortDay(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -44,6 +45,7 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         <Image className={styles.nflMark} src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="NFL" width={30} height={30} unoptimized />
         <div><strong>The Sideline</strong><small>{scheduleWeekLabel(selectedDay)}</small></div>
       </div>
+      <ResearchWorkspacePicker className={styles.mobileTools} label="NFL research workspace" value={workspace} disabled={pending} onChange={value => change(researchToolHref(href(value), '/the-sideline', searchParams))}><option value="">The Sideline</option><option value="odds-board">Odds Board</option><option value="cheatsheets">Cheatsheets</option><option value="public">The Public</option><option value="markets">Sportsbooks</option><option value="research">Matchup Lab</option></ResearchWorkspacePicker>
       <ResearchBoardTabs sport="NFL" researchLabel="The Sideline" oddsActive={workspace==='odds-board'} onSelect={board=>change(researchToolHref(href(board==='research'?'':board),'/the-sideline',searchParams))}/></div>
       <div className={styles.contextControls}>
         <label className={styles.selectControl}>
@@ -62,7 +64,7 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         <Link key={tool.mode} href={researchToolHref(href(tool.mode), '/the-sideline', searchParams)} prefetch={false} scroll={false} aria-current={workspace === tool.mode ? 'page' : undefined}><tool.icon size={16} aria-hidden="true" /><span>{tool.label}</span></Link>)}
     </nav>
 
-    <label className={styles.mobileWorkspace}><span className="sr-only">NFL research workspace</span><select aria-label="NFL research workspace" value={workspace} disabled={pending} onChange={event => change(researchToolHref(href(event.target.value), '/the-sideline', searchParams))}><option value="">The Sideline</option><option value="odds-board">Odds Board</option><option value="cheatsheets">Cheatsheets</option><option value="public">The Public</option><option value="markets">Sportsbooks</option><option value="research">Matchup Lab</option></select></label>
+
 
     <div className={styles.schedulePicker}>
       <nav className={styles.dayRail} aria-label="NFL game days">
