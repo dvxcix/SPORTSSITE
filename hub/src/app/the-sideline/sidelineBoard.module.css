@@ -77,6 +77,7 @@
 }
 
 .controlBar {
+  flex-wrap: wrap;
   position: sticky;
   top: 8px;
   z-index: 25;
@@ -122,7 +123,7 @@
 }
 
 .matchupMini span { color: var(--text-3); font-size: 12px; }
-.windowTabs { display: flex; gap: 4px; margin-right: auto; }
+.windowTabs { display: flex; flex: 0 0 auto; gap: 4px; margin-right: auto; }
 
 .activeControl,
 .windowTabs .activeControl,
@@ -939,6 +940,7 @@
    dense board controls inside their own rails instead of widening the page. */
 @media (max-width: 900px) {
   .controlBar {
+    flex-wrap: nowrap;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
