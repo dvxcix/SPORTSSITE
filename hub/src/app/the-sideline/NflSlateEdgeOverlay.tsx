@@ -68,7 +68,7 @@ function Score({ value, compact = false }: { value: number | null; compact?: boo
 function MarketPrice({ market }: { market: NflSlateEdgeMarket }) {
   return <span className={polish.quote}>
     {market.vendor ? <BookLogo vendor={market.vendor} size={18}/> : null}
-    <span className={polish.quoteBody}><NflQuote neutralLine side="odds" offer={{vendor:market.vendor??'',line:market.line,openingLine:market.openingLine,type:'over_under',current:{odds:market.odds},opening:{odds:market.openingOdds},updatedAt:null}}/></span>
+    <span className={polish.quoteBody}><NflQuote neutralLine side="odds" offer={{vendor:market.vendor??'',line:market.line,openingLine:market.openingLine,type:'over_under',current:{odds:market.odds??undefined},opening:{odds:market.openingOdds??undefined},updatedAt:null}}/></span>
   </span>
 }
 
