@@ -1,0 +1,56 @@
+SlipSurge — The Court and player research — 20 November 2026
+
+SCOPE AND RELEASE AUTHORITY
+The owner requested public rollout of The Court and all six player sections.
+This release also includes the previously reviewed Odds Board / identity batch
+at a131127e580c9199355e6af4e078607255db1c7d. The earlier batch-1 private-review
+report describes its state before this authorization. Released source goes to
+GitHub main; the live deployment must match that commit before completion.
+Baseline main/live: bddfa0182c55b8d877f23a0ccd20bdc3d111b981.
+Required NFL ancestry: 6c3811b0882e1b1a6694a30849273f3e210cd69c.
+
+IMPLEMENTED CHECKLIST
+[x] Court board: quieter controls, consistent rows, contained artwork,
+    sticky comparison and player columns, independent table scrolling.
+[x] Overview: compact summary, numeric chart axes, exact zero baselines,
+    missing values kept unavailable, readable labels, scrollable sortable log.
+[x] Game tracking: remove repeated drawer heading; replace the 70px detail
+    sparkline with a labelled, keyboard-selectable chart and observed-value axes.
+[x] Ladders: compact quotes, real sportsbook artwork, accessible best-price
+    marks, retained exact contracts, sample grades and horizontal table access.
+[x] Market Story: readable control grid, capture replay, signed price marks,
+    observed timestamps and exact-contract probability charts. Missing captures
+    break the line. O/U charts continue to show their observed reference lines.
+[x] Shots: explicit Shots/Heatmap controls, keyboard/touch shot selection,
+    distinct makes/misses, preserved off-map log, season shooting and summaries.
+[x] All odds: streamlined offer rows, exact prices/openings, retained side,
+    sportsbook, contract and save controls.
+[x] Shared drawer: contained player portrait, clear name hierarchy, sticky
+    six-section access, reachable full profile / Compare / close / footer.
+[x] Desktop and phone: light/dark reviewed; 320, 390, 768, 1024, 1440px boundaries.
+[x] Keep every tool: 17 NBA workspace destinations and permanent Court/Odds
+    Board navigation retained. Existing NFL access and its six destinations retained.
+
+VALIDATION
+NBA suite: 714 passed. Separate NBA pregame-freeze suite: 124 passed.
+Production source contracts: 134 passed. Changed TSX/TypeScript lint: clean.
+New chart regressions are included in test:paint: exact-contract probability,
+missing/zero observations, chronological keyboard navigation and shot/heatmap log.
+The best-price test still requires competing books at the same exact threshold,
+including tied best prices; it now asserts the accessible icon instead of text.
+Private browser evidence: docs/design/evidence/live/court-review/.
+Live Git SHA/deployment and post-release browser checks: court-review/release.json.
+
+REVIEW LIMITS
+Private review uses illustrative data and has no live service credentials.
+The private fixture has no O/U ladder/history for the selected market. Its
+disabled/empty states were checked; real O/U contracts are covered by the NBA
+component tests and are checked on the live page when available.
+No real picks were created to test save buttons. Exact save/drilldown contracts
+are covered by component tests. Reduced-motion CSS was reviewed; the owner's
+OS preference was not changed. Existing loading/error/frozen-data behavior is
+covered by the NBA suites. No database, collector, job, flag or secret changes.
+
+The 202-item inventory now records 10 owner-authorized items, one page in
+progress and 191 queued. This is a Court/player-section release, not a claim
+that all remaining pages and workspaces have received their individual review.

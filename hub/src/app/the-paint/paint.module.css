@@ -355,3 +355,188 @@
 @media(max-width:767px){.header>.mobileTools{grid-column:2;grid-row:3}.header>.oddsMode{grid-column:1;grid-row:3;min-width:0}.header>.oddsMode button{min-width:0;padding-inline:10px}}
 
 @media(min-width:768px) and (max-width:1150px){.headerActions>button:first-child{width:44px;min-width:44px;padding:0;font-size:0;gap:0;justify-content:center}.headerActions>button:first-child svg{width:18px;height:18px}}
+.paint[data-court-workspace=research] .board{border:1px solid var(--border-2);border-radius:10px;background:var(--surface);overflow:hidden}
+.paint[data-court-workspace=research] .marketRail{padding:8px;gap:4px;border-bottom:1px solid var(--border)}
+.paint[data-court-workspace=research] .marketRail button{min-height:44px;padding:8px 12px;border-radius:7px;font-size:12px;font-weight:500}
+.paint[data-court-workspace=research] .movementTools{margin:0;padding:10px 12px;gap:12px;border-bottom:1px solid var(--border)}
+.paint[data-court-workspace=research] .movementTools>label{color:var(--text-2);font-size:12px;gap:8px}
+.paint[data-court-workspace=research] .movementTools select{min-height:40px;background:var(--input-bg);font-size:13px}
+.paint[data-court-workspace=research] .filters{padding:12px;gap:8px;border:0;background:transparent;align-items:center}
+.paint[data-court-workspace=research] .filters>select{min-height:44px}
+.paint[data-court-workspace=research] .boardMeta{padding:10px 12px;border-top:1px solid var(--border);color:var(--text-2);font-size:12px}
+.paint[data-court-workspace=research] .tableScroll{border:0;border-top:1px solid var(--border-2);scrollbar-width:thin;scroll-padding-inline:240px}
+.paint[data-court-workspace=research] .table{font-variant-numeric:tabular-nums}
+.paint[data-court-workspace=research] .table th{height:44px;padding:0 10px;background:var(--surface-2);color:var(--text-2);font-size:12px}
+.paint[data-court-workspace=research] .table th button{min-height:44px;font-weight:550}
+.paint[data-court-workspace=research] .table td{height:84px;padding:10px;background:var(--surface);border-bottom:1px solid var(--border)}
+.paint[data-court-workspace=research] .table :is(th,td):first-child{position:sticky;left:0;z-index:3;width:44px;min-width:44px;max-width:44px;padding:0;text-align:center;box-shadow:none}
+.paint[data-court-workspace=research] .table td:first-child button{width:44px;min-width:44px;min-height:44px;display:inline-grid;place-items:center}
+.paint[data-court-workspace=research] .table :is(th,td):nth-child(2){position:sticky;left:44px;z-index:2;min-width:190px;max-width:220px;box-shadow:1px 0 0 var(--border-2)}
+.paint[data-court-workspace=research] .table thead :is(th:first-child,th:nth-child(2)){z-index:5;background:var(--surface-2)}
+.paint[data-court-workspace=research] .table tbody tr:hover td{background:var(--surface-2)}
+.paint[data-court-workspace=research] .playerButton{gap:12px;min-height:56px;text-align:left}
+.paint[data-court-workspace=research] .playerButton strong{font-size:13px;line-height:1.4;font-weight:600}
+.paint[data-court-workspace=research] .playerButton small{color:var(--text-2);font-size:11px}
+.paint[data-court-workspace=research] .table .priceQuote{font-size:13px}
+.paint[data-court-workspace=research] .mobilePlayer{padding:14px;background:var(--surface);border:1px solid var(--border-2);border-radius:10px;box-shadow:none}
+.paint[data-court-workspace=research] .mobilePlayer .playerButton strong{font-size:15px}
+.paint[data-court-workspace=research] .mobileStats{margin-block:12px;gap:6px}
+.paint[data-court-workspace=research] .mobileStats>div{padding:9px 6px;border:1px solid var(--border);background:var(--surface-2)}
+
+/* The six player sections share one measured drawer rhythm. */
+.drawerTop{min-height:56px;padding:6px 16px;gap:8px;border-bottom:1px solid var(--border)}
+.drawerTop>span{flex:1;min-width:0;color:var(--text-2)}
+.drawerTop>span a{font-size:12px;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.drawerTop>.iconButton{flex:none;width:44px;height:44px;min-height:44px;padding:0}
+.drawerScroll{scroll-padding-top:64px;scrollbar-width:thin;scrollbar-color:var(--border-3) transparent}
+.drawer .playerHero{min-height:128px;padding:14px 20px;gap:16px;background:var(--surface)}
+.drawer .playerHero>div{min-width:0}
+.drawer .playerHero h2,.drawer .playerHero h2 strong{display:inline;font-size:27px;line-height:1.18;font-weight:650;letter-spacing:-.035em}
+.drawer .playerHero h2{display:block;margin-block:8px}
+.drawer .playerPosition,.drawer .draftContext{font-size:11px;line-height:1.5;letter-spacing:0;color:var(--text-2)}
+.drawer .playerOpponent{font-size:12px;gap:6px;color:var(--text-2)}
+.drawer .playerHero .portrait{width:124px;height:104px;flex:0 0 124px;margin:0;border-radius:10px}
+.drawer .playerStrip{padding:10px 20px;gap:0;border-block:1px solid var(--border);background:var(--surface)}
+.drawer .playerStrip b{font-size:20px;line-height:1.2;font-weight:650}
+.drawer .playerStrip small{margin-top:4px;color:var(--text-2);font-size:11px;letter-spacing:0}
+.drawer .playerSample{padding:6px 20px;min-height:52px;gap:12px;background:var(--surface)}
+.drawer .playerSample>span{margin-right:auto;color:var(--text-2);font-size:11px;flex-basis:auto}
+.drawer .playerSample>button{min-height:44px;padding-inline:10px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);font-size:12px}
+.drawer .panelTabs{position:sticky;top:0;z-index:4;gap:2px;margin:0;padding:5px 12px;background:var(--surface);border-block:1px solid var(--border);scrollbar-width:thin}
+.drawer .panelTabs button{min-height:44px;padding:8px 10px;font-size:12px;font-weight:500;border-radius:7px;white-space:nowrap}
+.drawer .panelTabs button[aria-pressed=true]{color:var(--accent);background:var(--selected-bg);box-shadow:inset 0 -2px var(--accent)}
+.drawer .panelBody{padding:16px 20px 24px;min-width:0}
+.drawer .mobileMm{display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:24px;margin-bottom:10px;font-size:12px;color:var(--text-2)}
+.drawer .mobileMm small{margin-left:auto;font-size:11px;color:var(--text-2)}
+.drawer .panelMarket{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.drawer .panelMarket>select{flex:1;min-width:0;min-height:44px;font-size:13px;background:var(--input-bg);border-color:var(--control-border)}
+.drawer .segment{gap:0;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2);padding:3px}
+.drawer .segment button{min-height:36px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:5px}
+.drawer .trendSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.drawer .trendSummary>div{min-height:84px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.drawer .trendSummary>div>span{font-size:11px;line-height:1.4;color:var(--text-2)}
+.drawer .trendSummary strong{display:block;font-size:24px;line-height:1.25;margin-top:6px;font-weight:650;letter-spacing:-.025em}
+.drawer .trendSummary strong small{display:inline;margin-left:4px;color:var(--text-2);font-size:11px;font-weight:500}
+.drawer .trendSummary small{font-size:11px;line-height:1.4}
+.drawer .chartFilters{margin:0 0 14px;gap:10px;align-items:center}
+.drawer .chartFilters select{min-height:44px;font-size:13px;background:var(--input-bg);border-color:var(--control-border)}
+.drawer .chartCaption{margin:8px 0 16px;font-size:11px;color:var(--text-2)}
+.drawer .sectionHeading{margin:20px 0 12px;align-items:center;gap:12px}
+.drawer .sectionHeading h3,.drawer .toolHeading h3{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:-.015em}
+.drawer .sectionHeading>span,.drawer .toolHeading span{font-size:11px;color:var(--text-2)}
+.drawer .researchTool{padding:0;border:0;background:transparent}
+.drawer .toolHeading{margin:0 0 12px;padding:0;min-height:0}
+.drawer .toolControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:16px;padding:0;background:transparent}
+.drawer .toolControls>select,.drawer .toolControls>button{width:100%;min-width:0;min-height:44px;margin:0;font-size:13px;border-radius:8px;background:var(--input-bg);color:var(--text-1);border:1px solid var(--control-border)}
+.drawer .shotResearch .toolControls>.segment{grid-column:1/-1;justify-self:start}
+.drawer .shotResearch .toolControls>.segment button{min-height:44px}
+.drawer select{text-transform:none}
+.drawer .trackingSummary,.drawer .shotSummary{gap:8px;margin-block:14px}
+.drawer .shotSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.drawer .trackingSummary>span,.drawer .shotSummary>strong{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.drawer .trackingSummary small,.drawer .shotSummary small{color:var(--text-2);font-size:11px;font-weight:500;letter-spacing:0;text-transform:none}
+.drawer .trackingSummary b,.drawer .shotSummary>strong{font-size:21px;font-weight:650}
+.drawer .estimateCard{padding:12px 14px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);box-shadow:none}
+.drawer .estimateCard small{font-size:11px;line-height:1.5;letter-spacing:0;color:var(--text-2)}
+.drawer .estimateCard strong{font-size:24px;font-weight:650}
+.drawer .estimateCard b{font-size:12px;font-weight:550}
+.gameLogScroll{max-width:100%;overflow:auto;overscroll-behavior-x:contain;border:1px solid var(--border-2);border-radius:8px;scrollbar-width:thin}
+.gameLogScroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.drawer .logTable{width:100%;margin:0;border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums}
+.drawer .logTable th{height:44px;padding:0 10px;background:var(--surface-2);font-weight:550;color:var(--text-2)}
+.drawer .logTable th button{min-height:44px;gap:5px}
+.drawer .logTable td{height:52px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--surface)}
+.drawer .logOpponent{gap:8px;font-size:12px}
+.drawer .blockMuted{font-size:11px;line-height:1.4;color:var(--text-2)}
+.drawer .researchScroll,.drawer .oddsScroll{border:1px solid var(--border-2);border-radius:8px;scrollbar-width:thin}
+.drawer .researchTable :is(td,th),.drawer .ladderTable :is(td,th){padding:10px;border-color:var(--border)}
+.drawer .researchTable th,.drawer .ladderTable th{background:var(--surface-2);font-size:12px;font-weight:550}
+.drawer .researchTable tbody th,.drawer .ladderTable tbody th{box-shadow:1px 0 0 var(--border-2)}
+.drawer .ladderToolbar{gap:10px;align-items:center;margin:0 0 12px}
+.drawer .ladderToolbar>span{font-size:11px;color:var(--text-2)}
+.drawer .ladderQuote{position:relative;padding-top:14px;gap:8px;min-width:104px}
+.drawer .bestPrice{position:absolute;right:0;top:0;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;color:var(--accent);background:var(--selected-bg);border-radius:50%;font-size:11px}
+.drawer .offer{display:grid;grid-template-columns:32px 64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;box-shadow:none}
+.drawer .offer>b,.drawer .offer span>b{font-size:18px;font-weight:650}
+.drawer .offerOdds{min-width:0}
+.drawer .offerOdds .priceNow b{font-size:18px}
+.drawer .movementList{gap:12px}
+.drawer .movementCard{padding:14px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);box-shadow:none}
+.drawer .movementNumbers{gap:12px;align-items:flex-start}
+.drawer .movementNumbers>span{min-width:0;flex:1}
+.drawer .movementNumbers small{font-size:10px;letter-spacing:.02em;font-weight:500;color:var(--text-2)}
+.drawer .movementNumbers b{font-size:20px;font-weight:650}
+.drawer .movementTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px;align-items:end}
+.drawer .movementTools>select,.drawer .movementTools>label select{width:100%;min-width:0;min-height:44px;font-size:13px;background:var(--input-bg);border-color:var(--control-border)}
+.drawer .movementTools>.segment{justify-self:start}
+.drawer .movementTools>[data-paint-entity-select]{justify-self:start}
+.drawer .movementTools>label{font-size:11px;color:var(--text-2)}
+.drawer .shotMap{margin:12px auto;width:100%;max-width:420px;border-radius:8px}
+.drawer .shotMap [data-shot-point]{cursor:pointer;outline:none}
+.drawer .shotMap [data-shot-point]:focus-visible circle:last-child{stroke:var(--text-1);stroke-width:.5}
+.drawer .shotList{gap:0;margin-top:16px;border-top:1px solid var(--border)}
+.drawer .shotList>button{min-height:48px;gap:10px;padding:10px 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;font-size:12px;text-align:left}
+.drawer .shotList>button[aria-pressed=true]{background:var(--selected-bg);box-shadow:inset 3px 0 var(--accent)}
+.drawer .shotList small{font-size:11px;color:var(--text-2)}
+.drawer .shotDetail{padding:12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);font-size:12px}
+.drawer .shotCourt{margin-top:12px;gap:12px}
+.drawer .shotCourt>div{gap:0}
+.drawer .shotCourt>div>span{padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2)}
+.drawer .advancedGrid{gap:8px;margin-top:16px}
+.drawer .advancedGrid>span{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.drawer .drawerFooter{min-height:68px;padding:8px 16px max(8px,env(safe-area-inset-bottom));gap:12px;border-top:1px solid var(--border-2);background:var(--surface)}
+.drawer .drawerFooter>span{min-width:0;flex:1}
+.drawer .drawerFooter>button,.drawer .pickActions>button{min-width:44px;min-height:44px}
+.drawer .drawerFooter>button{padding-inline:10px;border-radius:8px;font-size:12px}
+
+/* Bar geometry is independent of the site's button minimum height. */
+.chartFrame{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;padding-top:18px}
+.chartAxis{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-bottom:0;color:var(--text-2);font-size:10px;line-height:1}
+.chartFrame .chart{height:170px;margin:0;gap:6px;position:relative;overflow:visible}
+.chartFrame .chart>button[data-chart-bar]{position:relative;height:100%;min-height:0;max-height:100%;min-width:4px;max-width:none;flex:1;padding:0;border:0;border-radius:3px;background:transparent;box-shadow:none}
+.chartFrame .chartFill{position:absolute;bottom:0;left:0;width:100%;display:block;min-height:0;border-radius:3px 3px 0 0;background:var(--chart-muted);transition:filter 120ms ease}
+.chartFrame [data-result=win] .chartFill{background:var(--green-fill)}
+.chartFrame [data-result=push] .chartFill{border:1px dashed var(--chart-axis);background:var(--surface-3)}
+.chartFrame [data-zero=true] .chartFill{border-top:2px solid var(--chart-axis)}
+.chartFrame .chart>button:hover .chartFill,.chartFrame .chart>button:focus-visible .chartFill{filter:brightness(1.2)}
+.chartFrame .chart .chartValue{position:absolute;top:auto;left:50%;height:auto;translate:-50% 0;min-width:0;font-size:11px;line-height:1;font-weight:550;white-space:nowrap;color:var(--text-1)}
+.chartFrame .chartLine{z-index:2;border-color:var(--chart-axis);pointer-events:none}
+.chartFigure .chartLegend{padding-top:10px;min-height:36px;gap:8px 12px;font-size:11px}
+.chartFigure .chartLegend output{font-size:11px}
+@media(max-width:767px){
+ .paint[data-court-workspace=research] .board{border:0;background:transparent;overflow:visible}
+ .paint[data-court-workspace=research] .boardOptionsRow{padding:0 0 10px;border:0}
+ .paint[data-court-workspace=research] .filters,.paint[data-court-workspace=research] .movementTools{padding:10px 0}
+ .paint[data-court-workspace=research] .boardMeta{padding:8px 0;border:0}
+ .drawer .playerHero{min-height:116px;padding:12px 14px;gap:12px}
+ .drawer .playerHero h2,.drawer .playerHero h2 strong{font-size:24px}
+ .drawer .playerHero .portrait{flex-basis:104px;width:104px;height:96px}
+ .drawer .playerStrip{padding:9px 14px}
+ .drawer .playerStrip b{font-size:19px}
+ .drawer .playerSample{padding:4px 14px;gap:8px;min-height:52px}
+ .drawer .playerSample>span{font-size:10px}
+ .drawer .panelTabs{display:none}
+ .drawer .panelMobileTabs{display:block;position:sticky;top:0;z-index:4;padding:8px 12px;background:var(--surface);border-block:1px solid var(--border)}
+ .drawer .panelBody{padding:14px 12px 20px}
+ .drawer .panelMarket>select,.drawer .toolControls>select,.drawer .chartFilters select,.drawer .movementTools>select,.drawer .movementTools>label select{font-size:16px}
+ .drawer .segment button{min-height:36px;padding-inline:10px}
+ .drawer .trendSummary{gap:6px;margin-bottom:12px}
+ .drawer .trendSummary>div{padding:9px 8px;min-height:80px}
+ .drawer .trendSummary strong{font-size:22px}
+ .drawer .trendSummary strong small{display:block;margin:3px 0 0;font-size:10px}
+ .drawer .trendSummary>div>span,.drawer .trendSummary small{font-size:10px}
+ .drawer .logTable td,.drawer .logTable th{padding-inline:8px}
+ .drawer .logTable{min-width:330px}
+ .drawer .trackingSummary small{font-size:10px}
+ .drawer .trackingSummary b{font-size:19px}
+ .drawer .offer{grid-template-columns:28px 50px minmax(0,1fr) 44px;gap:8px}
+ .drawer .offer .priceComparison{flex-wrap:wrap;gap:4px}
+ .drawer .drawerFooter{gap:8px;padding-inline:12px}
+ .chartFrame{grid-template-columns:30px minmax(0,1fr);gap:8px;padding-top:20px}
+ .chartFrame .chart{height:150px;gap:4px}
+ .chartFigure[data-dense=true] .chartValue{opacity:0}
+ .chartFigure[data-dense=true] button:is(:hover,:focus) .chartValue{opacity:1}
+}
+@media(prefers-reduced-motion:reduce){.chartFrame .chartFill{transition:none}}
+
+.drawer .marketChart{margin-top:16px}.drawer .marketChart>span{display:block;font-size:11px;font-weight:550;color:var(--text-2)}

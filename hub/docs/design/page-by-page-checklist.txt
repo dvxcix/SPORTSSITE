@@ -154,13 +154,13 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] General | Support | /support
 [Queued] MLB · off-season | Synergy | /synergy
 [Queued] General | Terms | /terms
-[Queued] NBA | The Paint | /the-paint
+[In progress] NBA | The Paint | /the-paint
 [Queued] MLB · off-season | The Public | /the-public
 [Queued] NFL | The Sideline | /the-sideline
 [Queued] MLB · off-season | Weather Lab | /weather-lab
 [Queued] General | Workspace | /workspace
-[Queued] NBA | NBA · The Court | /the-paint?view=research
-[Review ready] NBA | NBA · Odds Board | /the-paint?view=odds-board
+[Approved] NBA | NBA · The Court | /the-paint?view=research
+[Approved] NBA | NBA · Odds Board | /the-paint?view=odds-board
 [Queued] NBA | NBA · Odds comparison | /the-paint?view=odds
 [Queued] NBA | NBA · Ladders | /the-paint?view=ladders
 [Queued] NBA | NBA · Market Story | /the-paint?view=movement
@@ -177,23 +177,23 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | NBA · Availability | /the-paint?view=availability
 [Queued] NBA | NBA · Game markets | /the-paint?view=game-markets
 [Queued] NFL | NFL · The Sideline | /the-sideline
-[Review ready] NFL | NFL · Odds Board | /the-sideline?view=odds-board
+[Approved] NFL | NFL · Odds Board | /the-sideline?view=odds-board
 [Queued] NFL | NFL · Cheatsheets | /the-sideline?mode=cheatsheets
 [Queued] NFL | NFL · The Public | /the-sideline?mode=public
 [Queued] NFL | NFL · Sportsbooks | /the-sideline?mode=markets
 [Queued] NFL | NFL · Matchup Lab | /the-sideline?mode=research
-[Queued] NBA | Player drawer · Overview | /the-paint
-[Queued] NBA | Player drawer · Game tracking | /the-paint
-[Queued] NBA | Player drawer · Ladders | /the-paint
-[Queued] NBA | Player drawer · Market Story | /the-paint
-[Queued] NBA | Player drawer · Shots | /the-paint
-[Queued] NBA | Player drawer · All odds | /the-paint
+[Approved] NBA | Player drawer · Overview | /the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame
+[Approved] NBA | Player drawer · Game tracking | /the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame
+[Approved] NBA | Player drawer · Ladders | /the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame
+[Approved] NBA | Player drawer · Market Story | /the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame
+[Approved] NBA | Player drawer · Shots | /the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame
+[Approved] NBA | Player drawer · All odds | /the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame
 [Queued] NFL | Cheatsheets · Market Edge | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Exact-Line Hits | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Explosive Plays | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Run Gaps | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Defense / DvP | /the-sideline?mode=cheatsheets
-[Review ready] Shared components | Member identity, avatar rings and badges | /design-review/identity
+[Approved] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Queued] Shared components | Account menu | Shared surface
 [Queued] Shared components | Global search | Shared surface
 [Queued] Shared components | Notifications panel | Shared surface

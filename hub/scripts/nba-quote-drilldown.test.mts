@@ -300,9 +300,9 @@ test('ladder best-price badges require competing books at the exact line and ret
     const competing = rows.find(row => row.querySelector('th')?.textContent === '20+')!
     const unique = rows.find(row => row.querySelector('th')?.textContent === '30+')!
     assert.equal(competing.querySelectorAll('[data-best="true"]').length, 2)
-    assert.equal((competing.textContent?.match(/Best price/g) ?? []).length, 2)
+    assert.equal(competing.querySelectorAll('[aria-label="Best price"]').length, 2)
     assert.equal(unique.querySelectorAll('[data-best="true"]').length, 0)
-    assert.doesNotMatch(unique.textContent ?? '', /Best price/)
+    assert.equal(unique.querySelector('[aria-label="Best price"]'),null)
   } finally { await ui.close() }
 })
 

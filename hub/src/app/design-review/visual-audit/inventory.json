@@ -3284,9 +3284,9 @@
     "label": "The Paint",
     "group": "NBA",
     "kind": "Page",
-    "status": "Queued",
+    "status": "In progress",
     "batch": null,
-    "notes": "",
+    "notes": "The Court board, Odds Board and all six player sections are approved for rollout. The other 15 NBA workspaces require their individual visual review.",
     "checks": {
       "desktopDark": false,
       "desktopLight": false,
@@ -3393,20 +3393,24 @@
     "label": "NBA · The Court",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba:odds-board",
@@ -3414,9 +3418,9 @@
     "label": "NBA · Odds Board",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Review ready",
+    "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner approval pending.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3776,9 +3780,9 @@
     "label": "NFL · Odds Board",
     "group": "NFL",
     "kind": "Workspace",
-    "status": "Review ready",
+    "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner approval pending.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3882,129 +3886,153 @@
   },
   {
     "id": "nba-drawer:Overview",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame",
     "label": "Player drawer · Overview",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba-drawer:Game tracking",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame",
     "label": "Player drawer · Game tracking",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba-drawer:Ladders",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame",
     "label": "Player drawer · Ladders",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba-drawer:Market Story",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame",
     "label": "Player drawer · Market Story",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba-drawer:Shots",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame",
     "label": "Player drawer · Shots",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nba-drawer:All odds",
-    "route": "/the-paint",
+    "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame",
     "label": "Player drawer · All odds",
     "group": "NBA",
     "kind": "Panel",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Approved",
+    "batch": 2,
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "court-review/browser-checks.json",
+      "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
+      "court-review/production-tests.txt · 134 source checks"
+    ]
   },
   {
     "id": "nfl-cheatsheet:Market Edge",
@@ -4117,9 +4145,9 @@
     "label": "Member identity, avatar rings and badges",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Review ready",
+    "status": "Approved",
     "batch": 1,
-    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner approval pending.",
+    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,

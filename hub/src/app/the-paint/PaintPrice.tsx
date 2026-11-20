@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
+import { MarketMovement } from '@/components/research/ResearchMetrics'
 import { nbaOdds, nbaPrice, type PaintProp, type PaintGameOdds } from '@/lib/nbaPaint'
 import { nbaOddsDelta } from '@/lib/nbaOddsDelta'
 import styles from './paint.module.css'
@@ -15,8 +15,7 @@ export function PaintPriceDelta({ open, current }: { open?: number | null; curre
   const direction = move?.direction ?? 'unknown'
   const value = move == null ? '—' : `${move.pp > 0 ? '+' : ''}${move.pp.toFixed(1)} pp`
   return <span className={styles.priceDelta} data-direction={direction} aria-label={move == null ? 'No comparable opening capture yet' : `${direction === 'flat' ? 'Unchanged implied probability' : direction === 'shorter' ? 'Odds shortened' : 'Odds lengthened'} · ${value} probability points`}>
-    {direction === 'shorter' ? <ArrowDownRight size={12} aria-hidden="true"/> : direction === 'longer' ? <ArrowUpRight size={12} aria-hidden="true"/> : <Minus size={12} aria-hidden="true"/>}
-    <span><span className="sr-only">Change </span>{value}</span>
+    <span className="sr-only">Change </span><MarketMovement value={move?.pp ?? null}/>
   </span>
 }
 
