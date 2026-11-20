@@ -62,7 +62,7 @@ export default async function AdminEmailSettingsPage() {
       {!allReady && (
         <div className="flex items-start gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--gold)_25%,transparent)] bg-[color-mix(in_srgb,var(--gold)_8%,transparent)] p-4 text-sm text-[var(--gold)]">
           <AlertTriangle className="mt-0.5 shrink-0 text-[var(--gold)]" size={17} aria-hidden="true" />
-          <div><p className="font-extrabold">Email delivery is not fully instrumented.</p><p className="mt-1 text-xs leading-5 text-[color-mix(in_srgb,var(--gold)_70%,transparent)]">Add the missing environment values shown below, then redeploy. Secrets are never displayed here.</p></div>
+          <div><p className="font-extrabold">Email delivery is not fully instrumented.</p><p className="mt-1 text-xs leading-5 text-[var(--gold)]">Add the missing environment values shown below, then redeploy. Secrets are never displayed here.</p></div>
         </div>
       )}
 

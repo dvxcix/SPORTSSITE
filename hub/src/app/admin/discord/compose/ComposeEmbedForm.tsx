@@ -178,7 +178,7 @@ export function ComposeEmbedForm() {
 
       <div className="lg:sticky lg:top-6 self-start">
         <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">Preview</p>
-        <div className="bg-[#313338] rounded-lg p-4 space-y-2">
+        <div className="ss-on-dark bg-[#313338] rounded-lg p-4 space-y-2">
           {content && <p className="text-[#dbdee1] text-sm whitespace-pre-wrap break-words"><EmojiText text={content} /></p>}
           {hasEmbed && (
             <div className="flex rounded overflow-hidden max-w-[440px]" style={{ background: 'var(--surface-2)' }}>

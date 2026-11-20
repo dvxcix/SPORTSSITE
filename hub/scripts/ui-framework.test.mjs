@@ -19,6 +19,18 @@ const rgb=hex=>{const value=hex.length===4?'#'+hex.slice(1).split('').map(c=>c+c
 const luminance=hex=>rgb(hex).map(n=>{const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0)
 const contrast=(a,b)=>{const l=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (l[0]+.05)/(l[1]+.05)}
 
+test('component text aliases retain readable contrast in both themes',async()=>{
+ const shared={}
+ postcss.parse(await fs.readFile(new URL('../src/app/globals.css',import.meta.url),'utf8')).walkRules(rule=>{
+  if(rule.selector===':root')rule.walkDecls(declaration=>{shared[declaration.prop]=declaration.value})
+ })
+ for(const [mode,palette]of Object.entries(palettes)){
+  const tokens={...shared,...palette}
+  const resolve=(name,depth=0)=>{assert.ok(depth<10,'Color aliases must resolve without a cycle');const value=tokens[name],reference=value?.match(/^var\((--[\w-]+)\)$/);return reference?resolve(reference[1],depth+1):value}
+  for(const role of ['--text-primary','--text-secondary','--text-muted','--accent-primary'])for(const surface of ['--bg','--surface','--surface-2','--surface-3'])assert.ok(contrast(resolve(role),resolve(surface))>=4.5,`${mode}: ${role} on ${surface}`)
+ }
+})
+
 test('conditional and embedded primary buttons use the fill role with primary ink',async()=>{
  let checked=0
  async function visit(dir){for(const item of await fs.readdir(dir,{withFileTypes:true})){
