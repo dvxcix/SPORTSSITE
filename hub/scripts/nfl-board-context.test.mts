@@ -15,7 +15,7 @@ const contents=`import {useState} from 'react';import {NflOddsBoard} from './src
 const odds={players:[{id:1,name:'Test',team:'SEA',position:'WR',markets:[{propType:'receiving_yards',offers:[{vendor:'fanduel'},{vendor:'draftkings'}]},{propType:'rushing_yards',offers:[{vendor:'fanduel'},{vendor:'draftkings'}]}]}]};
 export function Harness(){const [market,onMarket]=useState('receiving_yards');const [vendor,onVendor]=useState('fanduel');const [board,setBoard]=useState(false);return <><button onClick={()=>setBoard(!board)}>Switch view</button>{board?<NflOddsBoard date='2020-11-02' market={market} onMarket={onMarket} vendor={vendor} onVendor={onVendor}/>:<LadderBoard board={odds} prop={market} onProp={onMarket} vendor={vendor} onVendor={onVendor} onPlayer={()=>{}} scores={new Map()}/>}</>}`
 const stubs:Record<string,string>={
-  '@/components/BookLogo':'export const BookLogo=()=>null;export const normalizeVendor=x=>x',
+  '@/components/BookLogo':'export const BookLogo=()=>null;export const normalizeVendor=x=>x;export const bookName=x=>x',
   '@/components/sideline/NflScorerBadges':'export const NflScorerBadges=()=>null',
   '@/components/sideline/NflPropActions':'export const NflPropActions=()=>null',
   'next/image':'export default function Image(){return null}',

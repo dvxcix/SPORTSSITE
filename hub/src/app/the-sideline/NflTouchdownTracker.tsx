@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
-import Image from 'next/image'
+import { SafeImage } from '@/components/ui/SafeImage'
 import { Download, Flame, Radio, X } from 'lucide-react'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import { nflTouchdownQuoteLabel } from '@/lib/nflTouchdownQuoteLabel'
@@ -24,12 +24,9 @@ function receiptQuotes(event: NflTouchdownEvent) {
 }
 
 function Avatar({ event }: { event: NflTouchdownEvent }) {
-  const [failed, setFailed] = useState(false)
   return <span className={styles.avatar}>
-    {event.headshot && !failed
-      ? <Image unoptimized src={event.headshot} alt={`${event.playerName} headshot`} width={48} height={48} onError={() => setFailed(true)} />
-      : <b>{event.playerName.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
-    {event.teamLogo ? <Image unoptimized className={styles.teamLogo} src={event.teamLogo} alt="" width={18} height={18} /> : null}
+    <SafeImage src={event.headshot} alt={`${event.playerName} headshot`} width={48} height={48} fallback={<b>{event.playerName.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}/>
+    {event.teamLogo ? <SafeImage className={styles.teamLogo} src={event.teamLogo} alt="" width={18} height={18} /> : null}
   </span>
 }
 

@@ -30,3 +30,23 @@
 .sheet :is(button,a):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:640px){.moment{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.field i{animation:none;transform:translateY(-50%);opacity:1}}
+
+.sheet{width:min(760px,100%);max-height:94dvh;border:1px solid var(--border-2);border-radius:12px;background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-dialog)}
+.sheet>header{padding:16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.sheet h2{font-size:21px;font-weight:650;letter-spacing:-.025em}
+.sheet header p{font-size:12px;line-height:1.5;color:var(--text-2)}
+.sheet>nav{padding:8px 12px;gap:4px;border-color:var(--border);background:var(--surface);overflow-x:auto;scrollbar-width:thin}
+.sheet button{min-height:44px;font-weight:500}
+.sheet .close{width:44px;height:44px;min-width:44px;border-radius:7px}
+.sheet nav button{font-size:12px;white-space:nowrap;border-radius:7px}
+.list{padding:12px;gap:12px;scrollbar-width:thin}
+.list article{border:1px solid var(--border-2);border-radius:9px;background:var(--surface-2);box-shadow:none}
+.eventButton{padding:14px;gap:12px;background:transparent;color:var(--text-1)}
+.identity strong{font-size:14px;font-weight:600}
+.identity small,.identity em,.moment small{font-size:11px;color:var(--text-2);line-height:1.5}
+.avatar{width:48px;height:48px;border-radius:10px;overflow:visible}
+.avatar>img:not(.teamLogo){width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.moment{font-variant-numeric:tabular-nums}
+.replayRow{padding:8px 12px;border-color:var(--border)}
+.marketStrip>span{font-size:11px;border-color:var(--border-2);background:var(--surface)}
+@media(max-width:767px){.sheet{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.sheet>header{padding:12px}.sheet h2{font-size:19px}.sheet>nav{display:flex}.eventButton{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px}.moment{grid-column:2;display:flex;justify-content:space-between;gap:10px}.identity>span{flex-wrap:wrap}.identity em{font-size:11px}.list{padding:10px}.live{display:none}}

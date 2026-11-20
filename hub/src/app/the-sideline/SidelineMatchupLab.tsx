@@ -6,7 +6,10 @@ import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { PlayerIdentity } from './SidelineResearchClient'
-import controls from '@/components/product/ResearchControls.module.css'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
+import { BookLogo } from '@/components/BookLogo'
+import { MarketMovement, PickCount } from '@/components/research/ResearchMetrics'
+import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
 import styles from './sidelineResearch.module.css'
 
 type Metric = { key: keyof SidelinePlayer; label: string; suffix?: string }
@@ -37,12 +40,12 @@ function MarketSignal({ player }: { player: SidelineOddsBoard['players'][number]
   const ratio = impliedProbabilityRatio(ftd, atd)
   const baseline = player?.tdBaselines?.find(item => item.vendor === 'fanduel' && item.propType === 'anytime_td')
   return <div className={styles.bookGrid}>
-    <div className={styles.bookOffer}><span>FD anytime TD</span><b>{odds(atd)}</b></div>
-    <div className={styles.bookOffer}><span>FD first TD</span><b>{odds(ftd)}</b></div>
+    <div className={styles.bookOffer}><span><BookLogo vendor="fanduel" size={18}/>Anytime TD</span><b>{odds(atd)}</b></div>
+    <div className={styles.bookOffer}><span><BookLogo vendor="fanduel" size={18}/>First TD</span><b>{odds(ftd)}</b></div>
     <div className={styles.bookOffer}><span>FTD : ATD</span><b>{ratio == null ? '-' : ratio.toFixed(2)}</b></div>
-    <div className={styles.bookOffer}><span>ATD picks</span><b>{atdPicks < 0 ? '-' : atdPicks.toLocaleString()}</b></div>
-    <div className={styles.bookOffer}><span>FTD picks</span><b>{ftdPicks < 0 ? '-' : ftdPicks.toLocaleString()}</b></div>
-    <div className={styles.bookOffer}><span>Vs own baseline</span><b>{baseline?.deltaProbabilityPoints == null ? '-' : `${baseline.deltaProbabilityPoints > 0 ? '+' : ''}${baseline.deltaProbabilityPoints.toFixed(1)}pp`}</b></div>
+    <div className={styles.bookOffer}><span>ATD</span><PickCount value={atdPicks<0?null:atdPicks} observed/></div>
+    <div className={styles.bookOffer}><span>FTD</span><PickCount value={ftdPicks<0?null:ftdPicks} observed/></div>
+    <div className={styles.bookOffer}><span>Own baseline</span><MarketMovement value={baseline?.deltaProbabilityPoints??null}/></div>
   </div>
 }
 
@@ -61,12 +64,12 @@ export function SidelineMatchupLab({ lens, board }: { lens: SidelineLens; board:
       ? Number(b[metrics[0].key]) - Number(a[metrics[0].key])
       : (marketPrice(boardById.get(a.id), 'anytime_td') ?? 99999) - (marketPrice(boardById.get(b.id), 'anytime_td') ?? 99999)),
   [boardById, metrics, query, sample.players, teamAbbreviations])
-  return <div className={styles.root}>
+  return <div className={styles.root} data-nfl-tool="matchup">
     <header><h1>Matchup Lab</h1></header>
     <section className={styles.controls} aria-label="Matchup filters"><label>Player<input value={search} onChange={event => setSearch(event.target.value)} placeholder="Player, team or position" /></label><label>Window<select value={window} onChange={event => setWindow(event.target.value as SidelineWindow)}><option value="season">Season</option>{[1, 3, 5, 10].map(n => <option key={n} value={`l${n}`}>Last {n}</option>)}</select></label><span>{players.length} players</span></section>
-    <div className={controls.scrollRail} aria-label="Matchup research categories">{Object.keys(views).map(name => <button key={name} type="button" aria-pressed={name === view} className={`${controls.pill} ${name === view ? controls.pillActive : ''}`} onClick={() => setView(name)}>{name}</button>)}</div>
+    <ResearchSectionNav label="Matchup research categories" value={view} items={Object.keys(views).map(name=>({value:name,label:name}))} onChange={setView}/>
     <section className={styles.cards} aria-label="Team tendencies and opponent allowances">{sample.teams.map(profile => <article className={styles.card} data-tone="cyan" key={profile.team.abbr} style={{ '--team-color': profile.team.color } as CSSProperties}>
-      <div className={styles.cardHead}><strong>{profile.team.abbr} team pulse</strong><span className={styles.bookCount}>{profile.plays.toLocaleString()} plays</span></div>
+      <div className={styles.cardHead}><NflTeamLogo abbr={profile.team.abbr} logoUrl={profile.team.logo} size={28}/><strong>{profile.team.name}</strong><span className={styles.bookCount}>{profile.plays.toLocaleString()} plays</span></div>
       <div className={styles.bookGrid}><div className={styles.bookOffer}><span>Neutral pass</span><b>{profile.neutralPassRate.toFixed(1)}%</b></div><div className={styles.bookOffer}><span>Success</span><b>{profile.successRate.toFixed(1)}%</b></div><div className={styles.bookOffer}><span>Explosive</span><b>{profile.explosiveRate.toFixed(1)}%</b></div><div className={styles.bookOffer}><span>RZ TD</span><b>{profile.redZoneTdRate.toFixed(1)}%</b></div><div className={styles.bookOffer}><span>Explosive allowed</span><b>{profile.defenseExplosiveAllowed.toFixed(1)}%</b></div></div>
     </article>)}</section>
     <div className={styles.cards}>{players.map(player => {
@@ -77,7 +80,7 @@ export function SidelineMatchupLab({ lens, board }: { lens: SidelineLens; board:
         {view === 'Market signal' ? <MarketSignal player={identity} /> : <div className={styles.bookGrid}>{metrics.map(metric => {
           const value = player[metric.key]
           const available = !player.unavailableMetrics?.includes(metric.key) && typeof value === 'number' && Number.isFinite(value)
-          return <div className={styles.bookOffer} key={metric.key}><span>{metric.label}</span><b>{available ? `${Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 })}${metric.suffix ?? ''}` : '—'}</b></div>
+          return <div className={styles.bookOffer} key={metric.key}><span>{metric.label}</span><b>{available ? `${Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 })}${metric.suffix ?? ''}` : '—'}</b>{available&&(metric.suffix==='%'||['volume','geometry','evidence','redZone','breakaway'].includes(metric.key))&&<meter min={0} max={100} value={Number(value)} aria-label={metric.label}/>}</div>
         })}</div>}
       </article>
     })}</div>

@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import Image from 'next/image'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { SafeImage } from '@/components/ui/SafeImage'
 import Link from 'next/link'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { NflScorerBadges } from '@/components/sideline/NflScorerBadges'
 import controls from '@/components/product/ResearchControls.module.css'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
-import { BookLogo } from '@/components/BookLogo'
+import { BookLogo, bookName } from '@/components/BookLogo'
+import { Check } from 'lucide-react'
+import { PickCount } from '@/components/research/ResearchMetrics'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineTeam } from './types'
@@ -17,13 +19,12 @@ import { startNflPolling } from '@/lib/nflPolling'
 import { NflLastSeen } from './NflLastSeen'
 
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
-const stamp = (value: string | null | undefined) => value ? value.replace('T', ' ').slice(0, 19) + ' UTC' : 'Time unavailable'
+const stamp = (value: string | null | undefined) => value&&Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET' : 'Time unavailable'
 
 export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?: SidelineTeam }) {
-  const [failed, setFailed] = useState<string[]>([])
   const sources = [...new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((src): src is string => Boolean(src)))]
-  const source = sources.find(src => !failed.includes(src))
-  const body = <><span className={styles.portrait}>{source ? <Image unoptimized src={source} alt={`${player.name} headshot`} width={56} height={56} onError={() => setFailed(values => [...values, source])} /> : <span className={styles.initials} aria-label="Portrait unavailable">{player.name.split(' ').map(word => word[0]).slice(0, 2).join('')}</span>}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><NflScorerBadges player={player} /><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small></span></>
+  const portrait=sources.reduceRight<ReactNode>((fallback,src)=><SafeImage key={src} src={src} alt={`${player.name} headshot`} width={56} height={56} fallback={fallback}/>,<span className={styles.initials} aria-label="Portrait unavailable">{player.name.split(' ').map(word=>word[0]).slice(0,2).join('')}</span>)
+  const body = <><span className={styles.portrait} style={team?{background:`linear-gradient(145deg,${team.color},${team.color2||'#15202b'})`}:undefined}>{portrait}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><NflScorerBadges player={player} /><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small></span></>
   return player.gsisId ? <Link prefetch={false} className={styles.identity} aria-label={`View ${player.name} NFL profile`} href={`/nfl/players/${encodeURIComponent(player.gsisId)}`}>{body}<span className={styles.profileArrow}>↗</span></Link> : <div className={styles.identity}>{body}</div>
 }
 const toneFor = (key: string) => /td|touchdown/.test(key) ? 'lime' : /rec/.test(key) ? 'cyan' : /rush/.test(key) ? 'amber' : 'violet'
@@ -105,8 +106,8 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
   const pageSize = 24
   const page = Math.min(requestedPage, Math.max(0, Math.ceil(count / pageSize) - 1))
   const theme = (team: string) => ({ '--team-color': teams.find(item => item.abbr === team)?.color ?? '#203d50' }) as CSSProperties
-  return <div className={styles.root}>
-    <header><Link href={boardHref}>← The Sideline</Link><p>{title}</p><h1>{mode === 'public' ? 'The Public · NFL' : 'NFL sportsbook comparison'}</h1>
+  return <div className={styles.root} data-nfl-tool={mode}>
+    <header><Link href={boardHref}>← The Sideline</Link><p className="sr-only">{title}</p><h1>{mode === 'public' ? 'The Public' : 'Sportsbooks'}</h1>
       <small>Odds captured: {stamp(board.capturedAt)} · Picks captured: {stamp(board.picksCapturedAt)}</small>
       {marketRefreshFailed ? <p role="status">Market refresh delayed; showing the last captured prices and picks.</p> : null}
       {mode === 'public' ? <p className={styles.resultSummary} role="status">{results?.status === 'final' ? 'Final results' : results?.status === 'in_progress' ? 'Live results · refresh every 30s' : 'Game results'}{results ? ` · Updated ${stamp(results.updatedAt)}` : ' · Awaiting feed'}{refreshFailed ? ' · Refresh delayed; showing last update' : ''}</p> : null}
@@ -115,7 +116,7 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
     <section className={styles.controls} aria-label="Research filters">
       <label>Search<input value={search} placeholder="Player, team or market" onChange={event => { setSearch(event.target.value); setPage(0) }} /></label>
       <label>Team<select value={teamFilter} onChange={event => { setTeamFilter(event.target.value); setPage(0) }}><option value="all">Both teams</option>{teams.map(team => <option key={team.abbr} value={team.abbr}>{team.name}</option>)}</select></label>
-      <span>{count} rows{mode === 'public' ? ` · ${totalPicks.toLocaleString()} tracked picks` : ''}</span>
+      <span>{count} rows{mode === 'public' ? <PickCount value={totalPicks} observed/> : null}</span>
     </section>
     <div className={controls.scrollRail} aria-label="Choose a market">{['all', ...options].map(option => <button type="button" key={option} aria-pressed={category === option} className={`${controls.pill} ${category === option ? controls.pillActive : ''}`} onClick={() => { setCategory(option); setPage(0) }}>{option === 'all' ? 'All markets' : marketLabel(option)}</button>)}</div>
     {count === 0 ? <p className={styles.empty}>No captured data matches this view.</p> : <div className={styles.cards}>
@@ -131,19 +132,19 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
         }))).values()].sort((a, b) => a.line - b.line)
         const share = totalPicks ? row.picks / totalPicks * 100 : 0
         return <article className={styles.card} data-tone={toneFor(row.propType)} style={theme(row.team)} key={`${row.playerId}:${row.propType}:${index}`}>
-          <div className={styles.cardHead}><span className={styles.rank}>{page * pageSize + index + 1}</span><PlayerIdentity player={player} team={teams.find(team => team.abbr === row.team)} /><span className={styles.pickBadge}><b>{row.picks.toLocaleString()}</b><small>PICKS</small></span></div>
+          <div className={styles.cardHead}><span className={styles.rank}>{page * pageSize + index + 1}</span><PlayerIdentity player={player} team={teams.find(team => team.abbr === row.team)} /><span className={styles.pickBadge}><PickCount value={row.picks} observed/></span></div>
           <div className={styles.marketHeading}><strong>{row.label}</strong><span>{share.toFixed(1)}% of filtered picks</span></div>
           <div className={styles.outcome} data-state={outcome.state}><strong>{outcome.label}</strong>{outcome.actual != null ? <span>{outcome.actual}{row.line != null ? ` / ${row.line}` : ''} actual</span> : null}</div>
           {ladder.length ? <details className={styles.resultLadders}><summary>Captured ladder results · {ladder.length} lines</summary><div>{ladder.map(rung => { const grade = gradeNflPublicProp(results, player, { propType: row.propType, ...rung, side: row.side }); return <span key={`${rung.line}:${rung.kind}`} data-state={grade.state}><b>{row.side === 'under' ? 'Under ' : rung.kind === 'over_under' ? 'Over ' : ''}{rung.line}{rung.kind === 'milestone' ? '+' : ''}</b><small>{grade.label}</small></span> })}</div></details> : null}
           <div className={styles.shareTrack} role="meter" aria-label={`${row.player} filtered pick share`} aria-valuenow={share} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${share}%` }} /></div>
-          {offers.length ? <div className={styles.reference}><small>{row.line == null ? 'CATEGORY REFERENCE' : 'MATCHING LINE'}{market?.line != null ? ` · LINE ${market.line}` : ''}</small><div className={styles.oddsChips}>{offers.map(offer => <span key={`${offer.vendor}:${offer.line}`} aria-label={`${offer.vendor} ${price(oddsFor(offer)!)} captured ${stamp(offer.updatedAt)}`}><BookLogo vendor={offer.vendor} size={16} /><b>{row.side === 'under' ? 'U ' : offer.current.over != null ? 'O ' : ''}{price(oddsFor(offer)!)}</b></span>)}</div></div> : <small className={styles.missing}>No matching reference price captured</small>}
+          {offers.length ? <div className={styles.reference}><small>{row.line==null?'Category reference':`${row.side==='under'?'Under ':row.kind==='over_under'?'Over ':''}${row.line}${row.kind==='milestone'?'+':''}`}</small><div className={styles.oddsChips}>{offers.map(offer => <span key={`${offer.vendor}:${offer.line}`} aria-label={`${offer.vendor} ${price(oddsFor(offer)!)} captured ${stamp(offer.updatedAt)}`}><BookLogo vendor={offer.vendor} size={16} /><b>{row.side === 'under' ? 'U ' : offer.current.over != null ? 'O ' : ''}{price(oddsFor(offer)!)}</b></span>)}</div></div> : <small className={styles.missing}>No matching reference price captured</small>}
           <footer className={styles.cardFooter}><small>{stamp(row.capturedAt)}</small>{player.gsisId ? <Link prefetch={false} href={`/nfl/players/${encodeURIComponent(player.gsisId)}`}>Player profile ↗</Link> : <small>Profile not linked yet</small>}</footer>
         </article>
-      }) : filteredMarkets.slice(page * pageSize, (page + 1) * pageSize).map(row => <article className={styles.card} data-tone={toneFor(row.category)} style={theme(row.team)} key={row.id}>
+      }) : filteredMarkets.slice(page * pageSize, (page + 1) * pageSize).map(row => {const comparison=new Set(row.offers.map(offer=>offer.vendor)).size>1;return <article className={styles.card} data-tone={toneFor(row.category)} style={theme(row.team)} key={row.id}>
         <div className={styles.cardHead}><PlayerIdentity player={playersById.get(row.playerId)!} team={teams.find(team => team.abbr === row.team)} /><span className={styles.bookCount}>{row.offers.length} books</span></div>
         <div className={styles.marketHeading}><strong>{row.label}</strong><span>{row.lineSide}</span></div>
-        <div className={styles.bookGrid}>{row.offers.map((offer, index) => <div className={styles.bookOffer} data-best={index === 0 && row.offers.length > 1} key={`${offer.vendor}:${index}`}><span><BookLogo vendor={offer.vendor} size={20} />{offer.vendor}</span><b>{price(offer.odds)}</b><small>{stamp(offer.time)}</small>{index === 0 && row.offers.length > 1 ? <em>BEST PAYOUT</em> : null}</div>)}</div>
-      </article>)}
+        <div className={styles.bookGrid}>{row.offers.map((offer, index) => {const best=comparison&&offer.odds===row.offers[0]?.odds;return <div className={styles.bookOffer} data-best={best} key={`${offer.vendor}:${index}`}><span><BookLogo vendor={offer.vendor} size={24} /><span className="sr-only">{bookName(offer.vendor)}</span>{best&&<Check size={14} role="img" aria-label="Best payout"/>}</span><b>{price(offer.odds)}</b><time dateTime={offer.time??undefined} title={offer.time??undefined}>{stamp(offer.time)}</time></div>})}</div>
+      </article>})}
     </div>}
     <footer className={styles.controls}><button disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page + 1} of {Math.max(1, Math.ceil(count / pageSize))}</span><button disabled={(page + 1) * pageSize >= count} onClick={() => setPage(page + 1)}>Next</button></footer>
   </div>

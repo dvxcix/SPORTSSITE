@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
@@ -16,6 +17,9 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair,
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { ModalSurface } from '@/components/ui/ModalSurface'
+import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
+import { NflQuote, type NflQuoteSide } from '@/components/sideline/NflQuote'
+import { PickCount, PicksMark } from '@/components/research/ResearchMetrics'
 import { useSidelineMarket } from './useSidelineMarket'
 import { NflTouchdownTracker } from './NflTouchdownTracker'
 import { NflLastSeen } from './NflLastSeen'
@@ -472,13 +476,6 @@ function offerCurrent(offer: NflMarketOffer | null) {
 function offerOpening(offer: NflMarketOffer | null) {
   if (!offer?.opening) return null
   return offer.type === 'milestone' ? (offer.opening.odds ?? null) : (offer.opening.over ?? null)
-}
-
-function offerSummary(offer: NflMarketOffer, phase: 'current' | 'opening') {
-  const value = phase === 'current' ? offer.current : offer.opening
-  if (!value) return '-'
-  if (offer.type === 'milestone') return oddsLabel(value.odds)
-  return `O ${oddsLabel(value.over)} · U ${oddsLabel(value.under)}`
 }
 
 function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vendor = 'fanduel') {
@@ -947,14 +944,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
         value: row => publicPickCount(row.market, market.propType),
         render: row => {
           const count = publicPickCount(row.market, market.propType)
-          return count == null ? (
-            <span className={styles.empty}>-</span>
-          ) : (
-            <span className={styles.publicPickValue}>
-              <b>{count.toLocaleString()}</b>
-              <small>PICKS</small>
-            </span>
-          )
+          return <PickCount value={count} observed/>
         },
       })
     }
@@ -1108,7 +1098,7 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
           <small>WINDOW</small>
           <span>
             {WINDOW_OPTIONS.map(option => (
-              <button type="button" key={option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>
+              <button type="button" key={option.id} aria-pressed={selectedWindow===option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>
                 {option.label.replace('Last ', 'L')}
               </button>
             ))}
@@ -1121,18 +1111,18 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
       </div>
       <div className={styles.teamSignals} aria-label={`${team.name} player highlights`}>
         <div>
-          <small>TOP SCORE <span>· {contextLabel}</span></small>
+          <small>Top score <span>· {contextLabel}</span></small>
           <b className={styles.signalValue}>
             <strong>{topScore?.name ?? 'No scored player'}</strong>
             <span>{topScore?.index ?? '—'} <em>/ 100</em></span>
           </b>
         </div>
         <div className={styles.advertised}>
-          <small>MOST ADVERTISED <span>· {contextLabel}</span></small>
+          <small>Most advertised <span>· {contextLabel}</span></small>
           {signal(advertised)}
         </div>
         <div className={styles.hidden}>
-          <small>MOST HIDDEN <span>· {contextLabel}</span></small>
+          <small>Most hidden <span>· {contextLabel}</span></small>
           {signal(hidden)}
         </div>
       </div>
@@ -1236,7 +1226,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
   const nextPlayer = playerIndex >= 0 && playerIndex < players.length - 1 ? players[playerIndex + 1] : null
   const activePlayer = useMemo<PlayerRow>(() => {
     const found = lens.windows[detailWindow].players.find(candidate => normalizedTeam(candidate.team) === normalizedTeam(player.team) && normalizedName(candidate.name) === normalizedName(player.name))
-    if (!found) return player
+    if (!found) return { ...player, hasTracking:false }
     const windowData = lens.windows[detailWindow]
     const teamProfile = windowData.teams.find(profile => normalizedTeam(profile.team.abbr) === normalizedTeam(player.team)) ?? null
     const opponentProfile = windowData.teams.find(profile => normalizedTeam(profile.team.abbr) !== normalizedTeam(player.team)) ?? null
@@ -1268,34 +1258,30 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
             <div>
               <small>
                 {team.abbr} · {player.position}
-                {player.jersey ? ` · #${player.jersey}` : ''}
+                {player.jersey!=null ? ` · #${player.jersey}` : ''}
               </small>
               <h2>{player.name}</h2>
             </div>
           </div>
           <div className={styles.modalHeaderActions}>
+            <span className={styles.modalTeam}><TeamLogo team={team} size={22}/><span>{team.name}</span></span>
             <button type="button" disabled={!previousPlayer} onClick={() => previousPlayer && onSelect(previousPlayer)} aria-label="Previous player">
               <ChevronLeft size={18} />
             </button>
             <button type="button" disabled={!nextPlayer} onClick={() => nextPlayer && onSelect(nextPlayer)} aria-label="Next player">
               <ChevronRight size={18} />
             </button>
-            <button type="button" onClick={onClose}>
-              <X size={19} /> Close
+            {!player.id.startsWith('bdl-')&&<Link prefetch={false} href={`/nfl/players/${encodeURIComponent(player.id)}`} aria-label={`Open ${player.name} full profile`}><MoveUp size={17}/></Link>}
+            <button type="button" onClick={onClose} aria-label="Close player details">
+              <X size={19} />
             </button>
           </div>
         </header>
-        <nav>
-          {(['matchup', 'tracking', 'markets'] as const).map(item => (
-            <button key={item} type="button" className={tab === item ? styles.modalTabActive : ''} onClick={() => setTab(item)}>
-              {item === 'matchup' ? 'Matchup' : item === 'tracking' ? 'NFL Tracking' : 'Sportsbooks'}
-            </button>
-          ))}
-        </nav>
+        <ResearchSectionNav label="NFL player section" value={tab} onChange={setTab} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
         <div className={styles.modalBody}>
           <div className={styles.modalWindows}>
             {WINDOW_OPTIONS.map(option => (
-              <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>
+              <button type="button" key={option.id} aria-pressed={detailWindow===option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>
                 {option.label}
               </button>
             ))}
@@ -1309,28 +1295,29 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                   <span>{activePlayer.contextLabel ?? 'ROLE'} SCORE</span>
                 </div>
                 <div>
-                  <small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small>
-                  <strong>{activePlayer.lane}</strong>
+                  <small>{WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small>
+                  <strong>{activePlayer.hasTracking?activePlayer.lane:'Sample unavailable'}</strong>
                   <div className={styles.identityBadges}>
-                    {activePlayer.rookieSeason === gameSeason ? <span>ROOKIE</span> : null}
-                    {activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}
-                    {activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}
+                    {activePlayer.rookieSeason === gameSeason ? <span>Rookie</span> : null}
+                    {activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>Prior team: {activePlayer.sampleTeam}</span> : null}
+                    {activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus==='ACT'?'Active':activePlayer.rosterStatus}</span> : null}
                   </div>
-                  <p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === gameSeason ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p>
+                  {!activePlayer.hasTracking&&<p>{activePlayer.rookieSeason === gameSeason ? 'Production is unavailable until a qualifying game is recorded.' : 'No qualifying production in this window. Captured markets remain available.'}</p>}
                 </div>
               </div>
               <div className={styles.metricCards}>
                 {[
-                  ['Volume', activePlayer.volume],
-                  ['Geometry', activePlayer.geometry],
-                  ['Red zone', activePlayer.redZone],
-                  ['Breakaway', activePlayer.breakaway],
-                  ['Evidence', activePlayer.evidence],
-                  ['RZ looks', activePlayer.redZoneLooks],
-                ].map(([label, value]) => (
+                  ['Volume', 'volume', activePlayer.volume],
+                  ['Geometry', 'geometry', activePlayer.geometry],
+                  ['Red zone', 'redZone', activePlayer.redZone],
+                  ['Breakaway', 'breakaway', activePlayer.breakaway],
+                  ['Evidence', 'evidence', activePlayer.evidence],
+                  ['RZ looks', 'redZoneLooks', activePlayer.redZoneLooks],
+                ].map(([label, field, value]) => (
                   <div key={label}>
                     <small>{label}</small>
-                    <b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b>
+                    <b className={field==='redZoneLooks'?undefined:scoreTone(Number(value))}>{activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:1}):'—'}</b>
+                    {label!=='RZ looks'&&activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)&&<meter min={0} max={100} value={value} aria-label={`${label} score`}/>}
                   </div>
                 ))}
               </div>
@@ -1338,22 +1325,22 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
           ) : tab === 'tracking' ? (
             <div className={styles.metricCards}>
               {[
-                ['Targets', activePlayer.targets],
-                ['Receptions', activePlayer.receptions],
-                ['Target share', `${activePlayer.targetShare}%`],
-                ['Carries', activePlayer.carries],
-                ['Carry share', `${activePlayer.carryShare}%`],
-                ['aDOT', activePlayer.airYards],
-                ['Separation', activePlayer.separation],
-                ['YACOE', activePlayer.yacAboveExpected],
-                ['RYOE/A', activePlayer.rushOverExpected],
-                ['Explosives', activePlayer.explosivePlays],
-                ['Pass yards', activePlayer.passingYards],
-                ['CPOE', activePlayer.cpoe],
-              ].map(([label, value]) => (
+                ['Targets', 'targets', activePlayer.targets, ''],
+                ['Receptions', 'receptions', activePlayer.receptions, ''],
+                ['Target share', 'targetShare', activePlayer.targetShare, '%'],
+                ['Carries', 'carries', activePlayer.carries, ''],
+                ['Carry share', 'carryShare', activePlayer.carryShare, '%'],
+                ['aDOT', 'airYards', activePlayer.airYards, ''],
+                ['Separation', 'separation', activePlayer.separation, ''],
+                ['YACOE', 'yacAboveExpected', activePlayer.yacAboveExpected, ''],
+                ['RYOE/A', 'rushOverExpected', activePlayer.rushOverExpected, ''],
+                ['Explosives', 'explosivePlays', activePlayer.explosivePlays, ''],
+                ['Pass yards', 'passingYards', activePlayer.passingYards, ''],
+                ['CPOE', 'cpoe', activePlayer.cpoe, ''],
+              ].map(([label, field, value, suffix]) => (
                 <div key={label}>
                   <small>{label}</small>
-                  <b>{activePlayer.hasTracking ? value : '-'}</b>
+                  <b>{activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:1})+suffix:'—'}</b>
                 </div>
               ))}
             </div>
@@ -1366,11 +1353,11 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                     {market.line != null ? <span>Line {market.line}</span> : null}
                   </header>
                   <div>
-                    {market.offers.map(offer => (
-                      <span key={offer.vendor}>
+                    {market.offers.map((offer,index) => (
+                      <span className={styles.modalQuote} key={`${offer.vendor}:${offer.type}:${offer.line}:${index}`}>
                         <BookLogo vendor={offer.vendor} size={19} />
-                        <b>{offerSummary(offer, 'current')}</b>
-                        <small>{offer.openingLine != null && offer.openingLine !== offer.line ? `OPEN ${offer.openingLine} · ${offerSummary(offer, 'opening')}` : `OPEN ${offerSummary(offer, 'opening')}`}</small>
+                        <span className="sr-only">{offer.vendor}</span>
+                        <div>{(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}</div>
                       </span>
                     ))}
                   </div>
@@ -1390,9 +1377,8 @@ function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset,
     <ModalSurface open onClose={onClose} label="Customize NFL board columns" backdropClassName={styles.modalTheme + ' ' + styles.modalBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.columnModal}>
         <header>
           <div>
-            <small>THE SIDELINE</small>
             <h2>Customize columns</h2>
-            <p>Your NFL layout is saved separately from TheDugout.</p>
+            <p>Choose and arrange the statistics on your board.</p>
           </div>
           <button type="button" onClick={onClose}>
             <X size={19} /> Close
@@ -1408,7 +1394,6 @@ function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset,
                   <small>{column.title}</small>
                 </span>
               </label>
-              <em>{column.group}</em>
               <div>
                 <button type="button" disabled={index === 0} onClick={() => onMove(column.id, -1)} aria-label={`Move ${column.label} left`}>
                   <MoveUp size={15} />
@@ -1438,7 +1423,7 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
     <section className={styles.comparison}>
       <header>
         <div>
-          <small>PLAYER COMPARISON</small>
+          <small>Player comparison</small>
           <h2>
             {players.length}/4 selected · {WINDOW_OPTIONS.find(item => item.id === window)?.label}
           </h2>
@@ -1537,17 +1522,13 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
                   <div key={market.key}>
                     <small>
                       {market.label}
-                      {publicPickCount(marketPlayer, market.propType) != null ? <b>{publicPickCount(marketPlayer, market.propType)!.toLocaleString()} PICKS</b> : null}
+                      <PickCount value={publicPickCount(marketPlayer, market.propType)} observed/>
                     </small>
                     <span>
-                      {market.offers.map(offer => (
-                        <em key={offer.vendor}>
+                      {market.offers.map((offer,index) => (
+                        <em key={`${offer.vendor}:${offer.type}:${offer.line}:${index}`}>
                           <BookLogo vendor={offer.vendor} size={14} />
-                          <b>
-                            {market.line != null ? `${market.line} ` : ''}
-                            {oddsLabel(offerCurrent(offer))}
-                          </b>
-                          <i>{offerOpening(offer) == null ? 'OPEN -' : `OPEN ${oddsLabel(offerOpening(offer))}`}</i>
+                          {(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}
                         </em>
                       ))}
                     </span>
@@ -2085,7 +2066,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const statusCopy = gameStatusCopy(selected, marketStory.gameState)
   const periodScores = periodScoreCopy(marketStory.gameState)
   return (
-    <NflScorerProvider gameId={selectedId} events={marketStory.touchdowns}><div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
+    <NflScorerProvider gameId={selectedId} events={marketStory.touchdowns}><div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`} data-nfl-workspace={view}>{view!=='odds-board'&&<h1 className="sr-only">The Sideline · NFL research</h1>}
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}>
           <TeamLogo team={selected.away} size={28} />
@@ -2096,7 +2077,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </div>
         <div className={styles.windowTabs}>
           {WINDOW_OPTIONS.map(option => (
-            <button key={option.id} type="button" className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>
+            <button key={option.id} type="button" aria-pressed={windowId===option.id} className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>
               {option.label}
             </button>
           ))}
@@ -2125,19 +2106,19 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
 
       {view !== 'odds-board' && <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}>
-          <small>STADIUM / CONDITIONS</small>
+          <small>Conditions</small>
           <strong>{selected.stadium ?? 'Stadium TBD'}</strong>
           <span>
             {selected.weatherSummary ?? 'Weather unavailable'}
           </span>
         </article>
         <article>
-          <small>GAME STATUS</small>
+          <small>Game status</small>
           <strong>{statusCopy.headline}</strong>
           <span>{periodScores ?? statusCopy.detail}</span>
         </article>
         <article>
-          <small className={styles.inlineMarket}><BookLogo vendor={(board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0])?.vendor ?? 'fanduel'} size={20} /> GAME LINE</small>
+          <small className={styles.inlineMarket}><BookLogo vendor={(board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0])?.vendor ?? 'fanduel'} size={20} /> Game line</small>
           <div className={styles.gameLineSummary}>
             <span><TeamLogo team={selected.away} size={24} />{selected.away.abbr}<b>{oddsLabel(gameMoneyline(board, 'away'))}</b></span>
             <i>@</i>
@@ -2147,8 +2128,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </article>
         <article className={styles.marketStory}>
           <div>
-            <small>MARKET STORY</small>
-            <strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong>
+            <small>Market Story</small>
+            <strong>{frameIndex === 0 ? 'First capture' : frameIndex === history.length - 1 ? 'Latest' : `Capture ${frameIndex + 1}`}</strong>
           </div>
           {marketStory.error ? (
             <span role="alert">
@@ -2235,16 +2216,10 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </section>
       ) : null}
 
-      {view !== 'odds-board' && <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">
-        {VIEW_OPTIONS.filter(option => option.id !== 'odds-board').map(option => (
-          <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>
-            {option.label}
-          </button>
-        ))}
-      </nav>}
+      {view !== 'odds-board' && <ResearchSectionNav className={styles.boardSections} label="NFL board column groups" value={view} onChange={setView} items={VIEW_OPTIONS.filter(option=>option.id!=='odds-board').map(option=>({value:option.id,label:option.label}))}/>}
       {view !== 'odds-board' && <nav className={styles.roleTabs} aria-label="NFL position lanes">
         {ROLE_OPTIONS.map(option => (
-          <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>
+          <button key={option.id} type="button" aria-pressed={roleFilter===option.id} className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>
             {option.label}
           </button>
         ))}
@@ -2252,6 +2227,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
 
       {view === 'odds-board' ? <NflOddsBoard date={selected.gameday} phase={marketStory.oddsBoardPhase} market={activeProp} onMarket={setActiveProp} vendor={activeBook} onVendor={setActiveBook}/> : view === 'props' ? (
         <LadderBoard
+              teams={[selected.away,selected.home]}
           board={board}
           prop={activeProp}
           onProp={setActiveProp}
@@ -2302,7 +2278,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
               onSelectWindow={setWindowId}
             />
             {!collapsedTeams.has(section.team.abbr) ? (
-              <div className={styles.tableScroller} key={`${view}:${roleFilter}`}>
+              <div className={styles.tableScroller} key={`${view}:${roleFilter}`} role="region" aria-label={`${section.team.name} player statistics`} tabIndex={0}>
                 <table
                   className={styles.boardTable}
                   style={{
@@ -2325,8 +2301,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                             }}
                           >
                             <button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>
-                              {column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}
-                              <span>{column.label}</span>
+                              {column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <PicksMark/> : null}
+                              <span>{isPublicPicks?column.label.replace(/ PICKS$/,''):column.label}</span>
                               {sort ? (
                                 <em>
                                   {sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
@@ -2389,7 +2365,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                       <b>{player.name}<NflScorerBadges player={player.market ?? player} /></b>
                                       <small>
                                         {player.position}
-                                        {player.jersey ? ` · #${player.jersey}` : ''}
+                                        {player.jersey!=null ? ` · #${player.jersey}` : ''}
                                         {player.rookieSeason === selected.season ? ' · ROOKIE' : ''}
                                         {player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}
                                         {availabilityLabel(player) ? (

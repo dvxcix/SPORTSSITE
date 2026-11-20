@@ -29,6 +29,8 @@ async function compiled<T>(file: string, imports: Record<string, unknown>) {
 }
 const { NflTouchdownTracker } = await compiled<typeof import('../src/app/the-sideline/NflTouchdownTracker.tsx')>('../src/app/the-sideline/NflTouchdownTracker.tsx', {
   'next/image': { default: noop }, './touchdownTracker.module.css': { default: {} }, '@/lib/nflTouchdownQuoteLabel': { nflTouchdownQuoteLabel },
+  '@/components/ui/SafeImage': { SafeImage: noop },
+  '@/components/ui/ModalSurface': { ModalSurface: ({open,children,label}: {open:boolean;children:ReactNode;label:string}) => open ? createElement('div',{role:'dialog','aria-label':label},children) : null },
 })
 const odds = { players: [], capturedAt: '2026-10-25T16:58:00Z', picksCapturedAt: null } as unknown as SidelineOddsBoard
 const event = {
@@ -53,6 +55,7 @@ test('cold touchdown failure keeps the server board available with unknown total
     '@/lib/sidelineWire': { packSidelineBoard: (value: unknown) => value }, 'next/navigation': { notFound: () => { throw new Error('Denied') } },
     '@/lib/nflSample': { defaultNflSample: () => 'current', parseNflSample: (value: string) => value, nflSampleReference: () => ({ label: 'Current' }) },
     '@/lib/nflAccess': gate, '@/lib/supabase/authErrors': { AuthTemporarilyUnavailableError: Error },
+    '@/lib/publicResearchPreview': { readPreviewContext: () => null },
     './SidelineBoardClient': { SidelineBoardClient: ({ touchdowns }: { touchdowns: NflTouchdownEvent[] | null }) => { boardFeed = touchdowns; return createElement('article', null, 'Current odds +220', createElement(NflTouchdownTracker, { events: touchdowns, onJumpToGame: noop })) } },
     './SidelineResearchClient': { SidelineResearchClient: noop }, './SidelineNavigation': { SidelineNavigation: noop }, './SidelineMatchupLab': { SidelineMatchupLab: noop },
     './NflLastSeen': { NflLastSeen: noop },
@@ -66,6 +69,7 @@ test('cold touchdown failure keeps the server board available with unknown total
     'next/server': { NextResponse: { json: Response.json } }, '@/lib/sidelineWire': { packSidelineBoard: (value: unknown) => value },
     '@/lib/nflAccess': gate, '../data': data, '@/lib/nflTouchdownFeed': feed,
     '@/lib/nflPublicResultsServer': { getNflPublicResults: noop }, '@/lib/nflPregameResearchData': { nflPregameOpen: () => false },
+    '@/lib/nflOddsBoardClock': { nflOddsBoardClockToken: noop, sharedNflOddsBoardClocks: noop },
   })
   const originalError = console.error; console.error = noop
   try {

@@ -23,7 +23,7 @@ for (const isAdmin of [false, true]) {
     board: { players: [] },
   }))
   assert.doesNotMatch(html, /NGS|PBP|fallback|charted plays|roster matches|performance rates disagree|Model \+ market|Data coverage/i)
-  assert.match(html, /Sideline Cheatsheets/)
+  assert.match(html, /<h1[^>]*>Cheatsheets<\/h1>/)
   assert.match(html, /Cheatsheet controls/)
   assert.match(html, /Market Edge/)
   console.log((isAdmin ? 'Admin' : 'Member') + ': customer cheatsheet renders without diagnostic banners')

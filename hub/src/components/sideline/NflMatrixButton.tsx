@@ -51,7 +51,7 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
     onChange({ ...factor, category, field: isMarket ? 'market' : isPicks ? 'public_picks' : first?.field ?? 'index', vendor: isMarket ? 'fanduel' : null, propType: isMarket || isPicks ? 'anytime_td' : null, marketValue: isMarket ? 'current' : null })
   }
   return (
-    <article className={styles.factor}>
+    <article className={styles.factor} data-pipeline={pipeline || undefined}>
       <div className={styles.factorTop}>
         {pipeline ? <select aria-label="Pipeline step type" value={step.kind} onChange={event => onChange({ ...step, kind: event.target.value as 'filter' | 'rank' })}><option value="filter">Filter</option><option value="rank">Rank</option></select> : null}
         <select aria-label="Condition category" value={factor.category} onChange={event => setCategory(event.target.value as NflMatrixCategory)}>
@@ -115,7 +115,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: NflMatrix | null
   }
   return (
     <ModalSurface open onClose={onClose} label="NFL Matrix editor" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.editor}>
-        <header><div><small>NFL ONLY</small><h2>{initial ? 'Edit NFL Matrix' : 'Build NFL Matrix'}</h2><p>Uses Sideline fields only. It can never highlight an MLB board.</p></div><button type="button" onClick={onClose}><X size={18} /> Close</button></header>
+        <header><div><h2>{initial ? 'Edit NFL Matrix' : 'Build NFL Matrix'}</h2><p>Choose the conditions that highlight players on your board.</p></div><button type="button" aria-label="Close NFL Matrix editor" onClick={onClose}><X size={18} /></button></header>
         <div className={styles.editorBody}>
           <label className={styles.nameField}><span>Name</span><input value={name} maxLength={80} onChange={event => setName(event.target.value)} placeholder="Red-zone role + ATD value" /></label>
           <div className={styles.editorOptions}><div><span>Color</span>{COLORS.map(option => <button type="button" aria-label={`Use ${option}`} key={option} className={color === option ? styles.colorActive : ''} style={{ background: option }} onClick={() => setColor(option)} />)}</div><div><button type="button" className={type === 'classic' ? styles.active : ''} onClick={() => setType('classic')}>Classic</button><button type="button" className={type === 'pipeline' ? styles.active : ''} onClick={() => setType('pipeline')}>Pipeline</button></div></div>
@@ -177,7 +177,7 @@ export function NflMatrixButton() {
     <>
       <button type="button" className={`matrix-fab ${styles.fab}`} onClick={() => setOpen(true)}><Grid3X3 size={15} /> NFL Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
       <ModalSurface open={open && !editor} onClose={() => setOpen(false)} label="NFL Matrices" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.drawer}>
-        <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Separate criteria, codes, and community posts from MLB.</p></div><button type="button" aria-label="Close NFL Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
+        <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Saved player filters and community templates.</p></div><button type="button" aria-label="Close NFL Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
         <nav aria-label="NFL Matrix views"><button type="button" aria-pressed={tab === 'mine'} className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NFL Matrices</button><button type="button" aria-pressed={tab === 'community'} className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NFL Community</button></nav>
         <div className={styles.drawerBody}>
           {tab === 'mine' ? <>

@@ -21,3 +21,41 @@
 
 /* Shared restrained panel treatment. */
 .card{box-shadow:none}
+
+/* NFL public, sportsbook and matchup research. */
+.root{padding:20px clamp(12px,2vw,28px) 110px;color:var(--text-1);min-width:0}
+.root>header{border:0;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 16px;margin-bottom:16px;background:transparent}
+.root>header h1{font-size:24px;line-height:1.2;font-weight:650;letter-spacing:-.03em;margin:10px 0}
+.root>header>a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--text-2)}
+.root>header small{font-size:11px;color:var(--text-2)}
+.root .controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;padding:12px 0;margin:0 0 12px;border:0;background:transparent}
+.controls label{gap:6px;font-size:11px;color:var(--text-2);min-width:0}
+.controls label:first-child{flex:1;min-width:180px}
+.controls input,.controls select,.controls button{min-height:44px;font-size:13px;border-radius:8px;background:var(--input-bg);border-color:var(--control-border)}
+.controls>span{display:flex;align-items:center;gap:12px;min-height:44px;font-size:12px;color:var(--text-2)}
+.cards{margin-top:14px;gap:12px}
+.card{border:1px solid var(--border-2);border-radius:10px;padding:16px;background:var(--surface);box-shadow:none}
+.cardHead{min-width:0;margin-bottom:14px}
+.playerName strong{font-size:14px;font-weight:600;line-height:1.4}
+.playerName small{color:var(--text-2)!important;font-size:11px;margin-top:3px}
+.portrait{width:52px;height:52px;border:1px solid var(--border-2);border-radius:10px;color:var(--on-dark)}
+.portrait>img{border-radius:inherit;object-fit:cover;object-position:center 12%;display:block}
+.teamBadge{background:var(--surface);border:1px solid var(--border-2);padding:1px}
+.pickBadge{border:0;background:var(--surface-2);padding:8px;color:var(--accent)}
+.marketHeading{margin:12px 0 10px;font-size:11px;color:var(--text-2)}
+.marketHeading strong{font-size:13px;color:var(--text-1);font-weight:600}
+.bookGrid{gap:8px}
+.bookOffer{gap:8px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px}
+.bookOffer>span{justify-content:space-between;font-size:11px;color:var(--text-2)}
+.bookOffer>b{font-size:21px;font-weight:650;color:var(--text-1)}
+.bookOffer>time{font-size:10px;line-height:1.5;color:var(--text-2)}
+.bookOffer[data-best=true]{background:var(--selected-bg);border-color:var(--selected-border)}
+.bookOffer meter{width:100%;height:5px;accent-color:var(--accent)}
+.reference>small,.missing,.cardFooter small{font-size:11px;color:var(--text-2)!important;letter-spacing:0}
+.outcome{padding:10px;border-radius:8px;font-size:12px;background:var(--surface-2)}
+.resultLadders summary{min-height:44px;font-size:12px;display:flex;align-items:center}
+.oddsChips>span{min-height:36px;padding:6px 8px;background:var(--surface-2);border-color:var(--border)}
+.cardFooter a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--text-2)!important}
+@media(max-width:767px){.root{padding:16px 12px 110px}.root>header h1{font-size:22px}.controls input,.controls select{font-size:16px;max-width:100%}.root .controls{gap:8px}.controls label{flex:1}.controls label:first-child{flex-basis:100%}.card{padding:14px 12px}.cards{grid-template-columns:minmax(0,1fr)}.bookGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.bookOffer{padding:10px}.portrait{width:48px;height:48px}}
+.identity .playerName strong{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.identity .playerName small{white-space:normal;line-height:1.4}

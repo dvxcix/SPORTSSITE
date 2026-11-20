@@ -1,6 +1,8 @@
 'use client'
 import { useMemo, useState } from 'react'
-import Image from 'next/image'
+import { PickCount, PicksMark, MarketMovement } from '@/components/research/ResearchMetrics'
+import { SidelinePlayerAvatar } from './SidelinePlayerAvatar'
+import type { SidelineTeam } from './types'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { NflScorerBadges } from '@/components/sideline/NflScorerBadges'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
@@ -17,7 +19,7 @@ const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_t
 const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
 const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
-export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, matrixMatches, initialPreview }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>>; initialPreview?: { player?: number; line?: number } | null }) {
+export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, teams, matrixMatches, initialPreview }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; teams?: SidelineTeam[]; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>>; initialPreview?: { player?: number; line?: number } | null }) {
   const statusFor = (player: SidelineOddsBoard['players'][number]) => nflAvailability(player, game?.gameday)
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
@@ -82,8 +84,8 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
   const changeSort = (key: LadderSortKey) => setSort({ key, direction: activeSort.key === key ? activeSort.direction === 'asc' ? 'desc' : 'asc' : key === 'player' ? 'asc' : 'desc' })
   const sortHeader = (key: LadderSortKey, label: string) => (
     <th key={key} scope="col" aria-sort={activeSort.key === key ? activeSort.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
-      <button type="button" className={styles.sortButton} onClick={() => changeSort(key)}>
-        {label}<span aria-hidden="true">{activeSort.key === key ? activeSort.direction === 'asc' ? '↑' : '↓' : '↕'}</span>
+      <button type="button" aria-label={label} className={styles.sortButton} onClick={() => changeSort(key)}>
+        {key==='picks'?<PicksMark/>:label}<span aria-hidden="true">{activeSort.key === key ? activeSort.direction === 'asc' ? '↑' : '↓' : '↕'}</span>
       </button>
     </th>
   )
@@ -91,7 +93,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
     <section className={styles.panel} aria-label="NFL full market ladders">
       <header>
         <div>
-          <h2>Player Props</h2>
+          <h2>Player props</h2>
           <small>
             {board.capturedAt
               ? new Date(board.capturedAt).toLocaleString('en-US', {
@@ -144,7 +146,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
         </label>
       </div>
       <details className={styles.options}>
-        <summary>Display Options</summary>
+        <summary>Display options</summary>
       <div className={styles.controls}>
         <label>
           Starting Line
@@ -209,7 +211,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
               <tr key={row.player.id} data-preview-player={row.player.id === initialPreview?.player ? 'true' : undefined} className={!statusFor(row.player).eligible ? styles.unavailableRow : undefined}>
                 <td>
                   <button className={styles.player} onClick={() => onPlayer(row.player.id)}>
-                    {row.player.headshot ? <Image src={row.player.headshot} unoptimized={!row.player.headshot.startsWith('https://static.www.nfl.com/')} width={32} height={32} alt="" /> : null}
+                    <SidelinePlayerAvatar player={row.player} team={teams?.find(team=>team.abbr===row.player.team)??{abbr:row.player.team,name:row.player.team,color:'var(--surface-3)',color2:'var(--surface-2)',logo:''}}/>
                     <span>
                       <b>{row.player.name}<NflScorerBadges player={row.player} /></b>
                       <small>
@@ -228,7 +230,7 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
                   <b>{scores.get(row.player.id)?.mm == null ? '—' : `${(scores.get(row.player.id)?.mm ?? 0) > 0 ? '+' : ''}${scores.get(row.player.id)?.mm}`}</b>
                 </td>
                 <td style={ladderHeatBackground(metricHeat.get(`${row.player.id}:picks`))}>
-                  <b>{observedPropPicks(row.player, prop)?.toLocaleString() ?? '—'}</b>
+                  <PickCount value={observedPropPicks(row.player, prop)} observed/>
                 </td>
                 {visible.map(line => {
                   const e = row.entries.find(e => e.line === line)
@@ -246,10 +248,10 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
                       key={line}
                       style={ladderHeatBackground(strength)}
                     >
-                      <b>{mode === 'odds' ? price(now) : v == null ? '—' : mode === 'picks' ? (exact == null ? 'Est. ' : '') + v.toLocaleString() : v.toFixed(2)}</b>
-                      <small>{openingOnly ? 'OPEN ONLY ' + price(open) : mode === 'odds' ? 'OPEN ' + price(open) : 'ODDS ' + price(now)}</small>
-                      {e.offer.openingLine !== e.offer.line ? <small>OPEN LINE {e.offer.openingLine ?? '—'}</small> : null}
-                      {mode !== 'picks' ? <small>{exact != null ? exact + ' picks' : est != null ? 'Est. ' + est : 'Picks —'}</small> : null}
+                      {mode==='picks'?<PickCount value={v} estimated={exact==null}/>:mode==='move'?<MarketMovement value={v} precision={2}/>:<b>{mode==='odds'?price(now):v==null?'—':v.toFixed(2)}</b>}
+                      <small>{openingOnly ? 'Open only ' + price(open) : mode === 'odds' ? 'Open ' + price(open) : 'Odds ' + price(now)}</small>
+                      {e.offer.openingLine != null && e.offer.openingLine !== e.offer.line ? <small>Opening line {e.offer.openingLine ?? '—'}</small> : null}
+                      {mode!=='picks'?<small><PickCount value={exact??est} estimated={exact==null&&est!=null}/></small>:null}
                       {game && now != null ? <NflPropActions player={row.player} market={e.market} offer={e.offer} side={side} game={game} /> : null}
                     </td>
                   )

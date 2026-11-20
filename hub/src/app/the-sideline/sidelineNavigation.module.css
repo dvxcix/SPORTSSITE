@@ -60,3 +60,32 @@
 @media(max-width:767px){.boardHeading{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%}.topBar{width:100%}}
 
 @media(max-width:767px){.boardHeading{grid-template-columns:minmax(0,1fr) auto}.boardHeading>.mobileTools{grid-column:2;grid-row:1}.boardHeading>nav{grid-column:1/-1;grid-row:2}}
+
+/* Compact workspace context; all six destinations stay in the picker. */
+.shell{max-width:100%;border-radius:10px}
+.topBar{padding:12px;gap:12px;flex-wrap:wrap}
+.identity strong{font-size:17px;font-weight:650;letter-spacing:-.025em}
+.identity small{font-size:11px;font-weight:400;color:var(--text-2)}
+.contextControls{gap:12px;min-width:0}
+.selectControl{gap:8px;min-width:0}
+.selectControl>span:first-child{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-2)}
+.selectControl select{min-height:44px;font-size:13px;font-weight:500;border-color:var(--control-border);background:var(--input-bg)}
+.toolNav{padding:6px 12px;gap:4px}
+.toolNav a{min-height:44px;padding:8px 12px;font-size:12px;font-weight:500;border-radius:7px}
+.toolNav a[aria-current=page]{background:var(--selected-bg);color:var(--accent);border-color:var(--selected-border)}
+.schedulePicker{padding:12px;gap:12px}
+.dayRail{background:var(--surface-2);border-color:var(--border-2);scrollbar-width:thin}
+.dayRail button{min-height:52px;min-width:76px}
+.dayRail small{font-size:10px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-2)}
+.dayRail button[aria-current=date]{background:var(--selected-bg);border-color:var(--selected-border);color:var(--accent)}
+.dayRail button[aria-current=date] small{color:var(--accent)}
+.gameCards{gap:8px;grid-auto-columns:180px;scrollbar-color:var(--border-3) transparent}
+.gameCards button{min-height:64px;padding:8px;background:var(--surface-2)}
+.gameCards .gameActive{background:var(--selected-bg);border-color:var(--selected-border);box-shadow:none}
+.gameCards button:after{display:none}
+.gamePickerTitle{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-2)}
+.matchupCenter i{font-size:10px;font-weight:400}
+.matchupCenter small{font-size:11px;font-weight:500}
+.matchupTeam img,.matchupTeam>span{width:26px;height:26px}
+@media(max-width:767px){.topBar{display:grid;padding:10px}.contextControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.selectControl{display:grid;gap:5px}.selectControl select{font-size:16px;min-width:0;max-width:100%}.schedulePicker{padding:10px;gap:8px}.dayRail{margin:0}.gameCards{grid-auto-columns:168px}.gameCards button{min-height:62px}.identity strong{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.progress{animation:none}.schedulePicker{transition:none}}

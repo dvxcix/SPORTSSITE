@@ -30,8 +30,9 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     [path.join(root,'src/lib/nbaResearchResources')]:path.join(root,'review/nba-resources.ts'),
     [path.join(root,'src/lib/nbaSharedCache')]:path.join(root,'review/cache.ts'),
     [path.join(root,'src/app/the-sideline/data')]:path.join(root,'review/nfl.ts'),
+    [path.join(root,'src/lib/nflTouchdownFeed')]:path.join(root,'review/nfl.ts'),
    }
-   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|nbaPaintData|nbaResearchResources|nbaSharedCache|[./]data)(?:\.ts)?$/, (resource:any)=>{
+   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|nbaPaintData|nbaResearchResources|nbaSharedCache|nflTouchdownFeed|[./]data)(?:\.ts)?$/, (resource:any)=>{
     const target=(resource.request.startsWith('@/')?path.join(root,'src',resource.request.slice(2)):path.resolve(resource.context,resource.request)).replace(/\.tsx?$/,'')
     if(replacements[target])resource.request=replacements[target]
    }))

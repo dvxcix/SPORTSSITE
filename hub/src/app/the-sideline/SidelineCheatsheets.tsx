@@ -10,6 +10,8 @@ import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import type { NflMarketOffer, NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineLens, SidelinePlayer, SidelinePlayerGameLine, Team } from './SidelineClient'
 import { PlayerIdentity } from './SidelineResearchClient'
+import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
+import { MarketMovement, PickCount, PicksMark } from '@/components/research/ResearchMetrics'
 import styles from './sidelineCheatsheets.module.css'
 
 type View = 'edge' | 'hits' | 'explosives' | 'gaps' | 'defense'
@@ -118,7 +120,7 @@ function HitCell({ value }: { value: HitSummary }) {
 }
 
 function SortButton({ label, active, direction, onClick }: { label: string; active: boolean; direction: SortDirection; onClick: () => void }) {
-  return <button type="button" className={styles.sortButton} data-active={active} onClick={onClick}>{label}<ArrowUpDown size={12} aria-hidden />{active && <span>{direction === 'desc' ? '↓' : '↑'}</span>}</button>
+  return <button type="button" className={styles.sortButton} aria-label={label} data-active={active} onClick={onClick}>{label==='Public Picks'?<PicksMark/>:label}<ArrowUpDown size={12} aria-hidden />{active && <span>{direction === 'desc' ? '↓' : '↑'}</span>}</button>
 }
 
 function TeamBadge({ team }: { team: Team | undefined }) {
@@ -228,10 +230,10 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
 
   return <div className={styles.root}>
     <header className={styles.hero}>
-      <div className={styles.heroCopy}><h1>Sideline Cheatsheets</h1><p>{sampleLabel}</p></div>
+      <div className={styles.heroCopy}><h1>Cheatsheets</h1><p>{sampleLabel}</p></div>
       <div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div>
     </header>
-    <nav className={styles.views} aria-label="Cheatsheet views">{VIEW_META.map(([key, label, Icon]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); setDirection('desc'); setSort(key === 'explosives' ? 'x-total' : key === 'defense' ? 'd-edge' : key === 'gaps' ? 'g-edge' : 'edge') }}><Icon size={15} />{label}</button>)}</nav>
+    <ResearchSectionNav label="Cheatsheet views" value={view} items={VIEW_META.map(([key,label,Icon])=>({value:key,label,icon:<Icon size={15}/>}))} onChange={key=>{setView(key);setDirection('desc');setSort(key==='explosives'?'x-total':key==='defense'?'d-edge':key==='gaps'?'g-edge':'edge')}}/>
     <section className={styles.controls} aria-label="Cheatsheet controls">
       {view !== 'gaps' && view !== 'defense' && <label className={styles.searchControl}><span>Find Player</span><div className={styles.searchBox}><Search size={15} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search player, team, role" /></div></label>}
       <label><span>Team</span><select value={team} onChange={event => setTeam(event.target.value)}><option value="all">Both Teams</option>{teams.map(item => <option key={item.abbr} value={item.abbr}>{item.name}</option>)}</select></label>
@@ -239,9 +241,9 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
     </section>
     {((view === 'explosives' && !explosiveRows.length) || (view === 'gaps' && !gapRows.length) || (view === 'defense' && !dvpRows.length)) && <p className={styles.empty} role="status">No results for this selection.</p>}
     {(view === 'edge' || view === 'hits') && <section className={styles.summaryGrid}>
-      <article data-tone="positive"><Target size={17} /><span><small>TOP PRICE EDGE</small><b>{marketSummary.leader?.market.name ?? 'Awaiting match'}</b><em>{marketSummary.leader?.edge == null ? '—' : (marketSummary.leader.edge > 0 ? '+' : '') + marketSummary.leader.edge.toFixed(1) + 'pp'}</em></span></article>
-      <article><ArrowUpDown size={17} /><span><small>LARGEST MARKET MOVE</small><b>{marketSummary.mover?.market.name ?? 'No movement'}</b><em>{marketSummary.mover?.move == null ? '—' : Math.abs(marketSummary.mover.move).toFixed(1) + 'pp'}</em></span></article>
-      <article><Gauge size={17} /><span><small>BEST EXACT-LINE RATE</small><b>{marketSummary.hitter?.market.name ?? 'No sample'}</b><em>{marketSummary.hitter?.season == null ? '—' : marketSummary.hitter.season.hits + '/' + marketSummary.hitter.season.total}</em></span></article>
+      <article data-tone="positive"><Target size={17} /><span><small>Top price edge</small><b>{marketSummary.leader?.market.name ?? 'Awaiting match'}</b><em>{marketSummary.leader?.edge == null ? '—' : (marketSummary.leader.edge > 0 ? '+' : '') + marketSummary.leader.edge.toFixed(1) + 'pp'}</em></span></article>
+      <article><ArrowUpDown size={17} /><span><small>Largest market move</small><b>{marketSummary.mover?.market.name ?? 'No movement'}</b><em>{marketSummary.mover?.move == null ? '—' : Math.abs(marketSummary.mover.move).toFixed(1) + 'pp'}</em></span></article>
+      <article><Gauge size={17} /><span><small>Best exact-line rate</small><b>{marketSummary.hitter?.market.name ?? 'No sample'}</b><em>{marketSummary.hitter?.season == null ? '—' : marketSummary.hitter.season.hits + '/' + marketSummary.hitter.season.total}</em></span></article>
     </section>}
     {(view === 'edge' || view === 'hits') && <div className={styles.tableWrap} role="region" aria-label={`${VIEW_META.find(item => item[0] === view)?.[1]} table`} tabIndex={0}><table><thead><tr>
       {['player', 'line', 'current', 'open', 'move', 'public', 'projection'].map(key => <th key={key}><SortButton label={({ player: 'Player', line: 'Line', current: 'Current', open: 'Open', move: 'Open → Now', public: 'Public Picks', projection: 'Projection' } as Record<string, string>)[key]} active={sort === key} direction={direction} onClick={() => changeSort(key)} /></th>)}
@@ -252,8 +254,8 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
       <td><div className={styles.rowIdentity}><span className={styles.rank}>{index + 1}</span><PlayerIdentity player={row.market} team={teams.find(item => item.abbr === row.market.team)} /></div></td>
       <td><b>{row.line ?? '—'}</b><small>{PROP_LABELS[prop] ?? titleCase(prop)}</small></td>
       <td><span className={styles.price}><BookLogo vendor={vendor} size={18} />{price(row.now)}</span></td><td>{price(row.open)}</td>
-      <td><span className={styles.movement} data-state={row.move == null || row.move === 0 ? 'flat' : row.move > 0 ? 'shortened' : 'lengthened'}>{row.move == null ? <b>—</b> : <><b>{row.move > 0 ? '+' : ''}{row.move.toFixed(1)}pp</b><small>{row.move > 0 ? 'Shortened' : row.move < 0 ? 'Lengthened' : 'Unchanged'}</small></>}</span></td>
-      <td><b>{row.pickCount?.toLocaleString() ?? '—'}</b></td><td><b>{formatProjection(row.projection, prop)}</b></td><td><HitCell value={row.season} /></td>
+      <td><MarketMovement value={row.move}/></td>
+      <td><PickCount value={row.pickCount} observed/></td><td><b>{formatProjection(row.projection, prop)}</b></td><td><HitCell value={row.season} /></td>
       {view === 'hits' && <>{[10, 5, 3, 1].map(count => <td key={count}><HitCell value={row.line == null || !row.stats ? null : hitSummary(row.stats.gameLog, PROP_FIELDS[prop], row.line, count, row.offer.type === 'milestone' || prop.includes('td'))} /></td>)}</>}
       <td className={row.edge == null ? '' : row.edge >= 0 ? styles.up : styles.down}><b>{row.edge == null ? '—' : `${row.edge > 0 ? '+' : ''}${row.edge.toFixed(1)}pp`}</b><small>{row.modeled == null ? '' : `${row.modeled.toFixed(1)}% modeled`}</small></td>
     </tr>)}</tbody></table>{!marketRows.length && <p className={styles.empty}>No captured {titleCase(vendor)} contracts match this market and game.</p>}</div>}

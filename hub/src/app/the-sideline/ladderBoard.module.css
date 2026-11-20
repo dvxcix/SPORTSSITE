@@ -39,3 +39,23 @@
 }
 
 .panel tr[data-preview-player] td:first-child { box-shadow: inset 3px 0 var(--accent), 1px 0 #2a3a4a; }
+
+.panel{border-radius:10px;background:var(--surface);border-color:var(--border-2)}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.panel h2{font-size:16px;font-weight:600;letter-spacing:-.015em}
+.panel header small{font-size:11px;color:var(--text-2)}
+.panel button,.panel select{min-height:44px;font-size:13px;font-weight:500;border-radius:7px;border-color:var(--control-border)}
+.panel td,.panel th{border-color:var(--border);font-variant-numeric:tabular-nums}
+.panel td{height:108px;padding:12px;vertical-align:middle}
+.panel th{height:44px;padding:0 10px;color:var(--text-2);font-weight:500}
+.panel td:first-child,.panel th:first-child{min-width:240px;background:var(--surface);box-shadow:1px 0 0 var(--border-2)}
+.panel th:first-child{background:var(--surface-2)}
+.player{gap:12px!important}
+.player b{font-size:13px;font-weight:600;line-height:1.4}
+.panel td small{font-size:11px;font-weight:400;letter-spacing:0;color:var(--text-2)}
+.panel td:not(:first-child)>b{font-size:16px;font-weight:650}
+.panel .player img{border-radius:9px}
+.panel footer{border-top:1px solid var(--border);font-size:12px;gap:10px}
+.panel .sortButton{font-size:12px;min-height:44px}
+.scroll{scrollbar-width:thin;scrollbar-color:var(--border-3) transparent}
+@media(max-width:767px){.controls select{font-size:16px}.panel header{padding:12px}.panel td:first-child,.panel th:first-child{min-width:176px;max-width:176px}.panel td{padding:10px}.player b{font-size:12px}.panel footer{flex-wrap:wrap;justify-content:center}.panel footer>button{flex:1}}

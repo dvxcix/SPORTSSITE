@@ -51,7 +51,7 @@ export default async function NflTeamPage({ params }: { params: Promise<{ abbr: 
 
   return (
     <TierGate requiredTier="basic" label="Team Pages">
-      <div className={styles.page} style={{ '--entity-color': team.team_color ?? '#9cff39' } as React.CSSProperties}>
+      <div className={`${styles.page} ${styles.nflPage}`} style={{ '--entity-color': team.team_color ?? '#9cff39' } as React.CSSProperties}>
         <header className={styles.hero}>
           <div className={styles.avatar}>
             {team.team_logo_espn ? <SafeImage src={team.team_logo_espn} alt={`${team.team_name} logo`} /> : <Shield size={38} />}

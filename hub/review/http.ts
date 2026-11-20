@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {authUser,reviewProfile,table,REVIEW_DATE,type ReviewRole} from './database'
 import {makeBoard,games,getPaintScouting,getPaintProfile,observedAt} from './nba'
 import * as resources from './nba-resources'
-import {makeNflOdds,makeLens,nflGames,storedGameState} from './nfl'
+import {makeNflOdds,makeLens,nflGames,storedGameState,makeNflSlateEdge,getNflTouchdownFeed,nflReviewTimeline} from './nfl'
 import {nbaSlateRows} from '../src/lib/nbaSlate'
 import {nbaSlipSurgeScore,nbaPosition,nbaGamePace} from '../src/lib/nbaIntelligence'
 import {nbaMarketRanks} from '../src/lib/nbaMarketMetrics'
@@ -72,11 +72,13 @@ export async function reviewHttp(request:NextRequest){
   const markets=['anytime_td','first_td','passing_yards','rushing_yards','receiving_yards','receptions'],books=['fanduel','draftkings','betmgm','caesars'],market=q.get('market')??'anytime_td',book=q.get('book')??'all',at=new Date().toISOString()
   return json({date:REVIEW_DATE,games:nflGames.map(g=>({id:g.id,away:g.away.abbr,home:g.home.abbr,status:'ready'})),markets,books,market,book,quotes:nflGames.flatMap(g=>makeNflOdds(g).players.flatMap(p=>p.markets.filter(m=>m.propType===market).flatMap(m=>m.offers.filter(o=>book==='all'||o.vendor===book).map(o=>[g.id,p.id,p.name,p.team,p.position,market,o.vendor,o.line,o.current.odds??o.current.over??-110,at,o.opening?.odds??o.opening?.over??null,at,o.opening?.odds??o.opening?.over??null,false])))),picks:[],identities:nflGames.flatMap(g=>makeNflOdds(g).players.map(p=>[g.id,p.id,p.name,p.team,p.headshot,[]])),teams:nflGames.flatMap(g=>[g.away,g.home].map(t=>[g.id,t.abbr,t.color,t.color2,t.logo])),phaseToken:'a'.repeat(64),phaseObservedAt:at,nextStart:'2030-11-20T20:20:00Z'})
  }
- if(path==='/api/the-sideline/slate-edge')return json({date:REVIEW_DATE,sampleLabel:'Illustrative local review',games:nflGames.map(g=>({id:g.id,label:g.away.abbr+' @ '+g.home.abbr,awayAbbr:g.away.abbr,awayLogo:g.away.logo,homeAbbr:g.home.abbr,homeLogo:g.home.logo})),entries:[],unavailableGames:[]})
+ if(path==='/api/the-sideline/slate-edge')return json(makeNflSlateEdge())
  if(path==='/the-sideline/market'){
   const game=nflGames.find(g=>g.id===q.get('game'))??nflGames[0],odds=makeNflOdds(game)
-  return json({odds,board:odds,frame:q.has('at')?{capturedAt:observedAt,board:odds}:null,timeline:[observedAt],gameState:storedGameState(game),touchdowns:[],results:null})
+  return json({odds,board:odds,frame:q.has('at')?{capturedAt:q.get('at')!,board:{...odds,capturedAt:q.get('at')!}}:null,timeline:nflReviewTimeline,gameState:storedGameState(game),touchdowns:await getNflTouchdownFeed(),results:null})
  }
+ if(path==='/api/nfl-matrices')return json({matrices:[{id:'illustrative-matrix',name:'Illustrative red-zone role',color:'#35d7ff',priority:0,enabled:false,matrix_type:'classic',match_mode:'all',match_any_count:null,pipeline_scope:null,definition:{factors:[{id:'review-factor',category:'score',field:'redZone',operator:'gte',value:70,window:'season',vendor:null,propType:null,marketValue:null}]},element_code:'NFL-REVIEW01'}]})
+ if(path==='/api/nfl-matrix-marketplace')return json({listings:[{id:'illustrative-listing',title:'Illustrative receiving role',description:'Local layout sample. No live template or member data.',color:'#4de2a1',matrix_type:'classic',copy_count:12,snapshot:{}}]})
  if(path==='/api/nfl-matrices'||path==='/api/nba-matrices')return json({matrices:[]})
  if(path==='/api/nfl-matrix-marketplace'||path==='/api/nba-matrix-marketplace')return json({listings:[]})
  if(path.includes('changelog'))return json({entries:table('changelog_entries'),items:table('changelog_entries')})

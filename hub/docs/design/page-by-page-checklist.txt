@@ -193,6 +193,36 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NFL | Cheatsheets · Explosive Plays | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Run Gaps | /the-sideline?mode=cheatsheets
 [Queued] NFL | Cheatsheets · Defense / DvP | /the-sideline?mode=cheatsheets
+[Queued] NFL | Sideline board · Game Day | /the-sideline?view=core
+[Queued] NFL | Sideline board · TDs | /the-sideline?view=touchdowns
+[Queued] NFL | Sideline board · Props | /the-sideline?view=props
+[Queued] NFL | Sideline board · Usage | /the-sideline?view=usage
+[Queued] NFL | Sideline board · Tracking | /the-sideline?view=tracking
+[Queued] NFL | Sideline board · Team | /the-sideline?view=team
+[Queued] NFL | Sideline board · All | /the-sideline?view=all
+[Queued] NFL | Sideline board · Custom | /the-sideline?view=custom
+[Queued] NFL | NFL player drawer · Matchup | /the-sideline
+[Queued] NFL | NFL player drawer · NFL Tracking | /the-sideline
+[Queued] NFL | NFL player drawer · Sportsbooks | /the-sideline
+[Queued] NFL | Matchup Lab · Role command | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Score zone | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Receiving value | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Route leverage | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Ground game | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · QB command | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Explosive lanes | /the-sideline?mode=research
+[Queued] NFL | Matchup Lab · Market signal | /the-sideline?mode=research
+[Queued] NFL | Sideline Edge · Slate Rankings | /the-sideline
+[Queued] NFL | Sideline Edge · Matchup Lens | /the-sideline
+[Queued] NFL | Sideline Edge · Model vs Market | /the-sideline
+[Queued] NFL | Sideline Edge · Signal Lab | /the-sideline
+[Queued] NFL | NFL · Touchdown tracker | /the-sideline
+[Queued] NFL | NFL · Matrix library | /the-sideline
+[Queued] NFL | NFL · Matrix community | /the-sideline
+[Queued] NFL | NFL · Matrix editor | /the-sideline
+[Queued] NFL | NFL · Column manager | /the-sideline
+[Queued] NFL | NFL · Player comparison | /the-sideline
+[Queued] NFL | NFL · Game lines and capture replay | /the-sideline
 [Approved] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Queued] Shared components | Account menu | Shared surface
 [Queued] Shared components | Global search | Shared surface
