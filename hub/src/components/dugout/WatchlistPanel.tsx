@@ -328,7 +328,7 @@ export function WatchlistButton() {
                   onClick={() => startPost(selectedItems)}
                   style={{
                     width: '100%', padding: '9px', borderRadius: 8, border: 'none',
-                    background: booksMismatch || selectedItems.length < 2 ? 'var(--surface-3)' : 'var(--accent)',
+                    background: booksMismatch || selectedItems.length < 2 ? 'var(--surface-3)' : 'var(--accent-fill)',
                     color: booksMismatch || selectedItems.length < 2 ? 'var(--text-3)' : 'var(--accent-fg)',
                     fontWeight: 700, fontSize: 12, cursor: booksMismatch || selectedItems.length < 2 ? 'not-allowed' : 'pointer',
                   }}

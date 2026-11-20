@@ -1,0 +1,25 @@
+SLIPSURGE / FINAL PRIVATE UI POLISH
+20 November 2026
+
+OUTCOME
+The private app and gallery are current. No push, merge or deployment. Owner approval remains required before a public release.
+
+CHANGES
+Conditional primary buttons now pair lime fill with primary ink in community comment/reply actions, Matrix/watchlist actions, sports game filters and seasonal controls. The header fits 320px screens; mobile navigation labels and surfaces are clearer; dialog close buttons have 44px targets. Local role switching preserves research query parameters. MLB remains hidden/off-season.
+
+FRAMEWORK PATCH
+Next.js and eslint-config-next: 16.4.3 -> 16.4.6, plus their matching @next packages. No unrelated package versions changed. Official release: https://github.com/vercel/next.js/releases/tag/v16.4.6
+The isolated private optimized build finishes with exit 0, TypeScript passes and all 156 pages generate. npm audit no longer lists Next.js. The original checkout's installed Next.js is still 16.4.3; its unrelated source work was preserved.
+
+LOCAL VERIFICATION
+Production source: 134/134. Cross-sport: 44/44. Framework: 7/7. Total: 185/185.
+Targeted lint and Git whitespace checks pass. The new source audit covers conditional inline and embedded-CSS primary button states, including the community actions missed by a stylesheet-only audit.
+11 final screenshots cover 6 additional layouts/states, including 320px phones, 768px tablets and 1440px desktops. No document-width overflow or console errors/warnings in these optimized checks. Saved themes, reloads, tool navigation, admin review roles and the updates/column panels were exercised. Updates drawer focus stays inside, Escape closes it, and focus returns to the launcher. The mobile menu closes with Escape.
+The pre-upgrade development cache was isolated after a reload syntax error. A fresh development load and reload then produced no console errors. Earlier bulk-capture React 418 warnings were not reproduced by final targeted checks. No source suppression was added. The entire 191-entry sweep was not repeated after this polish; the original sweep and final recheck evidence are both retained.
+Gallery: http://127.0.0.1:4178/whole-site-review.html (797 images)
+Interactive: http://127.0.0.1:4180/design-review (191 entries)
+
+RELEASE LIMITS
+This uses isolated sample data and browser viewports. Operational writes/services are blocked. No real-service or physical-device certification is claimed.
+The broad npm workspace audit still lists 13 pre-existing dependency nodes: 9 moderate and 4 high, no critical. These include Expo/tooling and existing local-backport findings. Names: @expo/cli, @expo/config, @expo/config-plugins, @expo/fingerprint, @expo/metro-config, expo, glob, image-size, minimatch, node-forge, uuid, xcode, zod. Raw registry findings and mitigation applicability require a separate dependency release review; this patch does not claim the whole workspace audit is clean.
+Before release: owner visual approval, refreshed main/live preflight, integration with approved main changes and real-service checks. No feature flags, model/research mathematics, freeze boundaries, backend routes, database migrations, settings or jobs were changed by this polish.

@@ -653,7 +653,7 @@ function PlayByPlay({
         {(['all', 'scoring'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-            background: filter === f ? 'var(--accent)' : 'var(--surface)',
+            background: filter === f ? 'var(--accent-fill)' : 'var(--surface)',
             color: filter === f ? 'var(--accent-fg)' : 'var(--text-3)',
             border: `1px solid ${filter === f ? 'var(--accent)' : 'var(--border)'}`,
             cursor: 'pointer',
@@ -711,7 +711,7 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
             <button key={s} onClick={() => setSide(s)} style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-              background: side === s ? 'var(--accent)' : 'var(--surface)',
+              background: side === s ? 'var(--accent-fill)' : 'var(--surface)',
               color: side === s ? 'var(--accent-fg)' : 'var(--text-2)',
               border: `1px solid ${side === s ? 'var(--accent)' : 'var(--border)'}`,
               cursor: 'pointer',

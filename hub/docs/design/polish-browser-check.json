@@ -1,0 +1,163 @@
+{
+  "origin": "http://127.0.0.1:4180",
+  "build": "Next.js 16.4.6 private optimized build",
+  "checks": [
+    {
+      "name": "NBA tablet dark",
+      "url": "http://127.0.0.1:4180/the-paint?date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+      "documentWidth": 758,
+      "headings": [
+        "The CourtNBA",
+        "Player board"
+      ],
+      "height": 1024,
+      "theme": "dark",
+      "width": 768,
+      "errors": [],
+      "file": "211-tablet-dark.jpg"
+    },
+    {
+      "name": "NBA availability tablet dark",
+      "url": "http://127.0.0.1:4180/the-paint?view=availability&mode=pregame&game=900001&date=2030-11-20&market=points&book=all&side=over&contract=milestone&sort=average&order=desc",
+      "documentWidth": 758,
+      "headings": [
+        "The CourtNBA",
+        "Availability"
+      ],
+      "height": 1024,
+      "theme": "dark",
+      "width": 768,
+      "errors": [],
+      "file": "212-tablet-dark.jpg"
+    },
+    {
+      "name": "NBA availability tablet light reload",
+      "url": "http://127.0.0.1:4180/the-paint?view=availability&mode=pregame&game=900001&date=2030-11-20&market=points&book=all&side=over&contract=milestone&sort=average&order=desc",
+      "documentWidth": 758,
+      "headings": [
+        "The CourtNBA",
+        "Availability"
+      ],
+      "height": 1024,
+      "theme": "light",
+      "width": 768,
+      "errors": [],
+      "file": "212-tablet-light.jpg"
+    },
+    {
+      "name": "NFL small phone light",
+      "url": "http://127.0.0.1:4180/the-sideline",
+      "documentWidth": 310,
+      "headings": [],
+      "height": 740,
+      "theme": "light",
+      "width": 320,
+      "errors": [],
+      "file": "213-mobile-light.jpg"
+    },
+    {
+      "name": "NFL column editor small phone light",
+      "url": "http://127.0.0.1:4180/the-sideline",
+      "documentWidth": 310,
+      "headings": [
+        "Customize columns"
+      ],
+      "height": 740,
+      "theme": "light",
+      "width": 320,
+      "errors": [],
+      "file": "214-mobile-light.jpg"
+    },
+    {
+      "name": "NFL small phone dark reload",
+      "url": "http://127.0.0.1:4180/the-sideline",
+      "documentWidth": 310,
+      "headings": [],
+      "height": 740,
+      "theme": "dark",
+      "width": 320,
+      "errors": [],
+      "file": "213-mobile-dark.jpg"
+    },
+    {
+      "name": "NFL column editor small phone dark",
+      "url": "http://127.0.0.1:4180/the-sideline",
+      "documentWidth": 310,
+      "headings": [
+        "Customize columns"
+      ],
+      "height": 740,
+      "theme": "dark",
+      "width": 320,
+      "errors": [],
+      "file": "214-mobile-dark.jpg"
+    },
+    {
+      "name": "NBA wide desktop dark",
+      "url": "http://127.0.0.1:4180/the-paint?date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+      "documentWidth": 1430,
+      "headings": [
+        "The CourtNBA",
+        "Player board"
+      ],
+      "height": 900,
+      "theme": "dark",
+      "width": 1440,
+      "errors": [],
+      "file": "215-desktop-dark.jpg"
+    },
+    {
+      "name": "NBA wide desktop light",
+      "url": "http://127.0.0.1:4180/the-paint?date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+      "documentWidth": 1430,
+      "headings": [
+        "The CourtNBA",
+        "Player board"
+      ],
+      "height": 900,
+      "theme": "light",
+      "width": 1440,
+      "errors": [],
+      "file": "215-desktop-light.jpg"
+    },
+    {
+      "name": "Admin changelog editor wide light",
+      "url": "http://127.0.0.1:4180/admin/changelog",
+      "documentWidth": 1430,
+      "headings": [
+        "What's New / Changelog"
+      ],
+      "height": 900,
+      "theme": "light",
+      "width": 1440,
+      "errors": [],
+      "file": "216-desktop-light.jpg"
+    },
+    {
+      "name": "Admin changelog editor wide dark",
+      "url": "http://127.0.0.1:4180/admin/changelog",
+      "documentWidth": 1430,
+      "headings": [
+        "What's New / Changelog"
+      ],
+      "height": 900,
+      "theme": "dark",
+      "width": 1440,
+      "errors": [],
+      "file": "216-desktop-dark.jpg"
+    }
+  ],
+  "keyboard": [
+    "Updates drawer contains Tab focus, Escape closes, focus returns to launcher",
+    "Mobile navigation closes with Escape"
+  ],
+  "reviewRolePreservesFilters": true,
+  "cleanDevelopmentReloadErrors": [
+    {
+      "level": "error",
+      "message": "Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <PostLiveProvider>\n      <RootLayoutShell>\n        <WatchlistProvider>\n          <RootLayoutShellContent>\n            <MfaGate>\n            <LoadableComponent>\n            <a>\n            <NetworkStatus>\n            <ProductTelemetry>\n            <Suspense>\n            <div className={\"flex min...\"} data-product-area=\"research\">\n              <Suspense fallback={null}>\n                <Sidebar open={false} onClose={function onClose}>\n                  <aside ref={{current:null}} className=\"ss-site-si...\" style={{width:220, ...}}>\n                    <div>\n                    <button>\n                    <div>\n                    <nav aria-label=\"All naviga...\" style={{flex:1,minHeight:0, ...}}>\n                      <div>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <div>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <div>\n                      <LinkComponent>\n                      <LinkComponent>\n                      <LinkComponent href=\"/marketplace\" prefetch={false} className=\"nav-item\" data-active={false} ...>\n+                       <a\n+                         className=\"nav-item\"\n+                         data-active={false}\n+                         aria-current={undefined}\n+                         aria-label={undefined}\n+                         title={undefined}\n+                         style={{position:\"relative\",display:\"flex\",alignItems:\"center\",gap:10,minHeight:44,justifyContent:\"flex-start\", ...}}\n+                         onMouseLeave={function onMouseLeave}\n+                         ref={function}\n+                         onClick={function onClick}\n+                         onMouseEnter={function onMouseEnter}\n+                         onTouchStart={function onTouchStart}\n+                         href=\"/marketplace\"\n+                       >\n-                       <div\n-                         style={{display:\"flex\",align-items:\"center\",row-gap:\"6px\",column-gap:\"6px\",justify-content:\"flex-start\", ...}}\n-                       >\n                      ...\n                    ...\n              ...\n            ...\n\n    at throwOnHydrationMismatch (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:5548:11)\n    at beginWork (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12447:17)\n    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:1046:30)\n    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:19180:22)\n    at workLoopConcurrentByScheduler (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:19174:9)\n    at renderRootConcurrent (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:19156:15)\n    at performWorkOnRoot (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:18015:11)\n    at performWorkOnRootViaSchedulerTask (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:20669:7)\n    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:45:48)",
+      "timestamp": "2026-11-20T10:54:05.343Z",
+      "url": "webpack-internal:///(app-pages-browser)/./review/framework-runtime/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js"
+    }
+  ]
+}

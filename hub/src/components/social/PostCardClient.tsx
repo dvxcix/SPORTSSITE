@@ -1100,7 +1100,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   <GifPicker onSelect={url => insertCommentEmoji(` ${url} `)} />
                   <button onClick={submitComment} disabled={!commentText.trim()} style={{
                     padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                    background: commentText.trim() ? 'var(--accent)' : 'var(--surface-3)',
+                    background: commentText.trim() ? 'var(--accent-fill)' : 'var(--surface-3)',
                     color: commentText.trim() ? 'var(--accent-fg)' : 'var(--text-3)',
                     border: 'none', cursor: commentText.trim() ? 'pointer' : 'not-allowed',
                   }}>
@@ -1278,7 +1278,7 @@ function CommentItem({
             <GifPicker onSelect={url => setReplyText(`${replyText}${replyText ? ' ' : ''}${url} `)} />
             <button onClick={() => onSubmitReply(node.id, node.author_id)} disabled={!replyText.trim()} style={{
               padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-              background: replyText.trim() ? 'var(--accent)' : 'var(--surface-3)',
+              background: replyText.trim() ? 'var(--accent-fill)' : 'var(--surface-3)',
               color: replyText.trim() ? 'var(--accent-fg)' : 'var(--text-3)',
               border: 'none', cursor: replyText.trim() ? 'pointer' : 'not-allowed',
             }}>

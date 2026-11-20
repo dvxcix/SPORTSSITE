@@ -928,7 +928,7 @@ export function AllStarClient() {
               onClick={() => setHand(h)}
               style={{
                 padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
-                background: hand === h ? 'var(--accent)' : 'transparent', color: hand === h ? 'var(--accent-fg)' : 'var(--text-3)',
+                background: hand === h ? 'var(--accent-fill)' : 'transparent', color: hand === h ? 'var(--accent-fg)' : 'var(--text-3)',
               }}
             >{h === 'R' ? 'RHP / RHB' : 'LHP / LHB'}</button>
           ))}

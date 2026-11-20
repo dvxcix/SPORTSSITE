@@ -2,7 +2,7 @@ SLIPSURGE / PRIVATE ENTIRE-SITE UI REVIEW
 20 November 2026
 
 STATUS
-Ready for owner visual review. Nothing pushed, merged or deployed. No live database, settings, jobs, collectors, payments or member messages changed.
+Final private polish verified and ready for owner visual review. Nothing pushed, merged or deployed. No live database, settings, jobs, collectors, payments or member messages changed.
 Local branch: codex/ui-framework-review
 Verified main/live baseline: e7b68ef36a967955ff5c6acf4e4fa45e21ac7df7
 Production preflight deployment: dpl_3Nsz6iyNp6ZuYP76N6CNLj4Yserp
@@ -17,6 +17,7 @@ The catalog switches local member, administrator and signed-out roles. These are
 COVERAGE
 191 page and tool entries; 382 desktop/phone layouts; 764 route images in both themes.
 11 additional panel/control states, 22 additional images.
+Final polish adds 6 targeted layouts and 11 images: 320px phone, 768px tablet and 1440px desktop. Gallery total: 797 images across 399 recorded layouts/panel states. The catalog still contains 191 page/tool entries.
 Desktop viewport 1280 x 720; phone viewport 390 x 844. No remaining document-width overflow in the catalog sweep.
 Entries include existing redirects and seasonal maintenance states; they are not 191 independent features. MLB remains hidden/off-season.
 
@@ -25,13 +26,15 @@ Shared light/dark semantic colors, local Geist font, text contrast, primary/seco
 NBA and NFL player portraits remain inside clipped team-color frames, with separate team badges. NBA tool views/player panels and NFL board presets/tool views use the same framework.
 Persistent What's new drawer in navigation, existing admin changelog editor, and aligned admin/member popup preview.
 All existing research math, access rules, freeze boundaries, live APIs and operational jobs are preserved. No tracked changes under src/app/api, existing src/lib data code, or Supabase migrations.
-335 tracked files changed; other components inherit the shared framework.
+340 source files changed; other components inherit the shared framework.
+Final polish corrects conditional primary button fills in community replies, Matrix/watchlist actions and game filters. The 320px header fits, dock labels have room, mobile dialog close targets are larger, and switching local review roles preserves tool filters.
 
 VERIFICATION
 Production source checks: 134/134.
 Cross-sport identity, favorites, game center and portrait checks: 44/44.
-Framework contrast, primary-control labels, private build guards and fixture contracts: 6/6.
+Framework contrast, stylesheet/conditional primary-control labels, private build guards and fixture contracts: 7/7. Combined automated checks: 185/185.
 TypeScript: passed. Targeted lint for new/shared components: passed. Git whitespace check: passed.
+Final optimized private build on Next.js 16.4.6: exit 0, 156/156 pages generated. The installed Next.js advisory is cleared from this branch's npm audit. The original checkout's installed Next.js remains unchanged.
 The source assertions for tooltip delegation, drawer radius and error-document attributes were updated for the new presentation while keeping their behavior/accessibility checks.
 Sorting, player search, filter controls, NBA/NFL Matrix builders, NFL column editor, player drawer, updates drawer and admin popup preview were operated in the browser.
 
@@ -42,12 +45,12 @@ Data is clearly marked illustrative and future-dated 2030-11-20. This is not his
 
 BEFORE ANY PUBLIC RELEASE
 Owner approval is required. Refresh main and live state again, reconcile this branch with approved changes, and run real-service release checks.
-The installed Next.js CLI emitted a dependency security advisory after completing compilation/build outputs and exited 1. Dependencies were not upgraded in this design task. Review that advisory before release.
-Rapid multi-tab captures emitted React 418 hydration warnings. Direct readable-development checks of dark load, saved light reload, phone-width reload and tool navigation reproduced none. See direct-hydration-check.json. Do not treat the private visual sweep as a clean live-data release certification.
+Earlier rapid multi-tab captures emitted React 418 hydration warnings. Final targeted optimized checks and the catalog show no console warnings or errors; see polish-browser-check.json. This is a targeted recheck, not a repeated sweep of all 191 entries. A stale pre-upgrade development cache caused a reload syntax error; isolating that generated cache cleared the error on a fresh load and reload. No hydration warnings were suppressed in source.
+The workspace npm audit still reports 13 pre-existing dependency nodes (9 moderate, 4 high), including Expo/tooling and packages with existing local backports. This visual work does not certify that broader dependency tree. See polish-release-check.txt. Do not treat sample-data visual verification as a real-service release certification.
 No physical-device verification was performed.
 
 RESTART
 From the isolated hub checkout: npm run start:ui-review
-To rebuild: npm run build:ui-review (review any dependency advisory from the CLI).
+To rebuild: npm run build:ui-review.
 For editable development: npm run dev:ui-review
 The gallery is a static artifact generated by node scripts/build-ui-review-gallery.mjs; screenshot files are local and ignored by Git.

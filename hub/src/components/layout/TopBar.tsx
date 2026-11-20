@@ -776,7 +776,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               transition: 'background 130ms',
             }}
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = '#C8FF6A')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'var(--accent)')}>
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'var(--accent-fill)')}>
               Sign up free
             </Link>
           </div>

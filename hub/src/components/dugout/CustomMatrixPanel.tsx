@@ -1512,7 +1512,7 @@ export function MatrixButton() {
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   padding: '9px 0', marginBottom: 12, borderRadius: 8, fontSize: 12, fontWeight: 700,
                   color: matrices.length >= 10 ? 'var(--text-3)' : 'var(--accent-fg)',
-                  background: matrices.length >= 10 ? 'var(--surface-2)' : 'var(--accent)',
+                  background: matrices.length >= 10 ? 'var(--surface-2)' : 'var(--accent-fill)',
                   border: 'none', cursor: matrices.length >= 10 ? 'not-allowed' : 'pointer',
                 }}
               >

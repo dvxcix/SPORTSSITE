@@ -499,7 +499,7 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                     </div>
                     <button
                       onClick={() => setShowAll(v => !v)}
-                      style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${showAll ? 'var(--accent)' : 'var(--border)'}`, background: showAll ? 'var(--accent)' : 'var(--surface)', color: showAll ? 'var(--accent-fg)' : 'var(--text-2)' }}
+                      style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${showAll ? 'var(--accent)' : 'var(--border)'}`, background: showAll ? 'var(--accent-fill)' : 'var(--surface)', color: showAll ? 'var(--accent-fg)' : 'var(--text-2)' }}
                     >
                       {showAll ? '✓ Showing all pitches' : 'Show all pitches'}
                     </button>

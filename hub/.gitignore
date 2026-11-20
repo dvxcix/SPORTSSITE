@@ -50,6 +50,7 @@ next-env.d.ts
 /.responsive-captures/
 /review/dev-server.log
 /review/optimized-server.log
+/review/framework-runtime/
 /docs/design/evidence/
 /.next-ui-build-check/
 /.next-private-ui-review/

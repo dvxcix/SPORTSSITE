@@ -1,0 +1,19 @@
+
+> hub@0.1.0 test:ui-framework
+> node --import tsx --test scripts/ui-framework.test.mjs
+
+✔ conditional and embedded primary buttons use the fill role with primary ink (974.4621ms)
+✔ dark text and action roles meet normal-text contrast (0.4043ms)
+✔ light text and action roles meet normal-text contrast (0.2047ms)
+✔ heatmaps use the shared theme surface and text roles at both extremes (0.387ms)
+✔ filled primary controls keep readable labels across feature stylesheets (189.978ms)
+✔ private review cannot be enabled for production or Vercel (0.6848ms)
+✔ illustrative research fixtures satisfy the real board contracts (20.0966ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2276.5349

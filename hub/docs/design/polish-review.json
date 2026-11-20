@@ -1,0 +1,101 @@
+[
+  {
+    "index": 211,
+    "name": "NBA board · tablet",
+    "href": "/the-paint",
+    "device": "tablet",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "211-tablet-dark.jpg"
+      }
+    ]
+  },
+  {
+    "index": 212,
+    "name": "NBA availability · tablet",
+    "href": "/the-paint?view=availability",
+    "device": "tablet",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "212-tablet-dark.jpg"
+      },
+      {
+        "theme": "light",
+        "file": "212-tablet-light.jpg"
+      }
+    ]
+  },
+  {
+    "index": 213,
+    "name": "NFL board · 320px phone",
+    "href": "/the-sideline",
+    "device": "mobile",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "light",
+        "file": "213-mobile-light.jpg"
+      },
+      {
+        "theme": "dark",
+        "file": "213-mobile-dark.jpg"
+      }
+    ]
+  },
+  {
+    "index": 214,
+    "name": "NFL column editor · 320px phone",
+    "href": "/the-sideline",
+    "device": "mobile",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "light",
+        "file": "214-mobile-light.jpg"
+      },
+      {
+        "theme": "dark",
+        "file": "214-mobile-dark.jpg"
+      }
+    ]
+  },
+  {
+    "index": 215,
+    "name": "NBA board · wide desktop",
+    "href": "/the-paint",
+    "device": "desktop",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "dark",
+        "file": "215-desktop-dark.jpg"
+      },
+      {
+        "theme": "light",
+        "file": "215-desktop-light.jpg"
+      }
+    ]
+  },
+  {
+    "index": 216,
+    "name": "Admin update editor · wide desktop",
+    "href": "/admin/changelog",
+    "device": "desktop",
+    "role": "admin",
+    "group": "Final polish",
+    "shots": [
+      {
+        "theme": "light",
+        "file": "216-desktop-light.jpg"
+      },
+      {
+        "theme": "dark",
+        "file": "216-desktop-dark.jpg"
+      }
+    ]
+  }
+]

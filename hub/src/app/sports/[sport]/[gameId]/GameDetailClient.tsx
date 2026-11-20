@@ -506,7 +506,7 @@ function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact
         {(['all', 'scoring'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-            background: filter === f ? 'var(--accent)' : 'var(--surface-2)',
+            background: filter === f ? 'var(--accent-fill)' : 'var(--surface-2)',
             color: filter === f ? 'var(--accent-fg)' : 'var(--text-2)',
             border: `1px solid ${filter === f ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer',
           }}>

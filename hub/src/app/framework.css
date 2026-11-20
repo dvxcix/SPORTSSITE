@@ -78,6 +78,8 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font-geist),Geis
 .ss-modal-open .ss-site-topbar{z-index:var(--layer-sticky)}
 .ss-site-shell{background:var(--bg)}
 .ss-site-main{min-width:0}
+.ss-mobile-dock-surface{background:var(--surface);border-color:var(--border-2);box-shadow:var(--shadow-lg);backdrop-filter:none}
+.ss-mobile-dock-item{font-weight:600}
 .ss-site-main h1{letter-spacing:-.035em;font-weight:650}
 .ss-site-main h2,.ss-site-main h3{letter-spacing:-.02em}
 .ss-site-main :where(th){font-size:12px;font-weight:600;letter-spacing:0;color:var(--text-2)}
@@ -125,10 +127,14 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font-geist),Geis
 }
 @media(max-width:767px){
  :root{--topbar-h:60px;--page-gutter:16px;--control-sm:36px;--control-md:42px}
+ .ss-site-topbar{gap:8px!important;padding-inline:12px!important}
+ .ss-site-topbar .ss-topbar-search{min-width:0}
+ .ss-site-topbar .ss-topbar-guest-actions{min-width:0;font-size:11px!important}
+ [role="dialog"] button[aria-label^="Close"]{min-width:44px;min-height:44px;flex-shrink:0}
  .ss-theme-switch:not(.is-full) button[aria-pressed="true"]{display:none}
  .ss-theme-switch:not(.is-full) button>span{display:none}
  .ss-theme-switch:not(.is-full){padding:2px}
- .ss-theme-switch:not(.is-full) button{min-height:36px;min-width:36px;padding:6px}
+ .ss-theme-switch:not(.is-full) button{min-height:40px;min-width:40px;padding:6px}
  .ss-public-theme{right:14px;top:14px}
  .ss-site-main h1{font-size:clamp(24px,6vw,29px)}
  .ss-site-main :where(th){font-size:12px}
@@ -140,6 +146,7 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font-geist),Geis
  .ss-review-catalog h1{font-size:27px}
 }
 .ss-tooltip-portal{animation:ss-tooltip-enter 140ms ease-out}
+@media(max-width:359px){.ss-mobile-dock-item{font-size:10.5px}}
 @keyframes ss-tooltip-enter{from{opacity:0;transform:translateY(3px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){.ss-tooltip-portal{animation:none}}
 @media(prefers-reduced-motion:reduce){:where(button,a,input,select,textarea){transition:none!important}}

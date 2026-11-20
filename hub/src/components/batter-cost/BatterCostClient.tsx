@@ -676,7 +676,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
           .batter-cost-filter-summary button{min-height:34px;border-radius:9px;font-size:10px;font-weight:850}
           .batter-cost-filter-clear{padding:0 9px;border:1px solid var(--border);background:transparent;color:var(--text-3)}
           .batter-cost-filter-open{display:flex;align-items:center;gap:6px;padding:0 11px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-dim);color:var(--accent)}
-          .batter-cost-filter-open b{display:grid;width:18px;height:18px;place-items:center;border-radius:99px;background:var(--accent);color:var(--accent-fg);font-size:9px}
+          .batter-cost-filter-open b{display:grid;width:18px;height:18px;place-items:center;border-radius:99px;background:var(--accent-fill);color:var(--accent-fg);font-size:9px}
           .batter-cost-table-scroll{overscroll-behavior-x:contain;border-radius:8px!important}
           .batter-cost-table{font-size:12px!important;width:max-content!important;min-width:100%}
           .batter-cost-row>td{padding-top:8px!important;padding-bottom:8px!important}
@@ -729,7 +729,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
           .batter-cost-filter-sheet-footer button{display:flex;min-height:44px;align-items:center;justify-content:center;gap:6px;border-radius:11px;font-size:11px;font-weight:900}
           .batter-cost-filter-reset{border:1px solid var(--border);background:var(--surface-2);color:var(--text-2)}
           .batter-cost-filter-reset:disabled{opacity:.45}
-          .batter-cost-filter-apply{border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg)}
+          .batter-cost-filter-apply{border:1px solid var(--accent);background:var(--accent-fill);color:var(--accent-fg)}
           @keyframes batter-cost-sheet-in{from{opacity:.5;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
         }
         @media(max-width:370px){.batter-cost-filter-sheet-body{grid-template-columns:1fr}}
