@@ -23,6 +23,12 @@ test('unmatched, unavailable or ambiguous artwork remains a safe fallback',async
  assert.deepEqual(withoutPrices.map(p=>p.headshot),[null,null,null])
 })
 
+test('Odds Board retains Questionable and Probable statuses alongside eligible player identities',async()=>{
+ const roster=[{...player(1,'Amy','Adams',home),injury:{status:'Questionable',description:'Synthetic test'}},{...player(2,'Bea','Baker',away),injury:{status:'Probable',description:'Synthetic test'}}]
+ const result=await nbaFullBoardPlayers(game(),roster,true,false,async()=>{throw Error('must not fetch')})
+ assert.deepEqual(result.map(row=>row.injuryStatus),['Questionable','Probable']);assert.equal(result[0].id,1)
+})
+
 test('closed games use only their saved headshots and never look up current artwork',async()=>{
  const closed={...game(),status:'Final',status_state:'final'} as PaintGame
  const roster=[player(1,'Amy','Adams',home,'https://images.example/saved.png'),player(2,'Bea','Baker',away,null)]

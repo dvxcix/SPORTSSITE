@@ -1,0 +1,48 @@
+NBA Odds Board and availability repair — 2026-11-20
+
+Live diagnosis
+- WAS–CHI's supplemental feed used Nic Claxton, while the canonical roster
+  listed Nicolas Claxton, provider ID 666508. The private rejection digest
+  matched Nic Claxton exactly. Ninety-seven unresolved outcomes prevented the
+  complete player capture advancing; game lines continued independently.
+- HOU–DEN's current capture was healthy during this investigation. Its previous
+  warning could remain in the five-minute shared board/client refresh window.
+- The provider and the official NBA 5:00 p.m. ET injury report both listed
+  Kingston Flemings as Questionable for CHA–ATL. No manual Out override was
+  applied. Status must follow a newer verified report, not a historical game.
+- Confirmed starting-lineup data was empty. Injury status and lineup
+  confirmation are distinct; pending data must never become guessed starters.
+
+Repair
+- Added a canonical-name and player-ID-pinned Nic Claxton alias. Wrong IDs,
+  other teams and ambiguous names remain rejected. No fuzzy-name matching.
+- Open Odds Boards use a shared 60-second fill and visible 60-second poll.
+  All sportsbooks share that fill. Closed pregame slates do not start polling.
+- Injury and starting-lineup provider caches use 60 seconds. Injury status also
+  refreshes on retained open research, independent of slow/degraded baseline
+  loads. A failed report preserves its prior status with an unavailable warning.
+- Questionable/Probable labels survive into Odds Board player identities. OUT
+  players remain in research/availability views; their current markets are
+  excluded by the existing eligibility rule.
+- Lineup copy now says Lineup not confirmed, without inventing a confirmed five.
+
+Boundaries
+Whole-feed completeness, exact contracts, original quote timestamps, five-minute
+supplemental quote-age limits, earliest-tip freezes and historical snapshots are
+preserved. A stale or invalid sibling cannot certify a complete capture.
+Paid supplemental-source cadence, browser budgets, scheduled jobs, feature flags,
+database schemas and historical data are unchanged. No manual capture replay,
+database repair or collector duplication was performed.
+
+Verification
+Focused NBA checks 154/154; additional cache, ranking, paint and slate-freeze
+checks 153/153; updated Odds Board UI checks 11/11. The UI test exercises a
+scheduled minute refresh changing the displayed injury badge without a reload.
+New availability tests cover Questionable to Out, report removal, provider
+failure, frozen views and tip-crossing requests. Source contract harnesses now
+provide the existing market-roster exports and accept the shorter injury TTL.
+TypeScript, focused ESLint and production smoke are recorded in local evidence.
+Live release and automatic capture recovery are verified after deployment.
+
+Official report checked:
+https://ak-static.cms.nba.com/referee/injury/Injury-Report_2026-11-20_05_00PM.pdf

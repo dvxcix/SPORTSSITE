@@ -51,6 +51,21 @@ test('Court selections carry into the board and changes carry back',async()=>{
   await select('Odds board sportsbook','fanduel');assert.match(host.querySelector('[data-testid="selection"]')!.textContent!,/points:fanduel/);assert.ok(requests.includes('points:fanduel'))
  }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=original}
 })
+
+test('open Odds Board polls each minute and updates injury labels without reloading the page',async()=>{
+ const originalFetch=globalThis.fetch,originalInterval=window.setInterval,originalClear=window.clearInterval
+ let tick:(()=>void)|undefined,status='Questionable',requests=0
+ window.setInterval=((callback:()=>void,delay:number)=>{assert.equal(delay,60000);tick=callback;return 99999}) as typeof window.setInterval
+ window.clearInterval=()=>{}
+ globalThis.fetch=async()=>{requests++;return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,players:data.players.map(player=>({...player,injuryStatus:player.id===1?status:null})),phaseCheckedAt:Date.now()}),'fanduel'))}
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ try{
+  await act(async()=>{root.render(createElement(fixture.exports.PaintFullOddsBoard,{date:data.date,games:[game,otherGame]}));await new Promise(done=>setTimeout(done,25))})
+  assert.match(host.querySelector('tbody tr')!.textContent!,/Questionable/);assert.ok(tick);assert.equal(requests,1)
+  status='Probable';await act(async()=>{tick!();await new Promise(done=>setTimeout(done,25))})
+  assert.equal(requests,2);assert.match(host.querySelector('tbody tr')!.textContent!,/Probable/);assert.doesNotMatch(host.querySelector('tbody tr')!.textContent!,/Questionable/)
+ }finally{await act(async()=>root.unmount());host.remove();globalThis.fetch=originalFetch;window.setInterval=originalInterval;window.clearInterval=originalClear}
+})
 test('an explicit absent book stays selected, while All chooses a displayed available default',async()=>{
  const original=globalThis.fetch,requests:string[]=[]
  globalThis.fetch=async(input)=>{const url=new URL(String(input),'https://www.slipsurge.com'),book=url.searchParams.get('book')!;requests.push(book);return Response.json(nbaSelectPackedBoard(nbaPackFullBoard({...data,cells:data.cells.map(cell=>({...cell,vendor:'draftkings'})),phaseCheckedAt:Date.now()}),book))}

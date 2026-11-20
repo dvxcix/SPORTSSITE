@@ -3407,7 +3407,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3421,7 +3421,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/operations/nba-board-accuracy-2026-11-20.txt"
     ]
   },
   {
@@ -3432,7 +3433,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3447,7 +3448,8 @@
       "page-review/browser-checks.json",
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
-      "page-review/framework-tests.txt · 25 passed"
+      "page-review/framework-tests.txt · 25 passed",
+      "docs/operations/nba-board-accuracy-2026-11-20.txt"
     ]
   },
   {
@@ -3731,7 +3733,7 @@
     "kind": "Workspace",
     "status": "Queued",
     "batch": null,
-    "notes": "",
+    "notes": "2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
     "checks": {
       "desktopDark": false,
       "desktopLight": false,
@@ -3742,7 +3744,9 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [
+      "docs/operations/nba-board-accuracy-2026-11-20.txt"
+    ]
   },
   {
     "id": "nba:game-markets",

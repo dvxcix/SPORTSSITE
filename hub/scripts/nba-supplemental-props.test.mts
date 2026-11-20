@@ -76,6 +76,18 @@ test('all supported stat combinations, Q1 and exact DD/TD Yes/No use existing Pa
   assert.equal(h.NBA_SUPPLEMENTAL_MARKETS.some(key => key.includes('first3min') || key.includes('first_basket')), false)
 })
 
+test('Nic Claxton prices require his exact Nicolas Claxton game-roster identity', async () => {
+  const h=await fixture(),claxton={...player,id:666508,first_name:'Nicolas',last_name:'Claxton'}
+  assert.equal(crypto.createHash('sha256').update(paint.nbaName('Nic Claxton')).digest('hex'),'714724077e73a05079e29feb53cc01df1c0fca4663e681d08101fd286ca34daf')
+  const sample=payload([market('player_points_alternate',[{...outcome,description:'Nic Claxton'}])])
+  const result=h.nbaNormalizeSupplemental(sample,event,game,[claxton],'pregame',now)
+  assert.equal(result.complete,true);assert.equal(result.accepted,1);assert.equal(result.props[0].player_id,666508)
+  for(const roster of [[],[{...claxton,id:999}],[{...claxton,first_name:'Other'}],[{...claxton,team:{...team,id:999}}],[claxton,{...claxton,id:999,first_name:'Nic'}]]){
+    const rejected=h.nbaNormalizeSupplemental(sample,event,game,roster,'pregame',now)
+    assert.deepEqual(rejected.props,[]);assert.equal(rejected.complete,false)
+  }
+})
+
 test('Herb Jones prices require the exact verified Herbert Jones game-roster identity', async () => {
   const h=await fixture(), jones={...player,id:17896024,first_name:'Herbert',last_name:'Jones'}
   // The private production fingerprint represents the normalized source name;

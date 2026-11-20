@@ -1,9 +1,9 @@
-import { nbaName, type PaintGame, type PaintRoster } from './nbaPaint'
+import { nbaName, type PaintGame, type PaintRoster, type PaintPlayer } from './nbaPaint'
 import { nbaPregameOpen } from './nbaOddsMode'
 import { nbaRosterPortraits } from './nbaPlayerPortraits'
 import type { NbaBoardPlayer } from './nbaFullOddsBoard'
 
-type RosterPlayer = PaintRoster & { headshot?:string|null }
+type RosterPlayer = PaintRoster & { headshot?:string|null; injury?:PaintPlayer['injury'] }
 type TeamArtwork = { headshots:Map<string,string|null> }
 
 /** Use shared team artwork only before tip; the archived roster owns the
@@ -22,6 +22,6 @@ export async function nbaFullBoardPlayers(
     const name=nbaName(`${player.first_name} ${player.last_name}`)
     const archived=typeof player.headshot==='string'?player.headshot:null
     const headshot=open&&names.get(JSON.stringify([player.team.id,name]))===1?(portraits.get(player.team.id)?.get(player.id)??null):open?null:archived
-    return {gameId:game.id,id:player.id,first_name:player.first_name,last_name:player.last_name,position:player.position,team:player.team,headshot}
+    return {gameId:game.id,id:player.id,first_name:player.first_name,last_name:player.last_name,position:player.position,team:player.team,headshot,injuryStatus:player.injury?.status??null}
   })
 }

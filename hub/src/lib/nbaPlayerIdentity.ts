@@ -18,6 +18,9 @@ const playerAliases = [
   { id: 17896024, canonical: 'Herbert Jones', alias: 'Herb Jones', firstOnly: false },
   // NBA player 1630538 is listed as Nah'Shon "Bones" Hyland.
   { id: 17896031, canonical: "Nah'Shon Hyland", alias: 'Bones Hyland', firstOnly: false },
+  // NBA player 1630199 is displayed as Nic Claxton; the provider roster
+  // retains Nicolas Claxton. Require this exact ID and canonical identity.
+  { id: 666508, canonical: 'Nicolas Claxton', alias: 'Nic Claxton', firstOnly: false },
 ] as const
 
 export function nbaPlayerIdentities<T extends PlayerIdentity>(roster: T[]) {

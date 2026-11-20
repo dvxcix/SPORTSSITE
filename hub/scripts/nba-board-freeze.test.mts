@@ -43,7 +43,7 @@ async function harness() {
     './nbaSharedCache': { nbaSharedCache: async (key: string, _ttl: number, _stale: number, load: () => Promise<unknown>) => {
       if (key.startsWith('board:')) { researchReads++; return { value: structuredClone(research), fetchedAt: research.fetchedAt, stale: false } }
       if (key.startsWith('scouting:')) { researchReads++; return { value: structuredClone(scouting), fetchedAt: scouting.fetchedAt, stale: false } }
-      if (key.startsWith('provider:v1:300:')) return { value: await load() }
+      if (key.startsWith('provider:v1:300:') || key.startsWith('provider:v1:60:')) return { value: await load() }
       assert.ok(key.startsWith('phase-prices:'), key)
       onPriceRead?.()
       return { value: { props: quotes, gameOdds: [], firstBasket: [], observedAt: new Date(tip - 60000).toISOString(), issues: [] }, fetchedAt: new Clock().toISOString(), stale: false }

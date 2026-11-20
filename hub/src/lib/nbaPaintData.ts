@@ -92,13 +92,17 @@ export async function getPaintRoster(game:PaintGame){
   return result.rows.filter(p=>[game.home_team.id,game.visitor_team.id].includes(p.team.id))
 }
 async function getPaintInjuries(game: PaintGame, deadline = Infinity) {
-  return pages<NbaInjuryReportRow>(`/v1/player_injuries?team_ids[]=${game.visitor_team.id}&team_ids[]=${game.home_team.id}&per_page=100`, 300, 2, deadline)
+  return pages<NbaInjuryReportRow>(`/v1/player_injuries?team_ids[]=${game.visitor_team.id}&team_ids[]=${game.home_team.id}&per_page=100`, 60, 2, deadline)
+}
+function playerInjury(rows: NbaInjuryReportRow[], id: number): PaintPlayer['injury'] {
+  const row = rows.find(item => item.player.id === id)
+  return row ? { status: row.status, description: row.description, ...(row.return_date ? { return_date: row.return_date } : {}) } : null
 }
 
 export async function getPaintMarketRoster(game: PaintGame) {
   const [roster, injuries] = await Promise.all([getPaintRoster(game), getPaintInjuries(game)])
   if (!roster.length || !injuries.complete || injuries.rows.some(row => !Number.isSafeInteger(row?.player?.id) || typeof row.status !== 'string')) throw new Error('NBA market availability is unverified')
-  return nbaMarketRoster(game, roster, injuries.rows)
+  return nbaMarketRoster(game, roster.map(player => ({ ...player, injury: playerInjury(injuries.rows, player.id) })), injuries.rows)
 }
 
 export async function getPaintSavedMarketRoster(game: PaintGame) {
@@ -281,9 +285,13 @@ export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMo
   const game = await getNbaOddsGame(board.game)
   const issues: string[] = []
   const optional = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => { try { return await promise } catch { issues.push(label); return fallback } }
-  const [prices, openings] = await Promise.all([
+  const [prices, openings, injuries] = await Promise.all([
     optional('Sportsbook prices unavailable', getPaintPrices(game, mode), { props: [] as PaintProp[], gameOdds: [] as PaintGameOdds[], firstBasket: [] as PaintProp[], observedAt: new Date().toISOString(), issues: [] as string[] }),
     optional('Opening prices unavailable', getNbaQuoteOpenings(game.id, mode), []),
+    nbaPregameOpen(game) ? optional('Injury report unavailable', getPaintInjuries(game).then(result => {
+      if (!result.complete || result.rows.some(row => !Number.isSafeInteger(row?.player?.id) || typeof row.status !== 'string')) throw new Error('Injury report incomplete')
+      return result.rows
+    }), null) : Promise.resolve(null),
   ])
   // Research may survive an outage; quotes come only from their strict shared
   // TTL and never inherit the research cache's five-minute fallback.
@@ -291,7 +299,11 @@ export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMo
   const frozen = mode === 'pregame' && !nbaPregameOpen(game) || mode === 'live' && nbaGameFinal(game)
   const eligible = frozen ? new Set(nbaMarketRoster(game, board.players).map(player => player.id)) : null
   const priceIssues = new Set(['Sportsbook prices unavailable', 'Some sportsbook prices unavailable', 'Game lines unavailable', 'Opening prices unavailable', 'First-basket prices unavailable', 'Player availability unavailable'])
-  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, players: board.players.map(player => ({ ...player, props: eligible && !eligible.has(player.id) ? [] : quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
+  const currentAvailability = injuries && nbaPregameOpen(game) ? injuries : null
+  if (currentAvailability) { priceIssues.add('Injury report unavailable'); priceIssues.add('Injury coverage incomplete') }
+  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, players: board.players.map(player => ({ ...player,
+    injury: currentAvailability ? playerInjury(currentAvailability, player.id) : player.injury,
+    props: eligible && !eligible.has(player.id) ? [] : quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const deadline = Date.now() + 65_000
@@ -305,7 +317,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     optional('Injury report unavailable', getPaintInjuries(game, deadline), { rows: [], complete: false }),
     Promise.all(teams.map(t => optional('Some player images unavailable', artwork(t.abbreviation), { headshots: new Map<string, string | null>(), logo: null }))),
     optional('Team directory unavailable', bdl<PaintTeam & { conference: string }>('/v1/teams?per_page=100',86400), { data: [] }),
-    optional('Starting lineups unavailable', bdl<{ player: { id: number }; starter: boolean }>(`/v1/lineups?game_ids[]=${game.id}&per_page=100`, 120), { data: [] }),
+    optional('Starting lineups unavailable', bdl<{ player: { id: number }; starter: boolean }>(`/v1/lineups?game_ids[]=${game.id}&per_page=100`, 60), { data: [] }),
   ])
   const quotes: { props: PaintProp[]; gameOdds: PaintGameOdds[] } = { props: [], gameOdds: [] }
   if (!roster.complete) issues.push('Roster coverage incomplete')
@@ -340,7 +352,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     for (const market of ['double_double','triple_double']) sampleAvg[market] = nbaAverage(logs, market)
     const mins = logs.map(s => nbaMinutes(s.min)).filter((v): v is number => v != null); sampleAvg.min = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null
     return { ...player, headshot: portraits.get(player.team.id)?.get(player.id) ?? null,
-      injury: historical ? null : injuries.rows.find(i => i.player.id === player.id) ?? null, average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
+      injury: historical ? null : playerInjury(injuries.rows, player.id), average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
       averageSeason: sampleSeason,
       periodLogs, logs, props: quotes.props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
   })

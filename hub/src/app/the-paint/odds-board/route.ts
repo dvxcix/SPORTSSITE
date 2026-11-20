@@ -52,7 +52,7 @@ export async function GET(request:NextRequest) {
     // Earlier cached boards predate the player availability check.
     const version='v7'
     const partialKey=`odds-board-partial:${version}:${date}:${market}:${key}`
-    const interval=mode==='live'?60:300
+    const interval=60
     let cached:Awaited<ReturnType<typeof nbaSharedCache<NbaPackedBoard>>>
     try{
       cached=await nbaSharedCache(`odds-board:${version}:${date}:${market}:${key}`,interval,mode==='live'?0:60,async()=>{

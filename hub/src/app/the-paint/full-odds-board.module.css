@@ -57,3 +57,4 @@
 @media(max-width:700px){.primaryControls label{gap:0}.primaryControls .controlLabel,.primaryControls>.control>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.primaryControls>.control{gap:0}}
 
 @container(max-width:620px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.scroll tbody th .injuryStatus{color:var(--text-1);font-weight:650;border-left:2px solid var(--text-2);padding-left:6px;line-height:1.4}
