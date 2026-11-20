@@ -40,6 +40,10 @@ The best-price test still requires competing books at the same exact threshold,
 including tied best prices; it now asserts the accessible icon instead of text.
 Private browser evidence: docs/design/evidence/live/court-review/.
 Live Git SHA/deployment and post-release browser checks: court-review/release.json.
+Live review found O/U targets wrapping on phone offer rows; their target column
+now has 66px and keeps the target on one line. Public unauthenticated review
+routes redirect to sign-in without serving review content; the signed-in check
+confirms the production-only guard separately.
 
 REVIEW LIMITS
 Private review uses illustrative data and has no live service credentials.

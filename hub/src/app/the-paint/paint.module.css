@@ -459,6 +459,7 @@
 .drawer .offer{display:grid;grid-template-columns:32px 64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;box-shadow:none}
 .drawer .offer>b,.drawer .offer span>b{font-size:18px;font-weight:650}
 .drawer .offerOdds{min-width:0}
+.drawer .offer>span:nth-child(2){white-space:nowrap}
 .drawer .offerOdds .priceNow b{font-size:18px}
 .drawer .movementList{gap:12px}
 .drawer .movementCard{padding:14px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);box-shadow:none}
@@ -529,7 +530,7 @@
  .drawer .logTable{min-width:330px}
  .drawer .trackingSummary small{font-size:10px}
  .drawer .trackingSummary b{font-size:19px}
- .drawer .offer{grid-template-columns:28px 50px minmax(0,1fr) 44px;gap:8px}
+ .drawer .offer{grid-template-columns:28px 66px minmax(0,1fr) 44px;gap:8px}
  .drawer .offer .priceComparison{flex-wrap:wrap;gap:4px}
  .drawer .drawerFooter{gap:8px;padding-inline:12px}
  .chartFrame{grid-template-columns:30px minmax(0,1fr);gap:8px;padding-top:20px}
