@@ -1,5 +1,5 @@
 /** Serialized, staggered refreshes. No account data is cached. */
-export function startNflPolling(refresh: (signal: AbortSignal) => Promise<void>, options: { immediate?: boolean; resumeDelay?: () => number } = {}) {
+export function startNflPolling(refresh: (signal: AbortSignal) => Promise<void>, options: { immediate?: boolean; resumeDelay?: () => number; requestTimeoutMs?: number } = {}) {
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout>
   let running = false
@@ -15,7 +15,9 @@ export function startNflPolling(refresh: (signal: AbortSignal) => Promise<void>,
     if (document.visibilityState === 'hidden' || navigator.onLine === false) { schedule(); return }
     running = true
     try {
-      await refresh(AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]))
+      const requested = options.requestTimeoutMs
+      const timeout = typeof requested === 'number' && Number.isFinite(requested) ? Math.max(1000, Math.min(60000, requested)) : 20000
+      await refresh(AbortSignal.any([controller.signal, AbortSignal.timeout(timeout)]))
       failures = 0
     } catch { failures++ }
     finally { running = false; if(resumePending&&options.resumeDelay&&active()){resumePending=false;scheduleResume()}else{resumePending=false;schedule()} }

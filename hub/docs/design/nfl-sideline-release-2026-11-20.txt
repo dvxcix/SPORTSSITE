@@ -20,6 +20,12 @@ Changes
   and avoid calling a single sportsbook a best-price comparison.
 - Saved portrait fallbacks survive failed images and theme rerenders.
 - Sideline Edge can retry failures and retain its previous loaded slate.
+- Live full-slate requests hit the ordinary 20-second polling deadline. Only
+  this larger request now has a bounded 60-second allowance; ordinary polls stay
+  at 20 seconds. Timeout copy explains recovery without raw browser errors.
+  Collector extraction, dispatch and job timeout settings are unchanged.
+- Team-page roster counts no longer imply every listed status is active, and
+  the division label no longer repeats its conference.
 - Table identity columns, long names, phone controls and overlay scrolling checked.
 - A 320px toolbar regression was corrected with a two-column control layout;
   off-canvas overflow is contained by the NFL shell. The board guide opens as
@@ -43,8 +49,8 @@ trigger. Development hot-reload CSS failures were superseded by compiled checks.
 Deployed source and authenticated live checks are saved in the evidence directory
 after release.
 
-Automated checks: safe NFL suite 350/353 (three baseline failures below);
-test:sideline-ui 24/24; production smoke 134/134; shared
+Automated checks: safe NFL suite 352/355 (three baseline failures below);
+test:sideline-ui 25/25; polling 5/5; production smoke 134/134; shared
 modal/chart/framework/portrait/entity checks 27/27. TypeScript and focused ESLint
 passed. The optimized private build and Git-based Vercel preview passed. The complete safe NFL suite excludes eight legacy
 scripts that launch a browser; their layout/navigation cases are checked with

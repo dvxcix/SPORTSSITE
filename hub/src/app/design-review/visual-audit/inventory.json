@@ -4677,7 +4677,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4702,7 +4702,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4727,7 +4727,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4752,7 +4752,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,

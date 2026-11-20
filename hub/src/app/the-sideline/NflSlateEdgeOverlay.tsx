@@ -149,8 +149,13 @@ export function NflSlateEdgeOverlay({ open, date, sample, onClose }: { open: boo
         setError('')
         setPayload(data)
       })
-      .catch(reason => { if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message); throw reason })
-    }, { immediate: true })
+      .catch(reason => {
+        if (reason instanceof Error && reason.name !== 'AbortError') {
+          setError(reason.name === 'TimeoutError' ? 'The full slate is taking longer than usual. Please try again.' : 'The NFL slate could not be loaded. Please try again.')
+        }
+        throw reason
+      })
+    }, { immediate: true, requestTimeoutMs: 60000 })
   }, [date, open, sample, retry])
 
   const filtered = useMemo(() => {

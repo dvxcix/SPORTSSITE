@@ -60,14 +60,14 @@ export default async function NflTeamPage({ params }: { params: Promise<{ abbr: 
             <p className={styles.eyebrow}>NFL team hub</p>
             <h1 className={styles.title}>{team.team_name}</h1>
             <div className={styles.meta}>
-              <span className={styles.metaPill}>{team.team_conf} {team.team_division}</span>
-              <span className={styles.metaPill}>{roster.length} active players</span>
+              <span className={styles.metaPill}>{team.team_division || team.team_conf}</span>
+              <span className={styles.metaPill}>{roster.length} players</span>
             </div>
           </div>
         </header>
 
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Current roster</h2>
+          <h2 className={styles.sectionTitle}>Roster</h2>
           <span className={styles.sectionMeta}>{currentNflSeason()} season</span>
         </div>
         <section className={styles.panel}>

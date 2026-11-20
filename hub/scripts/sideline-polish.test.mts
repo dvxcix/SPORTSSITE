@@ -69,6 +69,12 @@ test('Sideline Edge retains the last good slate on refresh failure and Retry rec
  try{assert.match(document.body.textContent!,/Patrick Mahomes/);fail=true;await act(async()=>{await module.exports.callbacks.at(-1)(new AbortController().signal).catch(()=>{})});assert.match(document.body.textContent!,/Refresh unavailable/);assert.match(document.body.textContent!,/Patrick Mahomes/);fail=false;await act(async()=>[...document.querySelectorAll('button')].find(el=>el.textContent==='Retry')!.click());assert.doesNotMatch(document.body.textContent!,/Refresh unavailable/);assert.match(document.body.textContent!,/Patrick Mahomes/)}finally{await ui.close();globalThis.fetch=old}
 })
 
+test('Sideline Edge explains a timeout without exposing raw browser errors and can recover', async () => {
+ const old=globalThis.fetch;let fail=true;globalThis.fetch=async()=>{if(fail)throw new DOMException('signal timed out','TimeoutError');return Response.json(makeNflSlateEdge())}
+ const ui=await mount(h(module.exports.NflSlateEdgeOverlay,{open:true,date:'2030-11-20',sample:'regular',onClose:()=>{}}))
+ try{assert.match(document.body.textContent!,/full slate is taking longer than usual/);assert.doesNotMatch(document.body.textContent!,/signal timed out/);fail=false;await act(async()=>[...document.querySelectorAll('button')].find(el=>el.textContent==='Retry')!.click());assert.match(document.body.textContent!,/Patrick Mahomes/);assert.doesNotMatch(document.body.textContent!,/taking longer/)}finally{await ui.close();globalThis.fetch=old}
+})
+
 test('Matrix editor preserves every condition category and pipeline rank control without submitting a mutation',async()=>{
  const old=globalThis.fetch,calls:string[]=[];globalThis.fetch=async(input,init)=>{calls.push(init?.method??'GET');return Response.json({matrices:[],listings:[]})}
  const ui=await mount(h(module.exports.NflMatrixButton))

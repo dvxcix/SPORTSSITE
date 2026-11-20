@@ -60,3 +60,22 @@ test('NFL private endpoints keep auth outside shared cache and history is opt-in
   assert.match(read('src/app/the-sideline/page.tsx'),/gate.isAdmin/)
 })
 
+test('full-slate requests can use a bounded longer deadline while ordinary polls keep 20 seconds', async () => {
+  const originals = Object.fromEntries(['document', 'window', 'navigator', 'setTimeout', 'clearTimeout'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
+  const timeoutDescriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'timeout')!
+  const deadlines: number[] = [], pending: Array<() => void> = []
+  const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' })
+  for (const [key, value] of Object.entries({ document: doc, window: new EventTarget(), navigator: { onLine: true }, setTimeout: (fn: () => void) => { pending.push(fn); return pending.length }, clearTimeout: () => {} })) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true })
+  Object.defineProperty(AbortSignal, 'timeout', { ...timeoutDescriptor, value: (ms: number) => { deadlines.push(ms); return new AbortController().signal } })
+  try {
+    for (const requested of [undefined, 60000, 90000, NaN]) {
+      const stop = startNflPolling(async () => {}, { immediate: true, requestTimeoutMs: requested })
+      pending.shift()!(); await Promise.resolve(); await Promise.resolve(); stop(); pending.length = 0
+    }
+    assert.deepEqual(deadlines, [20000, 60000, 60000, 20000])
+  } finally {
+    Object.defineProperty(AbortSignal, 'timeout', timeoutDescriptor)
+    for (const [key, descriptor] of Object.entries(originals)) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key) }
+  }
+})
+
