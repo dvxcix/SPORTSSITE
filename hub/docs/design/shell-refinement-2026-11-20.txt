@@ -32,3 +32,12 @@ Local evidence (ignored): docs/design/evidence/live/shell-refinement/.
 Private preview contains fixtures, not live research results. The development
 server had oversized chunk reload timeouts; optimized build hydration succeeds.
 This pass does not rerun or claim the prior 620-state release audit.
+
+Release follow-up
+b5f866bc61ecc3aad8626c73019ccbe34f53bd00 reached production READY as
+dpl_3SiVdKzB7at4eAAJhUTZJGX8xMf5. Authenticated live NBA, NFL, settings,
+account and updates checks passed. Live admin inspection found the site
+notice could push the footer partly below the viewport. The follow-up
+subtracts the existing banner height from the desktop admin sidebar and
+offsets its sticky header. Source suite rerun: 134/134. No notice state or
+content is modified. Live verification must confirm full footer visibility.

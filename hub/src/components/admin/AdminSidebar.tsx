@@ -49,6 +49,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
       <aside
         aria-label="Admin workspace navigation"
         className={cn(
+          'ss-admin-sidebar',
           'fixed inset-y-0 left-0 z-[var(--layer-popover)] flex h-dvh w-[292px] max-w-[calc(100vw_-_16px)] flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-overlay)] transition-[transform,visibility] duration-[var(--duration-normal)] motion-reduce:transition-none lg:visible lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none',
           open ? 'visible translate-x-0' : 'invisible -translate-x-full',
         )}
