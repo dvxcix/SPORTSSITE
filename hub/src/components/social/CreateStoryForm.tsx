@@ -9,6 +9,15 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
+const STORY_BACKGROUNDS = [
+  { value: '#111111', label: 'Charcoal' },
+  { value: '#1a1a2e', label: 'Midnight' },
+  { value: '#16213e', label: 'Indigo' },
+  { value: '#0f3460', label: 'Navy' },
+  { value: '#1a472a', label: 'Forest' },
+  { value: '#4a1942', label: 'Plum' },
+]
+
 export function CreateStoryForm({ userId }: { userId: string }) {
   const { profile } = useAuth()
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
@@ -83,11 +92,11 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       </label>
       {/* Toggle */}
       <div className="flex gap-2 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
-        <button onClick={() => setType('text')}
+        <button type="button" aria-pressed={type === 'text'} onClick={() => setType('text')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'text' ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)]'}`}>
           <Type size={14} /> Text
         </button>
-        <button onClick={() => setType('image')}
+        <button type="button" aria-pressed={type === 'image'} onClick={() => setType('image')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${type === 'image' ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)]'}`}>
           <Upload size={14} /> Photo
         </button>
@@ -98,21 +107,21 @@ export function CreateStoryForm({ userId }: { userId: string }) {
         style={{ background: preview ? '#000' : bg }}>
         {preview
           ? <SafeImage src={preview} alt="Story preview" className="w-full h-full object-cover" />
-          : <p className="text-[var(--text-1)] text-center text-xl font-bold px-4 break-words">{text || 'Your story preview'}</p>
+          : <p className="text-[var(--on-dark)] text-center text-xl font-bold px-4 break-words">{text || 'Your story preview'}</p>
         }
       </div>
 
       {type === 'text' ? (
         <div className="space-y-3">
-          <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
+          <textarea aria-label="Story text" value={text} onChange={e => setText(e.target.value)} rows={4}
             placeholder={mlbAccess ? 'Share your MLB, NFL or NBA moment…' : 'Share your NFL or NBA moment…'}
             className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           <div>
             <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Background Color</label>
-            <div className="flex gap-2">
-              {['#111111','#1a1a2e','#16213e','#0f3460','#1a472a','#4a1942'].map(c => (
-                <button key={c} onClick={() => setBg(c)} style={{ background: c }}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${bg === c ? 'border-[var(--border-3)]' : 'border-transparent'}`} />
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Story background">
+              {STORY_BACKGROUNDS.map(color => (
+                <button type="button" key={color.value} aria-label={`${color.label} background`} aria-pressed={bg === color.value} onClick={() => setBg(color.value)} style={{ background: color.value }}
+                  className={`w-10 h-10 rounded-full border-2 transition-all ${bg === color.value ? 'border-[var(--border-3)]' : 'border-transparent'}`} />
               ))}
             </div>
           </div>
