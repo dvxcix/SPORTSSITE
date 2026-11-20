@@ -185,7 +185,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             </a>
           ) : authUser ? (
             <div className="flex items-center gap-2">
-              <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--overlay)] px-3 text-xs font-semibold text-[var(--text-2)] transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--text-1)]"><MessageCircle size={14}/> Message</Link>
+              <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface-2)] px-3 text-xs font-semibold text-[var(--text-2)] transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--text-1)]"><MessageCircle size={14}/> Message</Link>
               <FollowButton
                 currentUserId={authUser.id}
                 targetUserId={profile.id}
@@ -343,7 +343,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <div className="grid gap-3 sm:grid-cols-2">
                 {communities.length ? communities.map(entry => (
                   <Link key={entry.group?.id} href={`/groups/${entry.group?.slug}`} className="flex min-h-24 items-center gap-3 rounded-2xl border border-[rgba(var(--line-rgb),0.075)] bg-[rgba(var(--contrast-rgb),0.018)] p-4 transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] hover:bg-[rgba(var(--contrast-rgb),0.035)]">
-                    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--overlay)] text-xl"><SafeImage src={entry.group?.avatar_url} alt="" className="h-full w-full object-cover" fallback={entry.group?.emoji || '⚡'}/></span>
+                    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface-2)] text-xl"><SafeImage src={entry.group?.avatar_url} alt="" className="h-full w-full object-cover" fallback={entry.group?.emoji || '⚡'}/></span>
                     <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-[var(--text-1)]">{entry.group?.name}</strong><small className="mt-1 block line-clamp-1 text-[12px] text-[var(--text-3)]">{entry.group?.description || `${entry.group?.member_count ?? 0} members`}</small><em className="mt-2 block text-[11px] font-semibold uppercase not-italic tracking-wider text-[var(--accent)]">{entry.role}</em></span>
                     <ArrowRight size={14} className="text-[var(--text-3)]"/>
                   </Link>
