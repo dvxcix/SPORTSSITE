@@ -161,7 +161,7 @@ export function ContactRecapStudio() {
     <section className="overflow-hidden rounded-[28px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[var(--surface)] p-5 shadow-2xl sm:p-8">
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl"><p className="flex items-center gap-2 font-mono text-[12px] font-semibold uppercase tracking-[.2em] text-[var(--accent)]"><Clapperboard size={14}/> Publishing studio</p><h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-[var(--text-1)] sm:text-5xl">Daily Contact Recap</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-2)]">Produce game-by-game home-run and near-home-run flight graphics from the same official event stream and park geometry used across SlipSurge.</p></div>
-        <label className="flex min-w-56 items-center gap-3 rounded-2xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--overlay)] p-3 text-xs font-bold text-[var(--text-2)]"><CalendarDays size={17} className="text-[var(--accent)]"/><span>Date</span><input className="ml-auto bg-transparent font-mono text-[var(--text-1)] outline-none" type="date" value={date} max={todayEt()} onChange={event => { setLoading(true); setError(''); setDate(event.target.value) }}/></label>
+        <label className="flex min-w-56 items-center gap-3 rounded-2xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface-2)] p-3 text-xs font-bold text-[var(--text-2)]"><CalendarDays size={17} className="text-[var(--accent)]"/><span>Date</span><input className="ml-auto bg-transparent font-mono text-[var(--text-1)] outline-none" type="date" value={date} max={todayEt()} onChange={event => { setLoading(true); setError(''); setDate(event.target.value) }}/></label>
       </div>
     </section>
 
@@ -170,7 +170,7 @@ export function ContactRecapStudio() {
     {loading ? <div className="grid min-h-80 place-items-center rounded-3xl border border-[var(--border)] bg-[var(--bg)]"><LoaderCircle className="animate-spin text-[var(--accent)]" size={28}/></div> : error ? <div className="rounded-3xl border border-[color-mix(in_srgb,var(--red)_20%,transparent)] bg-[color-mix(in_srgb,var(--red)_5%,transparent)] p-6 text-sm text-[var(--red)]">{error}</div> : data ? <>
       <section className="flex flex-col gap-4 rounded-2xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface)] p-4 shadow-[inset_0_1px_rgba(255,255,255,.06)] lg:flex-row lg:items-center lg:justify-between">
         <div><p className="text-xs font-semibold text-[var(--text-1)]">Social canvas</p><p className="mt-1 text-[12px] leading-5 text-[var(--text-3)]">Choose the destination first. Every layout keeps the park, player, result, and market receipt readable.</p></div>
-        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--overlay)] p-1" role="group" aria-label="Social export aspect ratio">
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface-2)] p-1" role="group" aria-label="Social export aspect ratio">
           {([
             { value: 'landscape', label: 'Feed', ratio: '16:9', icon: Monitor },
             { value: 'square', label: 'Square', ratio: '1:1', icon: Square },

@@ -229,7 +229,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             <div className="flex items-center gap-3 shrink-0">
               <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} ariaLabel={`${entry.title} active`} />
               <button onClick={() => startEdit(entry)} className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)]">Edit</button>
-              <button onClick={() => remove(entry)} className="text-xs font-bold text-[color-mix(in_srgb,var(--red)_80%,transparent)] hover:text-[var(--red)]">Delete</button>
+              <button onClick={() => remove(entry)} className="text-xs font-bold text-[var(--red)] hover:text-[var(--red)]">Delete</button>
             </div>
           </div>
         ))}
