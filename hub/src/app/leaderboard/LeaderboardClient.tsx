@@ -59,8 +59,8 @@ function RecentDots({ results }: { results: ('W' | 'L' | 'P')[] }) {
         <span key={i} style={{
           width: 14, height: 14, borderRadius: '50%', fontSize: 11, fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: r === 'W' ? 'rgba(74,222,128,0.15)' : r === 'L' ? 'rgba(255,77,106,0.15)' : 'rgba(255,200,0,0.15)',
-          color: r === 'W' ? '#4ade80' : r === 'L' ? 'var(--red)' : '#ffc800',
+          background: r === 'W' ? 'var(--green-dim)' : r === 'L' ? 'var(--red-dim)' : 'var(--gold-dim)',
+          color: r === 'W' ? 'var(--green)' : r === 'L' ? 'var(--red)' : 'var(--gold)',
         }}>{r}</span>
       ))}
     </div>
@@ -93,7 +93,7 @@ function PodiumCard({ user, rank }: { user: UserRow; rank: 1 | 2 | 3 }) {
           {user.display_name || user.username}
         </p>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>@{user.username}</p>
-        <p style={{ fontSize: isFirst ? 16 : 13, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-2)', marginTop: 8 }}>
+        <p style={{ fontSize: isFirst ? 16 : 13, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? 'var(--green)' : 'var(--text-2)', marginTop: 8 }}>
           {graded > 0 ? `${user.winPct}%` : 'No picks'}
         </p>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
@@ -144,7 +144,7 @@ function RankRow({ user, rank }: { user: UserRow; rank: number }) {
         </div>
         <div className={styles.record}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: graded > 0 && user.winPct >= 55 ? 'var(--green)' : 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
               {graded > 0 ? `${user.winPct}%` : '---'}
             </p>
             <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>WIN%</p>
@@ -188,7 +188,7 @@ function WeekRow({ user, rank }: { user: UserRow; rank: number }) {
           <p style={{ fontSize: 12, color: 'var(--text-3)' }}>@{user.username}</p>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: winPct >= 55 ? '#4ade80' : 'var(--text-2)' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: winPct >= 55 ? 'var(--green)' : 'var(--text-2)' }}>
             {graded > 0 ? `${winPct}%` : '---'}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{w.wins}W-{w.losses}L this wk</p>
