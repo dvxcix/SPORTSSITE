@@ -5,178 +5,178 @@ Checks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/
 Completed changes are Live in production. Owner visual feedback does not block the authorized rollout. Queued means unfinished overhaul work, not an unavailable tool.
 MLB remains hidden/off-season; its pages stay in the inventory.
 
-[Ready to deploy] General | About | /about
-[Ready to deploy] General | Activity | /activity
-[Ready to deploy] Admin | Admin · Ads | /admin/ads
-[Ready to deploy] Admin | Admin · Audit | /admin/audit
-[Ready to deploy] Admin | Admin · Badges | /admin/badges
-[Ready to deploy] Admin | Admin · Browserbase | /admin/browserbase
-[Ready to deploy] Admin | Admin · Changelog | /admin/changelog
-[Ready to deploy] Admin | Admin · Contact Recap | /admin/contact-recap
-[Ready to deploy] Admin | Admin · Content · Blogs | /admin/content/blogs
-[Ready to deploy] Admin | Admin · Content · Posts | /admin/content/posts
-[Ready to deploy] Admin | Admin · Content · Reports | /admin/content/reports
-[Ready to deploy] Admin | Admin · Content · Stories | /admin/content/stories
-[Ready to deploy] Admin | Admin · Creators | /admin/creators
-[Ready to deploy] Admin | Admin · Design System | /admin/design-system
-[Ready to deploy] Admin | Admin · Discord · Compose | /admin/discord/compose
-[Ready to deploy] Admin | Admin · Discord | /admin/discord
-[Ready to deploy] Admin | Admin · Emojis | /admin/emojis
-[Ready to deploy] Admin | Admin · Events | /admin/events
-[Ready to deploy] Admin | Admin · Fanduel Import | /admin/fanduel-import
-[Ready to deploy] Admin | Admin · Forum | /admin/forum
-[Ready to deploy] Admin | Admin · Groups | /admin/groups
-[Ready to deploy] Admin | Admin · Hr Intelligence | /admin/hr-intelligence
-[Ready to deploy] Admin | Admin · Jobs | /admin/jobs
-[Ready to deploy] Admin | Admin · Live | /admin/live
-[Ready to deploy] Admin | Admin · Market Dna | /admin/market-dna
-[Ready to deploy] Admin | Admin · Marketplace | /admin/marketplace
-[Ready to deploy] Admin | Admin · Matrix Backtest | /admin/matrix-backtest
-[Ready to deploy] Admin | Admin · Mgm Import | /admin/mgm-import
-[Ready to deploy] Admin | Admin · Mlb Archive | /admin/mlb-archive
-[Ready to deploy] Admin | Admin · Monetization | /admin/monetization
-[Ready to deploy] Admin | Admin · Nfl Access | /admin/nfl-access
-[Ready to deploy] Admin | Admin · Notifications | /admin/notifications
-[Ready to deploy] Admin | Admin | /admin
-[Ready to deploy] Admin | Admin · Pages | /admin/pages
-[Ready to deploy] Admin | Admin · Pikkit Import | /admin/pikkit-import
-[Ready to deploy] Admin | Admin · Pipeline Health | /admin/pipeline-health
-[Ready to deploy] Admin | Admin · Product Audit | /admin/product-audit
-[Ready to deploy] Admin | Admin · Reports | /admin/reports
-[Ready to deploy] Admin | Admin · Settings · Ai | /admin/settings/ai
-[Ready to deploy] Admin | Admin · Settings · Custom Code | /admin/settings/custom-code
-[Ready to deploy] Admin | Admin · Settings · Email | /admin/settings/email
-[Ready to deploy] Admin | Admin · Settings · Features | /admin/settings/features
-[Ready to deploy] Admin | Admin · Settings · General | /admin/settings/general
-[Ready to deploy] Admin | Admin · Settings · Payments | /admin/settings/payments
-[Ready to deploy] Admin | Admin · Settings · Social Login | /admin/settings/social-login
-[Ready to deploy] Admin | Admin · Site Banner | /admin/site-banner
-[Ready to deploy] Admin | Admin · Social Platforms | /admin/social-platforms
-[Ready to deploy] Admin | Admin · Users · Banned | /admin/users/banned
-[Ready to deploy] Admin | Admin · Users · Deletions | /admin/users/deletions
-[Ready to deploy] Admin | Admin · Users · Online | /admin/users/online
-[Ready to deploy] Admin | Admin · Users | /admin/users
-[Ready to deploy] Admin | Admin · Users · Verify | /admin/users/verify
-[Ready to deploy] Admin | Admin · Whop Renewal Shape | /admin/whop-renewal-shape
-[Ready to deploy] General | Allstar2026 | /allstar2026
-[Ready to deploy] Account access | Auth · Desktop · Complete | /auth/desktop/complete
-[Ready to deploy] Account access | Auth · Desktop · Start | /auth/desktop/start
-[Ready to deploy] Account access | Auth · Forgot Password | /auth/forgot-password
-[Ready to deploy] Account access | Auth · Login | /auth/login
-[Ready to deploy] Account access | Auth · Register | /auth/register
-[Ready to deploy] Account access | Auth · Reset Password | /auth/reset-password
-[Ready to deploy] Account access | Auth · Whop · Complete | /auth/whop/complete
-[Ready to deploy] MLB · off-season | Batter Cost | /batter-cost
-[Ready to deploy] Community | Blog · Slug | /blog/[slug]
-[Ready to deploy] Community | Blog · Create · Ai | /blog/create/ai
-[Ready to deploy] Community | Blog · Create | /blog/create
-[Ready to deploy] Community | Blog · Edit · Id | /blog/edit/[id]
-[Ready to deploy] Community | Blog · My | /blog/my
-[Ready to deploy] Community | Blog | /blog
-[Ready to deploy] Community | Bookmarks | /bookmarks
-[Ready to deploy] Community | Channels · Slug | /channels/[slug]
-[Ready to deploy] Community | Channels | /channels
-[Ready to deploy] Community | Community | /community
-[Ready to deploy] Creators & commerce | Creators · Username | /creators/[username]
-[Ready to deploy] Creators & commerce | Creators · Apply | /creators/apply
-[Ready to deploy] Creators & commerce | Creators · Offers · ProductId | /creators/offers/[productId]
-[Ready to deploy] Creators & commerce | Creators | /creators
-[Ready to deploy] Creators & commerce | Creators · Payouts | /creators/payouts
-[Ready to deploy] Creators & commerce | Creators · Studio | /creators/studio
-[Ready to deploy] MLB · off-season | Daily Recap | /daily-recap
-[Ready to deploy] MLB · off-season | Dugout | /dugout
-[Ready to deploy] Community | Events · Id | /events/[id]
-[Ready to deploy] Community | Events · Create | /events/create
-[Ready to deploy] Community | Events | /events
-[Ready to deploy] Community | Explore | /explore
-[Ready to deploy] General | Faq | /faq
-[Ready to deploy] Community | Feed | /feed
-[Ready to deploy] Community | Forum · Category | /forum/[category]
-[Ready to deploy] Community | Forum · New | /forum/new
-[Ready to deploy] Community | Forum | /forum
-[Ready to deploy] Community | Forum · Thread · Id | /forum/thread/[id]
-[Ready to deploy] Community | Groups · Slug | /groups/[slug]
-[Ready to deploy] Community | Groups · Slug · Settings | /groups/[slug]/settings
-[Ready to deploy] Community | Groups · Create | /groups/create
-[Ready to deploy] Community | Groups | /groups
-[Ready to deploy] Community | Hashtag · Tag | /hashtag/[tag]
+[Live] General | About | /about
+[Live] General | Activity | /activity
+[Live] Admin | Admin · Ads | /admin/ads
+[Live] Admin | Admin · Audit | /admin/audit
+[Live] Admin | Admin · Badges | /admin/badges
+[Live] Admin | Admin · Browserbase | /admin/browserbase
+[Live] Admin | Admin · Changelog | /admin/changelog
+[Live] Admin | Admin · Contact Recap | /admin/contact-recap
+[Live] Admin | Admin · Content · Blogs | /admin/content/blogs
+[Live] Admin | Admin · Content · Posts | /admin/content/posts
+[Live] Admin | Admin · Content · Reports | /admin/content/reports
+[Live] Admin | Admin · Content · Stories | /admin/content/stories
+[Live] Admin | Admin · Creators | /admin/creators
+[Live] Admin | Admin · Design System | /admin/design-system
+[Live] Admin | Admin · Discord · Compose | /admin/discord/compose
+[Live] Admin | Admin · Discord | /admin/discord
+[Live] Admin | Admin · Emojis | /admin/emojis
+[Live] Admin | Admin · Events | /admin/events
+[Live] Admin | Admin · Fanduel Import | /admin/fanduel-import
+[Live] Admin | Admin · Forum | /admin/forum
+[Live] Admin | Admin · Groups | /admin/groups
+[Live] Admin | Admin · Hr Intelligence | /admin/hr-intelligence
+[Live] Admin | Admin · Jobs | /admin/jobs
+[Live] Admin | Admin · Live | /admin/live
+[Live] Admin | Admin · Market Dna | /admin/market-dna
+[Live] Admin | Admin · Marketplace | /admin/marketplace
+[Live] Admin | Admin · Matrix Backtest | /admin/matrix-backtest
+[Live] Admin | Admin · Mgm Import | /admin/mgm-import
+[Live] Admin | Admin · Mlb Archive | /admin/mlb-archive
+[Live] Admin | Admin · Monetization | /admin/monetization
+[Live] Admin | Admin · Nfl Access | /admin/nfl-access
+[Live] Admin | Admin · Notifications | /admin/notifications
+[Live] Admin | Admin | /admin
+[Live] Admin | Admin · Pages | /admin/pages
+[Live] Admin | Admin · Pikkit Import | /admin/pikkit-import
+[Live] Admin | Admin · Pipeline Health | /admin/pipeline-health
+[Live] Admin | Admin · Product Audit | /admin/product-audit
+[Live] Admin | Admin · Reports | /admin/reports
+[Live] Admin | Admin · Settings · Ai | /admin/settings/ai
+[Live] Admin | Admin · Settings · Custom Code | /admin/settings/custom-code
+[Live] Admin | Admin · Settings · Email | /admin/settings/email
+[Live] Admin | Admin · Settings · Features | /admin/settings/features
+[Live] Admin | Admin · Settings · General | /admin/settings/general
+[Live] Admin | Admin · Settings · Payments | /admin/settings/payments
+[Live] Admin | Admin · Settings · Social Login | /admin/settings/social-login
+[Live] Admin | Admin · Site Banner | /admin/site-banner
+[Live] Admin | Admin · Social Platforms | /admin/social-platforms
+[Live] Admin | Admin · Users · Banned | /admin/users/banned
+[Live] Admin | Admin · Users · Deletions | /admin/users/deletions
+[Live] Admin | Admin · Users · Online | /admin/users/online
+[Live] Admin | Admin · Users | /admin/users
+[Live] Admin | Admin · Users · Verify | /admin/users/verify
+[Live] Admin | Admin · Whop Renewal Shape | /admin/whop-renewal-shape
+[Live] General | Allstar2026 | /allstar2026
+[Live] Account access | Auth · Desktop · Complete | /auth/desktop/complete
+[Live] Account access | Auth · Desktop · Start | /auth/desktop/start
+[Live] Account access | Auth · Forgot Password | /auth/forgot-password
+[Live] Account access | Auth · Login | /auth/login
+[Live] Account access | Auth · Register | /auth/register
+[Live] Account access | Auth · Reset Password | /auth/reset-password
+[Live] Account access | Auth · Whop · Complete | /auth/whop/complete
+[Live] MLB · off-season | Batter Cost | /batter-cost
+[Live] Community | Blog · Slug | /blog/[slug]
+[Live] Community | Blog · Create · Ai | /blog/create/ai
+[Live] Community | Blog · Create | /blog/create
+[Live] Community | Blog · Edit · Id | /blog/edit/[id]
+[Live] Community | Blog · My | /blog/my
+[Live] Community | Blog | /blog
+[Live] Community | Bookmarks | /bookmarks
+[Live] Community | Channels · Slug | /channels/[slug]
+[Live] Community | Channels | /channels
+[Live] Community | Community | /community
+[Live] Creators & commerce | Creators · Username | /creators/[username]
+[Live] Creators & commerce | Creators · Apply | /creators/apply
+[Live] Creators & commerce | Creators · Offers · ProductId | /creators/offers/[productId]
+[Live] Creators & commerce | Creators | /creators
+[Live] Creators & commerce | Creators · Payouts | /creators/payouts
+[Live] Creators & commerce | Creators · Studio | /creators/studio
+[Live] MLB · off-season | Daily Recap | /daily-recap
+[Live] MLB · off-season | Dugout | /dugout
+[Live] Community | Events · Id | /events/[id]
+[Live] Community | Events · Create | /events/create
+[Live] Community | Events | /events
+[Live] Community | Explore | /explore
+[Live] General | Faq | /faq
+[Live] Community | Feed | /feed
+[Live] Community | Forum · Category | /forum/[category]
+[Live] Community | Forum · New | /forum/new
+[Live] Community | Forum | /forum
+[Live] Community | Forum · Thread · Id | /forum/thread/[id]
+[Live] Community | Groups · Slug | /groups/[slug]
+[Live] Community | Groups · Slug · Settings | /groups/[slug]/settings
+[Live] Community | Groups · Create | /groups/create
+[Live] Community | Groups | /groups
+[Live] Community | Hashtag · Tag | /hashtag/[tag]
 [Live] General | Launch | /launch
-[Ready to deploy] General | Leaderboard | /leaderboard
-[Ready to deploy] Creators & commerce | Marketplace · Id | /marketplace/[id]
-[Ready to deploy] Creators & commerce | Marketplace | /marketplace
-[Ready to deploy] Creators & commerce | Marketplace · Sell | /marketplace/sell
-[Ready to deploy] Community | Messages · Username | /messages/[username]
-[Ready to deploy] Community | Messages · Group · Id | /messages/group/[id]
-[Ready to deploy] Community | Messages · New | /messages/new
-[Ready to deploy] Community | Messages | /messages
-[Ready to deploy] General | Missions | /missions
-[Ready to deploy] MLB · off-season | Mlb · Teams · Id | /mlb/teams/[id]
-[Ready to deploy] NBA | Nba | /nba
-[Ready to deploy] NBA | Nba · Players · Id | /nba/players/[id]
-[Ready to deploy] NBA | Nba · Teams · Id | /nba/teams/[id]
+[Live] General | Leaderboard | /leaderboard
+[Live] Creators & commerce | Marketplace · Id | /marketplace/[id]
+[Live] Creators & commerce | Marketplace | /marketplace
+[Live] Creators & commerce | Marketplace · Sell | /marketplace/sell
+[Live] Community | Messages · Username | /messages/[username]
+[Live] Community | Messages · Group · Id | /messages/group/[id]
+[Live] Community | Messages · New | /messages/new
+[Live] Community | Messages | /messages
+[Live] General | Missions | /missions
+[Live] MLB · off-season | Mlb · Teams · Id | /mlb/teams/[id]
+[Live] NBA | Nba | /nba
+[Live] NBA | Nba · Players · Id | /nba/players/[id]
+[Live] NBA | Nba · Teams · Id | /nba/teams/[id]
 [Live] NFL | Nfl · Players · Id | /nfl/players/[id]
 [Live] NFL | Nfl · Teams · Abbr | /nfl/teams/[abbr]
-[Ready to deploy] Community | Notifications | /notifications
-[Ready to deploy] MLB · off-season | Odds Terminal | /odds-terminal
-[Ready to deploy] Account access | Onboarding | /onboarding
-[Ready to deploy] General | Home | /
-[Ready to deploy] Community | Pages · Slug | /pages/[slug]
-[Ready to deploy] Community | Pages · Slug · Settings | /pages/[slug]/settings
-[Ready to deploy] Community | Pages · Create | /pages/create
-[Ready to deploy] Community | Pages | /pages
-[Ready to deploy] Community | Picks | /picks
-[Ready to deploy] MLB · off-season | Pitcher Report | /pitcher-report
-[Ready to deploy] MLB · off-season | Players · Id | /players/[id]
-[Ready to deploy] Community | Posts · Id | /posts/[id]
-[Ready to deploy] General | Preview · Sport | /preview/[sport]
-[Ready to deploy] Creators & commerce | Pricing | /pricing
-[Ready to deploy] General | Privacy | /privacy
-[Ready to deploy] Creators & commerce | Pro | /pro
-[Ready to deploy] Community | Profile · Username | /profile/[username]
-[Ready to deploy] General | Research | /research
-[Ready to deploy] General | Responsible Gambling | /responsible-gambling
-[Ready to deploy] General | Scores | /scores
-[Ready to deploy] Community | Search | /search
-[Ready to deploy] Settings | Settings · Account | /settings/account
-[Ready to deploy] Settings | Settings · Blocked | /settings/blocked
-[Ready to deploy] Settings | Settings · Connections | /settings/connections
-[Ready to deploy] Settings | Settings · Interests | /settings/interests
-[Ready to deploy] Settings | Settings · Membership | /settings/membership
-[Ready to deploy] Settings | Settings · Notifications | /settings/notifications
-[Ready to deploy] Settings | Settings | /settings
-[Ready to deploy] Settings | Settings · Privacy | /settings/privacy
-[Ready to deploy] Settings | Settings · Profile | /settings/profile
+[Live] Community | Notifications | /notifications
+[Live] MLB · off-season | Odds Terminal | /odds-terminal
+[Live] Account access | Onboarding | /onboarding
+[Live] General | Home | /
+[Live] Community | Pages · Slug | /pages/[slug]
+[Live] Community | Pages · Slug · Settings | /pages/[slug]/settings
+[Live] Community | Pages · Create | /pages/create
+[Live] Community | Pages | /pages
+[Live] Community | Picks | /picks
+[Live] MLB · off-season | Pitcher Report | /pitcher-report
+[Live] MLB · off-season | Players · Id | /players/[id]
+[Live] Community | Posts · Id | /posts/[id]
+[Live] General | Preview · Sport | /preview/[sport]
+[Live] Creators & commerce | Pricing | /pricing
+[Live] General | Privacy | /privacy
+[Live] Creators & commerce | Pro | /pro
+[Live] Community | Profile · Username | /profile/[username]
+[Live] General | Research | /research
+[Live] General | Responsible Gambling | /responsible-gambling
+[Live] General | Scores | /scores
+[Live] Community | Search | /search
+[Live] Settings | Settings · Account | /settings/account
+[Live] Settings | Settings · Blocked | /settings/blocked
+[Live] Settings | Settings · Connections | /settings/connections
+[Live] Settings | Settings · Interests | /settings/interests
+[Live] Settings | Settings · Membership | /settings/membership
+[Live] Settings | Settings · Notifications | /settings/notifications
+[Live] Settings | Settings | /settings
+[Live] Settings | Settings · Privacy | /settings/privacy
+[Live] Settings | Settings · Profile | /settings/profile
 [Live] Settings | Settings · Research | /settings/research
-[Ready to deploy] Settings | Settings · Security | /settings/security
-[Ready to deploy] MLB · off-season | Slate Breakdown | /slate-breakdown
-[Ready to deploy] General | Sports · Sport · GameId | /sports/[sport]/[gameId]
-[Ready to deploy] General | Sports | /sports
-[Ready to deploy] MLB · off-season | Spray Charts | /spray-charts
-[Ready to deploy] Community | Stories · Create | /stories/create
-[Ready to deploy] General | Support | /support
-[Ready to deploy] MLB · off-season | Synergy | /synergy
-[Ready to deploy] General | Terms | /terms
-[Ready to deploy] NBA | The Paint | /the-paint
-[Ready to deploy] MLB · off-season | The Public | /the-public
+[Live] Settings | Settings · Security | /settings/security
+[Live] MLB · off-season | Slate Breakdown | /slate-breakdown
+[Live] General | Sports · Sport · GameId | /sports/[sport]/[gameId]
+[Live] General | Sports | /sports
+[Live] MLB · off-season | Spray Charts | /spray-charts
+[Live] Community | Stories · Create | /stories/create
+[Live] General | Support | /support
+[Live] MLB · off-season | Synergy | /synergy
+[Live] General | Terms | /terms
+[Live] NBA | The Paint | /the-paint
+[Live] MLB · off-season | The Public | /the-public
 [Live] NFL | The Sideline | /the-sideline
-[Ready to deploy] MLB · off-season | Weather Lab | /weather-lab
-[Ready to deploy] General | Workspace | /workspace
+[Live] MLB · off-season | Weather Lab | /weather-lab
+[Live] General | Workspace | /workspace
 [Live] NBA | NBA · The Court | /the-paint?view=research
 [Live] NBA | NBA · Odds Board | /the-paint?view=odds-board
-[Ready to deploy] NBA | NBA · Odds comparison | /the-paint?view=odds
-[Ready to deploy] NBA | NBA · Ladders | /the-paint?view=ladders
-[Ready to deploy] NBA | NBA · Market Story | /the-paint?view=movement
-[Ready to deploy] NBA | NBA · First basket | /the-paint?view=first-basket
-[Ready to deploy] NBA | NBA · Cheatsheets | /the-paint?view=cheatsheets
+[Live] NBA | NBA · Odds comparison | /the-paint?view=odds
+[Live] NBA | NBA · Ladders | /the-paint?view=ladders
+[Live] NBA | NBA · Market Story | /the-paint?view=movement
+[Live] NBA | NBA · First basket | /the-paint?view=first-basket
+[Live] NBA | NBA · Cheatsheets | /the-paint?view=cheatsheets
 [Live] NBA | NBA · SlipSurge Score | /the-paint?view=score
-[Ready to deploy] NBA | NBA · Slate Edge | /the-paint?view=slate
+[Live] NBA | NBA · Slate Edge | /the-paint?view=slate
 [Live] NBA | NBA · ThePublic | /the-paint?view=public
-[Ready to deploy] NBA | NBA · Cross-market | /the-paint?view=divergence
+[Live] NBA | NBA · Cross-market | /the-paint?view=divergence
 [Live] NBA | NBA · Defense × position | /the-paint?view=dvp
-[Ready to deploy] NBA | NBA · Player trends | /the-paint?view=usage
-[Ready to deploy] NBA | NBA · Game tracking | /the-paint?view=tracking
-[Ready to deploy] NBA | NBA · Matchup Lab | /the-paint?view=matchup
-[Ready to deploy] NBA | NBA · Availability | /the-paint?view=availability
+[Live] NBA | NBA · Player trends | /the-paint?view=usage
+[Live] NBA | NBA · Game tracking | /the-paint?view=tracking
+[Live] NBA | NBA · Matchup Lab | /the-paint?view=matchup
+[Live] NBA | NBA · Availability | /the-paint?view=availability
 [Live] NBA | NBA · Game markets | /the-paint?view=game-markets
 [Live] NBA | NBA · Game market slider and public activity | /the-paint
 [Live] NFL | NFL · The Sideline | /the-sideline
@@ -230,16 +230,16 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Live] Shared components | NBA game-specific lineup cards | /the-paint?view=game-markets
 [Live] Shared components | Saved sportsbook picker and comparison links | /the-paint?view=odds
 [Live] Shared components | Member identity, avatar rings and badges | /design-review/identity
-[Ready to deploy] Shared components | Account menu | Shared surface
-[Ready to deploy] Shared components | Global search | Shared surface
-[Ready to deploy] Shared components | Notifications panel | Shared surface
-[Ready to deploy] Shared components | What’s new and release popup | Shared surface
-[Ready to deploy] Shared components | Saved picks drawer | Shared surface
-[Ready to deploy] Shared components | NBA Matrix | Shared surface
-[Ready to deploy] Shared components | NFL Matrix | Shared surface
-[Ready to deploy] Shared components | Player comparison | Shared surface
-[Ready to deploy] Shared components | Post composer | Shared surface
-[Ready to deploy] Shared components | Comments and share | Shared surface
-[Ready to deploy] Shared components | Image and video viewer | Shared surface
-[Ready to deploy] Shared components | Confirmation dialogs | Shared surface
-[Ready to deploy] Shared components | Empty, loading and error states | Shared surface
+[Live] Shared components | Account menu | Shared surface
+[Live] Shared components | Global search | Shared surface
+[Live] Shared components | Notifications panel | Shared surface
+[Live] Shared components | What’s new and release popup | Shared surface
+[Live] Shared components | Saved picks drawer | Shared surface
+[Live] Shared components | NBA Matrix | Shared surface
+[Live] Shared components | NFL Matrix | Shared surface
+[Live] Shared components | Player comparison | Shared surface
+[Live] Shared components | Post composer | Shared surface
+[Live] Shared components | Comments and share | Shared surface
+[Live] Shared components | Image and video viewer | Shared surface
+[Live] Shared components | Confirmation dialogs | Shared surface
+[Live] Shared components | Empty, loading and error states | Shared surface

@@ -23,7 +23,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/about"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/activity",
@@ -49,7 +55,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/activity"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/ads",
@@ -75,7 +87,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/ads"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/audit",
@@ -101,7 +119,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/audit"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/badges",
@@ -127,7 +151,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/badges"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/browserbase",
@@ -153,7 +183,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/browserbase"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/changelog",
@@ -179,7 +215,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/changelog"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/contact-recap",
@@ -205,7 +247,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/contact-recap"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/content/blogs",
@@ -231,7 +279,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/blogs"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/content/posts",
@@ -257,7 +311,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/posts"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/content/reports",
@@ -283,7 +343,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/reports"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/content/stories",
@@ -309,7 +375,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/stories"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/creators",
@@ -335,7 +407,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/creators"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/design-system",
@@ -361,7 +439,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/design-system"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/discord/compose",
@@ -387,7 +471,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord/compose"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/discord",
@@ -413,7 +503,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/emojis",
@@ -439,7 +535,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/emojis"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/events",
@@ -465,7 +567,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/events"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/fanduel-import",
@@ -491,7 +599,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/fanduel-import"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/forum",
@@ -517,7 +631,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/forum"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/groups",
@@ -543,7 +663,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/groups"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/hr-intelligence",
@@ -569,7 +695,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/hr-intelligence"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/jobs",
@@ -595,7 +727,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/jobs"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/live",
@@ -621,7 +759,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/live"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/market-dna",
@@ -647,7 +791,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/market-dna"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/marketplace",
@@ -673,7 +823,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/marketplace"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/matrix-backtest",
@@ -699,7 +855,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/matrix-backtest"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/mgm-import",
@@ -725,7 +887,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/mgm-import"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/mlb-archive",
@@ -751,7 +919,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/mlb-archive"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/monetization",
@@ -777,7 +951,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/monetization"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/nfl-access",
@@ -803,7 +983,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/nfl-access"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/notifications",
@@ -829,7 +1015,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/notifications"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin",
@@ -855,7 +1047,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/pages",
@@ -881,7 +1079,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pages"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/pikkit-import",
@@ -907,7 +1111,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pikkit-import"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/pipeline-health",
@@ -933,7 +1143,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pipeline-health"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/product-audit",
@@ -959,7 +1175,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/product-audit"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/reports",
@@ -985,7 +1207,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/reports"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/ai",
@@ -1011,7 +1239,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/ai"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/custom-code",
@@ -1037,7 +1271,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/custom-code"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/email",
@@ -1063,7 +1303,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/email"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/features",
@@ -1089,7 +1335,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/features"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/general",
@@ -1115,7 +1367,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/general"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/payments",
@@ -1141,7 +1399,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/payments"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/settings/social-login",
@@ -1167,7 +1431,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/social-login"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/site-banner",
@@ -1193,7 +1463,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/site-banner"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/social-platforms",
@@ -1219,7 +1495,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/social-platforms"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/users/banned",
@@ -1245,7 +1527,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/banned"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/users/deletions",
@@ -1271,7 +1559,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/deletions"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/users/online",
@@ -1297,7 +1591,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/online"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/users",
@@ -1323,7 +1623,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/users/verify",
@@ -1349,7 +1655,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/verify"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/admin/whop-renewal-shape",
@@ -1375,7 +1687,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/whop-renewal-shape"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/allstar2026",
@@ -1401,7 +1719,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/allstar2026"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/desktop/complete",
@@ -1427,7 +1751,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/complete"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/desktop/start",
@@ -1453,7 +1783,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/start"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/forgot-password",
@@ -1479,7 +1815,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/forgot-password"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/login",
@@ -1505,7 +1847,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/login"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/register",
@@ -1531,7 +1879,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/register"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/reset-password",
@@ -1557,7 +1911,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/reset-password"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/auth/whop/complete",
@@ -1583,7 +1943,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/whop/complete"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/batter-cost",
@@ -1609,7 +1975,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/batter-cost"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog/[slug]",
@@ -1635,7 +2007,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/[slug]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog/create/ai",
@@ -1661,7 +2039,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/create/ai"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog/create",
@@ -1687,7 +2071,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/create"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog/edit/[id]",
@@ -1713,7 +2103,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/edit/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog/my",
@@ -1739,7 +2135,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/my"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/blog",
@@ -1765,7 +2167,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/bookmarks",
@@ -1791,7 +2199,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/bookmarks"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/channels/[slug]",
@@ -1817,7 +2231,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/channels/[slug]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/channels",
@@ -1843,7 +2263,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/channels"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/community",
@@ -1869,7 +2295,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/community"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators/[username]",
@@ -1895,7 +2327,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators/[username]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators/apply",
@@ -1921,7 +2359,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators/apply"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators/offers/[productId]",
@@ -1947,7 +2391,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators/offers/[productId]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators",
@@ -1973,7 +2423,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators/payouts",
@@ -1999,7 +2455,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators/payouts"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/creators/studio",
@@ -2025,7 +2487,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/creators/studio"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/daily-recap",
@@ -2051,7 +2519,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/daily-recap"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/dugout",
@@ -2077,7 +2551,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/dugout"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/events/[id]",
@@ -2103,7 +2583,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/events/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/events/create",
@@ -2129,7 +2615,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/events/create"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/events",
@@ -2155,7 +2647,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/events"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/explore",
@@ -2181,7 +2679,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/explore"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/faq",
@@ -2207,7 +2711,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/faq"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/feed",
@@ -2233,7 +2743,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/feed"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/forum/[category]",
@@ -2259,7 +2775,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/[category]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/forum/new",
@@ -2285,7 +2807,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/new"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/forum",
@@ -2311,7 +2839,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/forum"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/forum/thread/[id]",
@@ -2337,7 +2871,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/thread/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/groups/[slug]",
@@ -2363,7 +2903,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/groups/[slug]/settings",
@@ -2389,7 +2935,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]/settings"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/groups/create",
@@ -2415,7 +2967,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/create"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/groups",
@@ -2441,7 +2999,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/hashtag/[tag]",
@@ -2467,7 +3031,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/hashtag/[tag]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/launch",
@@ -2494,9 +3064,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -2524,7 +3094,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/leaderboard"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/marketplace/[id]",
@@ -2550,7 +3126,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/marketplace",
@@ -2576,7 +3158,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/marketplace/sell",
@@ -2602,7 +3190,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/sell"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/messages/[username]",
@@ -2628,7 +3222,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/[username]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/messages/group/[id]",
@@ -2654,7 +3254,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/group/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/messages/new",
@@ -2680,7 +3286,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/new"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/messages",
@@ -2706,7 +3318,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/missions",
@@ -2732,7 +3350,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/missions"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/mlb/teams/[id]",
@@ -2758,7 +3382,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/mlb/teams/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/nba",
@@ -2784,7 +3414,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/nba"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/nba/players/[id]",
@@ -2810,7 +3446,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/nba/players/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/nba/teams/[id]",
@@ -2836,7 +3478,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/nba/teams/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/nfl/players/[id]",
@@ -2865,9 +3513,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -2898,9 +3546,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -2928,7 +3576,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/notifications"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/odds-terminal",
@@ -2954,7 +3608,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/odds-terminal"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/onboarding",
@@ -2980,7 +3640,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/onboarding"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/",
@@ -3006,7 +3672,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pages/[slug]",
@@ -3032,7 +3704,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pages/[slug]/settings",
@@ -3058,7 +3736,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]/settings"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pages/create",
@@ -3084,7 +3768,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/create"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pages",
@@ -3110,7 +3800,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/picks",
@@ -3136,7 +3832,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/picks"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pitcher-report",
@@ -3162,7 +3864,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pitcher-report"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/players/[id]",
@@ -3188,7 +3896,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/players/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/posts/[id]",
@@ -3214,7 +3928,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/posts/[id]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/preview/[sport]",
@@ -3240,7 +3960,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/preview/[sport]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pricing",
@@ -3266,7 +3992,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pricing"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/privacy",
@@ -3292,7 +4024,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/privacy"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/pro",
@@ -3318,7 +4056,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pro"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/profile/[username]",
@@ -3344,7 +4088,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/research",
@@ -3370,7 +4120,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/research"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/responsible-gambling",
@@ -3396,7 +4152,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/responsible-gambling"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/scores",
@@ -3422,7 +4184,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/scores"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/search",
@@ -3448,7 +4216,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/search"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/account",
@@ -3474,7 +4248,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/account"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/blocked",
@@ -3500,7 +4280,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/connections",
@@ -3526,7 +4312,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/connections"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/interests",
@@ -3552,7 +4344,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/interests"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/membership",
@@ -3578,7 +4376,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/membership"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/notifications",
@@ -3604,7 +4408,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/notifications"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings",
@@ -3630,7 +4440,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/privacy",
@@ -3656,7 +4472,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/privacy"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/profile",
@@ -3682,7 +4504,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/research",
@@ -3709,9 +4537,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -3739,7 +4567,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/security"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/slate-breakdown",
@@ -3765,7 +4599,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/slate-breakdown"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/sports/[sport]/[gameId]",
@@ -3791,7 +4631,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/sports/[sport]/[gameId]"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/sports",
@@ -3817,7 +4663,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/sports"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/spray-charts",
@@ -3843,7 +4695,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/spray-charts"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/stories/create",
@@ -3869,7 +4727,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/stories/create"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/support",
@@ -3895,7 +4759,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/support"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/synergy",
@@ -3921,7 +4791,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/synergy"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/terms",
@@ -3947,7 +4823,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/terms"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/the-paint",
@@ -3973,7 +4855,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/the-paint"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/the-public",
@@ -3999,7 +4887,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/the-public"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/the-sideline",
@@ -4028,9 +4922,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4058,7 +4952,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/weather-lab"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/workspace",
@@ -4084,7 +4984,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/workspace"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:research",
@@ -4114,9 +5020,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4149,9 +5055,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4178,7 +5084,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:odds"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:ladders",
@@ -4203,7 +5115,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:ladders"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:movement",
@@ -4228,7 +5146,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:movement"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:first-basket",
@@ -4253,7 +5177,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:first-basket"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:cheatsheets",
@@ -4278,7 +5208,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:cheatsheets"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:score",
@@ -4304,9 +5240,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4333,7 +5269,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:slate"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:public",
@@ -4359,9 +5301,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4388,7 +5330,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:divergence"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:dvp",
@@ -4414,9 +5362,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4443,7 +5391,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:usage"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:tracking",
@@ -4468,7 +5422,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:tracking"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:matchup",
@@ -4493,7 +5453,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:matchup"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:availability",
@@ -4518,7 +5484,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:availability"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:game-markets",
@@ -4544,9 +5516,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4574,9 +5546,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4606,9 +5578,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4642,9 +5614,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4674,9 +5646,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4706,9 +5678,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4738,9 +5710,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4770,9 +5742,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4802,9 +5774,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4834,9 +5806,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4866,9 +5838,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4898,9 +5870,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4930,9 +5902,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4962,9 +5934,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -4994,9 +5966,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5026,9 +5998,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5058,9 +6030,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5090,9 +6062,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5122,9 +6094,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5154,9 +6126,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5186,9 +6158,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5218,9 +6190,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5250,9 +6222,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5282,9 +6254,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5314,9 +6286,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5346,9 +6318,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5378,9 +6350,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5410,9 +6382,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5442,9 +6414,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5474,9 +6446,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5506,9 +6478,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5538,9 +6510,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5570,9 +6542,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5602,9 +6574,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5634,9 +6606,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5666,9 +6638,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5698,9 +6670,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5730,9 +6702,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5762,9 +6734,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5794,9 +6766,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5826,9 +6798,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5858,9 +6830,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5890,9 +6862,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5922,9 +6894,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5954,9 +6926,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -5986,9 +6958,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6018,9 +6990,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6050,9 +7022,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6082,9 +7054,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6112,9 +7084,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6142,9 +7114,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6172,9 +7144,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6205,9 +7177,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
-      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
-      "verifiedAt": "2026-11-21 01:53 UTC",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
   },
@@ -6234,7 +7206,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Account menu"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Global search",
@@ -6259,7 +7237,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Global search"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Notifications panel",
@@ -6284,7 +7268,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Notifications panel"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:What’s new and release popup",
@@ -6309,7 +7299,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:What’s new and release popup"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Saved picks drawer",
@@ -6334,7 +7330,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:NBA Matrix",
@@ -6359,7 +7361,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:NBA Matrix"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:NFL Matrix",
@@ -6384,7 +7392,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:NFL Matrix"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Player comparison",
@@ -6409,7 +7423,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Player comparison"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Post composer",
@@ -6434,7 +7454,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Post composer"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Comments and share",
@@ -6459,7 +7485,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Image and video viewer",
@@ -6484,7 +7516,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Image and video viewer"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Confirmation dialogs",
@@ -6509,7 +7547,13 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Confirmation dialogs"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Empty, loading and error states",
@@ -6534,6 +7578,12 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Empty, loading and error states"
     ],
-    "release": null
+    "release": {
+      "state": "Live",
+      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
+      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
+      "verifiedAt": "2026-11-21 04:31 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   }
 ]

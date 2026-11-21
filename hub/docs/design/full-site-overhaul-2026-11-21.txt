@@ -41,3 +41,9 @@ See src/app/design-review/visual-audit/release-ledger.json and the appended rele
 Additional release checks: NFL odds suite 84/84; final shared/release/media/keyboard checks 34/34. Remaining sub-40px phone controls identified in the audit were enlarged and rechecked.
 
 Additional narrow-phone checks: eight core flows at 320px, each in Light and Dark, had no page overflow. These supplement the complete 390px matrix; they do not certify every route at 320px.
+
+Published release — 2026-11-21 04:31 UTC
+Implementation source: 8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b
+Vercel production: dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy (READY, www.slipsurge.com assigned). GitHub main matches the implementation source. All 238 checklist entries now reference this verified UI deployment; the remaining 174 queued entries and Court parent are published. Zero queued, in-progress or ready-to-deploy entries remain.
+
+Post-deployment browser checks covered real NBA Court/Odds Board/player drawers, real NFL boards and shared feed/search/notification controls. The deployment returned no error/fatal runtime log groups in the final ten-minute check. The existing NBA odds-delay banner was preserved; collector freshness is separate from this UI release. Detailed scope and production receipts are in full-site-audit-2026-11-21.json. The subsequent documentation commit records this already verified source ancestor and does not change product behavior.
