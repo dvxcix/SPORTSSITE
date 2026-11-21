@@ -3,21 +3,24 @@
 import { useState } from 'react'
 import { ChevronDown, Sparkles } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { VoltTeaser } from '@/components/volt/VoltTeaser'
 
-export function UtilityDock({ children }: { children: React.ReactNode }) {
+export function UtilityDock({ children, teaserOnly = false }: { children?: React.ReactNode; teaserOnly?: boolean }) {
   const { signedIn } = useWatchlist()
   const [expanded, setExpanded] = useState(false)
 
-  if (!signedIn) return null
+  const showTools = signedIn && !teaserOnly
 
   return (
-    <div className={`ss-utility-dock ${expanded ? 'is-expanded' : ''}`}>
+    <div className={`ss-utility-dock ${showTools && expanded ? 'is-expanded' : ''} ${teaserOnly ? 'is-teaser-only' : ''}`}>
       <style>{`
         .ss-utility-dock {
-          position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+          position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px) + var(--volt-resume-offset, 0px));
           z-index: var(--layer-floating); display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
           pointer-events: none;
         }
+        body:has(.ss-context-handoff) .ss-utility-dock { --volt-resume-offset: 76px; }
+        .ss-utility-dock-launchers { display: flex; align-items: flex-end; gap: 12px; }
         .ss-utility-dock-items {
           display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
           opacity: 0; visibility: hidden; pointer-events: none;
@@ -43,9 +46,10 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
         @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
           .ss-utility-dock {
             right: 14px;
-            bottom: calc(var(--mobile-dock-clearance) - 8px);
+            bottom: calc(var(--mobile-dock-clearance) - 8px + var(--volt-resume-offset, 0px));
           }
           .ss-utility-dock-items { gap: 7px; }
+          .ss-utility-dock.is-teaser-only { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
           .ss-utility-dock-toggle {
             width: 50px; height: 50px; border-radius: 18px;
             box-shadow: 0 12px 38px rgba(0,0,0,.52), 0 0 30px rgba(180,255,77,.22);
@@ -66,7 +70,10 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
           .ss-utility-dock-items, .ss-utility-dock-toggle { transition: none; }
         }
       `}</style>
-      <div className="ss-utility-dock-items" aria-hidden={!expanded} inert={!expanded ? true : undefined}>{children}</div>
+      {showTools && <div className="ss-utility-dock-items" aria-hidden={!expanded} inert={!expanded ? true : undefined}>{children}</div>}
+      <div className="ss-utility-dock-launchers">
+      <VoltTeaser onActivate={() => setExpanded(false)} />
+      {showTools && <>
       <button
         type="button"
         className="ss-utility-dock-toggle"
@@ -76,6 +83,8 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
       >
         {expanded ? <ChevronDown size={20} /> : <Sparkles size={20} />}
       </button>
+      </>}
+      </div>
     </div>
   )
 }

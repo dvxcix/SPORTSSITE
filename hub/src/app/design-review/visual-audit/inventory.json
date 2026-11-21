@@ -7587,5 +7587,29 @@
       "verifiedAt": "2026-11-21 04:31 UTC",
       "url": "https://www.slipsurge.com"
     }
+  },
+  {
+    "id": "shared:VOLT and Sparks teaser",
+    "route": null,
+    "source": "src/components/volt/VoltTeaser.tsx",
+    "label": "VOLT and Sparks teaser",
+    "group": "Shared components",
+    "kind": "Shared surface",
+    "status": "Review ready",
+    "batch": "volt-teaser-2026-11-21",
+    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/operations/volt-teaser-2026-11-21.txt"
+    ]
   }
 ]

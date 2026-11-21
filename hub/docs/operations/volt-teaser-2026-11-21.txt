@@ -1,0 +1,42 @@
+VOLT / Sparks teaser — 2026-11-21
+
+Owner-authorized scope: publish the supplied VOLT character at the bottom of
+SlipSurge, with COMING SOON on hover. No assistant, AI service, audio, chat,
+credential, account permission or Sparks backend was enabled.
+
+Character source: the owner's OneDrive Desktop/VOLT/volt/handoff assets
+(README.md, volt.js, volt.css and volt-spec.json). The idle SVG paths, lime
+body, number 7, jersey trim, breathing and blink were ported to React/CSS.
+No generated replacement art, packages or full audio/mood library were added.
+The NBA jersey follows NBA research routes; other routes use the NFL jersey.
+
+The existing utility dock retains its picks, watchlist and matrix controls.
+VOLT is available on the landing page, public previews and ordinary site
+pages, including signed-out visits. Authentication, onboarding and admin
+layouts retain their dedicated flows. Hover and keyboard focus reveal the
+teaser; tap/click toggles it. Escape, outside press, route changes and modal
+opening dismiss it. It has a visible focus ring and accessible description.
+
+The tooltip opens above the character, fits within the viewport, and stays
+above the mobile navigation. The dock clears the resume banner and existing
+composer/modal rules. Animation uses transform-only CSS and honors reduced
+motion. SVG clip IDs remain unique when multiple characters render.
+
+Private browser checks: 1024px desktop and 390px phone layouts in light/dark,
+with 1440px geometry also checked. Member quick tools remain reachable.
+Visitor landing has no member-tool toggle. Player drawers hide the dock and
+dismiss the tooltip. No physical-device or changed OS-motion-setting claim.
+
+Validation: TypeScript and focused ESLint pass. The 21-test VOLT/shared
+surface suite passes, including keyboard modal nesting and sportsbook menus.
+All 134 production source checks pass. Fanatics backend validation separately
+passed 762 NBA and 124 freeze checks; see its release report.
+
+An additional unchanged MLB/Dugout source-contract suite has two existing
+failures: missing dg-player-signal-row literal and an obsolete activeElement
+focus literal assertion. Its other 29 checks passed. Those files were not
+changed and MLB was not enabled or certified by this release.
+
+Live publication details are recorded in the visual-audit release ledger
+under shared:VOLT and Sparks teaser. Local browser/test evidence is under
+docs/design/evidence/live/volt-*.

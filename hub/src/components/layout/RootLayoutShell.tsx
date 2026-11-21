@@ -49,7 +49,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthPage || isLandingPage || isPublicPreviewPath(path) || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {
-    return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main></>
+    return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main>{(isLandingPage || isPublicPreviewPath(path)) && <UtilityDock teaserOnly />}</>
   }
 
   // WatchlistProvider (and its two FABs) used to live inside dugout/page.tsx

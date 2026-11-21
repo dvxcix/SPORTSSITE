@@ -12,6 +12,7 @@ type FloatingSurfaceProps = {
   width?: number
   gap?: number
   align?: 'start' | 'center' | 'end'
+  side?: 'auto' | 'top'
   mobileSheet?: boolean
   role?: 'dialog' | 'menu' | 'tooltip'
   ariaLabel?: string
@@ -31,6 +32,7 @@ export function FloatingSurface({
   width = 300,
   gap = 9,
   align = 'center',
+  side = 'auto',
   mobileSheet = false,
   role = 'dialog',
   ariaLabel,
@@ -54,7 +56,7 @@ export function FloatingSurface({
     const surfaceWidth = Math.min(width, window.innerWidth - GUTTER * 2)
     const roomBelow = window.innerHeight - anchorRect.bottom - GUTTER
     const roomAbove = anchorRect.top - GUTTER
-    const top = roomBelow >= surfaceRect.height || roomBelow >= roomAbove
+    const top = side !== 'top' && (roomBelow >= surfaceRect.height || roomBelow >= roomAbove)
       ? Math.min(anchorRect.bottom + gap, window.innerHeight - surfaceRect.height - GUTTER)
       : Math.max(GUTTER, anchorRect.top - surfaceRect.height - gap)
     const preferredLeft = align === 'start'
@@ -70,7 +72,7 @@ export function FloatingSurface({
       opacity: 1,
       pointerEvents: 'auto',
     })
-  }, [align, anchorRef, gap, mobileSheet, width])
+  }, [align, anchorRef, gap, mobileSheet, side, width])
 
   useLayoutEffect(() => {
     if (!open) return

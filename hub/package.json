@@ -13,6 +13,7 @@
     "build:ui-review": "node scripts/start-ui-review.mjs build",
     "start:ui-review": "node scripts/start-ui-review.mjs start",
     "test:ui-framework": "node --import tsx --test scripts/ui-framework.test.mjs",
+    "test:volt": "node --import tsx --test scripts/volt-teaser.test.mts scripts/ui-framework.test.mjs scripts/modal-surface-keyboard.test.mts scripts/nba-entity-select.test.mts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
