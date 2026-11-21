@@ -67,3 +67,13 @@ test('score drawer shows the real market-specific weighted breakdown and workloa
   assert.doesNotMatch(dialog.textContent??'',/does not change this score|Workload inputs unavailable/)
  }finally{await React.act(async()=>root.unmount());dom.window.close();for(const [k,d]of saved)if(d)Object.defineProperty(globalThis,k,d);else Reflect.deleteProperty(globalThis,k)}
 })
+
+test('large dial label keeps its layout regardless of drawer stylesheet load order',async()=>{
+ const ring=await readFile(new URL('../src/components/ui/MechanicsScoreRing.module.css',import.meta.url),'utf8'),drawer=await readFile(new URL('../src/app/the-paint/workload.module.css',import.meta.url),'utf8')
+ for(const styles of [ring+drawer,drawer+ring]){
+  const dom=new JSDOM('<!doctype html><html><head></head><body><div class="score"><div class="scoreRing" data-size="large"><span class="center"><strong>70</strong><small id="brand"><img/><em>SCORE</em></small></span></div><div><small id="meta">Saved pregame inputs</small></div></div></body></html>')
+  const style=dom.window.document.createElement('style');style.textContent=styles;dom.window.document.head.append(style)
+  const brand=dom.window.getComputedStyle(dom.window.document.getElementById('brand')!),meta=dom.window.getComputedStyle(dom.window.document.getElementById('meta')!)
+  assert.equal(brand.display,'flex');assert.equal(brand.marginTop,'0px');assert.equal(meta.display,'block');assert.equal(meta.marginTop,'6px');dom.window.close()
+ }
+})

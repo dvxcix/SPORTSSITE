@@ -4,7 +4,7 @@
 .panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
 .panel h3{margin:0;font-size:18px}.panel>header p{margin:6px 0 0;color:var(--text-2)}
 .score{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-.score p{margin:0;font-size:13px}.score small{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:var(--text-2)}
+.score p{margin:0;font-size:13px}.score>div:last-child>small{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:var(--text-2)}
 .detail{font-size:12px;white-space:normal;text-align:left}
 .detail h4{margin:0;font-size:14px}
 .estimate{display:flex;align-items:baseline;gap:10px}.estimate strong{font:600 22px var(--font-mono,monospace)}.estimate span{font-size:12px;color:var(--text-2)}
