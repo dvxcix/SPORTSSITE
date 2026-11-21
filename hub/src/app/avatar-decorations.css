@@ -44,3 +44,7 @@
 
 /* Give original story artwork room without clipping member decorations. */
 .ss-story-item{width:80px;flex-basis:80px}.ss-story-ring{width:76px;height:76px;padding:9px;background:transparent;box-shadow:none}.ss-story-ring>div{width:58px;height:58px;overflow:visible;border:0;background:none}.ss-story-item.is-create .ss-story-ring{width:58px;height:58px;margin:9px}
+
+/* Keep keyboard-focused artwork clear of the sticky search/category controls. */
+.ss-avatar-picker-library{scroll-padding-block:110px 10px}
+@media(max-width:600px){.ss-avatar-picker-library{scroll-padding-block-start:160px}}
