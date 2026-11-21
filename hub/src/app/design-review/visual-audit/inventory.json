@@ -19,7 +19,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/activity",
@@ -41,7 +42,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/ads",
@@ -63,7 +65,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/audit",
@@ -85,7 +88,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/badges",
@@ -107,7 +111,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/browserbase",
@@ -129,7 +134,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/changelog",
@@ -151,7 +157,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/contact-recap",
@@ -173,7 +180,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/content/blogs",
@@ -195,7 +203,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/content/posts",
@@ -217,7 +226,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/content/reports",
@@ -239,7 +249,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/content/stories",
@@ -261,7 +272,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/creators",
@@ -283,7 +295,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/design-system",
@@ -305,7 +318,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/discord/compose",
@@ -327,7 +341,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/discord",
@@ -349,7 +364,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/emojis",
@@ -371,7 +387,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/events",
@@ -393,7 +410,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/fanduel-import",
@@ -415,7 +433,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/forum",
@@ -437,7 +456,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/groups",
@@ -459,7 +479,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/hr-intelligence",
@@ -481,7 +502,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/jobs",
@@ -503,7 +525,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/live",
@@ -525,7 +548,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/market-dna",
@@ -547,7 +571,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/marketplace",
@@ -569,7 +594,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/matrix-backtest",
@@ -591,7 +617,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/mgm-import",
@@ -613,7 +640,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/mlb-archive",
@@ -635,7 +663,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/monetization",
@@ -657,7 +686,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/nfl-access",
@@ -679,7 +709,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/notifications",
@@ -701,7 +732,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin",
@@ -723,7 +755,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/pages",
@@ -745,7 +778,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/pikkit-import",
@@ -767,7 +801,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/pipeline-health",
@@ -789,7 +824,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/product-audit",
@@ -811,7 +847,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/reports",
@@ -833,7 +870,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/ai",
@@ -855,7 +893,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/custom-code",
@@ -877,7 +916,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/email",
@@ -899,7 +939,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/features",
@@ -921,7 +962,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/general",
@@ -943,7 +985,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/payments",
@@ -965,7 +1008,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/settings/social-login",
@@ -987,7 +1031,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/site-banner",
@@ -1009,7 +1054,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/social-platforms",
@@ -1031,7 +1077,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/users/banned",
@@ -1053,7 +1100,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/users/deletions",
@@ -1075,7 +1123,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/users/online",
@@ -1097,7 +1146,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/users",
@@ -1119,7 +1169,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/users/verify",
@@ -1141,7 +1192,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/admin/whop-renewal-shape",
@@ -1163,7 +1215,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/allstar2026",
@@ -1185,7 +1238,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/desktop/complete",
@@ -1207,7 +1261,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/desktop/start",
@@ -1229,7 +1284,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/forgot-password",
@@ -1251,7 +1307,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/login",
@@ -1273,7 +1330,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/register",
@@ -1295,7 +1353,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/reset-password",
@@ -1317,7 +1376,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/auth/whop/complete",
@@ -1339,7 +1399,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/batter-cost",
@@ -1361,7 +1422,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog/[slug]",
@@ -1383,7 +1445,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog/create/ai",
@@ -1405,7 +1468,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog/create",
@@ -1427,7 +1491,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog/edit/[id]",
@@ -1449,7 +1514,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog/my",
@@ -1471,7 +1537,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/blog",
@@ -1493,7 +1560,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/bookmarks",
@@ -1515,7 +1583,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/channels/[slug]",
@@ -1537,7 +1606,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/channels",
@@ -1559,7 +1629,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/community",
@@ -1581,7 +1652,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators/[username]",
@@ -1603,7 +1675,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators/apply",
@@ -1625,7 +1698,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators/offers/[productId]",
@@ -1647,7 +1721,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators",
@@ -1669,7 +1744,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators/payouts",
@@ -1691,7 +1767,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/creators/studio",
@@ -1713,7 +1790,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/daily-recap",
@@ -1735,7 +1813,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/dugout",
@@ -1757,7 +1836,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/events/[id]",
@@ -1779,7 +1859,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/events/create",
@@ -1801,7 +1882,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/events",
@@ -1823,7 +1905,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/explore",
@@ -1845,7 +1928,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/faq",
@@ -1867,7 +1951,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/feed",
@@ -1889,7 +1974,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/forum/[category]",
@@ -1911,7 +1997,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/forum/new",
@@ -1933,7 +2020,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/forum",
@@ -1955,7 +2043,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/forum/thread/[id]",
@@ -1977,7 +2066,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/groups/[slug]",
@@ -1999,7 +2089,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/groups/[slug]/settings",
@@ -2021,7 +2112,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/groups/create",
@@ -2043,7 +2135,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/groups",
@@ -2065,7 +2158,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/hashtag/[tag]",
@@ -2087,7 +2181,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/launch",
@@ -2111,7 +2206,14 @@
     },
     "evidence": [
       "docs/design/member-workspace-preferences-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/leaderboard",
@@ -2133,7 +2235,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/marketplace/[id]",
@@ -2155,7 +2258,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/marketplace",
@@ -2177,7 +2281,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/marketplace/sell",
@@ -2199,7 +2304,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/messages/[username]",
@@ -2221,7 +2327,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/messages/group/[id]",
@@ -2243,7 +2350,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/messages/new",
@@ -2265,7 +2373,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/messages",
@@ -2287,7 +2396,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/missions",
@@ -2309,7 +2419,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/mlb/teams/[id]",
@@ -2331,7 +2442,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/nba",
@@ -2353,7 +2465,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/nba/players/[id]",
@@ -2375,7 +2488,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/nba/teams/[id]",
@@ -2397,7 +2511,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/nfl/players/[id]",
@@ -2423,7 +2538,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/nfl/teams/[abbr]",
@@ -2449,7 +2571,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/notifications",
@@ -2471,7 +2600,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/odds-terminal",
@@ -2493,7 +2623,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/onboarding",
@@ -2515,7 +2646,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/",
@@ -2537,7 +2669,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pages/[slug]",
@@ -2559,7 +2692,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pages/[slug]/settings",
@@ -2581,7 +2715,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pages/create",
@@ -2603,7 +2738,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pages",
@@ -2625,7 +2761,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/picks",
@@ -2647,7 +2784,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pitcher-report",
@@ -2669,7 +2807,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/players/[id]",
@@ -2691,7 +2830,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/posts/[id]",
@@ -2713,7 +2853,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/preview/[sport]",
@@ -2735,7 +2876,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pricing",
@@ -2757,7 +2899,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/privacy",
@@ -2779,7 +2922,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/pro",
@@ -2801,7 +2945,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/profile/[username]",
@@ -2823,7 +2968,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/research",
@@ -2845,7 +2991,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/responsible-gambling",
@@ -2867,7 +3014,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/scores",
@@ -2889,7 +3037,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/search",
@@ -2911,7 +3060,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/account",
@@ -2933,7 +3083,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/blocked",
@@ -2955,7 +3106,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/connections",
@@ -2977,7 +3129,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/interests",
@@ -2999,7 +3152,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/membership",
@@ -3021,7 +3175,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/notifications",
@@ -3043,7 +3198,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings",
@@ -3065,7 +3221,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/privacy",
@@ -3087,7 +3244,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/profile",
@@ -3109,7 +3267,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/settings/research",
@@ -3133,7 +3292,14 @@
     },
     "evidence": [
       "docs/design/member-workspace-preferences-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/settings/security",
@@ -3155,7 +3321,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/slate-breakdown",
@@ -3177,7 +3344,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/sports/[sport]/[gameId]",
@@ -3199,7 +3367,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/sports",
@@ -3221,7 +3390,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/spray-charts",
@@ -3243,7 +3413,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/stories/create",
@@ -3265,7 +3436,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/support",
@@ -3287,7 +3459,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/synergy",
@@ -3309,7 +3482,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/terms",
@@ -3331,7 +3505,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/the-paint",
@@ -3355,7 +3530,8 @@
     },
     "evidence": [
       "docs/design/nba-game-markets-release-2026-11-21.txt"
-    ]
+    ],
+    "release": null
   },
   {
     "id": "route:/the-public",
@@ -3377,7 +3553,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/the-sideline",
@@ -3403,7 +3580,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "route:/weather-lab",
@@ -3425,7 +3609,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "route:/workspace",
@@ -3447,7 +3632,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:research",
@@ -3474,7 +3660,14 @@
       "court-review/production-tests.txt · 134 source checks",
       "docs/operations/nba-board-accuracy-2026-11-20.txt",
       "docs/design/nba-game-markets-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:odds-board",
@@ -3502,7 +3695,14 @@
       "page-review/framework-tests.txt · 25 passed",
       "docs/operations/nba-board-accuracy-2026-11-20.txt",
       "docs/design/nba-game-markets-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:odds",
@@ -3523,7 +3723,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:ladders",
@@ -3544,7 +3745,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:movement",
@@ -3565,7 +3767,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:first-basket",
@@ -3586,7 +3789,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:cheatsheets",
@@ -3607,7 +3811,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:score",
@@ -3630,7 +3835,14 @@
     },
     "evidence": [
       "docs/design/nba-score-splits-lineups-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:slate",
@@ -3651,7 +3863,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:public",
@@ -3674,7 +3887,14 @@
     },
     "evidence": [
       "docs/design/nba-game-markets-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:divergence",
@@ -3695,7 +3915,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:dvp",
@@ -3718,7 +3939,14 @@
     },
     "evidence": [
       "docs/design/nba-score-splits-lineups-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba:usage",
@@ -3739,7 +3967,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:tracking",
@@ -3760,7 +3989,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:matchup",
@@ -3781,7 +4011,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "nba:availability",
@@ -3804,7 +4035,8 @@
     },
     "evidence": [
       "docs/operations/nba-board-accuracy-2026-11-20.txt"
-    ]
+    ],
+    "release": null
   },
   {
     "id": "nba:game-markets",
@@ -3827,7 +4059,14 @@
     },
     "evidence": [
       "docs/design/nba-score-splits-lineups-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-surface:Game markets and public activity",
@@ -3850,7 +4089,14 @@
     },
     "evidence": [
       "docs/design/nba-game-markets-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:research",
@@ -3875,7 +4121,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:view=odds-board",
@@ -3904,7 +4157,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:mode=cheatsheets",
@@ -3929,7 +4189,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:mode=public",
@@ -3954,7 +4221,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:mode=markets",
@@ -3979,7 +4253,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl:mode=research",
@@ -4004,7 +4285,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:Overview",
@@ -4029,7 +4317,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:Game tracking",
@@ -4054,7 +4349,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:Ladders",
@@ -4079,7 +4381,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:Market Story",
@@ -4104,7 +4413,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:Shots",
@@ -4129,7 +4445,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nba-drawer:All odds",
@@ -4154,7 +4477,14 @@
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-cheatsheet:Market Edge",
@@ -4179,7 +4509,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-cheatsheet:Exact-Line Hits",
@@ -4204,7 +4541,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-cheatsheet:Explosive Plays",
@@ -4229,7 +4573,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-cheatsheet:Run Gaps",
@@ -4254,7 +4605,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-cheatsheet:Defense / DvP",
@@ -4279,7 +4637,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:core",
@@ -4304,7 +4669,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:touchdowns",
@@ -4329,7 +4701,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:props",
@@ -4354,7 +4733,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:usage",
@@ -4379,7 +4765,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:tracking",
@@ -4404,7 +4797,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:team",
@@ -4429,7 +4829,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:all",
@@ -4454,7 +4861,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-board:custom",
@@ -4479,7 +4893,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-drawer:Matchup",
@@ -4504,7 +4925,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-drawer:NFL Tracking",
@@ -4529,7 +4957,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-drawer:Sportsbooks",
@@ -4554,7 +4989,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Role command",
@@ -4579,7 +5021,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Score zone",
@@ -4604,7 +5053,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Receiving value",
@@ -4629,7 +5085,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Route leverage",
@@ -4654,7 +5117,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Ground game",
@@ -4679,7 +5149,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:QB command",
@@ -4704,7 +5181,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Explosive lanes",
@@ -4729,7 +5213,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-matchup:Market signal",
@@ -4754,7 +5245,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-edge:Slate Rankings",
@@ -4779,7 +5277,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-edge:Matchup Lens",
@@ -4804,7 +5309,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-edge:Model vs Market",
@@ -4829,7 +5341,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-edge:Signal Lab",
@@ -4854,7 +5373,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Touchdown tracker",
@@ -4879,7 +5405,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Matrix library",
@@ -4904,7 +5437,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Matrix community",
@@ -4929,7 +5469,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Matrix editor",
@@ -4954,7 +5501,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Column manager",
@@ -4979,7 +5533,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Player comparison",
@@ -5004,7 +5565,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "nfl-tool:Game lines and capture replay",
@@ -5029,7 +5597,14 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:NBA score calculation drawer",
@@ -5052,7 +5627,14 @@
     },
     "evidence": [
       "docs/design/nba-score-splits-lineups-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:NBA game-specific lineups",
@@ -5075,7 +5657,14 @@
     },
     "evidence": [
       "docs/design/nba-score-splits-lineups-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Saved sportsbook picker",
@@ -5098,7 +5687,14 @@
     },
     "evidence": [
       "docs/design/member-workspace-preferences-release-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Member identity, avatar rings and badges",
@@ -5124,7 +5720,14 @@
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
       "page-review/framework-tests.txt · 25 passed"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7ff4f13b7bf63bd44fe66ec24807eed711e6292b",
+      "deploymentId": "dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn",
+      "verifiedAt": "2026-11-21 01:53 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   },
   {
     "id": "shared:Account menu",
@@ -5145,7 +5748,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Global search",
@@ -5166,7 +5770,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Notifications panel",
@@ -5187,7 +5792,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:What’s new and release popup",
@@ -5208,7 +5814,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Saved picks drawer",
@@ -5229,7 +5836,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:NBA Matrix",
@@ -5250,7 +5858,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:NFL Matrix",
@@ -5271,7 +5880,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Player comparison",
@@ -5292,7 +5902,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Post composer",
@@ -5313,7 +5924,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Comments and share",
@@ -5334,7 +5946,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Image and video viewer",
@@ -5355,7 +5968,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Confirmation dialogs",
@@ -5376,7 +5990,8 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   },
   {
     "id": "shared:Empty, loading and error states",
@@ -5397,6 +6012,7 @@
       "states": false,
       "toolAccess": false
     },
-    "evidence": []
+    "evidence": [],
+    "release": null
   }
 ]

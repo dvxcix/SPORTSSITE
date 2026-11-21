@@ -1,0 +1,9 @@
+Release checklist reconciliation — 2026-11-21
+
+The prior count of 53 Review ready plus 10 Approved described visual review history, not a deployment queue. All 63 completed surfaces are present in verified production source 7ff4f13b7bf63bd44fe66ec24807eed711e6292b, deployment dpl_6TgHN9eDwGAik6ZDyUzS3fYoWkTn, on www.slipsurge.com. No completed release is waiting for further visual approval. The owner's rollout authorization remains in effect.
+
+The checklist now separates verified publication from the existing owner-review history. An explicit release ledger records the 63 surface IDs and the production source anchor. The UI and generated text show 63 Live, 1 In progress and 174 Queued. Existing Approved records remain unchanged; no extra approvals were invented. Unknown/unreleased items cannot become Live just because their implementation or visual review is complete.
+
+Queued tracks unfinished overhaul work on existing pages and tools. It does not hide those tools or change their existing visibility, season, membership or access rules. The private design-review route remains private. No database, collectors, jobs, account preferences or feature flags changed.
+
+Validation: 145/145 release-ledger, private-review framework and production source checks passed. TypeScript and focused ESLint passed. Browser verification checks the visible counts, release filter and a recorded production source reference. The release-status correction itself only changes the private tracker and its source records; completed public UI code was already deployed.
