@@ -303,7 +303,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
                 {pollOptions.map((opt, i) => (
                   <div key={i} className="ss-composer-poll-option">
                     <input value={opt} onChange={e => setPollOptions(opts => opts.map((o, j) => j === i ? e.target.value : o))}
-                      placeholder={`Option ${i + 1}`} className="ss-input" />
+                      aria-label={`Poll option ${i + 1}`} placeholder={`Option ${i + 1}`} className="ss-input" />
                     {pollOptions.length > 2 && (
                       <button type="button" onClick={() => setPollOptions(opts => opts.filter((_, j) => j !== i))}
                         className="ss-composer-poll-remove" aria-label={`Remove option ${i + 1}`}>
@@ -318,7 +318,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
                     <Plus size={12} /> Add option
                   </button>
                 )}
-                <div className="ss-composer-poll-duration">
+                <div className="ss-composer-poll-duration" role="group" aria-label="Poll duration">
                   <span>Duration</span>
                   {['1', '6', '24', '48', '72'].map(h => (
                     <button key={h} type="button" aria-pressed={pollDuration === h} onClick={() => setPollDuration(h)}>
@@ -389,6 +389,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
                   type="button"
                   onClick={() => setVisibilityOpen(v => !v)}
                   className="ss-composer-visibility-trigger"
+                  aria-label={`Post audience: ${visibility === 'public' ? 'Public' : 'Followers'}`} aria-expanded={visibilityOpen} aria-haspopup="menu"
                 >
                   {visibility === 'public' ? <Globe size={11} /> : <Users size={11} />}
                   <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
@@ -441,7 +442,7 @@ function ComposerBtn({ icon, label, active, activeColor, activeFg, onClick }: {
   activeColor?: string; activeFg?: string; onClick: () => void
 }) {
   return (
-    <button type="button" onClick={onClick} className="ss-composer-tool" style={{
+    <button type="button" onClick={onClick} aria-label={label} className="ss-composer-tool" style={{
       background: active ? (activeColor ?? 'var(--surface-3)') : undefined,
       color: active ? (activeFg ?? 'var(--text-1)') : undefined,
     }}

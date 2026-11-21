@@ -228,14 +228,14 @@ export default async function PipelineHealthPage() {
 
       {error && <div className="mb-5 flex items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--red)_30%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] p-4 text-sm text-[var(--red)]"><XCircle size={16} /> Health data could not be loaded.</div>}
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="ss-admin-metrics mb-6 grid gap-3 grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Healthy</p><p className="mt-1 text-2xl font-semibold text-[var(--green)]">{healthy}</p></div>
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Waiting upstream</p><p className="mt-1 text-2xl font-semibold text-[var(--gold)]">{deferred}</p></div>
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Needs attention</p><p className="mt-1 text-2xl font-semibold text-[var(--gold)]">{problems}</p></div>
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4"><p className="text-xs text-[var(--text-3)]">Instrumented</p><p className="mt-1 text-2xl font-semibold text-[var(--text-1)]">{TRACKED_PIPELINES.length}</p></div>
       </div>
 
-      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Operational queues">
+      <section className="ss-admin-metrics mb-6 grid gap-3 grid-cols-2 xl:grid-cols-4" aria-label="Operational queues">
         <QueueCard icon={Webhook} label="Webhook failures" value={(failedWebhooks ?? 0) + (processingWebhooks ?? 0)} detail={`${processingWebhooks ?? 0} stalled · ${failedWebhooks ?? 0} failed`} tone={(failedWebhooks ?? 0) + (processingWebhooks ?? 0) > 0 ? 'danger' : 'success'} />
         <QueueCard icon={Bell} label="Push failures, 24h" value={failedPushes ?? 0} detail="Per-device delivery attempts" tone={(failedPushes ?? 0) > 0 ? 'warning' : 'success'} />
         <QueueCard icon={AlertTriangle} label="Review queues" value={(pendingReports ?? 0) + (pendingCreatorApplications ?? 0)} detail={`${pendingReports ?? 0} reports · ${pendingCreatorApplications ?? 0} creators`} href="/admin/reports" tone={(pendingReports ?? 0) > 0 ? 'warning' : 'neutral'} />

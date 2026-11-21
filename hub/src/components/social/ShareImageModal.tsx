@@ -88,11 +88,12 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
       labelledBy="share-pick-title"
       describedBy="share-pick-description"
       backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(8px)' }}
+      panelClassName="ss-share-dialog"
       panelStyle={{ width: 'min(420px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 18, outline: 'none' }}
     >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div><h2 id="share-pick-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Share pick</h2><p id="share-pick-description" className="sr-only">Download or share this pick card.</p></div>
-          <button type="button" data-modal-autofocus aria-label="Close share menu" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+          <button type="button" data-modal-autofocus aria-label="Close share menu" onClick={onClose} style={{ background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer', minWidth: 44, minHeight: 44, borderRadius: 8, border: '1px solid var(--border)', padding: 8 }}><X size={18} /></button>
         </div>
 
         <div style={{
@@ -110,9 +111,10 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
             <SafeImage
               src={imgUrl}
               alt="Pick share preview"
+              loading="eager"
               onLoad={() => setImgLoaded(true)}
-              onError={() => setImgErrored(true)}
-              style={{ width: '100%', display: imgLoaded ? 'block' : 'none' }}
+              onFailure={() => setImgErrored(true)}
+              style={{ width: '100%', display: 'block', opacity: imgLoaded ? 1 : 0 }}
             />
           )}
         </div>

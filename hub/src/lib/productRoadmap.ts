@@ -58,5 +58,6 @@ export const PRODUCT_ROADMAP_PHASES: ProductRoadmapPhase[] = [
 ]
 
 export function roadmapCompletion() {
-  return Math.round(PRODUCT_ROADMAP_PHASES.reduce((sum, phase) => sum + phase.progress, 0) / PRODUCT_ROADMAP_PHASES.length)
+  const rounded = Math.round(PRODUCT_ROADMAP_PHASES.reduce((sum, phase) => sum + phase.progress, 0) / PRODUCT_ROADMAP_PHASES.length)
+  return PRODUCT_ROADMAP_PHASES.every(phase => phase.status === 'complete') ? rounded : Math.min(99, rounded)
 }

@@ -300,7 +300,7 @@ test('resuming after a throttled cutoff hides the board and immediately requests
   const ui=await harness('research','over',null,false,'points','',beforeTip)
   let requests=0
   try {
-    globalThis.fetch=async()=>{requests++;return new Response(null,{status:503})}
+    globalThis.fetch=async input=>{if(String(input).startsWith('/the-paint/board?'))requests++;return new Response(null,{status:503})}
     time+=10000
     await act(async()=>{window.dispatchEvent(new dom.window.Event('focus'));await new Promise(resolve=>setTimeout(resolve,0))})
     assert.equal(ui.byLabel('Analyze Test Player, Boston Celtics'),undefined)

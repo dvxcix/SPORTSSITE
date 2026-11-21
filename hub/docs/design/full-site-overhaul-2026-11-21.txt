@@ -1,0 +1,43 @@
+SlipSurge full-site UI completion
+2026-11-21
+
+Release scope
+The remaining 174 queued entries and the in-progress Court page are implemented: 175 surfaces. The full inventory contains 238 entries, including 63 previously released surfaces. Publication is recorded separately after production verification; implementation alone does not claim Live.
+
+Browser evidence
+151 page routes, 11 NBA workspace tools and 13 shared surfaces were inspected using the actual repository components with isolated illustrative data. Each surface was viewed at desktop 1440×1000 and phone 390×844, in Light and Dark: 700 layout combinations. Screenshots and detailed local receipts are in docs/design/evidence/live and the task visualization directory. The compact, tracked per-entry evidence is full-site-audit-2026-11-21.json.
+
+The pass covers typography, duplicate headings, spacing, contrast, solid popovers, contained tables, readable controls, mobile layouts, keyboard focus and applicable populated/empty/loading/error/recovery states. Shared reduced-motion styles and behavioral tests supplement browser review. This is PC-browser responsive verification, not physical-phone or native-app certification.
+
+Concrete changes
+- NBA: compact game-market cards retain all moneyline/spread/total and Bets/Money data, with an expand control. Improved milestone movement icons/rank context, ladder controls, mobile filters, entity metrics and table/quote spacing. Per-market scores, pregame cutoffs, source provenance and every tool remain intact.
+- Shared controls: solid notification/search surfaces, one Ctrl+K dialog at a time, readable command labels, larger close/actions, full-height saved drawers and correct NBA saved-selection profile links.
+- Media: stories use the common modal focus/scroll system, retain paused progress, respect reduced motion, center correctly on desktop, expose usable mobile navigation/progress controls and offer photo/video retry states. Share previews load eagerly and recover from cached failures. Existing avatar rings and badges remain available.
+- Community: neutral page/card hierarchy; shorter headings; contained group cards; readable forms; in-flow submit controls; named mobile post actions; clearer profile/page/group headers; article and editor spacing; poll controls; separate conversation-pane scrolling and responsive message composers.
+- Workspace: neutral saved-research layouts, NBA note selection and explicit delete/cancel flows that preserve saved markets/private notes.
+- Account/settings: concise forms, stable connected-account callback presentation, readable switches, provider marks, profile controls and mobile fields.
+- Creators/commerce: storefront, offer, marketplace, pricing, studio, analytics and payout layouts; readable metadata and responsive metric grids; improved scheduled-post controls. No payment or commerce settings were changed.
+- Admin: all 51 routes reviewed. Improved field/table containment, table keyboard access, metric grids, import instructions, readable operational labels, concise explanations and banner/update previews. Operational controls were retained. Product roadmap rounding no longer displays 100% while phases remain incomplete.
+- General: consistent legal/info shells, hierarchy, activity, missions, leaderboard, score-center and support states.
+
+MLB scope
+MLB remains hidden/off-season as requested. Its 12 inventory routes, plus the dormant All-Star/research context, were reviewed for their existing empty, unavailable, retired or missing-record boundaries. Populated seasonal MLB charts/research, collectors and operational jobs were not re-enabled or certified. Missing data remains visibly unavailable.
+
+Validation
+- Optimized private build and TypeScript completed successfully.
+- Changed production TS/TSX and new components passed ESLint using the repository's existing suppression baseline; no baseline suppressions were pruned or expanded.
+- NBA suite: 720/720; NBA pregame-freeze suite: 124/124.
+- NFL UI suite: 25/25.
+- Production source suite: 134/134.
+- Shared framework, private isolation, release-ledger, focus/keyboard, conversation scrolling, media recovery, reduced motion, workspace cancellation/retention and saved-player-link tests passed. Refer to the named local test logs for exact runs; overlapping suites are not summed.
+- Older test harnesses were updated for already-released workload/preference dependencies. Rank assertions now validate accessible icon meaning; frozen-board request counting excludes independent outcome requests. Story scroll-lock checks now verify the shared modal implementation, backed by behavior tests.
+
+Operational boundaries
+No migrations, collectors, job replays, membership/access/feature changes, live posts/messages, emails or payment actions were executed for this UI release. Private fixture routes are local-only, use no production credentials, and remain unavailable in Vercel production.
+
+Production receipt
+See src/app/design-review/visual-audit/release-ledger.json and the appended release record. Only a verified deployment marks entries Live. The ten existing owner visual approvals are preserved; no new owner approvals are invented.
+
+Additional release checks: NFL odds suite 84/84; final shared/release/media/keyboard checks 34/34. Remaining sub-40px phone controls identified in the audit were enlarged and rechecked.
+
+Additional narrow-phone checks: eight core flows at 320px, each in Light and Dark, had no page overflow. These supplement the complete 390px matrix; they do not certify every route at 320px.

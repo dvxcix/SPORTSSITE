@@ -34,7 +34,7 @@ export default async function AdminOnlineUsersPage() {
         <h1 className="text-xl font-semibold text-[var(--text-1)]">Recently Active Users</h1>
       </div>
       <p className="text-xs text-[var(--text-3)] mb-6">
-        Sorted by last sign-in. There's no real-time presence tracking (no websocket/heartbeat) — this is "who signed in most recently," not "who has the app open right now." Anyone within {ACTIVE_WINDOW_MIN} minutes is marked active as a rough proxy.
+        Sorted by last sign-in. The active indicator means a sign-in within {ACTIVE_WINDOW_MIN} minutes; it does not indicate who currently has the app open.
       </p>
 
       {bySignIn.length === 0 ? (

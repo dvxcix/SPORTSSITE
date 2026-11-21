@@ -4,7 +4,7 @@ seedReviewSports()
 /* Query-compatible in-memory adapter. No URL, API key or network client exists. */
 class Query {
  filters:Array<(row:any)=>boolean>=[];one=false;limitBy=100;offset=0;operation='read';payload:any;sorts:Array<[string,boolean]>=[]
- constructor(public name:string,public role:ReviewRole='member'){}
+ constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>){}
  select(_columns?:string,options?:any){if(options?.head)this.limitBy=0;return this}
  eq(k:string,v:any){this.filters.push(row=>row[k]===v);return this}
  neq(k:string,v:any){this.filters.push(row=>row[k]!==v);return this}
@@ -36,7 +36,9 @@ class Query {
  update(value:any){this.operation='update';this.payload=value;return this}
  delete(){this.operation='delete';return this}
  async result(){
+  if(this.rolePromise)this.role=await this.rolePromise
   let all=table(this.name)
+  if(this.name==='creator_applications'&&this.role!=='creator')all=[]
   if(this.name==='users')all=all.map(row=>row.id===authUser(this.role)?.id?{...row,...reviewProfile(this.role)}:row)
   let rows=all.filter(row=>this.filters.every(test=>test(row)))
   if(this.operation==='insert'||this.operation==='upsert'){rows=(Array.isArray(this.payload)?this.payload:[this.payload]).map((r:any,i:number)=>({id:r.id??'00000000-0000-4000-8000-'+String(Date.now()+i).slice(-12),created_at:new Date().toISOString(),...r}));table(this.name).push(...rows)}
@@ -53,10 +55,10 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
  const role=reviewRole(options?.cookies),user=authUser(role),session=user?{user,access_token:'design-review-not-a-credential',refresh_token:'design-review-not-a-credential',expires_in:3600,token_type:'bearer'}:null
  const ok=(data:any={})=>Promise.resolve({data,error:null})
  const client:any={
-  from:(name:string)=>new Query(name,role),
+  from:(name:string)=>new Query(name,role,options?.rolePromise),
   rpc:(name:string,_params?:any)=>name==='get_member_mastery'?ok({points:640,level:3,totals:{posts:12,picks:18,wins:11,replies:28,following:8,communities:3,notes:14},missions:[{key:'review-research',title:'Build your research routine',current:3,target:5,period:'daily',points:40},{key:'review-community',title:'Join the conversation',current:2,target:3,period:'weekly',points:60}],achievements:['first_signal','research_routine']}):new Query(name.includes('feed')?'posts':name.includes('notification')?'notifications':name.includes('group')?'groups':'__review_rpc',role),
   auth:{
-   getUser:()=>ok({user}),getSession:()=>ok({session}),getClaims:()=>ok({claims:user?{sub:user.id,aal:'aal2'}:null}),refreshSession:()=>ok({session,user}),
+   getUser:()=>ok({user}),getSession:()=>ok({session}),getUserIdentities:()=>ok({identities:[]}),getClaims:()=>ok({claims:user?{sub:user.id,aal:'aal2'}:null}),refreshSession:()=>ok({session,user}),
    onAuthStateChange:(callback:any)=>{const id=setTimeout(()=>callback('INITIAL_SESSION',session),0);return {data:{subscription:{unsubscribe:()=>clearTimeout(id)}}}},
    signOut:()=>ok(),signInWithPassword:()=>ok({user,session}),signInWithOAuth:()=>ok({url:'/feed'}),signUp:()=>ok({user,session}),
    updateUser:()=>Promise.resolve({data:null,error:{message:'Account credentials are disabled in the private design review.'}}),resetPasswordForEmail:()=>ok(),

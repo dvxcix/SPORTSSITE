@@ -21,7 +21,7 @@ export default async function PagesPage({ searchParams }: { searchParams: Promis
       <CommunityNav />
       <ProductHero icon={<Star size={22} />} eyebrow="Public profiles" title="Pages" description="Follow the teams, athletes, brands, and communities shaping the conversation." actions={user ? <ProductAction href="/pages/create"><Plus size={15} /> Create page</ProductAction> : undefined} />
       <nav className="ss-picks-filters" aria-label="Page categories">{CATEGORIES.map(category => <Link key={category} href={category === 'All' ? '/pages' : `/pages?category=${encodeURIComponent(category)}`} className={activeCategory === category ? 'is-active' : ''} aria-current={activeCategory === category ? 'page' : undefined}>{category}</Link>)}</nav>
-      <ProductSectionHeader title={activeCategory === 'All' ? 'Popular pages' : activeCategory} meta={`${pages?.length ?? 0} results`} />
+      <ProductSectionHeader title={activeCategory === 'All' ? 'Popular pages' : activeCategory} meta={`${pages?.length ?? 0} ${pages?.length === 1 ? 'result' : 'results'}`} />
       {!pages?.length ? (
         <ProductPanel padded className="text-center"><Sparkles className="mx-auto text-[var(--text-3)]" size={28} /><p className="mt-3 font-semibold text-[var(--text-1)]">No pages here yet</p>{user && <Link href="/pages/create" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-fill)] px-4 py-2.5 text-xs font-semibold text-[var(--accent-fg)]"><Plus size={14} /> Create page</Link>}</ProductPanel>
       ) : (

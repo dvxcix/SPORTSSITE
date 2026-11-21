@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Check, Eye, FileText, ImageIcon, Save, Send } from 'lucide-react'
+import { Check, Eye, FileText, ImageIcon, Save, Send } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 
 const CATEGORIES = ['Analysis', 'Picks', 'News', 'Opinion', 'Preview', 'Recap', 'Fantasy', 'Betting Strategy']
@@ -72,7 +72,7 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
   }
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[rgba(var(--line-rgb),0.08)] bg-gradient-to-br from-white/[.045] to-white/[.015] shadow-[0_24px_80px_rgba(0,0,0,.28)]">
+    <div className="ss-article-editor overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
       <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(var(--line-rgb),0.07)] px-4 py-3 sm:px-5">
         <div className="flex rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] p-1" role="tablist" aria-label="Article editor view">
           <button type="button" role="tab" aria-selected={mode === 'write'} onClick={() => setMode('write')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${mode === 'write' ? 'bg-[rgba(var(--contrast-rgb),0.1)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}><FileText size={13}/>Write</button>
@@ -84,9 +84,9 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
       {error && <div role="alert" className="mx-4 mt-4 rounded-xl border border-[color-mix(in_srgb,var(--red)_20%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3 text-sm text-[var(--red)] sm:mx-5">{error}</div>}
 
       {mode === 'write' ? <div className="space-y-4 p-4 sm:p-5">
-        <label className="block"><span className="sr-only">Article title</span><input value={form.title} maxLength={140} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title…" className="w-full border-0 border-b border-[rgba(var(--line-rgb),0.08)] bg-transparent pb-4 text-2xl font-semibold tracking-[-.035em] text-[var(--text-1)] outline-none placeholder:text-[var(--text-3)] focus:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] sm:text-3xl" /></label>
+        <label className="block"><span className="sr-only">Article title</span><input value={form.title} maxLength={140} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title…" className="w-full border-0 border-b border-[rgba(var(--line-rgb),0.08)] bg-transparent pb-4 text-xl font-semibold tracking-[-.02em] text-[var(--text-1)] outline-none placeholder:text-[var(--text-3)] focus:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] sm:text-3xl" /></label>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <label className="ss-flow-field"><span>Category</span><select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="ss-flow-input"><option value="">Choose category</option>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
           <label className="ss-flow-field"><span>Sport</span><select value={form.sport} onChange={e => setForm(f => ({ ...f, sport: e.target.value }))} className="ss-flow-input"><option value="">All sports</option>{['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA'].map(s => <option key={s} value={s}>{s}</option>)}</select></label>
         </div>
@@ -115,11 +115,11 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
 
 function ArticlePreview({ form, readMinutes }: { form: { title: string; excerpt: string; content: string; cover_image: string; category: string; sport: string }; readMinutes: number }) {
   return <article className="min-h-[620px] p-4 sm:p-7">
-    {form.cover_image ? <SafeImage src={form.cover_image} alt="" className="mb-6 h-56 w-full rounded-2xl object-cover" /> : <div className="mb-6 grid h-44 place-items-center rounded-2xl bg-[var(--surface)] text-[color-mix(in_srgb,var(--accent)_35%,transparent)]"><BookOpen size={44}/></div>}
-    <div className="flex flex-wrap gap-2">{[form.category, form.sport].filter(Boolean).map(value => <span key={value} className="rounded-full border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[.14em] text-[var(--accent)]">{value}</span>)}</div>
+    {form.cover_image && <SafeImage src={form.cover_image} alt="" className="mb-6 h-56 w-full rounded-2xl object-cover" />}
+    <div className="flex flex-wrap gap-2">{[form.category, form.sport].filter(Boolean).map(value => <span key={value} className="rounded-full border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold tracking-normal text-[var(--accent)]">{value}</span>)}</div>
     <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-[-.045em] text-[var(--text-1)] sm:text-4xl">{form.title || 'Untitled article'}</h2>
     {form.excerpt && <p className="mt-4 text-base leading-7 text-[var(--text-2)]">{form.excerpt}</p>}
-    <p className="mt-4 text-[12px] font-bold uppercase tracking-[.12em] text-[var(--text-3)]">{readMinutes} min read</p>
+    <p className="mt-4 text-[12px] font-bold tracking-normal text-[var(--text-3)]">{readMinutes} min read</p>
     <div className="mt-7 space-y-4 text-sm leading-7 text-[var(--text-2)]">{form.content ? form.content.split('\n').map((paragraph, index) => paragraph.startsWith('### ') ? <h4 key={index} className="pt-2 text-lg font-semibold text-[var(--text-1)]">{paragraph.slice(4)}</h4> : paragraph.startsWith('## ') ? <h3 key={index} className="pt-3 text-2xl font-semibold text-[var(--text-1)]">{paragraph.slice(3)}</h3> : paragraph.startsWith('# ') ? <h2 key={index} className="pt-4 text-3xl font-semibold text-[var(--text-1)]">{paragraph.slice(2)}</h2> : paragraph.trim() ? <p key={index} className="whitespace-pre-wrap">{paragraph}</p> : <div key={index} className="h-1" />) : <p className="text-[var(--text-3)]">Your article preview will appear here.</p>}</div>
   </article>
 }

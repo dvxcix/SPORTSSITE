@@ -9,7 +9,7 @@ export default function AdminAiSettingsPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">AI Settings</h1>
       <p className="text-xs text-[var(--text-3)] mb-6">
-        AI blog generation uses Claude directly (hub/src/app/api/ai/blog/route.ts) — model and tone are hardcoded in that route right now, not configurable from here. This page is status-only until that's wired to real settings.
+        Status of the article generation service. The API key is managed in Vercel; model settings are managed in the application configuration.
       </p>
 
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]">

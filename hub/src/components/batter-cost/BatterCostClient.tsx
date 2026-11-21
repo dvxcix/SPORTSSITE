@@ -673,7 +673,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
           .batter-cost-filter-summary>div>svg{color:var(--accent);flex:0 0 auto}
           .batter-cost-filter-summary span{font-size:11px;font-weight:850;white-space:nowrap}
           .batter-cost-filter-summary small{overflow:hidden;color:var(--text-4);font-size:9px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
-          .batter-cost-filter-summary button{min-height:34px;border-radius:9px;font-size:10px;font-weight:850}
+          .batter-cost-filter-summary button{min-height:44px;border-radius:8px;font-size:12px;font-weight:600}
           .batter-cost-filter-clear{padding:0 9px;border:1px solid var(--border);background:transparent;color:var(--text-3)}
           .batter-cost-filter-open{display:flex;align-items:center;gap:6px;padding:0 11px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-dim);color:var(--accent)}
           .batter-cost-filter-open b{display:grid;width:18px;height:18px;place-items:center;border-radius:99px;background:var(--accent-fill);color:var(--accent-fg);font-size:9px}

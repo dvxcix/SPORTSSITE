@@ -136,3 +136,14 @@
   .description { font-size: 12px; }
   .dateCell { min-height: 46px; padding-inline: 1px; }
 }
+
+/* Page titles are a compact introduction, separate from the content panels. */
+.hero{padding:0 0 18px;border:0;border-bottom:1px solid var(--border-2);border-radius:0;background:transparent;gap:16px}
+.heroIdentity{gap:12px;align-items:flex-start}.icon{width:40px;height:40px;border-radius:9px}
+.eyebrow{font-size:11px;font-weight:500;margin-bottom:4px}
+.title{font-size:28px;line-height:1.2;font-weight:650;letter-spacing:-.035em}
+.description{max-width:65ch;font-size:13px;line-height:1.5;margin-top:6px}
+.status{letter-spacing:0;text-transform:none;border-color:var(--border);background:var(--surface-2);border-radius:7px;padding:6px 9px}
+.statusDot{display:none}.action{border-radius:8px;font-weight:550}
+@media(max-width:720px){.hero{padding:0 0 14px;border-radius:0;gap:12px}.title{font-size:25px}.heroIdentity{gap:10px}.description{font-size:13px}.actions{width:100%;justify-content:flex-start}.icon{width:36px;height:36px}}
+.status{font-family:inherit;font-size:12px;font-weight:500;line-height:1.4}

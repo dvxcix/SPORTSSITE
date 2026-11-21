@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PageState } from '@/components/layout/PageState'
 import { DailyRecapTable } from '@/components/dugout/DugoutClient'
 
 function todayEt() {
@@ -13,7 +14,7 @@ function addDays(date: string, delta: number) {
 }
 
 const navBtnStyle: React.CSSProperties = {
-  padding: '7px 12px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)',
+  minHeight: 44, minWidth: 44, padding: '7px 12px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)',
   color: 'var(--text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
 }
 
@@ -91,8 +92,8 @@ export function DailyRecapClient() {
         </div>
       </div>
 
-      {error && <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>}
-      {!error && data === null && <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>}
+      {error && <PageState compact kind="error" title="Recap unavailable" message="Choose another date or return when historical data is available." />}
+      {!error && data === null && <PageState compact kind="loading" title="Loading recap" message="Preparing the completed slate." />}
       {!error && data !== null && <div className="min-w-0"><DailyRecapTable data={data} date={date} /></div>}
     </div>
   )

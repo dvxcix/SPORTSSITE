@@ -50,24 +50,24 @@ export default async function AdminUsersPage({
   const emailVerifiedMap = new Map((emailRows ?? []).map(r => [r.id, r.email_verified]))
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="ss-admin-users min-w-0 p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-[var(--text-1)]">Manage Users</h1>
-        <span className="text-sm text-[var(--text-3)]">{users.length} results</span>
+        <span className="text-sm text-[var(--text-3)]">{users.length} {users.length === 1 ? 'result' : 'results'}</span>
       </div>
 
       <TerminateMembershipTool />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative min-w-0 basis-full sm:basis-64 flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
           <form>
             <input name="q" defaultValue={q} placeholder="Search users…"
               className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </form>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Account type">
           {[['', 'All'], ['user', 'Users'], ['creator', 'Creators'], ['admin', 'Admins']].map(([val, label]) => (
             <a key={val} href={val ? `/admin/users?type=${val}` : '/admin/users'}
               className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${type === val || (!type && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
@@ -75,7 +75,7 @@ export default async function AdminUsersPage({
             </a>
           ))}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Membership tier">
           {[['', 'All Tiers'], ['free', 'Free'], ['basic', 'Basic'], ['advanced', 'Advanced'], ['ultimate', 'Ultimate']].map(([val, label]) => (
             <a key={val} href={val ? `/admin/users?tier=${val}` : '/admin/users'}
               className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${tierFilter === val || (!tierFilter && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
@@ -86,7 +86,7 @@ export default async function AdminUsersPage({
       </div>
 
       {/* Table */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
+      <div role="region" tabIndex={0} aria-label="Member accounts, scroll for all columns" className="ss-table-region min-w-0 bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-[var(--border)]">
             <tr className="text-left">

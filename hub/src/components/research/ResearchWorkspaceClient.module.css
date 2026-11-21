@@ -79,3 +79,15 @@
 .windowPicker button{min-width:28px;padding:5px 6px;border:0;border-radius:7px;background:transparent;color:var(--text-3);font-size:12px;font-weight:700;cursor:pointer}
 .windowPicker button[data-active=true]{background:var(--accent-fill);color:var(--accent-fg);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
 @media(max-width:800px),(max-width:1024px) and (any-pointer:coarse){.headerActions{width:100%;flex-wrap:wrap}.windowPicker{order:-1;margin-right:auto}.compareGrid{padding:10px}}
+
+.sidebar,.comparePanel,.libraryPanel,.notesPanel{background:var(--surface);border-color:var(--border-2);border-radius:10px;box-shadow:none}
+.panelHeader{min-height:58px;padding:12px 14px}.panelHeader h2{font-size:15px;font-weight:600;color:var(--text-1)}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none}
+.libraryPanel:first-child{min-height:0}.libraryPanel:first-child .emptyTray,.emptyTray{min-height:150px;padding:20px;background:none}
+.createRow{grid-template-columns:minmax(0,1fr) 44px}.createRow input,.createRow button,.headerActions button,.noteComposer button{min-height:44px;border-radius:8px;font-size:13px;font-weight:550}
+.createRow input,.search input,.noteComposer input,.noteComposer textarea,.noteComposer select{font-size:16px}
+.search{min-height:44px;border-radius:8px}
+.windowPicker button{min-width:44px;min-height:44px}
+.noteTop button,.remove{min-width:44px;min-height:44px}
+.message{box-shadow:none;border-radius:8px}
+@media(max-width:800px){.libraryPanel .panelHeader{flex-direction:row;flex-wrap:wrap;align-items:center}.libraryPanel .panelHeader .search{flex-basis:100%}.workspaceList:has(>.emptyMini:only-child){padding-block:4px}.notesPanel{scroll-margin-top:80px}}

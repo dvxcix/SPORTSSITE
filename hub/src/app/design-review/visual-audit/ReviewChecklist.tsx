@@ -14,8 +14,9 @@ export function ReviewChecklist({ items }: { items:ReviewItem[] }) {
   const groups=[...new Set(items.map(item=>item.group))]
   const visible=items.filter(item=>(group==='All areas'||item.group===group)&&(status==='All statuses'||releaseStatus(item)===status)&&`${item.label} ${item.route??''} ${item.notes}`.toLowerCase().includes(query.toLowerCase()))
   const count=(value:string)=>items.filter(item=>releaseStatus(item)===value).length
+  const allLive=items.every(item=>releaseStatus(item)==='Live')
   return <div className={styles.page}>
-    <header className={styles.header}><div><h1>UI overhaul status</h1><p>Completed changes are live. Queued items still need overhaul work; their existing tools remain available.</p></div><Link href="/design-review">All screens <ArrowUpRight size={15}/></Link></header>
+    <header className={styles.header}><div><h1>UI overhaul status</h1><p>{allLive?'Every checklist item is published. Expand an entry to see its scope and verification evidence.':'Completed implementation is ready for release; Live entries have verified production evidence.'}</p></div><Link href="/design-review">All screens <ArrowUpRight size={15}/></Link></header>
     <div className={styles.progress}><span><strong>{count('Live')}</strong> Live</span><span><strong>{count('In progress')}</strong> In progress</span><span><strong>{count('Queued')}</strong> Queued</span>{count('Ready to deploy')>0&&<span><strong>{count('Ready to deploy')}</strong> Ready to deploy</span>}<span>Production status · previews use illustrative data</span></div>
     <section className={styles.batch} aria-label="Research review batches"><div><h2>Research review</h2><p>The Sideline, NFL tools and player drawers; The Court, Odds Boards and member identity.</p></div><nav><Link href="/the-sideline">The Sideline <ArrowUpRight size={15}/></Link><Link href="/the-paint?view=research">The Court <ArrowUpRight size={15}/></Link><Link href="/the-paint?view=odds-board">NBA Odds Board <ArrowUpRight size={15}/></Link><Link href="/the-sideline?view=odds-board">NFL Odds Board <ArrowUpRight size={15}/></Link><Link href="/design-review/identity">Avatars & badges <ArrowUpRight size={15}/></Link></nav></section>
     <div className={styles.filters}><label><Search size={16}/><input aria-label="Find a review item" placeholder="Find a page, tool or popup" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="Review area" value={group} onChange={e=>setGroup(e.target.value)}><option>All areas</option>{groups.map(name=><option key={name}>{name}</option>)}</select><select aria-label="Release status" value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Live','Ready to deploy','In progress','Queued'].map(name=><option key={name}>{name}</option>)}</select></div>
@@ -28,6 +29,6 @@ export function ReviewChecklist({ items }: { items:ReviewItem[] }) {
       {item.route&&!item.route.includes('[')?<Link href={item.route}>Open for review <ArrowUpRight size={14}/></Link>:<small>{item.route??'Shared component'} · representative records are selected when this item is reviewed</small>}
     </div></details></li>)}</ol>
     {!visible.length&&<p className={styles.count}>No matching review items.</p>}
-    <footer className={styles.footer}>A shared style change does not mark every page complete. MLB stays in the inventory while it remains off-season. Existing tools, feature flags and access rules remain in place.</footer>
+    <footer className={styles.footer}>Each entry has its own review evidence. MLB entries cover their existing off-season, empty and unavailable states; populated seasonal research was not re-enabled or certified. Existing tools, feature flags and access rules remain in place.</footer>
   </div>
 }

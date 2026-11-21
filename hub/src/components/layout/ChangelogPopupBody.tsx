@@ -22,10 +22,10 @@ export function ChangelogPopupBody({ title, description, how_to_use, screenshot_
     <>
       <div style={{ position: 'sticky', top: 0, padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase' }}>{'What’s New'}</span>
-          {audienceLabel && <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase', border: '1px solid color-mix(in srgb, var(--accent) 42%, transparent)', borderRadius: 999, padding: '2px 6px', background: 'var(--accent-dim)' }}>{audienceLabel}</span>}
+          <span style={{ fontSize: 12, fontWeight: 550, letterSpacing: 0, color: 'var(--accent)', textTransform: 'none' }}>{'What’s New'}</span>
+          {audienceLabel && <span style={{ fontSize: 11, fontWeight: 550, letterSpacing: 0, color: 'var(--accent)', textTransform: 'none', border: '1px solid color-mix(in srgb, var(--accent) 42%, transparent)', borderRadius: 999, padding: '2px 6px', background: 'var(--accent-dim)' }}>{audienceLabel}</span>}
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{title || 'Untitled entry'}</div>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-1)' }}>{title || 'Untitled entry'}</h2>
       </div>
 
       {screenshot_urls.length > 0 && (
@@ -42,8 +42,8 @@ export function ChangelogPopupBody({ title, description, how_to_use, screenshot_
         </p>
         {how_to_use && (
           <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>How to use it</div>
-            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{how_to_use}</p>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'none', letterSpacing: 0, marginBottom: 4 }}>How to use it</div>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{how_to_use}</p>
           </div>
         )}
       </div>
@@ -52,7 +52,7 @@ export function ChangelogPopupBody({ title, description, how_to_use, screenshot_
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{queuePosition ?? ''}</span>
         <button
           onClick={onDismiss}
-          style={{ minHeight: 40, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--accent-fill)', borderRadius: 9, padding: '10px 16px', background: 'var(--accent-fill)', color: 'var(--accent-fg)' }}
+          style={{ minHeight: 44, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--accent-fill)', borderRadius: 9, padding: '10px 16px', background: 'var(--accent-fill)', color: 'var(--accent-fg)' }}
         >
           {dismissLabel}
         </button>

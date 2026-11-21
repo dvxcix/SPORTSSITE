@@ -111,9 +111,8 @@ export function ResearchHubClient({ initialDate, initialGameKey }: {
       <header className={styles.hero}>
         <div className={styles.heroMark}><FlaskConical size={25} /><i /></div>
         <div className={styles.heroCopy}>
-          <span>ULTIMATE RESEARCH</span>
           <h1>Research Workspace</h1>
-          <p>One game, every pitch, contact shape, mechanics score, market and movement in one connected workspace.</p>
+          <p>Matchups, markets and saved research.</p>
         </div>
         <div className={styles.sessionState}>
           <CalendarDays size={15} />

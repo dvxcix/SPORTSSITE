@@ -98,10 +98,11 @@ export function MyPicksButton() {
         onClose={() => setOpen(false)}
         labelledBy="my-picks-panel-title"
         backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        panelClassName="ss-saved-research-drawer"
         panelStyle={{
           width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
           borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-          animation: 'slideIn 0.2s ease-out', outline: 'none',
+          animation: 'slideIn var(--motion-normal,200ms) ease-out', outline: 'none',
         }}
       >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
@@ -110,7 +111,7 @@ export function MyPicksButton() {
                 <ClipboardList size={16} /> My Picks
               </span>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {view === 'active' ? 'active' : 'in history'}</span>
-              <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             <nav aria-label="Pick status" style={{ display: 'flex', gap: 12, padding: 12 }}>
               {(['active', 'history'] as const).map(tab => <button key={tab} type="button" aria-pressed={view === tab} onClick={() => { setView(tab); setLimit(50) }} style={{ minHeight: 44, padding: '8px 18px', color: view === tab ? 'var(--accent)' : 'var(--text-2)' }}>{tab === 'active' ? 'Active Picks' : 'History'}</button>)}
@@ -121,7 +122,7 @@ export function MyPicksButton() {
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>
               ) : items.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
-                  {view === 'active' ? 'No active picks.' : 'No picks in your history yet.'}<br />Post a straight bet or parlay from your Watchlist to track it here.
+                  {view === 'active' ? 'No active picks yet.' : 'No picks in your history yet.'}<br />Post a straight bet or parlay from your Watchlist to track it here.
                 </div>
               ) : (
                 <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>

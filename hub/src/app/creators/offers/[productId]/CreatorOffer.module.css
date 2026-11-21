@@ -10,3 +10,8 @@
 .price strong{font-weight:600;font-variant-numeric:tabular-nums}.price small{font-size:12px}
 .card aside>button,.memberAccess{min-height:46px;font-size:13px;font-weight:600}
 .secure b,.secure small,.card aside>p{font-size:12px;line-height:1.5}
+
+/* Keep commerce readable in the same application shell. */
+.page{background:var(--bg)}.hero{border-radius:10px;box-shadow:none;background:var(--surface);padding:24px}.hero h1{font-size:32px;line-height:1.15;letter-spacing:-.025em}.hero>div>span,.eyebrow,.kicker{letter-spacing:0;text-transform:none}.card,.panel,.section,.locked{border-radius:10px;box-shadow:none}.actions>a,.actions>button,.productActions>button{min-height:44px;border-radius:8px;box-shadow:none}.stats{gap:10px}@media(max-width:767px){.hero{padding:18px}.hero h1{font-size:27px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats>div{padding:14px}.hero p{font-size:14px}}
+
+.page{min-height:0;align-content:start;padding-top:24px}.card{border-color:var(--border-2)}.summary{padding:24px}.summary h1{font-size:34px;line-height:1.12;letter-spacing:-.025em}.creator{margin:18px 0}.card aside{padding:24px;background:var(--surface-2)}.card aside>span{color:var(--text-2);font-family:inherit;letter-spacing:0}.secure{border-radius:8px}.back{min-height:44px}@media(max-width:767px){.summary,.card aside{padding:18px}.summary h1{font-size:27px}.summary>p,.summary li{font-size:13px;line-height:1.55}}

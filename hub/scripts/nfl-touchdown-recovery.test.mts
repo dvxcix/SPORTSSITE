@@ -1,3 +1,4 @@
+import { DEFAULT_RESEARCH_PREFERENCES } from '../src/lib/researchPreferences.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
@@ -56,6 +57,7 @@ test('cold touchdown failure keeps the server board available with unknown total
     '@/lib/nflSample': { defaultNflSample: () => 'current', parseNflSample: (value: string) => value, nflSampleReference: () => ({ label: 'Current' }) },
     '@/lib/nflAccess': gate, '@/lib/supabase/authErrors': { AuthTemporarilyUnavailableError: Error },
     '@/lib/publicResearchPreview': { readPreviewContext: () => null },
+    '@/lib/researchPreferencesServer': { readResearchPreferences: async () => DEFAULT_RESEARCH_PREFERENCES },
     './SidelineBoardClient': { SidelineBoardClient: ({ touchdowns }: { touchdowns: NflTouchdownEvent[] | null }) => { boardFeed = touchdowns; return createElement('article', null, 'Current odds +220', createElement(NflTouchdownTracker, { events: touchdowns, onJumpToGame: noop })) } },
     './SidelineResearchClient': { SidelineResearchClient: noop }, './SidelineNavigation': { SidelineNavigation: noop }, './SidelineMatchupLab': { SidelineMatchupLab: noop },
     './NflLastSeen': { NflLastSeen: noop },

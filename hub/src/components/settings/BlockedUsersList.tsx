@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { unblockUser } from '@/lib/blocks'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { UserRoundX } from 'lucide-react'
 
 interface BlockedUser { id: string; username: string; display_name?: string; avatar_url?: string; blocked_at: string }
 
@@ -26,7 +27,7 @@ export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUse
   if (blocked.length === 0) {
     return (
       <div className="ss-settings-card py-16 text-center">
-        <p className="text-4xl mb-3">🚫</p>
+        <UserRoundX size={24} className="mx-auto mb-3 text-[var(--text-3)]" aria-hidden="true"/>
         <p className="text-[var(--text-2)] font-medium">You haven't blocked anyone</p>
       </div>
     )

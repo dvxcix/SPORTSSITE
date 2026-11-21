@@ -1,5 +1,7 @@
 'use client'
 
+import { scrollMessagePane } from '@/lib/messageScroll'
+
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -79,7 +81,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   }
 
   useEffect(() => {
-    if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (atBottom) scrollMessagePane(scrollRef.current, undefined, 'smooth')
   }, [atBottom, messages])
 
   useEffect(() => {
@@ -87,7 +89,8 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   }, [atBottom, markRead, messages])
 
   useEffect(() => {
-    requestAnimationFrame(() => bottomRef.current?.scrollIntoView())
+    const frame = requestAnimationFrame(() => scrollMessagePane(scrollRef.current))
+    return () => cancelAnimationFrame(frame)
     void supabase.from('notifications').update({ read: true })
       .eq('user_id', currentUserId).eq('actor_id', partner.id).eq('type', 'message').eq('read', false)
   }, [currentUserId, partner.id, supabase])
@@ -127,7 +130,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   }
 
   function jumpToLatest() {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollMessagePane(scrollRef.current, undefined, 'smooth')
     atBottomRef.current = true
     setAtBottom(true)
     setUnseenCount(0)
@@ -135,7 +138,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
 
   function jumpToMessage(messageId: string) {
     setToolMode(null)
-    requestAnimationFrame(() => document.getElementById(`message-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+    requestAnimationFrame(() => scrollMessagePane(scrollRef.current, document.getElementById(`message-${messageId}`), 'smooth'))
   }
 
   async function togglePin(messageId: string) {
@@ -256,7 +259,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
         <Link href={`/profile/${partner.username}`} className="ss-dm-partner">
           <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} ringStyle={partner.avatar_ring_style} ringColor={partner.avatar_ring_color} />
           <div>
-            <p>{partner.display_name || partner.username}</p>
+            <h1>{partner.display_name || partner.username}</h1>
             <span>@{partner.username}</span>
           </div>
         </Link>
@@ -284,7 +287,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
                 <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} ringStyle={partner.avatar_ring_style} ringColor={partner.avatar_ring_color} />
               )}
               <div className="ss-dm-bubble-wrap">
-                {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
+                {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => scrollMessagePane(scrollRef.current, document.getElementById(`message-${replyTarget.id}`), 'smooth')}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
                 {m.forwarded_from_id ? <span className="ss-dm-forwarded"><Forward size={10}/> Forwarded</span> : null}<div className={`ss-dm-bubble ${m.is_deleted ? 'is-deleted' : ''}`}>{m.is_deleted ? 'Message deleted' : <><LinkifiedText text={m.content || ''} />{m.edited_at ? <small className="ss-chat-edited">edited</small> : null}</>}</div>
                 {!m.is_deleted && m.media_urls?.[0] && <SafeImage src={m.media_urls[0]} alt="" className="ss-dm-media"/>}
                 <MessageReactionBar reactions={reactions[m.id]} disabled={m.is_deleted} onToggle={emoji => void toggleReaction(m.id, emoji)}/>

@@ -39,7 +39,7 @@ export default function RenewalShapeForm() {
         <label className="grid gap-2">Expected plan ID
           <input required autoComplete="off" value={expectedPlanId} onChange={event => setExpectedPlanId(event.target.value)} className="rounded border border-[var(--border-2)] bg-[var(--bg)] px-3 py-2" />
         </label>
-        <button type="submit" disabled={busy} className="w-fit rounded bg-[var(--surface-2)] px-4 py-2 font-medium text-[var(--accent-fg)] disabled:opacity-50">{busy ? 'Checking…' : 'Check membership'}</button>
+        <button type="submit" disabled={busy} className="w-fit rounded bg-[var(--accent-fill)] px-4 py-2 font-medium text-[var(--accent-fg)] disabled:opacity-50">{busy ? 'Checking…' : 'Check membership'}</button>
       </form>
       {message && <p role="alert" className="mt-5 text-[var(--red)]">{message}</p>}
       {result && <dl aria-label="Verification results" className="mt-6 grid gap-2">{Object.entries(result).map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-[var(--border)] py-2"><dt>{label.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</dt><dd>{value ? 'Confirmed' : 'Not confirmed'}</dd></div>)}</dl>}

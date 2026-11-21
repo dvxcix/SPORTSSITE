@@ -11,3 +11,6 @@
 .tiers h3{font-weight:600}.tiers p,.tiers li{font-size:13px;line-height:1.55}
 .tiers article>a{min-height:44px;font-size:13px;font-weight:600}
 .content aside p,.communities b,.communities small{font-size:12px;line-height:1.5}
+
+/* Keep commerce readable in the same application shell. */
+.page{background:var(--bg)}.hero{border-radius:10px;box-shadow:none;background:var(--surface);padding:24px}.hero h1{font-size:32px;line-height:1.15;letter-spacing:-.025em}.hero>div>span,.eyebrow,.kicker{letter-spacing:0;text-transform:none}.card,.panel,.section,.locked{border-radius:10px;box-shadow:none}.actions>a,.actions>button,.productActions>button{min-height:44px;border-radius:8px;box-shadow:none}.stats{gap:10px}@media(max-width:767px){.hero{padding:18px}.hero h1{font-size:27px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats>div{padding:14px}.hero p{font-size:14px}}

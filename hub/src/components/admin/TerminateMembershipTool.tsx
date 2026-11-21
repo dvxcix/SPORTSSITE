@@ -37,17 +37,18 @@ export function TerminateMembershipTool() {
 
   return (
     <div className="bg-[var(--surface)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl p-4 mb-4 space-y-3">
-      <p className="text-xs font-bold text-[var(--red)] uppercase tracking-wider">Force-terminate a Whop membership</p>
+      <p className="text-sm font-semibold text-[var(--red)]">Terminate a Whop membership</p>
       <p className="text-xs text-[var(--text-3)]">
         Cancels immediately (not at period end) by raw Whop membership ID — works against either business, and
         does not require the membership to be linked to a SlipSurge account. For ToS violations, fraud, or chargebacks.
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <input
           value={membershipId}
           onChange={e => { setMembershipId(e.target.value); setConfirming(false); setResult('') }}
           placeholder="mem_xxxxxxxxxxxxxx"
-          className="flex-1 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--red)_50%,transparent)] font-mono"
+          aria-label="Whop membership ID"
+          className="min-w-0 min-h-11 flex-1 basis-48 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--red)_50%,transparent)] font-mono"
         />
         {!confirming ? (
           <button

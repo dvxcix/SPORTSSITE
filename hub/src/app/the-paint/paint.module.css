@@ -544,3 +544,48 @@
 
 /* Keep absolute screen-reader labels inside their table's scroll boundary. */
 .tableScroll,.researchScroll,.oddsScroll{position:relative}
+
+/* Exact-target market ranks stay readable without a sentence on every row. */
+.peerRank{display:inline-flex;align-items:center;gap:7px;justify-self:start;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);font-variant-numeric:tabular-nums}
+.peerRank span+span{padding-left:7px;border-left:1px solid var(--border);color:var(--text-2)}
+.ladderTable td[data-best=true]{background:color-mix(in srgb,var(--accent) 7%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 22%,var(--border))}
+
+/* Comparison rows keep the quote and its action on one row at phone sizes. */
+@media(max-width:767px){
+ .header>.oddsMode button{min-height:44px}
+ .oddsTable .bookQuote{display:grid;grid-template-columns:minmax(96px,1fr) 44px;gap:8px;align-items:center;min-width:152px}
+ .oddsTable :is(th,td){padding:10px 8px}
+ .oddsTable .priceQuote{align-items:flex-start;text-align:left}
+ .oddsTable .priceComparison{display:flex;flex-wrap:wrap;gap:3px 6px;white-space:normal}
+ .oddsTable .playerButton{min-height:64px}
+ .oddsTable .pickActions button{height:44px;width:44px}
+}
+
+.movement[data-market-format=milestone] .movementNumbers{grid-template-columns:1fr 1fr}
+@media(max-width:767px){
+ .movement>.movementTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:10px}
+ .movement>.movementTools>.segment{grid-column:1/-1;justify-self:start}
+ .movement>.movementTools>:is(select,label,[data-paint-entity-select]){width:100%;min-width:0;max-width:100%}
+ .movement>.movementTools select,.movement>.movementTools>label select{min-height:44px;font-size:16px;padding-left:10px}
+ .movement>.movementTools>[data-paint-entity-select] button{width:100%;min-height:44px}
+}
+
+.firstBasketOdds>.sectionHeading{margin:0 0 14px;min-height:0;padding:0}
+.firstBasketOdds .ladderTable td[data-best=true]{background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.firstBasketQuote .bestPrice{font-size:10px;color:var(--accent)}
+@media(max-width:767px){.firstBasketOdds>.movementTools>input{grid-column:1/-1;min-width:0;width:100%;min-height:44px;font-size:16px}.firstBasketOdds>.movementTools>label:nth-child(3){grid-column:1/-1}.firstBasketOdds .firstBasketQuote{padding-block:6px;gap:6px}}
+
+/* Research filters use the same two-column phone grid as the player drawer. */
+.researchTool>.toolHeading{margin:0 0 14px;padding:0;min-height:0}
+@media(max-width:767px){
+ .researchTool>.toolControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
+ .researchTool>.toolControls>*{min-width:0;max-width:100%;width:100%;margin:0}
+ .researchTool>.toolControls>label{display:grid;gap:5px;align-items:start;font-size:11px;color:var(--text-2)}
+ .researchTool>.toolControls :is(select,input),.researchTool>.toolControls>:is(select,button){min-width:0;width:100%;min-height:44px;font-size:16px}
+ .researchTool>.toolControls>.search{grid-column:1/-1}
+ .researchTool>.toolControls>[data-paint-entity-select] button{min-height:44px;width:100%}
+ .researchTool>.toolControls>.segment{grid-column:1/-1;justify-self:start;width:auto}
+ .researchTool>.toolControls>.segment button{min-height:44px}
+}
+
+@media(max-width:767px){.ladderToolbar .segment button,.movementTools .segment button,.drawer .segment button{min-height:44px}}

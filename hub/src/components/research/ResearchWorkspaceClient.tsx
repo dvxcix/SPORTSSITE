@@ -10,6 +10,7 @@ import styles from './ResearchWorkspaceClient.module.css'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { SlateEdgeEvidenceCard } from '@/components/social/SlateEdgeEvidenceCard'
 import { isSlateEdgeEvidence, type SlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type SavedItem = {
   id: string; sport: string; game_pk: string | null; game_date: string | null; mlb_id: number | null
@@ -26,7 +27,8 @@ function displayOdds(value: number | null) { return value == null ? '—' : valu
 export function ResearchWorkspaceClient({ userId, showMlb, initialItems, initialMlbMatrices, initialNflMatrices, initialWorkspaces, initialNotes, initialEvidenceItems }: {
   userId: string; showMlb: boolean; initialItems: SavedItem[]; initialMlbMatrices: Matrix[]; initialNflMatrices: Matrix[]; initialWorkspaces: Workspace[]; initialNotes: Note[]; initialEvidenceItems: EvidenceItem[]
 }) {
-  const db = createClient()
+  const db = useMemo(() => createClient(), [])
+  const { confirm } = useFeedback()
   const visibleItemIds = new Set(initialItems.map(item => item.id))
   const visibleSelection = (workspace: Workspace | undefined) => (workspace?.watchlist_item_ids ?? []).filter(id => visibleItemIds.has(id)).slice(0, 4)
   const selectionBaseline = useRef(new Map(initialWorkspaces.map(workspace => [workspace.id, visibleSelection(workspace)])))
@@ -97,6 +99,7 @@ export function ResearchWorkspaceClient({ userId, showMlb, initialItems, initial
   }
   async function deleteWorkspace() {
     if (!active) return
+    if (!await confirm({ title: 'Delete workspace?', message: `Delete “${active.name}” and its workspace board? Your saved markets and private notes will remain.`, confirmLabel: 'Delete workspace', tone: 'warning' })) return
     setBusy('delete'); setMessage('')
     const { error } = await db.from('research_workspaces').delete().eq('id', active.id).eq('user_id', userId)
     setBusy('')
@@ -135,6 +138,7 @@ export function ResearchWorkspaceClient({ userId, showMlb, initialItems, initial
     setEditingNoteId(''); setMessage('Note updated.')
   }
   async function deleteNote(note: Note) {
+    if (!await confirm({ title: 'Delete note?', message: `Permanently delete “${note.title}”?`, confirmLabel: 'Delete note', tone: 'warning' })) return
     const before = notes; setNotes(current => current.filter(item => item.id !== note.id))
     const { error } = await db.from('research_notes').delete().eq('id', note.id).eq('user_id', userId)
     if (error) { setNotes(before); setMessage('Note could not be deleted.') }
@@ -167,7 +171,7 @@ export function ResearchWorkspaceClient({ userId, showMlb, initialItems, initial
     <aside className={styles.notesPanel}>
       {active ? <WorkspaceCollaboration workspace={active} userId={userId} /> : null}
       <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Private</span><h2>Notebook</h2></div><FileText size={18}/></div>
-      <div className={styles.noteComposer}><input value={noteTitle} onChange={event => setNoteTitle(event.target.value)} placeholder="Note title" maxLength={100} aria-label="Note title"/><textarea value={noteBody} onChange={event => setNoteBody(event.target.value)} placeholder="Capture the read…" maxLength={10000} aria-label="Note body"/><div><select value={noteSport} onChange={event => setNoteSport(event.target.value)} aria-label="Note sport"><option value="">Any sport</option>{showMlb && <option value="MLB">MLB</option>}<option value="NFL">NFL</option></select><button type="button" onClick={() => void addNote()} disabled={!noteTitle.trim() || busy === 'note'}>{busy === 'note' ? <LoaderCircle className={styles.spin} size={15}/> : <Plus size={15}/>}Add</button></div></div>
+      <div className={styles.noteComposer}><input value={noteTitle} onChange={event => setNoteTitle(event.target.value)} placeholder="Note title" maxLength={100} aria-label="Note title"/><textarea value={noteBody} onChange={event => setNoteBody(event.target.value)} placeholder="Capture the read…" maxLength={10000} aria-label="Note body"/><div><select value={noteSport} onChange={event => setNoteSport(event.target.value)} aria-label="Note sport"><option value="">Any sport</option>{showMlb && <option value="MLB">MLB</option>}<option value="NFL">NFL</option><option value="NBA">NBA</option></select><button type="button" onClick={() => void addNote()} disabled={!noteTitle.trim() || busy === 'note'}>{busy === 'note' ? <LoaderCircle className={styles.spin} size={15}/> : <Plus size={15}/>}Add</button></div></div>
       <div className={styles.notesList}>{notes.map(note => <article className={styles.noteCard} key={note.id}>{editingNoteId === note.id ? <div className={styles.noteEditor}><input value={editTitle} onChange={event => setEditTitle(event.target.value)} maxLength={100} aria-label="Edit note title"/><textarea value={editBody} onChange={event => setEditBody(event.target.value)} maxLength={10000} aria-label="Edit note body"/><div><button type="button" onClick={() => setEditingNoteId('')}>Cancel</button><button type="button" onClick={() => void saveNote(note)} disabled={!editTitle.trim() || busy === `edit-${note.id}`}>{busy === `edit-${note.id}` ? <LoaderCircle className={styles.spin} size={14}/> : <Save size={14}/>}Save</button></div></div> : <><div className={styles.noteTop}><div><strong>{note.title}</strong>{note.sport && <span>{note.sport}</span>}</div><div><button type="button" onClick={() => editNote(note)} aria-label="Edit note"><Pencil size={14}/></button><button type="button" onClick={() => void togglePin(note)} className={note.pinned ? styles.pinned : ''} aria-label={note.pinned ? 'Unpin note' : 'Pin note'}><Pin size={14}/></button><button type="button" onClick={() => void deleteNote(note)} aria-label="Delete note"><Trash2 size={14}/></button></div></div>{note.body && <p><LinkifiedText text={note.body} /></p>}<time>{new Date(note.updated_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</time></>}</article>)}{!notes.length && <div className={styles.emptyMini}>Your private research notes will stay here.</div>}</div>
       {message && <div className={styles.message} role="status">{message}</div>}
     </aside>

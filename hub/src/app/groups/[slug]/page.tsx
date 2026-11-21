@@ -148,7 +148,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     <div className={styles.page}>
       <CommunityNav />
       <div className={styles.community}>
-      <div className={styles.banner}>
+      <div className={styles.banner} data-has-banner={Boolean(group.banner_url)}>
         <SafeImage src={group.banner_url} alt="" className={styles.bannerImage} />
         {group.sport && (
           <div className={styles.sportBadge}>

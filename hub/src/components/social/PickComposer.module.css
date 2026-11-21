@@ -3,3 +3,6 @@
 @media(prefers-reduced-motion:reduce){.summary button{transition:none}.summary button:hover{transform:none}}
 .sportTabs button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .sportLogo{width:20px;height:20px;object-fit:contain;flex-shrink:0}
+
+.composer{border-radius:10px;box-shadow:none;background:var(--surface)}.header{background:var(--surface-2)}.playerMenu{background:var(--surface);box-shadow:var(--shadow-overlay);backdrop-filter:none;border-radius:8px}.sportTabs button,.steps button,.playerMenu button,.selectedPlayer button{min-height:44px}.selectedPlayer button{min-width:44px}.selectedPlayer{grid-template-columns:34px minmax(0,1fr) 18px 44px}.field input,.field select,.playerSearch>input{min-height:44px;border-radius:8px}.field>span{letter-spacing:0;text-transform:none;font-weight:550}.summary button{border-radius:8px;box-shadow:none}@media(max-width:767px){.field input,.field select,.playerSearch>input{font-size:16px}.marketGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:767px){.marketGrid{grid-template-columns:minmax(0,1fr)}}

@@ -32,3 +32,5 @@
 .primaryButton,.secondaryButton,.toolCard{transition:background-color .18s ease,border-color .18s ease}
 .primaryButton{box-shadow:none}.primaryButton:hover,.secondaryButton:hover,.toolCard:hover{transform:none}
 .sport,.sportSelected{min-height:44px}.form textarea,.form input{font-size:16px}
+
+.page{background:var(--bg)}.hero{gap:32px;padding:36px 0}.heroGlow{display:none}.hero h1{font-size:clamp(30px,4vw,46px);line-height:1.12;letter-spacing:-.03em}.lede{font-size:16px;line-height:1.6}.eyebrow,.kicker,.sectionHeading>span,.formHeading>span,.formState>span,.whopCopy>span{letter-spacing:0;text-transform:none}.section,.applicationSection{padding-top:32px;padding-bottom:32px}.sectionHeading h2{font-size:28px}.primaryButton,.secondaryButton{border-radius:8px;box-shadow:none}.previewShell{border-radius:12px;box-shadow:none}.previewShell:before{display:none}@media(max-width:767px){.hero{padding:24px 0;gap:24px}.hero h1{font-size:32px}.hero,.section,.applicationSection{width:calc(100% - 24px)}.lede{font-size:15px}.sectionHeading h2{font-size:25px}}

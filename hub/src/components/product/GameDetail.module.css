@@ -23,3 +23,5 @@
   .tabs { top:calc(var(--mobile-header-height,64px) + 4px); }
   .tab { min-height:46px; padding-inline:13px; }
 }
+
+.scoreboard,.cta,.tabs,.content{box-shadow:none;border-color:var(--border-2);border-radius:10px}.tabs{border-radius:10px 10px 0 0;background:var(--surface);backdrop-filter:none}.content{border-radius:0 0 10px 10px}.tab{font-weight:550;font-size:13px}.tabActive:after{box-shadow:none}.back{display:inline-flex;align-items:center;min-height:44px}.cta{padding:14px;background:var(--surface)}.ctaButton{min-height:44px;border-radius:8px;box-shadow:none}

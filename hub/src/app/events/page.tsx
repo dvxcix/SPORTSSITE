@@ -29,7 +29,7 @@ export default async function EventsPage() {
         description="Watch parties, live rooms, meetups, and game-day gatherings."
         actions={user ? <ProductAction href="/events/create"><Plus size={15} /> Create event</ProductAction> : undefined}
       />
-      <ProductSectionHeader title="Upcoming" meta={`${upcoming?.length ?? 0} events`} />
+      <ProductSectionHeader title="Upcoming" meta={`${upcoming?.length ?? 0} ${upcoming?.length === 1 ? 'event' : 'events'}`} />
       {(upcoming?.length ?? 0) > 0 ? (
         <div className="grid gap-3 lg:grid-cols-2">{(upcoming ?? []).map((event: any) => <EventCard key={event.id} event={event} />)}</div>
       ) : (

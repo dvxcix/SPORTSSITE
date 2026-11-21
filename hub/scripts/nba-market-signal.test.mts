@@ -1,3 +1,4 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
 import * as workload from '../src/lib/nbaWorkload.ts'
 import * as seasonDisplay from '../src/lib/nbaSeasonDisplay.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
@@ -176,7 +177,7 @@ test('unchanged successful polling times do not generate new research archive id
 
 async function compiled(path:string,imports:Record<string,unknown>,clock:DateConstructor=Date){
   imports = { '@/lib/nbaSeasonDisplay': seasonDisplay, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, ...imports }
-  imports = { '@/lib/nbaWorkload': workload, ...imports }
+  imports = { '@/lib/nbaScoreWorkload': scoreWorkload, '@/lib/nbaWorkload': workload, ...imports }
   const source=await readFile(new URL(path,import.meta.url),'utf8')
   const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}})
   const target={exports:{} as Record<string,unknown>}
@@ -218,7 +219,7 @@ test('Score and Slate APIs return identical exact-quote scores; a warm slate can
   const gameData={refreshPaintBoardPrices:async(value:unknown)=>value,getPaintGame:async()=>board.game,getPaintBoard:async()=>{boardReads++;return board},getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true})}
   const common={'@/lib/nbaMarketSelection':await import('../src/lib/nbaMarketSelection.ts'),'next/server':response,'@/lib/paintAccess':{requirePaintAccess:async()=>({error:null})},'@/lib/nbaPaintData':gameData,
     '@/lib/nbaOddsMode':{...oddsMode,nbaPregameOpen:(game:PaintBoard['game'])=>oddsMode.nbaPregameOpen(game,Date.parse(now)),nbaLiveOpen:(game:PaintBoard['game'])=>oddsMode.nbaLiveOpen(game,Date.parse(now))},
-    '@/lib/nbaResearchResources':{getNbaResearchDefense:async()=>{if(defenseFailed)throw new Error('Defense unavailable');return defense},getNbaResearchModels:async()=>[],getNbaResearchMarketContext:async()=>{contextReads++;return {...nbaBuildMarketContext(input()),asOf:now}}},
+    '@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>({rows:[],fetchedAt:null}),getNbaResearchDefense:async()=>{if(defenseFailed)throw new Error('Defense unavailable');return defense},getNbaResearchModels:async()=>[],getNbaResearchMarketContext:async()=>{contextReads++;return {...nbaBuildMarketContext(input()),asOf:now}}},
     '@/lib/nbaResearchBundle':{resolveNbaResearchBundle:async(board:PaintBoard,_mode:string,load:(board:PaintBoard)=>Promise<unknown>)=>({board,value:await load(board)})},
     '@/lib/nbaSlateHeat':await import('../src/lib/nbaSlateHeat.ts'),
     '@/lib/nbaSlateFreezeData':{captureNbaSlatePools:async()=>({full:1,quarter:0}),getNbaSlateRanks:async()=>({ranks:new Map([['123:434',0]]),unavailable:[],observedAt:{},heatDomains:{}}),getNbaLegacySlateRows:async()=>{throw new Error('Pregame test must not read legacy results')}},
@@ -292,7 +293,7 @@ test('research snapshot stores verification provenance but deduplicates unchange
     return {data:name==='claim_nba_source'?true:0,error:null}
   }}
   const route=await compiled('../src/app/api/cron/nba-research-snapshot/route.ts',{'node:crypto':await import('node:crypto'),'next/server':{NextResponse:{json:(body:unknown,options?:{status?:number})=>({body,status:options?.status??200})}},'@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:board.game.date,games:[board.game],complete:true}),getPaintBoard:async()=>board,refreshPaintBoardPrices:async(value:unknown)=>value},
-    '@/lib/nbaResearchResources':{getNbaResearchDefense:async()=>({ready:false,profiles:[]}),getNbaResearchModels:async()=>[],getNbaResearchMarketContext:async()=>context,warmNbaResearchResources:async()=>[{resource:'models',status:'captured'}]},
+    '@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>({rows:[],fetchedAt:null}),getNbaResearchDefense:async()=>({ready:false,profiles:[]}),getNbaResearchModels:async()=>[],getNbaResearchMarketContext:async()=>context,warmNbaResearchResources:async()=>[{resource:'models',status:'captured'}]},
     '@/lib/nbaPregameResearchData':{readNbaPregameResearch:async()=>null},'@/lib/nbaSlateFreezeData':{captureNbaSlatePools:async()=>({full:1,quarter:0})},
     '@/lib/nbaOddsMode':{...oddsMode,nbaPregameOpen:(game:PaintBoard['game'])=>oddsMode.nbaPregameOpen(game,SnapshotClock.now())},
     '@/lib/nbaMarketSignal':{nbaMarketSupportIdentity},'@/lib/nbaResearchIdentity':{ensureNbaResearchPlayers:async()=>{}},'@/lib/nbaIntelligence':intelligence,'@/lib/nbaModel':model,'@/lib/nbaMovement':movement,'@/lib/nbaSharedCache':{nbaSharedCache:async(_key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>({value:await load()})},'@/lib/nbaPaint':paint},SnapshotClock as unknown as DateConstructor)

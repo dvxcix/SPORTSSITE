@@ -164,7 +164,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
-      <div className="overflow-hidden rounded-[28px] border border-[rgba(var(--line-rgb),0.09)] bg-[var(--surface)]">
+      <div className="ss-member-profile overflow-hidden rounded-xl border border-[rgba(var(--line-rgb),0.09)] bg-[var(--surface)]">
       {/* Banner */}
       <div className="h-44 sm:h-60 bg-[var(--surface-2)] relative overflow-hidden">
         {profile.banner_url && <SafeImage src={profile.banner_url} alt="" className="h-full w-full object-cover" />}
@@ -172,11 +172,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
       {/* Profile header */}
       <div className="px-4 pb-5 sm:px-7 sm:pb-7">
-        <div className="relative z-10 flex items-end justify-between -mt-12 sm:-mt-16 mb-5">
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-3 -mt-12 sm:-mt-16 mb-5">
           <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={112}
             tone={profile.tier === 'ultimate' ? 'ultimate' : profile.tier === 'advanced' ? 'advanced' : profile.account_type === 'creator' ? 'creator' : 'default'}
             ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="ss-member-profile-actions flex basis-full sm:basis-auto flex-wrap items-center justify-start sm:justify-end gap-2">
             <ProfileActions username={profile.username} />
             {isOwnProfile ? (
             <a href="/settings/profile"
@@ -184,7 +184,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               Edit Profile
             </a>
           ) : authUser ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(var(--line-rgb),0.1)] bg-[var(--surface-2)] px-3 text-xs font-semibold text-[var(--text-2)] transition hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-[var(--text-1)]"><MessageCircle size={14}/> Message</Link>
               <FollowButton
                 currentUserId={authUser.id}
@@ -215,7 +215,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
             {profile.is_verified && <BadgeCheck size={18} className="text-[var(--accent)]" aria-label="Verified" />}
             {isCreatorProfile && (
-              <span className="text-xs font-semibold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>
+              <span className="text-xs font-medium text-[var(--gold)] bg-[var(--gold-dim)] px-2 py-1 rounded-md border border-[var(--border)]">Creator</span>
             )}
           </div>
           <p className="text-sm text-[var(--text-3)]">@{profile.username}</p>

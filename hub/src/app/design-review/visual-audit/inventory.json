@@ -6,20 +6,23 @@
     "label": "About",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/about"
+    ],
     "release": null
   },
   {
@@ -29,20 +32,23 @@
     "label": "Activity",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/activity"
+    ],
     "release": null
   },
   {
@@ -52,20 +58,23 @@
     "label": "Admin · Ads",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/ads"
+    ],
     "release": null
   },
   {
@@ -75,20 +84,23 @@
     "label": "Admin · Audit",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/audit"
+    ],
     "release": null
   },
   {
@@ -98,20 +110,23 @@
     "label": "Admin · Badges",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/badges"
+    ],
     "release": null
   },
   {
@@ -121,20 +136,23 @@
     "label": "Admin · Browserbase",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/browserbase"
+    ],
     "release": null
   },
   {
@@ -144,20 +162,23 @@
     "label": "Admin · Changelog",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/changelog"
+    ],
     "release": null
   },
   {
@@ -167,20 +188,23 @@
     "label": "Admin · Contact Recap",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/contact-recap"
+    ],
     "release": null
   },
   {
@@ -190,20 +214,23 @@
     "label": "Admin · Content · Blogs",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/blogs"
+    ],
     "release": null
   },
   {
@@ -213,20 +240,23 @@
     "label": "Admin · Content · Posts",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/posts"
+    ],
     "release": null
   },
   {
@@ -236,20 +266,23 @@
     "label": "Admin · Content · Reports",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/reports"
+    ],
     "release": null
   },
   {
@@ -259,20 +292,23 @@
     "label": "Admin · Content · Stories",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/stories"
+    ],
     "release": null
   },
   {
@@ -282,20 +318,23 @@
     "label": "Admin · Creators",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/creators"
+    ],
     "release": null
   },
   {
@@ -305,20 +344,23 @@
     "label": "Admin · Design System",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/design-system"
+    ],
     "release": null
   },
   {
@@ -328,20 +370,23 @@
     "label": "Admin · Discord · Compose",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord/compose"
+    ],
     "release": null
   },
   {
@@ -351,20 +396,23 @@
     "label": "Admin · Discord",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord"
+    ],
     "release": null
   },
   {
@@ -374,20 +422,23 @@
     "label": "Admin · Emojis",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/emojis"
+    ],
     "release": null
   },
   {
@@ -397,20 +448,23 @@
     "label": "Admin · Events",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/events"
+    ],
     "release": null
   },
   {
@@ -420,20 +474,23 @@
     "label": "Admin · Fanduel Import",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/fanduel-import"
+    ],
     "release": null
   },
   {
@@ -443,20 +500,23 @@
     "label": "Admin · Forum",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/forum"
+    ],
     "release": null
   },
   {
@@ -466,20 +526,23 @@
     "label": "Admin · Groups",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/groups"
+    ],
     "release": null
   },
   {
@@ -489,20 +552,23 @@
     "label": "Admin · Hr Intelligence",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/hr-intelligence"
+    ],
     "release": null
   },
   {
@@ -512,20 +578,23 @@
     "label": "Admin · Jobs",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/jobs"
+    ],
     "release": null
   },
   {
@@ -535,20 +604,23 @@
     "label": "Admin · Live",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/live"
+    ],
     "release": null
   },
   {
@@ -558,20 +630,23 @@
     "label": "Admin · Market Dna",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/market-dna"
+    ],
     "release": null
   },
   {
@@ -581,20 +656,23 @@
     "label": "Admin · Marketplace",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/marketplace"
+    ],
     "release": null
   },
   {
@@ -604,20 +682,23 @@
     "label": "Admin · Matrix Backtest",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/matrix-backtest"
+    ],
     "release": null
   },
   {
@@ -627,20 +708,23 @@
     "label": "Admin · Mgm Import",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/mgm-import"
+    ],
     "release": null
   },
   {
@@ -650,20 +734,23 @@
     "label": "Admin · Mlb Archive",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/mlb-archive"
+    ],
     "release": null
   },
   {
@@ -673,20 +760,23 @@
     "label": "Admin · Monetization",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/monetization"
+    ],
     "release": null
   },
   {
@@ -696,20 +786,23 @@
     "label": "Admin · Nfl Access",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/nfl-access"
+    ],
     "release": null
   },
   {
@@ -719,20 +812,23 @@
     "label": "Admin · Notifications",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/notifications"
+    ],
     "release": null
   },
   {
@@ -742,20 +838,23 @@
     "label": "Admin",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin"
+    ],
     "release": null
   },
   {
@@ -765,20 +864,23 @@
     "label": "Admin · Pages",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/pages"
+    ],
     "release": null
   },
   {
@@ -788,20 +890,23 @@
     "label": "Admin · Pikkit Import",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/pikkit-import"
+    ],
     "release": null
   },
   {
@@ -811,20 +916,23 @@
     "label": "Admin · Pipeline Health",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/pipeline-health"
+    ],
     "release": null
   },
   {
@@ -834,20 +942,23 @@
     "label": "Admin · Product Audit",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/product-audit"
+    ],
     "release": null
   },
   {
@@ -857,20 +968,23 @@
     "label": "Admin · Reports",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/reports"
+    ],
     "release": null
   },
   {
@@ -880,20 +994,23 @@
     "label": "Admin · Settings · Ai",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/ai"
+    ],
     "release": null
   },
   {
@@ -903,20 +1020,23 @@
     "label": "Admin · Settings · Custom Code",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/custom-code"
+    ],
     "release": null
   },
   {
@@ -926,20 +1046,23 @@
     "label": "Admin · Settings · Email",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/email"
+    ],
     "release": null
   },
   {
@@ -949,20 +1072,23 @@
     "label": "Admin · Settings · Features",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/features"
+    ],
     "release": null
   },
   {
@@ -972,20 +1098,23 @@
     "label": "Admin · Settings · General",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/general"
+    ],
     "release": null
   },
   {
@@ -995,20 +1124,23 @@
     "label": "Admin · Settings · Payments",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/payments"
+    ],
     "release": null
   },
   {
@@ -1018,20 +1150,23 @@
     "label": "Admin · Settings · Social Login",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/social-login"
+    ],
     "release": null
   },
   {
@@ -1041,20 +1176,23 @@
     "label": "Admin · Site Banner",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/site-banner"
+    ],
     "release": null
   },
   {
@@ -1064,20 +1202,23 @@
     "label": "Admin · Social Platforms",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/social-platforms"
+    ],
     "release": null
   },
   {
@@ -1087,20 +1228,23 @@
     "label": "Admin · Users · Banned",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/banned"
+    ],
     "release": null
   },
   {
@@ -1110,20 +1254,23 @@
     "label": "Admin · Users · Deletions",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/deletions"
+    ],
     "release": null
   },
   {
@@ -1133,20 +1280,23 @@
     "label": "Admin · Users · Online",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/online"
+    ],
     "release": null
   },
   {
@@ -1156,20 +1306,23 @@
     "label": "Admin · Users",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/users"
+    ],
     "release": null
   },
   {
@@ -1179,20 +1332,23 @@
     "label": "Admin · Users · Verify",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/verify"
+    ],
     "release": null
   },
   {
@@ -1202,20 +1358,23 @@
     "label": "Admin · Whop Renewal Shape",
     "group": "Admin",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/admin/whop-renewal-shape"
+    ],
     "release": null
   },
   {
@@ -1225,20 +1384,23 @@
     "label": "Allstar2026",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/allstar2026"
+    ],
     "release": null
   },
   {
@@ -1248,20 +1410,23 @@
     "label": "Auth · Desktop · Complete",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/complete"
+    ],
     "release": null
   },
   {
@@ -1271,20 +1436,23 @@
     "label": "Auth · Desktop · Start",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/start"
+    ],
     "release": null
   },
   {
@@ -1294,20 +1462,23 @@
     "label": "Auth · Forgot Password",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/forgot-password"
+    ],
     "release": null
   },
   {
@@ -1317,20 +1488,23 @@
     "label": "Auth · Login",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/login"
+    ],
     "release": null
   },
   {
@@ -1340,20 +1514,23 @@
     "label": "Auth · Register",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/register"
+    ],
     "release": null
   },
   {
@@ -1363,20 +1540,23 @@
     "label": "Auth · Reset Password",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/reset-password"
+    ],
     "release": null
   },
   {
@@ -1386,20 +1566,23 @@
     "label": "Auth · Whop · Complete",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/auth/whop/complete"
+    ],
     "release": null
   },
   {
@@ -1409,20 +1592,23 @@
     "label": "Batter Cost",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/batter-cost"
+    ],
     "release": null
   },
   {
@@ -1432,20 +1618,23 @@
     "label": "Blog · Slug",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog/[slug]"
+    ],
     "release": null
   },
   {
@@ -1455,20 +1644,23 @@
     "label": "Blog · Create · Ai",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog/create/ai"
+    ],
     "release": null
   },
   {
@@ -1478,20 +1670,23 @@
     "label": "Blog · Create",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog/create"
+    ],
     "release": null
   },
   {
@@ -1501,20 +1696,23 @@
     "label": "Blog · Edit · Id",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog/edit/[id]"
+    ],
     "release": null
   },
   {
@@ -1524,20 +1722,23 @@
     "label": "Blog · My",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog/my"
+    ],
     "release": null
   },
   {
@@ -1547,20 +1748,23 @@
     "label": "Blog",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/blog"
+    ],
     "release": null
   },
   {
@@ -1570,20 +1774,23 @@
     "label": "Bookmarks",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/bookmarks"
+    ],
     "release": null
   },
   {
@@ -1593,20 +1800,23 @@
     "label": "Channels · Slug",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/channels/[slug]"
+    ],
     "release": null
   },
   {
@@ -1616,20 +1826,23 @@
     "label": "Channels",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/channels"
+    ],
     "release": null
   },
   {
@@ -1639,20 +1852,23 @@
     "label": "Community",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/community"
+    ],
     "release": null
   },
   {
@@ -1662,20 +1878,23 @@
     "label": "Creators · Username",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/[username]"
+    ],
     "release": null
   },
   {
@@ -1685,20 +1904,23 @@
     "label": "Creators · Apply",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/apply"
+    ],
     "release": null
   },
   {
@@ -1708,20 +1930,23 @@
     "label": "Creators · Offers · ProductId",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/offers/[productId]"
+    ],
     "release": null
   },
   {
@@ -1731,20 +1956,23 @@
     "label": "Creators",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators"
+    ],
     "release": null
   },
   {
@@ -1754,20 +1982,23 @@
     "label": "Creators · Payouts",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/payouts"
+    ],
     "release": null
   },
   {
@@ -1777,20 +2008,23 @@
     "label": "Creators · Studio",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/studio"
+    ],
     "release": null
   },
   {
@@ -1800,20 +2034,23 @@
     "label": "Daily Recap",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/daily-recap"
+    ],
     "release": null
   },
   {
@@ -1823,20 +2060,23 @@
     "label": "Dugout",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/dugout"
+    ],
     "release": null
   },
   {
@@ -1846,20 +2086,23 @@
     "label": "Events · Id",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/events/[id]"
+    ],
     "release": null
   },
   {
@@ -1869,20 +2112,23 @@
     "label": "Events · Create",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/events/create"
+    ],
     "release": null
   },
   {
@@ -1892,20 +2138,23 @@
     "label": "Events",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/events"
+    ],
     "release": null
   },
   {
@@ -1915,20 +2164,23 @@
     "label": "Explore",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/explore"
+    ],
     "release": null
   },
   {
@@ -1938,20 +2190,23 @@
     "label": "Faq",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/faq"
+    ],
     "release": null
   },
   {
@@ -1961,20 +2216,23 @@
     "label": "Feed",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/feed"
+    ],
     "release": null
   },
   {
@@ -1984,20 +2242,23 @@
     "label": "Forum · Category",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum/[category]"
+    ],
     "release": null
   },
   {
@@ -2007,20 +2268,23 @@
     "label": "Forum · New",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum/new"
+    ],
     "release": null
   },
   {
@@ -2030,20 +2294,23 @@
     "label": "Forum",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum"
+    ],
     "release": null
   },
   {
@@ -2053,20 +2320,23 @@
     "label": "Forum · Thread · Id",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum/thread/[id]"
+    ],
     "release": null
   },
   {
@@ -2076,20 +2346,23 @@
     "label": "Groups · Slug",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]"
+    ],
     "release": null
   },
   {
@@ -2099,20 +2372,23 @@
     "label": "Groups · Slug · Settings",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]/settings"
+    ],
     "release": null
   },
   {
@@ -2122,20 +2398,23 @@
     "label": "Groups · Create",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups/create"
+    ],
     "release": null
   },
   {
@@ -2145,20 +2424,23 @@
     "label": "Groups",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups"
+    ],
     "release": null
   },
   {
@@ -2168,20 +2450,23 @@
     "label": "Hashtag · Tag",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/hashtag/[tag]"
+    ],
     "release": null
   },
   {
@@ -2222,20 +2507,23 @@
     "label": "Leaderboard",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/leaderboard"
+    ],
     "release": null
   },
   {
@@ -2245,20 +2533,23 @@
     "label": "Marketplace · Id",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/[id]"
+    ],
     "release": null
   },
   {
@@ -2268,20 +2559,23 @@
     "label": "Marketplace",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/marketplace"
+    ],
     "release": null
   },
   {
@@ -2291,20 +2585,23 @@
     "label": "Marketplace · Sell",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/sell"
+    ],
     "release": null
   },
   {
@@ -2314,20 +2611,23 @@
     "label": "Messages · Username",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/messages/[username]"
+    ],
     "release": null
   },
   {
@@ -2337,20 +2637,23 @@
     "label": "Messages · Group · Id",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/messages/group/[id]"
+    ],
     "release": null
   },
   {
@@ -2360,20 +2663,23 @@
     "label": "Messages · New",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/messages/new"
+    ],
     "release": null
   },
   {
@@ -2383,20 +2689,23 @@
     "label": "Messages",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/messages"
+    ],
     "release": null
   },
   {
@@ -2406,20 +2715,23 @@
     "label": "Missions",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/missions"
+    ],
     "release": null
   },
   {
@@ -2429,20 +2741,23 @@
     "label": "Mlb · Teams · Id",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/mlb/teams/[id]"
+    ],
     "release": null
   },
   {
@@ -2452,20 +2767,23 @@
     "label": "Nba",
     "group": "NBA",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. /nba remains an alias to The Court; canonical workspace styling was reviewed in both themes.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba"
+    ],
     "release": null
   },
   {
@@ -2475,20 +2793,23 @@
     "label": "Nba · Players · Id",
     "group": "NBA",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba/players/[id]"
+    ],
     "release": null
   },
   {
@@ -2498,20 +2819,23 @@
     "label": "Nba · Teams · Id",
     "group": "NBA",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba/teams/[id]"
+    ],
     "release": null
   },
   {
@@ -2587,20 +2911,23 @@
     "label": "Notifications",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/notifications"
+    ],
     "release": null
   },
   {
@@ -2610,20 +2937,23 @@
     "label": "Odds Terminal",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/odds-terminal"
+    ],
     "release": null
   },
   {
@@ -2633,20 +2963,23 @@
     "label": "Onboarding",
     "group": "Account access",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the applicable sign-in, recovery, onboarding or callback state. No account or credential changes submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/onboarding"
+    ],
     "release": null
   },
   {
@@ -2656,20 +2989,23 @@
     "label": "Home",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/"
+    ],
     "release": null
   },
   {
@@ -2679,20 +3015,23 @@
     "label": "Pages · Slug",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]"
+    ],
     "release": null
   },
   {
@@ -2702,20 +3041,23 @@
     "label": "Pages · Slug · Settings",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]/settings"
+    ],
     "release": null
   },
   {
@@ -2725,20 +3067,23 @@
     "label": "Pages · Create",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pages/create"
+    ],
     "release": null
   },
   {
@@ -2748,20 +3093,23 @@
     "label": "Pages",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pages"
+    ],
     "release": null
   },
   {
@@ -2771,20 +3119,23 @@
     "label": "Picks",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/picks"
+    ],
     "release": null
   },
   {
@@ -2794,20 +3145,23 @@
     "label": "Pitcher Report",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pitcher-report"
+    ],
     "release": null
   },
   {
@@ -2817,20 +3171,23 @@
     "label": "Players · Id",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified. This rendered state has no interactive main-content control; shared shell keyboard behavior was checked separately.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/players/[id]"
+    ],
     "release": null
   },
   {
@@ -2840,20 +3197,23 @@
     "label": "Posts · Id",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/posts/[id]"
+    ],
     "release": null
   },
   {
@@ -2863,20 +3223,23 @@
     "label": "Preview · Sport",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/preview/[sport]"
+    ],
     "release": null
   },
   {
@@ -2886,20 +3249,23 @@
     "label": "Pricing",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pricing"
+    ],
     "release": null
   },
   {
@@ -2909,20 +3275,23 @@
     "label": "Privacy",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/privacy"
+    ],
     "release": null
   },
   {
@@ -2932,20 +3301,23 @@
     "label": "Pro",
     "group": "Creators & commerce",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/pro"
+    ],
     "release": null
   },
   {
@@ -2955,20 +3327,23 @@
     "label": "Profile · Username",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]"
+    ],
     "release": null
   },
   {
@@ -2978,20 +3353,23 @@
     "label": "Research",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/research"
+    ],
     "release": null
   },
   {
@@ -3001,20 +3379,23 @@
     "label": "Responsible Gambling",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/responsible-gambling"
+    ],
     "release": null
   },
   {
@@ -3024,20 +3405,23 @@
     "label": "Scores",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/scores"
+    ],
     "release": null
   },
   {
@@ -3047,20 +3431,23 @@
     "label": "Search",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/search"
+    ],
     "release": null
   },
   {
@@ -3070,20 +3457,23 @@
     "label": "Settings · Account",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/account"
+    ],
     "release": null
   },
   {
@@ -3093,20 +3483,23 @@
     "label": "Settings · Blocked",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked"
+    ],
     "release": null
   },
   {
@@ -3116,20 +3509,23 @@
     "label": "Settings · Connections",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/connections"
+    ],
     "release": null
   },
   {
@@ -3139,20 +3535,23 @@
     "label": "Settings · Interests",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/interests"
+    ],
     "release": null
   },
   {
@@ -3162,20 +3561,23 @@
     "label": "Settings · Membership",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/membership"
+    ],
     "release": null
   },
   {
@@ -3185,20 +3587,23 @@
     "label": "Settings · Notifications",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/notifications"
+    ],
     "release": null
   },
   {
@@ -3208,20 +3613,23 @@
     "label": "Settings",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings"
+    ],
     "release": null
   },
   {
@@ -3231,20 +3639,23 @@
     "label": "Settings · Privacy",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/privacy"
+    ],
     "release": null
   },
   {
@@ -3254,20 +3665,23 @@
     "label": "Settings · Profile",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile"
+    ],
     "release": null
   },
   {
@@ -3308,20 +3722,23 @@
     "label": "Settings · Security",
     "group": "Settings",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/security"
+    ],
     "release": null
   },
   {
@@ -3331,20 +3748,23 @@
     "label": "Slate Breakdown",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/slate-breakdown"
+    ],
     "release": null
   },
   {
@@ -3354,20 +3774,23 @@
     "label": "Sports · Sport · GameId",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/sports/[sport]/[gameId]"
+    ],
     "release": null
   },
   {
@@ -3377,20 +3800,23 @@
     "label": "Sports",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/sports"
+    ],
     "release": null
   },
   {
@@ -3400,20 +3826,23 @@
     "label": "Spray Charts",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/spray-charts"
+    ],
     "release": null
   },
   {
@@ -3423,20 +3852,23 @@
     "label": "Stories · Create",
     "group": "Community",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/stories/create"
+    ],
     "release": null
   },
   {
@@ -3446,20 +3878,23 @@
     "label": "Support",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/support"
+    ],
     "release": null
   },
   {
@@ -3469,20 +3904,23 @@
     "label": "Synergy",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/synergy"
+    ],
     "release": null
   },
   {
@@ -3492,20 +3930,23 @@
     "label": "Terms",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/terms"
+    ],
     "release": null
   },
   {
@@ -3515,21 +3956,22 @@
     "label": "The Paint",
     "group": "NBA",
     "kind": "Page",
-    "status": "In progress",
-    "batch": null,
-    "notes": "The Court board, Odds Board and all six player sections are approved for rollout. The other 15 NBA workspaces require their individual visual review. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-game-markets-release-2026-11-21.txt"
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/the-paint"
     ],
     "release": null
   },
@@ -3540,20 +3982,23 @@
     "label": "The Public",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/the-public"
+    ],
     "release": null
   },
   {
@@ -3596,20 +4041,23 @@
     "label": "Weather Lab",
     "group": "MLB · off-season",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Off-season scope: polished and reviewed the existing empty, unavailable, retired or missing-record boundary. MLB stays hidden; populated seasonal research and collectors were not re-enabled or certified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/weather-lab"
+    ],
     "release": null
   },
   {
@@ -3619,20 +4067,23 @@
     "label": "Workspace",
     "group": "General",
     "kind": "Page",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#route:/workspace"
+    ],
     "release": null
   },
   {
@@ -3710,20 +4161,23 @@
     "label": "NBA · Odds comparison",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:odds"
+    ],
     "release": null
   },
   {
@@ -3732,20 +4186,23 @@
     "label": "NBA · Ladders",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:ladders"
+    ],
     "release": null
   },
   {
@@ -3754,20 +4211,23 @@
     "label": "NBA · Market Story",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:movement"
+    ],
     "release": null
   },
   {
@@ -3776,20 +4236,23 @@
     "label": "NBA · First basket",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:first-basket"
+    ],
     "release": null
   },
   {
@@ -3798,20 +4261,23 @@
     "label": "NBA · Cheatsheets",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:cheatsheets"
+    ],
     "release": null
   },
   {
@@ -3850,20 +4316,23 @@
     "label": "NBA · Slate Edge",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:slate"
+    ],
     "release": null
   },
   {
@@ -3902,20 +4371,23 @@
     "label": "NBA · Cross-market",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:divergence"
+    ],
     "release": null
   },
   {
@@ -3954,20 +4426,23 @@
     "label": "NBA · Player trends",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:usage"
+    ],
     "release": null
   },
   {
@@ -3976,20 +4451,23 @@
     "label": "NBA · Game tracking",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:tracking"
+    ],
     "release": null
   },
   {
@@ -3998,20 +4476,23 @@
     "label": "NBA · Matchup Lab",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:matchup"
+    ],
     "release": null
   },
   {
@@ -4020,21 +4501,22 @@
     "label": "NBA · Availability",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged.",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
     "evidence": [
-      "docs/operations/nba-board-accuracy-2026-11-20.txt"
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#nba:availability"
     ],
     "release": null
   },
@@ -5735,20 +6217,23 @@
     "label": "Account menu",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Bottom-sidebar account access on desktop and top-bar access on mobile. Menu fits both themes; keyboard dismissal restores the opener.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Account menu"
+    ],
     "release": null
   },
   {
@@ -5757,20 +6242,23 @@
     "label": "Global search",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Ctrl+K closes top-bar suggestions, opens one focused command dialog, and finds The Court. Empty results and Escape tested.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Global search"
+    ],
     "release": null
   },
   {
@@ -5779,20 +6267,23 @@
     "label": "Notifications panel",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "All/Mentions states and dismissal/close controls reviewed. Final dismiss buttons measure 44px in both themes, with solid popover surfaces and Escape dismissal.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Notifications panel"
+    ],
     "release": null
   },
   {
@@ -5801,20 +6292,23 @@
     "label": "What’s new and release popup",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Update history drawer and admin full-screen member popup preview reviewed in all four layouts. Admin title/body/audience/active/screenshot controls retained; no release entry saved or deleted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:What’s new and release popup"
+    ],
     "release": null
   },
   {
@@ -5823,20 +6317,23 @@
     "label": "Saved picks drawer",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer"
+    ],
     "release": null
   },
   {
@@ -5845,20 +6342,23 @@
     "label": "NBA Matrix",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Library, import, community and Classic/Pipeline editors reviewed. Final controls measure at least 44px high; keyboard close and local draft controls verified without saving.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:NBA Matrix"
+    ],
     "release": null
   },
   {
@@ -5867,20 +6367,23 @@
     "label": "NFL Matrix",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Library, import, community and Classic/Pipeline editors reviewed. Final controls measure 44px or greater in all layouts; no saved matrix changed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:NFL Matrix"
+    ],
     "release": null
   },
   {
@@ -5889,20 +6392,23 @@
     "label": "Player comparison",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Two players selected and the side-by-side statistics table opened in all four layouts. Mobile containment and keyboard dismissal verified.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Player comparison"
+    ],
     "release": null
   },
   {
@@ -5911,20 +6417,23 @@
     "label": "Post composer",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "All four modes, NFL/NBA game and player selection, market/book and reversible draft leg verified. Phone selects use full width and 16px text. Nothing submitted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Post composer"
+    ],
     "release": null
   },
   {
@@ -5933,20 +6442,23 @@
     "label": "Comments and share",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Comments expanded; pick sharing preview loaded in every layout. Dialog focus, Escape, 44px actions and error recovery verified. No content posted or shared externally.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share"
+    ],
     "release": null
   },
   {
@@ -5955,20 +6467,23 @@
     "label": "Image and video viewer",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Centered photo viewer and visible 44px progress controls verified. Video, text contrast, pause/resume, navigation and Escape verified with browser and reduced-motion/error-retry tests.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Image and video viewer"
+    ],
     "release": null
   },
   {
@@ -5977,20 +6492,23 @@
     "label": "Confirmation dialogs",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Workspace deletion presents a confirmation with preserved-market context. Cancel keeps the workspace; no data deleted.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Confirmation dialogs"
+    ],
     "release": null
   },
   {
@@ -5999,20 +6517,23 @@
     "label": "Empty, loading and error states",
     "group": "Shared components",
     "kind": "Shared surface",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "site-completion-2026-11-21",
+    "notes": "Research retry/loading/unavailable boundary, empty ranking/history/search results, signed-out recovery and missing-record states reviewed. Unavailable fixture data remains visibly unavailable.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": [],
+    "evidence": [
+      "docs/design/full-site-overhaul-2026-11-21.txt",
+      "docs/design/full-site-audit-2026-11-21.json#shared:Empty, loading and error states"
+    ],
     "release": null
   }
 ]

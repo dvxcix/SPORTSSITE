@@ -11,11 +11,14 @@ const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://www.slipsu
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
 const { createRoot } = await import('react-dom/client')
 const calls: Array<Record<string, unknown>> = []
+const confirmations: Array<Record<string, unknown>> = []
+Object.assign(globalThis, { workspaceConfirm: async (options: Record<string, unknown>) => { confirmations.push(options); return false } })
 Object.assign(globalThis, { mlbWorkspaceFixture: { client: {
   rpc: async (_name: string, args: Record<string, unknown>) => { calls.push(args); return { error: null } },
   from: () => ({ insert: (values: Record<string, unknown>) => ({ select: () => ({ single: async () => ({ data: { ...values, id: 'new-workspace', description: '', created_at: '', updated_at: '' }, error: null }) }) }) }),
 } } })
 const stubs: Record<string, string> = {
+  '@/components/ui/FeedbackProvider': 'export const useFeedback=()=>({confirm:globalThis.workspaceConfirm})',
   '@/lib/supabase/client': 'export const createClient=()=>globalThis.mlbWorkspaceFixture.client',
   '@/components/sports/PlayerAvatar': 'export const PlayerAvatar=()=>null',
   './WorkspaceCollaboration': 'export const WorkspaceCollaboration=()=>null',
@@ -57,6 +60,23 @@ test('creating and saving a workspace does not copy hidden MLB matrices from the
 })
 const compiled = { exports: {} as { ResearchWorkspaceClient: ComponentType<Record<string, unknown>> } }
 new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, compiled, compiled.exports)
+
+test('cancelling workspace and note deletion preserves both records without a database call', async () => {
+  confirmations.length = 0; calls.length = 0
+  const workspace = { id: 'w1', user_id: 'owner', name: 'Saved research', sport: 'MULTI', watchlist_item_ids: [], mlb_matrix_ids: [], nfl_matrix_ids: [] }
+  const note = { id: 'n1', user_id: 'owner', title: 'Rotation notes', body: 'Keep this note', sport: 'NBA', pinned: false, updated_at: '2026-11-20T12:00:00Z' }
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  try {
+    await act(async () => root.render(createElement(compiled.exports.ResearchWorkspaceClient, { userId: 'owner', showMlb: false, initialItems: [], initialMlbMatrices: [], initialNflMatrices: [], initialWorkspaces: [workspace], initialNotes: [note], initialEvidenceItems: [] })))
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Delete workspace"]')!.click())
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Delete note"]')!.click())
+    assert.deepEqual(confirmations.map(value => value.title), ['Delete workspace?', 'Delete note?'])
+    assert.equal(calls.length, 0)
+    assert.match(host.textContent!, /Saved research/)
+    assert.match(host.textContent!, /Rotation notes/)
+    assert.equal(host.querySelectorAll('[aria-label="Delete note"]').length, 1)
+  } finally { await act(async () => root.unmount()); host.remove() }
+})
 
 test('saving the same workspace repeatedly keeps hidden MLB and visible overflow selections', async () => {
   calls.length = 0

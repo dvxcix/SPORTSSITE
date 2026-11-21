@@ -104,7 +104,7 @@ export function MatrixBacktestForm() {
     <div className="space-y-4">
       {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Element Code</label>
           <input type="text" value={elementCode} onChange={e => setElementCode(e.target.value)} placeholder="EL-XXXX-XXXX" className={inputClass + ' uppercase'} />
@@ -131,7 +131,7 @@ export function MatrixBacktestForm() {
         <div className="space-y-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
             <p className="text-sm font-bold text-[var(--text-1)] mb-1">{result.matrix.name} <span className="text-[var(--text-3)] font-normal">({result.matrix.matrix_type})</span></p>
-            <div className="grid grid-cols-3 gap-4 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
               <div>
                 <p className="text-[12px] font-bold text-[var(--text-3)] uppercase tracking-wider">Precision</p>
                 <p className="text-lg font-semibold text-[var(--text-1)]">{pct(result.aggregate.precision)}</p>

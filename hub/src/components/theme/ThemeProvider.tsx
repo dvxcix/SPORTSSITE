@@ -6,8 +6,15 @@ export type Theme = 'light' | 'dark'
 const KEY = 'slipsurge:appearance:v1'
 const listeners = new Set<() => void>()
 let current: Theme | null = null
+function reviewTheme(): Theme | null {
+  if (process.env.NEXT_PUBLIC_DESIGN_REVIEW !== '1' || typeof window === 'undefined') return null
+  const value=new URLSearchParams(window.location.search).get('reviewTheme') ?? window.frameElement?.getAttribute('data-review-theme')
+  return value==='light'||value==='dark'?value:null
+}
 const read = (): Theme => {
   if (current) return current
+  const isolated=reviewTheme()
+  if (isolated) return (current=isolated)
   try { current = localStorage.getItem(KEY) === 'light' ? 'light' : 'dark' } catch { current = 'dark' }
   return current
 }
@@ -21,7 +28,7 @@ function apply(theme: Theme) {
 }
 function setTheme(theme: Theme) {
   current = theme
-  try { localStorage.setItem(KEY, theme) } catch {}
+  if (!reviewTheme()) try { localStorage.setItem(KEY, theme) } catch {}
   apply(theme)
   listeners.forEach(notify => notify())
   window.dispatchEvent(new CustomEvent('slipsurge:themechange', { detail: theme }))
@@ -29,7 +36,7 @@ function setTheme(theme: Theme) {
 function subscribe(notify: () => void) {
   listeners.add(notify)
   const sync = (event: StorageEvent) => {
-    if (event.key !== KEY) return
+    if (event.key !== KEY || reviewTheme()) return
     current = event.newValue === 'light' ? 'light' : 'dark'
     apply(current)
     listeners.forEach(listener => listener())

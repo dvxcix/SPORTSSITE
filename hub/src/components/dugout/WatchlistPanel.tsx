@@ -13,6 +13,7 @@ import { CheckCircle2, Share2, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { watchlistPlayerHref } from '@/lib/watchlistPlayerHref'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
@@ -23,6 +24,7 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
   onPostSingle: (item: WatchlistItem) => void
 }) {
   const [removing, setRemoving] = useState(false)
+  const playerHref = watchlistPlayerHref(item)
 
   return (
     <div style={{
@@ -49,9 +51,9 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
         showTeam={!!sportTeamLogoUrl(item.sport, item.team)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        {item.mlb_id ? (
+        {playerHref ? (
           <Link
-            href={`/players/${item.mlb_id}`}
+            href={playerHref}
             style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
           >
             {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
@@ -205,17 +207,18 @@ export function WatchlistButton() {
         onClose={() => setOpen(false)}
         labelledBy="watchlist-panel-title"
         backdropStyle={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        panelClassName="ss-saved-research-drawer"
         panelStyle={{
           width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
           borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-          animation: 'slideIn 0.2s ease-out', outline: 'none',
+          animation: 'slideIn var(--motion-normal,200ms) ease-out', outline: 'none',
         }}
       >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
               <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>★ My Watchlist</span>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
-              <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             {postedId && <div role="status" aria-atomic="true" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 12px 12px', padding: '8px 10px', border: '1px solid var(--border-2)', borderRadius: 9, background: 'var(--accent-dim)' }}>
               <CheckCircle2 size={17} color="var(--accent)" aria-hidden="true"/>

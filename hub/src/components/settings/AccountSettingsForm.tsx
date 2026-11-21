@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Check, Database, KeyRound, Loader2, Mail, ShieldCheck } from 'lucide-react'
+import { Check, Database, Loader2 } from 'lucide-react'
 import { DataExportControl } from './DataExportControl'
 import { AccountDeletionControl } from './AccountDeletionControl'
 
@@ -58,11 +58,6 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
   return (
     <div className="space-y-6">
       {error && <div role="alert" className="rounded-xl border border-[color-mix(in_srgb,var(--red)_25%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><Mail size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Verified identity</p><p className="mt-1 truncate text-[12px] text-[var(--text-3)]">{profile?.email || 'Account email'}</p></div>
-        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><KeyRound size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Password access</p><p className="mt-1 text-[12px] text-[var(--text-3)]">Change it securely below</p></div>
-        <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-4"><ShieldCheck size={17} className="mb-3 text-[var(--accent)]" /><p className="text-xs font-semibold text-[var(--text-1)]">Privacy controls</p><p className="mt-1 text-[12px] text-[var(--text-3)]">Manage visibility and messages</p></div>
-      </div>
       <form className="ss-settings-card" onSubmit={updateEmail}>
         <h2 className="mb-3 font-semibold text-[var(--text-1)]">Email address</h2>
         <input type="email" aria-label="Email address" value={email} required maxLength={254} autoComplete="email" onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />

@@ -59,7 +59,7 @@ test('cross-market filters retain 15+ primary and opposing exact targets, signed
     const input=host.querySelector('input[aria-label="Search milestone players"]') as HTMLInputElement
     await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value')!.set!.call(input,'Ben');input.dispatchEvent(new dom.window.Event('input',{bubbles:true}))})
     assert.equal(cards().length,1)
-    const ben=cards().find(c=>c.textContent?.includes('Ben Player'))!;assert.match(ben.textContent!,/Lengthen rank #2\/2/)
+    const ben=cards().find(c=>c.textContent?.includes('Ben Player'))!;assert.ok(ben.querySelector('[aria-label="Lengthened rank 2 of 2 teammates at 15+ on fanduel"]'), 'compact rank retains its full accessible meaning')
     const related=ben.querySelectorAll('a[href*="market=assists"]');assert.ok(related.length);assert.match(related[0].getAttribute('href')!,/target=4/)
     assert.ok(!ben.querySelector('a[href*="target=20"]'))
   }finally{await act(async()=>root.unmount());host.remove()}

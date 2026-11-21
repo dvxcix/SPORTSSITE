@@ -17,7 +17,7 @@ export default async function ProfileSettingsPage() {
   const { data: profile } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', user.id).single()
   const accountProfile = profile as unknown as User | null
 
-  return <SettingsShell active="/settings/profile" title="Your public profile" description="Shape how the SlipSurge community sees you, from your identity and bio to teams, players, and public links.">
+  return <SettingsShell active="/settings/profile" title="Your profile" description="Edit your picture, bio, favorites and public links.">
     <div className="ss-settings-card"><ProfileForm profile={accountProfile ? visibleFavorites(accountProfile, !MLB_HIBERNATING || accountProfile.account_type === 'admin') : accountProfile} /></div>
   </SettingsShell>
 }

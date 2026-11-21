@@ -1,17 +1,13 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import Image from 'next/image'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 import styles from './InfoPageShell.module.css'
 
 export function InfoPageShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div className={styles.page}>
-      <header className={styles.nav}>
-        <Link href="/" className={styles.brand}><Image src="/logo.png" alt="" width={28} height={28}/><span>Slip<span>Surge</span></span></Link>
-        <Link href="/" className={styles.back}><ArrowLeft size={14} /> Home</Link>
-      </header>
       <div className={styles.main}>
-        <header className={styles.hero}><span className={styles.eyebrow}>SlipSurge</span><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</header>
+        <Link href="/" className={styles.back}><ArrowLeft size={14} aria-hidden="true" /> Home</Link>
+        <header className={styles.hero}><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</header>
         <div className={styles.content}>{children}</div>
       </div>
     </div>
@@ -40,8 +36,9 @@ export function InfoInlineLink({ href, children }: { href: string; children: Rea
 // each pass the matching `id` to Section above.
 export function Toc({ items }: { items: { id: string; label: string }[] }) {
   return (
-    <nav aria-label="Table of contents" className={styles.toc}>
-      <strong>On this page</strong>
+    <details className={styles.toc}>
+      <summary>On this page <ChevronDown size={16} aria-hidden="true"/></summary>
+      <nav aria-label="Table of contents">
       <ol>
         {items.map((item, i) => (
           <li key={item.id}>
@@ -49,6 +46,7 @@ export function Toc({ items }: { items: { id: string; label: string }[] }) {
           </li>
         ))}
       </ol>
-    </nav>
+      </nav>
+    </details>
   )
 }

@@ -168,6 +168,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [quickResultsOwner, setQuickResultsOwner] = useState(userId)
   const [quickResultsGeneration, setQuickResultsGeneration] = useState(0)
   const [quickOpen, setQuickOpen] = useState(false)
+  useEffect(() => {
+    const closeQuick = () => setQuickOpen(false)
+    const commandShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') closeQuick()
+    }
+    window.addEventListener('slipsurge:open-command', closeQuick)
+    window.addEventListener('keydown', commandShortcut)
+    return () => {
+      window.removeEventListener('slipsurge:open-command', closeQuick)
+      window.removeEventListener('keydown', commandShortcut)
+    }
+  }, [])
   const [quickLoading, setQuickLoading] = useState(false)
   const searchRef = useRef<HTMLFormElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)

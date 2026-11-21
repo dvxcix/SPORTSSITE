@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { Activity, AlertCircle, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Crosshair, HelpCircle, Layers3, Pin, RefreshCw, RotateCcw, Search, SlidersHorizontal, Sparkles, UserRound, UsersRound, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
@@ -389,6 +390,6 @@ export function OddsTerminalClient({ initialDate, embedded = false, selectedGame
       </section>
     </>}
     {notice&&<div className={styles.notice} role="status"><Check size={14}/>{notice}</div>}
-    {showGuide&&<div className={styles.guideBackdrop} role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closeGuide()}}><section className={styles.guideModal} role="dialog" aria-modal="true" aria-labelledby="terminal-guide-title"><button type="button" className={styles.guideClose} aria-label="Close guide" onClick={closeGuide}><X size={16}/></button><div className={styles.guideIcon}><Activity size={22}/></div><small>QUICK START</small><h2 id="terminal-guide-title">Use Odds Terminal</h2><ol><li><b>1</b><span><strong>Choose a game and market.</strong><small>Use Setup to adjust the terminal.</small></span></li><li><b>2</b><span><strong>Select sportsbooks and players.</strong><small>Show the full game or focus on one player.</small></span></li><li><b>3</b><span><strong>Inspect and compare.</strong><small>Select a line to focus it. Pin lines to keep them visible together.</small></span></li></ol><p>Price history stops at first pitch.</p><button type="button" className={styles.guideDone} onClick={closeGuide}>GOT IT</button></section></div>}
+    <ModalSurface open={showGuide} onClose={closeGuide} labelledBy="terminal-guide-title" backdropClassName={styles.guideBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.guideModal}><button type="button" className={styles.guideClose} data-modal-autofocus aria-label="Close guide" onClick={closeGuide}><X size={16}/></button><div className={styles.guideIcon}><Activity size={22}/></div><h2 id="terminal-guide-title">Use Odds Terminal</h2><ol><li><b>1</b><span><strong>Choose a game and market.</strong><small>Use Setup to adjust the terminal.</small></span></li><li><b>2</b><span><strong>Select sportsbooks and players.</strong><small>Show the full game or focus on one player.</small></span></li><li><b>3</b><span><strong>Inspect and compare.</strong><small>Select a line to focus it. Pin lines to keep them visible together.</small></span></li></ol><p>Price history stops at first pitch.</p><button type="button" className={styles.guideDone} onClick={closeGuide}>Got it</button></ModalSurface>
   </div>
 }

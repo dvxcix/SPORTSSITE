@@ -18,15 +18,14 @@ export default async function MgmImportPage() {
         Admin-only. Backs up/fills anytime-HR (1+) and 2+ HR odds for BetMGM when BDL coverage is sparse.
       </p>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6">
-        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">How to get the data</p>
+      <details className="ss-admin-help bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6"><summary>Import instructions</summary>
         <ol className="text-sm text-[var(--text-2)] space-y-1 list-decimal list-inside">
           <li>Open the BetMGM event page (nc.betmgm.com), scroll to and click "Batter home runs" to expand it</li>
           <li>Open DevTools console, paste the scraper script — it appends to <code className="text-[var(--text-2)]">window.__mgmAllScrapes</code></li>
           <li>Click the "2+" threshold tab and run the scraper again to capture that too (optional)</li>
           <li>Run <code className="text-[var(--text-2)]">copy(JSON.stringify(window.__mgmAllScrapes, null, 2))</code>, paste below</li>
         </ol>
-      </div>
+      </details>
 
       <MgmImportForm />
     </div>

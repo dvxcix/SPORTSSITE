@@ -44,7 +44,7 @@ export default async function BlogPage() {
       ) : (
         <>
           <ArticleCard article={lead} featured />
-          {rest.length > 0 && <><ProductSectionHeader title="Latest" meta={`${rest.length} articles`} /><div className="grid gap-3 md:grid-cols-2">{rest.map(article => <ArticleCard key={article.id} article={article} />)}</div></>}
+          {rest.length > 0 && <><ProductSectionHeader title="Latest" meta={`${rest.length} ${rest.length === 1 ? 'article' : 'articles'}`} /><div className="grid gap-3 md:grid-cols-2">{rest.map(article => <ArticleCard key={article.id} article={article} />)}</div></>}
         </>
       )}
     </ProductPageShell>
@@ -52,13 +52,10 @@ export default async function BlogPage() {
 }
 
 function ArticleCard({ article, featured = false }: { article: Article; featured?: boolean }) {
-  return <Link href={`/blog/${article.slug}`} className={`group overflow-hidden rounded-[22px] border border-[rgba(var(--line-rgb),0.08)] bg-gradient-to-br from-white/[.04] to-white/[.015] transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] ${featured ? 'grid md:grid-cols-[1.05fr_.95fr]' : 'block'}`}>
-    <div className={`relative overflow-hidden bg-[var(--surface)] ${featured ? 'min-h-64' : 'h-40'}`}>
-      {article.cover_image ? <SafeImage src={article.cover_image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]" /> : <BookOpen className="absolute bottom-6 left-6 text-[color-mix(in_srgb,var(--accent)_40%,transparent)]" size={featured ? 54 : 38} />}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-    </div>
+  return <Link href={`/blog/${article.slug}`} className={`group overflow-hidden rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[var(--surface)] transition hover:border-[color-mix(in_srgb,var(--accent)_25%,transparent)] ${featured && article.cover_image ? 'grid md:grid-cols-[1.05fr_.95fr]' : 'block'}`}>
+    {article.cover_image && <div className={`relative overflow-hidden bg-[var(--surface-2)] ${featured ? 'min-h-48' : 'h-40'}`}><SafeImage src={article.cover_image} alt="" className="h-full w-full object-cover" /></div>}
       <div className={`flex flex-col ${featured ? 'justify-center p-6 sm:p-8' : 'p-4'}`}>
-      {article.category && <span className="text-[11px] font-semibold uppercase tracking-[.16em] text-[var(--accent)]">{article.category}</span>}
+      {article.category && <span className="text-[11px] font-semibold tracking-normal text-[var(--accent)]">{article.category}</span>}
       <h2 className={`mt-2 font-semibold leading-tight tracking-[-.03em] text-[var(--text-1)] ${featured ? 'text-2xl sm:text-3xl' : 'text-base'}`}>{article.title}</h2>
       {article.excerpt && <p className="mt-2 line-clamp-3 text-sm leading-6 text-[var(--text-2)]">{article.excerpt}</p>}
       <div className="mt-5 flex items-center gap-2.5"><MemberAvatar src={article.author?.avatar_url} name={article.author?.display_name || article.author?.username || 'Author'} size={28} ringStyle={article.author?.avatar_ring_style} ringColor={article.author?.avatar_ring_color} /><span className="min-w-0 truncate text-xs font-bold text-[var(--text-2)]">{article.author?.display_name || article.author?.username}</span><span className="ml-auto flex shrink-0 items-center gap-3 text-[12px] font-bold text-[var(--text-3)]"><span className="flex items-center gap-1"><Clock size={11} />{new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>{(article.view_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye size={11} />{article.view_count}</span>}<ArrowRight size={13} className="transition group-hover:translate-x-1 group-hover:text-[var(--accent)]" /></span></div>

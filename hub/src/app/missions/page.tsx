@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Award, Check, Flame, MessageCircle, NotebookPen, Sparkles, Target, Trophy } from 'lucide-react'
+import { Award, Check, Flame, LockKeyhole, MessageCircle, NotebookPen, Sparkles, Target, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 import styles from './missions.module.css'
@@ -84,7 +84,7 @@ export default async function MissionsPage() {
                 return <article key={key} data-earned={earned}>
                   <span className={styles.achievementIcon}><Icon size={18}/></span>
                   <div><strong>{achievement.title}</strong><small>{achievement.detail}</small></div>
-                  {earned && <Check size={15}/>}
+                  {earned ? <Check size={15} aria-label="Earned"/> : <LockKeyhole size={15} aria-label="Not earned yet"/>}
                 </article>
               })}
             </div>

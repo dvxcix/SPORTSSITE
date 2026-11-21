@@ -1326,12 +1326,12 @@ function CommentItem({
 }
 
 function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onClick }: {
-  icon: React.ReactNode; label?: string; active?: boolean; activeColor?: string
+  icon: React.ReactNode; label: string; active?: boolean; activeColor?: string
   hoverBg?: string; hoverColor?: string; onClick: () => void
 }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <motion.button type="button" className="ss-post-action" onClick={onClick}
+    <motion.button type="button" className="ss-post-action" onClick={onClick} aria-label={label}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.92 }}

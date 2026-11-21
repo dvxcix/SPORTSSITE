@@ -46,3 +46,5 @@
   .posts { padding: 9px; }
   .chatViewport { min-height: 390px; height: calc(100dvh - 250px); }
 }
+
+.community{border-radius:10px;box-shadow:none}.banner{background:var(--surface-2)}.banner:after{display:none}.banner[data-has-banner=false]{height:100px}.title{font-size:27px;font-weight:600}.primaryAction,.secondaryAction{min-height:44px;border-radius:8px;box-shadow:none}.avatar{box-shadow:none;border-radius:12px}.actions{gap:8px}.identity{padding-top:0}@media(max-width:767px){.banner[data-has-banner=false]{height:84px}.identityRow{flex-wrap:wrap;align-items:flex-end}.actions{flex:1;min-width:160px}.title{font-size:24px}.actions button,.actions a{min-height:44px}}

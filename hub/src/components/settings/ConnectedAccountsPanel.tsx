@@ -2,8 +2,8 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { AtSign, BadgeCheck, Check, ExternalLink, Loader2, Link2, ShieldCheck, Sparkles, Unlink, X } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { AtSign, BadgeCheck, Check, ExternalLink, Loader2, Link2, Unlink, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 
@@ -45,22 +45,20 @@ export function ConnectedAccountsPanel({
   initialWhopConnected: boolean
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const linkError = searchParams.get('link_error') || searchParams.get('whop_link_error')
+  const linkedWhop = searchParams.get('whop_linked')
   const supabase = useMemo(() => createClient(), [])
   const [verified, setVerified] = useState<Record<string, VerifiedIdentity>>(initialVerified)
-  const [whopConnected, setWhopConnected] = useState(initialWhopConnected)
+  const [whopConnected, setWhopConnected] = useState(initialWhopConnected || Boolean(linkedWhop))
   const [busy, setBusy] = useState<Provider | null>(null)
   const [confirming, setConfirming] = useState<Provider | null>(null)
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(() =>
+    linkError ? { tone: 'error', text: 'That account could not be connected. It may already belong to another SlipSurge account.' }
+      : linkedWhop ? { tone: 'success', text: 'Whop connected.' } : null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const linkError = params.get('link_error') || params.get('whop_link_error')
-    const linkedWhop = params.get('whop_linked')
-    if (linkError) setMessage({ tone: 'error', text: 'That account could not be connected. It may already belong to another SlipSurge account.' })
-    if (linkedWhop) {
-      setWhopConnected(true)
-      setMessage({ tone: 'success', text: 'Whop connected.' })
-    }
     if (linkError || linkedWhop) {
       params.delete('link_error')
       params.delete('whop_link_error')
@@ -68,7 +66,7 @@ export function ConnectedAccountsPanel({
       const query = params.toString()
       window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
     }
-  }, [])
+  }, [linkError, linkedWhop])
 
   useEffect(() => {
     let cancelled = false
@@ -162,17 +160,7 @@ export function ConnectedAccountsPanel({
 
   return (
     <div className="ss-connections">
-      <section className="ss-connection-summary">
-        <span className="ss-connection-summary-icon"><ShieldCheck size={22} /></span>
-        <div>
-          <p>Your connected world</p>
-          <h2>One SlipSurge account. Your memberships and social identity.</h2>
-          <span>{connectionCount ? `${connectionCount} service${connectionCount === 1 ? '' : 's'} ready` : 'Choose a service to get started'}</span>
-        </div>
-        <div className="ss-connection-summary-brands" aria-label={`${connectionCount} of ${providers.length} services connected`}>
-          {providers.map(provider => <span key={provider.id} data-provider={provider.id} data-connected={isConnected(provider.id)}><ProviderMark provider={provider.id} /></span>)}
-        </div>
-      </section>
+      <p className="ss-connection-count">{connectionCount} of {providers.length} connected</p>
 
       {message && (
         <div className={`ss-connection-alert ${message.tone}`} role={message.tone === 'error' ? 'alert' : 'status'}>
@@ -191,24 +179,22 @@ export function ConnectedAccountsPanel({
           return (
             <article className={`ss-connection-card ${connected ? 'is-connected' : ''}`} data-provider={provider.id} key={provider.id} style={{ '--provider-accent': provider.accent, '--provider-deep': provider.deep } as React.CSSProperties}>
               <div className="ss-connection-brand-stage">
-                <span className="ss-connection-provider-mark"><ProviderMark provider={provider.id} /></span>
+                <h2 className="ss-connection-provider-mark" aria-label={provider.name}><ProviderMark provider={provider.id} /></h2>
                 <span className={`ss-connection-state ${connected ? 'is-connected' : ''}`}>
                   {connected ? <><BadgeCheck size={13} /> Connected</> : <><span /> Available</>}
                 </span>
               </div>
               <div className="ss-connection-copy">
-                <span className="ss-connection-kicker">CONNECTED SERVICE</span>
-                <h3>{provider.name}</h3>
                 <p>{provider.description}</p>
-                <div className={`ss-connection-identity ${connected ? 'is-connected' : ''}`}>
-                  <span>{connected ? <AtSign size={15} /> : <Sparkles size={15} />}</span>
+                {connected && <div className="ss-connection-identity is-connected">
+                  <span><AtSign size={15} /></span>
                   <div>
                     <small>{connected ? 'Connected as' : 'Connection status'}</small>
                     {connected && identity?.profileUrl
                       ? <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer">{identity.handle}<ExternalLink size={12} /></a>
                       : <strong>{connected ? 'Linked to SlipSurge' : 'Ready to connect'}</strong>}
                   </div>
-                </div>
+                </div>}
               </div>
               <div className="ss-connection-actions">
                 {!connected ? (

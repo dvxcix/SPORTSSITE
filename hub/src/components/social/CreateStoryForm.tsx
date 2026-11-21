@@ -103,7 +103,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       </div>
 
       {/* Preview */}
-      <div className="aspect-[9/16] max-h-64 rounded-2xl overflow-hidden flex items-center justify-center relative"
+      <div className="mx-auto aspect-[9/16] max-h-64 rounded-xl overflow-hidden flex items-center justify-center relative"
         style={{ background: preview ? '#000' : bg }}>
         {preview
           ? <SafeImage src={preview} alt="Story preview" className="w-full h-full object-cover" />
@@ -121,7 +121,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
             <div className="flex flex-wrap gap-2" role="group" aria-label="Story background">
               {STORY_BACKGROUNDS.map(color => (
                 <button type="button" key={color.value} aria-label={`${color.label} background`} aria-pressed={bg === color.value} onClick={() => setBg(color.value)} style={{ background: color.value }}
-                  className={`w-10 h-10 rounded-full border-2 transition-all ${bg === color.value ? 'border-[var(--border-3)]' : 'border-transparent'}`} />
+                  className={`w-11 h-11 rounded-full border-2 transition-all ${bg === color.value ? 'border-[var(--border-3)]' : 'border-transparent'}`} />
               ))}
             </div>
           </div>

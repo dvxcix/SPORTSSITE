@@ -172,3 +172,5 @@
 .previewLinks { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 0 0 13px; }
 .previewLinks a { color: var(--accent); background: var(--surface-2); border: 1px solid var(--border-3); border-radius: 7px; padding: 7px 11px; font-size: .8rem; font-weight: 650; }
 .previewLinks a:hover { border-color: #a7e17b; }
+
+.card{border-radius:10px;padding:20px}.previewLinks a{display:inline-flex;align-items:center;min-height:44px}.eyebrow{letter-spacing:0;text-transform:none}.heroCopy{font-size:14px}.billingTrust{background:transparent;border-radius:8px}.card li{line-height:1.6}@media(max-width:767px){.heroContent{padding-top:20px}.heroTitle{font-size:28px}.main{padding-inline:12px}.card{padding:18px}}

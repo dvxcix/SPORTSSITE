@@ -79,7 +79,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
             <div>
               <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">What should the article be about?</label>
               <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3}
-                placeholder="e.g. 'Best value bets in the MLB this week' or 'How I built a 60% win rate on spread bets'"
+                placeholder="e.g. How tonight’s NBA injuries change minutes and roles"
                 className="ss-flow-input min-h-28 resize-none" />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

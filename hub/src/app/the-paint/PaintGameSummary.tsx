@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react'
-import { Banknote, ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { Banknote, ChevronLeft, ChevronRight, Info, Minimize2, Maximize2 } from 'lucide-react'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
 import type { NbaOddsBoardPhaseCheck } from '@/lib/nbaOddsBoardPhase'
@@ -23,6 +23,7 @@ const percent = (value: number | null | undefined) => value == null ? '—' : `$
 
 export function PaintGameSummary({ board, teamControl, refreshPrices = false, phaseCheck, initialBook = 'draftkings' }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean; phaseCheck?: NbaOddsBoardPhaseCheck | null; initialBook?: string }) {
   const mode = useNbaOddsMode(), id = useId(), rail = useRef<HTMLDivElement>(null)
+  const [compact, setCompact] = useState(true)
   const [book, setBook] = useState(initialBook==='all'?'draftkings':initialBook)
   const [edges, setEdges] = useState({ start: true, end: true }), [retry, setRetry] = useState(0)
   const [state, setState] = useState<{ key: string; overview: NbaGameOverview | null; error: boolean; gameOdds?: PaintGameOdds[]; pricesError?: boolean } | null>(null)
@@ -79,10 +80,10 @@ export function PaintGameSummary({ board, teamControl, refreshPrices = false, ph
     if (element) element.scrollBy({ left: direction * ((element.firstElementChild?.getBoundingClientRect().width ?? element.clientWidth) + 12), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
 
-  return <section className={styles.summary} aria-label="Game markets and public activity">
+  return <section className={styles.summary} data-density={compact?'compact':'comfortable'} aria-label="Game markets and public activity">
     <header className={styles.toolbar}>
       <div className={styles.matchup}><TeamLogo abbr={teams[0].abbreviation} size={23}/><strong>{teams[0].abbreviation}<span>at</span>{teams[1].abbreviation}</strong><TeamLogo abbr={teams[1].abbreviation} size={23}/></div>
-      <div className={styles.actions}>{selectedBook && <PaintBookSelect label="Header sportsbook" value={selectedBook} onChange={setBook} books={books} allowAll={false}/>}{teamControl}<div className={styles.arrows}><button type="button" aria-label="Previous game market" aria-controls={id} disabled={edges.start} onClick={() => move(-1)}><ChevronLeft size={17}/></button><button type="button" aria-label="Next game market" aria-controls={id} disabled={edges.end} onClick={() => move(1)}><ChevronRight size={17}/></button></div></div>
+      <div className={styles.actions}><button type="button" aria-label="Compact game market cards" aria-pressed={compact} onClick={()=>setCompact(value=>!value)} title={compact?'Use detailed market cards':'Use compact market cards'}>{compact?<Maximize2 size={15}/>:<Minimize2 size={15}/>}</button>{selectedBook && <PaintBookSelect label="Header sportsbook" value={selectedBook} onChange={setBook} books={books} allowAll={false}/>}{teamControl}<div className={styles.arrows}><button type="button" aria-label="Previous game market" aria-controls={id} disabled={edges.start} onClick={() => move(-1)}><ChevronLeft size={17}/></button><button type="button" aria-label="Next game market" aria-controls={id} disabled={edges.end} onClick={() => move(1)}><ChevronRight size={17}/></button></div></div>
     </header>
     <div className={styles.rail} ref={rail} id={id} role="region" aria-label="Moneyline, spread and total" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1) } }}>
       {(['moneyline', 'spread', 'total'] as const).map(market => {

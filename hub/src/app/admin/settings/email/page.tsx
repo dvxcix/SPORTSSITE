@@ -66,7 +66,7 @@ export default async function AdminEmailSettingsPage() {
         </div>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Email configuration">
+      <section className="ss-admin-metrics grid grid-cols-2 gap-3 xl:grid-cols-5" aria-label="Email configuration">
         <StatusCard icon={Send} label="Resend API" ready={apiReady} detail={apiReady ? 'Sending enabled' : 'API key missing'} />
         <StatusCard icon={MailCheck} label="Sender domain" ready={domainReady} detail={domainReady ? 'Custom domain configured' : 'Explicit domain missing'} />
         <StatusCard icon={ShieldCheck} label="Signed webhooks" ready={webhookReady} detail={webhookReady ? 'Verification enabled' : 'Signing secret missing'} />
@@ -102,7 +102,7 @@ export default async function AdminEmailSettingsPage() {
         {recent.length === 0 ? (
           <div className="px-5 py-16 text-center text-sm text-[var(--text-muted)]">No notification-email attempts recorded yet.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="border-b border-[var(--border-subtle)] text-[12px] uppercase tracking-[0.14em] text-[var(--text-muted)]"><tr><th className="px-5 py-3">Time</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Provider event</th><th className="px-4 py-3">Provider ID</th><th className="px-5 py-3">Detail</th></tr></thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">

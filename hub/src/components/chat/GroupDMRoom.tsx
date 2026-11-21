@@ -1,5 +1,7 @@
 "use client";
 
+import { scrollMessagePane } from "@/lib/messageScroll";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -104,6 +106,7 @@ export function GroupDMRoom({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const memberById = useMemo(
@@ -240,7 +243,7 @@ export function GroupDMRoom({
   }, [isOwner, memberList, memberQuery, supabase]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView();
+    scrollMessagePane(scrollRef.current);
     void supabase
       .from("group_conversation_members")
       .update({ last_read_at: new Date().toISOString() })
@@ -496,7 +499,7 @@ export function GroupDMRoom({
           ))}
         </div>
         <div className="ss-group-dm-title">
-          <strong>{conversation.name}</strong>
+          <h1>{conversation.name}</h1>
           <span>{memberList.length} members</span>
         </div>
         <span className="ss-dm-private">
@@ -549,7 +552,7 @@ export function GroupDMRoom({
           {error}
         </p>
       )}
-      <div className="ss-dm-messages">
+      <div ref={scrollRef} className="ss-dm-messages">
         <div className="ss-dm-thread-start">
           <Users size={13} />
           <span>{conversation.name} started</span>
@@ -585,12 +588,7 @@ export function GroupDMRoom({
                     type="button"
                     className="ss-dm-reply-context"
                     onClick={() =>
-                      document
-                        .getElementById(`message-${reply.id}`)
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "center",
-                        })
+                      scrollMessagePane(scrollRef.current, document.getElementById(`message-${reply.id}`), "smooth")
                     }
                   >
                     <Reply size={10} />

@@ -454,3 +454,6 @@
   .spin { animation: none; }
   .playerRow > svg { transition: none; }
 }
+
+/* Semantic colors keep this internal screen readable in both themes. */
+.page{--intel-green:var(--accent);--intel-cyan:var(--blue);--intel-violet:var(--purple)}.hero,.controls,.panel,.signalHeader,.diagnostics,.calibrationLedger,.gameTabs,.recommendationCard,.error,.loading,.empty{background:var(--surface);box-shadow:none;border-color:var(--border-2);border-radius:10px}.hero{min-height:0;padding:20px;gap:14px}.hero:before{display:none}.hero h1{font-size:30px;line-height:1.15;letter-spacing:-.025em}.hero>div>span,.panel header>div>span{font-family:inherit;font-weight:550;letter-spacing:0;color:var(--text-2)}.heroIcon{width:42px;height:42px;border-radius:9px;box-shadow:none}.heroMeta{min-width:0;background:var(--surface-2);border-color:var(--border);padding:12px;border-radius:8px}.heroMeta span{letter-spacing:0!important;color:var(--text-2)!important}.controls button{background:var(--accent-fill);color:var(--accent-fg);border-color:var(--selected-border);box-shadow:none;border-radius:8px}.controls label span{letter-spacing:0;text-transform:none}@media(max-width:767px){.hero h1{font-size:26px}.controls{align-items:stretch}.controls label{min-width:0;flex:1}.controls input{width:100%;font-size:16px}.controls button{width:100%}}

@@ -74,3 +74,6 @@
   .shell { align-items: flex-start; padding: 10px 8px calc(20px + env(safe-area-inset-bottom)); }
   .panel, .panelCompact { min-height: calc(100dvh - 20px - env(safe-area-inset-bottom)); justify-content: center; padding: 23px 17px; border-radius: 14px; }
 }
+
+/* Recovery and sign-in use the same compact rhythm on small screens. */
+.panel{background:var(--surface)}.provider,.submit,.statusState>a{border-radius:8px;box-shadow:none}.provider:hover,.submit:hover{transform:none;filter:none;background:var(--surface-3)}.submit:hover{background:var(--accent-fill);filter:brightness(1.03)}.field input{border-radius:8px}.sportFieldset button{min-height:44px}.authLinks a{display:inline-flex;align-items:center;min-height:44px}.statusState>a{min-height:44px}.eyebrow{letter-spacing:0;text-transform:none}.aside:after{opacity:.4}@media(max-width:520px){.shell{padding:20px 12px calc(24px + env(safe-area-inset-bottom))}.panel,.panelCompact{min-height:0;justify-content:flex-start;padding:24px 16px;border-radius:10px}.brand{margin-bottom:28px}.field input{font-size:16px}.legal{margin-top:20px}.statusState{padding:16px 0}}@media(prefers-reduced-motion:reduce){.provider,.submit,.progress>div{transition:none}}

@@ -17,7 +17,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
    result.resolve.alias={...result.resolve.alias,
     '@supabase/ssr$':path.join(root,'review/supabase.ts'),
     '@supabase/supabase-js$':path.join(root,'review/supabase.ts'),
-    '@/lib/supabase/admin$':path.join(root,'review/supabase.ts'),
+    '@/lib/supabase/admin$':path.join(root,'review/admin.ts'),
     '@/lib/nbaPaintData$':path.join(root,'review/nba.ts'),
     '@/lib/nbaResearchResources$':path.join(root,'review/nba-resources.ts'),
     '@/lib/nbaSharedCache$':path.join(root,'review/cache.ts'),
@@ -25,13 +25,16 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     '@slipsurge/core':path.join(root,'packages/core/src'),
    }
    const replacements:Record<string,string>={
-    [path.join(root,'src/lib/supabase/admin')]:path.join(root,'review/supabase.ts'),
+    [path.join(root,'src/lib/supabase/admin')]:path.join(root,'review/admin.ts'),
     [path.join(root,'src/lib/nbaPaintData')]:path.join(root,'review/nba.ts'),
     [path.join(root,'src/lib/nbaResearchResources')]:path.join(root,'review/nba-resources.ts'),
     [path.join(root,'src/lib/nbaSharedCache')]:path.join(root,'review/cache.ts'),
     [path.join(root,'src/app/the-sideline/data')]:path.join(root,'review/nfl.ts'),
     [path.join(root,'src/lib/nflTouchdownFeed')]:path.join(root,'review/nfl.ts'),
    }
+   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/^@slipsurge\/core\/espn-api$/, (resource:{request:string})=>{
+    resource.request=path.join(root,'review/scoreboard.ts')
+   }))
    result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|nbaPaintData|nbaResearchResources|nbaSharedCache|nflTouchdownFeed|[./]data)(?:\.ts)?$/, (resource:any)=>{
     const target=(resource.request.startsWith('@/')?path.join(root,'src',resource.request.slice(2)):path.resolve(resource.context,resource.request)).replace(/\.tsx?$/,'')
     if(replacements[target])resource.request=replacements[target]

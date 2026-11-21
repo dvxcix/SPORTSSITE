@@ -48,7 +48,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
     return <><NetworkStatus /><ProductTelemetry />{children}</>
   }
 
-  if (isAuthPage || isLandingPage || isPublicPreviewPath(path)) {
+  if (isAuthPage || isLandingPage || isPublicPreviewPath(path) || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {
     return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main></>
   }
 

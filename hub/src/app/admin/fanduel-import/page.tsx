@@ -18,8 +18,7 @@ export default async function FanduelImportPage() {
         Admin-only. Fills markets our automated FanDuel feed doesn't carry: FHR, Laser 105+/110+, Moonshot, 1st Plate Appearance HR, HR/Moneyline Parlay, and Combine-for-HR (1 and 2+).
       </p>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6">
-        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">How to get the data</p>
+      <details className="ss-admin-help bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6"><summary>Import instructions</summary>
         <ol className="text-sm text-[var(--text-2)] space-y-1 list-decimal list-inside">
           <li>Open the FanDuel event page for the game (sportsbook.fanduel.com)</li>
           <li>Open DevTools console, click a tab (Same Game Parlay, Batter Props, Plate Appearance, Lasers, etc.)</li>
@@ -27,7 +26,7 @@ export default async function FanduelImportPage() {
           <li>Repeat for each tab that has FHR / Laser / Moonshot / 1st PA / HR-ML Parlay data</li>
           <li>Run <code className="text-[var(--text-2)]">copy(JSON.stringify(window.__fdAllScrapes, null, 2))</code>, paste below</li>
         </ol>
-      </div>
+      </details>
 
       <FanduelImportForm />
     </div>

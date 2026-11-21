@@ -163,7 +163,7 @@ export function MatrixMarketplaceDetailClient({
               <div>
                 <span>Public configuration</span>
                 <h2>
-                  {rows.length} {listing.matrix_type === "pipeline" ? "steps" : "Elements"}
+                  {rows.length} {listing.matrix_type === "pipeline" ? rows.length === 1 ? "step" : "steps" : rows.length === 1 ? "element" : "elements"}
                 </h2>
               </div>
             </div>

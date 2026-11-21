@@ -7,6 +7,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { MLB_TEAM_IDS } from '@slipsurge/core/mlbTeamColors'
 import { BookLogo } from '@/components/BookLogo'
+import { PageState } from '@/components/layout/PageState'
 import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
   computeCrossBookFlags, crossBookFlagsForPlayer,
@@ -820,10 +821,10 @@ export function AllStarClient() {
   }, [data, live])
 
   if (error) {
-    return <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-3)' }}>{error}</div>
+    return <section style={{ padding: '20px var(--page-gutter)' }}><h1 style={{ fontSize: 26, margin: '0 0 16px' }}>2026 MLB All-Star Game</h1><PageState kind="error" title="All-Star data unavailable" message={error} /></section>
   }
   if (!data) {
-    return <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-3)' }}>Loading All-Star Game data…</div>
+    return <PageState kind="loading" title="Loading All-Star Game" message="Preparing rosters and markets." />
   }
 
   const alRoster: Roster[] = data.rosters?.AL ?? []

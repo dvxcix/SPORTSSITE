@@ -38,7 +38,7 @@ export default async function AdminMonetizationPage() {
         <Link href="/admin/creators" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border-2)] bg-[var(--surface)] px-4 text-xs font-bold text-[var(--text-1)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--accent)]">Creator Control Center <ExternalLink size={14} /></Link>
       </header>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="ss-admin-metrics mb-6 grid gap-3 grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Connected creators', value: creators.filter(row => row.whop_connected_company_id).length, icon: WalletCards },
           { label: 'Live offers', value: products.filter(row => row.status === 'active').length, icon: Layers3 },
@@ -54,7 +54,7 @@ export default async function AdminMonetizationPage() {
 
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
         <header className="border-b border-[var(--border)] px-4 py-3"><h2 className="text-sm font-bold text-[var(--text-1)]">Recent Whop commerce</h2><p className="mt-1 text-xs text-[var(--text-3)]">Provider events recorded for creator products. Creator withdrawals remain in each connected Whop payout portal.</p></header>
-        <div className="overflow-x-auto">
+        <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead className="border-b border-[var(--border)]"><tr>{['Creator', 'Offer', 'Event', 'Amount', 'Status', 'Time'].map(label => <th key={label} className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-[var(--border)]">{events.length ? events.map(event => {

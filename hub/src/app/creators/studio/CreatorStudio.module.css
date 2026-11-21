@@ -13,3 +13,6 @@
 .status{font-size:12px;font-weight:600;letter-spacing:0}.progress i{background:var(--accent-fill)}
 .migration{background:var(--surface)}
 @media(max-width:1024px),(hover:none) and (pointer:coarse){.builder input,.builder textarea,.builder select{font-size:16px}}
+
+/* Keep commerce readable in the same application shell. */
+.page{background:var(--bg)}.hero{border-radius:10px;box-shadow:none;background:var(--surface);padding:24px}.hero h1{font-size:32px;line-height:1.15;letter-spacing:-.025em}.hero>div>span,.eyebrow,.kicker{letter-spacing:0;text-transform:none}.card,.panel,.section,.locked{border-radius:10px;box-shadow:none}.actions>a,.actions>button,.productActions>button{min-height:44px;border-radius:8px;box-shadow:none}.stats{gap:10px}@media(max-width:767px){.hero{padding:18px}.hero h1{font-size:27px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats>div{padding:14px}.hero p{font-size:14px}}

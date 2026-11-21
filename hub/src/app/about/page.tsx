@@ -6,11 +6,9 @@ export const dynamic = 'force-static'
 export default function AboutPage() {
   return (
     <InfoPageShell title="About SlipSurge" subtitle="The social hub for sports & picks.">
-      <Section title="What we're building">
-        SlipSurge is a place to follow sports bettors the way you'd follow anyone else worth listening to — real
-        graded records, real picks, real parlays, not screenshots that vanish the moment they're wrong. Post a pick,
-        build a parlay with same-book odds and payout math built in, and follow cappers whose track record you can
-        actually verify on their profile.
+      <Section title="Picks with a record">
+        Share picks and parlays, follow other members, and compare graded records.
+        Build parlays with same-book odds and payout calculations, then track results on your profile.
       </Section>
       {!MLB_HIBERNATING && <Section title="The Dugout">
         For MLB, SlipSurge goes deeper than a feed — The Dugout surfaces live odds deltas, Statcast splits, pitch-mix

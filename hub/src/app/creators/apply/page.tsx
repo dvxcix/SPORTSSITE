@@ -124,8 +124,8 @@ export default function CreatorApplyPage() {
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <div className={styles.eyebrow}><Sparkles size={14} /> SlipSurge Creator Program</div>
-          <h1>Give your audience more than a picks feed.</h1>
-          <p className={styles.lede}>Bring your brand, content, and community into a membership powered by SlipSurge research, analytics, live data, and creator tools.</p>
+          <h1>Build your creator membership.</h1>
+          <p className={styles.lede}>Publish your research, manage your community, and offer memberships with SlipSurge.</p>
           <div className={styles.heroActions}>
             <a className={styles.primaryButton} href="#creator-application">Start your application <ArrowRight size={17} /></a>
             <a className={styles.secondaryButton} href="#how-it-works">See how it works</a>

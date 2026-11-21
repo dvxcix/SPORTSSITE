@@ -20,10 +20,7 @@ export default async function AdminEmojisPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-xl font-semibold text-[var(--text-1)] mb-1">Custom Emojis</h1>
       <p className="text-sm text-[var(--text-3)] mb-6">
-        Upload a custom emoji, give it a code (letters/numbers/underscore only, no colons), and put it in a category
-        (MLB, NBA, whatever you want — manage categories below). Anyone can then type
-        <code className="text-[var(--text-2)] mx-1">:code:</code>
-        in a post or comment and it'll render as this image wherever the text is displayed, and it shows up under its category in everyone's emoji picker.
+        Upload an image, give it a code, and choose a category. Members can use :code: in posts and comments, or find it in the emoji picker.
       </p>
       <EmojiUploadForm userId={user.id} initialEmojis={emojis ?? []} initialCategories={categories ?? []} />
     </div>

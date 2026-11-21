@@ -343,7 +343,8 @@ export function NativeTooltipProvider() {
     const findTarget = (eventTarget: EventTarget | null) => {
       if (!(eventTarget instanceof Element)) return null;
       const target = suppressed?.target.contains(eventTarget)?suppressed.target:eventTarget.closest<HTMLElement>("[title],[data-ss-native-tooltip]");
-      return target?.closest("[data-ss-tooltip-root]") ? null : target;
+      // A frame's title is its accessible name, not a hover hint.
+      return target?.tagName === 'IFRAME' || target?.closest("[data-ss-tooltip-root]") ? null : target;
     };
     const show = (event: Event) => {
       const target = findTarget(event.target);

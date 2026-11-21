@@ -1,5 +1,7 @@
 'use client'
 
+import { scrollMessagePane } from '@/lib/messageScroll'
+
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, Loader2, MessageCircle, Radio, Send, Sparkles, Trophy } from 'lucide-react'
@@ -58,6 +60,7 @@ export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId,
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const channel = supabase.channel(`game-room:${sport}:${gameId}`)
@@ -76,7 +79,7 @@ export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId,
     return () => { void supabase.removeChannel(channel) }
   }, [gameId, sport, supabase])
 
-  useEffect(() => { bottomRef.current?.scrollIntoView() }, [messages.length])
+  useEffect(() => { scrollMessagePane(scrollRef.current) }, [messages.length])
 
   async function send(event: React.FormEvent) {
     event.preventDefault()
@@ -117,7 +120,7 @@ export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId,
       {recap.winningPicks.length > 0 && <div className="ss-game-room-winning-picks">{recap.winningPicks.slice(0, 3).map(pick => <Link key={pick.id} href={`/posts/${pick.id}`}><CheckCircle2 size={13}/><span><b>{pick.pick_data?.player_name || 'Winning pick'}</b><small>{pick.pick_data?.prop_label || pick.pick_data?.line || 'Verified result'}</small></span></Link>)}</div>}
       {recap.contributors.length > 0 && <div className="ss-game-room-contributors"><small>TOP CONTRIBUTORS</small><div>{recap.contributors.map((contributor, index) => <Link key={`${contributor.username || contributor.name}-${index}`} href={contributor.username ? `/profile/${contributor.username}` : '#'} aria-label={`${contributor.name}, top contributor ${index + 1}`}><i>{index + 1}</i><MemberAvatar src={contributor.avatar} name={contributor.name} size={28} ringStyle={contributor.ringStyle} ringColor={contributor.ringColor}/><span><b>{contributor.name}</b><small>{contributor.wins ? `${contributor.wins} win${contributor.wins === 1 ? '' : 's'}` : `${contributor.messages} message${contributor.messages === 1 ? '' : 's'}`}</small></span></Link>)}</div></div>}
     </section>}
-    <div className="ss-game-room-stream" aria-live="polite">
+    <div ref={scrollRef} className="ss-game-room-stream" aria-live="polite">
       {messages.length === 0 && <div className="ss-game-room-empty"><Radio size={24}/><strong>The room is open</strong><p>Start the conversation around this matchup.</p></div>}
       {messages.map(message => {
         const name = message.sender?.display_name || message.sender?.username || 'Member'

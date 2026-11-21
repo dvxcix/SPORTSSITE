@@ -140,9 +140,9 @@ export default async function ExplorePage() {
       <div className="ss-explore-page">
         <header className="ss-explore-hero">
           <div className="ss-explore-hero-copy">
-            <p className="ss-explore-eyebrow"><Radar size={13} /> DISCOVERY DESK</p>
+            <p className="ss-explore-eyebrow"><Radar size={13} /> Discover</p>
             <h1>Explore SlipSurge</h1>
-            <p>Follow today&apos;s action, find new voices, and open the tools shaping the conversation.</p>
+            <p>Games, research and people to follow.</p>
           </div>
           <Link href="/search" className="ss-explore-search"><Search size={16} /> Search SlipSurge</Link>
           <div className="ss-explore-pulse" aria-label="Today's activity summary">

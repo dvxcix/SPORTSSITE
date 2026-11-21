@@ -819,6 +819,7 @@ export function GameDetailClient({
 
   return (
     <div className={styles.page}>
+      <h1 className="sr-only">{sportLabel}: {Object.values(teamMap).map(team => team.name || team.abbr).join(' vs ')}</h1>
       <ScoreRefresh enabled={!initialNflDetails && (isLive || gameStatus.state === 'pre')} />
       {/* Back */}
       <Link href={nflDetails ? `/sports?date=${nflDetails.date}#scores-nfl` : '/sports'} className={styles.back}>

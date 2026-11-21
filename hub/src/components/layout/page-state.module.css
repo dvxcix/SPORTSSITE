@@ -11,3 +11,7 @@
 .action:focus-visible { outline: 2px solid var(--text-1); outline-offset: 3px; }
 @keyframes page-state-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .state[data-kind='loading'] .icon svg { animation: none; } }
+
+.state{min-height:220px;padding:28px 20px;border-radius:10px;background:var(--surface);border-color:var(--border-2);box-shadow:none;backdrop-filter:none}
+.glow{display:none}.icon{width:44px;height:44px;border-radius:10px;border-color:var(--border);background:var(--surface-2);box-shadow:none}
+.copy strong{font-size:16px;font-weight:600}.action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:8px;box-shadow:none;font-size:13px;font-weight:550}

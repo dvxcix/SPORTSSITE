@@ -49,7 +49,7 @@ function cleanTitle() {
   return (title || 'Your last view').slice(0, 160)
 }
 
-export function ContextHandoff() {
+function ContextHandoffContent() {
   const { user, loading, authUnavailable } = useAuth()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -227,4 +227,11 @@ export function ContextHandoff() {
       </button>
     </aside>
   )
+}
+
+/** The isolated multi-viewport inspection must not restore another fixture page. */
+export function ContextHandoff(){
+  const search=useSearchParams()
+  if(process.env.NEXT_PUBLIC_DESIGN_REVIEW==='1'&&(search.get('reviewMatrix')==='1'||typeof window!=='undefined'&&window.frameElement?.getAttribute('data-review-matrix')==='true'))return null
+  return <ContextHandoffContent/>
 }

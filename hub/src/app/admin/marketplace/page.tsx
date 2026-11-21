@@ -61,14 +61,14 @@ export default async function AdminMarketplacePage() {
           <h1 className="mt-1 text-xl font-semibold text-[var(--text-1)]">Matrix Marketplace</h1>
           <p className="mt-1 text-sm text-[var(--text-3)]">Review shared Matrix publications. Removing a post never deletes the member&apos;s original Matrix.</p>
         </div>
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)]">{listings.length} publications</span>
+        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)]">{listings.length} {listings.length === 1 ? 'publication' : 'publications'}</span>
       </div>
 
       {listings.length === 0 ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] py-20 text-center text-sm text-[var(--text-3)]">No Matrix publications yet.</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)]">
-          <div className="overflow-x-auto">
+          <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="border-b border-[var(--border)] bg-[var(--surface)]">
                 <tr className="text-left">

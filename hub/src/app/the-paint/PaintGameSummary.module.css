@@ -52,3 +52,16 @@
 @media(prefers-reduced-motion:reduce){.shareTrack>i{transition:none}.rail{scroll-behavior:auto}}
 @container(max-width:720px){.market{flex:0 0 calc((100% - 12px)/2);min-width:260px}.arrows{display:flex}}
 @container(max-width:520px){.market{flex-basis:calc(100% - 24px);min-width:0}}
+
+/* A data-first density with every price and public measure retained. */
+.summary[data-density=compact]{margin-block:12px 14px}
+.summary[data-density=compact] .market{padding:11px 13px}
+.summary[data-density=compact] .market h3{margin-bottom:9px}
+.summary[data-density=compact] .outcomes{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.summary[data-density=compact] .outcome{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;min-height:58px}
+.summary[data-density=compact] .outcome+.outcome{border-left:1px solid var(--border);padding-left:12px}
+.summary[data-density=compact] .outcome>span:last-child:not(.side){text-align:left;align-items:flex-start}
+.summary[data-density=compact] .side{gap:6px}.summary[data-density=compact] .side strong{font-size:15px}
+.summary[data-density=compact] .price{font-size:15px}.summary[data-density=compact] .splitStack{margin-top:10px;padding-top:9px;gap:7px}
+.summary[data-density=compact] .shareTrack{height:5px}.summary[data-density=compact] .footer{min-height:28px}
+@media(max-width:520px){.summary[data-density=compact] .market{padding:12px}.summary[data-density=compact] .outcome{min-height:57px}.summary[data-density=compact] .actions>button{min-width:44px;padding:0 10px}}

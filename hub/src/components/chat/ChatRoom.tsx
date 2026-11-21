@@ -1,5 +1,7 @@
 'use client'
 
+import { scrollMessagePane } from '@/lib/messageScroll'
+
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, Image as ImageIcon, Pencil, Reply, Send, Trash2, TrendingUp, X } from 'lucide-react'
@@ -102,7 +104,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }, [channelId, channelName, currentUserId, supabase])
 
   useEffect(() => {
-    if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (atBottom) scrollMessagePane(scrollRef.current, undefined, 'smooth')
   }, [atBottom, messages])
 
   useEffect(() => {
@@ -110,7 +112,8 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }, [atBottom, markRead, messages])
 
   useEffect(() => {
-    requestAnimationFrame(() => bottomRef.current?.scrollIntoView())
+    const frame = requestAnimationFrame(() => scrollMessagePane(scrollRef.current))
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   function handleScroll() {
@@ -123,7 +126,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }
 
   function jumpToLatest() {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollMessagePane(scrollRef.current, undefined, 'smooth')
     atBottomRef.current = true
     setAtBottom(true)
     setUnseenCount(0)
@@ -225,7 +228,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
           ) : <time>{stamp}</time>}
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}
-            {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
+            {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => scrollMessagePane(scrollRef.current, document.getElementById(`message-${replyTarget.id}`), 'smooth')}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p><EmojiText text={replyTarget.content || ''} /></p></button>}
             {message.is_deleted ? <p className="ss-chat-deleted">Message deleted</p> : message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} />{message.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
             {!message.is_deleted && message.media_urls?.[0] && <SafeImage src={message.media_urls[0]} alt="" className="ss-chat-media"/>}
             <MessageReactionBar reactions={reactions[message.id]} disabled={!currentUserId || message.is_deleted} onToggle={emoji => void toggleReaction(message.id, emoji)}/>

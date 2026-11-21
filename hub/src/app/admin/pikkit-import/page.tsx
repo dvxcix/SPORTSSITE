@@ -18,15 +18,14 @@ export default async function PikkitImportPage() {
         Admin-only. Feeds the community pick counts behind the 💰SA÷RBI value flag in The Dugout.
       </p>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6">
-        <p className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">How to get the data</p>
+      <details className="ss-admin-help bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-6"><summary>Import instructions</summary>
         <ol className="text-sm text-[var(--text-2)] space-y-1 list-decimal list-inside">
           <li>Sign into app.pikkit.com, open the game's props page</li>
           <li>Run your bookmarklet script in the browser console</li>
           <li>Copy the full JSON line it logs after "PIKKIT DONE"</li>
           <li>Paste it below, set the game date, and import</li>
         </ol>
-      </div>
+      </details>
 
       <PikkitImportForm />
     </div>

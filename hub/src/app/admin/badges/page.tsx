@@ -23,9 +23,7 @@ export default async function AdminBadgesPage() {
     <div className="ss-admin-badges-page">
       <h1>Badge studio</h1>
       <p className="ss-admin-badges-intro">
-        Create a badge (icon + name + what it means), then assign it to whichever members earned it — like assigning
-        a role on Discord. It shows next to their name on posts, comments, their profile, the leaderboard, and search,
-        and hovering it shows the description you set here.
+        Create badges with a name, icon and description. Assign them to members; badges appear beside their name across SlipSurge.
       </p>
       <BadgeManager userId={user.id} initialBadges={badges ?? []} initialAssignments={(assignments ?? []) as any} />
     </div>
