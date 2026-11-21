@@ -8,6 +8,7 @@ const state={date:'2026-11-02',game:{id:7,date:'2026-11-02'},fail:true,exact:fal
 ;(globalThis as typeof globalThis&{nbaPastPage:typeof state}).nbaPastPage=state
 const built=await build({stdin:{contents:"export {default} from './src/app/the-paint/page'",resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'nba-past-page.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'past-page',setup(builder){
   const modules:Record<string,string>={
+    '@/lib/researchPreferencesServer':`export async function readResearchPreferences(id){if(id!=='member')throw Error('wrong owner');return {preferences:{version:1,launchPage:'feed',books:['draftkings'],primaryBook:'draftkings'},available:true}}`,
     '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
     '@/lib/nbaSeasonDisplay':`export const nbaSeasonDisplayBoard=board=>board`,
     '@/components/nba/NbaAccessFallback':`export function NbaAccessFallback(){return null}`,
@@ -25,6 +26,7 @@ test('missing historical research keeps the requested date and game navigation, 
   const result=await fixture.exports.default({searchParams:Promise.resolve({date:'2026-11-02',game:'7',mode:'pregame',view:'odds-board'})})
   assert.equal(state.exact,true)
   assert.equal(result.props.date,'2026-11-02');assert.equal(result.props.selectedGameId,7);assert.equal(result.props.initial,null)
+  assert.deepEqual(result.props.initialPreferences,{version:1,launchPage:'feed',books:['draftkings'],primaryBook:'draftkings'});
   assert.equal(result.props.scheduleComplete,true);assert.deepEqual(result.props.games,[state.game])
   state.fail=false
   try{const saved=await fixture.exports.default({searchParams:Promise.resolve({date:'2026-11-02',game:'7',mode:'pregame'})});assert.deepEqual(saved.props.initial,{game:state.game});await fixture.exports.default({searchParams:Promise.resolve({})});assert.equal(state.exact,true)}finally{state.fail=true}

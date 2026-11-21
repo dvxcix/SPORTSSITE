@@ -1,0 +1,63 @@
+Member workspace defaults — 2026-11-21
+
+This release completes the Court heat-color regression and adds private, durable
+sportsbook and launch-page preferences. It does not certify the remaining site.
+
+Member experience
+- Settings > Your workspace: choose preferred books, a primary book and a launch
+  page. Settings navigation works in the desktop sidebar and phone section menu.
+- Root/Home and default password, OAuth, Whop and desktop OAuth completion use
+  the saved launch page. Installed web-app start_url uses /launch; its id stays /.
+- Direct destinations retain precedence. New-account onboarding remains mandatory.
+  Saved NBA/NFL launch choices recheck current access and fall back to Feed after
+  revocation. No arbitrary stored redirect URLs or stale game/date are accepted.
+- NBA single-book research, Odds Board and game header use the primary default.
+  NBA price comparisons/first-basket comparisons, NFL sportsbook comparisons,
+  expanded vendor columns and game lines start with the saved book set. NFL
+  Props and Odds Board start with the primary book. Every available book remains
+  reachable. If no preferred comparison book is present, captured books appear.
+- NBA comparison links preserve the visible book set through URL normalization;
+  manual All books overrides remain in the shared URL. Existing fixed analytical
+  references, pregame boundaries, archives, models and entitlement policies remain.
+- Court L5/L10/L20 continuous red/green fills and borders are restored. Sample
+  counts, neutral missing values and contrasted text remain visible.
+
+Persistence and security
+- Applied only the new member_research_preferences migration, remote version
+  20261121003520; local filename reconciled to that recorded version.
+- Separate private table, owner-read RLS, no anonymous access, no direct member
+  writes. Validated, service-only SECURITY INVOKER CAS function; HTTP writes bind
+  exclusively to the verified caller and enforce same-origin bounded bodies.
+- Public profile sportsbook badges and public user projections are not reused.
+  Optional preference-read outages cannot invalidate the user's auth/profile.
+- Live SQL assertions passed for initialization, stale-edit rejection, input
+  validation, owner/cross-owner RLS and denied direct member RPC execution.
+  All SQL fixture writes were rolled back; migration history was not replayed.
+- Failed or uncertain UI saves require reload before retrying. Concurrent-tab
+  conflicts preserve the saved version and expose an explicit recovery action.
+
+Verification
+- Production smoke suite: 134/134.
+- Focused account/auth/NBA/NFL/chart/heat/preferences regression batch: 108/108.
+  Total distinct tests in those two suites: 242. Earlier overlapping focused
+  runs are not added to this count.
+- Updated two test fixtures for newly imported private defaults/public preview
+  modules; no assertion or auth protection was removed to make them pass.
+- TypeScript and ESLint passed. Optimized private Next build completed, including
+  all 159 static outputs; final accent-fill/foreground CSS tokens were checked
+  in the dev browser and are included in the Git deployment build.
+- Actual PC browser review: 1440px desktop and 390px phone, light/dark; settings,
+  price-comparison picker, popup bounds and document overflow. Native keyboard
+  selection, Escape and trigger-focus restoration checked. Reduced-motion CSS
+  reviewed. No physical-phone or native-installer certification is claimed.
+- Compiled private app: save/reload, NBA launch resolution, retained books,
+  concurrent-tab CAS conflict and reload recovery passed. Live Court heat fills
+  separately confirmed after hotfix bade2a26 reached canonical production.
+- Production deployment SHA, alias, authenticated post-release checks and runtime
+  logs are recorded in the local release receipt under evidence/live.
+
+Checklist
+236 surfaces: 48 Review ready, 10 Approved, 1 In progress, 177 Queued.
+Added separate launch, workspace-settings and shared sportsbook-picker entries.
+Prior owner approvals remain; new work is review-ready, not owner-approved.
+MLB remains hidden/off-season. No tool was removed or hidden in this release.

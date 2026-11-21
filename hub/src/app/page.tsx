@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { LandingPage } from '@/components/marketing/LandingPage'
 import { pageMetadata } from '@/lib/siteMetadata'
+import { memberLaunchDestination } from '@/lib/researchPreferencesServer'
 
 export const dynamic = 'force-dynamic'
 export const metadata = pageMetadata({
@@ -13,6 +14,6 @@ export const metadata = pageMetadata({
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/feed')
+  if (user) redirect(await memberLaunchDestination(user.id))
   return <LandingPage />
 }

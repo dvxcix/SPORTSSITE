@@ -2,12 +2,23 @@ import { NextResponse } from 'next/server'
 import { resolveAuthedClient } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { safeApiError } from '@/lib/safeApiError'
+import { readResearchPreferences } from '@/lib/researchPreferencesServer'
+import { validResearchPreferences } from '@/lib/researchPreferences'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store, max-age=0' }
 const notificationKeys = new Set(['new_follower', 'post_reaction', 'post_comment', 'repost', 'mention', 'new_pick', 'pick_result', 'group_invite', 'dm', 'subscription', 'lineup_confirmed'].flatMap(key => [key, `${key}_email`]))
 const objectValue = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
 const stringList = (value: unknown) => Array.isArray(value) && value.length <= 300 && value.every(item => typeof item === 'string' && item.length <= 120)
+
+export async function GET() {
+  const { userId, error } = await resolveAuthedClient()
+  if (error) return error
+  if (!userId) return NextResponse.json({ error: 'Sign in required.' }, { status: 401, headers })
+  const saved = await readResearchPreferences(userId)
+  if (!saved.available) return NextResponse.json({ error: 'Preferences unavailable.' }, { status: 503, headers })
+  return NextResponse.json({ preferences: saved.preferences }, { headers })
+}
 
 async function limitedJson(request: Request): Promise<unknown> {
   const reader = request.body?.getReader()
@@ -39,6 +50,17 @@ export async function PATCH(request: Request) {
   if (!objectValue(body) || Object.keys(body).some(key => !['kind', 'value', 'expected'].includes(key)) || !objectValue(body.value) || !objectValue(body.expected)) return NextResponse.json({ error: 'Invalid preferences.' }, { status: 400, headers })
 
   const value = body.value
+  if (body.kind === 'research') {
+    if (!validResearchPreferences(value) || !validResearchPreferences(body.expected)) return NextResponse.json({ error: 'Invalid research preferences.' }, { status: 400, headers })
+    const { data: saved, error } = await createAdminClient().rpc('save_member_research_preferences', { p_user_id: userId, p_preferences: value, p_expected: body.expected })
+    if (error) {
+      const response = safeApiError('research-preferences-save', error, 'Preferences could not be saved.')
+      response.headers.set('Cache-Control', headers['Cache-Control'])
+      return response
+    }
+    if (saved !== true) return NextResponse.json({ error: 'Preferences changed while editing. Reload and try again.' }, { status: 409, headers })
+    return NextResponse.json({ ok: true }, { headers })
+  }
   let fields: string[]
   let update: Record<string, Record<string, unknown>>
   if (body.kind === 'interests') {

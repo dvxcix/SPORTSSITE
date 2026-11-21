@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
+import { validResearchPreferences } from '../src/lib/researchPreferences'
 
 const source = await readFile(new URL('../src/app/api/account/preferences/route.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -33,6 +34,8 @@ function fixture(options: { userId?: string | null; authError?: Reply; missing?:
     '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: options.userId === undefined ? 'owner' : options.userId, error: options.authError }) },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/safeApiError': { safeApiError: () => ({ status: 500, headers: { set: () => {} } }) },
+    '@/lib/researchPreferences': { validResearchPreferences },
+    '@/lib/researchPreferencesServer': { readResearchPreferences: async () => ({ available: false }) },
   }
   const mod = { exports: {} as { PATCH: (request: Request) => Promise<Reply> } }
   new Function('require', 'exports', 'module', compiled)((key: string) => { assert.ok(key in imports, key); return imports[key] }, mod.exports, mod)

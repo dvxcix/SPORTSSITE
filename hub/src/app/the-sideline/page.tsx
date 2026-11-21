@@ -20,6 +20,7 @@ import { NflPregameBoundary } from './NflPregameBoundary'
 import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
 import { readPreviewContext } from '@/lib/publicResearchPreview'
 import { NflLastSeen } from './NflLastSeen'
+import { readResearchPreferences } from '@/lib/researchPreferencesServer'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,12 +39,13 @@ function PregameResearchNotice({ lens }: { lens: { status: string; headline: str
 }
 
 export default async function SidelinePage({ searchParams }: {
-  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; view?: string | string[]; sample?: string | string[]; at?: string | string[]; preview?: string | string[]; player?: string | string[]; line?: string | string[] }>
+  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; view?: string | string[]; sample?: string | string[]; at?: string | string[]; preview?: string | string[]; player?: string | string[]; line?: string | string[]; book?: string | string[] }>
 }) {
   const gate = await requireNflAccess()
   if (gate.error?.status === 503) throw new AuthTemporarilyUnavailableError()
   if (gate.error) notFound()
 
+  const preferencesPromise = readResearchPreferences(gate.userId)
   const params = await searchParams
   const requestedSample = Array.isArray(params.sample) ? params.sample[0] : params.sample
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
@@ -77,6 +79,7 @@ export default async function SidelinePage({ searchParams }: {
     }),
     mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
+  const { preferences } = await preferencesPromise
   let market = initialMarket
   let weatherSummary = initialWeather
   if (mode === 'cheatsheets') {
@@ -88,7 +91,7 @@ export default async function SidelinePage({ searchParams }: {
     const results = mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null
     if (beganOpen && !nflPregameOpen(selected)) market = await getSidelineOddsBundle(selected)
     return <>{navigation}<SidelineResearchClient
-    key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
+    initialPreferences={preferences} key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     gameId={selected.id} initialResults={results}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
     boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
@@ -106,5 +109,5 @@ export default async function SidelinePage({ searchParams }: {
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
   if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
+  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient initialPreferences={preferences} initialBook={typeof params.book==='string'?params.book:undefined} key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')+':'+(typeof params.book==='string'?params.book:'default')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
 }

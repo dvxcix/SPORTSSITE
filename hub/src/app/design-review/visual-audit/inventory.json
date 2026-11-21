@@ -2090,6 +2090,30 @@
     "evidence": []
   },
   {
+    "id": "route:/launch",
+    "route": "/launch",
+    "source": "src/app/launch/page.tsx",
+    "label": "Launch",
+    "group": "General",
+    "kind": "Page",
+    "status": "Review ready",
+    "batch": "2026-11-21 · Member workspace defaults",
+    "notes": "Verified chosen NBA launch from the real browser; root and default password/OAuth/Whop/desktop callback paths use the shared resolver. Explicit next links and new-account onboarding remain in charge. Fresh NBA/NFL access checks fall back to Feed after revocation. This route redirects; visual and motion checks apply to its destination.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/member-workspace-preferences-release-2026-11-21.txt"
+    ]
+  },
+  {
     "id": "route:/leaderboard",
     "route": "/leaderboard",
     "source": "src/app/leaderboard/page.tsx",
@@ -3088,6 +3112,30 @@
     "evidence": []
   },
   {
+    "id": "route:/settings/research",
+    "route": "/settings/research",
+    "source": "src/app/settings/research/page.tsx",
+    "label": "Settings · Research",
+    "group": "Settings",
+    "kind": "Page",
+    "status": "Review ready",
+    "batch": "2026-11-21 · Member workspace defaults",
+    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/member-workspace-preferences-release-2026-11-21.txt"
+    ]
+  },
+  {
     "id": "route:/settings/security",
     "route": "/settings/security",
     "source": "src/app/settings/security/page.tsx",
@@ -3409,7 +3457,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3436,7 +3484,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3464,7 +3512,7 @@
     "kind": "Workspace",
     "status": "Queued",
     "batch": null,
-    "notes": "",
+    "notes": "2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": false,
       "desktopLight": false,
@@ -3806,7 +3854,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3831,7 +3879,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3910,7 +3958,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4975,6 +5023,29 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
+    ]
+  },
+  {
+    "id": "shared:Saved sportsbook picker",
+    "route": "/the-paint?view=odds",
+    "label": "Saved sportsbook picker and comparison links",
+    "group": "Shared components",
+    "kind": "Shared surface",
+    "status": "Review ready",
+    "batch": "2026-11-21 · Member workspace defaults",
+    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/member-workspace-preferences-release-2026-11-21.txt"
     ]
   },
   {

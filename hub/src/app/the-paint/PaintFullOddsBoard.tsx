@@ -23,8 +23,8 @@ function trackedGames(games:PaintGame[],learned:PaintGame[],now:number) {
   return games.map(item=>{const prior=learned.find(game=>game.id===item.id),starts=[nbaGameStart(item),prior?nbaGameStart(prior):null].filter((value):value is number=>value!=null);return {game:item,start:starts.length?Math.min(...starts):null,open:nbaPregameOpen(item,now)&&(!prior||nbaPregameOpen(prior,now))}})
 }
 const trackedSignature=(tracked:ReturnType<typeof trackedGames>)=>tracked.map(item=>`${item.game.id}:${item.start??'unknown'}:${item.open?'open':'closed'}`).sort().join('|')
-export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onResume,selectedMarket,selectedBook,onMarketChange,onBookChange}:{finalOutcomes?:ReadonlyMap<string,NbaFinalOutcome>;date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;onResume?:(at:number)=>void;selectedMarket?:PaintMarket;selectedBook?:string;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}) {
-  const mode=useNbaOddsMode(), [localMarket,setLocalMarket]=useState<PaintMarket>('points'), [localBook,setLocalBook]=useState('all'), [defaultBook,setDefaultBook]=useState('fanduel')
+export function PaintFullOddsBoard({finalOutcomes,date,games,phaseCheck=null,onResume,selectedMarket,selectedBook,preferredBook,onMarketChange,onBookChange}:{finalOutcomes?:ReadonlyMap<string,NbaFinalOutcome>;date:string;games:PaintGame[];phaseCheck?:NbaOddsBoardPhaseCheck|null;onResume?:(at:number)=>void;selectedMarket?:PaintMarket;selectedBook?:string;preferredBook?:string|null;onMarketChange?:(market:PaintMarket)=>void;onBookChange?:(book:string)=>void}) {
+  const mode=useNbaOddsMode(), [localMarket,setLocalMarket]=useState<PaintMarket>('points'), [localBook,setLocalBook]=useState('all'), [defaultBook,setDefaultBook]=useState(preferredBook??'fanduel')
   const market=selectedMarket??localMarket, parentBook=selectedBook??localBook, book=parentBook==='all'?defaultBook:parentBook
   const setMarket=(value:PaintMarket)=>{setLocalMarket(value);onMarketChange?.(value)}, setBook=(value:string)=>{setLocalBook(value);onBookChange?.(value)}
   const supported=!nbaBinary(market)

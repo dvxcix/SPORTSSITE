@@ -23,8 +23,8 @@ const STATE_COOKIE = 'whop_oauth_state'
 // later verify the same session is still the one completing the link.
 export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url)
-  const next = safeInternalPath(searchParams.get('next'))
   const mode = searchParams.get('mode') === 'link' ? 'link' as const : undefined
+  const next = safeInternalPath(searchParams.get('next'), mode === 'link' ? '/settings/membership' : '/launch')
   const desktopState = searchParams.get('desktop_state')
 
   let linkUserId: string | undefined

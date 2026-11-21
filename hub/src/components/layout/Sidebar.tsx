@@ -312,7 +312,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         }}
       >
       <div className="ss-sidebar-brand" data-collapsed={isCollapsed}>
-        <Link href="/feed" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={40} height={40} priority style={{ objectFit: 'contain' }} /></Link>
+        <Link href="/launch" prefetch={false} onClick={onClose} aria-label="SlipSurge home"><Image src="/logo.png" alt="SlipSurge" width={40} height={40} priority style={{ objectFit: 'contain' }} /></Link>
         <button type="button" onClick={toggleCollapsed} className="ss-sidebar-collapse hidden md:flex" aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
         <button type="button" onClick={onClose} className="ss-sidebar-close md:hidden" aria-label="Close menu"><X size={18}/></button>
       </div>

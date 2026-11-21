@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AuthStatus } from '@/components/auth/AuthShell'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 function DesktopAuthStartInner() {
   const searchParams = useSearchParams()
@@ -17,8 +18,7 @@ function DesktopAuthStartInner() {
       : ''
 
   useEffect(() => {
-    const rawNext = searchParams.get('next') || '/feed'
-    const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/feed'
+    const next = safeInternalPath(searchParams.get('next'), '/launch')
 
     if (requestError || !state) return
 

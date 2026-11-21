@@ -239,7 +239,7 @@ export async function GET(request: Request) {
   // straight to wherever they were headed, same as today.
   const completeUrl = new URL(`${origin}/auth/whop/complete`)
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
-  const next = isNewAccount ? '/onboarding' : safeInternalPath(stored.next)
+  const next = isNewAccount ? '/onboarding' : safeInternalPath(stored.next, '/launch')
   completeUrl.searchParams.set('next', next)
   if (stored.desktopState && /^[0-9a-f-]{36}$/i.test(stored.desktopState)) {
     const desktopUrl = new URL('slipsurge://auth/complete')

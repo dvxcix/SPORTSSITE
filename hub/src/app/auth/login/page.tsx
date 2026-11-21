@@ -22,7 +22,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = safeInternalPath(searchParams.get('next'))
+  const next = safeInternalPath(searchParams.get('next'), '/launch')
   const isDesktop = searchParams.get('platform') === 'desktop' ||
     (typeof navigator !== 'undefined' && navigator.userAgent.includes('SlipSurgeDesktop/'))
   const oauthError = searchParams.get('error')

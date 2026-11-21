@@ -100,6 +100,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] Community | Groups · Create | /groups/create
 [Queued] Community | Groups | /groups
 [Queued] Community | Hashtag · Tag | /hashtag/[tag]
+[Review ready] General | Launch | /launch
 [Queued] General | Leaderboard | /leaderboard
 [Queued] Creators & commerce | Marketplace · Id | /marketplace/[id]
 [Queued] Creators & commerce | Marketplace | /marketplace
@@ -145,6 +146,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] Settings | Settings | /settings
 [Queued] Settings | Settings · Privacy | /settings/privacy
 [Queued] Settings | Settings · Profile | /settings/profile
+[Review ready] Settings | Settings · Research | /settings/research
 [Queued] Settings | Settings · Security | /settings/security
 [Queued] MLB · off-season | Slate Breakdown | /slate-breakdown
 [Queued] General | Sports · Sport · GameId | /sports/[sport]/[gameId]
@@ -224,6 +226,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Review ready] NFL | NFL · Column manager | /the-sideline
 [Review ready] NFL | NFL · Player comparison | /the-sideline
 [Review ready] NFL | NFL · Game lines and capture replay | /the-sideline
+[Review ready] Shared components | Saved sportsbook picker and comparison links | /the-paint?view=odds
 [Approved] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Queued] Shared components | Account menu | Shared surface
 [Queued] Shared components | Global search | Shared surface

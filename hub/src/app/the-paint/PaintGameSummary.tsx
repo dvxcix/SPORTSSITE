@@ -20,9 +20,9 @@ const captured = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeri
 const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 })
 const percent = (value: number | null | undefined) => value == null ? '—' : `${Math.round(value * 100)}%`
 
-export function PaintGameSummary({ board, teamControl, refreshPrices = false, phaseCheck }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean; phaseCheck?: NbaOddsBoardPhaseCheck | null }) {
+export function PaintGameSummary({ board, teamControl, refreshPrices = false, phaseCheck, initialBook = 'draftkings' }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean; phaseCheck?: NbaOddsBoardPhaseCheck | null; initialBook?: string }) {
   const mode = useNbaOddsMode(), id = useId(), rail = useRef<HTMLDivElement>(null)
-  const [book, setBook] = useState('draftkings'), [metric, setMetric] = useState<'betShare' | 'moneyShare'>('betShare')
+  const [book, setBook] = useState(initialBook==='all'?'draftkings':initialBook), [metric, setMetric] = useState<'betShare' | 'moneyShare'>('betShare')
   const [edges, setEdges] = useState({ start: true, end: true }), [retry, setRetry] = useState(0)
   const [state, setState] = useState<{ key: string; overview: NbaGameOverview | null; error: boolean; gameOdds?: PaintGameOdds[]; pricesError?: boolean } | null>(null)
   const clockGame = nbaGameHeaderClock(board.game, mode, phaseCheck), start = clockGame ? nbaGameStart(clockGame) : null

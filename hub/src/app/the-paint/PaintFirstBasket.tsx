@@ -12,7 +12,7 @@ import { PaintFirstBasketOdds } from './PaintFirstBasketOdds'
 import { PaintSortHeader } from './PaintSortHeader'
 
 type Research = ReturnType<typeof nbaFirstBasketResearch>
-export function PaintFirstBasket({board,open}:{board:PaintBoard;open:(id:number)=>void}) {
+export function PaintFirstBasket({board,open,initialBook='all',preferredBooks=[]}:{board:PaintBoard;open:(id:number)=>void;initialBook?:string;preferredBooks?:string[]}) {
   const oddsMode = useNbaOddsMode()
   const dataKey=`${oddsMode}:${board.game.id}:${nbaResearchRevision(board)}`
   const [state,setState]=useState<{key:string;data:Research}|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
@@ -34,7 +34,7 @@ export function PaintFirstBasket({board,open}:{board:PaintBoard;open:(id:number)
     .sort((a,b)=>{const field=sort as 'games'|'firstFieldGoals'|'firstScores'|'firstAttempts'|'teamFirstFieldGoals';return (sort==='name'?`${a.player.last_name} ${a.player.first_name}`.localeCompare(`${b.player.last_name} ${b.player.first_name}`):a[field]-b[field])*(ascending?1:-1)||a.player.last_name.localeCompare(b.player.last_name)})
   const sortBy=(column:string)=>{if(column===sort)setAscending(value=>!value);else{setSort(column);setAscending(column==='name')}}
   return <section className={styles.movement} aria-label="NBA first-basket research">
-    <PaintFirstBasketOdds key={board.game.date} date={board.game.date}/>
+    <PaintFirstBasketOdds key={board.game.date} date={board.game.date} initialBook={initialBook} preferredBooks={preferredBooks}/>
     <div className={styles.sectionHeading}><h3>First basket</h3><span>Opening tip · First shot · First field goal</span></div>
     {error&&<p role="status" className={styles.notice}>{error} <button onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
     {!data&&!error&&<p role="status" className={styles.panelEmpty}>Loading opening-play research…</p>}

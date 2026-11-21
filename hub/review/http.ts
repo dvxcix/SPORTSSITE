@@ -11,12 +11,28 @@ import {nbaMarketSupportView,nbaMarketSupport} from '../src/lib/nbaMarketSignal'
 import {nbaPackFullBoard} from '../src/lib/nbaFullOddsBoard'
 import {nbaOddsBoardPhaseHeader,nbaOddsBoardPhaseSignature} from '../src/lib/nbaOddsBoardPhase'
 import {nbaMilestoneSignals} from '../src/lib/nbaMilestoneSignals'
+import {DEFAULT_RESEARCH_PREFERENCES,validResearchPreferences} from '../src/lib/researchPreferences'
 /** Complete interception of local review API requests. No request falls through to a real handler. */
 export async function reviewHttp(request:NextRequest){
  const path=request.nextUrl.pathname,q=request.nextUrl.searchParams
  const role=(request.cookies.get('ss_ui_review_role')?.value??'member') as ReviewRole
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
  const board=makeBoard(games.find(g=>g.id===Number(q.get('game')))??games[0])
+ if(path==='/api/account/preferences'){
+  const user=authUser(role)
+  if(!user)return json({error:'Sign in required.'},401)
+  const rows=table('member_research_preferences'),row=rows.find(item=>item.user_id===user.id)
+  const current=row?.preferences??structuredClone(DEFAULT_RESEARCH_PREFERENCES)
+  if(request.method==='GET')return json({preferences:current})
+  if(request.method==='PATCH'){
+   const body=await request.json().catch(()=>null)
+   if(body?.kind!=='research'||Object.keys(body).some(key=>!['kind','value','expected'].includes(key))||!validResearchPreferences(body.value)||!validResearchPreferences(body.expected))return json({error:'Invalid research preferences.'},400)
+   const canonical=(value:typeof current)=>JSON.stringify([value.version,value.launchPage,value.books,value.primaryBook])
+   if(canonical(current)!==canonical(body.expected))return json({error:'Preferences changed while editing.'},409)
+   if(row)row.preferences=structuredClone(body.value);else rows.push({user_id:user.id,preferences:structuredClone(body.value)})
+   return json({ok:true})
+  }
+ }
  if(!['GET','HEAD'].includes(request.method)){
   // Only UI editing in the isolated in-memory adapter is allowed. APIs never execute operational actions.
   return json({error:'This action is disabled in private design review. No live changes were made.',code:'PRIVATE_REVIEW_ONLY'},409)

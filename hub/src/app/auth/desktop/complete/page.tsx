@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AuthStatus } from '@/components/auth/AuthShell'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 function DesktopAuthCompleteInner() {
   const router = useRouter()
@@ -14,8 +15,7 @@ function DesktopAuthCompleteInner() {
     const tokenHash = searchParams.get('token_hash')
     const state = searchParams.get('state')
     const expectedState = localStorage.getItem('slipsurge_desktop_oauth_state')
-    const rawNext = searchParams.get('next') || '/feed'
-    const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/feed'
+    const next = safeInternalPath(searchParams.get('next'), '/launch')
 
     if (!tokenHash || !state || state !== expectedState) {
       window.queueMicrotask(() => setError('This desktop sign-in request is invalid or expired.'))

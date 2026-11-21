@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as authErrors from '../src/lib/supabase/authErrors.ts'
 import * as ownOnboarding from '../src/lib/supabase/ownOnboarding.ts'
 import { isMlbOnlyPath, isMlbPullPath } from '../src/lib/mlbOffseasonAccess.ts'
+import { isPublicPreviewPath } from '../src/lib/publicResearchPreview.ts'
 
 async function compiled(file: string, imports: Record<string, unknown>, fallback?: (name: string) => unknown) {
   const source = await readFile(new URL('../src/' + file, import.meta.url), 'utf8')
@@ -14,6 +15,7 @@ async function compiled(file: string, imports: Record<string, unknown>, fallback
   new Function('require', 'exports', 'module', outputText)((name: string) => {
     if (name.endsWith('/authErrors') || name === './authErrors') return authErrors
     if (name === './ownOnboarding') return ownOnboarding
+    if (name === '@/lib/publicResearchPreview') return { isPublicPreviewPath }
     if (name === 'next/server') return { NextResponse }
     if (name in imports) return imports[name]
     if (fallback) return fallback(name)

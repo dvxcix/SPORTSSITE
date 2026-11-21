@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores.',
     id: '/',
     scope: '/',
-    start_url: '/feed',
+    start_url: '/launch',
     display: 'standalone',
     orientation: 'any',
     lang: 'en-US',

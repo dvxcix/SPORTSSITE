@@ -8,7 +8,7 @@ import { safeInternalPath } from '@/lib/safeRedirect'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = safeInternalPath(searchParams.get('next'))
+  const next = safeInternalPath(searchParams.get('next'), '/launch')
   const desktopState = searchParams.get('desktop_state')
   const isDesktop = !!desktopState && /^[0-9a-f-]{36}$/i.test(desktopState)
 

@@ -26,6 +26,7 @@ export default async function SettingsPage() {
     {
       title: 'Preferences',
       items: [
+        { href: '/settings/research', icon: Compass, label: 'Your workspace', desc: 'Launch page and default sportsbooks' },
         { href: '/settings/interests', icon: Compass, label: 'Interests', desc: 'Sports, teams, markets, and feed mix' },
         { href: '/settings/notifications', icon: Bell, label: 'Notifications', desc: 'Push, email, in-app alerts' },
         { href: '/settings/privacy', icon: Eye, label: 'Privacy', desc: 'Who can see your posts and profile' },

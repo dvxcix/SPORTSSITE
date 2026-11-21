@@ -1,5 +1,7 @@
 'use client'
 
+import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
+import { DEFAULT_RESEARCH_PREFERENCES, initialResearchBook, type ResearchPreferences } from '@/lib/researchPreferences'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -1130,7 +1132,9 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
   )
 }
 
-function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoard }) {
+function GameLines({ game, board, preferredBooks = [] }: { game: SidelineGame; board: SidelineOddsBoard; preferredBooks?: string[] }) {
+  const available=board.gameLines.map(line=>line.vendor)
+  const selection=useResearchBooks(available,preferredBooks)
   if (!board.gameLines.length) return null
   return (
     <section className={styles.gameLines} aria-label="All sportsbook game lines">
@@ -1148,11 +1152,12 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
           <span>Total</span>
         </div>
         <span className={styles.liveBookCount}>
-          <b>{board.gameLines.length}</b> live books
+          <b>{selection.books.length}</b> captured books
         </span>
       </header>
+      <ResearchBookFilter available={available} selected={selection.books} onChange={selection.setBooks}/>
       <div className={styles.gameLineRail}>
-        {board.gameLines.map(line => (
+        {board.gameLines.filter(line=>selection.books.includes(line.vendor)).map(line => (
           <article className={styles.gameLineCard} data-vendor={normalizeVendor(line.vendor)} data-opening-only={line.isOpeningOnly ? '' : undefined} key={line.vendor}>
             <header>
               <span className={styles.bookMark}>
@@ -1591,7 +1596,7 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture, initialPreview, initialView = 'core' }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null; initialPreview?: { player?: number; line?: number } | null; initialView?: string }) {
+export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture, initialPreview, initialView = 'core', initialPreferences = DEFAULT_RESEARCH_PREFERENCES, initialBook }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null; initialPreview?: { player?: number; line?: number } | null; initialView?: string; initialPreferences?: ResearchPreferences; initialBook?: string }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
@@ -1599,7 +1604,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [view, setView] = useState<BoardView>(initialPreview ? 'props' : VIEW_OPTIONS.find(option=>option.id===initialView)?.id ?? 'core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
-  const [activeBook, setActiveBook] = useState('fanduel')
+  const [activeBook, setActiveBook] = useState(()=>initialResearchBook(initialBook,initialPreferences,'fanduel'))
   const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
   const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture, view === 'odds-board')
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
@@ -1633,6 +1638,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availablePickMarkets = useMemo(() => publicPickCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
+  const bookFilter = useResearchBooks(availableBooks.map(book=>book.id),initialBook ? [] : initialPreferences.books)
   const savedItems = useMemo(() => watchlistItems.filter(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === selected.id), [selected.id, watchlistItems])
   const savedKeys = useMemo(() => new Set(savedItems.map(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}`)), [savedItems])
   const toggleSavedMarket = useCallback(
@@ -1916,7 +1922,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   }, [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
 
   const resolvedColumns = useMemo(() => {
-    const ordered = columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
+    const ordered = (columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]).filter(column=>!column.vendor||bookFilter.books.includes(column.vendor))
     if (view === 'custom') return ordered.filter(column => visibleIds.has(column.id))
     const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
     const activeRows = rows.filter(row => !erased.has(row.id) && (!positions.length || positions.includes(row.position)))
@@ -1933,7 +1939,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         }))
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
-  }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds])
+  }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds, bookFilter.books])
 
   const scoreContextLabel = useMemo(() => {
     const labels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
@@ -2160,7 +2166,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         <summary>
           Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span>
         </summary>
-        <GameLines game={selected} board={board} />
+        <GameLines game={selected} board={board} preferredBooks={initialPreferences.books} />
       </details>}
 
       {toolsOpen ? (
@@ -2216,6 +2222,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </section>
       ) : null}
 
+      {!['core','props','odds-board'].includes(view) && <ResearchBookFilter available={availableBooks.map(book=>book.id)} selected={bookFilter.books} onChange={bookFilter.setBooks}/>}
       {view !== 'odds-board' && <ResearchSectionNav className={styles.boardSections} label="NFL board column groups" value={view} onChange={setView} items={VIEW_OPTIONS.filter(option=>option.id!=='odds-board').map(option=>({value:option.id,label:option.label}))}/>}
       {view !== 'odds-board' && <nav className={styles.roleTabs} aria-label="NFL position lanes">
         {ROLE_OPTIONS.map(option => (

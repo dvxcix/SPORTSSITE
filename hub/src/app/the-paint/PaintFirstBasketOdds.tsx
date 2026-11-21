@@ -13,6 +13,7 @@ import { PaintPriceValue } from './PaintPrice'
 import { PlayerAvatar } from './PaintVisuals'
 import { PaintBookSelect } from './PaintEntitySelect'
 import styles from './paint.module.css'
+import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
 
 type Slate = {date:string;requestedDate:string;games:number;loaded:number;failed:number;status:string;unmatched:number;rows:FirstBasketRow[];fetchedAt:string}
 type QuoteGroup = {key:string;row:FirstBasketRow;quotes:FirstBasketRow[]}
@@ -21,10 +22,10 @@ const playerName = (row:FirstBasketRow) => `${row.player.last_name} ${row.player
 const time = (at:string) => new Date(at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'})
 const bestProbability = (group:QuoteGroup) => Math.min(...group.quotes.map(row=>impliedProbability(nbaPrice(row.offer))??Infinity))
 
-export function PaintFirstBasketOdds({date}:{date:string}) {
+export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:{date:string;initialBook?:string;preferredBooks?:string[]}) {
   const oddsMode = useNbaOddsMode()
   const [state,setState]=useState<Slate|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
-  const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[market,setMarket]=useState('all'),[book,setBook]=useState('all'),[query,setQuery]=useState('')
+  const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[market,setMarket]=useState('all'),[book,setBook]=useState(initialBook),[query,setQuery]=useState('')
   const [sort,setSort]=useState('movement'),[direction,setDirection]=useState('all'),[basis,setBasis]=useState('opening'),[minimum,setMinimum]=useState(0)
   useEffect(()=>{
     const controller=new AbortController();let pending=false
@@ -44,10 +45,11 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
     const rows=slate?.rows??[]
     return {books:[...new Set(rows.map(row=>row.offer.vendor))].sort(),games:[...new Map(rows.map(row=>[row.game.id,row.game])).values()],teams:[...new Map(rows.filter(row=>game==='all'||String(row.game.id)===game).map(row=>[row.player.team.id,row.player.team])).values()]}
   },[slate,game])
+  const bookFilter=useResearchBooks(catalog.books,preferredBooks)
   const groups=useMemo(()=>{
     const pool=new Map<string,QuoteGroup>()
     for(const row of slate?.rows??[]){
-      if(game!=='all'&&String(row.game.id)!==game||team!=='all'&&String(row.player.team.id)!==team||market!=='all'&&row.offer.prop_type!==market||book!=='all'&&row.offer.vendor!==book||!`${row.player.first_name} ${row.player.last_name}`.toLowerCase().includes(query.trim().toLowerCase()))continue
+      if(game!=='all'&&String(row.game.id)!==game||team!=='all'&&String(row.player.team.id)!==team||market!=='all'&&row.offer.prop_type!==market||(book==='all'?!bookFilter.books.includes(row.offer.vendor):row.offer.vendor!==book)||!`${row.player.first_name} ${row.player.last_name}`.toLowerCase().includes(query.trim().toLowerCase()))continue
       const key=groupKey(row),group=pool.get(key)??{key,row,quotes:[]};group.quotes.push(row);pool.set(key,group)
     }
     const change=(row:FirstBasketRow)=>basis==='previous'?row.movement?.previousChange:row.movement?.change
@@ -69,14 +71,15 @@ export function PaintFirstBasketOdds({date}:{date:string}) {
       else {const av=movement(a),bv=movement(b);order=av==null?bv==null?0:1:bv==null?-1:(av-bv)*(sort==='lengthened'?1:-1)}
       return order||playerName(a.row).localeCompare(playerName(b.row))||a.key.localeCompare(b.key)
     })
-  },[slate,game,team,market,book,query,basis,direction,minimum,sort])
-  const vendors=book==='all'?catalog.books:[book]
+  },[slate,game,team,market,book,query,basis,direction,minimum,sort,bookFilter.books])
+  const vendors=book==='all'?bookFilter.books:[book]
   return <section aria-label="First-basket slate odds" className={`${styles.movement} ${styles.firstBasketOdds}`}>
     <div className={styles.sectionHeading}><h3>First-basket odds · NBA slate</h3></div>
     <div className={styles.movementTools}>
       <label>Game<select aria-label="First-basket game" value={game} onChange={event=>{setGame(event.target.value);setTeam('all')}}><option value="all">Full NBA slate</option>{catalog.games.map(value=><option key={value.id} value={value.id}>{value.visitor_team.abbreviation} @ {value.home_team.abbreviation}</option>)}</select></label>
       <label>Team<select aria-label="First-basket team" value={team} onChange={event=>setTeam(event.target.value)}><option value="all">All teams</option>{catalog.teams.map(value=><option key={value.id} value={value.id}>{value.full_name}</option>)}</select></label>
       <label>Market<select aria-label="First-basket market" value={market} onChange={event=>setMarket(event.target.value)}><option value="all">All first-basket markets</option>{NBA_FIRST_MARKETS.map(value=><option key={value.key} value={value.key}>{value.label}</option>)}</select></label>
+      {book==='all'&&<ResearchBookFilter available={catalog.books} selected={bookFilter.books} onChange={bookFilter.setBooks}/>}
       <PaintBookSelect label="First-basket sportsbook" value={book} onChange={setBook} books={catalog.books}/>
       <label>Change from<select aria-label="First-basket movement baseline" value={basis} onChange={event=>setBasis(event.target.value)}><option value="opening">Opening capture</option><option value="previous">Previous capture</option></select></label>
       <label>Movement<select aria-label="First-basket movement direction" value={direction} onChange={event=>setDirection(event.target.value)}><option value="all">All movement</option><option value="shortened">Shortened</option><option value="lengthened">Lengthened</option><option value="unchanged">Unchanged</option><option value="untracked">Awaiting comparison</option></select></label>

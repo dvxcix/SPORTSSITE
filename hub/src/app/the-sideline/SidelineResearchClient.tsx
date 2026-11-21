@@ -7,6 +7,8 @@ import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { NflScorerBadges } from '@/components/sideline/NflScorerBadges'
 import controls from '@/components/product/ResearchControls.module.css'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
+import { DEFAULT_RESEARCH_PREFERENCES, type ResearchPreferences } from '@/lib/researchPreferences'
 import { BookLogo, bookName } from '@/components/BookLogo'
 import { Check } from 'lucide-react'
 import { PickCount } from '@/components/research/ResearchMetrics'
@@ -34,9 +36,9 @@ export function SidelineResearchClient(props: Parameters<typeof ResearchView>[0]
   return <ResearchView key={`${props.gameId ?? props.boardHref}:${props.mode}:${props.board.capturedAt}:${props.board.picksCapturedAt}:${props.initialResults?.updatedAt}`} {...props} />
 }
 
-function ResearchView({ board: initialBoard, boardHref, title, mode, teams, gameId, initialResults = null }: {
+function ResearchView({ board: initialBoard, boardHref, title, mode, teams, gameId, initialResults = null, initialPreferences = DEFAULT_RESEARCH_PREFERENCES }: {
   board: SidelineOddsBoard; boardHref: string; title: string; mode: 'public' | 'markets'; teams: SidelineTeam[]
-  gameId?: string; initialResults?: NflPublicResult | null
+  gameId?: string; initialResults?: NflPublicResult | null; initialPreferences?: ResearchPreferences
 }) {
   const [board, setBoard] = useState(initialBoard)
   const [results, setResults] = useState(initialResults)
@@ -76,12 +78,14 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
   const picks = useMemo(() => board.players.flatMap(player => (player.publicPicks ?? []).map(pick => ({
     player: player.name, team: player.team, playerId: player.id, ...pick,
   }))).sort((a, b) => b.picks - a.picks), [board.players])
+  const availableBooks = [...new Set(board.players.flatMap(player=>player.markets.flatMap(market=>market.offers.map(offer=>offer.vendor))))]
+  const bookFilter = useResearchBooks(availableBooks,initialPreferences.books)
   const markets = useMemo(() => board.players.flatMap(player => player.markets.flatMap(market => {
     // Lines and sides are separate contracts. Never compare an over with an under
     // or a 40+ yard offer with a 50+ yard offer.
     const groups = new Map<string, { vendor: string; odds: number; time: string | null }[]>()
     for (const offer of market.offers) {
-      if (offer.isOpeningOnly) continue
+      if (offer.isOpeningOnly || !bookFilter.books.includes(offer.vendor)) continue
       for (const side of ['odds', 'over', 'under'] as const) {
         const odds = offer.current[side]
         if (odds == null || americanImpliedProbability(odds) == null) continue
@@ -96,7 +100,7 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
       label: market.label, category: market.category, lineSide: key.replace('|odds', '').replace('|', ' '),
       offers: offers.sort((a, b) => americanImpliedProbability(a.odds)! - americanImpliedProbability(b.odds)!),
     }))
-  })), [board.players])
+  })), [board.players, bookFilter.books])
   const options = mode === 'public' ? [...new Set(picks.map(row => row.propType))] : [...new Set(markets.map(row => row.category))]
   const matches = (player: string, team: string, label: string) => (teamFilter === 'all' || team === teamFilter) && `${player} ${team} ${label}`.toLowerCase().includes(search.toLowerCase())
   const filteredPicks = picks.filter(row => matches(row.player, row.team, row.label) && (category === 'all' || category === row.propType))
@@ -116,6 +120,7 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
     <section className={styles.controls} aria-label="Research filters">
       <label>Search<input value={search} placeholder="Player, team or market" onChange={event => { setSearch(event.target.value); setPage(0) }} /></label>
       <label>Team<select value={teamFilter} onChange={event => { setTeamFilter(event.target.value); setPage(0) }}><option value="all">Both teams</option>{teams.map(team => <option key={team.abbr} value={team.abbr}>{team.name}</option>)}</select></label>
+      {mode==='markets' && <ResearchBookFilter available={availableBooks} selected={bookFilter.books} onChange={books=>{bookFilter.setBooks(books);setPage(0)}}/>}
       <span>{count} rows{mode === 'public' ? <PickCount value={totalPicks} observed/> : null}</span>
     </section>
     <div className={controls.scrollRail} aria-label="Choose a market">{['all', ...options].map(option => <button type="button" key={option} aria-pressed={category === option} className={`${controls.pill} ${category === option ? controls.pillActive : ''}`} onClick={() => { setCategory(option); setPage(0) }}>{option === 'all' ? 'All markets' : marketLabel(option)}</button>)}</div>
