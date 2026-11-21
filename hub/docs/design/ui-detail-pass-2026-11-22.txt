@@ -31,3 +31,8 @@ The local app uses illustrative data without production credentials. The onboard
 
 Release procedure
 Source belongs on GitHub main and must retain the required recovered NFL ancestry. Verify Vercel's ready production deployment matches the published source, then check representative live NBA/NFL drawers. Do not republish or reset the existing What's new announcement as part of this detail pass.
+
+Production verification
+Published source: 375e15329f8311127e1759b82a0be05089688436 on GitHub main.
+Vercel dpl_8mg18hSSriByRE8Np2cDTCrJmHoS is READY and assigned to www.slipsurge.com.
+All nine player-drawer sections were then activated on representative live NBA/NFL players at desktop and phone sizes in both themes: 36 settled checks, no loading or drawer overflow. Shared DataGrid sorting passed on live desktop/phone pages in both themes. The NBA L20/End to L5 focus regression and matching game-log sort arrows passed live. Dark mode was restored and the four temporary QA tabs were closed. See productionVerification in the companion JSON for individual receipts.

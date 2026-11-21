@@ -14676,5 +14676,1203 @@
         "width": 390
       }
     }
-  ]
+  ],
+  "productionVerification": {
+    "state": "READY",
+    "codeCommit": "375e15329f8311127e1759b82a0be05089688436",
+    "deploymentId": "dpl_8mg18hSSriByRE8Np2cDTCrJmHoS",
+    "url": "https://www.slipsurge.com",
+    "source": "GitHub main",
+    "drawers": [
+      {
+        "sport": "NBA",
+        "section": "Overview",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1216,
+        "headings": [
+          "Tyrese Maxey",
+          "Game log"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 316,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "trends",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Overview",
+        "device": "phone",
+        "settled": true,
+        "characters": 1238,
+        "headings": [
+          "Tyrese Maxey",
+          "Game log"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "trends",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Game tracking",
+        "device": "desktop",
+        "settled": true,
+        "characters": 2817,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Game tracking",
+        "device": "phone",
+        "settled": true,
+        "characters": 2838,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Ladders",
+        "device": "desktop",
+        "characters": 1005,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "ladder",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Ladders",
+        "device": "phone",
+        "characters": 1026,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "ladder",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Market Story",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1985,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "movement",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Market Story",
+        "device": "phone",
+        "settled": true,
+        "characters": 2006,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "movement",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Shots",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1042,
+        "headings": [
+          "Tyrese Maxey",
+          "Shot map",
+          "Season shooting"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "court",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Shots",
+        "device": "phone",
+        "settled": true,
+        "characters": 1063,
+        "headings": [
+          "Tyrese Maxey",
+          "Shot map",
+          "Season shooting"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "court",
+        "smallButtons": [
+          {
+            "height": 19,
+            "label": "Retry"
+          }
+        ],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "All odds",
+        "device": "desktop",
+        "characters": 940,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "All odds",
+        "device": "phone",
+        "characters": 961,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 113.33333587646484,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "Matchup",
+        "device": "desktop",
+        "settled": true,
+        "characters": 234,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "matchup",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "Matchup",
+        "device": "phone",
+        "settled": true,
+        "characters": 253,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "matchup",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "NFL Tracking",
+        "device": "desktop",
+        "settled": true,
+        "characters": 259,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "NFL Tracking",
+        "device": "phone",
+        "settled": true,
+        "characters": 278,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "Sportsbooks",
+        "device": "desktop",
+        "settled": true,
+        "characters": 8236,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "Sportsbooks",
+        "device": "phone",
+        "settled": true,
+        "characters": 8255,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "dark",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Overview",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1216,
+        "headings": [
+          "Tyrese Maxey",
+          "Game log"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 138,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "trends",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Overview",
+        "device": "phone",
+        "settled": true,
+        "characters": 1238,
+        "headings": [
+          "Tyrese Maxey",
+          "Game log"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "trends",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Game tracking",
+        "device": "desktop",
+        "settled": true,
+        "characters": 2817,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Game tracking",
+        "device": "phone",
+        "settled": true,
+        "characters": 2838,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Ladders",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1005,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 316,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "ladder",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Ladders",
+        "device": "phone",
+        "settled": true,
+        "characters": 1026,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "ladder",
+        "smallButtons": [],
+        "tables": 1,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Market Story",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1985,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "movement",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Market Story",
+        "device": "phone",
+        "settled": true,
+        "characters": 2006,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "movement",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "Shots",
+        "device": "desktop",
+        "settled": true,
+        "characters": 1042,
+        "headings": [
+          "Tyrese Maxey",
+          "Shot map",
+          "Season shooting"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "court",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "Shots",
+        "device": "phone",
+        "settled": true,
+        "characters": 1063,
+        "headings": [
+          "Tyrese Maxey",
+          "Shot map",
+          "Season shooting"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 314,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "court",
+        "smallButtons": [
+          {
+            "height": 19,
+            "label": "Retry"
+          }
+        ],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NBA",
+        "section": "All odds",
+        "device": "desktop",
+        "settled": true,
+        "characters": 940,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 138,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 1440
+      },
+      {
+        "sport": "NBA",
+        "section": "All odds",
+        "device": "phone",
+        "settled": true,
+        "characters": 961,
+        "headings": [
+          "Tyrese Maxey"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 310,
+        "sections": [
+          "Overview",
+          "Game tracking",
+          "Ladders",
+          "Market Story",
+          "Shots",
+          "All odds"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Tyrese Maxey research",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "Matchup",
+        "device": "desktop",
+        "settled": true,
+        "characters": 234,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "matchup",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "Matchup",
+        "device": "phone",
+        "settled": true,
+        "characters": 253,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "matchup",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "NFL Tracking",
+        "device": "desktop",
+        "settled": true,
+        "characters": 259,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "NFL Tracking",
+        "device": "phone",
+        "settled": true,
+        "characters": 278,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "tracking",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      },
+      {
+        "sport": "NFL",
+        "section": "Sportsbooks",
+        "device": "desktop",
+        "settled": true,
+        "characters": 8236,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 1440
+      },
+      {
+        "sport": "NFL",
+        "section": "Sportsbooks",
+        "device": "phone",
+        "settled": true,
+        "characters": 8255,
+        "headings": [
+          "Trey McBride"
+        ],
+        "loading": false,
+        "overflow": false,
+        "scrollTop": 0,
+        "sections": [
+          "Matchup",
+          "NFL Tracking",
+          "Sportsbooks"
+        ],
+        "selected": "markets",
+        "smallButtons": [],
+        "tables": 0,
+        "theme": "light",
+        "title": "Trey McBride NFL breakdown",
+        "width": 390
+      }
+    ],
+    "grid": [
+      {
+        "theme": "light",
+        "phone": {
+          "asc": {
+            "cards": [
+              "SurfaceAbout/about · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionS",
+              "SurfaceActivity/activity · Social & discoveryPriorityP1shellSharedresponsiveSharedstatesSharedintera",
+              "SurfaceAdmin/admin · Admin operationsPriorityP1shellSharedresponsiveSharedstatesSharedinteractionSha"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "ascending",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          },
+          "desc": {
+            "cards": [
+              "SurfaceWorkspace/workspace · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedinteractio",
+              "SurfaceWeather Lab/weather-lab · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedintera",
+              "SurfaceThe Sideline board and internal workspaces/the-sideline · NFL researchPriorityP1shellSharedre"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "descending",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          },
+          "reset": {
+            "cards": [
+              "SurfaceHome/ · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionShareda",
+              "SurfaceAbout/about · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionS",
+              "SurfaceFaq/faq · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionShare"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "none",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          }
+        },
+        "desktop": {
+          "cards": [
+            "SurfaceAbout/about · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionS",
+            "SurfaceActivity/activity · Social & discoveryPriorityP1shellSharedresponsiveSharedstatesSharedintera",
+            "SurfaceAdmin/admin · Admin operationsPriorityP1shellSharedresponsiveSharedstatesSharedinteractionSha"
+          ],
+          "overflow": false,
+          "sort": [
+            {
+              "state": "ascending",
+              "text": "Route"
+            },
+            {
+              "state": "none",
+              "text": "Priority"
+            }
+          ],
+          "width": 1440
+        }
+      },
+      {
+        "theme": "dark",
+        "phone": {
+          "asc": {
+            "cards": [
+              "SurfaceAbout/about · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionS",
+              "SurfaceActivity/activity · Social & discoveryPriorityP1shellSharedresponsiveSharedstatesSharedintera",
+              "SurfaceAdmin/admin · Admin operationsPriorityP1shellSharedresponsiveSharedstatesSharedinteractionSha"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "ascending",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          },
+          "desc": {
+            "cards": [
+              "SurfaceWorkspace/workspace · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedinteractio",
+              "SurfaceWeather Lab/weather-lab · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedintera",
+              "SurfaceThe Sideline board and internal workspaces/the-sideline · NFL researchPriorityP1shellSharedre"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "descending",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          },
+          "reset": {
+            "cards": [
+              "SurfaceHome/ · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionShareda",
+              "SurfaceAbout/about · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionS",
+              "SurfaceFaq/faq · Public & marketingPriorityP2shellSharedresponsiveSharedstatesSharedinteractionShare"
+            ],
+            "overflow": false,
+            "sort": [
+              {
+                "state": "none",
+                "text": "Route"
+              },
+              {
+                "state": "none",
+                "text": "Priority"
+              }
+            ],
+            "width": 390
+          }
+        },
+        "desktop": {
+          "cards": [
+            "SurfaceWorkspace/workspace · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedinteractio",
+            "SurfaceWeather Lab/weather-lab · MLB researchPriorityP0shellSharedresponsiveSharedstatesSharedintera",
+            "SurfaceThe Sideline board and internal workspaces/the-sideline · NFL researchPriorityP1shellSharedre"
+          ],
+          "overflow": false,
+          "sort": [
+            {
+              "state": "descending",
+              "text": "Route"
+            },
+            {
+              "state": "none",
+              "text": "Priority"
+            }
+          ],
+          "width": 1440
+        }
+      }
+    ],
+    "chartRegression": [
+      {
+        "device": "desktop",
+        "chart": {
+          "bars": 5,
+          "tabStops": 1,
+          "theme": "dark"
+        },
+        "sort": [
+          {
+            "sort": "none",
+            "text": "Date"
+          },
+          {
+            "sort": null,
+            "text": "Opponent"
+          },
+          {
+            "arrow": "lucide lucide-arrow-down",
+            "sort": "descending",
+            "text": "MIN"
+          },
+          {
+            "sort": "none",
+            "text": "PTS"
+          },
+          {
+            "sort": null,
+            "text": "Result"
+          }
+        ]
+      },
+      {
+        "device": "phone",
+        "chart": {
+          "bars": 5,
+          "tabStops": 1,
+          "theme": "dark"
+        },
+        "sort": [
+          {
+            "sort": "none",
+            "text": "Date"
+          },
+          {
+            "sort": null,
+            "text": "Opponent"
+          },
+          {
+            "arrow": "lucide lucide-arrow-down",
+            "sort": "descending",
+            "text": "MIN"
+          },
+          {
+            "sort": "none",
+            "text": "PTS"
+          },
+          {
+            "sort": null,
+            "text": "Result"
+          }
+        ]
+      }
+    ],
+    "ownerAppearanceRestored": "dark",
+    "temporaryTabsClosed": 4,
+    "notes": [
+      "All 9 NBA/NFL drawer sections explicitly activated on representative live players in both themes and both viewport sizes; 36 settled checks without loading or overflow.",
+      "NFL Tracking includes an unavailable-data state; populated live tracking is not certified.",
+      "No picks, posts, saved player styles, collectors, database schemas or the existing announcement were changed."
+    ]
+  }
 }

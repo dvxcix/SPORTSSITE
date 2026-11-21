@@ -8,6 +8,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 2026-11-22 detail pass: see ui-detail-pass-2026-11-22.txt and ui-detail-pass-2026-11-22.json in this directory.
 The inventory still contains 239 released surfaces, zero queued surfaces, and 229 awaiting owner visual feedback (10 owner-approved).
 This pass adds fresh route-boundary checks and explicit NBA/NFL drawer interaction checks. It does not replace previous release receipts with blanket visual approval.
+Published as 375e1532; all nine live drawer sections and shared table sorting checked in desktop/mobile and light/dark. Full production receipts are in the companion detail-pass JSON.
 
 [Live] General | About | /about
 [Live] General | Activity | /activity
