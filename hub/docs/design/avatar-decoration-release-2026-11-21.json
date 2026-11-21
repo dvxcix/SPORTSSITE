@@ -1,0 +1,83 @@
+{
+  "state": "Live",
+  "baseCommit": "4309078fa8273713f5aec10b5be7c426b4bfa784",
+  "implementationCommit": "99a5d64f1139205e6fbccfe0f2a754bd3911570f",
+  "uiSourceCommit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+  "decorations": 50,
+  "groups": {
+    "football": 15,
+    "basketball": 15,
+    "baseball": 15,
+    "slipsurge": 5
+  },
+  "variants": [
+    "animated",
+    "still"
+  ],
+  "photoDiameter": 184,
+  "artboard": 240,
+  "layoutChecks": 600,
+  "layouts": [
+    "1440 light",
+    "1440 dark",
+    "390 light",
+    "390 dark"
+  ],
+  "sizes": [
+    112,
+    44,
+    32
+  ],
+  "tests": {
+    "avatarAndPrivateGuards": 11,
+    "memberUi": 32,
+    "productionSource": 134,
+    "researchUi": 38,
+    "feedVisibility": 28,
+    "crossSport": 44,
+    "typescript": "passed",
+    "optimizedPrivateBuild": "passed",
+    "changedAppLint": "passed with pre-existing unused suppression metadata retained"
+  },
+  "database": {
+    "project": "hkldweedwnxartkfhror",
+    "migration": "20261121213902_add_sports_avatar_decorations",
+    "acceptedStyles": 55,
+    "existingChoicesUnchanged": 7031,
+    "rlsUnchanged": true,
+    "policiesUnchanged": true,
+    "columnGrantsUnchanged": true,
+    "colorConstraintUnchanged": true,
+    "securityAdvisorCountsUnchanged": true,
+    "performanceAdvisorCountsUnchanged": true
+  },
+  "liveChecks": {
+    "saveAndReload": "passed",
+    "publicProfileAndAccount": "passed",
+    "photoRetainedAcrossThemeSwap": true,
+    "desktopWidth": 1280,
+    "phoneWidth": 390,
+    "lightAndDark": "passed",
+    "phoneKeyboardFocusClearOfStickyControls": true,
+    "desktopKeyboardFocusClearOfStickyControls": true,
+    "allChoices": 55,
+    "decorationThumbnails": 50,
+    "loadedThumbnails": 50,
+    "animatedThumbnails": 0,
+    "search": "passed",
+    "publishedAssets": 100,
+    "assetFailures": 0,
+    "privateGalleryUnavailable": true,
+    "ownerOriginalStyleRestored": true,
+    "ownerOriginalColorRestored": true,
+    "ownerOriginalThemeRestored": true,
+    "errorFatalRuntimeLogGroups": 0
+  },
+  "release": {
+    "state": "Live",
+    "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+    "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+    "verifiedAt": "2026-11-21 22:10 UTC",
+    "url": "https://www.slipsurge.com"
+  }
+}

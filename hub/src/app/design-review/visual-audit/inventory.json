@@ -2389,15 +2389,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/creators/offers/[productId]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/creators/offers/[productId]",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/creators",
@@ -2581,15 +2583,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/events/[id]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/events/[id]",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/events/create",
@@ -2645,15 +2649,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/events"
+      "docs/design/full-site-audit-2026-11-21.json#route:/events",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/explore",
@@ -2742,16 +2748,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/feed",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/forum/[category]",
@@ -2775,15 +2782,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/forum/[category]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum/[category]",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/forum/new",
@@ -2871,15 +2880,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/forum/thread/[id]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/forum/thread/[id]",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/groups/[slug]",
@@ -2903,15 +2914,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/groups/[slug]/settings",
@@ -2935,15 +2948,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]/settings"
+      "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]/settings",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/groups/create",
@@ -3094,15 +3109,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/leaderboard"
+      "docs/design/full-site-audit-2026-11-21.json#route:/leaderboard",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/marketplace/[id]",
@@ -3616,15 +3633,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/notifications"
+      "docs/design/full-site-audit-2026-11-21.json#route:/notifications",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/odds-terminal",
@@ -4131,16 +4150,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/research",
@@ -4260,15 +4280,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/search"
+      "docs/design/full-site-audit-2026-11-21.json#route:/search",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/settings/account",
@@ -4327,16 +4349,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/settings/connections",
@@ -4565,16 +4588,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "route:/settings/research",
@@ -5070,15 +5094,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/workspace"
+      "docs/design/full-site-audit-2026-11-21.json#route:/workspace",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "nba:research",
@@ -7816,16 +7842,17 @@
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
       "page-review/framework-tests.txt · 25 passed",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:Account menu",
@@ -7849,16 +7876,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Account menu",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:Global search",
@@ -7881,15 +7909,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Global search"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Global search",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:Notifications panel",
@@ -7912,15 +7942,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Notifications panel"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Notifications panel",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:What’s new and release popup",
@@ -8102,16 +8134,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Post composer",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:Comments and share",
@@ -8135,16 +8168,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/avatar-decoration-release-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-      "verifiedAt": "2026-11-21 21:01 UTC",
+      "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+      "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+      "verifiedAt": "2026-11-21 22:10 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "latestPolish": "member-experience-2026-11-21"
+    "latestPolish": "avatar-decorations-2026-11-21"
   },
   {
     "id": "shared:Image and video viewer",

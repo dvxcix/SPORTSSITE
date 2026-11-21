@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
-    "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
-    "verifiedAt": "2026-11-21 21:01 UTC",
+    "commit": "e53186a73828b838d658c3f967fd7862c843c4c5",
+    "deploymentId": "dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb",
+    "verifiedAt": "2026-11-21 22:10 UTC",
     "url": "https://www.slipsurge.com"
   },
   "items": [
@@ -246,5 +246,14 @@
     "shared:Confirmation dialogs",
     "shared:Empty, loading and error states",
     "shared:VOLT and Sparks teaser"
+  ],
+  "history": [
+    {
+      "state": "Live",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   ]
 }

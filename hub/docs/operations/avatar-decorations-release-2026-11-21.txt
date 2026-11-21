@@ -1,0 +1,18 @@
+SlipSurge avatar decoration release · 2026-11-21
+
+State: Live. GitHub main contains all released source.
+Implementation: 99a5d64f1139205e6fbccfe0f2a754bd3911570f.
+Final UI source: e53186a73828b838d658c3f967fd7862c843c4c5.
+Production: dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb, READY; www.slipsurge.com alias and exact Git main source verified.
+Baseline: 4309078fa8273713f5aec10b5be7c426b4bfa784. Recovered NFL ancestry 6c3811b0882e1b1a6694a30849273f3e210cd69c retained.
+
+Owner-supplied handoff: 50 original SVG decorations (15 football, 15 basketball, 15 baseball, 5 SlipSurge), plus 50 generated still versions. Original generator was not executed. Checked originals retain their SHA256 hashes. Existing rings, colors, photos, badges, tier appearance and tool access remain available.
+The existing avatar_ring_style value stores one allowlisted style. Shared member rendering and existing profile reads carry that choice through member-facing surfaces. No per-avatar database reads or new dependencies. Story wrappers preserve the full frame; notification team artwork remains separate from member artwork. Workspace search received a complete keyboard combobox and avoids synchronous effect resets.
+
+Database migration: 20261121213902_add_sports_avatar_decorations on primary hkldweedwnxartkfhror, applied individually. Do not replay it or historical migrations. Additive check expansion accepts five existing rings and 50 catalog values. Migration pre/post confirmed 7,031 choices unchanged; RLS, policies, authenticated column grants, color constraint, defaults and advisor counts preserved. UI rollback can leave this additive constraint in place to preserve saved choices.
+
+Checks: optimized private build and TypeScript passed; avatar/consumer/private guards 11/11; full member UI 32/32; Feed visibility 28/28; research UI 38/38; cross-sport 44/44; production source contracts 134/134. Changed application ESLint passed with pre-existing unused suppression metadata retained. This is not a whole-repository lint certification.
+Artwork: all 50 at 112/44/32px in desktop/phone and light/dark, 600 bounded checks. Visible motion, offscreen/static behavior, reduced motion, photo fallback, style/theme stability, keyboard selection, cancel and save drafts covered. Final sticky-control focus spacing verified on the published phone and desktop builds.
+Live: owner style saved, reloaded and appeared on the public profile, account and posts. Original Pulse ring, color and dark theme restored. All 55 picker options present and all 50 still thumbnails loaded. All 100 public files passed anonymous HTTP status/MIME/hash checks. Private gallery redirects anonymous visitors to sign-in and shows not-found to signed-in visitors. No error/fatal runtime-log groups returned during verification.
+
+Checklist/evidence: docs/design/avatar-decorations-2026-11-21.txt, avatar-decoration-release-2026-11-21.json, avatar-decoration-layouts-2026-11-21.json, avatar-decoration-live-assets-2026-11-21.json, avatar-decoration-provenance-2026-11-21.json. Original overhaul batches and approvals remain in the global checklist.

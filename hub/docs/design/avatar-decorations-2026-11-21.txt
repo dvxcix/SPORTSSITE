@@ -1,6 +1,8 @@
 SlipSurge avatar decorations · 2026-11-21
 
-State: validated locally; production rollout in progress.
+State: Live on https://www.slipsurge.com.
+UI source: e53186a73828b838d658c3f967fd7862c843c4c5
+Production: dpl_ASFzU5Akt2v7Jt3CtEtwwFzppERb · READY · 2026-11-21 22:10 UTC
 Entry: Settings → Profile → Avatar style → Change style → Use style → Save Profile.
 
 Complete owner handoff: 50 decorations, 125,699 original SVG bytes.
@@ -30,53 +32,55 @@ The source-contract assertion for the old ring class template was updated to req
 Evidence: avatar-decoration-provenance-2026-11-21.json; avatar-decoration-layouts-2026-11-21.json; scripts/avatar-decorations.test.mts; local contact sheets and browser captures in the session visualization directory.
 
 Individual artwork checklist (each verified in all four layouts at all three sizes):
-[Verified] football | Tight Spiral | fb-spiral
-[Verified] football | It's Good | fb-goalposts
-[Verified] football | Gridiron | fb-gridiron
-[Verified] football | Laces Out | fb-laces
-[Verified] football | End Zone | fb-endzone
-[Verified] football | All-Out Blitz | fb-blitz
-[Verified] football | Flag on the Play | fb-flags
-[Verified] football | Move the Chains | fb-chains
-[Verified] football | Facemask | fb-facemask
-[Verified] football | Hail Mary | fb-hailmary
-[Verified] football | Coin Toss | fb-cointoss
-[Verified] football | Red Zone | fb-redzone
-[Verified] football | Two-Minute Drill | fb-twominute
-[Verified] football | Confetti Drop | fb-confetti
-[Verified] football | Pom-Poms | fb-pompoms
-[Verified] basketball | Nothing But Net | bb-swish
-[Verified] basketball | Handles | bb-dribble
-[Verified] basketball | Full-Court Press | bb-orbit
-[Verified] basketball | Hardwood | bb-hardwood
-[Verified] basketball | Heat Check | bb-heatcheck
-[Verified] basketball | Buzzer Beater | bb-buzzer
-[Verified] basketball | Shot Chart | bb-shotchart
-[Verified] basketball | Showtime | bb-fingerspin
-[Verified] basketball | Off the Glass | bb-glass
-[Verified] basketball | Alley-Oop | bb-alleyoop
-[Verified] basketball | Ankle Breaker | bb-crossover
-[Verified] basketball | And-One | bb-andone
-[Verified] basketball | From Deep | bb-fromdeep
-[Verified] basketball | Rainbow Three | bb-rainbow
-[Verified] basketball | Shot Clock | bb-shotclock
-[Verified] baseball | Seams | bs-stitches
-[Verified] baseball | Round the Bases | bs-diamond
-[Verified] baseball | Moonshot | bs-moonshot
-[Verified] baseball | Lumber | bs-lumber
-[Verified] baseball | Pennant Race | bs-pennants
-[Verified] baseball | Warning Track | bs-wall
-[Verified] baseball | Punchout | bs-punchout
-[Verified] baseball | Old Ballpark | bs-marquee
-[Verified] baseball | Heater | bs-heater
-[Verified] baseball | The Dish | bs-dish
-[Verified] baseball | Walk-Off | bs-walkoff
-[Verified] baseball | Rally Cap | bs-rallycap
-[Verified] baseball | Big League Bubble | bs-bubble
-[Verified] baseball | Doubleheader | bs-doubleheader
-[Verified] baseball | The Wave | bs-wave
-[Verified] slipsurge | Surge | ss-surge
-[Verified] slipsurge | Bolt Crown | ss-crown
-[Verified] slipsurge | Hot Streak | ss-streak
-[Verified] slipsurge | Parlay Chain | ss-parlay
-[Verified] slipsurge | Cashed | ss-cashed
+[Live] football | Tight Spiral | fb-spiral
+[Live] football | It's Good | fb-goalposts
+[Live] football | Gridiron | fb-gridiron
+[Live] football | Laces Out | fb-laces
+[Live] football | End Zone | fb-endzone
+[Live] football | All-Out Blitz | fb-blitz
+[Live] football | Flag on the Play | fb-flags
+[Live] football | Move the Chains | fb-chains
+[Live] football | Facemask | fb-facemask
+[Live] football | Hail Mary | fb-hailmary
+[Live] football | Coin Toss | fb-cointoss
+[Live] football | Red Zone | fb-redzone
+[Live] football | Two-Minute Drill | fb-twominute
+[Live] football | Confetti Drop | fb-confetti
+[Live] football | Pom-Poms | fb-pompoms
+[Live] basketball | Nothing But Net | bb-swish
+[Live] basketball | Handles | bb-dribble
+[Live] basketball | Full-Court Press | bb-orbit
+[Live] basketball | Hardwood | bb-hardwood
+[Live] basketball | Heat Check | bb-heatcheck
+[Live] basketball | Buzzer Beater | bb-buzzer
+[Live] basketball | Shot Chart | bb-shotchart
+[Live] basketball | Showtime | bb-fingerspin
+[Live] basketball | Off the Glass | bb-glass
+[Live] basketball | Alley-Oop | bb-alleyoop
+[Live] basketball | Ankle Breaker | bb-crossover
+[Live] basketball | And-One | bb-andone
+[Live] basketball | From Deep | bb-fromdeep
+[Live] basketball | Rainbow Three | bb-rainbow
+[Live] basketball | Shot Clock | bb-shotclock
+[Live] baseball | Seams | bs-stitches
+[Live] baseball | Round the Bases | bs-diamond
+[Live] baseball | Moonshot | bs-moonshot
+[Live] baseball | Lumber | bs-lumber
+[Live] baseball | Pennant Race | bs-pennants
+[Live] baseball | Warning Track | bs-wall
+[Live] baseball | Punchout | bs-punchout
+[Live] baseball | Old Ballpark | bs-marquee
+[Live] baseball | Heater | bs-heater
+[Live] baseball | The Dish | bs-dish
+[Live] baseball | Walk-Off | bs-walkoff
+[Live] baseball | Rally Cap | bs-rallycap
+[Live] baseball | Big League Bubble | bs-bubble
+[Live] baseball | Doubleheader | bs-doubleheader
+[Live] baseball | The Wave | bs-wave
+[Live] slipsurge | Surge | ss-surge
+[Live] slipsurge | Bolt Crown | ss-crown
+[Live] slipsurge | Hot Streak | ss-streak
+[Live] slipsurge | Parlay Chain | ss-parlay
+[Live] slipsurge | Cashed | ss-cashed
+
+Live verification: a new decoration saved and survived a full reload, appearing on the public profile, account avatar and posts. Original photo remained unchanged across themes. Owner Pulse ring, original color and dark theme restored after testing. All 55 choices present; all 50 still thumbnails loaded, none animated. Search and phone/desktop keyboard focus passed. All 100 SVG files returned 200 with expected bytes and SVG MIME types without authentication. Anonymous private-gallery requests redirect to sign-in; signed-in requests show not-found. No error/fatal runtime-log groups returned. Final keyboard spacing was verified on the published build.

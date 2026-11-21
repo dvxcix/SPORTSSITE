@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-11-21T22:07:58.851Z",
+  "assets": 100,
+  "passed": 100,
+  "failures": [],
+  "privateGalleryAnonymous": {
+    "status": 307,
+    "redirectTo": "/auth/login?next=%2Fdesign-review%2Fdecorations",
+    "unavailable": true
+  },
+  "privateGalleryAuthenticated": "Not-found page verified in signed-in production browser"
+}
