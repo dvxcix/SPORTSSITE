@@ -40,3 +40,10 @@ changed and MLB was not enabled or certified by this release.
 Live publication details are recorded in the visual-audit release ledger
 under shared:VOLT and Sparks teaser. Local browser/test evidence is under
 docs/design/evidence/live/volt-*.
+
+Production source 7938834e reached READY on www.slipsurge.com. The live member
+Court showed the character, tooltip and preserved quick tools, with clearance
+above both the real resume banner and the mobile dock. The final real-data
+check also exposed compact game-price comparison text overlapping at narrow
+desktop widths. A scoped CSS correction lets opening and movement labels wrap
+within each outcome column. Fifteen header/price/selector tests pass.

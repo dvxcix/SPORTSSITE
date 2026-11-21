@@ -243,4 +243,4 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Live] Shared components | Image and video viewer | Shared surface
 [Live] Shared components | Confirmation dialogs | Shared surface
 [Live] Shared components | Empty, loading and error states | Shared surface
-[Review ready] Shared components | VOLT and Sparks teaser | Shared surface
+[Live] Shared components | VOLT and Sparks teaser | Shared surface

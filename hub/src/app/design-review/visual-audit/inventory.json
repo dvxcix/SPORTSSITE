@@ -7610,6 +7610,13 @@
     },
     "evidence": [
       "docs/operations/volt-teaser-2026-11-21.txt"
-    ]
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7938834e9d077bf35bd1a248c0b051da369a46a2",
+      "deploymentId": "dpl_B9Y4GdSpfup5uF3i8mfxqw5WsehS",
+      "verifiedAt": "2026-11-21 12:52 UTC",
+      "url": "https://www.slipsurge.com"
+    }
   }
 ]

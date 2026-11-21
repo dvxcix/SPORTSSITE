@@ -61,6 +61,8 @@
 .summary[data-density=compact] .outcome{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;min-height:58px}
 .summary[data-density=compact] .outcome+.outcome{border-left:1px solid var(--border);padding-left:12px}
 .summary[data-density=compact] .outcome>span:last-child:not(.side){text-align:left;align-items:flex-start}
+.summary .outcome>[data-compact]{min-width:0;max-width:100%}
+.summary .outcome>[data-compact]>span:last-child{display:flex;flex-wrap:wrap;row-gap:4px;max-width:100%}
 .summary[data-density=compact] .side{gap:6px}.summary[data-density=compact] .side strong{font-size:15px}
 .summary[data-density=compact] .price{font-size:15px}.summary[data-density=compact] .splitStack{margin-top:10px;padding-top:9px;gap:7px}
 .summary[data-density=compact] .shareTrack{height:5px}.summary[data-density=compact] .footer{min-height:28px}

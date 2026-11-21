@@ -42,3 +42,13 @@ Live preflight at 12:26 UTC found current Fanatics prices for all six games;
 market timestamps ranged from 36 to 272 seconds old. This establishes current
 availability separately from the new refresh behavior. Release and post-release
 evidence is recorded in the local docs/design/evidence/live/fanatics-* files.
+
+Production e306e511 reached READY (dpl_AFhkTFwcsb6JVhyojXo6nU8xw7w6).
+At 12:49:49 UTC the authenticated member response loaded all six games, with
+594 quotes overall and 61 fresh Fanatics First Field Goal quotes covering all
+six games. Fanatics source ages were 73-219 seconds; zero returned quotes
+were expired, future-dated or missing a valid timestamp. Natural cloud receipts
+at 12:50 UTC showed six dedicated Fanatics sources and 13 recent v5 attempts.
+No error/fatal runtime logs appeared for this deployment in the 10-minute
+window checked. Suspended upstream markets remain blocked when their original
+source clock expires, and recover when the source resumes.
