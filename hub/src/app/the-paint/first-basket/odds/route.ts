@@ -5,6 +5,7 @@ import { getPaintSchedule } from '@/lib/nbaPaintData'
 import { nbaDate } from '@/lib/nbaPaint'
 import { getNbaFirstOddsForMode,NbaFirstOddsUnavailable } from '@/lib/nbaFirstBasketOddsData'
 import { attachNbaFirstBasketHistory } from '@/lib/nbaFirstBasketHistoryData'
+import { nbaFirstQuoteVisible } from '@/lib/nbaFirstQuoteFreshness'
 export const maxDuration=120
 export async function GET(request:NextRequest){
   const gate=await requirePaintAccess();if(gate.error)return gate.error
@@ -19,11 +20,14 @@ export async function GET(request:NextRequest){
       try{return {...result,rows:await attachNbaFirstBasketHistory(game.id,result.rows,result.observedAt, mode),historyAvailable:true}}
       catch{return {...result,historyAvailable:false}}
     })))
-    const rows=results.flatMap(r=>r.status==='fulfilled'?r.value.rows:[]),failures=results.filter(r=>r.status==='rejected')
+    const rawRows=results.flatMap(r=>r.status==='fulfilled'?r.value.rows:[]),failures=results.filter(r=>r.status==='rejected')
     const frozenGameIds=results.flatMap((result,index)=>result.status==='fulfilled'&&'frozen' in result.value&&result.value.frozen?[games[index].id]:[])
-    const bookCoverage=results.flatMap(result=>result.status==='fulfilled'&&'bookCoverage' in result.value?result.value.bookCoverage??[]:[])
+    // History work and later game batches can cross a source expiry or tipoff.
+    // Recheck the entire response at one server clock after all work completes.
+    const responseAt=Date.now(),rows=rawRows.filter(row=>nbaFirstQuoteVisible(row,mode,responseAt,frozenGameIds))
+    const bookCoverage=results.flatMap(result=>result.status==='fulfilled'&&'bookCoverage' in result.value?result.value.bookCoverage??[]:[]).map(report=>report.status==='fresh'&&responseAt-Date.parse(report.quoteAt??'')>300_000?{...report,status:'expired' as const,quotes:0}:report)
     const incompleteBooks=bookCoverage.some(row=>['expired','invalid','wrong_phase'].includes(row.status))
     const connection=failures.some(r=>r.status==='rejected'&&r.reason instanceof NbaFirstOddsUnavailable&&['connection','authorization'].includes(r.reason.reason))
-    return NextResponse.json({mode,date:schedule.date,requestedDate:date,games:schedule.games.length,loaded:results.filter(r=>r.status==='fulfilled').length,failed:failures.length,status:connection?'connection_unavailable':failures.length||incompleteBooks?'partial':rows.length?'ready':'not_posted',rows,frozenGameIds,bookCoverage,historyAvailable:results.every(r=>r.status==='fulfilled'&&r.value.historyAvailable),unmatched:results.reduce((n,r)=>n+(r.status==='fulfilled'?r.value.unmatched:0),0),...(gate.isAdmin?{diagnostics:{withheldMethods:[...new Set(results.flatMap(r=>r.status==='fulfilled'?'withheldMethods' in r.value?r.value.withheldMethods??[]:[]:[]))]}}:{}),fetchedAt:new Date().toISOString()},{headers:{'Cache-Control':'private, no-store'}})
+    return NextResponse.json({mode,date:schedule.date,requestedDate:date,games:schedule.games.length,loaded:results.filter(r=>r.status==='fulfilled').length,failed:failures.length,status:connection?'connection_unavailable':failures.length||incompleteBooks||rows.length!==rawRows.length?'partial':rows.length?'ready':'not_posted',rows,frozenGameIds,bookCoverage,historyAvailable:results.every(r=>r.status==='fulfilled'&&r.value.historyAvailable),unmatched:results.reduce((n,r)=>n+(r.status==='fulfilled'?r.value.unmatched:0),0),...(gate.isAdmin?{diagnostics:{withheldMethods:[...new Set(results.flatMap(r=>r.status==='fulfilled'?'withheldMethods' in r.value?r.value.withheldMethods??[]:[]:[]))]}}:{}),fetchedAt:new Date(responseAt).toISOString()},{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'First-basket odds could not refresh.'},{status:503})}
 }

@@ -85,3 +85,11 @@ The follow-up scopes the divider styles above that rule, yielding full-width
 description. Local browser verification confirmed the corrected dimensions.
 The release checklist records these two surfaces without changing owner-review
 history or marking unrelated work as newly reviewed.
+
+The final six-game response audit also caught 11 quotes expiring while movement
+history was loading. The endpoint now applies a final source-age and phase check
+after all game batches/history work, with one response timestamp. The client
+already blocked these quotes; the server response now excludes them too and
+marks the affected coverage partial. Delayed-history, tip-crossing and frozen
+archive regression tests cover this response boundary.
+Final response-boundary verification: 760/760 NBA tests, 124/124 freeze tests, TypeScript and scoped ESLint passed.

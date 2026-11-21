@@ -6,9 +6,10 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
+import * as firstQuoteFreshness from '../src/lib/nbaFirstQuoteFreshness.ts'
 
 async function route(file: string, imports: Record<string, unknown>) {
-  imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
+  imports = { '@/lib/nbaFirstQuoteFreshness':firstQuoteFreshness,'@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -97,7 +98,7 @@ test('First Basket slate uses selected-phase prices and the same phase for every
   const api = await route('../src/app/the-paint/first-basket/odds/route.ts', {
     '@/lib/nbaPaint': { nbaDate: (value: string) => value },
     '@/lib/nbaPaintData': { getPaintSchedule: async (_date:string,exact:boolean) => {assert.equal(exact,true);return {date:'2026-10-20',games:[{id:123},{id:456}]}} },
-    '@/lib/nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async (game: {id:number}, mode: string) => { quotes.push(`${game.id}:${mode}`); return {rows:[{game,offer:{odds:mode==='live'?800:500}}],unmatched:0,observedAt:'2026-10-20T13:00:00Z'} }, NbaFirstOddsUnavailable: class extends Error {} },
+    '@/lib/nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async (game: {id:number}, mode: string) => { quotes.push(`${game.id}:${mode}`); const now=Date.now(),current={...game,datetime:new Date(now+(mode==='live'?-60000:60000)).toISOString(),status:mode==='live'?'Q1':'Scheduled',status_state:mode==='live'?'in_progress':'scheduled',period:mode==='live'?1:0};return {rows:[{game:current,offer:{odds:mode==='live'?800:500,updated_at:new Date(now-1000).toISOString()}}],unmatched:0,observedAt:new Date(now).toISOString()} }, NbaFirstOddsUnavailable: class extends Error {} },
     '@/lib/nbaFirstBasketHistoryData': { attachNbaFirstBasketHistory: async (id: number, rows: unknown[], _at: string, mode: string) => { histories.push(`${id}:${mode}`); return rows } },
   })
   for (const mode of ['pregame','live']) {

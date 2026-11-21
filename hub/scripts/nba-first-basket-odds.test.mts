@@ -1,4 +1,5 @@
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
+import * as firstQuoteFreshness from '../src/lib/nbaFirstQuoteFreshness.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { nbaFirstEvent,nbaNormalizeFirstOdds,type FirstOddsEvent } from '../src/lib/nbaFirstBasketOdds.ts'
@@ -164,6 +165,7 @@ test('first-basket normalization diagnostics remain admin-only',async()=>{
   const compiled={exports:{} as {GET:(r:unknown)=>Promise<Response>}}
   const mocks:Record<string,unknown>={
    '@/lib/nbaOddsMode':oddsMode,
+   '@/lib/nbaFirstQuoteFreshness':firstQuoteFreshness,
    'next/server':{NextResponse:{json:(body:unknown,options?:ResponseInit)=>Response.json(body,options)}},
    '@/lib/paintAccess':{requirePaintAccess:async()=>({userId:'member',isAdmin})},
    '@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:'2026-10-20',games:[game]})},

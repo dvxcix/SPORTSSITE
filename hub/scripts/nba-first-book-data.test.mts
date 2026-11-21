@@ -7,6 +7,7 @@ import * as first from '../src/lib/nbaFirstBasketOdds.ts'
 import * as panels from '../src/lib/nbaFirstBookMarkets.ts'
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import * as diagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
+import * as freshness from '../src/lib/nbaFirstQuoteFreshness.ts'
 import type { PaintGame, PaintPlayer } from '../src/lib/nbaPaint.ts'
 
 const now=Date.parse('2026-11-21T12:00:00Z'),at=new Date(now-1000).toISOString()
@@ -57,4 +58,33 @@ test('a verified exact source panel reaches the service writer; invalid phase/ti
   for(const frame of [{...frames[0],observedAt:new Date(now+1).toISOString()},{...frames[0],observedAt:new Date(now-300001).toISOString()},{...frames[0],book:'another-book'}])await assert.rejects(api.saveNbaFirstApiFrames(game,'pregame',[frame]))
   assert.equal(writes,1)
   failed=true;await assert.rejects(api.saveNbaFirstApiFrames(game,'pregame',frames),/could not be saved/)
+})
+
+async function delayedResponse({frozen=false,crossTip=false}={}){
+  let clock=frozen?now+2000:now
+  class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
+  const scheduled=crossTip?{...game,datetime:new Date(now+500).toISOString()}:game
+  const row=(vendor:string,age:number)=>({game:scheduled,player,offer:{id:-434,game_id:game.id,player_id:player.id,vendor,prop_type:'first_score',line_value:'0.5',market:{type:'over_under',over_odds:700},updated_at:new Date(now-age).toISOString()}})
+  const rows=[row('fanduel',299500),row('draftkings',1000)]
+  const api=await compiled<{GET:(request:unknown)=>Promise<Response>}>('../src/app/the-paint/first-basket/odds/route.ts',{
+    'next/server':{NextResponse:{json:Response.json}},'@/lib/nbaOddsMode':modes,'@/lib/nbaFirstQuoteFreshness':freshness,
+    '@/lib/paintAccess':{requirePaintAccess:async()=>({isAdmin:false})},'@/lib/nbaPaint':{nbaDate:(date:string)=>date},
+    '@/lib/nbaPaintData':{getPaintSchedule:async()=>({date:game.date,games:[scheduled]})},
+    '@/lib/nbaFirstBasketOddsData':{NbaFirstOddsUnavailable:class extends Error{},getNbaFirstOddsForMode:async()=>({rows,unmatched:0,eventMatched:true,observedAt:new Date(clock).toISOString(),frozen,bookCoverage:[{gameId:game.id,book:'fanduel',market:'player_first_basket',status:'fresh',quoteAt:rows[0].offer.updated_at,quotes:1}]})},
+    '@/lib/nbaFirstBasketHistoryData':{attachNbaFirstBasketHistory:async(_game:number,current:unknown[])=>{clock+=1000;return current}},
+  },Clock)
+  return (await api.GET({nextUrl:new URL('https://test/the-paint/first-basket/odds?date='+game.date)})).json()
+}
+
+test('the completed slate response rechecks source age after delayed movement history without blocking healthy books',async()=>{
+  const body=await delayedResponse()
+  assert.equal(body.status,'partial');assert.deepEqual(body.rows.map((row:any)=>row.offer.vendor),['draftkings'])
+  assert.equal(body.bookCoverage[0].status,'expired');assert.equal(body.bookCoverage[0].quotes,0)
+  assert.equal(body.fetchedAt,new Date(now+1000).toISOString());assert.equal(body.historyAvailable,true)
+})
+
+test('a response crossing tip holds unproven prices, while durable frozen pregame prices remain available',async()=>{
+  assert.equal((await delayedResponse({crossTip:true})).rows.length,0)
+  const archived=await delayedResponse({crossTip:true,frozen:true})
+  assert.equal(archived.rows.length,2);assert.deepEqual(archived.frozenGameIds,[game.id])
 })
