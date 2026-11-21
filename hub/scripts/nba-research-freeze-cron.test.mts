@@ -1,3 +1,4 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -19,8 +20,8 @@ async function fixture(incomplete=false) {
     'node:crypto':crypto,'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},
     '@/lib/cron-auth':{requireCronAuth:()=>null},'@/lib/pipelineHealth':{withPipelineHealth:(_name:string,run:unknown)=>run},'@/lib/supabase/admin':{createAdminClient:()=>admin},
     '@/lib/nbaPaintData':{getPaintSchedule:async(day:string)=>{dates.push(day);return{date:day,games:day===date?games:[],complete:true}},getPaintBoard:async(game:any)=>{reads.push(game.id);const value=board(game);archive.set(game.id+':board:v1',{value:structuredClone(value)});return value},refreshPaintBoardPrices:async(board:unknown,phase:string)=>{assert.equal(phase,'pregame');priceHook?.();return board}},
-    '@/lib/nbaResearchResources':{getNbaResearchDefense:async()=>({profiles:[]}),getNbaResearchModels:async(board:any)=>{archive.set(board.game.id+':models:v1',{value:[]});return[]},getNbaResearchMarketContext:async()=>({}),warmNbaResearchResources:async(board:any,options:any)=>{warms.push({game:board.game.id,...options});return[{resource:'models',status:'captured'}]}},
-    '@/lib/nbaMarketSignal':{nbaMarketSupportIdentity:()=>({})},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},
+    '@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>({rows:[],fetchedAt:new Date(now).toISOString()}),getNbaResearchDefense:async()=>({profiles:[]}),getNbaResearchModels:async(board:any)=>{archive.set(board.game.id+':models:v1',{value:[]});return[]},getNbaResearchMarketContext:async()=>({}),warmNbaResearchResources:async(board:any,options:any)=>{warms.push({game:board.game.id,...options});return[{resource:'models',status:'captured'}]}},
+    '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaMarketSignal':{nbaMarketSupportIdentity:()=>({})},'@/lib/nbaIntelligence':{},'@/lib/nbaModel':{},'@/lib/nbaMovement':{},
     '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(scoreCache&&key.startsWith('snapshot-attempt:')&&cache.has(key))return cache.get(key);const value={value:await load(),fetched_at:new Date(now).toISOString()};cache.set(key,value);return value}},
     '@/lib/nbaResearchIdentity':{ensureNbaResearchPlayers:async()=>{}},'@/lib/nbaPaint':{...paint,nbaToday:()=>date},
     '@/lib/nbaOddsClockData':{getNbaOddsGame:async(game:unknown)=>game},'@/lib/nbaOddsMode':{...mode,nbaPregameOpen:(game:any)=>mode.nbaPregameOpen(game,now)},

@@ -3,6 +3,7 @@ import { NBA_FIRST_MARKETS, nbaFirstMarket } from './nbaFirstBasketMarkets'
 import { impliedProbability, nbaMarketRanks } from './nbaMarketMetrics'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore, type NbaDvp } from './nbaIntelligence'
 import type { NbaMarketContext } from './nbaMarketSignal'
+import { nbaScoreWorkloads } from './nbaScoreWorkload'
 import { nbaTrackingField, nbaTrackingSample, type NbaTrackingRow } from './nbaTracking'
 
 export type NbaMatrixCategory = 'score' | 'stats' | 'tracking' | 'team' | 'market' | 'picks'
@@ -139,6 +140,7 @@ export function nbaMatrixOffer(player: PaintPlayer, factor: NbaMatrixFactor): Pa
     .sort((a,b) => nbaPrice(b, factor.marketSide)! - nbaPrice(a, factor.marketSide)! || b.updated_at.localeCompare(a.updated_at))[0] ?? null
 }
 export function nbaMatrixCandidates(board: PaintBoard, context: NbaMatrixContext = {}): NbaMatrixCandidate[] {
+  const scoreWorkloads = nbaScoreWorkloads(board, context.tracking ?? [], board.researchSnapshot?.observedAt ?? board.fetchedAt)
   const cache = new Map<string, Map<number, number | null>>()
   const values = (factor: NbaMatrixFactor): Map<number, number | null> => {
     const key = JSON.stringify({ ...factor, id: '' })
@@ -171,7 +173,7 @@ export function nbaMatrixCandidates(board: PaintBoard, context: NbaMatrixContext
         else {
           const opponent = player.team.id === board.game.home_team.id ? board.game.visitor_team.id : board.game.home_team.id
           const matchup = context.defense?.find(p => p.teamId === opponent && p.position === nbaPosition(player.position) && p.market === market)
-          const score = nbaSlipSurgeScore(player, market, board.game.date, matchup, nbaGamePace(board), offer ? { offer, side, context: context.market ?? null } : undefined)
+          const score = nbaSlipSurgeScore(player, market, board.game.date, matchup, nbaGamePace(board), offer ? { offer, side, context: context.market ?? null } : undefined, scoreWorkloads.get(player.id, market))
           value = factor.field === 'index' ? score.score : score.parts.find(p => p.key === factor.field)?.value ?? null
         }
       } else if (factor.category === 'tracking') {

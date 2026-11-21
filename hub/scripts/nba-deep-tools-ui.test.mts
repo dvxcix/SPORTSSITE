@@ -157,17 +157,17 @@ test('matchup spread lines display their spread prices rather than moneylines', 
   } finally { await ui.close() }
 })
 
-test('game header switches observed public cohorts and clears them when the matchup changes', async () => {
+test('game header shows both observed bet and money cohorts and clears them when the matchup changes', async () => {
   const overview={gameId:123,observedAt:'2026-10-20T12:00:00Z',totalBets:21613,totalHandleDollars:698522.76,splits:[
     {market:'moneyline',side:'away',betShare:.23,moneyShare:.19},{market:'moneyline',side:'home',betShare:.77,moneyShare:.81},
   ]}
   const ui=await harness('PaintMatchup',{board},{overview})
   try {
     ui.succeed();await ui.click('Retry')
-    const share=()=>ui.host.querySelector('[aria-label="moneyline public pick share"]')??ui.host.querySelector('[aria-label="moneyline public wager share"]')
+    const share=()=>ui.host.querySelector('[aria-label="moneyline public bets share"]')
     assert.ok(share()?.textContent?.includes('23%'))
-    await ui.click('Show public wager share')
-    assert.ok(share()?.textContent?.includes('19%'))
+    assert.ok(ui.host.querySelector('[aria-label="moneyline public money share"]')?.textContent?.includes('19%'))
+    assert.equal(share()?.querySelectorAll('i').length,2)
     assert.ok(ui.host.querySelector('[aria-label="Recorded picks: 21,613"]'))
     assert.equal(ui.host.querySelector('time')?.getAttribute('datetime'),overview.observedAt)
     await ui.render({board:{...board,game:{...board.game,id:456}}})
@@ -210,30 +210,23 @@ test('membership denial clears loaded public activity and independent header pri
   } finally {await ui.close()}
 })
 
-test('matchup starter portraits match confirmed IDs per team and preserve pending teams', async () => {
-  const away = { id: 11, first_name: 'Jayson', last_name: 'Tatum', team: board.game.visitor_team, headshot: 'https://example.test/tatum.png' }
-  const home = { id: 12, first_name: 'Cade', last_name: 'Cunningham', team: board.game.home_team, headshot: 'https://example.test/cunningham.png' }
-  const lineup = { ...board, players: [away, home], starters: [away.id, 99999] }
-  const ui = await harness('PaintMatchup', { board: lineup }, {})
+test('matchup lineups use saved game-specific slots, keep expected honest and never infer from legacy IDs', async () => {
+  const players = ['PG','SG','SF','PF','C'].map((position,i)=>({id:11+i,firstName:'Player',lastName:String(i),position}))
+  const data={gameId:123,mode:'pregame',cutoffAt:board.game.datetime,checkedAt:'2026-10-20T12:00:00Z',unavailable:false,teams:[{teamId:board.game.visitor_team.id,status:'confirmed',source:'pregame',sourceId:1,observedAt:'2026-10-20T12:00:00Z',players}]}
+  const ui=await harness('PaintMatchup',{board:{...board,players:[],starters:[99999]}},data)
   try {
-    await ui.click('Team matchup details')
-    const awayPanel = ui.host.querySelector('[aria-label="Boston Celtics matchup"]')!
-    const homePanel = ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
-    assert.ok(awayPanel.textContent?.includes('1 confirmed starter'))
-    const player = awayPanel.querySelector('a[aria-label="Jayson Tatum, confirmed starter"]')!
-    assert.equal(player.getAttribute('href'), '/nba/players/11?game=123&mode=pregame')
-    assert.equal(player.querySelector('img')?.getAttribute('src'), away.headshot)
-    assert.equal(awayPanel.querySelectorAll('li').length, 1, 'unmatched provider IDs do not invent a player')
-    assert.ok(homePanel.textContent?.includes('Lineup not confirmed'))
-    assert.equal(homePanel.querySelector('footer a'), null)
-    assert.equal(ui.host.textContent?.includes('provider'), false)
-    await ui.render({ board: { ...lineup, starters: [away.id, home.id] } })
-    assert.ok(homePanel.querySelector('a[aria-label="Cade Cunningham, confirmed starter"]'))
-    await ui.render({ board: { ...lineup, starters: [] } })
-    assert.equal(ui.host.querySelectorAll('footer a').length, 0)
-    assert.ok(awayPanel.textContent?.includes('Lineup not confirmed'))
-    assert.ok(homePanel.textContent?.includes('Lineup not confirmed'))
-  } finally { await ui.close() }
+    ui.succeed();await ui.click('Team matchup details')
+    const awayPanel=ui.host.querySelector('[aria-label="Boston Celtics matchup"]')!
+    assert.ok(awayPanel.textContent?.includes('Confirmed pregame'))
+    assert.equal(awayPanel.querySelectorAll('li').length,5)
+    const player=awayPanel.querySelector('a[aria-label="Player 0, PG, confirmed pregame"]')!
+    assert.equal(player.getAttribute('href'),'/nba/players/11?game=123&mode=pregame')
+    assert.equal(awayPanel.querySelectorAll('[aria-label="Game position"]').length,5)
+    const homePanel=ui.host.querySelector('[aria-label="Detroit Pistons matchup"]')!
+    assert.equal(homePanel.querySelector('footer a'),null)
+    assert.ok(homePanel.textContent?.includes('No pre-tip lineup recorded') || homePanel.textContent?.includes('Lineup pending'))
+    assert.doesNotMatch(ui.host.textContent??'',/99999/)
+  } finally {await ui.close()}
 })
 
 test('NBA profile tables expose named keyboard-focusable scroll regions', async () => {

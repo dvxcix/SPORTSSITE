@@ -3615,20 +3615,22 @@
     "label": "NBA · SlipSurge Score",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "NBA score, splits and lineups",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+    ]
   },
   {
     "id": "nba:slate",
@@ -3701,20 +3703,22 @@
     "label": "NBA · Defense × position",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "NBA score, splits and lineups",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+    ]
   },
   {
     "id": "nba:usage",
@@ -3808,20 +3812,22 @@
     "label": "NBA · Game markets",
     "group": "NBA",
     "kind": "Workspace",
-    "status": "Queued",
-    "batch": null,
-    "notes": "",
+    "status": "Review ready",
+    "batch": "NBA score, splits and lineups",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
     "checks": {
-      "desktopDark": false,
-      "desktopLight": false,
-      "phoneDark": false,
-      "phoneLight": false,
-      "keyboard": false,
-      "motion": false,
-      "states": false,
-      "toolAccess": false
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
     },
-    "evidence": []
+    "evidence": [
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+    ]
   },
   {
     "id": "nba-surface:Game markets and public activity",
@@ -5023,6 +5029,52 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt"
+    ]
+  },
+  {
+    "id": "shared:NBA score calculation drawer",
+    "route": "/the-paint?view=score",
+    "label": "NBA score calculation drawer",
+    "group": "Shared components",
+    "kind": "Shared surface",
+    "status": "Review ready",
+    "batch": "NBA score, splits and lineups",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+    ]
+  },
+  {
+    "id": "shared:NBA game-specific lineups",
+    "route": "/the-paint?view=game-markets",
+    "label": "NBA game-specific lineup cards",
+    "group": "Shared components",
+    "kind": "Shared surface",
+    "status": "Review ready",
+    "batch": "NBA score, splits and lineups",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
     ]
   },
   {

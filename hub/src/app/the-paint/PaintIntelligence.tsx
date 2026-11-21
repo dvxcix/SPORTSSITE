@@ -4,11 +4,10 @@ import { nbaResearchRevision } from '@/lib/nbaResearchRevision'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import type { NbaMarketSelection } from '@/lib/nbaMarketSelection'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpRight, X } from 'lucide-react'
-import { ModalSurface } from '@/components/ui/ModalSurface'
+import { ArrowUpRight } from 'lucide-react'
 import { nbaPrice, nbaTarget, nbaSeason, PAINT_MARKETS, type PaintTeam, type PaintBoard, type PaintMarket, type PaintProp } from '@/lib/nbaPaint'
 import { nbaPosition } from '@/lib/nbaPosition'
-import type { NbaDvp } from '@/lib/nbaIntelligence'
+import type { NbaDvp, NbaScoreDetails } from '@/lib/nbaIntelligence'
 import type { NbaWorkload } from '@/lib/nbaWorkload'
 import type { NbaMarketSupportView } from '@/lib/nbaMarketSignal'
 import { BookLogo } from '@/components/BookLogo'
@@ -18,46 +17,18 @@ import { watchNbaRefresh } from '@/lib/nbaRefresh'
 import { PaintPrice } from './PaintPrice'
 import { PaintSortHeader } from './PaintSortHeader'
 import { PaintMarketSupport } from './PaintMarketSupport'
-import { compareResearch, PaintMmCell, PaintScoreCell } from './PaintResearchCells'
+import { compareResearch, PaintMmCell } from './PaintResearchCells'
 import { PaintBookSelect,PaintTeamSelect } from './PaintEntitySelect'
 import { PaintHeatCell, PaintHeatLegend } from './PaintHeatCell'
 import { nbaCenteredHeat } from './paintHeat'
 import styles from './paint.module.css'
 import polish from './research-polish.module.css'
 import dials from './research-dials.module.css'
-import workloadStyles from './workload.module.css'
+import { PaintScoreWorkloadCell } from './PaintScoreDetails'
+export { PaintScoreWorkloadCell, PaintWorkloadDetails } from './PaintScoreDetails'
 
-type ScoreView = { playerId: number; score: number | null; mm: number | null; offer: PaintProp | null; minutes: number | null; production: number | null; newTeam: boolean | null; marketSignals: NbaMarketSupportView; workload?: NbaWorkload | null; workloadGap?: number | null }
+type ScoreView = { scoreDetails?: NbaScoreDetails | null; playerId: number; score: number | null; mm: number | null; offer: PaintProp | null; minutes: number | null; production: number | null; newTeam: boolean | null; marketSignals: NbaMarketSupportView; workload?: NbaWorkload | null; workloadGap?: number | null }
 type Context = { teams?: PaintTeam[]; season: number; ready: boolean; profiles: NbaDvp[]; games: number; fetchedAt: string | null; stale: boolean; scores: ScoreView[]; unavailable?: string[] }
-export function PaintWorkloadDetails({ value, gap }: { value?: NbaWorkload | null; gap?: number | null }) {
-  if (!value || value.status !== 'available') return <p className={workloadStyles.note} aria-label="Workload unavailable">{value?.reason ?? 'Workload inputs unavailable'}</p>
-  return <div className={workloadStyles.detail}>
-    <h4>Workload context</h4>
-    <p className={workloadStyles.estimate}><strong>{number(value.estimate)}</strong><span>{value.proxy ? 'Pass-based estimate' : 'Opportunity estimate'}</span></p>
-    <dl>
-      <dt>{value.opportunityLabel} · last 2 / prior {value.priorGames}</dt><dd>{number(value.recentOpportunity)} / {number(value.priorOpportunity)}</dd>
-      <dt>Minutes · last 2 / prior</dt><dd>{number(value.recentMinutes)} / {number(value.priorMinutes)}</dd>
-      <dt>Last 2 production</dt><dd>{number(value.recentProduction)}</dd>
-      <dt>Earlier conversion</dt><dd>{value.conversion == null ? '—' : value.market === 'points' ? `${number(value.conversion)} points / shot equivalent` : `${(value.conversion * 100).toFixed(1)}%`}</dd>
-      <dt>Gap to selected target · selected side</dt><dd>{gap == null ? '—' : `${gap > 0 ? '+' : ''}${number(gap)}`}</dd>
-      <dt>Team workload rank</dt><dd>{value.teamRank == null ? '—' : `${value.teamRank} / ${value.teamPool}`}</dd>
-      <dt>Share of available team workload</dt><dd>{value.teamShare == null ? '—' : `${(value.teamShare * 100).toFixed(1)}%`}</dd>
-      <dt>Saved inputs · Eastern</dt><dd>{value.observedAt && Number.isFinite(Date.parse(value.observedAt)) ? new Date(value.observedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Unavailable'}</dd>
-    </dl>
-    <p>Last two games’ opportunities × conversion in the earlier sample. This describes recent workload, without forecasting an injury-adjusted rotation. An estimate is not a ceiling or a hit rate.{value.proxy ? ' Passes are a proxy, not potential assists.' : ''}</p>
-  </div>
-}
-export function PaintScoreWorkloadCell({ score, value, gap, playerName }: { score: number | null; value?: NbaWorkload | null; gap?: number | null; playerName: string }) {
-  const [expanded, setExpanded] = useState(false)
-  return <>
-    <button type="button" className={workloadStyles.trigger} aria-label={`View SlipSurge Score details for ${playerName}`} aria-haspopup="dialog" aria-expanded={expanded} onClick={() => setExpanded(true)}><PaintScoreCell score={score}/></button>
-    <ModalSurface open={expanded} onClose={() => setExpanded(false)} label={`SlipSurge Score details for ${playerName}`} backdropClassName={styles.modalBackdrop} panelClassName={workloadStyles.panel}>
-      <header><div><h3>SlipSurge Score</h3><p>{playerName}</p></div><button type="button" className={styles.iconButton} aria-label="Close score details" onClick={() => setExpanded(false)}><X size={20}/></button></header>
-      <div className={workloadStyles.score}><PaintScoreCell score={score}/><p>{score == null ? 'Score inputs unavailable' : 'Current SlipSurge Score'}<small>The workload evidence below provides context; it does not change this score.</small></p></div>
-      <PaintWorkloadDetails value={value} gap={gap}/>
-    </ModalSurface>
-  </>
-}
 export function PaintIntelligence({ selection, board, market, book, side, mode, open, onMarketChange, onBookChange, onSideChange }: { selection?: NbaMarketSelection; board: PaintBoard; market: PaintMarket; book: string; side: 'over' | 'under'; mode: 'score' | 'dvp'; open: (id: number, market?: PaintMarket, book?: string, panel?: 'trends' | 'ladder' | 'movement' | 'tracking' | 'court' | 'markets', quote?: { line: number; type: 'over_under' | 'milestone' }, side?: 'over' | 'under') => void; onMarketChange: (market: PaintMarket) => void; onBookChange: (book: string) => void; onSideChange: (side: 'over' | 'under') => void }) {
   const oddsMode = useNbaOddsMode()
   const [contextState, setContext] = useState<{ key: string; data: Context } | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0)
@@ -90,7 +61,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
   const rows = useMemo(() => board.players.map(player => {
     const opponent = player.team.id === board.game.home_team.id ? board.game.visitor_team : board.game.home_team
     const matchup = context?.profiles.find(profile => profile.teamId === opponent.id && profile.position === nbaPosition(player.position) && profile.market === market)
-    const signal = context?.scores?.find(row => row.playerId === player.id) ?? { score: null, mm: null, offer: null, minutes: null, production: null, newTeam: false, marketSignals: null, workload: null, workloadGap: null }
+    const signal = context?.scores?.find(row => row.playerId === player.id) ?? { scoreDetails: null, score: null, mm: null, offer: null, minutes: null, production: null, newTeam: false, marketSignals: null, workload: null, workloadGap: null }
     return { player, opponent, matchup, signal, offer: signal.offer, mm: signal.mm }
   }).filter(row => (team==='all'||String(row.player.team.id)===team)&&`${row.player.first_name} ${row.player.last_name} ${row.player.team.full_name}`.toLowerCase().includes(query.toLowerCase()) && (position === 'all' || nbaPosition(row.player.position) === position)).sort((a, b) => {
     const value = (row: typeof a) => sort === 'name' ? `${row.player.first_name} ${row.player.last_name}` : sort === 'mm' ? row.mm : sort === 'minutes' ? row.signal.minutes : sort === 'production' ? row.signal.production : sort === 'defense' ? row.matchup?.per48 : sort === 'allowance' ? row.matchup?.allowance : sort === 'line' ? row.offer ? Number(row.offer.line_value) : null : sort === 'odds' ? row.offer ? nbaPrice(row.offer, side) : null : sort === 'market' ? row.signal.marketSignals?.signal ? row.signal.marketSignals.signal.relatedPicks - row.signal.marketSignals.signal.targetPicks : null : row.signal.score
@@ -132,7 +103,7 @@ export function PaintIntelligence({ selection, board, market, book, side, mode, 
     {mode === 'dvp' && scope === 'league' ? <div className={styles.researchScroll} role="region" aria-label="NBA defense by position" tabIndex={0}><table className={`${styles.researchTable} ${polish.table} ${dials.dvpTable}`}><caption className={styles.srOnly}>NBA defense by position</caption><thead><tr>{header('Defense', 'name', leagueSort)}{header('Position', 'position', leagueSort)}{header('Games', 'games', leagueSort)}{header('Allowed / 48', 'defense', leagueSort)}{header('League / 48', 'league', leagueSort)}{header('Allowance', 'allowance', leagueSort)}</tr></thead><tbody>{leagueRows.map(row => <tr key={`${row.teamId}:${row.position}`}><th scope="row"><span className={styles.playerButton}><TeamLogo abbr={row.team!.abbreviation} size={34}/><strong>{row.team!.full_name}</strong></span></th><td><span className={dials.position} aria-label={row.position === 'G' ? 'Guards' : row.position === 'F' ? 'Forwards' : 'Centers'}>{row.position}</span></td><td><span className={dials.sample}>{row.games}</span></td><td><PaintHeatCell value={row.per48} pool={defensePools.get(row.position)?.per48} label="Allowed per 48 position-minutes">{number(row.per48)}</PaintHeatCell></td><td>{number(row.leaguePer48)}</td><td><PaintHeatCell value={row.allowance} heat={nbaCenteredHeat(row.allowance, defensePools.get(row.position)?.allowance ?? [])} tone="performance" label="Allowance versus league">{row.allowance == null ? '—' : `${row.allowance > 0 ? '+' : ''}${(row.allowance * 100).toFixed(1)}%`}</PaintHeatCell></td></tr>)}</tbody></table>{context && !leagueRows.length && <div className={polish.empty}>No position sample for this selection.</div>}</div>
       : <div className={styles.researchScroll} role="region" aria-label="NBA player scores and market signals" tabIndex={0}><table className={`${styles.researchTable} ${polish.table} ${dials.table}`}><caption className={styles.srOnly}>NBA player scores and market signals</caption><thead><tr>{header('Player', 'name')}{header('Score', 'score')}{header('MM', 'mm')}{header('Market signals', 'market')}{header('L10 min', 'minutes')}{header('L10', 'production')}{header('Allowed / 48', 'defense')}{header('Allowance', 'allowance')}{header('Target', 'line')}{header('Odds', 'odds')}<th><span className={styles.srOnly}>Save pick</span></th></tr></thead><tbody>{rows.map(({ player, signal, matchup, offer, opponent, mm }) => <tr key={player.id}>
         <td><button className={styles.playerButton} onClick={() => open(player.id, market)}><PlayerAvatar player={player}/><span><strong>{player.first_name} {player.last_name}</strong><small>{player.position}{signal.newTeam && <em>New team</em>}</small></span><ArrowUpRight size={14}/></button></td>
-        <td><PaintScoreWorkloadCell score={signal.score} value={signal.workload} gap={signal.workloadGap} playerName={`${player.first_name} ${player.last_name}`}/>{context && signal.score == null && <small className={polish.subtle}>{context.unavailable?.length ? 'Saved inputs unavailable' : 'Limited history'}</small>}</td><td><PaintMmCell mm={mm}/></td>
+        <td><PaintScoreWorkloadCell key={`${contextKey}:${player.id}`} details={signal.scoreDetails} market={market} contract={signal.offer?`${side === 'under' ? 'Under' : 'Over'} ${signal.offer.line_value}`:undefined} score={signal.score} value={signal.workload} gap={signal.workloadGap} playerName={`${player.first_name} ${player.last_name}`}/>{context && signal.score == null && <small className={polish.subtle}>{context.unavailable?.length ? 'Saved inputs unavailable' : 'Limited history'}</small>}</td><td><PaintMmCell mm={mm}/></td>
         <td><PaintMarketSupport support={context ? signal.marketSignals : null} onOpen={(next, actualBook, quote) => open(player.id, next, actualBook, 'ladder', quote)}/></td>
 
         <td><PaintHeatCell value={signal.minutes} pool={minutesPool} label="Last 10 minutes">{number(signal.minutes)}</PaintHeatCell></td><td><PaintHeatCell value={signal.production} pool={productionPool} label="Last 10 production">{marketNumber(signal.production, market)}</PaintHeatCell></td>

@@ -4,11 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePaintAccess } from '@/lib/paintAccess'
 import { getPaintBoard, getPaintGame } from '@/lib/nbaPaintData'
 import { getNbaResearchDefense, getNbaResearchMarketContext, getNbaResearchTracking } from '@/lib/nbaResearchResources'
-import { nbaWorkloadBoard, nbaWorkloadGap, NBA_WORKLOAD_MARKETS } from '@/lib/nbaWorkload'
+import { nbaWorkloadGap } from '@/lib/nbaWorkload'
+import { nbaScoreWorkloads, nbaScoreNeedsTracking } from '@/lib/nbaScoreWorkload'
 import { resolveNbaResearchBundle } from '@/lib/nbaResearchBundle'
 import { nbaEmptyMarketContext } from '@/lib/nbaMarketSignal'
 import { nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSignal'
-import { nbaGamePace,nbaPosition,nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
+import { nbaGamePace,nbaPosition,nbaSlipSurgeScore,nbaScoreDetails } from '@/lib/nbaIntelligence'
 import { nbaReference,nbaPeriod,PAINT_MARKETS,type PaintMarket } from '@/lib/nbaPaint'
 import { nbaMarketRanks } from '@/lib/nbaMarketMetrics'
 import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
         new Promise<never>((_resolve,reject)=>{defenseTimer=setTimeout(()=>reject(new Error('Defense context unavailable')),18_000)}),
       ]).catch(()=>{unavailable.push('Defense context');return {ready:false,season:board.sampleSeason,before:board.game.date,teams:board.teams,profiles:[],games:0,rows:0,fetchedAt:null,stale:false}}).finally(()=>{if(defenseTimer)clearTimeout(defenseTimer)})
       let trackingTimer:ReturnType<typeof setTimeout>|undefined
-      const trackingLoad=NBA_WORKLOAD_MARKETS.some(key=>key===market)?Promise.race([
+      const trackingLoad=nbaScoreNeedsTracking(market)?Promise.race([
         Promise.resolve().then(()=>getNbaResearchTracking(board,mode)),
         new Promise<never>((_resolve,reject)=>{trackingTimer=setTimeout(()=>reject(new Error('Workload tracking unavailable')),18_000)}),
       ]).catch(()=>null).finally(()=>{if(trackingTimer)clearTimeout(trackingTimer)}):Promise.resolve(null)
@@ -58,17 +59,18 @@ export async function GET(request: NextRequest) {
     if(!playerSeasonValid) unavailable.push('Selected-season player history')
     // Derive only from this bundle's captured facts. Tracking is itself a
     // frozen research resource; a missing archive never triggers a live fill.
-    const workloads=playerSeasonValid?nbaWorkloadBoard(rawBoard,tracking?.rows??[],tracking?.fetchedAt??rawBoard.researchSnapshot?.observedAt??rawBoard.fetchedAt):[]
+    const preparedWorkloads=playerSeasonValid?nbaScoreWorkloads(rawBoard,tracking?.rows??[],tracking?.fetchedAt??rawBoard.researchSnapshot?.observedAt??rawBoard.fetchedAt):null
+    const workloads=preparedWorkloads?.workloads??[]
     const ranks=playerSeasonValid?nbaMarketRanks(board.players,market as PaintMarket,book,'all',{gameId:board.game.id,beforeDate:board.game.date}):new Map()
     const scores=board.players.map(player=>{
       const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id
       const matchup=defenseSeasonValid?defense.profiles.find(profile=>profile.teamId===opponent&&profile.position===nbaPosition(player.position)&&profile.market===market):undefined
       const offer=nbaReference(player.props,market,book,side as 'over'|'under')
-      const score=playerSeasonValid?nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined):null
+      const score=playerSeasonValid?nbaSlipSurgeScore(player,market as PaintMarket,board.game.date,matchup,nbaGamePace(board),offer?{offer,side:side as 'over'|'under',context:marketContext}:undefined,preparedWorkloads?.get(player.id,market as PaintMarket)):null
       const mm=playerSeasonValid&&board.statsComplete&&(!nbaPeriod(market)||board.periodStatsComplete!==false)?ranks.get(player.id)?.mm??null:null
       const marketSignals=nbaPlayerMarketSignals({playerId:player.id,gameId:board.game.id,market:market as PaintMarket,book,side:side as 'over'|'under',props:player.props,context:marketContext})
       const workload=workloads.find(row=>row.playerId===player.id&&row.market===market)??null
-      return {playerId:player.id,score:unavailable.length?null:score?.score??null,offer:offer??null,mm,minutes:score?.minutes??null,production:score?.production??null,newTeam:score?.newTeam??null,marketSupport:defenseSeasonValid&&score?nbaMarketSupportView(score.marketSupport):null,marketSignals:nbaMarketSupportView(marketSignals),workload,workloadGap:nbaWorkloadGap(workload,offer?Number(offer.line_value):null,side as 'over'|'under')}
+      return {playerId:player.id,scoreDetails:score?{...nbaScoreDetails(score,market as PaintMarket,rawBoard.researchSnapshot?.observedAt??rawBoard.fetchedAt,!!rawBoard.researchSnapshot?.frozen),score:unavailable.length?null:score.score,unavailableReason:unavailable.length?unavailable.join(', '):score.unavailableReason}:null,score:unavailable.length?null:score?.score??null,offer:offer??null,mm,minutes:score?.minutes??null,production:score?.production??null,newTeam:score?.newTeam??null,marketSupport:defenseSeasonValid&&score?nbaMarketSupportView(score.marketSupport):null,marketSignals:nbaMarketSupportView(marketSignals),workload,workloadGap:nbaWorkloadGap(workload,offer?Number(offer.line_value):null,side as 'over'|'under')}
     })
     const visibleDefense=defenseSeasonValid?defense:{season:board.game.season,before:board.game.date,ready:false,profiles:[],teams:[],games:null,rows:null,quarterRows:null,fetchedAt:defense.fetchedAt,stale:defense.stale,researchSnapshot:'researchSnapshot' in defense?defense.researchSnapshot:undefined}
     return NextResponse.json({...visibleDefense,scores,market,book,side,mode,unavailable:unavailable.sort()}, { headers: { 'Cache-Control': 'private, no-store' } })

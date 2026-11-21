@@ -1,24 +1,30 @@
 import { nbaBinary, nbaPeriod, nbaMarketLogs, nbaAverage, nbaMinutes, nbaSample, nbaValue, type PaintBoard, type PaintMarket, type PaintPlayer, type PaintStat } from './nbaPaint'
 import { nbaMarketSupport, type NbaMarketInput } from './nbaMarketSignal'
 import { nbaPosition } from './nbaPosition'
+import { nbaGameStart } from './nbaOddsMode'
+import type { NbaScoreWorkload } from './nbaScoreWorkload'
 export { nbaPosition } from './nbaPosition'
 
-export const NBA_SCORE_VERSION = 'nba-opportunity-market-v3'
+export const NBA_SCORE_VERSION = 'nba-opportunity-market-v4'
 const clamp = (value: number, low = 0, high = 100) => Math.max(low, Math.min(high, value))
 const mean = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 const numeric = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const field = (logs: PaintStat[], key: keyof PaintStat) => mean(logs.map(log => log[key]).filter(numeric))
 const ceiling: Partial<Record<PaintMarket, number>> = { points: 35, rebounds: 15, assists: 12, threes: 5, points_rebounds_assists: 55, points_rebounds: 48, points_assists: 46, rebounds_assists: 24, steals: 2.5, blocks: 3, turnovers: 5, double_double: 1, triple_double: 1, points_1q: 35, rebounds_1q: 15, assists_1q: 12 }
-export type NbaScorePart = { key: string; label: string; value: number | null; weight: number }
+export type NbaScorePart = { key: string; label: string; value: number | null; weight: number; beforeWorkload?: number | null }
 export type NbaDvp = { teamId: number; position: string; market: PaintMarket; games: number; minutes: number; per48: number | null; leaguePer48: number | null; allowance: number | null }
 export function nbaGamePace(board: PaintBoard) {
-  if (board.historical) return null
+  if (board.teamStatsSeason !== board.game.season) return null
+  if (board.historical && board.oddsMode !== 'live') {
+    const at = Date.parse(board.researchSnapshot?.observedAt ?? ''), start = nbaGameStart(board.game)
+    if (!Number.isFinite(at) || start == null || at >= start) return null
+  }
   const teams = [board.game.home_team.id, board.game.visitor_team.id]
   const values = teams.map(id => board.teamStats?.find(row => row.team.id === id)?.stats.pace)
   return values.every((value): value is number => numeric(value) && value > 0) ? mean(values) : null
 }
 /** Descriptive production support, not a win probability or a fitted betting edge. */
-export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null, marketInput?: NbaMarketInput) {
+export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, before: string, matchup?: NbaDvp | null, pace?: number | null, marketInput?: NbaMarketInput, workload?: NbaScoreWorkload) {
   const logs = nbaSample(nbaMarketLogs(player, market).filter(log => log.game.date.slice(0, 10) < before), 30)
   const recent = logs.slice(0, 10), prior = logs.slice(10, 30)
   const minutes = mean(recent.map(log => nbaMinutes(log.min)).filter(numeric))
@@ -35,9 +41,13 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
   const deviation = minutes == null ? null : Math.sqrt(minutesValues.reduce((sum, value) => sum + (value - minutes) ** 2, 0) / Math.max(1, minutesValues.length))
   const stability = minutes != null && deviation != null && minutes > 0 ? clamp(100 - deviation / minutes * 200) : null
   const form = production != null && baseline != null && prior.length >= 5 ? clamp(50 + (production - baseline) / Math.max(1, baseline) * 100) : null
+  const scopedWorkload = workload?.market === market ? workload : undefined
+  const opportunityValue = opportunity == null ? null : clamp(opportunity * (scopedWorkload?.opportunityFactor ?? 1) * (scopedWorkload?.availabilityFactor ?? 1))
+  const role = minutes == null ? null : clamp(minutes / minutesCeiling * 100)
+  const roleMinutes = scopedWorkload?.recentMinutes ?? minutes
   const parts: NbaScorePart[] = [
-    { key: 'opportunity', label: binary ? 'Event frequency' : market === 'points' || market === 'points_1q' || market === 'threes' ? 'Shot opportunity' : 'Per-36 production', value: opportunity, weight: .35 },
-    { key: 'role', label: 'Minutes', value: minutes == null ? null : clamp(minutes / minutesCeiling * 100), weight: .20 },
+    { key: 'opportunity', label: binary ? 'Event frequency & workload' : market === 'points' || market === 'points_1q' || market === 'threes' ? 'Shot opportunity' : 'Production & workload', value: opportunityValue, beforeWorkload: opportunity, weight: .35 },
+    { key: 'role', label: 'Minutes', value: roleMinutes == null ? null : clamp(roleMinutes / minutesCeiling * 100), beforeWorkload: role, weight: .20 },
     { key: 'form', label: 'Recent form', value: form, weight: .20 },
     { key: 'stability', label: 'Role stability', value: stability, weight: .10 },
     { key: 'matchup', label: 'Position allowance', value: matchup?.allowance == null ? null : clamp(50 + matchup.allowance * 100), weight: .10 },
@@ -47,14 +57,26 @@ export function nbaSlipSurgeScore(player: PaintPlayer, market: PaintMarket, befo
   // Shrink sparse samples toward neutral; missing features remain visible.
   const raw = coverage ? valid.reduce((sum, part) => sum + part.value! * part.weight, 0) / coverage : null
   const marketGames = recent.filter(log => nbaValue(log, market) != null).length
-  const baseScore = marketGames >= 5 && coverage >= .55 && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
+  const unavailableReason = scopedWorkload?.unavailablePlayer ? `Player is ${scopedWorkload.playerStatus}` : marketGames < 5 ? 'At least five market observations required' : coverage < .55 ? 'Insufficient score input coverage' : null
+  const baseScore = !unavailableReason && raw != null ? Math.round(50 + (raw - 50) * Math.min(1, logs.length / 20)) : null
+  const originalRaw = coverage ? valid.reduce((sum, part) => sum + (part.beforeWorkload ?? part.value!) * part.weight, 0) / coverage : null
+  const beforeWorkload = baseScore != null && originalRaw != null ? Math.round(50 + (originalRaw - 50) * Math.min(1, logs.length / 20)) : null
   const {score,marketSupport}=nbaContextualScore(baseScore,player.id,market,before,marketInput)
   const historicalTeams = [...new Set(logs.map(log => log.team.id))]
   const year = Number(before.slice(0, 4)), season = Number(before.slice(5, 7)) < 7 ? year - 1 : year
   const previousSeasonTeams = [...new Set(logs.filter(log => log.game.season != null && log.game.season < season).map(log => log.team.id))]
   const priorTeams = previousSeasonTeams.length ? previousSeasonTeams : historicalTeams
-  return { version: NBA_SCORE_VERSION, score, baseScore, marketSupport, games: logs.length, marketGames, coverage, parts, minutes, production, baseline, pace: pace ?? null, newTeam: priorTeams.length > 0 && !priorTeams.includes(player.team.id), priorTeams }
+  return { version: NBA_SCORE_VERSION, score, baseScore, beforeWorkload, workload: scopedWorkload ?? null, unavailableReason, marketSupport, games: logs.length, marketGames, coverage, parts, minutes, roleMinutes, production, baseline, pace: pace ?? null, newTeam: priorTeams.length > 0 && !priorTeams.includes(player.team.id), priorTeams }
 }
+
+/** Member-facing inputs only; excludes private models and archived raw feeds. */
+export function nbaScoreDetails(signal: ReturnType<typeof nbaSlipSurgeScore>, market: PaintMarket, observedAt: string, frozen: boolean) {
+  return { version: signal.version, market, score: signal.score, baseScore: signal.baseScore, beforeWorkload: signal.beforeWorkload,
+    parts: signal.parts, coverage: signal.coverage, games: signal.games, marketGames: signal.marketGames,
+    workload: signal.workload, unavailableReason: signal.unavailableReason, marketAdjustment: signal.marketSupport.adjustment,
+    observedAt, frozen }
+}
+export type NbaScoreDetails = ReturnType<typeof nbaScoreDetails>
 
 /** Shared by board, slate and archival scoring; production remains required. */
 export function nbaContextualScore(baseScore:number|null,playerId:number,market:PaintMarket,before:string,marketInput?:NbaMarketInput){

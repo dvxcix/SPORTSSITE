@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { Banknote, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaGameStart, nbaPregameOpen } from '@/lib/nbaOddsMode'
@@ -11,6 +11,7 @@ import { PickCount, PicksMark } from '@/components/research/ResearchMetrics'
 import { bookName } from '@/components/BookLogo'
 import { nbaOdds, type PaintBoard, type PaintGameOdds } from '@/lib/nbaPaint'
 import { nbaGameHeaderClock, type NbaGameOverview } from '@/lib/nbaGameOverview'
+import { nbaTeamColors } from '@/lib/nbaTeamColors'
 import { TeamLogo } from './PaintVisuals'
 import { PaintBookSelect } from './PaintEntitySelect'
 import { PaintGamePrice } from './PaintPrice'
@@ -22,7 +23,7 @@ const percent = (value: number | null | undefined) => value == null ? '—' : `$
 
 export function PaintGameSummary({ board, teamControl, refreshPrices = false, phaseCheck, initialBook = 'draftkings' }: { board: Pick<PaintBoard, 'game' | 'gameOdds'>; teamControl?: ReactNode; refreshPrices?: boolean; phaseCheck?: NbaOddsBoardPhaseCheck | null; initialBook?: string }) {
   const mode = useNbaOddsMode(), id = useId(), rail = useRef<HTMLDivElement>(null)
-  const [book, setBook] = useState(initialBook==='all'?'draftkings':initialBook), [metric, setMetric] = useState<'betShare' | 'moneyShare'>('betShare')
+  const [book, setBook] = useState(initialBook==='all'?'draftkings':initialBook)
   const [edges, setEdges] = useState({ start: true, end: true }), [retry, setRetry] = useState(0)
   const [state, setState] = useState<{ key: string; overview: NbaGameOverview | null; error: boolean; gameOdds?: PaintGameOdds[]; pricesError?: boolean } | null>(null)
   const clockGame = nbaGameHeaderClock(board.game, mode, phaseCheck), start = clockGame ? nbaGameStart(clockGame) : null
@@ -86,7 +87,6 @@ export function PaintGameSummary({ board, teamControl, refreshPrices = false, ph
     <div className={styles.rail} ref={rail} id={id} role="region" aria-label="Moneyline, spread and total" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1) } }}>
       {(['moneyline', 'spread', 'total'] as const).map(market => {
         const sides = market === 'total' ? ['over', 'under'] as const : ['away', 'home'] as const
-        const shares = sides.map(side => overview?.splits.find(row => row.market === market && row.side === side)?.[metric]), complete = shares.every(value => value != null)
         return <article key={market} className={styles.market} aria-label={market === 'total' ? 'Game total' : market === 'moneyline' ? 'Moneyline' : 'Spread'}>
           <h3>{market === 'total' ? 'Total' : market === 'moneyline' ? 'Moneyline' : 'Spread'}</h3>
           <div className={styles.outcomes}>{sides.map((side, index) => {
@@ -94,13 +94,19 @@ export function PaintGameSummary({ board, teamControl, refreshPrices = false, ph
             const field = `${market}_${side}` as Parameters<typeof PaintGamePrice>[0]['field']
             return <div key={side} className={styles.outcome}><span className={styles.side}>{market === 'total' ? <b>{side === 'over' ? 'O' : 'U'}</b> : <TeamLogo abbr={teams[index].abbreviation} size={22}/>}<span>{market === 'total' ? side === 'over' ? 'Over' : 'Under' : teams[index].abbreviation}{line != null && <strong>{market === 'spread' && Number(line) > 0 ? '+' : ''}{line}</strong>}</span></span>{quote?.opening?.[field] ? <PaintGamePrice quote={quote} field={field} compact/> : <b className={styles.price}>{nbaOdds(quote?.[`${field}_odds`])}</b>}</div>
           })}</div>
-          {overview && <div className={styles.split} aria-label={`${market} public ${metric === 'betShare' ? 'pick' : 'wager'} share`}><div className={styles.shareLabels}>{sides.map((side, index) => <span key={side}><small>{market === 'total' ? side === 'over' ? 'Over' : 'Under' : teams[index].abbreviation}</small><b>{percent(shares[index])}</b></span>)}</div><div className={styles.shareTrack} aria-hidden="true" data-unavailable={!complete}>{complete && <i style={{ width: `${shares[0]! * 100}%` }}/>}</div></div>}
+          {overview && <div className={styles.splitStack}>{([{key:'betShare',label:'Bets',Icon:PicksMark},{key:'moneyShare',label:'Money',Icon:Banknote}] as const).map(({key:metric,label,Icon})=>{
+            const shares=sides.map(side=>overview.splits.find(row=>row.market===market&&row.side===side)?.[metric]),complete=shares.every(value=>value!=null)
+            return <div className={styles.split} key={metric} role="group" aria-label={market+' public '+label.toLowerCase()+' share'}>
+              <div className={styles.shareLabels}><span className={styles.metricLabel}><Icon aria-hidden="true"/>{label}</span>{sides.map((side,index)=><span key={side}><small>{market==='total'?(side==='over'?'Over':'Under'):teams[index].abbreviation}</small><b>{percent(shares[index])}</b></span>)}</div>
+              <div className={styles.shareTrack} aria-hidden="true" data-unavailable={!complete}>{complete&&sides.map((side,index)=>{const [primary,secondary]=nbaTeamColors(teams[index].abbreviation);return <i key={side} data-side={side} style={{width:String(shares[index]!*100)+'%','--segment-from':market==='total'?(index?'var(--red)':'var(--accent-fill)'):primary,'--segment-to':market==='total'?(index?'var(--red)':'var(--accent-fill)'):secondary} as CSSProperties}/>})}</div>
+            </div>
+          })}</div>}
         </article>
       })}
     </div>
     <footer className={styles.footer}>
       {refreshPrices && state?.key === key && state.pricesError && <button className={styles.retry} type="button" onClick={() => setRetry(value => value + 1)}>Game prices unavailable · Retry</button>}
-      {overview ? <><div className={styles.publicMeta}><span title="Recorded community activity for this game; exact side counts are unavailable"><PickCount value={overview.totalBets}/></span>{overview.totalHandleDollars != null && <span className={styles.handle} title={`Total recorded wagers: ${overview.totalHandleDollars.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}><Banknote size={16}/>{dollars.format(overview.totalHandleDollars)}</span>}<time dateTime={overview.observedAt}>Pregame public · {captured.format(new Date(overview.observedAt))} ET</time></div><div className={styles.shareSwitch} role="group" aria-label="Public share metric"><button type="button" aria-label="Show public pick share" title="Pick share" aria-pressed={metric === 'betShare'} onClick={() => setMetric('betShare')}><PicksMark/>%</button><button type="button" aria-label="Show public wager share" title="Wager share" aria-pressed={metric === 'moneyShare'} onClick={() => setMetric('moneyShare')}><Banknote size={16}/>%</button></div></> : <span className={styles.status} role="status">{mode === 'live' ? 'Live public splits unavailable' : error ? 'Public activity could not refresh' : state?.key !== key ? 'Loading public activity…' : 'Public splits not captured'}{error && <button type="button" onClick={() => setRetry(value => value + 1)}>Retry</button>}</span>}
+      {overview ? <><div className={styles.publicMeta}><span title="Recorded community activity for this game; exact side counts are unavailable"><PickCount value={overview.totalBets}/></span>{overview.totalHandleDollars != null && <span className={styles.handle} title={`Total recorded wagers: ${overview.totalHandleDollars.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}><Banknote size={16}/>{dollars.format(overview.totalHandleDollars)}</span>}<time dateTime={overview.observedAt}>Pregame public · {captured.format(new Date(overview.observedAt))} ET</time></div></> : <span className={styles.status} role="status">{mode === 'live' ? 'Live public splits unavailable' : error ? 'Public activity could not refresh' : state?.key !== key ? 'Loading public activity…' : 'Public splits not captured'}{error && <button type="button" onClick={() => setRetry(value => value + 1)}>Retry</button>}</span>}
       {error && overview && <button type="button" className={styles.retry} onClick={() => setRetry(value => value + 1)}>Last loaded · Retry</button>}
       <details className={styles.guide}><summary aria-label="About game markets and public activity"><Info size={16}/></summary><div><p>Prices: {quote ? bookName(quote.vendor) : 'unavailable'}{quote ? ` · ${captured.format(new Date(quote.updated_at))} ET` : ''}. Open and movement compare captured prices for this book.</p><p>Public shares and game activity are separate community observations. They are not this book’s wagers or exact side counts. A dash means unavailable.</p></div></details>
     </footer>

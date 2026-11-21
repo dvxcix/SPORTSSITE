@@ -31,6 +31,12 @@ async function bdl<T>(path: string, ttl = 120): Promise<Page<T>> {
     return payload as Page<T>
   }, 25)).value
 }
+export async function getPaintProjectedLineups(gameId: number) {
+  return (await bdl<unknown>(`/v1/projected_lineups?game_ids[]=${gameId}&per_page=100`, 30)).data
+}
+export async function getPaintActualLineups(gameId: number) {
+  return (await bdl<unknown>(`/v1/lineups?game_ids[]=${gameId}&per_page=100`, 60)).data
+}
 async function pages<T>(path: string, ttl: number, limit = 24, deadline = Infinity) {
   const rows: T[] = []; const cursors = new Set<number>(); let cursor: number | null = null
   for (let page = 0; page < limit; page++) {
@@ -221,7 +227,7 @@ export async function getPaintProfile(player: number, season: number) {
 export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintBoard> {
   game = await getNbaOddsGame(game)
   const load = async () => {
-    const cached = await nbaSharedCache(`board:v8:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
+    const cached = await nbaSharedCache(`board:v9:${mode}:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game, mode), 120)
     if (mode === 'pregame' && (cached.value.statsComplete !== true || cached.value.periodStatsComplete !== true || boardBaselineIncomplete(cached.value))) {
       const prior = await readNbaPregameResearch<PaintBoard>(game, 'board:v1')
       // Preserve a complete observation as a bundle, including its original
@@ -305,7 +311,7 @@ export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMo
     injury: currentAvailability ? playerInjury(currentAvailability, player.id) : player.injury,
     props: eligible && !eligible.has(player.id) ? [] : quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
 }
-async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
+async function loadPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintBoard> {
   const deadline = Date.now() + 65_000
   const issues: string[] = []
   const historical = (game.date < nbaToday() || game.status_state === 'final' || game.status === 'Final' || game.status_state === 'in_progress' || game.period > 0 || !!game.datetime && Date.parse(game.datetime) <= Date.now())
@@ -333,7 +339,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const sampleStart = new Date(`${sampleEnd}T12:00:00Z`); sampleStart.setUTCDate(sampleStart.getUTCDate() - 200)
   const [stats, teamStats, quarterStats] = await Promise.all([
     optional('Game-log data unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason}&season_type=regular&start_date=${sampleStart.toISOString().slice(0, 10)}&end_date=${sampleEnd}&per_page=100`, 3600, 24, deadline), { rows: [], complete: false }),
-    historical ? Promise.resolve({ data: [] }) : optional('Team ratings unavailable', bdl<{ team: PaintTeam; stats: Record<string, number | null> }>(`/nba/v1/team_season_averages/general?${teamQuery}&season=${sampleSeason}&season_type=regular&type=advanced&per_page=100`, 3600), { data: [] }),
+    historical && mode !== 'live' ? Promise.resolve({ data: [] }) : optional('Team ratings unavailable', bdl<{ team: PaintTeam; stats: Record<string, number | null> }>(`/nba/v1/team_season_averages/general?${teamQuery}&season=${sampleSeason}&season_type=regular&type=advanced&per_page=100`, 3600), { data: [] }),
     optional('First-quarter logs unavailable', pages<PaintStat>(`/v1/stats?${idsQuery}&seasons[]=${sampleSeason}&season_type=regular&start_date=${sampleStart.toISOString().slice(0, 10)}&end_date=${sampleEnd}&period=1&per_page=100`, 3600, 24, deadline), { rows: [], complete: false }),
   ])
   if (!stats.complete) issues.push('Game-log coverage incomplete; rates use returned games only')
@@ -352,7 +358,7 @@ async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
     for (const market of ['double_double','triple_double']) sampleAvg[market] = nbaAverage(logs, market)
     const mins = logs.map(s => nbaMinutes(s.min)).filter((v): v is number => v != null); sampleAvg.min = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null
     return { ...player, headshot: portraits.get(player.team.id)?.get(player.id) ?? null,
-      injury: historical ? null : playerInjury(injuries.rows, player.id), average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
+      injury: historical && mode !== 'live' ? null : playerInjury(injuries.rows, player.id), average: historical ? sampleAvg : (avgMap.get(player.id)?.gp ?? 0) > 0 ? avgMap.get(player.id)! : sampleAvg,
       averageSeason: sampleSeason,
       periodLogs, logs, props: quotes.props.filter(p => p.player_id === player.id && p.game_id === game.id && Number.isFinite(Number(p.line_value))) }
   })

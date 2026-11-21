@@ -83,7 +83,7 @@ test('every NBA customer data endpoint rejects lower tiers before reading resear
   const h = await access({ tier: 'advanced' })
   let reads = 0
   const blocked = new Proxy({}, { get: () => () => { reads++; throw new Error('Data access before membership') } })
-  const routes = ['board', 'divergence', 'estimate', 'history', 'intelligence', 'profile', 'public', 'results', 'scouting', 'shots', 'slate', 'tracking']
+  const routes = ['board', 'divergence', 'estimate', 'history', 'intelligence', 'lineups', 'profile', 'public', 'results', 'scouting', 'shots', 'slate', 'tracking']
   for (const route of [...routes.map(route => `../src/app/the-paint/${route}/route.ts`), '../src/app/api/search/nba/route.ts']) {
     const api = await compiled(route, { '@/lib/paintAccess': { requirePaintAccess: h.gate }, 'next/server': { NextResponse: { json: Response.json } } }, () => blocked)
     const response = await (api.GET as (req: Request) => Promise<Response>)(new Request('https://test/the-paint/board?game=123'))

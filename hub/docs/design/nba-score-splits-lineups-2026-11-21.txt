@@ -1,0 +1,29 @@
+SlipSurge NBA score, public splits and game-specific lineups
+2026-11-21
+
+Scope
+- Repaired the shared radial with contained SVG geometry, a real zero state, finite bounds and accessible values. Compact tables use 52px dials; calculation drawers use 78px dials.
+- DvP and Score drawers show the selected market/contract, final numeric score, six weighted inputs, input coverage, original observation time, workload effect and market adjustment. Slate uses the same drawer.
+- Version nba-opportunity-market-v4 feeds market-specific recent workload into the existing opportunity (35%) and minutes (20%) inputs. Form (20%), stability (10%), matchup (10%) and pace (5%) retain their weights. The existing selected-quote movement/ladders adjustment remains in use.
+- Availability uses definite Out/Inactive/Suspended teammates with recent team participation in the complete roster, including teammates without the selected contract. It is bounded at x1.25. Questionable/Doubtful are not treated as definite absences; an absence already reflected in the two recent team games is not counted twice. This is a descriptive score input, not invented rotation minutes or a hit probability.
+- Combined markets aggregate their matching production units. Double/triple-double use geometric PTS/REB/AST workload support only when every component is observed, without inventing a joint probability. Missing category inputs and unsupported quarter/other workload markets remain explicit. Per-market scores retain their independent production history and market signals.
+- Board, Matrix, Slate and future existing research captures use the same prepared full-roster workload context. No cron/job was replayed. Existing archived score rows are not rewritten. Recovered legacy Slate rows preserve their original score and explicitly lack a reconstructed breakdown.
+- Fixed frozen pace provenance: valid saved same-season pre-tip ratings remain usable after tip. Missing/wrong-season/post-tip ratings remain unavailable. Explicit Live may retrieve current team ratings and injuries under its own board cache key.
+- Public game cards show Bets and Money simultaneously. Team bars use primary/secondary palettes with a primary-color floor for visibility; Total uses SlipSurge green/red. Missing measures are not derived from the other measure or fabricated complements. Public aggregates are not individual sportsbook ticket counts.
+- Pregame lineups use the provider's separate projected/confirmed source and original updated_at. Tonight's PG/SG/SF/PF/C slots are displayed with portraits and names. Expected never becomes confirmed merely because tip passed. Actual game-row positions are restricted to explicit Live. Missing historical lineups say No pre-tip lineup recorded.
+- Phone team panels stack and retain five usable lineup cards. No tools removed, no entitlement changes.
+
+Source evidence
+Official BallDontLie NBA documentation: https://nba.balldontlie.io/#projected-lineups
+Projected lineups stop updating at scheduled start or earlier live state and retain their last pregame record. Actual /v1/lineups is available only after a game begins. The implementation validates game/team, five unique identities/slots, original source time and the earliest known cutoff. Late retrievals are identified separately from captures before tip.
+
+Database
+Applied only additive migration 20261121013311_nba_pregame_lineup_observations. Original payload/time immutable to the service API (SELECT/INSERT only); RLS enabled, no anon/member grants. Verified late-retrieval provenance in a rolled-back fixture. No historical migration tree, backfill or collectors replayed.
+
+Verification
+398/398 combined production smoke and targeted NBA tests passed, including existing access, Matrix, exact-contract Slate, source failure and tip-crossing coverage plus new workload/lineup/drawer cases. TypeScript and changed-file ESLint passed. Optimized private webpack build passed. The final phone stacking CSS change was then included in a fresh optimized build and browser inspection.
+Browser: PC browser at desktop 1440px and phone 390px, both themes. Real rendered ring/value geometry, responsive drawer containment/scrolling, Escape/focus return, separate public measures, all 17 mobile Tools options and game-specific lineup labels inspected. Phone lineup cards are approximately 62px wide at 390px; team panels stack. Reduced-motion CSS guards inspected; OS preference not changed. Physical-phone and native-app testing not claimed.
+Private previews use illustrative fixtures and no live credentials. Production observations and exact Git/deployment verification are recorded separately in docs/design/evidence/live/game-score-production-release.json after rollout. Source delay or missing original observations must remain visible.
+
+Checklist
+Only this batch's surfaces move to Review ready. Earlier owner approvals are preserved. The remaining site inventory is not certified by this change. See docs/design/page-by-page-checklist.txt and /design-review/visual-audit in the private review.

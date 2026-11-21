@@ -4,8 +4,9 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPaintBoard, getPaintSchedule, refreshPaintBoardPrices } from '@/lib/nbaPaintData'
-import { getNbaResearchDefense, getNbaResearchModels, getNbaResearchMarketContext, warmNbaResearchResources } from '@/lib/nbaResearchResources'
+import { getNbaResearchDefense, getNbaResearchModels,getNbaResearchTracking, getNbaResearchMarketContext, warmNbaResearchResources } from '@/lib/nbaResearchResources'
 import { nbaMarketSupportIdentity } from '@/lib/nbaMarketSignal'
+import { nbaScoreWorkloads } from '@/lib/nbaScoreWorkload'
 import { nbaGamePace, nbaPosition, nbaSlipSurgeScore } from '@/lib/nbaIntelligence'
 import { nbaSelectedSeasonEstimate, type NbaModelReport } from '@/lib/nbaModel'
 import { nbaEconomicSnapshot } from '@/lib/nbaMovement'
@@ -61,12 +62,14 @@ async function run(request: Request) {
           if (!board.statsComplete) throw new Error('Game-log coverage incomplete; score archive deferred')
           const [context,marketContext,models] = await Promise.all([getNbaResearchDefense(board),getNbaResearchMarketContext(board),getNbaResearchModels(board)])
           loadedModels.set(game.id,models)
+          const tracking = await getNbaResearchTracking(board).catch(()=>null)
+          const scoreWorkloads = nbaScoreWorkloads(board,tracking?.rows??[],tracking?.fetchedAt??board.fetchedAt)
           const rows = board.players.flatMap(player => PAINT_MARKETS.flatMap(market => {
             if (nbaPeriod(market.key) && board.periodStatsComplete === false) return []
             const opponent = player.team.id === game.home_team.id ? game.visitor_team.id : game.home_team.id
             const matchup = context.profiles.find(profile => profile.teamId === opponent && profile.position === nbaPosition(player.position) && profile.market === market.key)
             const quote = nbaReference(player.props, market.key)
-            const signal = nbaSlipSurgeScore(player, market.key, game.date, matchup, nbaGamePace(board),quote?{offer:quote,side:'over',context:marketContext}:undefined)
+            const signal = nbaSlipSurgeScore(player, market.key, game.date, matchup, nbaGamePace(board),quote?{offer:quote,side:'over',context:marketContext}:undefined,scoreWorkloads.get(player.id,market.key))
             if (signal.score == null || signal.games < 5) return []
             const logs = nbaMarketLogs(player, market.key)
             const sampleThrough = logs.map(log => log.game.date.slice(0, 10)).filter(date => date < game.date).sort().at(-1)

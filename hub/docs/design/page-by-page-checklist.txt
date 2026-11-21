@@ -168,16 +168,16 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Queued] NBA | NBA · Market Story | /the-paint?view=movement
 [Queued] NBA | NBA · First basket | /the-paint?view=first-basket
 [Queued] NBA | NBA · Cheatsheets | /the-paint?view=cheatsheets
-[Queued] NBA | NBA · SlipSurge Score | /the-paint?view=score
+[Review ready] NBA | NBA · SlipSurge Score | /the-paint?view=score
 [Queued] NBA | NBA · Slate Edge | /the-paint?view=slate
 [Review ready] NBA | NBA · ThePublic | /the-paint?view=public
 [Queued] NBA | NBA · Cross-market | /the-paint?view=divergence
-[Queued] NBA | NBA · Defense × position | /the-paint?view=dvp
+[Review ready] NBA | NBA · Defense × position | /the-paint?view=dvp
 [Queued] NBA | NBA · Player trends | /the-paint?view=usage
 [Queued] NBA | NBA · Game tracking | /the-paint?view=tracking
 [Queued] NBA | NBA · Matchup Lab | /the-paint?view=matchup
 [Queued] NBA | NBA · Availability | /the-paint?view=availability
-[Queued] NBA | NBA · Game markets | /the-paint?view=game-markets
+[Review ready] NBA | NBA · Game markets | /the-paint?view=game-markets
 [Review ready] NBA | NBA · Game market slider and public activity | /the-paint
 [Review ready] NFL | NFL · The Sideline | /the-sideline
 [Approved] NFL | NFL · Odds Board | /the-sideline?view=odds-board
@@ -226,6 +226,8 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Review ready] NFL | NFL · Column manager | /the-sideline
 [Review ready] NFL | NFL · Player comparison | /the-sideline
 [Review ready] NFL | NFL · Game lines and capture replay | /the-sideline
+[Review ready] Shared components | NBA score calculation drawer | /the-paint?view=score
+[Review ready] Shared components | NBA game-specific lineup cards | /the-paint?view=game-markets
 [Review ready] Shared components | Saved sportsbook picker and comparison links | /the-paint?view=odds
 [Approved] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Queued] Shared components | Account menu | Shared surface

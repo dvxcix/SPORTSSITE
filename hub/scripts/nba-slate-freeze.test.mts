@@ -1,3 +1,4 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -314,12 +315,12 @@ async function routeFixture() {
       refreshPaintBoardPrices:async(b:paint.PaintBoard)=>{priceHook?.();return structuredClone(b)},
     },
     '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,(async()=>({value:await load(),fetchedAt:new Date(now).toISOString(),stale:false}))());return await cached.get(key)}},
-    '@/lib/nbaResearchResources':{
+    '@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>({rows:[]}),
       getNbaResearchModels:async(b:paint.PaintBoard,live:string)=>{if(failModels)throw new Error('missing model');return resource(b,'models',live,()=>[])},
       getNbaResearchDefense:async(b:paint.PaintBoard,live:string)=>{if(failDefense)throw new Error('missing defense');return resource(b,'defense',live,()=>({ready:true,profiles:[]}))},
       getNbaResearchMarketContext:async(b:paint.PaintBoard,live:string)=>{if(crossing)time(tip+1);if(failContext)throw new Error('missing context');return resource(b,'market',live,()=>({gameId:b.game.id,marker}))},
     },
-    '@/lib/nbaSlate':{nbaSlateRows},
+    '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaSlate':{nbaSlateRows},
     '@/lib/nbaSlateHeat':slateHeat,
     '@/lib/nbaSlateFreezeData':{...h.api,captureNbaSlatePools:async(...args:Parameters<typeof h.api.captureNbaSlatePools>)=>{captures++;captureDeadlines.push(args[5]!);return h.api.captureNbaSlatePools(...args)},getNbaSlateRanks:async(...args:Parameters<typeof h.api.getNbaSlateRanks>)=>{const result=await h.api.getNbaSlateRanks(...args);if(crossDuringRank){crossDuringRank=false;time(tip+1)}return result}},
     '@/lib/nbaMarketSignal':{...marketSignal,nbaPlayerMarketSignals:({context}:{context:{marker:number}|null})=>({...marketSignal.nbaMarketSupport(),reason:context?'original '+context.marker:'missing'})},

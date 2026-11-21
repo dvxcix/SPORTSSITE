@@ -5,8 +5,9 @@ import { requirePaintAccess } from '@/lib/paintAccess'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { getPaintBoard, getPaintSchedule, refreshPaintBoardPrices } from '@/lib/nbaPaintData'
 import { nbaPeriod, nbaDate, PAINT_MARKETS, type PaintBoard, type PaintMarket } from '@/lib/nbaPaint'
-import { getNbaResearchDefense, getNbaResearchModels, getNbaResearchMarketContext } from '@/lib/nbaResearchResources'
-import { nbaSlateRows } from '@/lib/nbaSlate'
+import { getNbaResearchDefense, getNbaResearchModels, getNbaResearchMarketContext, getNbaResearchTracking } from '@/lib/nbaResearchResources'
+import { nbaScoreNeedsTracking, nbaScoreWorkloads } from '@/lib/nbaScoreWorkload'
+import { nbaSlateRows, type NbaSlateViewRow } from '@/lib/nbaSlate'
 import { nbaMarketSupport, nbaMarketSupportView, nbaPlayerMarketSignals } from '@/lib/nbaMarketSignal'
 import { nbaContextualScore } from '@/lib/nbaIntelligence'
 import { getNbaOddsGame } from '@/lib/nbaOddsClockData'
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
       const reports = new Map(cached.value.reports.map(item=>[item.gameId,item.reports]))
       const defense = new Map(cached.value.defense.map(item=>[item.gameId,item]))
       const marketContexts = new Map(contextResults.flatMap(result=>result.status==='fulfilled'?[[result.value.gameId,result.value] as const]:[]))
+      const trackingResults=await Promise.allSettled(initialBoards.map(board=>nbaScoreNeedsTracking(market!)?getNbaResearchTracking(board,mode):Promise.resolve(null)))
+      const trackingMap=new Map(initialBoards.map((board,index)=>{const result=trackingResults[index];return [board.game.id,result.status==='fulfilled'?result.value:null] as const}))
       const contextUnavailable = new Set(cached.value.boards.filter((_,index)=>contextResults[index].status==='rejected').map(board=>board.game.id))
       const defenseMissing = new Set(cached.value.defenseMissing), failed = new Set(cached.value.failed), closedResolved = new Set<number>()
       // Every game can cross once. Re-resolve final research after the slow
@@ -103,7 +106,8 @@ export async function GET(request: NextRequest) {
           try {
             const board=await getPaintBoard(game,'pregame')
             boards.set(game.id,board);failed.delete(game.id)
-            const [modelResult,defenseResult,contextResult]=await Promise.allSettled([getNbaResearchModels(board,'pregame'),getNbaResearchDefense(board,'pregame'),getNbaResearchMarketContext(board,'pregame')])
+            const [modelResult,defenseResult,contextResult,trackingResult]=await Promise.allSettled([getNbaResearchModels(board,'pregame'),getNbaResearchDefense(board,'pregame'),getNbaResearchMarketContext(board,'pregame'),nbaScoreNeedsTracking(market!)?getNbaResearchTracking(board,'pregame'):Promise.resolve(null)])
+            trackingMap.set(game.id,trackingResult.status==='fulfilled'?trackingResult.value:null)
             reports.set(game.id,modelResult.status==='fulfilled'?modelResult.value:[])
             if(defenseResult.status==='fulfilled'){defense.set(game.id,{gameId:game.id,...defenseResult.value});defenseMissing.delete(game.id)}
             else {defense.delete(game.id);defenseMissing.add(game.id)}
@@ -122,23 +126,23 @@ export async function GET(request: NextRequest) {
         const legacyResults=mode==='pregame'?await Promise.allSettled(schedule.games.filter(game=>missing.includes(game.id)).map(async game=>({gameId:game.id,saved:await getNbaLegacySlateRows(game,market as PaintMarket,book,side as 'over'|'under',selection)}))):[]
         const legacy=legacyResults.flatMap(result=>result.status==='fulfilled'&&result.value.saved?[{gameId:result.value.gameId,saved:result.value.saved}]:[])
         if(mode==='pregame'&&schedule.games.slice(0,16).some(game=>!nbaPregameOpen(game)&&!closedResolved.has(game.id)))continue
-        return {pricedBoards,reports:[...reports].map(([gameId,reports])=>({gameId,reports})),defense:[...defense.values()],marketContexts:[...marketContexts.values()],contextUnavailable:[...contextUnavailable],defenseMissing:[...defenseMissing],failed:[...failed].filter(id=>!legacy.some(entry=>entry.gameId===id)),complete,frozen,legacy,missing}
+        return {scoreWorkloads:new Map(pricedBoards.map(board=>{const tracking=trackingMap.get(board.game.id);return [board.game.id,nbaScoreWorkloads(board,tracking?.rows??[],tracking?.fetchedAt??board.researchSnapshot?.observedAt??board.fetchedAt)] as const})),pricedBoards,reports:[...reports].map(([gameId,reports])=>({gameId,reports})),defense:[...defense.values()],marketContexts:[...marketContexts.values()],contextUnavailable:[...contextUnavailable],defenseMissing:[...defenseMissing],failed:[...failed].filter(id=>!legacy.some(entry=>entry.gameId===id)),complete,frozen,legacy,missing}
       }
       throw new Error('NBA slate phase could not settle')
     }
     enter('finalize')
-    const {pricedBoards,reports,defense,marketContexts,contextUnavailable,defenseMissing,failed,complete,frozen,legacy,missing}=await finalize().finally(() => timer.endFinalize())
+    const {scoreWorkloads,pricedBoards,reports,defense,marketContexts,contextUnavailable,defenseMissing,failed,complete,frozen,legacy,missing}=await finalize().finally(() => timer.endFinalize())
     enter('render')
     for (const entry of legacy) frozen.observedAt[entry.gameId]=entry.saved.observedAt
     const unavailable=missing.filter(gameId=>!legacy.some(entry=>entry.gameId===gameId))
-    const baseRows = nbaSlateRows(pricedBoards.map(board => ({ ...board, players: nbaSelectedPlayers(board.players, market!, selection) })), market as PaintMarket, book, side as 'over' | 'under', complete, [], defense, [], { ranks: frozen.ranks, reports })
-    const rows=baseRows.filter(row=>!legacy.some(entry=>entry.gameId===row.game.id)).map(row=>{
+    const baseRows = nbaSlateRows(pricedBoards.map(board => ({ ...board, players: nbaSelectedPlayers(board.players, market!, selection) })), market as PaintMarket, book, side as 'over' | 'under', complete, [], defense, [], { ranks: frozen.ranks, reports },scoreWorkloads)
+    const rows:NbaSlateViewRow[]=baseRows.filter(row=>!legacy.some(entry=>entry.gameId===row.game.id)).map(row=>{
       const {player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,issues}=row
       const missingScore=mode==='pregame'&&!nbaPregameOpen(game)&&(defenseMissing.includes(game.id)||contextUnavailable.includes(game.id))
       const safe={player,game,market:rowMarket,offer,estimate,mm,average,hit,gap,fetchedAt,researchObservedAt:frozen.observedAt[game.id],frozenHeat:mode==='pregame'?nbaSlateFrozenHeat(row,frozen.heatDomains[game.id]):undefined,issues:[...issues,...(unavailable.includes(game.id)?['Pregame slate comparison was not captured; MM unavailable']:[]),...(contextUnavailable.includes(game.id)?['Pregame market context was not captured; market signals unavailable']:[]),...(missingScore?['Complete pregame score inputs were not captured; score unavailable']:[])]}
       const contextual=nbaContextualScore(row.baseScore,row.player.id,row.market,row.game.date,{offer:row.offer,side:side as 'over'|'under',context:marketContexts.find(context=>context.gameId===row.game.id)??null})
       const marketSignals=nbaPlayerMarketSignals({playerId:row.player.id,gameId:row.game.id,market:row.market,book,side:side as 'over'|'under',props:row.signalOffers,context:marketContexts.find(context=>context.gameId===row.game.id)??null})
-      return {...safe,score:missingScore?null:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
+      return {...safe,scoreDetails:{...row.scoreDetails,score:missingScore?null:contextual.score,marketAdjustment:contextual.marketSupport.adjustment,unavailableReason:missingScore?'Complete pregame score inputs were not captured':row.scoreDetails.unavailableReason},score:missingScore?null:contextual.score,marketSupport:nbaMarketSupportView(contextual.marketSupport),marketSignals:nbaMarketSupportView(marketSignals)}
     })
     for (const entry of legacy) for (const row of entry.saved.value.rows) {
       const {player,game,market:rowMarket,offer,mm,average,hit,gap,fetchedAt,score}=row
@@ -149,10 +153,10 @@ export async function GET(request: NextRequest) {
       // Exact-filter legacy rows retain no model sample provenance. Withhold
       // only the unverifiable projection and its heat; preserve captured MM,
       // score, price and all other archived values without recalculation.
-      rows.push({player,game,market:rowMarket,offer,estimate:null,mm,average,hit,gap,fetchedAt,score,researchObservedAt:entry.saved.observedAt,frozenHeat:{...frozenHeat,estimate:null},issues:[...row.issues,'Recovered original pregame slate snapshot'],marketSupport:nbaMarketSupportView(row.marketSupport??nbaMarketSupport()),marketSignals:nbaMarketSupportView({...nbaMarketSupport(),reason:'Market signals were not captured with this original slate snapshot'})})
+      rows.push({player,game,market:rowMarket,offer,estimate:null,mm,average,hit,gap,fetchedAt,score,scoreDetails:undefined,researchObservedAt:entry.saved.observedAt,frozenHeat:{...frozenHeat,estimate:null},issues:[...row.issues,'Recovered original pregame slate snapshot'],marketSupport:nbaMarketSupportView(row.marketSupport??nbaMarketSupport()),marketSignals:nbaMarketSupportView({...nbaMarketSupport(),reason:'Market signals were not captured with this original slate snapshot'})})
     }
     rows.sort((a,b)=>(b.score??-1)-(a.score??-1)||(b.mm??0)-(a.mm??0))
-    const { boards: _boards, reports: _reports, defense: _defense, ...summary } = cached.value
+    const summary = { date:cached.value.date,games:cached.value.games,loaded:cached.value.loaded,failed:cached.value.failed,defenseMissing:cached.value.defenseMissing,defenseUnavailable:cached.value.defenseUnavailable }
     return NextResponse.json({ ...summary, complete, failed, loaded:new Set([...pricedBoards.map(board=>board.game.id),...legacy.map(entry=>entry.gameId)]).size,defenseMissing,defenseUnavailable:pricedBoards.filter(board=>!defense.find(context=>context.gameId===board.game.id)?.ready).length, rows, mode, frozenMmUnavailable: unavailable, frozenMmObservedAt: frozen.observedAt, recoveredSlateGames:legacy.map(entry=>entry.gameId), fetchedAt: cached.fetchedAt, stale: cached.stale }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) { console.error('[The Court] slate unavailable', nbaSlateFailure(stage, error)); return NextResponse.json({ error: 'NBA slate could not load. Try again shortly.' }, { status: 503 }) }
   finally { const slow = timer.finish(); if (slow) console.info('[The Court] slow slate', slow) }

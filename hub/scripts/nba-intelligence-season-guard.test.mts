@@ -1,3 +1,5 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
+import { nbaScoreDetails } from '../src/lib/nbaIntelligence.ts'
 import * as workload from '../src/lib/nbaWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -6,7 +8,7 @@ import ts from 'typescript'
 import type {PaintBoard} from '../src/lib/nbaPaint.ts'
 import * as display from '../src/lib/nbaSeasonDisplay.ts'
 async function compiled(file:string,imports:Record<string,unknown>){
-  imports = { '@/lib/nbaWorkload': workload, ...imports }
+  imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
  const source=await readFile(new URL(file,import.meta.url),'utf8'),out=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const m={exports:{} as Record<string,any>};new Function('require','exports','module',out)((key:string)=>{assert.ok(key in imports,key);return imports[key]},m.exports,m);return m.exports
 }
@@ -24,7 +26,7 @@ async function route(initial:PaintBoard,raw:ReturnType<typeof defense>|((board:P
   '@/lib/nbaResearchResources':{getNbaResearchDefense:async(b:PaintBoard)=>{defenseReads++;return typeof raw==='function'?raw(b):raw},getNbaResearchMarketContext:async()=>{marketReads++;return {gameId:101}}},
   '@/lib/nbaResearchBundle':{resolveNbaResearchBundle:resolve??(async(b:PaintBoard,_mode:string,load:(b:PaintBoard)=>Promise<unknown>)=>({board:b,value:await load(b)}))},
   '@/lib/nbaMarketSignal':{nbaEmptyMarketContext:()=>({}),nbaMarketSupportView:(v:unknown)=>v,nbaPlayerMarketSignals:()=>({status:'confirmed',signal:{targetPicks:2}})},
-  '@/lib/nbaIntelligence':{nbaGamePace:()=>100,nbaPosition:()=> 'G',nbaSlipSurgeScore:()=>({score:77,minutes:30,production:20,newTeam:false,marketSupport:{status:'confirmed'}})},
+  '@/lib/nbaIntelligence':{nbaScoreDetails,nbaGamePace:()=>100,nbaPosition:()=> 'G',nbaSlipSurgeScore:()=>({score:77,minutes:30,production:20,newTeam:false,marketSupport:{status:'confirmed'}})},
   '@/lib/nbaPaint':{nbaReference:()=>offer,nbaPeriod:(market:string)=>market.endsWith('_1q')?1:0,PAINT_MARKETS:[{key:'points'},{key:'points_1q'}]},
   '@/lib/nbaMarketMetrics':{nbaMarketRanks:()=>new Map([[1,{mm:3}]])},
   '@/lib/nbaSeasonDisplay':display,

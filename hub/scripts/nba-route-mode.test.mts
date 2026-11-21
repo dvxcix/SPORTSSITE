@@ -1,3 +1,5 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
+import { nbaScoreDetails } from '../src/lib/nbaIntelligence.ts'
 import * as workload from '../src/lib/nbaWorkload.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -6,7 +8,7 @@ import ts from 'typescript'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 
 async function route(file: string, imports: Record<string, unknown>) {
-  imports = { '@/lib/nbaWorkload': workload, ...imports }
+  imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
   imports = { '@/lib/nbaResearchBundle': { resolveNbaResearchBundle: async (board: unknown, _mode: unknown, load: (board: unknown) => Promise<unknown>) => ({ board, value: await load(board) }) }, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -24,14 +26,14 @@ const failedResource = (delay: number) => async () => {
 
 test('Intelligence missing-resource metadata is stable when failures finish in opposite orders', async () => {
   const offer = { id: 7, player_id: 1, game_id: 123, prop_type: 'threes', vendor: 'fanduel', line_value: '5', market: { type: 'milestone', odds: 410 } }
-  const board = { game: { id: 123, season: 2026, date: '2026-10-24', datetime: '2026-10-25T00:00:00Z', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, teams: [], fetchedAt: '2026-10-24T20:00:00Z', statsComplete: true, players: [{ id: 1, team: { id: 1 }, position: 'F', props: [offer], logs: [], periodLogs: [] }] }
+  const board = { game: { id: 123, season: 2026, date: '2026-10-24', datetime: '2026-10-25T00:00:00Z', home_team: { id: 1 }, visitor_team: { id: 2 } }, sampleSeason: 2026, issues:[], teams: [], fetchedAt: '2026-10-24T20:00:00Z', statsComplete: true, players: [{ id: 1, team: { id: 1 }, position: 'F', props: [offer], logs: [], periodLogs: [] }] }
   const read = async (reverse: boolean) => {
     const api = await route('../src/app/the-paint/intelligence/route.ts', {
       '@/lib/nbaPaintData': { getPaintGame: async () => board.game, getPaintBoard: async () => board },
       '@/lib/nbaResearchResources': { getNbaResearchDefense: failedResource(reverse ? 15 : 0), getNbaResearchMarketContext: failedResource(reverse ? 0 : 15) },
       '@/lib/nbaMarketSelection': { nbaReadSelection: () => null, nbaSelectedPlayers: (players: unknown) => players },
       '@/lib/nbaMarketSignal': { nbaEmptyMarketContext: () => ({ available: false }), nbaMarketSupportView: (value: unknown) => value, nbaPlayerMarketSignals: () => ({ status: 'unavailable', signal: null }) },
-      '@/lib/nbaIntelligence': { nbaGamePace: () => null, nbaPosition: () => 'F', nbaSlipSurgeScore: () => ({ score: 71, minutes: 30, production: 2.5, newTeam: false, marketSupport: { status: 'unavailable', signal: null } }) },
+      '@/lib/nbaIntelligence': { nbaScoreDetails, nbaGamePace: () => null, nbaPosition: () => 'F', nbaSlipSurgeScore: () => ({ score: 71, minutes: 30, production: 2.5, newTeam: false, marketSupport: { status: 'unavailable', signal: null } }) },
       '@/lib/nbaPaint': { PAINT_MARKETS: [{ key: 'threes' }], nbaPeriod: () => 0, nbaReference: () => offer },
       '@/lib/nbaMarketMetrics': { nbaMarketRanks: () => new Map([[1, { mm: -7 }]]) },
     })
@@ -170,7 +172,7 @@ test('Matrix evaluation uses selected-phase exact prices and public picks while 
 
 test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying its last live provider response', async () => {
   const tip = Date.parse('2020-10-20T13:00:00Z'); let now = tip - 1000, builds = 0
-  const game = {id:123,date:'2020-10-20',datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}
+  const game = {id:123,season:2020,home_team:{id:1},visitor_team:{id:2},date:'2020-10-20',datetime:new Date(tip).toISOString(),status:'Scheduled',status_state:'scheduled',period:0}
   const cached = new Map<string, unknown>()
   const api = await route('../src/app/the-paint/slate/route.ts', {
     '@/lib/nbaSlateDiagnostics': await import('../src/lib/nbaSlateDiagnostics.ts'),
@@ -178,14 +180,14 @@ test('a cached pregame Slate rebuilds immediately at tipoff instead of carrying 
     '@/lib/nbaOddsMode': {...oddsMode,nbaPregameOpen:(value:any)=>oddsMode.nbaPregameOpen(value,now),nbaLiveOpen:(value:any)=>oddsMode.nbaLiveOpen(value,now)},
     '@/lib/nbaMarketSelection': {nbaReadSelection:()=>null,nbaSelectedPlayers:(players:unknown)=>players},
     '@/lib/nbaPaint': {nbaDate:(value:string)=>value,PAINT_MARKETS:[{key:'points'}],nbaPeriod:()=>0},
-    '@/lib/nbaPaintData': {getPaintSchedule:async(_date:string,exact:boolean)=>{assert.equal(exact,true);return {date:game.date,games:[game],complete:true}},getPaintBoard:async(_game:any,mode:string)=>{assert.equal(_game.datetime,new Date(tip).toISOString());assert.equal(mode,'pregame');builds++;return {game,players:[],statsComplete:true,price:now<tip?110:130}},refreshPaintBoardPrices:async(board:unknown,mode:string)=>{assert.equal(mode,'pregame');return board}},
+    '@/lib/nbaPaintData': {getPaintSchedule:async(_date:string,exact:boolean)=>{assert.equal(exact,true);return {date:game.date,games:[game],complete:true}},getPaintBoard:async(_game:any,mode:string)=>{assert.equal(_game.datetime,new Date(tip).toISOString());assert.equal(mode,'pregame');builds++;return {game,players:[],issues:[],statsComplete:true,price:now<tip?110:130}},refreshPaintBoardPrices:async(board:unknown,mode:string)=>{assert.equal(mode,'pregame');return board}},
     '@/lib/nbaSharedCache': {nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{if(!cached.has(key))cached.set(key,await load());return {value:cached.get(key),fetchedAt:new Date(now).toISOString(),stale:false}}},
     '@/lib/nbaResearchResources': {getNbaResearchModels:async()=>[],getNbaResearchDefense:async()=>({ready:false,profiles:[]}),getNbaResearchMarketContext:async()=>({gameId:123})},
     '@/lib/nbaSlateFreezeData': {captureNbaSlatePools:async()=>({full:1,quarter:0}),getNbaSlateRanks:async()=>({ranks:new Map(),unavailable:[],observedAt:{},heatDomains:{}}),getNbaLegacySlateRows:async()=>null},
     '@/lib/nbaSlateHeat': await import('../src/lib/nbaSlateHeat.ts'),
-    '@/lib/nbaSlate': {nbaSlateRows:(boards:any[])=>boards.map(board=>({game:board.game,player:{id:1},market:'points',offer:{odds:board.price},signalOffers:[],baseScore:50,issues:[]}))},
+    '@/lib/nbaSlate': {nbaSlateRows:(boards:any[])=>boards.map(board=>({game:board.game,player:{id:1},market:'points',offer:{odds:board.price},signalOffers:[],scoreDetails:{unavailableReason:null},baseScore:50,issues:[]}))},
     '@/lib/nbaMarketSignal': {nbaMarketSupportView:(value:unknown)=>value,nbaPlayerMarketSignals:()=>null},
-    '@/lib/nbaIntelligence': {nbaContextualScore:()=>({score:50,marketSupport:null})},
+    '@/lib/nbaIntelligence': {nbaContextualScore:()=>({score:50,marketSupport:{adjustment:0}})},
   })
   const search='date=2020-10-20&market=points&book=all&side=over'
   assert.equal((await (await api.GET(request(search))).json()).rows[0].offer.odds,110)

@@ -87,7 +87,7 @@ test('NBA score uses the canonical bolt dial and never converts missing or inval
   try {
     const ring = ui.host.querySelector('[data-size="small"]')!
     assert.equal(ring.getAttribute('data-tone'), 'elite')
-    assert.equal(ring.getAttribute('aria-label'), 'SlipSurge Score 71')
+    assert.equal(ring.getAttribute('aria-label'), 'SlipSurge Score 71 out of 100')
     assert.equal(ring.querySelector('strong')?.textContent, '71')
     assert.equal(ring.querySelector('img')?.getAttribute('src'), '/logo.png')
     for (const score of [null, undefined, NaN, Infinity]) {
@@ -100,6 +100,8 @@ test('NBA score uses the canonical bolt dial and never converts missing or inval
     await ui.render({ score: 0 })
     assert.equal(ui.host.querySelector('[data-tone]')?.getAttribute('data-tone'), 'cold')
     assert.equal(ui.host.querySelector('strong')?.textContent, '0')
+    assert.equal(ui.host.querySelectorAll('circle').length,1,'zero has an empty track, not a fake progress dot')
+    await ui.render({score:120});assert.equal(ui.host.querySelector('strong')?.textContent,'100');assert.equal(ui.host.querySelector('circle[pathLength]')?.getAttribute('stroke-dasharray'),'100 100')
   } finally { await ui.close() }
 })
 

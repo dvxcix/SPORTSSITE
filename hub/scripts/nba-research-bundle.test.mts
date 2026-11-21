@@ -1,3 +1,5 @@
+import * as scoreWorkload from '../src/lib/nbaScoreWorkload.ts'
+import { nbaScoreDetails } from '../src/lib/nbaIntelligence.ts'
 import * as workload from '../src/lib/nbaWorkload.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
@@ -24,7 +26,7 @@ test('workload uses final frozen tracking after tip and tracking failure leaves 
     getNbaResearchTracking:async(b:PaintBoard)=>{seen.push(b.fetchedAt);if(missing)throw Error('Missing archive');return {fetchedAt:b.fetchedAt,rows:b.players[0].logs.map((l,i)=>({id:l.id,playerId:7,teamId:1,gameId:l.game.id,values:{rebound_chances_total:i<2&&b.researchSnapshot?.frozen?12:6}}))}},
    },
    '@/lib/nbaMarketSignal':{nbaEmptyMarketContext:()=>({}),nbaMarketSupportView:(v:unknown)=>v,nbaPlayerMarketSignals:()=>null},
-   '@/lib/nbaIntelligence':{nbaGamePace:()=>100,nbaPosition:()=> 'G',nbaSlipSurgeScore:()=>({score:77,marketSupport:{}})},
+   '@/lib/nbaIntelligence':{nbaScoreDetails,nbaGamePace:()=>100,nbaPosition:()=> 'G',nbaSlipSurgeScore:()=>({score:77,marketSupport:{}})},
    '@/lib/nbaPaint':{PAINT_MARKETS:[{key:'rebounds'}],nbaReference:()=>({line_value:'6'}),nbaPeriod:()=>0},
    '@/lib/nbaMarketMetrics':{nbaMarketRanks:()=>new Map()},
   })
@@ -41,10 +43,10 @@ test('workload uses final frozen tracking after tip and tracking failure leaves 
 const tip = Date.parse('2026-10-24T22:00:00Z')
 const game = { id: 123, season: 2026, date: '2026-10-24', datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: { id: 1 }, visitor_team: { id: 2 } }
 function board(frozen = false): PaintBoard {
-  return { game, fetchedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), sampleSeason: 2026, baselineSeasons: [2026], statsComplete: true, teams: [], players: [{ id: 7, first_name: 'Test', last_name: 'Player', position: 'G', team: { id: 1, abbreviation: 'BOS' }, averageSeason: 2026, average: { pts: frozen ? 7 : 1 }, props: [], logs: [{ pts: frozen ? 7 : 1, player:{id:7}, team:{id:1}, game: { id:99,season:2026,date: '2026-10-23', status: 'Final',home_team_id:1,visitor_team_id:2 } }] }], researchSnapshot: { observedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), source: 'capture', frozen } } as unknown as PaintBoard
+  return { game, fetchedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), sampleSeason: 2026, baselineSeasons: [2026], statsComplete: true, issues:[], teams: [], players: [{ id: 7, first_name: 'Test', last_name: 'Player', position: 'G', team: { id: 1, abbreviation: 'BOS' }, averageSeason: 2026, average: { pts: frozen ? 7 : 1 }, props: [], logs: [{ pts: frozen ? 7 : 1, player:{id:7}, team:{id:1}, game: { id:99,season:2026,date: '2026-10-23', status: 'Final',home_team_id:1,visitor_team_id:2 } }] }], researchSnapshot: { observedAt: new Date(tip - (frozen ? 1000 : 60000)).toISOString(), source: 'capture', frozen } } as unknown as PaintBoard
 }
 async function compiled(file: string, imports: Record<string, unknown>) {
-  imports = { '@/lib/nbaWorkload': workload, ...imports }
+  imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const module = { exports: {} as Record<string, any> }
@@ -120,7 +122,7 @@ test('intelligence route scores and ranks final baseline with final defense and 
       getNbaResearchMarketContext: async (value: PaintBoard) => ({ marker: value.players[0].average!.pts }),
     },
     '@/lib/nbaMarketSignal': { nbaEmptyMarketContext: () => ({}), nbaMarketSupportView: (value: unknown) => value, nbaPlayerMarketSignals: () => null },
-    '@/lib/nbaIntelligence': { nbaGamePace: () => 100, nbaPosition: () => 'G', nbaSlipSurgeScore: (player: any, _market: string, _date: string, defense: any, _pace: number, context: any) => ({ score: player.average.pts + defense.marker + context.context.marker }) },
+    '@/lib/nbaIntelligence': { nbaScoreDetails,nbaGamePace: () => 100, nbaPosition: () => 'G', nbaSlipSurgeScore: (player: any, _market: string, _date: string, defense: any, _pace: number, context: any) => ({ score: player.average.pts + defense.marker + context.context.marker,marketSupport:{} }) },
     '@/lib/nbaPaint': { PAINT_MARKETS: [{ key: 'points' }], nbaReference: () => ({ odds: 300 }), nbaPeriod: () => 0 },
     '@/lib/nbaMarketMetrics': { nbaMarketRanks: (players: any[]) => new Map([[7, { mm: players[0].average.pts }]]) },
   })

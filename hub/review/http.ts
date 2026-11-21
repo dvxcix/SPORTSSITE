@@ -4,7 +4,8 @@ import {makeBoard,games,getPaintScouting,getPaintProfile,observedAt} from './nba
 import * as resources from './nba-resources'
 import {makeNflOdds,makeLens,nflGames,storedGameState,makeNflSlateEdge,getNflTouchdownFeed,nflReviewTimeline} from './nfl'
 import {nbaSlateRows} from '../src/lib/nbaSlate'
-import {nbaSlipSurgeScore,nbaPosition,nbaGamePace} from '../src/lib/nbaIntelligence'
+import {nbaSlipSurgeScore,nbaPosition,nbaGamePace,nbaScoreDetails} from '../src/lib/nbaIntelligence'
+import {nbaScoreWorkloads} from '../src/lib/nbaScoreWorkload'
 import {nbaMarketRanks} from '../src/lib/nbaMarketMetrics'
 import {nbaReference,type PaintMarket} from '../src/lib/nbaPaint'
 import {nbaMarketSupportView,nbaMarketSupport} from '../src/lib/nbaMarketSignal'
@@ -55,6 +56,7 @@ export async function reviewHttp(request:NextRequest){
   }
   return json(board)
  }
+ if(path==='/the-paint/lineups')return json({gameId:board.game.id,mode:q.get('mode')==='live'?'live':'pregame',cutoffAt:board.game.datetime,checkedAt:observedAt,unavailable:false,teams:[board.game.visitor_team,board.game.home_team].map((team,i)=>({teamId:team.id,status:i?'expected':'confirmed',source:'pregame',sourceId:team.id,observedAt,players:board.players.filter(p=>p.team.id===team.id).slice(0,5).map((p,j)=>({id:p.id,firstName:p.first_name,lastName:p.last_name,position:['PG','SG','SF','PF','C'][j]}))}))})
  if(path==='/the-paint/tracking')return json(await resources.getNbaResearchTracking(board))
  if(path==='/the-paint/scouting')return json(await getPaintScouting(board.game))
  if(path==='/the-paint/profile')return json({...await getPaintProfile(),gameId:board.game.id,playerId:Number(q.get('player')),fetchedAt:observedAt})
@@ -66,7 +68,8 @@ export async function reviewHttp(request:NextRequest){
  if(path==='/the-paint/results'||path==='/the-paint/final-results')return json({gameId:board.game.id,players:[],rows:[],games:[],available:false})
  if(path==='/the-paint/intelligence'){
   const defense=await resources.getNbaResearchDefense(board),market=(q.get('market')??'points') as PaintMarket,book=q.get('book')??'all',side=q.get('side')==='under'?'under':'over',ranks=nbaMarketRanks(board.players,market,book,'all',{gameId:board.game.id,beforeDate:board.game.date})
-  return json({...defense,scores:board.players.map(player=>{const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id,matchup=defense.profiles.find(p=>p.teamId===opponent&&p.position===nbaPosition(player.position)&&p.market===market),score=nbaSlipSurgeScore(player,market,board.game.date,matchup as any,nbaGamePace(board));return {playerId:player.id,score:score.score,mm:ranks.get(player.id)?.mm??0,offer:nbaReference(player.props,market,book,side),minutes:score.minutes,production:score.production,newTeam:false,marketSupport:nbaMarketSupportView(nbaMarketSupport()),marketSignals:nbaMarketSupportView(nbaMarketSupport()),workload:null,workloadGap:null}}),market,book,side,mode:'pregame',unavailable:[]})
+  const tracking=await resources.getNbaResearchTracking(board),workloads=nbaScoreWorkloads(board,tracking.rows,tracking.fetchedAt)
+  return json({...defense,scores:board.players.map(player=>{const opponent=player.team.id===board.game.home_team.id?board.game.visitor_team.id:board.game.home_team.id,matchup=defense.profiles.find(p=>p.teamId===opponent&&p.position===nbaPosition(player.position)&&p.market===market),score=nbaSlipSurgeScore(player,market,board.game.date,matchup as any,nbaGamePace(board),undefined,workloads.get(player.id,market));return {playerId:player.id,scoreDetails:nbaScoreDetails(score,market,observedAt,false),score:score.score,mm:ranks.get(player.id)?.mm??0,offer:nbaReference(player.props,market,book,side),minutes:score.minutes,production:score.production,newTeam:false,marketSupport:nbaMarketSupportView(nbaMarketSupport()),marketSignals:nbaMarketSupportView(nbaMarketSupport()),workload:null,workloadGap:null}}),market,book,side,mode:'pregame',unavailable:[]})
  }
  if(path==='/the-paint/divergence'){
   const props=board.players.flatMap(p=>p.props.filter(o=>o.market.type==='milestone'))

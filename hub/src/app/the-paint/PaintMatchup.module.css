@@ -1,8 +1,10 @@
-.starters.starters{display:block;padding-top:11px;color:var(--text-1)}
-.starterStatus{display:block;font-size:12px;line-height:1.4}
-.starterList{display:flex;flex-wrap:wrap;gap:7px;list-style:none;padding:0;margin:8px 0 0}
-.starterLink{display:flex;align-items:center;justify-content:center;width:46px;min-height:48px;border:1px solid var(--border-2);border-radius:11px;background:var(--surface-3);transition:background 140ms ease,border-color 140ms ease}
-.starterLink:hover{background:var(--surface-3);border-color:var(--border-3)}
-.starterLink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.starterLink>span{width:40px;height:40px}
+.starters.starters{display:block;padding-top:13px;color:var(--text-1)}
+.lineupHeading{display:flex;justify-content:space-between;align-items:center;gap:8px}.lineupHeading time{font-size:10px;color:var(--text-3);white-space:nowrap}
+.starterStatus{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.4;color:var(--text-2)}.starterStatus[data-confirmed=true]{color:var(--green)}
+.starterList{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;list-style:none;padding:0;margin:12px 0 0;max-width:540px}
+.starterList li{min-width:0}.starterLink{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;min-height:104px;padding:9px 4px;border:1px solid var(--border-2);border-radius:11px;background:var(--surface-3);text-decoration:none;transition:background 140ms ease,border-color 140ms ease}
+.starterLink:hover{background:var(--surface-2);border-color:var(--border-3)}.starterLink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.starterLink>span:first-child{width:42px;height:42px}
+.starters .slot{font:700 12px/1 var(--font-mono,monospace);color:var(--text-1)}.starterName{max-width:100%;text-align:center;font-size:10px;line-height:1.35;color:var(--text-2);overflow-wrap:anywhere}
+.lineupEmpty{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);line-height:1.5}.lineupEmpty button,.lineupRetry{border:0;background:none;padding:4px 0;color:var(--text-2);text-decoration:underline;font:inherit;font-size:11px;cursor:pointer;min-height:36px}
+@media(max-width:520px){.starterList{gap:5px}.starterLink{padding-inline:2px;min-height:103px}.starterLink>span:first-child{width:36px;height:36px}.lineupHeading{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){.starterLink{transition:none}}
