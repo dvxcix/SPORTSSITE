@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, X } from 'lucide-react'
-import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 import { Modal } from '@/components/ui/Modal'
 
-type FoundUser = { id: string; username: string; display_name: string | null; avatar_url: string | null }
+type FoundUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; avatar_ring_style?: MemberRingStyle | null; avatar_ring_color?: string | null }
 
 export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId }: {
   groupId: string; groupSlug: string; groupName: string; currentUserId: string
@@ -30,7 +30,7 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
     try {
       const { data, error: searchError } = await supabase
         .from('users')
-        .select('id, username, display_name, avatar_url')
+        .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color')
         .or(`username.ilike.%${term}%,display_name.ilike.%${term}%`)
         .neq('id', currentUserId)
         .limit(10)
@@ -121,7 +121,7 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
             <div className="ss-community-invite-results">
               {results.map(u => (
                 <div key={u.id} className="ss-community-invite-row">
-                  <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={32} />
+                  <MemberAvatar src={u.avatar_url} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} name={u.display_name || u.username} size={32} />
                   <div>
                     <p>{u.display_name || u.username}</p>
                     <span>@{u.username}</span>

@@ -7,6 +7,8 @@ import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Use
 import { useCustomEmojis } from '@/lib/emoji'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { MemberAvatar } from './MemberAvatar'
+import type { MemberRingStyle } from '@/lib/avatarStyles'
 import { EmojiText } from '@/components/social/EmojiText'
 import styles from './NotificationsList.module.css'
 
@@ -27,7 +29,7 @@ export const NOTIF_ICONS: Record<string, LucideIcon> = {
 export type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
   link: string | null; read: boolean; created_at: string
-  actor?: { username: string; display_name?: string; avatar_url?: string } | null
+  actor?: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: MemberRingStyle | null; avatar_ring_color?: string | null } | null
   data?: { avatar_url?: string; emoji?: string; team_logo?: string; actors?: { id: string; avatar_url?: string }[]; count?: number } | null
 }
 
@@ -218,15 +220,15 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
   const inner = (
     <>
       <div className={styles.avatarWrap}>
-        <div className={styles.avatar}>
-          {(n.actor?.avatar_url || n.data?.avatar_url) && (
+        <div className={`${styles.avatar} ${n.actor ? styles.memberAvatar : ''}`}>
+          {n.actor ? <MemberAvatar src={n.actor.avatar_url} name={actorName || 'Member'} size={38} ringStyle={n.actor.avatar_ring_style} ringColor={n.actor.avatar_ring_color} /> : n.data?.avatar_url && (
             // A player headshot is a portrait photo meant to fill the circle
             // (cover). A team logo (lineup_confirmed) is a flat mark on a
             // square/transparent canvas — cover crops right into the
             // artwork; it needs to shrink to fit inside instead, with a
             // little breathing room so it doesn't touch the circle's edge.
             <SafeImage
-              src={n.actor?.avatar_url || n.data?.avatar_url}
+              src={n.data?.avatar_url}
               alt=""
               className={n.type === 'lineup_confirmed' ? styles.teamAvatar : styles.avatarImage}
             />
@@ -289,9 +291,9 @@ function GroupedFollowRow({ items, nowMs, onRead, onDelete }: { items: NotifRow[
   const inner = (
     <>
       <div className={styles.avatarWrap}>
-        <div className={styles.avatar}>
-          {(latest.actor?.avatar_url || latest.data?.avatar_url) && (
-            <SafeImage src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" className={styles.avatarImage} />
+        <div className={`${styles.avatar} ${latest.actor ? styles.memberAvatar : ''}`}>
+          {latest.actor ? <MemberAvatar src={latest.actor.avatar_url} name={actorName || 'Member'} size={38} ringStyle={latest.actor.avatar_ring_style} ringColor={latest.actor.avatar_ring_color} /> : latest.data?.avatar_url && (
+            <SafeImage src={latest.data?.avatar_url} alt="" className={styles.avatarImage} />
           )}
         </div>
         <div className={styles.typeBadge}>

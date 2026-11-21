@@ -29,8 +29,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   const supabase = await createClient()
   const [{ data: { user } }, { data: thread }, { data: replies }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from('forum_threads').select('*, author:users(username, display_name, avatar_url, is_verified), category:forum_categories(name, slug)').eq('id', id).single(),
-    supabase.from('forum_replies').select('*, author:users(username, display_name, avatar_url, is_verified)').eq('thread_id', id).order('created_at', { ascending: true }),
+    supabase.from('forum_threads').select('*, author:users(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color, is_verified), category:forum_categories(name, slug)').eq('id', id).single(),
+    supabase.from('forum_replies').select('*, author:users(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color, is_verified)').eq('thread_id', id).order('created_at', { ascending: true }),
   ])
   if (!thread) notFound()
 
@@ -62,7 +62,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {/* OP */}
       <article className="ss-forum-post is-original">
         <div className="flex items-center gap-3 mb-3">
-          <Link href={`/profile/${thread.author?.username}`}><MemberAvatar src={thread.author?.avatar_url} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} /></Link>
+          <Link href={`/profile/${thread.author?.username}`}><MemberAvatar src={thread.author?.avatar_url} ringStyle={thread.author?.avatar_ring_style} ringColor={thread.author?.avatar_ring_color} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} /></Link>
           <div>
             <p className="text-sm font-bold text-[var(--text-1)] flex items-center gap-1">
               {thread.author?.display_name || thread.author?.username}
@@ -82,7 +82,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             const depth = r.parent_reply_id ? 1 : 0
             return <article key={r.id} className={`ss-forum-post ${depth ? 'is-nested' : ''}`}>
               <div className="flex items-center gap-3 mb-3">
-                <Link href={`/profile/${r.author?.username}`}><MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} /></Link>
+                <Link href={`/profile/${r.author?.username}`}><MemberAvatar src={r.author?.avatar_url} ringStyle={r.author?.avatar_ring_style} ringColor={r.author?.avatar_ring_color} name={r.author?.display_name || r.author?.username || 'Member'} size={34} /></Link>
                 <div>
                   <p className="text-sm font-bold text-[var(--text-1)] flex items-center gap-1">
                     {r.author?.display_name || r.author?.username}

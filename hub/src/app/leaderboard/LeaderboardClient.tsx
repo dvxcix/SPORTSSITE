@@ -11,6 +11,7 @@ type UserRow = {
   id: string
   username: string
   display_name: string | null
+  avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null;
   avatar_url: string | null
   is_verified: boolean
   account_type: string
@@ -32,7 +33,7 @@ const SPORT_LABELS: Record<string, string> = {
 }
 
 function Avatar({ user, size = 40 }: { user: UserRow; size?: number }) {
-  return <MemberAvatar src={user.avatar_url} name={user.display_name || user.username} size={size} />
+  return <MemberAvatar src={user.avatar_url} ringStyle={user.avatar_ring_style} ringColor={user.avatar_ring_color} name={user.display_name || user.username} size={size} />
 }
 
 function StreakBadge({ streak }: { streak: number }) {

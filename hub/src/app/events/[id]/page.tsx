@@ -27,7 +27,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const supabase = await createClient()
   const [{ data: { user } }, { data: event }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from('events').select('*, host:users(username, display_name, avatar_url, is_verified)').eq('id', id).single(),
+    supabase.from('events').select('*, host:users(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color, is_verified)').eq('id', id).single(),
   ])
   if (!event) notFound()
   const { data: rsvp } = user ? await supabase.from('event_rsvps').select('status').eq('user_id', user.id).eq('event_id', id).maybeSingle() : { data: null }
@@ -44,7 +44,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         <div className="p-5 sm:p-7">
           <div className="flex flex-wrap items-center gap-2">{logo && <span className="grid h-9 w-9 place-items-center rounded-xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.05)]"><SafeImage src={logo} alt="" className="h-5 w-5 object-contain" /></span>}{event.is_online && <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--text-2)]"><Radio size={13} /> Online</span>}</div>
           <h1 className="mt-4 text-3xl font-semibold tracking-[-.02em] text-[var(--text-1)] sm:text-4xl">{event.title}</h1>
-          <Link href={`/profile/${event.host?.username}`} className="mt-4 inline-flex min-h-11 max-w-full items-center gap-2.5 text-sm font-medium text-[var(--text-2)] hover:text-[var(--text-1)]"><MemberAvatar src={event.host?.avatar_url} name={event.host?.display_name || event.host?.username || 'Host'} size={30} /><span className="min-w-0 truncate">Hosted by @{event.host?.username}</span></Link>
+          <Link href={`/profile/${event.host?.username}`} className="mt-4 inline-flex min-h-11 max-w-full items-center gap-2.5 text-sm font-medium text-[var(--text-2)] hover:text-[var(--text-1)]"><MemberAvatar src={event.host?.avatar_url} ringStyle={event.host?.avatar_ring_style} ringColor={event.host?.avatar_ring_color} name={event.host?.display_name || event.host?.username || 'Host'} size={30} /><span className="min-w-0 truncate">Hosted by @{event.host?.username}</span></Link>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Info icon={<Calendar size={16} />} value={start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} />

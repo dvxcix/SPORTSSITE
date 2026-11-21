@@ -13,7 +13,7 @@ export default async function EventsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const now = new Date().toISOString()
-  const selection = '*, host:users(username, display_name, avatar_url)'
+  const selection = '*, host:users(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)'
   const [{ data: upcoming }, { data: past }] = await Promise.all([
     supabase.from('events').select(selection).gte('start_date', now).order('start_date', { ascending: true }).limit(20),
     supabase.from('events').select(selection).lt('start_date', now).order('start_date', { ascending: false }).limit(6),
@@ -58,7 +58,7 @@ function EventCard({ event, past = false }: { event: any; past?: boolean }) {
           {event.is_online && <span className="flex items-center gap-1"><Radio size={13} />Online</span>}
           <span className="flex items-center gap-1"><Users size={13} />{event.going_count ?? 0}</span>
         </div>
-        <div className="mt-3 flex items-center gap-2 text-xs text-[var(--text-2)]"><MemberAvatar src={event.host?.avatar_url} name={event.host?.display_name || event.host?.username || 'Host'} size={22} /><span className="truncate">@{event.host?.username}</span></div>
+        <div className="mt-3 flex items-center gap-2 text-xs text-[var(--text-2)]"><MemberAvatar src={event.host?.avatar_url} ringStyle={event.host?.avatar_ring_style} ringColor={event.host?.avatar_ring_color} name={event.host?.display_name || event.host?.username || 'Host'} size={22} /><span className="truncate">@{event.host?.username}</span></div>
       </div>
       <ArrowRight size={16} className="text-[var(--text-3)]" />
     </Link>

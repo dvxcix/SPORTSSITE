@@ -3,11 +3,11 @@
 import { useMemo, useState } from 'react'
 import { Check, Search, ShieldCheck, UserMinus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 import styles from './GroupMemberManager.module.css'
 
 export type GroupRole = 'owner' | 'admin' | 'moderator' | 'analyst' | 'subscriber' | 'member'
-export type GroupMemberManagerMember = { user_id: string; role: GroupRole; user: { username: string; display_name?: string | null; avatar_url?: string | null; is_verified?: boolean | null } | null }
+export type GroupMemberManagerMember = { user_id: string; role: GroupRole; user: { username: string; display_name?: string | null; avatar_url?: string | null; avatar_ring_style?: MemberRingStyle | null; avatar_ring_color?: string | null; is_verified?: boolean | null } | null }
 type Role = GroupRole
 type Member = GroupMemberManagerMember
 const ROLES: Array<{ id: Exclude<Role, 'owner'>; label: string }> = [
@@ -45,7 +45,7 @@ export function GroupMemberManager({ groupId, initialMembers, canChangeSystemRol
     <div className={styles.search}><Search size={15}/><input aria-label="Find a group member" value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a member" /></div>
     <div className={styles.list}>
       {filtered.map(member => <article key={member.user_id}>
-        <MemberAvatar src={member.user?.avatar_url} name={member.user?.display_name || member.user?.username || 'Member'} size={38}/>
+        <MemberAvatar src={member.user?.avatar_url} ringStyle={member.user?.avatar_ring_style} ringColor={member.user?.avatar_ring_color} name={member.user?.display_name || member.user?.username || 'Member'} size={38}/>
         <div className={styles.identity}><strong>{member.user?.display_name || member.user?.username || 'Member'}</strong><small>@{member.user?.username || 'member'}</small></div>
         {member.role === 'owner' ? <span className={styles.owner}><Check size={12}/> Owner</span> : <>
           {canChangeSystemRoles ? <select value={member.role} disabled={busy === member.user_id} onChange={event => setRole(member, event.target.value as Exclude<Role, 'owner'>)} aria-label={`Role for ${member.user?.username}`}>

@@ -6,7 +6,7 @@ import { Volume2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 
-type MutedUser = { id:string; username:string; display_name?:string|null; avatar_url?:string|null }
+type MutedUser = { avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null; id:string; username:string; display_name?:string|null; avatar_url?:string|null }
 
 export function MutedUsersList({ currentUserId, initialMuted }: { currentUserId:string; initialMuted:MutedUser[] }) {
   const [muted,setMuted]=useState(initialMuted)
@@ -24,5 +24,5 @@ export function MutedUsersList({ currentUserId, initialMuted }: { currentUserId:
 
   if(!muted.length) return <div className="ss-settings-card py-10 text-center"><Volume2 size={24} className="mx-auto mb-3 text-[var(--text-3)]"/><p className="text-sm font-medium text-[var(--text-2)]">No muted accounts</p></div>
 
-  return <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">{muted.map(user=><div key={user.id} className="flex items-center gap-3 px-4 py-3"><Link href={`/profile/${user.username}`} className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-80"><MemberAvatar src={user.avatar_url} name={user.display_name||user.username} size={40}/><div className="min-w-0"><p className="truncate text-sm font-bold text-[var(--text-1)]">{user.display_name||user.username}</p><p className="truncate text-xs text-[var(--text-3)]">@{user.username}</p></div></Link><button type="button" onClick={()=>void unmute(user.id)} disabled={pending===user.id} className="ss-settings-secondary shrink-0 disabled:opacity-40">{pending===user.id?'Restoring…':failed===user.id?'Try again':'Unmute'}</button></div>)}</div>
+  return <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">{muted.map(user=><div key={user.id} className="flex items-center gap-3 px-4 py-3"><Link href={`/profile/${user.username}`} className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-80"><MemberAvatar src={user.avatar_url} ringStyle={user.avatar_ring_style} ringColor={user.avatar_ring_color} name={user.display_name||user.username} size={40}/><div className="min-w-0"><p className="truncate text-sm font-bold text-[var(--text-1)]">{user.display_name||user.username}</p><p className="truncate text-xs text-[var(--text-3)]">@{user.username}</p></div></Link><button type="button" onClick={()=>void unmute(user.id)} disabled={pending===user.id} className="ss-settings-secondary shrink-0 disabled:opacity-40">{pending===user.id?'Restoring…':failed===user.id?'Try again':'Unmute'}</button></div>)}</div>
 }

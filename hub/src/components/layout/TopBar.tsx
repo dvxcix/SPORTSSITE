@@ -32,7 +32,7 @@ const NOTIF_ICONS: Record<string, any> = {
 type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
   link: string | null; read: boolean; created_at: string; actor_id?: string | null
-  actor?: { username: string; display_name?: string; avatar_url?: string } | null
+  actor?: { avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null; username: string; display_name?: string; avatar_url?: string } | null
   data?: { avatar_url?: string; emoji?: string; team_logo?: string } | null
 }
 
@@ -97,7 +97,7 @@ function TopbarNotificationEntry({
         {notification.type === 'lineup_confirmed' ? (
           <SafeImage src={notification.data?.avatar_url} alt="" className="ss-topbar-notification-team" />
         ) : (
-          <MemberAvatar src={notification.actor?.avatar_url || notification.data?.avatar_url} name={actorName || 'SlipSurge'} size={38} />
+          <MemberAvatar src={notification.actor?.avatar_url || notification.data?.avatar_url} ringStyle={notification.actor?.avatar_ring_style} ringColor={notification.actor?.avatar_ring_color} name={actorName || 'SlipSurge'} size={38} />
         )}
         <span className="ss-topbar-notification-badge">{badge}</span>
       </div>
@@ -206,7 +206,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         const postCols = 'id, content, pick_data, sport, author_id, author:users!posts_author_id_fkey(username, display_name)'
         const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData, nbaData] = await Promise.all([
           socialReady ? supabase.from('users')
-            .select('id, username, display_name, avatar_url')
+            .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color')
             .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
             .limit(3).abortSignal(controller.signal) : Promise.resolve({ data: [] }),
           socialReady ? supabase.from('posts').select(postCols)
@@ -336,7 +336,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       setNotifError('')
       const { data, error } = await supabase
         .from('notifications')
-        .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+        .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -536,7 +536,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <button type="button" key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
-                    <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={26} />
+                    <MemberAvatar src={u.avatar_url} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} name={u.display_name || u.username} size={26} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{u.display_name || u.username}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>@{u.username}</span>
                   </button>

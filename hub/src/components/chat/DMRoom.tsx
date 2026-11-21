@@ -20,7 +20,7 @@ import { useMessageInteractionState } from '@/components/chat/useMessageInteract
 import { DMConversationTools, type DMToolMode } from '@/components/chat/DMConversationTools'
 
 interface DMRoomProps {
-  partner: { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; is_verified?: boolean }
+  partner: { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; is_verified?: boolean }
   currentUserId: string
   initialMessages: DMMessage[]
   initialPinnedMessageIds?: string[]
@@ -32,7 +32,7 @@ export type DMMessage = {
   created_at: string
   sender_id: string
   reply_to_id?: string | null
-  sender?: { username?: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string } | null
+  sender?: { username?: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string } | null
   reply_to?: Pick<DMMessage, 'id' | 'content' | 'sender_id'> | null
   media_urls?: string[] | null
   edited_at?: string | null

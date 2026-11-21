@@ -1430,7 +1430,7 @@ test('social identity and publishing support custom rings and native post modes'
   const columns = await read('src/lib/supabase/userColumns.ts')
   const migration = await read('supabase/migrations/20260912143000_add_member_avatar_appearance.sql')
   assert.ok(avatar.includes("ringStyle = 'surge'"))
-  assert.ok(avatar.includes("ring-${ringStyle || 'surge'}"))
+  assert.ok(avatar.includes('isAvatarStyle(ringStyle)'), 'persisted styles must be validated before rendering')
   assert.ok(profile.includes('ss-profile-ring-editor'))
   assert.ok(profile.includes('avatar_ring_color: form.avatar_ring_color'))
   for (const mode of ['take', 'pick', 'poll', 'research']) assert.ok(composer.includes(`key: '${mode}'`))

@@ -107,7 +107,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     { data: memberPreferences },
     { data: channelPreferences },
   ] = await Promise.all([
-    supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).order('role').limit(8),
+    supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified)').eq('group_id', group.id).order('role').limit(8),
     postsPromise(),
     isMember
       ? supabase.from('channels').select('id,slug,name,description,icon,channel_kind,sort_order').eq('group_id', group.id).order('sort_order').order('created_at')
@@ -218,7 +218,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
           <div className={styles.memberStack}>
             {memberPreviews.slice(0, 6).map(m => (
               <Link key={m.user.id} href={`/profile/${m.user.username}`} aria-label={`${m.user.display_name || m.user.username}, ${m.role}`} data-role={m.role}>
-                <MemberAvatar src={m.user.avatar_url} name={m.user.display_name || m.user.username} size={28} />
+                <MemberAvatar src={m.user.avatar_url} ringStyle={m.user.avatar_ring_style} ringColor={m.user.avatar_ring_color} name={m.user.display_name || m.user.username} size={28} />
                 {['owner', 'admin', 'moderator'].includes(m.role) && <span className={styles.roleMark}>{m.role === 'owner' ? 'O' : m.role === 'admin' ? 'A' : 'M'}</span>}
               </Link>
             ))}

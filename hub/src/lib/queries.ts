@@ -100,7 +100,7 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
   const supabase = await createClient()
   const { data } = await supabase
     .from('notifications')
-    .select(`*, actor:users(id,username,display_name,avatar_url)`)
+    .select(`*, actor:users(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)`)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(30)
@@ -146,7 +146,7 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
       .order('created_at', { ascending: false })
       .limit(20),
     supabase.from('reposts')
-      .select(`created_at, reposted_by:users!reposts_user_id_fkey(username,display_name,avatar_url), post:posts(${POST_WITH_AUTHOR})`)
+      .select(`created_at, reposted_by:users!reposts_user_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color), post:posts(${POST_WITH_AUTHOR})`)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20),

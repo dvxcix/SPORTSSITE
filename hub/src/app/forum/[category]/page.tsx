@@ -19,7 +19,7 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
 
   const { data: threads } = await supabase
     .from('forum_threads')
-    .select('*, author:users(username, display_name, avatar_url, is_verified)')
+    .select('*, author:users(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color, is_verified)')
     .eq('category_id', cat.id)
     .order('is_pinned', { ascending: false })
     .order('last_reply_at', { ascending: false })
@@ -38,7 +38,7 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
           {(threads ?? []).map((t: any) => (
             <Link key={t.id} href={`/forum/thread/${t.id}`}
               className={`ss-forum-thread ${t.is_pinned ? 'is-pinned' : ''}`}>
-              <MemberAvatar src={t.author?.avatar_url} name={t.author?.display_name || t.author?.username || 'Member'} size={38} />
+              <MemberAvatar src={t.author?.avatar_url} ringStyle={t.author?.avatar_ring_style} ringColor={t.author?.avatar_ring_color} name={t.author?.display_name || t.author?.username || 'Member'} size={38} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   {t.is_pinned && <Pin size={11} className="text-[var(--green)] shrink-0" />}

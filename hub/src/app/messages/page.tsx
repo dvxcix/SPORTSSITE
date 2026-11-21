@@ -87,7 +87,7 @@ export default async function MessagesPage() {
   const groupIds = (groupMemberships ?? []).map(membership => membership.conversation_id)
   let groupConversations: Array<{
     id: string; name: string; updatedAt: string; lastMessage: string; unreadCount: number
-    members: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarRingStyle: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null; avatarRingColor: string | null }>
+    members: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarRingStyle: import('@/lib/avatarStyles').MemberRingStyle | null; avatarRingColor: string | null }>
   }> = []
   if (groupIds.length) {
     const [{ data: groups }, { data: groupMessages }, { data: groupMembers }] = await Promise.all([

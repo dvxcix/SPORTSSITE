@@ -7,7 +7,7 @@ import { unblockUser } from '@/lib/blocks'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { UserRoundX } from 'lucide-react'
 
-interface BlockedUser { id: string; username: string; display_name?: string; avatar_url?: string; blocked_at: string }
+interface BlockedUser { avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null; id: string; username: string; display_name?: string; avatar_url?: string; blocked_at: string }
 
 export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUserId: string; initialBlocked: BlockedUser[] }) {
   const [blocked, setBlocked] = useState(initialBlocked)
@@ -38,7 +38,7 @@ export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUse
       {blocked.map(u => (
         <div key={u.id} className="flex items-center gap-3 px-4 py-3">
           <Link href={`/profile/${u.username}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
-            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} />
+            <MemberAvatar src={u.avatar_url} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} name={u.display_name || u.username} size={40} />
             <div className="min-w-0">
               <p className="font-bold text-[var(--text-1)] text-sm truncate">{u.display_name || u.username}</p>
               <p className="text-xs text-[var(--text-3)] truncate">@{u.username}</p>

@@ -7,7 +7,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-interface User { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; is_verified?: boolean }
+interface User { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; is_verified?: boolean }
 
 export function NewDMForm({ users, forwardMessageId }: { users: User[]; forwardMessageId?: string }) {
   const [q, setQ] = useState('')

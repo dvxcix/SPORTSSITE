@@ -37,7 +37,7 @@ import { SlateEdgeEvidenceCard } from './SlateEdgeEvidenceCard'
 import { isSlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
 
 interface PostCardClientProps {
-  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
+  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
   index?: number
   // Set only by the dedicated /posts/[id] page — that's the one place the
   // card shouldn't navigate to itself on click, and where comments should
@@ -51,7 +51,7 @@ type CommentNode = {
   content: string
   author_id: string
   parent_id: string | null
-  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string } | null
+  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string } | null
   created_at: string
   updated_at: string
   reaction_count: number
@@ -1173,7 +1173,7 @@ function CommentItem({
 }: {
   node: CommentNode; depth: number; nowMs: number
   currentUserId?: string; currentUserAvatar?: string | null; currentUserDisplay?: string
-  currentUserRingStyle?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; currentUserRingColor?: string
+  currentUserRingStyle?: import('@/lib/avatarStyles').MemberRingStyle; currentUserRingColor?: string
   editingCommentId: string | null; editText: string; setEditText: (v: string) => void
   onStartEdit: (n: CommentNode) => void; onSaveEdit: (id: string) => void; onCancelEdit: () => void
   onDelete: (id: string) => void; onReport: (id: string) => void

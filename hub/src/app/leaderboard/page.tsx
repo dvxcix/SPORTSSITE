@@ -38,6 +38,7 @@ type LeaderboardUserRow = {
   id: string
   username: string
   display_name: string | null
+  avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null;
   avatar_url: string | null
   is_verified: boolean | null
   account_type: string | null
@@ -83,7 +84,7 @@ async function fetchRankedLeaderboard() {
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await admin
       .from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record, is_private, hide_win_rate')
+      .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record, is_private, hide_win_rate')
       .order('id', { ascending: true })
       .range(from, from + pageSize - 1)
     if (error) throw error
@@ -175,6 +176,8 @@ async function fetchRankedLeaderboard() {
       username: u.username as string,
       display_name: u.display_name as string | null,
       avatar_url: u.avatar_url as string | null,
+      avatar_ring_style: u.avatar_ring_style,
+      avatar_ring_color: u.avatar_ring_color,
       is_verified: u.is_verified as boolean,
       account_type: u.account_type as string,
       follower_count: (u.follower_count as number) ?? 0,
@@ -194,7 +197,7 @@ async function fetchRankedLeaderboard() {
   return { ranked, allSports }
 }
 
-const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard-public-outcomes-v2'], { revalidate: 120 })
+const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard-public-outcomes-v3'], { revalidate: 120 })
 
 export default async function LeaderboardPage() {
   const [{ ranked, allSports }, supabase] = await Promise.all([getCachedLeaderboard(), createClient()])

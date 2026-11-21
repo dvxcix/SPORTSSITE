@@ -25,7 +25,6 @@ export type GameRoomMessage = {
     is_verified?: boolean | null
   } | null
 }
-
 export type GameRoomPick = {
   id: string
   game_pk?: string | number | null
@@ -40,12 +39,10 @@ export type GameRoomPick = {
   } | null
   author?: GameRoomMessage['sender'] & { id?: string | null }
 }
-
 function gamePickResult(pick: GameRoomPick, gameId: string) {
   if (String(pick.game_pk) === String(gameId)) return pick.pick_data?.result ?? 'pending'
   return pick.pick_data?.legs?.find(leg => leg.game_pk != null && String(leg.game_pk) === String(gameId))?.result ?? 'pending'
 }
-
 export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId, picks = [] }: {
   sport: string
   gameId: string
@@ -91,7 +88,6 @@ export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId,
     if (sendError) { setError('Message not sent. Try again.'); return }
     setContent('')
   }
-
   const phaseLabel = phase === 'in' ? 'Live now' : phase === 'post' ? 'Final discussion' : 'Pregame room'
   const recap = useMemo(() => {
     if (phase !== 'post') return null
@@ -125,7 +121,7 @@ export function GameRoom({ sport, gameId, phase, initialMessages, currentUserId,
       {messages.map(message => {
         const name = message.sender?.display_name || message.sender?.username || 'Member'
         return <article key={message.id}>
-          {message.sender?.username ? <Link href={`/profile/${message.sender.username}`}><MemberAvatar src={message.sender.avatar_url} name={name} size={34} ringStyle={message.sender.avatar_ring_style} ringColor={message.sender.avatar_ring_color}/></Link> : <MemberAvatar src={message.sender?.avatar_url} name={name} size={34}/>} 
+          {message.sender?.username ? <Link href={`/profile/${message.sender.username}`}><MemberAvatar src={message.sender.avatar_url} name={name} size={34} ringStyle={message.sender.avatar_ring_style} ringColor={message.sender.avatar_ring_color}/></Link> : <MemberAvatar src={message.sender?.avatar_url} ringStyle={message.sender?.avatar_ring_style} ringColor={message.sender?.avatar_ring_color} name={name} size={34}/>}
           <div><header><strong>{name}</strong>{message.sender?.is_verified && <span>✓</span>}<time>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time></header><p><LinkifiedText text={message.content}/></p></div>
         </article>
       })}

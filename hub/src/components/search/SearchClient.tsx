@@ -123,10 +123,10 @@ export function SearchClient() {
     setLoading(true)
     const filterQuery = query.replace(/[,%()]/g, ' ').trim().slice(0, 64)
 
-    const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
+    const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)'
     const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData, nbaData] = await Promise.all([
       currentBlockIds !== null ? supabase.from('users')
-        .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count')
+        .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
         .or(`username.ilike.%${filterQuery}%,display_name.ilike.%${filterQuery}%`)
         .limit(8) : Promise.resolve({ data: [] }),
       // Plain ilike, not full-text search — a partial/mid-word type-ahead
@@ -483,7 +483,7 @@ export function SearchClient() {
                 {visibleUsers.map((u: any) => (
                   <Link key={u.id} href={`/profile/${u.username}`}
                     className="ss-search-result flex items-center gap-3 p-3">
-                    <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} tone={u.account_type === 'creator' ? 'creator' : 'default'} />
+                    <MemberAvatar src={u.avatar_url} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} name={u.display_name || u.username} size={40} tone={u.account_type === 'creator' ? 'creator' : 'default'} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-[var(--text-1)] text-sm truncate">{u.display_name || u.username}</span>
@@ -523,7 +523,7 @@ export function SearchClient() {
                     className="ss-search-result p-3 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <MemberAvatar src={p.author?.avatar_url} name={p.author?.display_name || p.author?.username || 'Member'} size={24} />
+                      <MemberAvatar src={p.author?.avatar_url} ringStyle={p.author?.avatar_ring_style} ringColor={p.author?.avatar_ring_color} name={p.author?.display_name || p.author?.username || 'Member'} size={24} />
                       <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)]">
                         @{p.author?.username}
                       </Link>

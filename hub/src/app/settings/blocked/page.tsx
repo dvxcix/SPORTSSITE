@@ -12,7 +12,7 @@ export default async function BlockedUsersPage() {
   if (!user) redirect('/auth/login?next=/settings/blocked')
 
   const [{data:blocks},{data:suppressions}]=await Promise.all([
-    supabase.from('blocks').select('blocked_id, created_at, blocked:users!blocks_blocked_id_fkey(id, username, display_name, avatar_url)').eq('blocker_id',user.id).order('created_at',{ascending:false}),
+    supabase.from('blocks').select('blocked_id, created_at, blocked:users!blocks_blocked_id_fkey(id, username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)').eq('blocker_id',user.id).order('created_at',{ascending:false}),
     supabase.from('feed_suppressions').select('target_id').eq('user_id',user.id).eq('target_type','author'),
   ])
 
@@ -20,7 +20,7 @@ export default async function BlockedUsersPage() {
     .map((b: any) => ({ ...b.blocked, blocked_at: b.created_at }))
     .filter(Boolean)
   const mutedIds=(suppressions??[]).map(row=>row.target_id)
-  const {data:muted}=mutedIds.length?await supabase.from('users').select('id,username,display_name,avatar_url').in('id',mutedIds):{data:[]}
+  const {data:muted}=mutedIds.length?await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color').in('id',mutedIds):{data:[]}
 
   return (
     <SettingsShell active="/settings/blocked" title="Muted and blocked" description="Control which accounts can reach you and which voices appear in your feed.">

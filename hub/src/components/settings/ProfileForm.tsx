@@ -15,6 +15,9 @@ import { FavoritePicker } from '@/components/profile/FavoritePicker'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
+import { AvatarStylePicker } from './AvatarStylePicker'
+import { avatarDecoration, avatarStyleName, isAvatarStyle } from '@/lib/avatarStyles'
+import { useAuth } from '@/context/AuthContext'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
 
@@ -41,6 +44,7 @@ type SocialPlatform = { id: string; key: string; name: string; icon_url: string;
 
 export function ProfileForm({ profile }: { profile: any }) {
   const router = useRouter()
+  const { refreshProfile } = useAuth()
   const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     display_name: profile?.display_name ?? '',
@@ -119,6 +123,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       const username = form.username.trim().toLowerCase().replace(/\s/g, '')
       if (username.length < 2 || username.length > 30 || !/^[a-z0-9._]+$/.test(username)) { setError('Use 2–30 letters, numbers, periods, or underscores for your username.'); return }
       if (!isSafeHttpUrl(form.website) || !isSafeHttpUrl(form.avatar_url) || !isSafeHttpUrl(form.banner_url)) { setError('Website and image links must begin with https://'); return }
+      if (!isAvatarStyle(form.avatar_ring_style) || !/^#[0-9a-f]{6}$/i.test(form.avatar_ring_color)) { setError('Choose a valid avatar style and color.'); return }
 
       const { error: err } = await supabase.from('users').update({
         display_name: form.display_name.trim() || null,
@@ -134,6 +139,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         sportsbooks: form.sportsbooks,
       }).eq('id', profile.id)
       if (err) { setError('Your profile could not be saved. Try again.'); return }
+      void refreshProfile()
       const favoritesResponse = await fetch('/api/account/favorites', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teams: form.favorite_teams, players: form.favorite_players, sports: form.favorite_sports }) }).catch(() => null)
       if (!favoritesResponse?.ok) { setError('Your profile was saved, but favorites could not be saved. Please try again.'); return }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -182,6 +188,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       </section>
 
       <section className="ss-profile-ring-editor">
+        <div className="ss-avatar-style-summary">
         <div className="ss-profile-ring-preview">
           <MemberAvatar
             src={form.avatar_url}
@@ -191,18 +198,11 @@ export function ProfileForm({ profile }: { profile: any }) {
             ringStyle={form.avatar_ring_style}
             ringColor={form.avatar_ring_color}
           />
-          <div><strong>Profile ring</strong><span>Shown anywhere your profile picture appears.</span></div>
+          <div><strong>Avatar style</strong><span>{avatarStyleName(form.avatar_ring_style)}</span></div>
         </div>
-        <div className="ss-profile-ring-styles" role="radiogroup" aria-label="Profile ring style">
-          {(['surge', 'pulse', 'orbit', 'solid', 'none'] as MemberRingStyle[]).map(style => (
-            <button key={style} type="button" role="radio" aria-checked={form.avatar_ring_style === style}
-              className={form.avatar_ring_style === style ? 'is-active' : ''}
-              onClick={() => setForm(current => ({ ...current, avatar_ring_style: style }))}>
-              {style[0].toUpperCase() + style.slice(1)}
-            </button>
-          ))}
+        <AvatarStylePicker value={form.avatar_ring_style} onChange={style => setForm(current => ({ ...current, avatar_ring_style: style }))} src={form.avatar_url} name={form.display_name || form.username || 'You'} color={form.avatar_ring_color} />
         </div>
-        <div className="ss-profile-ring-colors">
+        {!avatarDecoration(form.avatar_ring_style) && <div className="ss-profile-ring-colors">
           {['#b6ff3b', '#39d9ff', '#a855f7', '#ff4d6a', '#f8c15c', '#ffffff'].map(color => (
             <button key={color} type="button" aria-label={`Use ${color} profile ring`} aria-pressed={form.avatar_ring_color === color}
               className={form.avatar_ring_color === color ? 'is-active' : ''}
@@ -211,7 +211,7 @@ export function ProfileForm({ profile }: { profile: any }) {
           ))}
           <label className="ss-profile-ring-custom">Custom <input type="color" value={form.avatar_ring_color}
             onChange={event => setForm(current => ({ ...current, avatar_ring_color: event.target.value }))} /></label>
-        </div>
+        </div>}
       </section>
 
       <div className="grid grid-cols-2 gap-4">

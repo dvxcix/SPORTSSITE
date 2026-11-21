@@ -20,7 +20,7 @@ type Conversation = {
     username: string
     displayName: string | null
     avatarUrl: string | null
-    avatarRingStyle: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+    avatarRingStyle: import('@/lib/avatarStyles').MemberRingStyle | null
     avatarRingColor: string | null
   }
 }

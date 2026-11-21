@@ -166,7 +166,7 @@ export function GroupRoleManager({ groupId, initialRoles, initialAssignments, in
           <div>{members.filter(member => member.role !== 'owner').map(member => {
             const checked = assignments.some(item => item.user_id === member.user_id && item.role_id === selected.id)
             const key = `member:${member.user_id}:${selected.id}`
-            return <label key={member.user_id}><MemberAvatar src={member.user?.avatar_url} name={member.user?.display_name || member.user?.username || 'Member'} size={30} /><span><strong>{member.user?.display_name || member.user?.username}</strong><small>@{member.user?.username}</small></span><input type="checkbox" checked={checked} disabled={selected.is_default || busy === key} onChange={event => toggleAssignment(member.user_id, selected.id, event.target.checked)} /></label>
+            return <label key={member.user_id}><MemberAvatar src={member.user?.avatar_url} ringStyle={member.user?.avatar_ring_style} ringColor={member.user?.avatar_ring_color} name={member.user?.display_name || member.user?.username || 'Member'} size={30} /><span><strong>{member.user?.display_name || member.user?.username}</strong><small>@{member.user?.username}</small></span><input type="checkbox" checked={checked} disabled={selected.is_default || busy === key} onChange={event => toggleAssignment(member.user_id, selected.id, event.target.checked)} /></label>
           })}</div>
         </details>
         <details className={styles.overrides}>

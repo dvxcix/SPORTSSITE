@@ -1,0 +1,252 @@
+[
+  {
+    "id": "fb-spiral",
+    "name": "Tight Spiral",
+    "sport": "football"
+  },
+  {
+    "id": "fb-goalposts",
+    "name": "It's Good",
+    "sport": "football"
+  },
+  {
+    "id": "fb-gridiron",
+    "name": "Gridiron",
+    "sport": "football"
+  },
+  {
+    "id": "fb-laces",
+    "name": "Laces Out",
+    "sport": "football"
+  },
+  {
+    "id": "fb-endzone",
+    "name": "End Zone",
+    "sport": "football"
+  },
+  {
+    "id": "fb-blitz",
+    "name": "All-Out Blitz",
+    "sport": "football"
+  },
+  {
+    "id": "fb-flags",
+    "name": "Flag on the Play",
+    "sport": "football"
+  },
+  {
+    "id": "fb-chains",
+    "name": "Move the Chains",
+    "sport": "football"
+  },
+  {
+    "id": "fb-facemask",
+    "name": "Facemask",
+    "sport": "football"
+  },
+  {
+    "id": "fb-hailmary",
+    "name": "Hail Mary",
+    "sport": "football"
+  },
+  {
+    "id": "fb-cointoss",
+    "name": "Coin Toss",
+    "sport": "football"
+  },
+  {
+    "id": "fb-redzone",
+    "name": "Red Zone",
+    "sport": "football"
+  },
+  {
+    "id": "fb-twominute",
+    "name": "Two-Minute Drill",
+    "sport": "football"
+  },
+  {
+    "id": "fb-confetti",
+    "name": "Confetti Drop",
+    "sport": "football"
+  },
+  {
+    "id": "fb-pompoms",
+    "name": "Pom-Poms",
+    "sport": "football"
+  },
+  {
+    "id": "bb-swish",
+    "name": "Nothing But Net",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-dribble",
+    "name": "Handles",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-orbit",
+    "name": "Full-Court Press",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-hardwood",
+    "name": "Hardwood",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-heatcheck",
+    "name": "Heat Check",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-buzzer",
+    "name": "Buzzer Beater",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-shotchart",
+    "name": "Shot Chart",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-fingerspin",
+    "name": "Showtime",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-glass",
+    "name": "Off the Glass",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-alleyoop",
+    "name": "Alley-Oop",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-crossover",
+    "name": "Ankle Breaker",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-andone",
+    "name": "And-One",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-fromdeep",
+    "name": "From Deep",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-rainbow",
+    "name": "Rainbow Three",
+    "sport": "basketball"
+  },
+  {
+    "id": "bb-shotclock",
+    "name": "Shot Clock",
+    "sport": "basketball"
+  },
+  {
+    "id": "bs-stitches",
+    "name": "Seams",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-diamond",
+    "name": "Round the Bases",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-moonshot",
+    "name": "Moonshot",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-lumber",
+    "name": "Lumber",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-pennants",
+    "name": "Pennant Race",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-wall",
+    "name": "Warning Track",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-punchout",
+    "name": "Punchout",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-marquee",
+    "name": "Old Ballpark",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-heater",
+    "name": "Heater",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-dish",
+    "name": "The Dish",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-walkoff",
+    "name": "Walk-Off",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-rallycap",
+    "name": "Rally Cap",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-bubble",
+    "name": "Big League Bubble",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-doubleheader",
+    "name": "Doubleheader",
+    "sport": "baseball"
+  },
+  {
+    "id": "bs-wave",
+    "name": "The Wave",
+    "sport": "baseball"
+  },
+  {
+    "id": "ss-surge",
+    "name": "Surge",
+    "sport": "slipsurge"
+  },
+  {
+    "id": "ss-crown",
+    "name": "Bolt Crown",
+    "sport": "slipsurge"
+  },
+  {
+    "id": "ss-streak",
+    "name": "Hot Streak",
+    "sport": "slipsurge"
+  },
+  {
+    "id": "ss-parlay",
+    "name": "Parlay Chain",
+    "sport": "slipsurge"
+  },
+  {
+    "id": "ss-cashed",
+    "name": "Cashed",
+    "sport": "slipsurge"
+  }
+]

@@ -13,7 +13,7 @@ export default async function CreatorOfferPage({ params }: { params: Promise<{ p
   const { productId } = await params
   const supabase = await createClient()
   const [{ data: product }, { data: { user } }] = await Promise.all([
-    supabase.from('creator_products').select('id,creator_id,title,description,price,product_type,status,creator:users!creator_products_creator_id_fkey(username,display_name,avatar_url)').eq('id', productId).eq('status', 'active').single(),
+    supabase.from('creator_products').select('id,creator_id,title,description,price,product_type,status,creator:users!creator_products_creator_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)').eq('id', productId).eq('status', 'active').single(),
     supabase.auth.getUser(),
   ])
   if (!product) notFound()
@@ -28,7 +28,7 @@ export default async function CreatorOfferPage({ params }: { params: Promise<{ p
     <section className={styles.card}>
       <div className={styles.summary}>
         <span className={styles.eyebrow}><LockKeyhole size={14} /> Creator access</span>
-        <div className={styles.creator}><MemberAvatar src={creator?.avatar_url} name={creator?.display_name || creator?.username || 'SlipSurge creator'} size={38} /><span><strong>{creator?.display_name || creator?.username}</strong><small><BadgeCheck size={12} /> SlipSurge creator</small></span></div>
+        <div className={styles.creator}><MemberAvatar src={creator?.avatar_url} ringStyle={creator?.avatar_ring_style} ringColor={creator?.avatar_ring_color} name={creator?.display_name || creator?.username || 'SlipSurge creator'} size={38} /><span><strong>{creator?.display_name || creator?.username}</strong><small><BadgeCheck size={12} /> SlipSurge creator</small></span></div>
         <h1>{product.title}</h1><p>{product.description || 'Premium creator content, research, and member community access.'}</p>
         <ul><li><Check size={15} /> Access linked to your SlipSurge account</li><li><Check size={15} /> Private content and communities unlock automatically</li><li><Check size={15} /> Whop-secured checkout and membership management</li></ul>
       </div>

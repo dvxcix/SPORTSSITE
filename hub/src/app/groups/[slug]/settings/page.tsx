@@ -39,7 +39,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   const [{ data: members }, { data: channels }, { data: roles }, { data: assignments }] = await Promise.all([
     supabase.from('group_members')
-      .select('user_id,role,user:users(username,display_name,avatar_url,is_verified)')
+      .select('user_id,role,user:users(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,is_verified)')
       .eq('group_id', group.id).order('created_at'),
     supabase.from('channels')
       .select('id,slug,name,description,icon,channel_kind,sort_order')

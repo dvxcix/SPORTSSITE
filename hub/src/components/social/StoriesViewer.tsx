@@ -14,7 +14,7 @@ interface Story {
   story_type?: string
   content?: string | null
   bg_color?: string | null
-  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string }
+  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string }
   created_at: string
 }
 

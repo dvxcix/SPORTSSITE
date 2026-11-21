@@ -6,7 +6,7 @@ export type ExploreUser = {
   username: string
   display_name: string | null
   avatar_url: string | null
-  avatar_ring_style: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+  avatar_ring_style: import('@/lib/avatarStyles').MemberRingStyle | null
   avatar_ring_color: string | null
   is_verified: boolean
   account_type: string

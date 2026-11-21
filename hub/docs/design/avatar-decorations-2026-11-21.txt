@@ -1,0 +1,82 @@
+SlipSurge avatar decorations · 2026-11-21
+
+State: validated locally; production rollout in progress.
+Entry: Settings → Profile → Avatar style → Change style → Use style → Save Profile.
+
+Complete owner handoff: 50 decorations, 125,699 original SVG bytes.
+15 football, 15 basketball, 15 baseball, 5 SlipSurge. Baseball research remains off-season; these are member cosmetics.
+The five existing rings, custom ring colors, photos, initials, membership identity and badges remain available.
+
+[Passed] All original hashes match the owner handoff; original generator was not executed.
+[Passed] SVG safety validation: no executable nodes, event handlers or external resources.
+[Passed] 50 still variants remove CSS and SMIL animations; visible at chat size.
+[Passed] All 50 at 112px / 44px / 32px, desktop 1440 and phone 390, light and dark: 600 bounded avatar checks; no missing frames or page overflow.
+[Passed] Search, six categories, keyboard radio navigation, cancel, draft selection and Use style.
+[Passed] Still thumbnails; visible preview animates; offscreen/background/reduced-motion switches to still art.
+[Passed] Theme/style changes preserve the loaded photo node and fixed layout slot; invalid styles fall back safely.
+[Passed] Failed/changed photos preserve initials and recover; membership and badge behavior retain regression coverage.
+[Passed] Existing avatar style is carried into group member lists and invitations; shared renderer handles Feed, profiles, comments, chat, stories, search, account and existing member consumers. Search, notification actors, forum authors, event hosts, leaderboard and workspace collaborators now carry the existing style fields in their existing reads. Story wrappers allow the full artwork instead of clipping it. Workspace search now exposes a complete keyboard combobox and clears suggestions in input/selection handlers rather than synchronously in an effect.
+[Passed] No per-avatar database calls or new dependencies.
+[Passed] New private gallery is unavailable in production.
+
+Database: primary hkldweedwnxartkfhror, migration 20261121213902_add_sports_avatar_decorations.
+CLI generated the initial local migration name; the tracked version matches the applied cloud version.
+Adds exactly 50 allowlisted values to the existing avatar_ring_style check, preserving five rings and all defaults.
+Live pre/post verification: 7,031 member choices unchanged; color check, RLS, policies and authenticated update grants unchanged. Security/performance advisor counts unchanged. No unrelated advisories were represented as resolved.
+
+Checks: avatar/consumer/private guards 11/11; member UI 32/32; Feed visibility 28/28; research UI 38/38; cross-sport 44/44; production source contracts 134/134. Changed app ESLint: no findings; existing unused suppression metadata preserved. TypeScript passed.
+The source-contract assertion for the old ring class template was updated to require persisted-style validation; actual ring/decoration rendering is covered by runtime tests. A nested gallery landmark found by the source suite was fixed.
+
+Evidence: avatar-decoration-provenance-2026-11-21.json; avatar-decoration-layouts-2026-11-21.json; scripts/avatar-decorations.test.mts; local contact sheets and browser captures in the session visualization directory.
+
+Individual artwork checklist (each verified in all four layouts at all three sizes):
+[Verified] football | Tight Spiral | fb-spiral
+[Verified] football | It's Good | fb-goalposts
+[Verified] football | Gridiron | fb-gridiron
+[Verified] football | Laces Out | fb-laces
+[Verified] football | End Zone | fb-endzone
+[Verified] football | All-Out Blitz | fb-blitz
+[Verified] football | Flag on the Play | fb-flags
+[Verified] football | Move the Chains | fb-chains
+[Verified] football | Facemask | fb-facemask
+[Verified] football | Hail Mary | fb-hailmary
+[Verified] football | Coin Toss | fb-cointoss
+[Verified] football | Red Zone | fb-redzone
+[Verified] football | Two-Minute Drill | fb-twominute
+[Verified] football | Confetti Drop | fb-confetti
+[Verified] football | Pom-Poms | fb-pompoms
+[Verified] basketball | Nothing But Net | bb-swish
+[Verified] basketball | Handles | bb-dribble
+[Verified] basketball | Full-Court Press | bb-orbit
+[Verified] basketball | Hardwood | bb-hardwood
+[Verified] basketball | Heat Check | bb-heatcheck
+[Verified] basketball | Buzzer Beater | bb-buzzer
+[Verified] basketball | Shot Chart | bb-shotchart
+[Verified] basketball | Showtime | bb-fingerspin
+[Verified] basketball | Off the Glass | bb-glass
+[Verified] basketball | Alley-Oop | bb-alleyoop
+[Verified] basketball | Ankle Breaker | bb-crossover
+[Verified] basketball | And-One | bb-andone
+[Verified] basketball | From Deep | bb-fromdeep
+[Verified] basketball | Rainbow Three | bb-rainbow
+[Verified] basketball | Shot Clock | bb-shotclock
+[Verified] baseball | Seams | bs-stitches
+[Verified] baseball | Round the Bases | bs-diamond
+[Verified] baseball | Moonshot | bs-moonshot
+[Verified] baseball | Lumber | bs-lumber
+[Verified] baseball | Pennant Race | bs-pennants
+[Verified] baseball | Warning Track | bs-wall
+[Verified] baseball | Punchout | bs-punchout
+[Verified] baseball | Old Ballpark | bs-marquee
+[Verified] baseball | Heater | bs-heater
+[Verified] baseball | The Dish | bs-dish
+[Verified] baseball | Walk-Off | bs-walkoff
+[Verified] baseball | Rally Cap | bs-rallycap
+[Verified] baseball | Big League Bubble | bs-bubble
+[Verified] baseball | Doubleheader | bs-doubleheader
+[Verified] baseball | The Wave | bs-wave
+[Verified] slipsurge | Surge | ss-surge
+[Verified] slipsurge | Bolt Crown | ss-crown
+[Verified] slipsurge | Hot Streak | ss-streak
+[Verified] slipsurge | Parlay Chain | ss-parlay
+[Verified] slipsurge | Cashed | ss-cashed

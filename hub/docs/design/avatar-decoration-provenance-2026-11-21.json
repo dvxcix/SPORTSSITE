@@ -1,0 +1,262 @@
+{
+  "owner": "SlipSurge",
+  "source": "Owner-supplied Claude handoff, 2026-11-21",
+  "artboard": {
+    "width": 240,
+    "height": 240,
+    "avatar_diameter": 184,
+    "avatar_pct_of_width": 76.67
+  },
+  "originals": [
+    {
+      "id": "fb-spiral",
+      "bytes": 1096,
+      "sha256": "e0aee6bbc87736e09c94a0e2c68df4e7713b2f9393a9c28e834d5a1c8f06d1c9"
+    },
+    {
+      "id": "fb-goalposts",
+      "bytes": 1597,
+      "sha256": "97b46a5acf19ae6767246250495c397b282eeea87a67334d6cf1ce931f717141"
+    },
+    {
+      "id": "fb-gridiron",
+      "bytes": 7263,
+      "sha256": "51d3a8343c9202c888ad5c32c95fd8d0b958143d40168e0cadaad4220faf79d4"
+    },
+    {
+      "id": "fb-laces",
+      "bytes": 2036,
+      "sha256": "1682fe748c48cadbae3aa304c37bb39fa4da063a65c98e50b5c3891a0754b404"
+    },
+    {
+      "id": "fb-endzone",
+      "bytes": 1570,
+      "sha256": "7e3e64ccc9e6aeac208acea2f786d692a59a241ffa32f4ffbb2797bc67afde6a"
+    },
+    {
+      "id": "fb-blitz",
+      "bytes": 2485,
+      "sha256": "b6208a5cdf559718590667ff5aa6991404c21c81ac43b691f62c2bbd1fd85cf3"
+    },
+    {
+      "id": "fb-flags",
+      "bytes": 1648,
+      "sha256": "b19c1c541dc35edabcd1e82944b34953a4e236a4aa492a03f2061be767a5bd9b"
+    },
+    {
+      "id": "fb-chains",
+      "bytes": 1940,
+      "sha256": "ccbbfc23d27f0c3aacd5a8dd53cbeda392721fbf7b0b771802fc42b878046816"
+    },
+    {
+      "id": "fb-facemask",
+      "bytes": 1301,
+      "sha256": "83c4b027db56d8eee6eef0b092ab3ef5abd7e746e08af4b57ed43bedb51b23bc"
+    },
+    {
+      "id": "fb-hailmary",
+      "bytes": 1323,
+      "sha256": "d17f32b341ae28ccac947c9c9324411292e5e77c06bacb3a74846fd98d05e26d"
+    },
+    {
+      "id": "fb-cointoss",
+      "bytes": 904,
+      "sha256": "bdaec6fab402aaf6d3120a05fc9e71009e5ef1924bfcfc84a9c60813a3074b7e"
+    },
+    {
+      "id": "fb-redzone",
+      "bytes": 5183,
+      "sha256": "c3f7012ceaee2c57bedab7ef337373c02c8160e93d9bdafe37ea6cc140f251c1"
+    },
+    {
+      "id": "fb-twominute",
+      "bytes": 8892,
+      "sha256": "05dc7ebe3411bc952177d0c37264b9ca58d225358e4f18f5265056527b70e359"
+    },
+    {
+      "id": "fb-confetti",
+      "bytes": 4394,
+      "sha256": "e116cc23b4ca7c1b3e3f6b89dc03238b0dbb98d31fe7b49dbe1b60dfb47adb35"
+    },
+    {
+      "id": "fb-pompoms",
+      "bytes": 3110,
+      "sha256": "d213bac76980d8e087e723dae7a6dcb1e560725b1abbc57952d3798e6727aa41"
+    },
+    {
+      "id": "bb-swish",
+      "bytes": 1089,
+      "sha256": "2b37af9adf693b70f5792d9cbd7629239c0e4f1e5db51cddf1a61281671e85bb"
+    },
+    {
+      "id": "bb-dribble",
+      "bytes": 1177,
+      "sha256": "31c434564ef26fc65436f3fbd1b3d7b70bd36ed99ed7e9a9cadcef2b55dc12b7"
+    },
+    {
+      "id": "bb-orbit",
+      "bytes": 1061,
+      "sha256": "0df6398ecb90507aa7cb0b8d9e3f625e653fd6d069ba6dd391bde27a64a80d5f"
+    },
+    {
+      "id": "bb-hardwood",
+      "bytes": 4259,
+      "sha256": "63097efad077199ff7b94e59b33a545f4e27b468df98777cbedace6d6e5a2899"
+    },
+    {
+      "id": "bb-heatcheck",
+      "bytes": 5259,
+      "sha256": "a68a86e133dae3bfc59d205adc534f1f3e0632a93253653a9d5c75f8f902e9c6"
+    },
+    {
+      "id": "bb-buzzer",
+      "bytes": 1256,
+      "sha256": "c9cafd9d57dbe1e87e9bd5e5441652de7ba45bf167de1a262dcddb3a6fda154c"
+    },
+    {
+      "id": "bb-shotchart",
+      "bytes": 3386,
+      "sha256": "c53170bc144a952520fcc3ba1b62068ff4a8c8e280d99aadc0383b3c55778921"
+    },
+    {
+      "id": "bb-fingerspin",
+      "bytes": 1049,
+      "sha256": "2cdb11ec5176e41668173babd3c2228cb7e9090ce8f7ea241fb26b3cc4777043"
+    },
+    {
+      "id": "bb-glass",
+      "bytes": 648,
+      "sha256": "b3c4654735409cc1890d11ae8af57b4c352765fce903af49645392001a76dabb"
+    },
+    {
+      "id": "bb-alleyoop",
+      "bytes": 1301,
+      "sha256": "bed51789f14ef8f0f443eb46ff6c4dbf0ed0a2e8cc00ff42862df3bba4f8df09"
+    },
+    {
+      "id": "bb-crossover",
+      "bytes": 1158,
+      "sha256": "7abc43f1e2c50b71677a7f86475a452738d8f4b43a12d3068e46dfb32e4501ff"
+    },
+    {
+      "id": "bb-andone",
+      "bytes": 1474,
+      "sha256": "c909966e3a229111902d6ce7dfe2c672da9e0b925801a9f472b56f6b0a09cee1"
+    },
+    {
+      "id": "bb-fromdeep",
+      "bytes": 1679,
+      "sha256": "bacf833d0a12dc68027e0c0bc80daede2071afa448f4253004c465b688e33d40"
+    },
+    {
+      "id": "bb-rainbow",
+      "bytes": 1293,
+      "sha256": "ad93fd2e6e3b4dd41b051b26d465fd7f6ae58fb863dc3ed403ebb31f8b200525"
+    },
+    {
+      "id": "bb-shotclock",
+      "bytes": 6844,
+      "sha256": "c7a3aadf914cb905635f3137d12e09130c34558768502eb314a373e95ea5b7c2"
+    },
+    {
+      "id": "bs-stitches",
+      "bytes": 5172,
+      "sha256": "5296a300b1a801513d6af99177e5991ce9e743a7bbd753a62cfd827cceefd0b1"
+    },
+    {
+      "id": "bs-diamond",
+      "bytes": 1608,
+      "sha256": "2752513ffaaf4aa12a6179f1a4e4f5b42c540be2c1f29faf3d8d012733876493"
+    },
+    {
+      "id": "bs-moonshot",
+      "bytes": 1912,
+      "sha256": "9c0e9650137fe062dca9983e1c194e26f94ce7bd54a92b622fb8486b3f634165"
+    },
+    {
+      "id": "bs-lumber",
+      "bytes": 1432,
+      "sha256": "0b6d02e1ed746dd165023822e6a39e7bb26fc797e250bdab2874fb609e0f3019"
+    },
+    {
+      "id": "bs-pennants",
+      "bytes": 1845,
+      "sha256": "bb1c8d0e42e763b2328f66d5836e04d03d6e689d8bfa2270b102d071e040908c"
+    },
+    {
+      "id": "bs-wall",
+      "bytes": 1717,
+      "sha256": "f291772996715f717f5b38f192b694a901fdde777a1d94c6349f466b12e32dbf"
+    },
+    {
+      "id": "bs-punchout",
+      "bytes": 2128,
+      "sha256": "517a0a4b7629783abad83f29b16ebc99f59a06bb2287c736275c92139cdf8293"
+    },
+    {
+      "id": "bs-marquee",
+      "bytes": 3232,
+      "sha256": "f32711981f7be56d0a2454a8bc2d75cdf1954bc9c820572fe1a4790a6201864b"
+    },
+    {
+      "id": "bs-heater",
+      "bytes": 1031,
+      "sha256": "2d85fa773d04dabc7d9a9deaac441a29d465d03b48e0f2b041d493f8e81629fa"
+    },
+    {
+      "id": "bs-dish",
+      "bytes": 797,
+      "sha256": "37c939507d4a364638ebe512f48f2f5ac31ad9052e7e27fc5a17b49e164bd06c"
+    },
+    {
+      "id": "bs-walkoff",
+      "bytes": 4768,
+      "sha256": "75a40e5ded6a7599f7854ca3925708f7ddcd9b971d56e0a02c0c9e78fc20708a"
+    },
+    {
+      "id": "bs-rallycap",
+      "bytes": 871,
+      "sha256": "1cf6c815f9b57c190e2773dd8dc0e95c6c984b68e15d02a55eb7c41100228d93"
+    },
+    {
+      "id": "bs-bubble",
+      "bytes": 1654,
+      "sha256": "b8d56794d344a1eaccad67e0da7e0061c72d526d13127e501c1404e8a55f2948"
+    },
+    {
+      "id": "bs-doubleheader",
+      "bytes": 1099,
+      "sha256": "5ec294abadc8dc63d49606faa11e9a6e21c3b91d7e1ffa27e65c45ed26dfe223"
+    },
+    {
+      "id": "bs-wave",
+      "bytes": 8927,
+      "sha256": "073fc9db63db22d1047cd0c53055231b21f9abc9a4882b67a13639d66e412e97"
+    },
+    {
+      "id": "ss-surge",
+      "bytes": 859,
+      "sha256": "d2e1a5dcbe03d52cb20e20484d4768f017451cfbee88f6690d4e34eb313d9bfd"
+    },
+    {
+      "id": "ss-crown",
+      "bytes": 1436,
+      "sha256": "9921d895fff13058dece282d9aef646bc41dcbb41b98ac0edcb45aacbad53861"
+    },
+    {
+      "id": "ss-streak",
+      "bytes": 3446,
+      "sha256": "5e41cda8d82cf0f0e9c7ce1650a49589be905834b01b4288bd6adb5e78692194"
+    },
+    {
+      "id": "ss-parlay",
+      "bytes": 3099,
+      "sha256": "a90f33d38fbc56a288ed6eddceb515e7fa62e02674c6c8389bd63ea71a1e25e3"
+    },
+    {
+      "id": "ss-cashed",
+      "bytes": 995,
+      "sha256": "3050a7b2f784f38140335ae82bb1baf8b0e5f6835e3535b9034eafc5234d31f4"
+    }
+  ]
+}

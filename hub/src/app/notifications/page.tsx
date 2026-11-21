@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
   const blockedIds = await getBlockedEitherWayIds(supabase, user.id)
   let notifQuery = supabase
     .from('notifications')
-    .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+    .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(50)

@@ -1,0 +1,46 @@
+/* The supplied 240px artboard surrounds a 184px photo. Keep the photo's layout slot unchanged. */
+.ss-avatar-decoration{position:absolute;z-index:2;inset:-15.2174%;pointer-events:none;user-select:none;line-height:0;filter:drop-shadow(0 0 .55px rgba(235,243,255,.6)) drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+.ss-avatar-decoration img{display:block;width:100%;height:100%;max-width:none;object-fit:contain}
+.ss-member-avatar.is-still::before{animation:none!important}
+.ss-member-avatar.has-decoration{isolation:isolate;overflow:visible}
+.ss-member-avatar.has-decoration .ss-member-presence{z-index:3}
+[data-theme=light] .ss-avatar-decoration{filter:drop-shadow(0 0 .5px rgba(7,16,29,.65)) drop-shadow(0 2px 2px rgba(7,16,29,.22))}
+.ss-avatar-style-summary{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.ss-avatar-style-summary .ss-profile-ring-preview{flex:1;min-width:190px}
+.ss-avatar-style-summary .ss-profile-ring-preview>div{display:grid;gap:3px}
+.ss-avatar-style-summary button,.ss-avatar-picker button{font:inherit;cursor:pointer}
+.ss-avatar-style-change{min-height:44px;padding:0 15px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface);color:var(--text-1);font-size:13px!important;font-weight:600!important}
+.ss-avatar-picker-backdrop{z-index:var(--layer-modal,1000);align-items:center;justify-content:center;padding:24px;background:rgba(7,15,27,.58);backdrop-filter:blur(8px)}
+.ss-avatar-picker{display:flex;flex-direction:column;width:min(800px,100%);max-height:min(860px,calc(100dvh - 48px));border:1px solid var(--border-2);border-radius:18px;background:var(--surface);color:var(--text-1);box-shadow:0 24px 100px rgba(0,0,0,.3);overflow:hidden}
+.ss-avatar-picker header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border)}
+.ss-avatar-picker h2{margin:0;font-size:21px;font-weight:650;letter-spacing:-.035em}
+.ss-avatar-picker-close{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface-2);color:var(--text-2)}
+.ss-avatar-picker-body{display:grid;grid-template-columns:minmax(0,1fr) 210px;min-height:0;flex:1}
+.ss-avatar-picker-library{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px 22px}
+.ss-avatar-picker-search{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface-2)}
+.ss-avatar-picker-search input{min-height:44px;min-width:0;width:100%;outline:none;background:none;color:var(--text-1);font:inherit;font-size:14px}
+.ss-avatar-picker-tools{position:sticky;top:-18px;z-index:3;padding-top:2px;background:var(--surface)}
+.ss-avatar-picker-categories{display:flex;gap:5px;overflow-x:auto;padding:12px 0;scrollbar-width:none}
+.ss-avatar-picker-categories::-webkit-scrollbar{display:none}
+.ss-avatar-picker-categories button{flex-shrink:0;min-height:36px;padding:0 10px;border:1px solid transparent;border-radius:7px;background:none;color:var(--text-2);font-size:12px}
+.ss-avatar-picker-categories button[aria-pressed=true]{background:var(--selected-bg);border-color:var(--selected-border);color:var(--accent)}
+.ss-avatar-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ss-avatar-picker-option{position:relative;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:17px;min-height:122px;padding:18px 5px 10px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);color:var(--text-2);font-size:12px!important;text-align:center}
+.ss-avatar-picker-option>span:last-child{min-height:30px;display:flex;align-items:center;justify-content:center;line-height:1.25}
+.ss-avatar-picker-option[aria-checked=true]{background:var(--selected-bg);border-color:var(--selected-border);color:var(--text-1)}
+.ss-avatar-picker-option:hover{border-color:var(--border-3);background:var(--surface-3)}
+.ss-avatar-picker-check{position:absolute;right:7px;top:7px;color:var(--accent)}
+.ss-avatar-picker-preview{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:36px 18px 22px;border-left:1px solid var(--border);background:radial-gradient(ellipse at 50% 15%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%),var(--surface-2);text-align:center}
+.ss-avatar-picker-preview>strong{margin-top:20px;font-size:15px}.ss-avatar-picker-preview>small{font-size:12px;color:var(--text-3)}
+.ss-avatar-picker-sizes{display:flex;align-items:center;justify-content:center;gap:28px;padding:13px 0}
+.ss-avatar-picker footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 24px;border-top:1px solid var(--border)}
+.ss-avatar-picker footer>small{max-width:280px;font-size:12px;line-height:1.4;color:var(--text-3)}
+.ss-avatar-picker footer>div{display:flex;gap:8px}.ss-avatar-picker footer button{min-height:44px;padding:0 16px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface-2);color:var(--text-1);font-size:13px;font-weight:600}
+.ss-avatar-picker footer button:last-child{border-color:transparent;background:var(--accent-fill);color:var(--accent-fg)}
+.ss-avatar-picker :is(button,input):focus-visible,.ss-avatar-style-change:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:600px){.ss-avatar-picker-backdrop{padding:10px;align-items:flex-end}.ss-avatar-picker{max-height:calc(100dvh - 20px);border-radius:16px}.ss-avatar-picker header{padding:12px 16px}.ss-avatar-picker-body{display:flex;flex-direction:column-reverse}.ss-avatar-picker-library{padding:12px 14px;flex:1}.ss-avatar-picker-preview{flex-direction:row;justify-content:center;gap:22px;flex-shrink:0;padding:18px 16px;border-left:0;border-bottom:1px solid var(--border)}.ss-avatar-picker-preview>.ss-member-avatar{--member-size:64px!important;width:64px!important;height:64px!important;min-width:64px!important;max-width:64px!important;min-height:64px!important;max-height:64px!important;flex-basis:64px!important}.ss-avatar-picker-preview>strong{margin-top:0;max-width:130px}.ss-avatar-picker-sizes,.ss-avatar-picker-preview>small{display:none}.ss-avatar-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ss-avatar-picker footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom))}.ss-avatar-picker footer>small{max-width:120px;font-size:11px}.ss-avatar-picker footer button{padding:0 12px}.ss-avatar-picker-categories button{min-height:44px}.ss-avatar-style-summary{gap:16px}}
+
+@media(max-width:600px){.ss-avatar-picker-search input{font-size:16px}.ss-avatar-picker-tools{top:-12px}.ss-avatar-picker-categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:10px 0}}
+
+/* Give original story artwork room without clipping member decorations. */
+.ss-story-item{width:80px;flex-basis:80px}.ss-story-ring{width:76px;height:76px;padding:9px;background:transparent;box-shadow:none}.ss-story-ring>div{width:58px;height:58px;overflow:visible;border:0;background:none}.ss-story-item.is-create .ss-story-ring{width:58px;height:58px;margin:9px}
