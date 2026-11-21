@@ -388,15 +388,15 @@
 .drawerTop>span{flex:1;min-width:0;color:var(--text-2)}
 .drawerTop>span a{font-size:12px;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
 .drawerTop>.iconButton{flex:none;width:44px;height:44px;min-height:44px;padding:0}
-.drawerScroll{scroll-padding-top:64px;scrollbar-width:thin;scrollbar-color:var(--border-3) transparent}
-.drawer .playerHero{min-height:128px;padding:14px 20px;gap:16px;background:var(--surface)}
+.drawerScroll{position:relative;scroll-padding-top:64px;scrollbar-width:thin;scrollbar-color:var(--border-3) transparent}
+.drawer .playerHero{min-height:112px;padding:10px 20px;gap:16px;background:radial-gradient(ellipse at 96% 30%,color-mix(in srgb,var(--player-primary,var(--accent)) 12%,transparent),transparent 65%),radial-gradient(ellipse at 72% 100%,color-mix(in srgb,var(--player-secondary,var(--accent)) 6%,transparent),transparent 60%),var(--surface)}
 .drawer .playerHero>div{min-width:0}
 .drawer .playerHero h2,.drawer .playerHero h2 strong{display:inline;font-size:27px;line-height:1.18;font-weight:650;letter-spacing:-.035em}
 .drawer .playerHero h2{display:block;margin-block:8px}
 .drawer .playerPosition,.drawer .draftContext{font-size:11px;line-height:1.5;letter-spacing:0;color:var(--text-2)}
 .drawer .playerOpponent{font-size:12px;gap:6px;color:var(--text-2)}
 .drawer .playerHero .portrait{width:124px;height:104px;flex:0 0 124px;margin:0;border-radius:10px}
-.drawer .playerStrip{padding:10px 20px;gap:0;border-block:1px solid var(--border);background:var(--surface)}
+.drawer .playerStrip{padding:8px 20px;gap:0;border-block:1px solid var(--border);background:var(--surface)}
 .drawer .playerStrip b{font-size:20px;line-height:1.2;font-weight:650}
 .drawer .playerStrip small{margin-top:4px;color:var(--text-2);font-size:11px;letter-spacing:0}
 .drawer .playerSample{padding:6px 20px;min-height:52px;gap:12px;background:var(--surface)}
@@ -413,7 +413,7 @@
 .drawer .segment{gap:0;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2);padding:3px}
 .drawer .segment button{min-height:36px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:5px}
 .drawer .trendSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
-.drawer .trendSummary>div{min-height:84px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.drawer .trendSummary>div{min-height:76px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
 .drawer .trendSummary>div>span{font-size:11px;line-height:1.4;color:var(--text-2)}
 .drawer .trendSummary strong{display:block;font-size:24px;line-height:1.25;margin-top:6px;font-weight:650;letter-spacing:-.025em}
 .drawer .trendSummary strong small{display:inline;margin-left:4px;color:var(--text-2);font-size:11px;font-weight:500}
@@ -536,7 +536,8 @@
  .chartFrame{grid-template-columns:30px minmax(0,1fr);gap:8px;padding-top:20px}
  .chartFrame .chart{height:150px;gap:4px}
  .chartFigure[data-dense=true] .chartValue{opacity:0}
- .chartFigure[data-dense=true] button:is(:hover,:focus) .chartValue{opacity:1}
+.chartFigure[data-dense=true] button:is(:hover,:focus,[data-active=true]) .chartValue{opacity:1}
+.chartFrame button[data-chart-bar][data-active=true]{background:color-mix(in srgb,var(--accent) 7%,transparent);box-shadow:inset 0 0 0 1px var(--border-2)}
 }
 @media(prefers-reduced-motion:reduce){.chartFrame .chartFill{transition:none}}
 

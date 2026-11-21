@@ -39,15 +39,16 @@ function TrendChart({ values, max, line, side, milestone }: {
 }) {
   const [active, setActive] = useState<number | null>(null)
   const [focus, setFocus] = useState(0)
+  const focusIndex = Math.min(focus, Math.max(0, values.length - 1))
   const scale = Math.ceil(max)
   const selected = active == null ? null : values[active]
   const result = (value: number | null) => line == null || value == null ? null : gradeNbaValue(value, line, milestone ? 'milestone' : side)
   const describe = (value: number | null) => value == null ? 'Unavailable' : result(value) === 'win' ? 'Hit' : result(value) === 'push' ? 'Push' : result(value) === 'loss' ? 'Miss' : 'No reference line'
   return <figure className={styles.chartFigure} data-dense={values.length>10||undefined}>
     <div className={styles.chartFrame}><div className={styles.chartAxis} aria-hidden="true"><span>{number(scale,0)}</span><span>{number(scale/2,1)}</span><span>0</span></div>
-    <div className={styles.chart} role="group" aria-label="Game-by-game results" onPointerLeave={() => setActive(null)}>
+    <div className={styles.chart} role="group" aria-label="Game-by-game results" onPointerLeave={event => { if (event.pointerType === 'mouse' && !event.currentTarget.contains(document.activeElement)) setActive(null) }}>
       {line != null && <span className={styles.chartLine} style={{ bottom: (line / scale * 100)+'%' }} aria-hidden="true"/>}
-      {values.map(({ log, value }, index) => <button type="button" key={log.id} data-chart-bar data-result={result(value) ?? 'unavailable'} data-known={value!=null} data-zero={value===0||undefined} tabIndex={index === focus ? 0 : -1} aria-label={log.game.date+': '+(value ?? 'Unavailable')+' · '+describe(value)} onPointerEnter={() => setActive(index)} onFocus={() => { setActive(index); setFocus(index) }} onBlur={() => setActive(null)} onClick={() => setActive(index)} onKeyDown={event => {
+      {values.map(({ log, value }, index) => <button type="button" key={log.id} data-chart-bar data-active={active === index || undefined} data-result={result(value) ?? 'unavailable'} data-known={value!=null} data-zero={value===0||undefined} tabIndex={index === focusIndex ? 0 : -1} aria-label={log.game.date+': '+(value ?? 'Unavailable')+' · '+describe(value)} onPointerEnter={() => setActive(index)} onFocus={() => { setActive(index); setFocus(index) }} onBlur={() => setActive(null)} onClick={() => setActive(index)} onKeyDown={event => {
         if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return
         event.preventDefault()
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + values.length) % values.length

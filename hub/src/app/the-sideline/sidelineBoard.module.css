@@ -1203,7 +1203,7 @@
 .modalTeam>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .playerModal .modalHeaderActions>button,.modalHeaderActions>a{display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid var(--control-border);border-radius:7px;background:var(--surface-2);color:var(--text-2)}
 .modalHeaderActions>a svg{rotate:45deg}
-.modalPlayer{display:flex;align-items:center;gap:16px;padding:16px 20px;min-height:124px}
+.modalPlayer{display:flex;align-items:center;gap:16px;padding:12px 20px;min-height:112px;background:radial-gradient(ellipse at 98% 40%,color-mix(in srgb,var(--player-primary,var(--accent)) 12%,transparent),transparent 65%),var(--surface)}
 .modalPlayer>div{min-width:0;flex:1}
 .modalPlayer>.avatar{order:2;flex:none;width:112px;height:96px;margin-left:auto;border-radius:10px}
 .modalPlayer h2{font-size:26px;font-weight:650;line-height:1.2;letter-spacing:-.03em;overflow-wrap:anywhere}

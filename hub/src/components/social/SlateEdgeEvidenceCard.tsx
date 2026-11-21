@@ -55,7 +55,7 @@ export function SlateEdgeEvidenceCard({ evidence, interactive = true }: { eviden
       <span className={styles.price}><small><BookLogo vendor="fanduel" size={13}/> HR</small><b>{odds(snapshot.hr)}</b>{snapshot.hrOpen != null && <i>Open {odds(snapshot.hrOpen)}</i>}</span>
       <span className={styles.price} data-fhr><small><BookLogo vendor="fanduel" size={13}/> FHR</small><b>{odds(snapshot.fhr)}</b>{snapshot.fhrOpen != null && <i>Open {odds(snapshot.fhrOpen)}</i>}</span>
       {books.length > 0 && <span className={styles.books}>{books.slice(0, 5).map(offer => <span key={offer.book} title={offer.book}><BookLogo vendor={offer.book} size={17}/><b>{odds(offer.price)}</b></span>)}</span>}
-      {snapshot.publicPicks != null && <span className={styles.picks}><UsersRound size={12}/><b>{snapshot.publicPicks.toLocaleString()}</b><small>picks</small></span>}
+      {snapshot.publicPicks != null && <span className={styles.picks}><UsersRound size={12}/><b>{snapshot.publicPicks.toLocaleString('en-US')}</b><small>picks</small></span>}
     </div>
 
     <footer><span>{snapshot.awayAbbr} @ {snapshot.homeAbbr}</span><time dateTime={evidence.capturedAt}>Captured {new Date(evidence.capturedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></footer>

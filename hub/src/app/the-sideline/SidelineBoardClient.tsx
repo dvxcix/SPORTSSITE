@@ -16,7 +16,7 @@ import { teamMmHighlights } from './teamHighlights'
 import { nflAvailability, nflMarketExclusion } from '@/lib/nflAvailability'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
-import { BookLogo, normalizeVendor } from '@/components/BookLogo'
+import { BookLogo, bookName, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
@@ -1225,6 +1225,13 @@ function GameLines({ game, board, preferredBooks = [] }: { game: SidelineGame; b
 
 function PlayerModal({ player, players, team, lens, board, game, initialWindow, onSelect, onClose, gameSeason }: { player: PlayerRow; players: PlayerRow[]; team: SidelineTeam; lens: SidelineLens; board: SidelineOddsBoard; game: SidelineGame; initialWindow: SidelineWindow; gameSeason: number; onSelect: (player: PlayerRow) => void; onClose: () => void }) {
   const [tab, setTab] = useState<'matchup' | 'tracking' | 'markets'>('matchup')
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const changeSection = (next: typeof tab) => {
+    if(next === tab)return
+    setTab(next)
+    if(bodyRef.current)bodyRef.current.scrollTop=0
+  }
+  useEffect(()=>{if(bodyRef.current)bodyRef.current.scrollTop=0},[player.id])
   const [detailWindow, setDetailWindow] = useState<SidelineWindow>(initialWindow)
   const playerIndex = players.findIndex(candidate => candidate.id === player.id)
   const previousPlayer = playerIndex > 0 ? players[playerIndex - 1] : null
@@ -1258,7 +1265,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
   return (
     <ModalSurface open onClose={onClose} label={`${player.name} NFL breakdown`} backdropClassName={styles.modalTheme + ' ' + styles.modalBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.playerModal}>
         <header>
-          <div className={styles.modalPlayer}>
+          <div className={styles.modalPlayer} style={{'--player-primary':team.color} as CSSProperties}>
             <PlayerAvatar player={player} team={team} />
             <div>
               <small>
@@ -1282,8 +1289,8 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
             </button>
           </div>
         </header>
-        <ResearchSectionNav label="NFL player section" value={tab} onChange={setTab} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
-        <div className={styles.modalBody}>
+        <ResearchSectionNav label="NFL player section" value={tab} onChange={changeSection} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
+        <div className={styles.modalBody} ref={bodyRef}>
           <div className={styles.modalWindows}>
             {WINDOW_OPTIONS.map(option => (
               <button type="button" key={option.id} aria-pressed={detailWindow===option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>
@@ -1355,13 +1362,13 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                 <article key={market.key}>
                   <header>
                     <strong>{market.label}</strong>
-                    {market.line != null ? <span>Line {market.line}</span> : null}
+                    {!market.offers.length && market.line != null ? <span>Line {market.line}</span> : null}
                   </header>
                   <div>
                     {market.offers.map((offer,index) => (
                       <span className={styles.modalQuote} key={`${offer.vendor}:${offer.type}:${offer.line}:${index}`}>
                         <BookLogo vendor={offer.vendor} size={19} />
-                        <span className="sr-only">{offer.vendor}</span>
+                        <span className="sr-only">{bookName(offer.vendor)}</span>
                         <div>{(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}</div>
                       </span>
                     ))}

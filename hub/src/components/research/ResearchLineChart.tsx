@@ -11,6 +11,7 @@ export function ResearchLineChart({ points, label, formatValue = value=>value.to
 }) {
   const [hover,setHover] = useState<number|null>(null)
   const [focus,setFocus] = useState<number|null>(null)
+  const [touch,setTouch] = useState<number|null>(null)
   const [tabStop,setTabStop] = useState(0)
   const known = points.flatMap((point,index)=>point.value!=null&&Number.isFinite(point.value)?[{...point,value:point.value,index}]:[])
   if (!known.length) return <p className={styles.empty} role="status">No observations available.</p>
@@ -22,14 +23,26 @@ export function ResearchLineChart({ points, label, formatValue = value=>value.to
     y:point.value==null||!Number.isFinite(point.value)?null:95-(point.value-low)/(high-low)*90,
   }))
   const path = positions.map((point,index)=>point.y==null?'':`${index>0&&positions[index-1].y!=null?'L':'M'}${point.x},${point.y}`).join(' ')
-  const active = hover??focus, selected = active==null?null:known.find(point=>point.index===active)
+  const active = hover??focus??touch, selected = active==null?null:known.find(point=>point.index===active)
   const focusable = known.some(point=>point.index===tabStop)?tabStop:known[0].index
   return <figure className={styles.figure} aria-label={label}>
     <div className={styles.frame}>
       <div className={styles.axis} aria-hidden="true"><span>{formatValue(high)}</span><span>{formatValue((high+low)/2)}</span><span>{formatValue(low)}</span></div>
-      <div className={styles.plot} onPointerLeave={()=>setHover(null)}>
+      <div className={styles.plot} onPointerLeave={()=>setHover(null)} onPointerDown={event=>{
+        if(event.pointerType!=='touch'&&event.pointerType!=='pen')return
+        const bounds=event.currentTarget.getBoundingClientRect()
+        if(!bounds.width||!bounds.height)return
+        const x=event.clientX-bounds.left,y=event.clientY-bounds.top
+        let nearest=known[0],distance=Infinity
+        for(const point of known){
+          const position=positions[point.index]
+          const candidate=(position.x*bounds.width/100-x)**2+(position.y!*bounds.height/100-y)**2
+          if(candidate<distance){nearest=point;distance=candidate}
+        }
+        setHover(null);setFocus(null);setTouch(nearest.index);setTabStop(nearest.index)
+      }}>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path className={styles.grid} d="M0 5H100 M0 50H100 M0 95H100"/><path className={styles.line} d={path}/></svg>
-        {known.map(point=><button key={point.index} type="button" data-line-point data-active={active===point.index||undefined} className={styles.point} style={{left:`${positions[point.index].x}%`,top:`${positions[point.index].y}%`}} tabIndex={point.index===focusable?0:-1} aria-label={`${point.label}: ${formatValue(point.value)}`} onPointerEnter={()=>setHover(point.index)} onFocus={()=>{setFocus(point.index);setTabStop(point.index)}} onBlur={()=>setFocus(null)} onClick={()=>setHover(point.index)} onKeyDown={event=>{
+        {known.map(point=><button key={point.index} type="button" data-line-point data-active={active===point.index||undefined} className={styles.point} style={{left:`${positions[point.index].x}%`,top:`${positions[point.index].y}%`}} tabIndex={point.index===focusable?0:-1} aria-label={`${point.label}: ${formatValue(point.value)}`} onPointerEnter={()=>setHover(point.index)} onFocus={()=>{setTouch(null);setFocus(point.index);setTabStop(point.index)}} onBlur={()=>setFocus(null)} onClick={()=>setHover(point.index)} onKeyDown={event=>{
           if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return
           event.preventDefault()
           setHover(null)

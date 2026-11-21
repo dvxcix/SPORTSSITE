@@ -19,7 +19,7 @@ const stubs:Record<string,string>={
 const bundle=await build({stdin:{contents:'export {ResearchLineChart} from "./src/components/research/ResearchLineChart";export {TrendBars} from "./src/app/the-paint/PaintVisuals";export {PaintShotChart} from "./src/app/the-paint/PaintShotChart"',resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'court-charts.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'chart-fixture',setup(builder){builder.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'fixture'}:undefined);builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:stubs[args.path],loader:'tsx'}))}}]})
 const module={exports:{} as Record<string,ComponentType<any>>}
 new Function('require','module','exports',bundle.outputFiles[0].text)(require,module,module.exports)
-async function mount(component:React.ReactNode){const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(component));return{host,close:async()=>{await act(async()=>root.unmount());host.remove()}}}
+async function mount(component:React.ReactNode){const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(component));return{host,render:async(next:React.ReactNode)=>{await act(async()=>root.render(next))},close:async()=>{await act(async()=>root.unmount());host.remove()}}}
 async function key(node:Element,value:string){await act(async()=>node.dispatchEvent(new win.KeyboardEvent('keydown',{key:value,bubbles:true,cancelable:true})))}
 
 test('market charts use the displayed exact-contract price, skip missing captures and preserve time spacing',()=>{
@@ -54,6 +54,25 @@ test('line charts keep zero, break missing observations and expose chronological
   } finally {await ui.close()}
 })
 
+test('touching the chart area selects the nearest observed point and keeps its detail after lift',async()=>{
+ const ui=await mount(h(module.exports.ResearchLineChart,{label:'Observed usage',points:[{label:'Nov 1',value:0},{label:'Nov 2',value:2},{label:'Nov 3',value:null},{label:'Nov 4',value:3}]}))
+ try{
+  const plot=ui.host.querySelector('button[data-line-point]')!.parentElement!
+  plot.getBoundingClientRect=()=>({left:0,top:0,width:400,height:200,right:400,bottom:200,x:0,y:0,toJSON(){}})
+  const touch=new win.Event('pointerdown',{bubbles:true,cancelable:true})
+  Object.defineProperties(touch,{pointerType:{value:'touch'},clientX:{value:360},clientY:{value:20}})
+  await act(async()=>plot.dispatchEvent(touch))
+  assert.equal(touch.defaultPrevented,false,'chart inspection must preserve native page scrolling')
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 4 · 3.0/)
+  const leave=new win.Event('pointerout',{bubbles:true});Object.defineProperty(leave,'pointerType',{value:'touch'})
+  await act(async()=>plot.dispatchEvent(leave))
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 4 · 3.0/)
+  const active=ui.host.querySelector<HTMLButtonElement>('button[data-active="true"]')!
+  await act(async()=>active.focus());await key(active,'Home')
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 1 · 0.0/)
+ }finally{await ui.close()}
+})
+
 test('result bars distinguish an observed zero from an unavailable value and keep exact grades',async()=>{
   const logs=[0,null,10].map((pts,id)=>({id:id+1,pts,min:'30',game:{date:`2026-11-${18-id}`,season:2026},team:{id:2}}))
   const ui=await mount(h(module.exports.TrendBars,{logs,market:'points',line:5,side:'over',tall:true}))
@@ -69,6 +88,28 @@ test('result bars distinguish an observed zero from an unavailable value and kee
     assert.match(ui.host.querySelector('output')!.textContent!,/0 · Miss/)
     assert.match(hit.getAttribute('aria-label')!,/10 · Hit/)
   } finally {await ui.close()}
+})
+
+test('shortening a player sample keeps exactly one reachable chart bar and touch details stay selected',async()=>{
+  const logs=Array.from({length:20},(_,index)=>({id:index+1,pts:index+1,min:'30',game:{date:`2026-11-${String(index+1).padStart(2,'0')}`,season:2026},team:{id:2}}))
+  const props={market:'points',line:5,side:'over',tall:true}
+  const ui=await mount(h(module.exports.TrendBars,{...props,logs}))
+  try{
+    let bars=[...ui.host.querySelectorAll<HTMLButtonElement>('button[data-chart-bar]')]
+    await act(async()=>bars[0].focus());await key(bars[0],'End')
+    assert.equal(bars[19].tabIndex,0)
+    await ui.render(h(module.exports.TrendBars,{...props,logs:logs.slice(0,5)}))
+    bars=[...ui.host.querySelectorAll<HTMLButtonElement>('button[data-chart-bar]')]
+    assert.equal(bars.length,5)
+    assert.equal(bars.filter(bar=>bar.tabIndex===0).length,1,'a removed sample point cannot strand keyboard users')
+    await act(async()=>bars[1].click())
+    const selected=ui.host.querySelector('output')!.textContent
+    const leave=new win.Event('pointerout',{bubbles:true})
+    Object.defineProperty(leave,'pointerType',{value:'touch'})
+    await act(async()=>bars[1].dispatchEvent(leave))
+    assert.equal(ui.host.querySelector('output')!.textContent,selected,'lifting a finger keeps the selected observation readable')
+    assert.equal(bars[1].getAttribute('data-active'),'true')
+  }finally{await ui.close()}
 })
 
 test('shot points provide one keyboard stop, arrow navigation and an accessible unmapped-shot log',async()=>{

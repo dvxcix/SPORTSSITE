@@ -100,7 +100,7 @@ export function DataGrid<Row>({
 
   return <section className={styles.shell} data-density={density} aria-label={ariaLabel}>
     <div className={styles.toolbar}>
-      <span>{rows.length.toLocaleString()} row{rows.length === 1 ? '' : 's'}</span>
+      <span>{rows.length.toLocaleString('en-US')} row{rows.length === 1 ? '' : 's'}</span>
       <div>
         <button type="button" onClick={toggleDensity} aria-label={`Use ${density === 'comfortable' ? 'compact' : 'comfortable'} row density`}><Rows3 size={14}/><span>{density === 'comfortable' ? 'Comfortable' : 'Compact'}</span></button>
         <details className={styles.columns}>
@@ -110,10 +110,14 @@ export function DataGrid<Row>({
       </div>
     </div>
 
+    {columns.some(column=>column.sortValue)&&<div className={styles.mobileSorting}>
+      <label><span className="sr-only">Sort {ariaLabel}</span><select aria-label={`Sort ${ariaLabel}`} value={sort?.id??''} onChange={event=>setSort(event.target.value?{id:event.target.value,direction:sort?.direction??'asc'}:null)}><option value="">Original order</option>{columns.filter(column=>column.sortValue).map(column=><option key={column.id} value={column.id}>{column.mobileLabel||String(column.header)}</option>)}</select></label>
+      <button type="button" disabled={!sort} aria-label={sort?.direction==='asc'?'Sort descending':'Sort ascending'} onClick={()=>setSort(current=>current?{...current,direction:current.direction==='asc'?'desc':'asc'}:null)}>{sort?.direction==='desc'?<ArrowDown size={17}/>:<ArrowUp size={17}/>}</button>
+    </div>}
     {displayedRows.length ? <>
-      <div className={styles.desktop}>
+      <div className={styles.desktop} role="region" aria-label={`${ariaLabel} table`} tabIndex={0}>
         <table>
-          <thead><tr>{visible.map(column => <th key={column.id} className={`${column.pinned ? styles.pinned : ''} ${column.className || ''}`} data-align={column.align || 'left'}>{column.sortValue ? <button type="button" onClick={() => updateSort(column)} aria-label={`Sort by ${String(column.mobileLabel || column.header)}`}>{column.header}{sort?.id === column.id ? sort.direction === 'asc' ? <ArrowUp size={11}/> : <ArrowDown size={11}/> : null}</button> : column.header}</th>)}</tr></thead>
+          <thead><tr>{visible.map(column => <th key={column.id} aria-sort={column.sortValue?(sort?.id===column.id?(sort.direction==='asc'?'ascending':'descending'):'none'):undefined} className={`${column.pinned ? styles.pinned : ''} ${column.className || ''}`} data-align={column.align || 'left'}>{column.sortValue ? <button type="button" onClick={() => updateSort(column)} aria-label={`Sort by ${String(column.mobileLabel || column.header)}`}>{column.header}{sort?.id === column.id ? sort.direction === 'asc' ? <ArrowUp size={11}/> : <ArrowDown size={11}/> : null}</button> : column.header}</th>)}</tr></thead>
           <tbody>{displayedRows.map(row => <tr key={getRowKey(row)}>{visible.map(column => <td key={column.id} className={`${column.pinned ? styles.pinned : ''} ${column.className || ''}`} data-align={column.align || 'left'}>{column.cell(row)}</td>)}</tr>)}</tbody>
         </table>
       </div>

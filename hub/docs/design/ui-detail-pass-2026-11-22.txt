@@ -1,0 +1,33 @@
+SlipSurge UI detail pass — 2026-11-22
+
+Checklist state
+239 existing surfaces released; 0 queued. Owner visual feedback remains open on 229 surfaces; 10 were explicitly approved. These are review-history states, not unpublished tools.
+
+Completed polish
+[Done] NBA drawer: tighter hero, stats and summary spacing; restrained team primary/secondary glow in both themes; headshots stay contained.
+[Done] NFL drawer: tighter team-colour header; changing section or player starts the content at the top.
+[Done] NBA drawer section changes position the new content beneath the visible section controls.
+[Done] NBA game-log arrows match the selected column and actual ascending/descending order.
+[Done] L20 to L5 chart changes preserve a keyboard tab stop. Touch selection and its value remain visible after lifting a finger.
+[Done] Shared line charts select the nearest observed point from a touch/pen tap anywhere on the plot. Native scrolling remains available; missing observations remain missing.
+[Done] Shared DataGrid mobile cards retain sorting, direction and original-order controls. Desktop headers expose aria-sort and the scrolling table is keyboard focusable.
+[Done] NFL sportsbook panels remove the redundant aggregate line when individual exact quotes are present. Each quote retains its line, market, side and book; accessible book names are readable.
+[Done] Suggested-member and Slate Edge counts use the same locale during server and browser rendering.
+[Done] Existing NBA/NFL tools, drawer tabs, odds boards and navigation remain accessible. No entitlements, quote identity, score calculation, collectors or frozen research rules changed.
+
+Fresh validation
+- 65/65 focused component/source/accessibility checks pass.
+- 134/134 production source checks pass.
+- Focused ESLint and TypeScript pass; optimized private fixture build passes.
+- 192 unique catalogued route/role combinations return HTTP 200 without a server error in the compiled fixture app.
+- Route-boundary DOM checks at 1440x1000 and 390x844 in light/dark, including admin, community, settings, sports and off-season inventory. This checks rendering, page overflow, visible broken images and headings; it is not exhaustive interaction certification of every control.
+- All six NBA drawer sections and all three NFL sections explicitly activated in all four layouts; no drawer overflow or unreachable section controls. L20/End to L5 retains one chart tab stop.
+- Shared DataGrid sorting verified in both desktop themes and both phone themes: ascending/descending; phone original-order reset retains rows.
+- Explore/hashtag initial overflow measurements cleared after rendered-page capture. No speculative CSS change was applied.
+- Redirect routes /launch, /scores and /marketplace/sell were followed through to their rendered destinations. Redirects discard fixture-only theme parameters; the destination pages have separate theme checks.
+
+Limits and remaining review
+The local app uses illustrative data without production credentials. The onboarding fixture redirects its completed account to Feed, and NFL Tracking includes an unavailable-data state; neither is proof of a populated live flow. Shared popups and the 239-surface inventory retain their earlier individual release receipts. This pass does not certify every real account, browser, device, live data condition or animation. Further owner visual feedback remains tracked individually. Physical-phone testing was not performed; desktop browser phone viewports were used as preferred by the owner.
+
+Release procedure
+Source belongs on GitHub main and must retain the required recovered NFL ancestry. Verify Vercel's ready production deployment matches the published source, then check representative live NBA/NFL drawers. Do not republish or reset the existing What's new announcement as part of this detail pass.

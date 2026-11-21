@@ -45,7 +45,7 @@ export function SuggestedUsers({ users, currentUserId }: {
               {u.is_verified && <BadgeCheck size={14} aria-label="Verified" className="ss-suggested-verified" />}
               <UserBadges userId={u.id} size={16} maxVisible={2} />
             </div>
-            <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString()} followers` : ''}</p>
+            <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString('en-US')} followers` : ''}</p>
           </div>
           {currentUserId ? (
             <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} compact />

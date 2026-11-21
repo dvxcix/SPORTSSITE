@@ -63,6 +63,20 @@ test('drawer never substitutes season production for an empty Last 1 sample; exa
 })
 
 
+test('switching NFL player sections starts the next section at its beginning',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds:makeNflOdds(),gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  await act(async()=>ui.host.querySelector<HTMLButtonElement>('button[aria-label="Open Josh Allen"]')!.click())
+  const dialog=document.querySelector('[role="dialog"]')!
+  const body=dialog.querySelector('nav')!.parentElement!.nextElementSibling as HTMLElement
+  body.scrollTop=640
+  await act(async()=>[...dialog.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
+  assert.equal(body.scrollTop,0,'a shorter or longer section must not inherit the previous section scroll')
+  assert.match(body.textContent!,/\+165/,'the sportsbook quotes remain accessible')
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
 test('Sideline Edge retains the last good slate on refresh failure and Retry recovers it',async()=>{
  const old=globalThis.fetch;let fail=false;globalThis.fetch=async()=>fail?new Response('{}',{status:503}):Response.json(makeNflSlateEdge())
  const ui=await mount(h(module.exports.NflSlateEdgeOverlay,{open:true,date:'2030-11-20',sample:'regular',onClose:()=>{}}))
