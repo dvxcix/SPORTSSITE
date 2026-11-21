@@ -31,6 +31,8 @@ test('explicit book links win, primary seeds single-book tools and multi-book de
   assert.equal(initialResearchBook('fanduel', selected), 'fanduel')
   assert.equal(initialResearchBook('all', selected), 'all')
   assert.equal(initialResearchBook(null, selected), 'draftkings')
+  assert.equal(initialResearchBook(null, selected, 'all', true), 'all')
+  assert.equal(initialResearchBook('fanduel', selected, 'all', true), 'fanduel')
   assert.equal(initialResearchBook('injected', selected), 'draftkings')
   assert.equal(initialResearchBook(null, defaults, 'fanduel'), 'fanduel')
   assert.deepEqual(preferredBookIds(['fanduel', 'draftkings', 'betmgm'], selected.books), ['fanduel', 'draftkings'])

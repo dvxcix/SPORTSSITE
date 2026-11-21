@@ -67,8 +67,9 @@ export function preferredBookIds(available: readonly string[], preferred: readon
   return selected.length ? selected : [...available]
 }
 
-export function initialResearchBook(explicit: string | null | undefined, preferences: ResearchPreferences, fallback = 'all'): string {
+export function initialResearchBook(explicit: string | null | undefined, preferences: ResearchPreferences, fallback = 'all', comparison = false): string {
   if (explicit === 'all' || (explicit && (bookIds.has(explicit) || explicit === 'williamhill_us'))) return explicit
+  if (comparison && preferences.books.length > 1) return 'all'
   return preferences.primaryBook ?? fallback
 }
 
