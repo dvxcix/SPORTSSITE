@@ -1,8 +1,14 @@
 {
   "title": "Member experience polish · 2026-11-21",
-  "state": "Verified locally; ready to deploy",
+  "state": "Live",
   "baseCommit": "b6a2a8d8b47b2013af3a7174d24b9684c10d1d76",
-  "release": null,
+  "release": {
+    "state": "Live",
+    "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+    "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+    "verifiedAt": "2026-11-21 21:01 UTC",
+    "url": "https://www.slipsurge.com"
+  },
   "scopeCount": 43,
   "layoutChecks": 172,
   "tests": {
@@ -18,11 +24,12 @@
   "notes": [
     "Original member photos and badge artwork retained.",
     "Cached team directory resolves numeric NBA favorite IDs; catalog reads run alongside existing profile reads and are reused by FavoritesSection.",
-    "Read-only live smoke pending. Posting failure/success, pagination and account switches are covered with isolated fixtures.",
     "No operational jobs, migrations, account/security changes, financial actions or member messages performed.",
     "Native system-share delivery, real MFA setup and billing changes are outside this visual test.",
     "The private review database adapter retains its three pre-existing explicit-any lint findings. Application and changed-test lint is clean.",
-    "Prior unrelated MLB source-contract failures remain outside this member-interface pass."
+    "Prior unrelated MLB source-contract failures remain outside this member-interface pass.",
+    "Read-only production smoke passed for Feed, own profile, Picks and workspace settings in light/dark at desktop (1280/1440px) and phone (390px) widths. Real photos retained their sources across a theme change; no badge fallback icons were present. Empty My Picks opens the same Watchlist drawer.",
+    "Production error/fatal runtime-log query returned no groups for this deployment at verification time."
   ],
   "surfaces": [
     {
@@ -4120,5 +4127,28 @@
         }
       ]
     }
-  ]
+  ],
+  "live": {
+    "verifiedAt": "2026-11-21 21:01 UTC",
+    "paths": [
+      "/feed",
+      "/profile/parlayparty",
+      "/picks",
+      "/settings/research"
+    ],
+    "desktopWidths": [
+      1280,
+      1440
+    ],
+    "phoneWidth": 390,
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "photoSourcesStable": true,
+    "badgeFallbacks": 0,
+    "emptyPicksToWatchlist": true,
+    "memberDataWrites": false,
+    "runtimeErrorGroups": 0
+  }
 }

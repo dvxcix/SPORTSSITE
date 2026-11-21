@@ -1,5 +1,4 @@
 SlipSurge page-by-page visual review
-Latest NBA/NFL follow-up: 72 individual four-layout receipts in nba-nfl-interface-polish-checklist-2026-11-21.txt.
 
 Every item requires its own review. A shared CSS change does not certify its consumers.
 Checks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/empty/error; all tools reachable.
@@ -230,6 +229,7 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Live] Shared components | NBA score calculation drawer | /the-paint?view=score
 [Live] Shared components | NBA game-specific lineup cards | /the-paint?view=game-markets
 [Live] Shared components | Saved sportsbook picker and comparison links | /the-paint?view=odds
+[Live] Shared components | VOLT and Sparks teaser | Shared surface
 [Live] Shared components | Member identity, avatar rings and badges | /design-review/identity
 [Live] Shared components | Account menu | Shared surface
 [Live] Shared components | Global search | Shared surface
@@ -244,4 +244,3 @@ MLB remains hidden/off-season; its pages stay in the inventory.
 [Live] Shared components | Image and video viewer | Shared surface
 [Live] Shared components | Confirmation dialogs | Shared surface
 [Live] Shared components | Empty, loading and error states | Shared surface
-[Live] Shared components | VOLT and Sparks teaser | Shared surface

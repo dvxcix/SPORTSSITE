@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "f2574ec49e28a4375719d3c16c8c573e36f50cd5",
-    "deploymentId": "dpl_46yaVbeiHiUWjUCGPPibkQKdTEFS",
-    "verifiedAt": "2026-11-21 19:46 UTC",
+    "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+    "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+    "verifiedAt": "2026-11-21 21:01 UTC",
     "url": "https://www.slipsurge.com"
   },
   "items": [

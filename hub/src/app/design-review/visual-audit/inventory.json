@@ -2728,7 +2728,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -2741,15 +2741,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/feed"
+      "docs/design/full-site-audit-2026-11-21.json#route:/feed",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/forum/[category]",
@@ -3857,7 +3859,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3870,15 +3872,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/picks"
+      "docs/design/full-site-audit-2026-11-21.json#route:/picks",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/pitcher-report",
@@ -4113,7 +4117,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4126,15 +4130,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/research",
@@ -4273,7 +4279,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4286,15 +4292,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/account"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/account",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/blocked",
@@ -4305,7 +4313,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4318,15 +4326,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/connections",
@@ -4337,7 +4347,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4350,15 +4360,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/connections"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/connections",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/interests",
@@ -4369,7 +4381,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4382,15 +4394,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/interests"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/interests",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/membership",
@@ -4401,7 +4415,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4414,15 +4428,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/membership"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/membership",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/notifications",
@@ -4433,7 +4449,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4446,15 +4462,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/notifications"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/notifications",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings",
@@ -4465,7 +4483,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4478,15 +4496,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/privacy",
@@ -4497,7 +4517,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4510,15 +4530,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/privacy"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/privacy",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/profile",
@@ -4529,7 +4551,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4542,15 +4564,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/research",
@@ -4561,7 +4585,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "2026-11-21 · Member workspace defaults",
-    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim.",
+    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4573,15 +4597,17 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/member-workspace-preferences-release-2026-11-21.txt"
+      "docs/design/member-workspace-preferences-release-2026-11-21.txt",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/settings/security",
@@ -4592,7 +4618,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4605,15 +4631,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/settings/security"
+      "docs/design/full-site-audit-2026-11-21.json#route:/settings/security",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/slate-breakdown",
@@ -4656,7 +4684,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation.",
+    "notes": "Reviewed page hierarchy, copy, responsive spacing, theme contrast and navigation. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4669,15 +4697,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/sports/[sport]/[gameId]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/sports/[sport]/[gameId]",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "route:/sports",
@@ -7731,6 +7761,38 @@
     }
   },
   {
+    "id": "shared:VOLT and Sparks teaser",
+    "route": null,
+    "source": "src/components/volt/VoltTeaser.tsx",
+    "label": "VOLT and Sparks teaser",
+    "group": "Shared components",
+    "kind": "Shared surface",
+    "status": "Review ready",
+    "batch": "volt-teaser-2026-11-21",
+    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
+    "checks": {
+      "desktopDark": true,
+      "desktopLight": true,
+      "phoneDark": true,
+      "phoneLight": true,
+      "keyboard": true,
+      "motion": true,
+      "states": true,
+      "toolAccess": true
+    },
+    "evidence": [
+      "docs/operations/volt-teaser-2026-11-21.txt",
+      "docs/operations/research-header-volt-depth-2026-11-21.txt"
+    ],
+    "release": {
+      "state": "Live",
+      "commit": "7938834e9d077bf35bd1a248c0b051da369a46a2",
+      "deploymentId": "dpl_B9Y4GdSpfup5uF3i8mfxqw5WsehS",
+      "verifiedAt": "2026-11-21 12:52 UTC",
+      "url": "https://www.slipsurge.com"
+    }
+  },
+  {
     "id": "shared:Member identity, avatar rings and badges",
     "route": "/design-review/identity",
     "label": "Member identity, avatar rings and badges",
@@ -7738,7 +7800,7 @@
     "kind": "Shared surface",
     "status": "Approved",
     "batch": 1,
-    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.",
+    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7753,15 +7815,17 @@
       "page-review/browser-checks.json",
       "page-review/board-tests.txt · 44 passed",
       "page-review/component-tests.txt · 6 passed",
-      "page-review/framework-tests.txt · 25 passed"
+      "page-review/framework-tests.txt · 25 passed",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "shared:Account menu",
@@ -7771,7 +7835,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Bottom-sidebar account access on desktop and top-bar access on mobile. Menu fits both themes; keyboard dismissal restores the opener.",
+    "notes": "Bottom-sidebar account access on desktop and top-bar access on mobile. Menu fits both themes; keyboard dismissal restores the opener. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7784,15 +7848,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Account menu"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Account menu",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "shared:Global search",
@@ -7895,7 +7961,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
+    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7909,15 +7975,17 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer",
-      "docs/operations/research-header-volt-depth-2026-11-21.txt"
+      "docs/operations/research-header-volt-depth-2026-11-21.txt",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "shared:NBA Matrix",
@@ -8020,7 +8088,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "All four modes, NFL/NBA game and player selection, market/book and reversible draft leg verified. Phone selects use full width and 16px text. Nothing submitted.",
+    "notes": "All four modes, NFL/NBA game and player selection, market/book and reversible draft leg verified. Phone selects use full width and 16px text. Nothing submitted. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8033,15 +8101,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Post composer"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Post composer",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "shared:Comments and share",
@@ -8051,7 +8121,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Comments expanded; pick sharing preview loaded in every layout. Dialog focus, Escape, 44px actions and error recovery verified. No content posted or shared externally.",
+    "notes": "Comments expanded; pick sharing preview loaded in every layout. Dialog focus, Escape, 44px actions and error recovery verified. No content posted or shared externally. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8064,15 +8134,17 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share",
+      "docs/design/member-experience-polish-2026-11-21.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
-      "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
-      "verifiedAt": "2026-11-21 04:31 UTC",
+      "commit": "d2b53aedc1978b8d27f6f4cc06f18429071ce8ee",
+      "deploymentId": "dpl_CodoPkeCNrSXUpjqJnx7CQ544CP1",
+      "verifiedAt": "2026-11-21 21:01 UTC",
       "url": "https://www.slipsurge.com"
-    }
+    },
+    "latestPolish": "member-experience-2026-11-21"
   },
   {
     "id": "shared:Image and video viewer",
@@ -8164,38 +8236,6 @@
       "commit": "8e49c3df84a1fcd65bd2e3c02039eb9570f5f42b",
       "deploymentId": "dpl_48w7d9DroCEFNyYF2Bb2JFoVupEy",
       "verifiedAt": "2026-11-21 04:31 UTC",
-      "url": "https://www.slipsurge.com"
-    }
-  },
-  {
-    "id": "shared:VOLT and Sparks teaser",
-    "route": null,
-    "source": "src/components/volt/VoltTeaser.tsx",
-    "label": "VOLT and Sparks teaser",
-    "group": "Shared components",
-    "kind": "Shared surface",
-    "status": "Review ready",
-    "batch": "volt-teaser-2026-11-21",
-    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
-    "checks": {
-      "desktopDark": true,
-      "desktopLight": true,
-      "phoneDark": true,
-      "phoneLight": true,
-      "keyboard": true,
-      "motion": true,
-      "states": true,
-      "toolAccess": true
-    },
-    "evidence": [
-      "docs/operations/volt-teaser-2026-11-21.txt",
-      "docs/operations/research-header-volt-depth-2026-11-21.txt"
-    ],
-    "release": {
-      "state": "Live",
-      "commit": "7938834e9d077bf35bd1a248c0b051da369a46a2",
-      "deploymentId": "dpl_B9Y4GdSpfup5uF3i8mfxqw5WsehS",
-      "verifiedAt": "2026-11-21 12:52 UTC",
       "url": "https://www.slipsurge.com"
     }
   }
