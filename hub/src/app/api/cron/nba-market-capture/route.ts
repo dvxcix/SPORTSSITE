@@ -69,7 +69,7 @@ async function run(request: Request) {
         report.firstBasket.checked++
         try {
           let performed = false
-          const attempt = await nbaSharedCache<FirstBasketReceipt>(`first-basket-attempt:v4:${mode}:${game.id}`, 60, 0, async () => {
+          const attempt = await nbaSharedCache<FirstBasketReceipt>(`first-basket-attempt:v5:${mode}:${game.id}`, 45, 0, async () => {
             performed = true
             const counts: Pick<FirstBasketReceipt,'accepted'|'unmatched'|'quotes'|'diagnostics'|'bookCaptures'|'books'> = { accepted: 0, unmatched: 0, quotes: 0 }
             try {

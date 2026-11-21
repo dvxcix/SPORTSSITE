@@ -21,7 +21,7 @@ async function compiled<T>(file:string,imports:Record<string,unknown>,Clock:unkn
   return target.exports as T
 }
 
-test('member and cloud reads coalesce one 60-second all-book request, and every cached API price expires without restamping',async()=>{
+test('member and cloud reads share separate bounded source requests, and cached API prices expire without restamping',async()=>{
   let clock=now,network=0
   class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
   const cache=new Map<string,unknown>(),calls:{key:string;ttl:number;stale:number}[]=[]
@@ -33,16 +33,17 @@ test('member and cloud reads coalesce one 60-second all-book request, and every 
     './nbaPaintData':{getPaintRoster:async()=>[player],artwork:async()=>({headshots:new Map()})},
     './nbaOddsPhaseData':{},'./nbaOddsClockData':{},'./supabase/admin':{},'./nbaBookFirstData':{getNbaBookFirstSupplement:async()=>({props:[],complete:true})},
     './nbaSharedCache':{nbaSharedCache:async(key:string,ttl:number,stale:number,load:()=>Promise<unknown>)=>{calls.push({key,ttl,stale});if(!cache.has(key))cache.set(key,await load());return{value:cache.get(key)}}},
-  },Clock,async()=>{network++;return Response.json(source)})
+  },Clock,async(url:URL)=>{network++;return Response.json({...source,bookmakers:source.bookmakers?.filter(book=>(url.searchParams.get('bookmakers')??'').split(',').includes(book.key))})})
   const firstRead=await api.getNbaFirstOdds(game,true,[source]),second=await api.getNbaFirstOdds(game,true,[source])
-  assert.equal(network,1,'the capture retry cannot multiply requests by book or member')
+  assert.equal(network,2,'the capture retry cannot multiply requests by book or member')
   assert.equal(firstRead.apiFrames.length,1);assert.equal(second.rows.length,1);assert.equal(firstRead.rows[0].offer.updated_at,at)
   assert.equal(firstRead.bookCoverage.find(row=>row.book==='fanatics'&&row.market==='player_first_basket')?.status,'expired')
   const cached=await api.getNbaFirstOdds(game,false,[source]);assert.equal(cached.rows.length,1)
   clock=now+300001
   const expired=await api.getNbaFirstOdds(game,false,[source]);assert.equal(expired.rows.length,0);assert.equal(expired.captureComplete,false)
   assert.ok(calls.filter(row=>row.key.startsWith('first-api:')).every(row=>row.ttl===60&&row.stale===0))
-  assert.equal(network,1,'expiry is checked on the aggregate result even before a successful refresh')
+  assert.ok(calls.filter(row=>row.key.startsWith('fanatics-first:')).every(row=>row.ttl===30&&row.stale===0))
+  assert.equal(network,2,'expiry is checked on the aggregate result even before a successful refresh')
 })
 
 test('a verified exact source panel reaches the service writer; invalid phase/time and failed receipts cannot claim success',async()=>{
@@ -87,4 +88,53 @@ test('a response crossing tip holds unproven prices, while durable frozen pregam
   assert.equal((await delayedResponse({crossTip:true})).rows.length,0)
   const archived=await delayedResponse({crossTip:true,frozen:true})
   assert.equal(archived.rows.length,2);assert.deepEqual(archived.frozenGameIds,[game.id])
+})
+
+async function independentSources({mainFailure=false,fanaticsFailure=false,fanaticsClock='fresh'}:{mainFailure?:boolean;fanaticsFailure?:boolean;fanaticsClock?:'fresh'|'stale'|'future'|'wrong-event'}={}){
+  let clock=now,fanaticsReady=false
+  class Clock extends Date{constructor(value:string|number=clock){super(value)}static now(){return clock}}
+  const requests:{book:string;at:number}[]=[],cache=new Map<string,{expires:number;value:Promise<unknown>}>()
+  const api=await compiled<typeof import('../src/lib/nbaFirstBasketOddsData.ts')>('../src/lib/nbaFirstBasketOddsData.ts',{
+    'server-only':{},'./nbaPlayerPortraits':portraits,'./nbaFirstEventDiagnostics':diagnostics,
+    './nbaOddsMode':{...modes,nbaPregameOpen:(game:PaintGame)=>modes.nbaPregameOpen(game,clock)},
+    './nbaFirstBasketOdds':{...first,nbaNormalizeFirstOdds:(...args:Parameters<typeof first.nbaNormalizeFirstOdds>)=>first.nbaNormalizeFirstOdds(args[0],args[1],args[2],clock)},
+    './nbaFirstBookMarkets':{...panels,nbaFirstBookMarkets:(...args:Parameters<typeof panels.nbaFirstBookMarkets>)=>panels.nbaFirstBookMarkets(args[0],args[1],args[2],args[3],clock)},
+    './nbaPaintData':{getPaintRoster:async()=>[player],artwork:async()=>({headshots:new Map()})},'./nbaOddsPhaseData':{},'./nbaOddsClockData':{},'./supabase/admin':{},
+    './nbaBookFirstData':{getNbaBookFirstSupplement:async()=>({props:[],complete:true})},
+    './nbaSharedCache':{nbaSharedCache:async(key:string,ttl:number,stale:number,load:()=>Promise<unknown>)=>{
+      assert.equal(stale,0);let entry=cache.get(key)
+      if(!entry||entry.expires<=clock){entry={expires:clock+ttl*1000,value:Promise.resolve().then(load)};cache.set(key,entry)}
+      return{value:await entry.value}
+    }},
+  },Clock,async(url:URL)=>{
+    const fanatics=url.searchParams.get('bookmakers')==='fanatics',book=fanatics?'fanatics':'fanduel';requests.push({book,at:clock})
+    if(fanatics?fanaticsFailure:mainFailure)return Response.json({}, {status:503})
+    const sourceAt=fanatics?(fanaticsClock==='future'?clock+1:fanaticsClock==='stale'&&!fanaticsReady?clock-600000:clock-500):now-1000
+    return Response.json({...source,id:fanatics&&fanaticsClock==='wrong-event'?'another-event':source.id,bookmakers:[{key:book,markets:[{key:'player_first_basket',last_update:new Date(sourceAt).toISOString(),outcomes:[{name:'Real Player',price:fanatics?900:700}]}]}]})
+  })
+  return{load:()=>api.getNbaFirstOdds(game,true,[source]),requests,ready:()=>{fanaticsReady=true},advance:(elapsed:number)=>{clock=now+elapsed}}
+}
+
+test('Fanatics recovers on its own 30-second lease while main-book observations retain their clocks and requests coalesce',async()=>{
+  const h=await independentSources({fanaticsClock:'stale'})
+  const initial=await h.load();assert.deepEqual(initial.rows.map(row=>row.offer.vendor),['fanduel'])
+  h.ready();h.advance(31_000)
+  const readers=await Promise.all(Array.from({length:25},()=>h.load()))
+  assert.equal(h.requests.filter(row=>row.book==='fanatics').length,2)
+  assert.equal(h.requests.filter(row=>row.book==='fanduel').length,1)
+  assert.ok(readers.every(result=>result.rows.some(row=>row.offer.vendor==='fanatics'&&row.offer.updated_at===new Date(now+30_500).toISOString())))
+  assert.ok(readers.every(result=>result.rows.find(row=>row.offer.vendor==='fanduel')?.offer.updated_at===at))
+  assert.equal(readers[0].rows.find(row=>row.offer.vendor==='fanatics')?.offer.prop_type,'first_field_goal')
+})
+
+test('independent source outages, suspended/future quotes and a mismatched event never freshen or withdraw healthy siblings',async()=>{
+  for(const options of [{mainFailure:true},{fanaticsFailure:true},{fanaticsClock:'stale' as const},{fanaticsClock:'future' as const},{fanaticsClock:'wrong-event' as const}]){
+    const h=await independentSources(options),result=await h.load(),expected=options.mainFailure?'fanatics':'fanduel'
+    assert.deepEqual(result.rows.map(row=>row.offer.vendor),[expected])
+    assert.equal(result.apiFrames.every(frame=>frame.book===expected),true)
+    if(options.mainFailure||options.fanaticsFailure||options.fanaticsClock==='wrong-event')assert.equal(result.captureComplete,false)
+    if(options.fanaticsFailure)assert.equal(result.bookCoverage.find(row=>row.book==='fanatics')?.status,'unavailable')
+    assert.equal(result.rows.some(row=>Date.parse(row.offer.updated_at)>now||now-Date.parse(row.offer.updated_at)>300000),false)
+  }
+  await assert.rejects((await independentSources({mainFailure:true,fanaticsFailure:true})).load(),/unavailable/i)
 })

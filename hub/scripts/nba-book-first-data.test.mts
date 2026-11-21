@@ -180,7 +180,7 @@ test('aggregate First Basket deduplicates newer direct prices, applies exact wit
     const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
     const target = { exports: {} }
     new Function('require', 'module', 'exports', 'Date', 'fetch', 'process', output)((name: string) => { if(name==='./nbaPlayerPortraits')return portraits; if(name==='./nbaFirstBookMarkets')return {...firstBookMarkets,nbaFirstBookMarkets:(event:firstOdds.FirstOddsEvent,game:PaintGame,players:paint.PaintPlayer[],phase:mode.NbaOddsMode)=>firstBookMarkets.nbaFirstBookMarkets(event,game,players,phase,h.now())}; assert.ok(name in imports, name); return imports[name] }, target, target.exports, h.Clock,
-      async (url: URL) => { providerReads++; return Response.json(url.pathname.endsWith('/events') ? [event] : event) }, { env: { ODDS_API_KEY: 'fixture-only' } })
+      async (url: URL) => { providerReads++; return Response.json(url.pathname.endsWith('/events') ? [event] : {...event,bookmakers:event.bookmakers.filter(book=>(url.searchParams.get('bookmakers')??'').split(',').includes(book.key))}) }, { env: { ODDS_API_KEY: 'fixture-only' } })
     const api = target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts')
     const load = () => phaseWrapper ? api.getNbaFirstOddsForMode(match) : api.getNbaFirstOdds(match)
     const initial=await load()
@@ -190,6 +190,6 @@ test('aggregate First Basket deduplicates newer direct prices, applies exact wit
     const expired = await load()
     assert.deepEqual(expired.rows, [], 'each aggregate cache return must recheck the direct observation age')
     assert.equal('captureComplete' in expired ? expired.captureComplete : undefined, withdrawn, 'expiration of a formerly present price is not a verified sportsbook withdrawal')
-    assert.equal(providerReads, 2, 'expiry must not create an extra member-triggered sportsbook request')
+    assert.equal(providerReads, 3, 'expiry must not create an extra member-triggered sportsbook request')
   }
 })

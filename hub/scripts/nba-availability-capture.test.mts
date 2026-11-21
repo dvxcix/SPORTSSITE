@@ -63,6 +63,6 @@ test('cloud market dispatch and First Basket retry each minute with separate att
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
   assert.equal(config.crons.find((row: { path: string }) => row.path === '/api/cron/nba-market-capture').schedule, '* * * * *')
   const source = await readFile(new URL('../src/app/api/cron/nba-market-capture/route.ts', import.meta.url), 'utf8')
-  assert.match(source, /first-basket-attempt:v4:.*60, 0/)
+  assert.match(source, /first-basket-attempt:v5:.*45, 0/)
   assert.match(source, /market-attempt:v4:.*60,0/)
 })

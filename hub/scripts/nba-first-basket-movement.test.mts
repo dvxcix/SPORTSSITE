@@ -216,7 +216,7 @@ test('partial First Basket identities preserve the prior complete frame and fail
     assert.equal(result.calls.some(call => call.args.p_feed === 'first'), false)
     assert.equal(result.calls.filter(call => call.args.p_feed !== 'first').length, 2)
     const receipt = { status: 'failed', accepted: 1, unmatched: 3, quotes: 0 }
-    assert.deepEqual(result.receipts.get('first-basket-attempt:v4:pregame:123'), receipt)
+    assert.deepEqual(result.receipts.get('first-basket-attempt:v5:pregame:123'), receipt)
     assert.deepEqual(result.body.firstBasket.games, [{ gameId: 123, mode: 'pregame', cached: false, ...receipt }])
     assert.equal(JSON.stringify(result.body).includes('private provider label'), false)
   }

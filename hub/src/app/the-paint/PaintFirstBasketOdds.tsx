@@ -57,7 +57,7 @@ export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:
         if(!controller.signal.aborted){setState({slate:data,requestStarted});setMonotonicNow(performance.now());setError('')}
       } catch {if(!controller.signal.aborted)setError('First-basket prices could not refresh.')} finally {pending=false}
     }
-    void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}
+    void update();const stop=watchNbaRefresh(update,30_000);return()=>{controller.abort();stop()}
   },[oddsMode, date,retry])
   const slate=state?.slate.requestedDate===date&&(!state.slate.mode||state.slate.mode===oddsMode)?state.slate:null
   const quoteNow=slate&&state?nbaFirstQuoteClock(slate.fetchedAt,state.requestStarted,monotonicNow):NaN

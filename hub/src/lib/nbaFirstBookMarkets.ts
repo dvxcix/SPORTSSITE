@@ -4,7 +4,7 @@ import { NBA_FIRST_MARKETS } from './nbaFirstBasketMarkets'
 import type { PaintGame, PaintPlayer, PaintProp } from './nbaPaint'
 
 export type NbaFirstApiFrame = { book: string; market: string; observedAt: string; props: PaintProp[] }
-export type NbaFirstBookCoverage = { gameId: number; book: string; market: string; status: 'fresh' | 'expired' | 'not_posted' | 'invalid' | 'wrong_phase'; quoteAt: string | null; quotes: number }
+export type NbaFirstBookCoverage = { gameId: number; book: string; market: string; status: 'fresh' | 'expired' | 'not_posted' | 'invalid' | 'wrong_phase' | 'unavailable'; quoteAt: string | null; quotes: number }
 const vendor = (book: string) => book === 'williamhill_us' ? 'caesars' : book
 export const NBA_FIRST_PRICE_BOOKS = NBA_FIRST_API_BOOKS.map(vendor)
 

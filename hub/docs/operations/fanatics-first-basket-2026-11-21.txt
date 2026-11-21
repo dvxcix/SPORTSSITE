@@ -1,0 +1,44 @@
+Fanatics First Basket independent refresh — 2026-11-21
+
+The owner authorized correcting Fanatics delays while retaining strict stale
+quote blocking, full-flow tests and production publication.
+
+The five-book request had a 60-second shared lease, followed by a 30-second
+phase aggregate and 60-second visible refresh. A 60-second cloud attempt TTL
+could also skip the next minute's dispatch when the prior write finished a few
+seconds after the minute boundary. These extra waits delayed recovery after a
+bookmaker began publishing fresh market observations again.
+
+Fanatics now uses its own shared 30-second request for First Basket and team
+First Basket. The other four books retain their shared 60-second request.
+Both sources load concurrently, with exact event, book and market validation.
+An outage in one source leaves the other source usable and explicitly marks
+coverage incomplete; it cannot become a full-feed withdrawal. Empty invalid
+or expired panels also fail completeness. There are no extra browser sessions,
+new collectors, paid-plan changes, schema changes or historical replays.
+
+The phase aggregate uses 15 seconds, the visible First Basket view refreshes
+every 30 seconds, and the cloud attempt expires after 45 seconds so each
+scheduled minute can inspect it. Member traffic shares the same source leases.
+No per-member provider loop or manual refresh bypass was added. This uses the
+existing Odds API plan: one four-book/three-market request per 60 seconds and
+one Fanatics/two-market request per 30 seconds per active matched game/phase.
+
+Original bookmaker market timestamps remain untouched. Future observations,
+prices older than five minutes and phase-incompatible quotes remain blocked.
+The final slate-response check still runs after movement history completes.
+Suspended or closed upstream markets cannot be converted to current prices by
+refreshing a request. They recover automatically when a fresh source market
+observation arrives. The provider documents these market timestamp semantics:
+https://the-odds-api.com/liveapi/guides/v4/
+
+Validation: 762/762 NBA tests and 124/124 freeze tests passed. New fixtures
+verify independent recovery at 31 seconds without re-fetching the other books,
+25 concurrent readers sharing requests, exact original clocks, book outages,
+stale/future observations, wrong events and protection against false full-feed
+withdrawals. TypeScript and focused ESLint passed. No VOLT backend is included.
+
+Live preflight at 12:26 UTC found current Fanatics prices for all six games;
+market timestamps ranged from 36 to 272 seconds old. This establishes current
+availability separately from the new refresh behavior. Release and post-release
+evidence is recorded in the local docs/design/evidence/live/fanatics-* files.

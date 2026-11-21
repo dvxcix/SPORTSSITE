@@ -29,7 +29,7 @@ export async function getNbaFirstEvents(fresh=false,classifyEventTransport=false
   return fresh?load():(await nbaSharedCache('first-basket-events:v1',60,0,load,25)).value
 }
 export async function getNbaFirstOdds(game:PaintGame,fresh=false,slateEvents?:FirstOddsEvent[]){
-  if(!fresh)return freshBookRows((await nbaSharedCache(`first-basket-prices:v6:${game.id}`,60,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value)
+  if(!fresh)return freshBookRows((await nbaSharedCache(`first-basket-prices:v7:${game.id}`,30,0,()=>loadNbaFirstOdds(game,false,slateEvents),60)).value)
   return freshBookRows(await loadNbaFirstOdds(game,true,slateEvents))
 }
 /** Recheck observations at every aggregate-cache return. Frozen phase history is
@@ -62,7 +62,7 @@ export async function getNbaFirstOddsForMode(game:PaintGame, mode:NbaOddsMode='p
   }
   if(mode==='pregame'&&!nbaPregameOpen(game))return frozen()
   if(mode==='live'&&!nbaLiveOpen(game))return nbaGameFinal(game)?frozen():empty()
-  const [cached,eligible]=await Promise.all([nbaSharedCache(`first-basket-phase-prices:v5:${mode}:${game.id}:${nbaGameStart(game)}`,30,0,async()=>{
+  const [cached,eligible]=await Promise.all([nbaSharedCache(`first-basket-phase-prices:v6:${mode}:${game.id}:${nbaGameStart(game)}`,15,0,async()=>{
     const result=await loadNbaFirstOdds(game,false)
     return {...result,rows:result.rows.filter(row=>nbaQuoteInMode(row.offer,game,mode))}
   },60),getPaintMarketIds(game,mode)])
@@ -99,20 +99,41 @@ async function getFrozenFirstRoster(game:PaintGame,playerIds:number[]) {
   }))
   return [...roster.values()]
 }
+const firstApiSources=[
+  {key:'first-api:v2',books:['fanduel','draftkings','betmgm','williamhill_us'],markets:['player_first_basket','player_first_team_basket','player_method_of_first_basket'],ttl:60},
+  {key:'fanatics-first:v1',books:['fanatics'],markets:['player_first_basket','player_first_team_basket'],ttl:30},
+] as const
+/** Independent, shared source leases. A Fanatics retry never re-fetches the
+ * other books or lends its request time to a suspended bookmaker market. */
+async function firstApiEvent(game:PaintGame,match:FirstOddsEvent){
+  const phase=nbaPregameOpen(game)?'pregame':'live'
+  const outcomes=await Promise.allSettled(firstApiSources.map(source=>nbaSharedCache(`${source.key}:${phase}:${game.id}:${nbaGameStart(game)}`,source.ttl,0,async()=>{
+    const event=await odds<FirstOddsEvent>(`/events/${encodeURIComponent(match.id)}/odds?bookmakers=${source.books.join(',')}&markets=${source.markets.join(',')}&oddsFormat=american`)
+    if(!event||event.id!==match.id||nbaFirstEvent([event],game)?.id!==match.id||!Array.isArray(event.bookmakers)||event.bookmakers.length>source.books.length
+      ||event.bookmakers.some(book=>!(source.books as readonly string[]).includes(book.key)||!Array.isArray(book.markets)||book.markets.length>source.markets.length
+        ||book.markets.some(market=>!(source.markets as readonly string[]).includes(market.key)||!Array.isArray(market.outcomes)||market.outcomes.length>300)))throw new NbaFirstOddsUnavailable('upstream')
+    return event
+  },25).then(result=>result.value)))
+  if(outcomes.every(result=>result.status==='rejected'))throw new NbaFirstOddsUnavailable('upstream')
+  const unavailableBooks:string[]=outcomes.flatMap((result,index)=>result.status==='rejected'?[...firstApiSources[index].books].map(book=>book==='williamhill_us'?'caesars':book):[])
+  return {event:{...match,bookmakers:outcomes.flatMap(result=>result.status==='fulfilled'?result.value.bookmakers??[]:[])},complete:unavailableBooks.length===0,unavailableBooks}
+}
 async function loadNbaFirstOdds(game:PaintGame,fresh:boolean,slateEvents?:FirstOddsEvent[]){
   const events=slateEvents??await getNbaFirstEvents(fresh)
   const match=nbaFirstEvent(events,game)
   const teams=[game.home_team,game.visitor_team]
-  const [event,roster,images]=await Promise.all([
-    match?nbaSharedCache(`first-api:v1:${nbaPregameOpen(game)?'pregame':'live'}:${game.id}:${nbaGameStart(game)}`,60,0,()=>odds<FirstOddsEvent>(`/events/${encodeURIComponent(match.id)}/odds?bookmakers=fanduel,draftkings,betmgm,williamhill_us,fanatics&markets=player_first_basket,player_first_team_basket,player_method_of_first_basket&oddsFormat=american`),25).then(result=>result.value):Promise.resolve(null),
+  const [api,roster,images]=await Promise.all([
+    match?firstApiEvent(game,match):Promise.resolve(null),
     getPaintRoster(game),
     fresh?Promise.resolve([]):Promise.all(teams.map(team=>artwork(team.abbreviation).catch(()=>({headshots:new Map<string,string|null>()})))),
   ])
-  if(event&&event.id!==match?.id)throw new NbaFirstOddsUnavailable('upstream')
+  const event=api?.event
   const portraits=new Map(teams.map((team,index)=>[team.id,nbaRosterPortraits(roster.filter(player=>player.team.id===team.id),images[index]?.headshots??new Map())]))
   const players=roster.map(p=>({...p,headshot:portraits.get(p.team.id)?.get(p.id)??null,average:{},logs:[],props:[],injury:null})) as PaintPlayer[]
   const result = event?nbaNormalizeFirstOdds(event,game,players):{rows:[],unmatched:0}
   const scoped = event?nbaFirstBookMarkets(event,game,players,nbaPregameOpen(game)?'pregame':'live'):{frames:[],coverage:[]}
+  for(const report of scoped.coverage)if(api?.unavailableBooks.includes(report.book))report.status='unavailable'
+  const sourceComplete=api?.complete!==false&&scoped.coverage.every(report=>report.status==='fresh'||report.status==='not_posted')
   const safeOffers=scoped.frames.flatMap(frame=>frame.props)
   const safeRows=result.rows.filter(row=>safeOffers.includes(row.offer)||safeOffers.some(offer=>offer.id===row.offer.id&&offer.updated_at===row.offer.updated_at))
   const supplement = await getNbaBookFirstSupplement(game,safeRows.map(row=>row.offer),fresh)
@@ -121,5 +142,5 @@ async function loadNbaFirstOdds(game:PaintGame,fresh:boolean,slateEvents?:FirstO
     const player=players.find(player=>player.id===offer.player_id)
     return player?[{game,player:{id:player.id,first_name:player.first_name,last_name:player.last_name,team:player.team,position:player.position,headshot:player.headshot},offer}]:[]
   })
-  return {...result,rows:[...safeRows.filter(row=>!retained||retained.has(row.offer)),...added],apiFrames:scoped.frames,bookCoverage:scoped.coverage,captureComplete:supplement.complete&&added.length===supplement.props.length&&safeRows.length===result.rows.length,eventMatched:!!match||added.length>0,observedAt:new Date().toISOString()}
+  return {...result,rows:[...safeRows.filter(row=>!retained||retained.has(row.offer)),...added],apiFrames:scoped.frames,bookCoverage:scoped.coverage,captureComplete:sourceComplete&&supplement.complete&&added.length===supplement.props.length&&safeRows.length===result.rows.length,eventMatched:!!match||added.length>0,observedAt:new Date().toISOString()}
 }
