@@ -2,13 +2,13 @@
   "date": "2026-11-21",
   "scope": "NBA/NFL interface polish",
   "sourceBaseline": "c79da8f41cd93f1bfc9a3c3259274fddf930e6b1",
-  "status": "Verified for rollout",
+  "status": "Live",
   "items": [
     {
       "id": "route:/nba",
       "label": "Nba",
       "route": "/nba",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -123,7 +123,7 @@
       "id": "route:/nba/players/[id]",
       "label": "Nba · Players · Id",
       "route": "/nba/players/[id]",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -280,7 +280,7 @@
       "id": "route:/nba/teams/[id]",
       "label": "Nba · Teams · Id",
       "route": "/nba/teams/[id]",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -409,7 +409,7 @@
       "id": "route:/nfl/players/[id]",
       "label": "Nfl · Players · Id",
       "route": "/nfl/players/[id]",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -538,7 +538,7 @@
       "id": "route:/nfl/teams/[abbr]",
       "label": "Nfl · Teams · Abbr",
       "route": "/nfl/teams/[abbr]",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -631,7 +631,7 @@
       "id": "route:/the-paint",
       "label": "The Paint",
       "route": "/the-paint",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -746,7 +746,7 @@
       "id": "route:/the-sideline",
       "label": "The Sideline",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -887,7 +887,7 @@
       "id": "nba:research",
       "label": "NBA · The Court",
       "route": "/the-paint?view=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -997,7 +997,7 @@
       "id": "nba:odds-board",
       "label": "NBA · Odds Board",
       "route": "/the-paint?view=odds-board",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1130,7 +1130,7 @@
       "id": "nba:odds",
       "label": "NBA · Odds comparison",
       "route": "/the-paint?view=odds",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1259,7 +1259,7 @@
       "id": "nba:ladders",
       "label": "NBA · Ladders",
       "route": "/the-paint?view=ladders",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1388,7 +1388,7 @@
       "id": "nba:movement",
       "label": "NBA · Market Story",
       "route": "/the-paint?view=movement",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1489,7 +1489,7 @@
       "id": "nba:first-basket",
       "label": "NBA · First basket",
       "route": "/the-paint?view=first-basket",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1651,7 +1651,7 @@
       "id": "nba:cheatsheets",
       "label": "NBA · Cheatsheets",
       "route": "/the-paint?view=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1784,7 +1784,7 @@
       "id": "nba:score",
       "label": "NBA · SlipSurge Score",
       "route": "/the-paint?view=score",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -1917,7 +1917,7 @@
       "id": "nba:slate",
       "label": "NBA · Slate Edge",
       "route": "/the-paint?view=slate",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2050,7 +2050,7 @@
       "id": "nba:public",
       "label": "NBA · ThePublic",
       "route": "/the-paint?view=public",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2169,7 +2169,7 @@
       "id": "nba:divergence",
       "label": "NBA · Cross-market",
       "route": "/the-paint?view=divergence",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2274,7 +2274,7 @@
       "id": "nba:dvp",
       "label": "NBA · Defense × position",
       "route": "/the-paint?view=dvp",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2407,7 +2407,7 @@
       "id": "nba:usage",
       "label": "NBA · Player trends",
       "route": "/the-paint?view=usage",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2542,7 +2542,7 @@
       "id": "nba:tracking",
       "label": "NBA · Game tracking",
       "route": "/the-paint?view=tracking",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2677,7 +2677,7 @@
       "id": "nba:matchup",
       "label": "NBA · Matchup Lab",
       "route": "/the-paint?view=matchup",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2790,7 +2790,7 @@
       "id": "nba:availability",
       "label": "NBA · Availability",
       "route": "/the-paint?view=availability",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -2895,7 +2895,7 @@
       "id": "nba:game-markets",
       "label": "NBA · Game markets",
       "route": "/the-paint?view=game-markets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3008,7 +3008,7 @@
       "id": "nba-surface:Game markets and public activity",
       "label": "NBA · Game market slider and public activity",
       "route": "/the-paint",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3123,7 +3123,7 @@
       "id": "nfl:research",
       "label": "NFL · The Sideline",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3264,7 +3264,7 @@
       "id": "nfl:view=odds-board",
       "label": "NFL · Odds Board",
       "route": "/the-sideline?view=odds-board",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3381,7 +3381,7 @@
       "id": "nfl:mode=cheatsheets",
       "label": "NFL · Cheatsheets",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3498,7 +3498,7 @@
       "id": "nfl:mode=public",
       "label": "NFL · The Public",
       "route": "/the-sideline?mode=public",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3587,7 +3587,7 @@
       "id": "nfl:mode=markets",
       "label": "NFL · Sportsbooks",
       "route": "/the-sideline?mode=markets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3676,7 +3676,7 @@
       "id": "nfl:mode=research",
       "label": "NFL · Matchup Lab",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3765,7 +3765,7 @@
       "id": "nba-drawer:Overview",
       "label": "Player drawer · Overview",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -3886,7 +3886,7 @@
       "id": "nba-drawer:Game tracking",
       "label": "Player drawer · Game tracking",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4208,7 +4208,7 @@
       "id": "nba-drawer:Ladders",
       "label": "Player drawer · Ladders",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4325,7 +4325,7 @@
       "id": "nba-drawer:Market Story",
       "label": "Player drawer · Market Story",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4659,7 +4659,7 @@
       "id": "nba-drawer:Shots",
       "label": "Player drawer · Shots",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4756,7 +4756,7 @@
       "id": "nba-drawer:All odds",
       "label": "Player drawer · All odds",
       "route": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4845,7 +4845,7 @@
       "id": "nfl-cheatsheet:Market Edge",
       "label": "Cheatsheets · Market Edge",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -4962,7 +4962,7 @@
       "id": "nfl-cheatsheet:Exact-Line Hits",
       "label": "Cheatsheets · Exact-Line Hits",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5079,7 +5079,7 @@
       "id": "nfl-cheatsheet:Explosive Plays",
       "label": "Cheatsheets · Explosive Plays",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5196,7 +5196,7 @@
       "id": "nfl-cheatsheet:Run Gaps",
       "label": "Cheatsheets · Run Gaps",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5285,7 +5285,7 @@
       "id": "nfl-cheatsheet:Defense / DvP",
       "label": "Cheatsheets · Defense / DvP",
       "route": "/the-sideline?mode=cheatsheets",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5402,7 +5402,7 @@
       "id": "nfl-board:core",
       "label": "Sideline board · Game Day",
       "route": "/the-sideline?view=core",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5543,7 +5543,7 @@
       "id": "nfl-board:touchdowns",
       "label": "Sideline board · TDs",
       "route": "/the-sideline?view=touchdowns",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5684,7 +5684,7 @@
       "id": "nfl-board:props",
       "label": "Sideline board · Props",
       "route": "/the-sideline?view=props",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5805,7 +5805,7 @@
       "id": "nfl-board:usage",
       "label": "Sideline board · Usage",
       "route": "/the-sideline?view=usage",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -5946,7 +5946,7 @@
       "id": "nfl-board:tracking",
       "label": "Sideline board · Tracking",
       "route": "/the-sideline?view=tracking",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6087,7 +6087,7 @@
       "id": "nfl-board:team",
       "label": "Sideline board · Team",
       "route": "/the-sideline?view=team",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6228,7 +6228,7 @@
       "id": "nfl-board:all",
       "label": "Sideline board · All",
       "route": "/the-sideline?view=all",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6369,7 +6369,7 @@
       "id": "nfl-board:custom",
       "label": "Sideline board · Custom",
       "route": "/the-sideline?view=custom",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6510,7 +6510,7 @@
       "id": "nfl-drawer:Matchup",
       "label": "NFL player drawer · Matchup",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6599,7 +6599,7 @@
       "id": "nfl-drawer:NFL Tracking",
       "label": "NFL player drawer · NFL Tracking",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6688,7 +6688,7 @@
       "id": "nfl-drawer:Sportsbooks",
       "label": "NFL player drawer · Sportsbooks",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6777,7 +6777,7 @@
       "id": "nfl-matchup:Role command",
       "label": "Matchup Lab · Role command",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6866,7 +6866,7 @@
       "id": "nfl-matchup:Score zone",
       "label": "Matchup Lab · Score zone",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -6955,7 +6955,7 @@
       "id": "nfl-matchup:Receiving value",
       "label": "Matchup Lab · Receiving value",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7044,7 +7044,7 @@
       "id": "nfl-matchup:Route leverage",
       "label": "Matchup Lab · Route leverage",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7133,7 +7133,7 @@
       "id": "nfl-matchup:Ground game",
       "label": "Matchup Lab · Ground game",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7222,7 +7222,7 @@
       "id": "nfl-matchup:QB command",
       "label": "Matchup Lab · QB command",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7311,7 +7311,7 @@
       "id": "nfl-matchup:Explosive lanes",
       "label": "Matchup Lab · Explosive lanes",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7400,7 +7400,7 @@
       "id": "nfl-matchup:Market signal",
       "label": "Matchup Lab · Market signal",
       "route": "/the-sideline?mode=research",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7489,7 +7489,7 @@
       "id": "nfl-edge:Slate Rankings",
       "label": "Sideline Edge · Slate Rankings",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7592,7 +7592,7 @@
       "id": "nfl-edge:Matchup Lens",
       "label": "Sideline Edge · Matchup Lens",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7681,7 +7681,7 @@
       "id": "nfl-edge:Model vs Market",
       "label": "Sideline Edge · Model vs Market",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7770,7 +7770,7 @@
       "id": "nfl-edge:Signal Lab",
       "label": "Sideline Edge · Signal Lab",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7859,7 +7859,7 @@
       "id": "nfl-tool:Touchdown tracker",
       "label": "NFL · Touchdown tracker",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -7948,7 +7948,7 @@
       "id": "nfl-tool:Matrix library",
       "label": "NFL · Matrix library",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8037,7 +8037,7 @@
       "id": "nfl-tool:Matrix community",
       "label": "NFL · Matrix community",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8126,7 +8126,7 @@
       "id": "nfl-tool:Matrix editor",
       "label": "NFL · Matrix editor",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8215,7 +8215,7 @@
       "id": "nfl-tool:Column manager",
       "label": "NFL · Column manager",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8304,7 +8304,7 @@
       "id": "nfl-tool:Player comparison",
       "label": "NFL · Player comparison",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8449,7 +8449,7 @@
       "id": "nfl-tool:Game lines and capture replay",
       "label": "NFL · Game lines and capture replay",
       "route": "/the-sideline",
-      "status": "Verified for rollout",
+      "status": "Live",
       "checks": {
         "desktopLight": true,
         "desktopDark": true,
@@ -8587,5 +8587,73 @@
       }
     }
   ],
-  "method": "Actual app components and illustrative private fixtures; 1440x1000 and 390x844 browser viewports, each light/dark. Tool subviews activated before measurement. Desktop keyboard and automated interaction tests supplement the browser review. Physical phone and OS reduced-motion switching were not tested in this round."
+  "method": "Actual app components and illustrative private fixtures; 1440x1000 and 390x844 browser viewports, each light/dark. Tool subviews activated before measurement. Desktop keyboard and automated interaction tests supplement the browser review. Physical phone and OS reduced-motion switching were not tested in this round.",
+  "release": {
+    "state": "Live",
+    "commit": "f2574ec49e28a4375719d3c16c8c573e36f50cd5",
+    "deploymentId": "dpl_46yaVbeiHiUWjUCGPPibkQKdTEFS",
+    "verifiedAt": "2026-11-21 19:46 UTC",
+    "url": "https://www.slipsurge.com"
+  },
+  "liveChecks": {
+    "court": {
+      "desktopLight": {
+        "width": 1024,
+        "overflow": false,
+        "drawerWidth": 640
+      },
+      "phoneLight": {
+        "width": 390,
+        "overflow": false,
+        "drawerWidth": 390
+      },
+      "phoneDarkFirstBasket": {
+        "width": 390,
+        "overflow": false,
+        "bookSelectors": 1,
+        "movementDisclosure": true
+      },
+      "allOddsFooterDuplicate": false
+    },
+    "sideline": {
+      "desktopLight": {
+        "width": 1024,
+        "overflow": false,
+        "namedTables": 2
+      },
+      "phoneDark": {
+        "width": 390,
+        "overflow": false,
+        "drawerWidth": 390,
+        "saveTarget": 44
+      },
+      "drawerTabs": [
+        "Matchup",
+        "NFL Tracking",
+        "Sportsbooks"
+      ],
+      "compactHint": {
+        "width": 115.36,
+        "height": 34.45
+      }
+    },
+    "privateAudit": "Production unavailable-page screen; no audit content rendered. Unauthenticated requests go through the normal sign-in boundary.",
+    "runtimeLogs": "No error/fatal request-path groups in the sampled production window."
+  },
+  "narrowSpotChecks": [
+    {
+      "surface": "First Basket",
+      "width": 320,
+      "theme": "light",
+      "overflow": false,
+      "bookSelectors": 1
+    },
+    {
+      "surface": "NFL player drawer",
+      "width": 320,
+      "theme": "dark",
+      "overflow": false,
+      "drawerWidth": 320
+    }
+  ]
 }

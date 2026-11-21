@@ -1,81 +1,85 @@
 SlipSurge NBA / NFL interface polish - 2026-11-21
 
-Current round: Verified for rollout
+Current round: Live
+Production: https://www.slipsurge.com
+Source: f2574ec49e28a4375719d3c16c8c573e36f50cd5
+Deployment: dpl_46yaVbeiHiUWjUCGPPibkQKdTEFS
+Verified: 2026-11-21 19:46 UTC
 72 pages, workspaces and tool sections; four layouts each.
 Desktop 1440 x 1000 / phone 390 x 844; light and dark.
 All tools retained. Shared tooltip improvements apply throughout.
 Dense chart points remain 24px with keyboard navigation and value output.
 This is browser viewport verification, not physical-device certification.
 
-[Verified for rollout] Nba | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Nba · Players · Id | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Nba · Teams · Id | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Nfl · Players · Id | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Nfl · Teams · Abbr | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] The Paint | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] The Sideline | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · The Court | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Odds Board | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Odds comparison | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Ladders | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Market Story | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · First basket | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Cheatsheets | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · SlipSurge Score | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Slate Edge | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · ThePublic | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Cross-market | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Defense × position | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Player trends | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Game tracking | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Matchup Lab | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Availability | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Game markets | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NBA · Game market slider and public activity | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · The Sideline | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Odds Board | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Cheatsheets | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · The Public | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Sportsbooks | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Matchup Lab | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · Overview | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · Game tracking | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · Ladders | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · Market Story | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · Shots | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Player drawer · All odds | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Cheatsheets · Market Edge | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Cheatsheets · Exact-Line Hits | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Cheatsheets · Explosive Plays | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Cheatsheets · Run Gaps | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Cheatsheets · Defense / DvP | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Game Day | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · TDs | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Props | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Usage | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Tracking | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Team | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · All | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline board · Custom | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL player drawer · Matchup | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL player drawer · NFL Tracking | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL player drawer · Sportsbooks | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Role command | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Score zone | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Receiving value | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Route leverage | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Ground game | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · QB command | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Explosive lanes | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Matchup Lab · Market signal | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline Edge · Slate Rankings | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline Edge · Matchup Lens | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline Edge · Model vs Market | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] Sideline Edge · Signal Lab | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Touchdown tracker | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Matrix library | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Matrix community | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Matrix editor | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Column manager | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Player comparison | desktop light true / dark true | phone light true / dark true
-[Verified for rollout] NFL · Game lines and capture replay | desktop light true / dark true | phone light true / dark true
+[Live] Nba | desktop light true / dark true | phone light true / dark true
+[Live] Nba · Players · Id | desktop light true / dark true | phone light true / dark true
+[Live] Nba · Teams · Id | desktop light true / dark true | phone light true / dark true
+[Live] Nfl · Players · Id | desktop light true / dark true | phone light true / dark true
+[Live] Nfl · Teams · Abbr | desktop light true / dark true | phone light true / dark true
+[Live] The Paint | desktop light true / dark true | phone light true / dark true
+[Live] The Sideline | desktop light true / dark true | phone light true / dark true
+[Live] NBA · The Court | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Odds Board | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Odds comparison | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Ladders | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Market Story | desktop light true / dark true | phone light true / dark true
+[Live] NBA · First basket | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Cheatsheets | desktop light true / dark true | phone light true / dark true
+[Live] NBA · SlipSurge Score | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Slate Edge | desktop light true / dark true | phone light true / dark true
+[Live] NBA · ThePublic | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Cross-market | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Defense × position | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Player trends | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Game tracking | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Matchup Lab | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Availability | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Game markets | desktop light true / dark true | phone light true / dark true
+[Live] NBA · Game market slider and public activity | desktop light true / dark true | phone light true / dark true
+[Live] NFL · The Sideline | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Odds Board | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Cheatsheets | desktop light true / dark true | phone light true / dark true
+[Live] NFL · The Public | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Sportsbooks | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Matchup Lab | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · Overview | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · Game tracking | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · Ladders | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · Market Story | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · Shots | desktop light true / dark true | phone light true / dark true
+[Live] Player drawer · All odds | desktop light true / dark true | phone light true / dark true
+[Live] Cheatsheets · Market Edge | desktop light true / dark true | phone light true / dark true
+[Live] Cheatsheets · Exact-Line Hits | desktop light true / dark true | phone light true / dark true
+[Live] Cheatsheets · Explosive Plays | desktop light true / dark true | phone light true / dark true
+[Live] Cheatsheets · Run Gaps | desktop light true / dark true | phone light true / dark true
+[Live] Cheatsheets · Defense / DvP | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Game Day | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · TDs | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Props | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Usage | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Tracking | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Team | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · All | desktop light true / dark true | phone light true / dark true
+[Live] Sideline board · Custom | desktop light true / dark true | phone light true / dark true
+[Live] NFL player drawer · Matchup | desktop light true / dark true | phone light true / dark true
+[Live] NFL player drawer · NFL Tracking | desktop light true / dark true | phone light true / dark true
+[Live] NFL player drawer · Sportsbooks | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Role command | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Score zone | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Receiving value | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Route leverage | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Ground game | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · QB command | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Explosive lanes | desktop light true / dark true | phone light true / dark true
+[Live] Matchup Lab · Market signal | desktop light true / dark true | phone light true / dark true
+[Live] Sideline Edge · Slate Rankings | desktop light true / dark true | phone light true / dark true
+[Live] Sideline Edge · Matchup Lens | desktop light true / dark true | phone light true / dark true
+[Live] Sideline Edge · Model vs Market | desktop light true / dark true | phone light true / dark true
+[Live] Sideline Edge · Signal Lab | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Touchdown tracker | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Matrix library | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Matrix community | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Matrix editor | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Column manager | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Player comparison | desktop light true / dark true | phone light true / dark true
+[Live] NFL · Game lines and capture replay | desktop light true / dark true | phone light true / dark true

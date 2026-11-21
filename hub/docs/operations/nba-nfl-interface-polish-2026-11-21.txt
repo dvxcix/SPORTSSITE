@@ -63,3 +63,15 @@ Publication
 Source and documentation are released through GitHub main. Deployment identity,
 production alias, browser spot checks and runtime observations are recorded in
 the release receipt after publication.
+
+Verified UI release
+f2574ec49e28a4375719d3c16c8c573e36f50cd5
+dpl_46yaVbeiHiUWjUCGPPibkQKdTEFS - READY, www.slipsurge.com alias verified.
+2026-11-21 19:46 UTC
+Live Court: light desktop drawer, light phone All odds and dark phone First Basket.
+Live NFL: dark phone Matchup/Tracking/Sportsbooks, 44px saves, light desktop tables.
+Compact native hint measured 115x34px; Escape dismisses it.
+Private audit rendered the unavailable-page screen. Sampled runtime error/fatal
+request-path groups were empty. Additional 320px fixture checks passed for
+First Basket and the NFL player drawer. Publication receipt follows tested UI
+source; later documentation-only commits preserve this source ancestry.
