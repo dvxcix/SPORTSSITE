@@ -59,10 +59,10 @@ test('actual starter receipts remain explicitly Live', async () => {
   const h = await fixture({ statuses: ['actual', 'actual'] }), result = await h.capture(game, 'live')
   assert.equal(result.mode, 'live'); assert.equal(result.actual, 2); assert.equal(result.confirmed, 0)
 })
-test('cloud market dispatch runs each minute while independent paid First Basket cadence is retained', async () => {
+test('cloud market dispatch and First Basket retry each minute with separate attempt leases', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
   assert.equal(config.crons.find((row: { path: string }) => row.path === '/api/cron/nba-market-capture').schedule, '* * * * *')
   const source = await readFile(new URL('../src/app/api/cron/nba-market-capture/route.ts', import.meta.url), 'utf8')
-  assert.match(source, /first-basket-attempt:v3:.*240, 0/)
+  assert.match(source, /first-basket-attempt:v4:.*60, 0/)
   assert.match(source, /market-attempt:v4:.*60,0/)
 })

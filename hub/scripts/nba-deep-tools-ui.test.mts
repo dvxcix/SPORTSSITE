@@ -294,6 +294,23 @@ test('First Basket sorts signed movement and changes baseline without dropping t
   } finally {await ui.close()}
 })
 
+test('First Basket removes expired prices after a failed refresh while keeping server-proven archived prices',async()=>{
+  const row={game:{...board.game,status_state:'scheduled'},player:{id:1,first_name:'Fresh',last_name:'Player',position:'G',team,headshot:null},offer:{id:-1,game_id:123,player_id:1,vendor:'fanduel',prop_type:'first_score',line_value:'0.5',market:{type:'over_under',over_odds:700},updated_at:'2026-10-20T11:55:00.700Z'}}
+  const slate={mode:'pregame',requestedDate:board.game.date,date:board.game.date,games:1,loaded:1,failed:0,status:'ready',unmatched:0,rows:[row],fetchedAt:'2026-10-20T12:00:00Z'}
+  const ui=await harness('PaintFirstBasketOdds',{date:board.game.date},slate)
+  try{
+    ui.succeed();await ui.refresh()
+    assert.match(ui.host.textContent??'',/Fresh Player/)
+    ui.fail();await ui.refresh()
+    assert.match(ui.host.textContent??'',/could not refresh/)
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,1000))})
+    assert.equal(ui.host.querySelectorAll('tbody tr').length,0)
+    assert.match(ui.host.textContent??'',/0 prices/)
+  }finally{await ui.close()}
+  const archived=await harness('PaintFirstBasketOdds',{date:board.game.date},{...slate,fetchedAt:'2026-10-21T12:00:00Z',frozenGameIds:[123]})
+  try{archived.succeed();await archived.refresh();assert.match(archived.host.textContent??'',/Fresh Player/)}finally{await archived.close()}
+})
+
 
 test('switching NBA history mode clears old captures and ignores a late response from the previous mode', async () => {
   const originalFetch = globalThis.fetch

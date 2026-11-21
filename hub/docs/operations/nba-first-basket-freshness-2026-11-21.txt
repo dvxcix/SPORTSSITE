@@ -1,0 +1,62 @@
+NBA First Basket freshness and market-first player research — 2026-11-21
+
+Scope: the owner authorized correcting First Basket delays, retaining strict
+stale-price blocking, testing and publishing; priced/available Court players
+must precede unpriced and Out players without deleting their research.
+
+Root cause: one expired bookmaker market could block the whole First Basket
+capture, although other bookmakers had fresh complete panels. The four-minute
+attempt cache prolonged the failed receipt. API quote IDs also bypassed two
+aggregate-cache age checks, and the comparison UI retained expired rows after
+a refresh failure.
+
+Repair: reuse the existing service-only exact-book observation tape. Each
+verified book/contract advances independently, with its original market-level
+timestamp. Unknown identities, incomplete panels, future/expired observations
+and wrong-phase data never create withdrawals. Older source timestamps cannot
+overwrite newer observations. Whole-feed failures remain honestly incomplete.
+The cloud attempt retries after 60 seconds; all members and captures share one
+60-second all-book source request per game and phase, with no stale fallback.
+Existing direct-browser collection cadence and budgets are unchanged.
+
+All current First Basket rows are rechecked against the original five-minute
+limit at aggregate-cache returns, including the outer Court price cache. The
+comparison UI uses the response's server clock plus monotonic elapsed time,
+expires prices on a scheduled deadline and rechecks on focus/visibility. A
+failed refresh cannot leave expired prices actionable. Browser tip crossing
+does not certify an archive; only a server-proven durable snapshot retains old
+pregame prices. Pregame and explicit Live remain separate.
+
+The Court preserves the selected sort within three stable groups: priced,
+unpriced and unavailable. The latter two use expandable lower sections on
+desktop and mobile. Searching opens matching research automatically. Existing
+drawers, markets, filters, comparison tools and saved picks remain accessible.
+Questionable players with prices stay in the active group. Source status and
+quote changes recompute membership without modifying player history.
+
+Database: individually applied migration 20261121113324,
+nba_first_book_market_captures. Guarded existing function hashes matched live
+preflight. No historical migration tree or collector jobs were replayed.
+Rolled-back runtime checks passed for independent source panels, unchanged
+retry deduplication, eleven invalid panel cases, atomic rollback, older-source
+blocking, exact empty withdrawal, direct-writer compatibility, Live boundaries
+and service-only grants. No test fixture rows remain. No new security or
+performance advisor findings; health advisor is empty. Existing unrelated
+advisor findings are unchanged.
+
+Verification before publication: 758/758 NBA tests, 124/124 freeze tests,
+134/134 production source checks, TypeScript, focused ESLint and optimized
+Webpack production compile passed. React checks covered stable keys, effect
+cleanup, cancellation, server-clock expiry, keyboard-accessible section
+buttons, exact contract sorting and contained responsive tables. Expiry uses
+one scheduled deadline rather than a continuous rendering interval.
+Private browser checks covered desktop/phone light/dark, selected target
+grouping, expansion/collapse, lower-group drawer access, book comparisons,
+tool navigation and page overflow. Fixture observations are illustrative;
+production coverage is verified separately below after deployment.
+
+Evidence: docs/design/evidence/live/first-scope-* (local detailed test logs).
+Provider semantics: market-level last_update is the original bookmaker price
+observation, and a closed/suspended market's timestamp can stop advancing.
+https://the-odds-api.com/liveapi/guides/v4/
+https://the-odds-api.com/sports-odds-data/update-intervals.html

@@ -589,3 +589,10 @@
 }
 
 @media(max-width:767px){.ladderToolbar .segment button,.movementTools .segment button,.drawer .segment button{min-height:44px}}
+.marketGroupRow td { padding: 0 !important; position: static !important; background: var(--surface-2); }
+.marketGroupToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 12px 18px; border: 0; border-top: 1px solid var(--border-2); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; }
+.marketGroupToggle > span { display: inline-flex; align-items: center; gap: 10px; }
+.marketGroupToggle b { padding: 2px 7px; border: 1px solid var(--border-2); border-radius: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.marketGroupToggle:hover { background: var(--surface-3); color: var(--text-1); }
+.marketGroupToggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.marketGroupSection { margin-top: 8px; }

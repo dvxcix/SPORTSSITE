@@ -35,7 +35,7 @@ export type NbaFrameScope = { market?: string; playerId?: number | null; selecti
 export async function getNbaPhaseFrames(input: PaintGame, mode: NbaOddsMode = 'pregame', feed: NbaPhaseFeed = 'props', scope: NbaFrameScope = {}): Promise<NbaPhaseFrame[]> {
   const game = await getNbaOddsGame(input)
   const boundary = nbaPhaseBoundary(game, mode)
-  const selection = scope.selection ?? 'history', maximum = selection === 'latest' ? 1 : selection === 'edges' ? 2 : selection === 'recent' ? 6 : 96
+  const selection = scope.selection ?? 'history', maximum = selection === 'latest' ? 1 : selection === 'edges' ? 2 : selection === 'recent' ? 64 : 96
   if(selection==='recent'&&feed!=='first')throw new Error('Invalid NBA recent history scope')
   const asOf = scope.asOf == null ? null : Date.parse(scope.asOf)
   if (asOf != null && (!Number.isFinite(asOf) || asOf > Date.now())) throw new Error('Invalid NBA history cutoff')
@@ -54,12 +54,12 @@ export async function getNbaPhaseFrames(input: PaintGame, mode: NbaOddsMode = 'p
   // Explicit historical cutoffs are already coalesced by market-context's cache.
   // Do not create one persisted cache row for every request timestamp.
   if(scope.asOf != null) return load()
-  return (await nbaSharedCache('phase-frames:v3:' + boundary.key + ':' + feed + ':' + selection + ':' + (scope.market??'all') + ':' + (scope.playerId??'all'),60,0,load,25)).value
+  return (await nbaSharedCache('phase-frames:v4:' + boundary.key + ':' + feed + ':' + selection + ':' + (scope.market??'all') + ':' + (scope.playerId??'all'),60,0,load,25)).value
 }
 export async function getNbaPhaseSnapshot(input: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<NbaPhaseSnapshot> {
   const game = await getNbaOddsGame(input)
   const boundary = nbaPhaseBoundary(game,mode)
-  return (await nbaSharedCache('phase-snapshot:v2:' + boundary.key,60,0,async()=>{
+  return (await nbaSharedCache('phase-snapshot:v3:' + boundary.key,60,0,async()=>{
     const feeds: NbaPhaseFeed[] = ['props','game','first']
     const data = await Promise.all(feeds.map(async feed => {
       const rows = await getNbaPhaseFrames(game,mode,feed,{selection:'latest'})

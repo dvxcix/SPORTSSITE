@@ -389,7 +389,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
-  imports = { '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
+  imports = { '@/lib/nbaFirstBookMarketData': { saveNbaFirstApiFrames: async()=>{throw Error('Unexpected First Basket scope write')} }, '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
   imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
   imports = { './nbaMarketAvailability': marketAvailability, ...imports }
   imports = { '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) }, ...imports }
@@ -624,7 +624,7 @@ test('NBA quote capture covers the third calendar date beyond sixteen games and 
   '@/lib/nbaPaintData':{getPaintGame:async(id:number)=>({...games.find(game=>game.id===id)!,status:'Scheduled',period:0}),getPaintSchedule:async(date:string)=>{calls.push(date);return{games:date==='2099-10-22'?[...games,{...games[0],id:99,datetime:new Date(Date.now()+49*3600000).toISOString()}]:[]}},getPaintPropSnapshot:async(game:{id:number})=>{reads.push(game.id);if(game.id===9)throw new Error('source unavailable');return propSnapshot([{...offer,game_id:game.id}])},getPaintGameOdds:async(id:number)=>{gameReads.push(id);return[gameQuote(id)]}}
  })
  const get=route.GET as(request:Request)=>Promise<Response>,response=await get(new Request('https://test/capture'))
- assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-19','2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='props').length,17);assert.equal(writes.filter(row=>row.name==='game').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='game'));assert.equal(attempts.filter(key=>key.startsWith('market-attempt:v4:pregame:')).length,18);assert.equal(attempts.filter(key=>key.startsWith('first-basket-attempt:v3:pregame:')).length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
+ assert.equal(response.status,503);assert.deepEqual(calls,['2099-10-19','2099-10-20','2099-10-21','2099-10-22']);assert.equal(reads.length,18);assert.equal(reads[0],9);assert.equal(gameReads.length,18);assert.equal(writes.filter(row=>row.name==='props').length,17);assert.equal(writes.filter(row=>row.name==='game').length,18);assert.ok(writes.some(row=>row.game===9&&row.name==='game'));assert.equal(attempts.filter(key=>key.startsWith('market-attempt:v4:pregame:')).length,18);assert.equal(attempts.filter(key=>key.startsWith('first-basket-attempt:v4:pregame:')).length,18);assert.ok(!reads.includes(99));assert.ok(!gameReads.includes(99))
  assert.equal((await response.json()).failed,1)
  hit=true;reads.length=0;gameReads.length=0;writes.length=0
  const repeated=await get(new Request('https://test/capture')),summary=await repeated.json()

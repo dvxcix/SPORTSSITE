@@ -20,7 +20,10 @@ export async function GET(request:NextRequest){
       catch{return {...result,historyAvailable:false}}
     })))
     const rows=results.flatMap(r=>r.status==='fulfilled'?r.value.rows:[]),failures=results.filter(r=>r.status==='rejected')
+    const frozenGameIds=results.flatMap((result,index)=>result.status==='fulfilled'&&'frozen' in result.value&&result.value.frozen?[games[index].id]:[])
+    const bookCoverage=results.flatMap(result=>result.status==='fulfilled'&&'bookCoverage' in result.value?result.value.bookCoverage??[]:[])
+    const incompleteBooks=bookCoverage.some(row=>['expired','invalid','wrong_phase'].includes(row.status))
     const connection=failures.some(r=>r.status==='rejected'&&r.reason instanceof NbaFirstOddsUnavailable&&['connection','authorization'].includes(r.reason.reason))
-    return NextResponse.json({mode,date:schedule.date,requestedDate:date,games:schedule.games.length,loaded:results.filter(r=>r.status==='fulfilled').length,failed:failures.length,status:connection?'connection_unavailable':failures.length?'partial':rows.length?'ready':'not_posted',rows,historyAvailable:results.every(r=>r.status==='fulfilled'&&r.value.historyAvailable),unmatched:results.reduce((n,r)=>n+(r.status==='fulfilled'?r.value.unmatched:0),0),...(gate.isAdmin?{diagnostics:{withheldMethods:[...new Set(results.flatMap(r=>r.status==='fulfilled'?'withheldMethods' in r.value?r.value.withheldMethods??[]:[]:[]))]}}:{}),fetchedAt:new Date().toISOString()},{headers:{'Cache-Control':'private, no-store'}})
+    return NextResponse.json({mode,date:schedule.date,requestedDate:date,games:schedule.games.length,loaded:results.filter(r=>r.status==='fulfilled').length,failed:failures.length,status:connection?'connection_unavailable':failures.length||incompleteBooks?'partial':rows.length?'ready':'not_posted',rows,frozenGameIds,bookCoverage,historyAvailable:results.every(r=>r.status==='fulfilled'&&r.value.historyAvailable),unmatched:results.reduce((n,r)=>n+(r.status==='fulfilled'?r.value.unmatched:0),0),...(gate.isAdmin?{diagnostics:{withheldMethods:[...new Set(results.flatMap(r=>r.status==='fulfilled'?'withheldMethods' in r.value?r.value.withheldMethods??[]:[]:[]))]}}:{}),fetchedAt:new Date().toISOString()},{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'First-basket odds could not refresh.'},{status:503})}
 }

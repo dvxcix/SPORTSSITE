@@ -14,8 +14,11 @@ import { PlayerAvatar } from './PaintVisuals'
 import { PaintBookSelect } from './PaintEntitySelect'
 import styles from './paint.module.css'
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
+import { NBA_FIRST_PRICE_BOOKS, type NbaFirstBookCoverage } from '@/lib/nbaFirstBookMarkets'
+import { nbaFirstQuoteClock, nbaFirstQuoteVisible } from '@/lib/nbaFirstQuoteFreshness'
+import { nbaGameStart } from '@/lib/nbaOddsMode'
 
-type Slate = {date:string;requestedDate:string;games:number;loaded:number;failed:number;status:string;unmatched:number;rows:FirstBasketRow[];fetchedAt:string}
+type Slate = {mode?:'pregame'|'live';date:string;requestedDate:string;games:number;loaded:number;failed:number;status:string;unmatched:number;rows:FirstBasketRow[];fetchedAt:string;frozenGameIds?:number[];bookCoverage?:NbaFirstBookCoverage[]}
 type QuoteGroup = {key:string;row:FirstBasketRow;quotes:FirstBasketRow[]}
 const groupKey = (row:FirstBasketRow) => `${row.game.id}:${row.player.id}:${row.offer.prop_type}:${row.offer.market.type}:${row.offer.line_value}`
 const playerName = (row:FirstBasketRow) => `${row.player.last_name} ${row.player.first_name}`
@@ -24,31 +27,49 @@ const bestProbability = (group:QuoteGroup) => Math.min(...group.quotes.map(row=>
 
 export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:{date:string;initialBook?:string;preferredBooks?:string[]}) {
   const oddsMode = useNbaOddsMode()
-  const [state,setState]=useState<Slate|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
+  const [state,setState]=useState<{slate:Slate;requestStarted:number}|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
+  const [monotonicNow,setMonotonicNow]=useState(0)
+  useEffect(()=>{
+    const tick=()=>setMonotonicNow(performance.now())
+    tick()
+    window.addEventListener('focus',tick);document.addEventListener('visibilitychange',tick)
+    return()=>{window.removeEventListener('focus',tick);document.removeEventListener('visibilitychange',tick)}
+  },[])
+  useEffect(()=>{
+    if(!state)return
+    const now=nbaFirstQuoteClock(state.slate.fetchedAt,state.requestStarted,performance.now())
+    const deadlines=state.slate.rows.filter(row=>!state.slate.frozenGameIds?.includes(row.game.id)).flatMap(row=>[Date.parse(row.offer.updated_at)+300_000,nbaGameStart(row.game)??NaN]).filter(at=>Number.isFinite(at)&&at>=now)
+    if(!Number.isFinite(now)||!deadlines.length)return
+    const timer=window.setTimeout(()=>setMonotonicNow(performance.now()),Math.min(2_147_483_647,Math.max(1,Math.min(...deadlines)-now+1)))
+    return()=>window.clearTimeout(timer)
+  },[state,monotonicNow])
   const [game,setGame]=useState('all'),[team,setTeam]=useState('all'),[market,setMarket]=useState('all'),[book,setBook]=useState(initialBook),[query,setQuery]=useState('')
   const [sort,setSort]=useState('movement'),[direction,setDirection]=useState('all'),[basis,setBasis]=useState('opening'),[minimum,setMinimum]=useState(0)
   useEffect(()=>{
     const controller=new AbortController();let pending=false
     const update=async()=>{
       if(pending)return;pending=true
+      const requestStarted=performance.now()
       try {
         const response=await fetch(nbaModeHref(`/the-paint/first-basket/odds?date=${date}`, oddsMode),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(115000)])})
         if(!response.ok)throw new Error('unavailable')
         const data=await response.json() as Slate
-        if(!controller.signal.aborted){setState(data);setError('')}
+        if(!controller.signal.aborted){setState({slate:data,requestStarted});setMonotonicNow(performance.now());setError('')}
       } catch {if(!controller.signal.aborted)setError('First-basket prices could not refresh.')} finally {pending=false}
     }
     void update();const stop=watchNbaRefresh(update);return()=>{controller.abort();stop()}
   },[oddsMode, date,retry])
-  const slate=state?.requestedDate===date?state:null
+  const slate=state?.slate.requestedDate===date&&(!state.slate.mode||state.slate.mode===oddsMode)?state.slate:null
+  const quoteNow=slate&&state?nbaFirstQuoteClock(slate.fetchedAt,state.requestStarted,monotonicNow):NaN
+  const currentRows=useMemo(()=>(slate?.rows??[]).filter(row=>nbaFirstQuoteVisible(row,oddsMode,quoteNow,slate?.frozenGameIds)),[slate,oddsMode,quoteNow])
   const catalog=useMemo(()=>{
     const rows=slate?.rows??[]
-    return {books:[...new Set(rows.map(row=>row.offer.vendor))].sort(),games:[...new Map(rows.map(row=>[row.game.id,row.game])).values()],teams:[...new Map(rows.filter(row=>game==='all'||String(row.game.id)===game).map(row=>[row.player.team.id,row.player.team])).values()]}
+    return {books:[...new Set([...NBA_FIRST_PRICE_BOOKS,...rows.map(row=>row.offer.vendor)])].sort(),games:[...new Map(rows.map(row=>[row.game.id,row.game])).values()],teams:[...new Map(rows.filter(row=>game==='all'||String(row.game.id)===game).map(row=>[row.player.team.id,row.player.team])).values()]}
   },[slate,game])
   const bookFilter=useResearchBooks(catalog.books,preferredBooks)
   const groups=useMemo(()=>{
     const pool=new Map<string,QuoteGroup>()
-    for(const row of slate?.rows??[]){
+    for(const row of currentRows){
       if(game!=='all'&&String(row.game.id)!==game||team!=='all'&&String(row.player.team.id)!==team||market!=='all'&&row.offer.prop_type!==market||(book==='all'?!bookFilter.books.includes(row.offer.vendor):row.offer.vendor!==book)||!`${row.player.first_name} ${row.player.last_name}`.toLowerCase().includes(query.trim().toLowerCase()))continue
       const key=groupKey(row),group=pool.get(key)??{key,row,quotes:[]};group.quotes.push(row);pool.set(key,group)
     }
@@ -71,8 +92,8 @@ export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:
       else {const av=movement(a),bv=movement(b);order=av==null?bv==null?0:1:bv==null?-1:(av-bv)*(sort==='lengthened'?1:-1)}
       return order||playerName(a.row).localeCompare(playerName(b.row))||a.key.localeCompare(b.key)
     })
-  },[slate,game,team,market,book,query,basis,direction,minimum,sort,bookFilter.books])
-  const vendors=book==='all'?bookFilter.books:[book]
+  },[currentRows,game,team,market,book,query,basis,direction,minimum,sort,bookFilter.books])
+  const vendors=book==='all'?bookFilter.books.filter(vendor=>currentRows.some(row=>row.offer.vendor===vendor)):[book]
   return <section aria-label="First-basket slate odds" className={`${styles.movement} ${styles.firstBasketOdds}`}>
     <div className={styles.sectionHeading}><h3>First-basket odds · NBA slate</h3></div>
     <div className={styles.movementTools}>
@@ -90,7 +111,7 @@ export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:
     {error&&<p className={styles.notice} role="status">{error} <button onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
     {!slate&&!error&&<p className={styles.panelEmpty} role="status">Loading first-basket prices…</p>}
     {slate?.status==='connection_unavailable'&&<p className={styles.panelEmpty} role="status">First-basket prices unavailable.</p>}
-    {slate&&slate.status!=='connection_unavailable'&&<p className={styles.finePrint}>{slate.loaded}/{slate.games} games · {slate.rows.length} prices · {groups.length} selections{slate.failed?` · ${slate.failed} games could not refresh`:''}</p>}
+    {slate&&slate.status!=='connection_unavailable'&&<p className={styles.finePrint}>{slate.loaded}/{slate.games} games · {currentRows.length} prices · {groups.length} selections{slate.failed?` · ${slate.failed} games could not refresh`:''}{currentRows.length<slate.rows.length?' · Awaiting fresh prices':''}</p>}
     {groups.length>0&&<div className={styles.oddsScroll} role="region" aria-label="First-basket book comparisons" tabIndex={0}><table className={styles.ladderTable}>
       <thead><tr><th>Player / market</th>{vendors.map(vendor=><th key={vendor}><BookLogo vendor={vendor} size={25}/><span>{bookName(vendor)}</span></th>)}</tr></thead>
       <tbody>{groups.map(group=>{

@@ -11,7 +11,7 @@ import { nbaGameStart,nbaQuoteInMode,type NbaOddsMode } from './nbaOddsMode'
 
 export async function getNbaFirstBasketState(gameId:number,mode:NbaOddsMode='pregame'):Promise<NbaFirstState> {
   const game=await getNbaOddsGame(await getPaintGame(gameId)),boundary=nbaPhaseBoundary(game,mode),start=nbaGameStart(game)!
-  return (await nbaSharedCache('first-basket-state:v3:'+boundary.key,60,0,async()=>{
+  return (await nbaSharedCache('first-basket-state:v4:'+boundary.key,60,0,async()=>{
     const [{data,error},history]=await Promise.all([
       createAdminClient().rpc('read_nba_phase_first_state',{p_game_id:gameId,p_mode:mode,p_tipoff:boundary.tipoff}).abortSignal(AbortSignal.timeout(12000)),
       getNbaPhaseFrames(game,mode,'first',{selection:'recent'}),

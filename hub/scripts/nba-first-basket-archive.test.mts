@@ -1,3 +1,4 @@
+import * as firstBookMarkets from '../src/lib/nbaFirstBookMarkets.ts'
 import * as portraits from '../src/lib/nbaPlayerPortraits.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -38,7 +39,7 @@ async function harness(setup:Setup){
     }})},
   }
   const target={exports:{}}
-  new Function('require','module','exports','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Archived prices must not request live odds')})
+  new Function('require','module','exports','fetch',output)((name:string)=>{if(name==='./nbaPlayerPortraits')return portraits; if(name==='./nbaFirstBookMarkets')return firstBookMarkets; assert.ok(name in imports,name);return imports[name]},target,target.exports,()=>{throw Error('Archived prices must not request live odds')})
   return {api:target.exports as typeof import('../src/lib/nbaFirstBasketOddsData.ts'),identities,queries,snapshots}
 }
 

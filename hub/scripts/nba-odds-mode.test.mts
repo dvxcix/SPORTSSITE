@@ -14,7 +14,7 @@ import { nbaAttachOpenings } from '../src/lib/nbaOddsHistory.ts'
 const tip = Date.parse('2026-10-20T23:00:00Z')
 const team = { id: 1, abbreviation: 'BOS', name: 'Celtics', full_name: 'Boston Celtics' }
 const game = { id: 123, datetime: new Date(tip).toISOString(), status: 'Scheduled', status_state: 'scheduled', period: 0, home_team: team, visitor_team: {...team,id:2} } as paint.PaintGame
-const roster = [434,435].map(id=>({id,first_name:'Real',last_name:'Player',team,position:'G'}))
+const roster = [434,435,436].map(id=>({id,first_name:'Real',last_name:'Player',team,position:'G'}))
 const quote = (odds:number, at:number):paint.PaintProp => ({ id:1,game_id:123,player_id:434,vendor:'fanduel',prop_type:'points',line_value:'20',market:{type:'milestone',odds},updated_at:new Date(at).toISOString() })
 async function harness(initialTime:number, current:paint.PaintProp[], frozen= [quote(1000,tip-60000)], firstBasket:paint.PaintProp[]=[], ruledOut:number[] = []) {
   let now=initialTime, fetches=0, snapshots=0, crossBoundary=false
@@ -98,12 +98,13 @@ test('missing or withdrawn frozen prices remain empty and scheduled games have n
   assert.equal(h.counts().fetches,0)
 })
 
-test('the outer board-price cache expires direct First Basket observations without refetching or suppressing healthy quotes',async()=>{
+test('the outer board-price cache expires direct and API First Basket observations without refetching or suppressing healthy quotes',async()=>{
   const start=tip-3600000
   const direct={...quote(900,start-299000),id:-3_000_000_000_434,prop_type:'first_score',line_value:'0.5',market:{type:'over_under' as const,over_odds:900}}
   const primary={...direct,id:55,player_id:435,updated_at:new Date(start-1000).toISOString()}
-  const h=await harness(start,[quote(-110,start-1000)],[],[direct,primary])
-  assert.equal((await h.api.getPaintPrices(game)).firstBasket.length,2)
+  const api={...direct,id:-434,player_id:436}
+  const h=await harness(start,[quote(-110,start-1000)],[],[direct,api,primary])
+  assert.equal((await h.api.getPaintPrices(game)).firstBasket.length,3)
   const reads=h.counts().fetches
   h.advance(start+2000)
   const aged=await h.api.getPaintPrices(game)
@@ -117,7 +118,7 @@ test('First Basket after tipoff renders its saved pregame quote and never reques
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const match={...game,status_state:'in_progress',period:2,home_team:{id:1,abbreviation:'BOS'},visitor_team:{id:2,abbreviation:'NYK'}} as paint.PaintGame
   const imports:Record<string,unknown>={
-    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaFirstEventDiagnostics':eventDiagnostics,'./nbaSharedCache':{},
+    'server-only':{},'./nbaPaint':paint,'./nbaFirstBasketOdds':{},'./nbaFirstBookMarkets':{},'./nbaFirstEventDiagnostics':eventDiagnostics,'./nbaSharedCache':{},
     './nbaBookFirstData':{getNbaBookFirstSupplement:async()=>{throw Error('Frozen pregame prices must not read current direct-book observations')}},
     './supabase/admin':{},
     './nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>g},

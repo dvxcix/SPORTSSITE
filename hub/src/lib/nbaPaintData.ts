@@ -281,7 +281,7 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
   // replace the stored closing frame after the boundary.
   if (mode === 'pregame' && !nbaPregameOpen(game)) return frozen()
   const fresh = (quote: PaintProp) => !nbaSupplementalQuote(quote) || (Date.parse(quote.updated_at) <= Date.now() && Date.now() - Date.parse(quote.updated_at) <= 300_000)
-  const current = cached.value.props.filter(fresh), firstBasket = cached.value.firstBasket.filter(fresh)
+  const current = cached.value.props.filter(fresh), firstBasket = cached.value.firstBasket.filter(quote => Date.parse(quote.updated_at) <= Date.now() && Date.now() - Date.parse(quote.updated_at) <= 300_000)
   const issues = [...cached.value.issues]
   if (current.length !== cached.value.props.length || firstBasket.length !== cached.value.firstBasket.length) issues.push('Some sportsbook prices unavailable')
   if (!eligible) issues.push('Player availability unavailable')

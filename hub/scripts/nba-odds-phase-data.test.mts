@@ -11,7 +11,7 @@ import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as bookHistory from '../src/lib/nbaBookHistory.ts'
 
 async function compiled<T>(file:string,imports:Record<string,unknown>,Clock:unknown):Promise<T>{
- imports = { '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
+ imports = { '@/lib/nbaFirstBookMarketData': { saveNbaFirstApiFrames: async()=>{throw Error('Unexpected First Basket scope write')} }, '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
  const source=await readFile(new URL(file,import.meta.url),'utf8'),output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const target={exports:{}}
  new Function('require','module','exports','Date',output)((key:string)=>{if(key==='./nbaOddsClockData'&&!(key in imports))return{getNbaOddsGame:async(game:unknown)=>game};if(key==='./nbaBookHistory'&&!(key in imports))return bookHistory;assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)
@@ -86,8 +86,8 @@ test('a complete book-only panel survives the pregame freeze with its real obser
 })
 
 test('First Basket recent selection is bounded separately from general history',async()=>{
- const h=await fixture(),frames=Array.from({length:6},(_,i)=>({captured_at:new Date(tip-10000+i*1000).toISOString(),quotes:[],fingerprint:'recent'+i}))
- h.set(frames);assert.equal((await h.phase.getNbaPhaseFrames(game,'pregame','first',{selection:'recent'})).length,6)
+ const h=await fixture(),frames=Array.from({length:64},(_,i)=>({captured_at:new Date(tip-100000+i*1000).toISOString(),quotes:[],fingerprint:'recent'+i}))
+ h.set(frames);assert.equal((await h.phase.getNbaPhaseFrames(game,'pregame','first',{selection:'recent'})).length,64)
  h.set([...frames,frames[0]]);await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','first',{selection:'recent'}),/history unavailable/)
  await assert.rejects(()=>h.phase.getNbaPhaseFrames(game,'pregame','props',{selection:'recent'}),/recent history scope/)
 })
@@ -97,7 +97,7 @@ test('opening history cannot use a pregame first observation as the live baselin
  h.set([{...opening,odds:1000,observed_at:new Date(tip-1000).toISOString()},{...opening,odds:-600,observed_at:new Date(tip+1000).toISOString()}])
  assert.deepEqual((await data.getNbaQuoteOpenings(123)).map(row=>row.odds),[1000]);assert.deepEqual((await data.getNbaQuoteOpenings(123,'live')).map(row=>row.odds),[-600])
 })
-async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string;firstUnmatched?:boolean;firstPartiallyInvalid?:boolean;unmatchedDiagnostic?:boolean}={}){
+async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:boolean;stale?:boolean;cross?:boolean;directIncomplete?:boolean;badDiagnostic?:boolean;cached?:boolean;cacheTime?:string;firstUnmatched?:boolean;firstPartiallyInvalid?:boolean;unmatchedDiagnostic?:boolean;firstScoped?:boolean}={}){
  const h=await fixture();h.time(mode==='pregame'?tip-60000:tip+60000)
  const current={...game,status_state:mode==='live'?'in_progress':'scheduled',period:mode==='live'?1:0} as paint.PaintGame
  const at=mode==='pregame'||options.stale?tip-120000:tip+1000
@@ -110,12 +110,23 @@ async function captureFixture(mode:'pregame'|'live'|'unknown',options:{empty?:bo
  '@/lib/nbaPaint':{nbaToday:()=>game.date},'@/lib/nbaOddsMode':h.modes,'@/lib/nbaMovement':movement,'@/lib/nbaOddsHistory':history,
  '@/lib/nbaSharedCache':{nbaSharedCache:async(key:string,_ttl:number,_stale:number,load:()=>Promise<unknown>)=>{keys.push(key);if(options.cached&&key.startsWith('market-attempt:'))return{value:{status:'failed',coverage:{complete:false,accepted:0,unmatched:0,stale:0},sourceDiagnostics:{primary:'complete',supplemental:'complete',direct:'incomplete'}},fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false};return{value:await load(),fetchedAt:options.cacheTime??new Date(tip-120000).toISOString(),stale:false}}},
  '@/lib/nbaFirstEventDiagnostics':eventDiagnostics,
- '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:options.firstUnmatched?1:0,rows:first.map(offer=>({offer}))})},
+ '@/lib/nbaFirstBasketOddsData':{getNbaFirstEvents:async()=>[],getNbaFirstOdds:async()=>({eventMatched:true,unmatched:options.firstUnmatched?1:0,rows:first.map(offer=>({offer})),...(options.firstScoped?{apiFrames:[{book:'fanduel',market:'first_score',observedAt:first[0].updated_at,props:first}]}:{})})},
+ '@/lib/nbaFirstBookMarketData':{saveNbaFirstApiFrames:async(game:paint.PaintGame,mode:string,frames:unknown[])=>{calls.push({name:'record_nba_first_api_frames',args:{p_game_id:game.id,p_mode:mode,p_frames:frames}});return{captured:frames.length,unchanged:0,skipped:0}}},
  },h.Clock)
  const response=await route.GET(new Request('https://test/capture'));return{calls,keys,response,body:await response.json()}
 }
 test('the normal NBA collector writes pregame and live into separate tapes and attempt keys',async()=>{
- for(const mode of ['pregame','live'] as const){const run=await captureFixture(mode);assert.equal(run.response.status,200);assert.equal(run.calls.length,3);assert.ok(run.calls.every(call=>call.name==='record_nba_phase_capture'&&call.args.p_mode===mode));assert.deepEqual(new Set(run.calls.map(call=>call.args.p_feed)),new Set(['props','game','first']));assert.ok(run.keys.includes('market-attempt:v4:'+mode+':123'));assert.ok(run.keys.includes('first-basket-attempt:v3:'+mode+':123'))}
+ for(const mode of ['pregame','live'] as const){const run=await captureFixture(mode);assert.equal(run.response.status,200);assert.equal(run.calls.length,3);assert.ok(run.calls.every(call=>call.name==='record_nba_phase_capture'&&call.args.p_mode===mode));assert.deepEqual(new Set(run.calls.map(call=>call.args.p_feed)),new Set(['props','game','first']));assert.ok(run.keys.includes('market-attempt:v4:'+mode+':123'));assert.ok(run.keys.includes('first-basket-attempt:v4:'+mode+':123'))}
+})
+
+test('fresh exact First Basket panels capture before an expired sibling blocks the whole feed, without reporting false full coverage',async()=>{
+ const run=await captureFixture('pregame',{firstScoped:true,firstUnmatched:true})
+ assert.equal(run.response.status,503)
+ assert.equal(run.body.firstBasket.failed,1)
+ assert.deepEqual(run.body.firstBasket.games[0].bookCaptures,{captured:1,unchanged:0,skipped:0})
+ assert.equal(run.calls.filter(call=>call.name==='record_nba_first_api_frames').length,1)
+ assert.equal(run.calls.some(call=>call.name==='record_nba_phase_capture'&&call.args.p_feed==='first'),false)
+ assert.deepEqual(run.calls.filter(call=>call.name==='record_nba_phase_capture').map(call=>call.args.p_feed).sort(),['game','props'])
 })
 test('a direct-source incomplete result is privately reported without changing independent capture decisions',async()=>{
  const run=await captureFixture('pregame',{directIncomplete:true})

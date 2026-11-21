@@ -15,6 +15,8 @@ import { nbaFirstEventFailureLog } from '@/lib/nbaFirstEventDiagnostics'
 import type { NbaFirstDiagnostics } from '@/lib/nbaFirstBasketOdds'
 import type { NbaSupplementalDiagnostics } from '@/lib/nbaSupplementalProps'
 import { captureNbaAvailability } from '@/lib/nbaAvailabilityCapture'
+import { saveNbaFirstApiFrames } from '@/lib/nbaFirstBookMarketData'
+import type { NbaFirstBookCoverage } from '@/lib/nbaFirstBookMarkets'
 export const maxDuration = 120
 type FirstBasketReceipt = NbaMarketReceipt & {
   accepted: number
@@ -22,6 +24,8 @@ type FirstBasketReceipt = NbaMarketReceipt & {
   quotes: number
   capture?: 'captured' | 'unchanged'
   diagnostics?: NbaFirstDiagnostics
+  bookCaptures?: {captured:number;unchanged:number;skipped:number}
+  books?: NbaFirstBookCoverage[]
 }
 type FirstBasketGameReport = FirstBasketReceipt & { gameId: number; mode: 'pregame' | 'live'; cached: boolean }
 type MarketReceipt = NbaMarketReceipt & { coverage?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['coverage']; sourceDiagnostics?: Awaited<ReturnType<typeof getPaintPropSnapshot>>['sourceDiagnostics'] }
@@ -65,9 +69,9 @@ async function run(request: Request) {
         report.firstBasket.checked++
         try {
           let performed = false
-          const attempt = await nbaSharedCache<FirstBasketReceipt>(`first-basket-attempt:v3:${mode}:${game.id}`, 240, 0, async () => {
+          const attempt = await nbaSharedCache<FirstBasketReceipt>(`first-basket-attempt:v4:${mode}:${game.id}`, 60, 0, async () => {
             performed = true
-            const counts: {accepted:number;unmatched:number;quotes:number;diagnostics?:NbaFirstDiagnostics} = { accepted: 0, unmatched: 0, quotes: 0 }
+            const counts: Pick<FirstBasketReceipt,'accepted'|'unmatched'|'quotes'|'diagnostics'|'bookCaptures'|'books'> = { accepted: 0, unmatched: 0, quotes: 0 }
             try {
               if (!firstEvents) return { status: 'failed', ...counts }
               const result = await getNbaFirstOdds(game, true, firstEvents)
@@ -75,6 +79,10 @@ async function run(request: Request) {
               if('diagnostics' in result)counts.diagnostics=result.diagnostics
               if (!result.eventMatched) return { status: 'deferred', ...counts }
               if (!phaseOpen()) return { status: 'deferred', ...counts }
+              // Complete book contracts advance independently. An expired or
+              // unmatched sibling never certifies a whole-feed withdrawal.
+              if(result.apiFrames?.length)counts.bookCaptures=await saveNbaFirstApiFrames(game,mode,result.apiFrames)
+              if(result.bookCoverage?.length)counts.books=result.bookCoverage
               const raw = result.rows.map(row => row.offer)
               const checkedAt=Date.now(),props = raw.filter(prop=>nbaQuoteInMode(prop,game,mode,checkedAt))
               if(props.length!==raw.length){
@@ -113,7 +121,7 @@ async function run(request: Request) {
           report.firstBasket.quotes += receipt.quotes
           report.firstBasket.accepted += receipt.accepted
           report.firstBasket.unmatched += receipt.unmatched
-          if (report.firstBasket.games.length < 64) report.firstBasket.games.push({ gameId: game.id, mode, cached: !performed, status: receipt.status, accepted: receipt.accepted, unmatched: receipt.unmatched, quotes: receipt.quotes, ...(receipt.capture ? { capture: receipt.capture } : {}), ...(receipt.diagnostics?{diagnostics:receipt.diagnostics}:{}) })
+          if (report.firstBasket.games.length < 64) report.firstBasket.games.push({ gameId: game.id, mode, cached: !performed, status: receipt.status, accepted: receipt.accepted, unmatched: receipt.unmatched, quotes: receipt.quotes, ...(receipt.capture ? { capture: receipt.capture } : {}), ...(receipt.diagnostics?{diagnostics:receipt.diagnostics}:{}),...(receipt.bookCaptures?{bookCaptures:receipt.bookCaptures}:{}),...(receipt.books?{books:receipt.books}:{}) })
         } catch { report.firstBasket.failed++ }
       })()
       report.checked++

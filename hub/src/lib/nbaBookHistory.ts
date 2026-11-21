@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { PaintGameOdds, PaintProp } from './nbaPaint'
 import { nbaValidOdds } from './nbaOddsHistory'
+import { NBA_FIRST_MARKETS } from './nbaFirstBasketMarkets'
 
 export type NbaBookHistoryContract = {
   book: string; market: string; market_type: 'milestone' | 'over_under'; line: number
@@ -30,7 +31,8 @@ export function nbaMergeBookHistory(frame: NbaBookHistoryFrame): NbaBookHistoryF
   const baseKeys = new Set(values.keys()), seen = new Set<string>()
   for (const contract of frame.book_contracts) {
     const at = Date.parse(contract.observed_at), scope = scopeKey(contract.book, contract.market, contract.market_type, Number(contract.line))
-    if (!['betmgm', 'draftkings'].includes(contract.book) || !['milestone', 'over_under'].includes(contract.market_type)
+    const first=contract.market_type==='over_under'&&Number(contract.line)===.5&&NBA_FIRST_MARKETS.some(market=>market.key===contract.market)
+    if (!(first?['betmgm','draftkings','fanduel','caesars','fanatics']:['betmgm','draftkings']).includes(contract.book) || !['milestone', 'over_under'].includes(contract.market_type)
       || !Number.isFinite(Number(contract.line)) || !Number.isFinite(at) || at > eventAt || seen.has(scope)
       || !Array.isArray(contract.quotes) || contract.quotes.length > 100) throw new Error('Invalid NBA book history')
     seen.add(scope)
