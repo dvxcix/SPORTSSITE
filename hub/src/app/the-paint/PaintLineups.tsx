@@ -34,7 +34,7 @@ export function usePaintLineups(board: PaintBoard, enabled: boolean) {
       finally { pending = false }
     }
     void load()
-    const stop = polling ? watchNbaRefresh(load) : () => {}
+    const stop = polling ? watchNbaRefresh(load, 30000) : () => {}
     return () => { controller.abort(); stop() }
   }, [board.game.id, key, mode, enabled, retry, polling])
   const value = state?.key === key ? state.value : null, bound = Math.min(cutoff ?? -Infinity, Date.parse(value?.cutoffAt ?? ''))

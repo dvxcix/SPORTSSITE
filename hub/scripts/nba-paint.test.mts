@@ -389,6 +389,7 @@ test('date and artwork identity normalization reject invalid dates and fuzzy nam
 })
 
 async function compiled(file: string, imports: Record<string, unknown>, fetcher: typeof fetch = fetch, globals:Record<string,unknown> = {}) {
+  imports = { '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
   imports = { '@/lib/nbaScoreWorkload':scoreWorkload,'@/lib/nbaWorkload': workload, ...imports }
   imports = { './nbaMarketAvailability': marketAvailability, ...imports }
   imports = { '@/lib/pikkitGameOverviewServer': { observePikkitGameOverview: () => ({ find: () => null, dispose() {} }) }, ...imports }

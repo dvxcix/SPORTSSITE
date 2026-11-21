@@ -66,9 +66,9 @@ export async function artwork(abbr: string) {
   return { headshots: new Map(cached.value.headshots), logo: cached.value.logo }
 }
 export function paintTeamLogo(abbr: string) { return `https://a.espncdn.com/i/teamlogos/nba/500/${espnCode(abbr)}.png` }
-export async function getPaintSchedule(requestedDate?: string, exact = false) {
+export async function getPaintSchedule(requestedDate?: string, exact = false, ttl: 30 | 120 = 120) {
   const date = nbaDate(requestedDate); const start = new Date(`${date}T12:00:00Z`); const end = new Date(start); end.setUTCDate(end.getUTCDate() + 7)
-  const result = await pages<PaintGame>(`/v1/games?start_date=${date}&end_date=${end.toISOString().slice(0, 10)}&season_type=regular&per_page=100`, 120, 2)
+  const result = await pages<PaintGame>(`/v1/games?start_date=${date}&end_date=${end.toISOString().slice(0, 10)}&season_type=regular&per_page=100`, ttl, 2)
   return nbaScheduleForDate(date,result.rows,result.complete,exact)
 }
 export async function getPaintGame(id: number, fresh = false): Promise<PaintGame> {

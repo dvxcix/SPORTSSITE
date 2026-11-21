@@ -94,7 +94,7 @@
     },
     {
       "path": "/api/cron/nba-market-capture",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/poll-pikkit-nba-picks",

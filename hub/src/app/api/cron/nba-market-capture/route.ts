@@ -14,6 +14,7 @@ import { getNbaFirstEvents, getNbaFirstOdds } from '@/lib/nbaFirstBasketOddsData
 import { nbaFirstEventFailureLog } from '@/lib/nbaFirstEventDiagnostics'
 import type { NbaFirstDiagnostics } from '@/lib/nbaFirstBasketOdds'
 import type { NbaSupplementalDiagnostics } from '@/lib/nbaSupplementalProps'
+import { captureNbaAvailability } from '@/lib/nbaAvailabilityCapture'
 export const maxDuration = 120
 type FirstBasketReceipt = NbaMarketReceipt & {
   accepted: number
@@ -45,6 +46,7 @@ async function run(request: Request) {
     return null
   })
   const report = { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, coverage: [] as { gameId: number; mode: 'pregame' | 'live'; complete: boolean; accepted: number; unmatched: number; stale: number; diagnostics?: NbaSupplementalDiagnostics; sources?: MarketReceipt['sourceDiagnostics']; sourceCached?: boolean; sourceReceiptAt?: string }[], firstBasket: { checked: 0, captured: 0, unchanged: 0, failed: 0, deferred: 0, quotes: 0, accepted: 0, unmatched: 0, games: [] as FirstBasketGameReport[] } }
+  const availability: Awaited<ReturnType<typeof captureNbaAvailability>>[] = []
   for (let offset = 0; offset < games.length; offset += 4) {
     if (Date.now() - started > 82_000) { report.deferred += games.length-offset; report.firstBasket.deferred += games.length-offset; break }
     await Promise.all(games.slice(offset,offset+4).map(async scheduled => {
@@ -54,6 +56,9 @@ async function run(request: Request) {
       if(!mode){report.deferred++;report.firstBasket.deferred++;return}
       const phaseOpen=()=>mode==='pregame'?nbaPregameOpen(game):nbaLiveOpen(game)
       const tipoff=new Date(nbaGameStart(game)!).toISOString()
+      // Availability has its own refresh and receipt. A cached market failure
+      // must never stop injury changes or confirmed lineups reaching members.
+      const availabilityTask = captureNbaAvailability(game, mode).then(result => { availability.push(result) })
       // Each feed owns its receipt and tape. First-basket trouble must not
       // suppress standard market captures, or freshen their fingerprint.
       const firstTask = (async () => {
@@ -114,7 +119,7 @@ async function run(request: Request) {
       report.checked++
       try {
         let performed=false
-        const attempt=await nbaSharedCache<MarketReceipt>(`market-attempt:v4:${mode}:${game.id}`,240,0,async()=>{
+        const attempt=await nbaSharedCache<MarketReceipt>(`market-attempt:v4:${mode}:${game.id}`,60,0,async()=>{
           performed=true
           try{
             const [propsResult, gameResult] = await Promise.allSettled([getPaintPropSnapshot(game,mode,true,true), getPaintGameOdds(game.id,true)])
@@ -144,8 +149,9 @@ async function run(request: Request) {
         if(attempt.value.coverage&&report.coverage.length<64){const {complete,accepted,unmatched,stale,diagnostics}=attempt.value.coverage;const sources=privateSourceDiagnostics(attempt.value.sourceDiagnostics);const sourceAt=typeof attempt.fetchedAt==='string'?Date.parse(attempt.fetchedAt):NaN;report.coverage.push({gameId:game.id,mode,complete,accepted,unmatched,stale,...(diagnostics?{diagnostics}:{}),...(sources?{sources,sourceCached:!performed,...(Number.isFinite(sourceAt)&&sourceAt<=Date.now()?{sourceReceiptAt:attempt.fetchedAt}:{})}:{})})}
       } catch { report.failed++ }
       await firstTask
+      await availabilityTask
     }))
   }
-  return NextResponse.json(report,{status:report.failed || report.firstBasket.failed ? 503 : 200})
+  return NextResponse.json({...report, availability},{status:report.failed || report.firstBasket.failed || availability.some(result => result.status === 'unavailable') ? 503 : 200})
 }
 export const GET = withPipelineHealth('nba-market-capture',run)

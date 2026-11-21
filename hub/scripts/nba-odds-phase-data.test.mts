@@ -11,6 +11,7 @@ import * as eventDiagnostics from '../src/lib/nbaFirstEventDiagnostics.ts'
 import * as bookHistory from '../src/lib/nbaBookHistory.ts'
 
 async function compiled<T>(file:string,imports:Record<string,unknown>,Clock:unknown):Promise<T>{
+ imports = { '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
  const source=await readFile(new URL(file,import.meta.url),'utf8'),output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const target={exports:{}}
  new Function('require','module','exports','Date',output)((key:string)=>{if(key==='./nbaOddsClockData'&&!(key in imports))return{getNbaOddsGame:async(game:unknown)=>game};if(key==='./nbaBookHistory'&&!(key in imports))return bookHistory;assert.ok(key in imports,key);return imports[key]},target,target.exports,Clock)

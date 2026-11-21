@@ -1,0 +1,60 @@
+NBA data freshness repair — November 21, 2026
+
+Diagnosis
+The general NBA delay banner was last updated November 6. At the live preflight,
+all six November 21 games had complete ordinary player-market coverage, with
+zero unmatched/stale outcomes. The authenticated full-slate Odds Board returned
+six games, 164 players, complete=true and empty failed/unavailable/warning lists.
+Recent failing collector runs were isolated to First Basket bookmakers supplying
+quotes beyond the existing five-minute age limit. These remain excluded, with
+independent ordinary player and game captures continuing normally.
+
+Lineup retention depended on a member opening Teams. Only two November 20 games
+had stored projected/confirmed lineup observations. Confirmations must be fetched
+and saved automatically across the slate, while expected/missing remains honest.
+
+Repair
+- The existing cloud NBA market dispatcher runs every minute rather than five.
+  Its ordinary player/game attempt lease is sixty seconds rather than four
+  minutes. The supplemental paid-source shared TTL remains 120 seconds, First
+  Basket's independent attempt lease remains 240 seconds, and direct-browser
+  budgets/checkpoints are unchanged. No collector runs on the laptop.
+- Each eligible game independently refreshes the existing validated injury/
+  market roster and projected/actual lineup readers, even if its price attempt
+  is cached or failed. Bounded per-game availability receipts are retained in
+  pipeline health, distinguishing expected, confirmed, actual and missing teams.
+- An open lineup panel polls every thirty seconds using the same shared source.
+- The scoreboard strip previously retained page-load games indefinitely. Its
+  authenticated lightweight schedule route now shares a thirty-second source
+  fill and the strip refreshes every thirty seconds in both boards. It preserves
+  the last scores on failures, offers Retry and stops after a complete final
+  slate. Display scores never replace odds, research or authoritative cutoffs.
+  Frozen pregame views do not poll. Actual game starters remain explicit Live
+  only; game-specific positions and original source timestamps are preserved.
+- Source errors and failed durable saves remain unavailable. A partial feed or
+  stale sibling cannot erase the last complete market frame, become a withdrawal
+  or certify full coverage. Missing lineups are never guessed or promoted.
+
+Validation
+Focused availability/lineup/First Basket behavior checks passed 40/40. Affected
+collector, clock/freeze and market-signal regression harnesses passed 91/91 after
+adding the new independent availability dependency to their fixtures. Pregame
+freeze checks passed 124/124; production source smoke passed 134/134. TypeScript
+and scoped ESLint passed. Complete-suite/build/live receipts are recorded below
+after verification. No historical data, migrations, secrets or feature/access
+flags are changed by this release.
+
+Final pre-release checks: expanded NBA suite 746/746 and freeze suite 124/124;
+schedule/Live-mode interaction checks 26/26. TypeScript, scoped ESLint and the
+production-source Webpack compile build passed. Local Windows Turbopack could
+not resolve existing dependencies; no dependency versions were changed to mask
+that environment issue. Vercel's full production build is verified on release.
+Real API checks also recovered WAS–CHI's two confirmed pregame lineups with
+their original pre-tip timestamps and HOU–DEN's two actual Live starter groups,
+including their game-specific positions. Today's early unpublished lineup
+correctly returned no guessed starters, with unavailable=false.
+
+Provider contract checked: https://nba.balldontlie.io/#projected-lineups
+The provider retains its final pregame snapshot after tip, with original update
+time; expected can remain expected. The separate actual lineup feed starts once
+the game begins. Both endpoint families support the existing /v1 aliases.

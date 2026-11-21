@@ -176,6 +176,7 @@ test('unchanged successful polling times do not generate new research archive id
 })
 
 async function compiled(path:string,imports:Record<string,unknown>,clock:DateConstructor=Date){
+  imports = { '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: { id: number }, mode: string) => ({ gameId: game.id, mode, status: 'verified', pendingTeams: 2 }) }, ...imports }
   imports = { '@/lib/nbaSeasonDisplay': seasonDisplay, '@/lib/nbaFirstEventDiagnostics': eventDiagnostics, ...imports }
   imports = { '@/lib/nbaScoreWorkload': scoreWorkload, '@/lib/nbaWorkload': workload, ...imports }
   const source=await readFile(new URL(path,import.meta.url),'utf8')

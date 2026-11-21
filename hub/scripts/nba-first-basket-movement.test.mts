@@ -80,6 +80,7 @@ async function runCapture(failFirst = false, failProps = false, empty = false, f
   const mocks: Record<string, unknown> = {
     'node:crypto': crypto, 'next/server': { NextResponse: { json: (body: unknown, options: ResponseInit) => Response.json(body, options) } },
     '@/lib/cron-auth': { requireCronAuth: () => null },
+    '@/lib/nbaAvailabilityCapture': { captureNbaAvailability: async (game: PaintGame, mode: string) => ({ gameId: game.id, mode, status: 'verified', marketPlayers: 20, expected: 2, confirmed: 0, actual: 0, pendingTeams: 0 }) },
     '@/lib/nbaFirstEventDiagnostics': eventDiagnostics,
     '@/lib/pipelineHealth': { withPipelineHealth: (_name: string, run: unknown) => run },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
@@ -114,6 +115,7 @@ test('cloud capture persists First Basket separately without suppressing ordinar
   assert.equal(failed.response.status, 503)
   assert.equal(failed.body.captured, 1)
   assert.equal(failed.body.firstBasket.failed, 1)
+  assert.equal(failed.body.availability[0].status, 'verified', 'A price failure cannot suppress independent injury/lineup refreshes')
   assert.equal(failed.calls.some(call => call.args.p_feed === 'first'), false)
   const failedProps = await runCapture(false, true)
   assert.equal(failedProps.body.firstBasket.captured, 1)

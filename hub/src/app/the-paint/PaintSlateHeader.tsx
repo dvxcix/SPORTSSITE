@@ -1,8 +1,12 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { PaintGame } from '@/lib/nbaPaint'
+import { useEffect, useRef, useState } from 'react'
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { nbaToday, type PaintGame } from '@/lib/nbaPaint'
+import { nbaGameFinal } from '@/lib/nbaOddsMode'
+import { watchNbaRefresh } from '@/lib/nbaRefresh'
+import { nbaModeHref } from '@/lib/nbaModeHref'
+import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { TeamLogo } from './PaintVisuals'
 import styles from './slateHeader.module.css'
 
@@ -32,6 +36,30 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
 }) {
   const activeDay = useRef<HTMLButtonElement>(null)
   const activeGame = useRef<HTMLButtonElement>(null)
+  const mode = useNbaOddsMode()
+  const [updated, setUpdated] = useState<{ date: string; games: PaintGame[] } | null>(null)
+  const [failedDate, setFailedDate] = useState<string | null>(null), [retry, setRetry] = useState(0)
+  const displayed = updated?.date === date ? updated.games : games
+  const poll = displayed.some(game => !nbaGameFinal(game)) || displayed.length === 0 && date >= nbaToday()
+  useEffect(() => {
+    if (!poll) return
+    const controller = new AbortController(); let pending = false
+    const load = async () => {
+      if (pending) return
+      pending = true
+      try {
+        const response = await fetch(nbaModeHref(`/the-paint/schedule?date=${encodeURIComponent(date)}`, mode), { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) })
+        if (!response.ok) throw new Error('Schedule unavailable')
+        const next = await response.json() as { date: string; games: PaintGame[] }
+        if (next.date !== date || !Array.isArray(next.games) || next.games.length > 16 || new Set(next.games.map(game => game.id)).size !== next.games.length || next.games.some(game => !Number.isSafeInteger(game.id) || game.id <= 0 || game.date !== date || !game.home_team || !game.visitor_team)) throw new Error('Invalid schedule')
+        if (!controller.signal.aborted) { setUpdated(next); setFailedDate(null) }
+      } catch { if (!controller.signal.aborted) setFailedDate(date) }
+      finally { pending = false }
+    }
+    void load()
+    const stop = watchNbaRefresh(load, 30000)
+    return () => { controller.abort(); stop() }
+  }, [date, mode, poll, retry])
   // Keep recent dates reachable even when the schedule query starts today.
   const slateDays = [...new Set([...days, ...Array.from({length:8},(_,index)=>paintSlateDay(date,-index))])].sort()
   useEffect(() => {
@@ -61,10 +89,10 @@ export function PaintSlateHeader({ date, days, games, gameId, onChange }: {
         <button type="button" className={styles.arrow} aria-label="Next day" onClick={() => onChange(paintSlateDay(date, 1))}><ChevronRight size={17}/></button>
       </div>
     </div>
-    {games.length > 0 && <div className={styles.gamesRow}>
-      <div className={styles.slateLabel}><span>{games.length} {games.length === 1 ? 'game' : 'games'}</span><small>All times ET</small></div>
+    {displayed.length > 0 && <div className={styles.gamesRow}>
+      <div className={styles.slateLabel}><span>{displayed.length} {displayed.length === 1 ? 'game' : 'games'}</span><small>All times ET</small>{failedDate === date && <button type="button" className={styles.arrow} aria-label="Game status refresh delayed. Retry" title="Game status refresh delayed. Retry" onClick={() => setRetry(value => value + 1)}><RefreshCw size={14}/></button>}</div>
       <nav className={styles.games} aria-label="NBA matchups">
-        {games.map(game => {
+        {displayed.map(game => {
           const selected = game.id === gameId
           const hasScore = ['final', 'in_progress'].includes(game.status_state ?? '')
           return <button type="button" key={game.id} ref={selected ? activeGame : undefined} className={styles.game} aria-pressed={selected} aria-label={`${game.visitor_team.full_name} at ${game.home_team.full_name}, ${gameTime(game)}${hasScore ? `, ${game.visitor_team_score} to ${game.home_team_score}` : ' Eastern'}`} onClick={() => onChange(game.date, game.id)}>

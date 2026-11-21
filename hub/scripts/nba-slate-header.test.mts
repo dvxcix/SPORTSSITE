@@ -17,6 +17,7 @@ const bundle = await build({ entryPoints: ['src/app/the-paint/PaintSlateHeader.t
 const fixture = { exports: {} as { PaintSlateHeader:ComponentType<{date:string;days:string[];games:unknown[];gameId?:number;onChange:(date:string,gameId?:number)=>void}>; paintSlateDay:(date:string,direction:number)=>string } }
 new Function('require', 'module', 'exports', bundle.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, fixture, fixture.exports)
 const { PaintSlateHeader, paintSlateDay } = fixture.exports
+globalThis.fetch = async () => { throw new Error('No implicit network calls in slate tests') }
 
 test('slate day navigation crosses calendar and daylight-saving boundaries without drifting', () => {
   assert.equal(paintSlateDay('2026-11-01', 1), '2026-11-02')
@@ -62,4 +63,33 @@ test('a no-game previous day does not block reaching the prior saved slate',asyn
     await act(async()=>(host.querySelector('[aria-label="Previous day"]') as HTMLButtonElement).click())
     assert.equal(changes.pop(),'2026-11-02')
   }finally{await act(async()=>root.unmount());host.remove()}
+})
+
+test('all matchup scores refresh independently, retain the last view on failure, and stop polling after final', async () => {
+  const originalNow = Date.now, originalFetch = globalThis.fetch
+  let now = 0, calls = 0, fail = false, final = false
+  Date.now = () => now
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+  const game = { id: 91, date: '2030-11-20', datetime: '2030-11-21T00:00:00Z', status_state: 'in_progress', period: 1, visitor_team_score: 0, home_team_score: 0, visitor_team: { full_name: 'Away', abbreviation: 'ATL' }, home_team: { full_name: 'Home', abbreviation: 'BOS' } }
+  globalThis.fetch = async (url) => {
+    assert.equal(url, '/the-paint/schedule?date=2030-11-20&mode=pregame'); calls++
+    if (fail) return Response.json({}, { status: 503 })
+    return Response.json({ date: game.date, games: [{ ...game, status_state: final ? 'final' : 'in_progress', status: final ? 'Final' : 'Live', visitor_team_score: calls * 10, home_team_score: calls * 8 }] })
+  }
+  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+  try {
+    await act(async () => root.render(createElement(PaintSlateHeader, { date: game.date, days: [game.date], games: [game], onChange: () => {} })))
+    const score = () => host.querySelector('[aria-label="NBA matchups"] button')!.getAttribute('aria-label')!
+    assert.match(score(), /10 to 8/)
+    now = 31_000; await act(async () => window.dispatchEvent(new dom.window.Event('focus')))
+    assert.match(score(), /20 to 16/)
+    fail = true; now = 62_000; await act(async () => window.dispatchEvent(new dom.window.Event('focus')))
+    assert.match(score(), /20 to 16/, 'A failed score read preserves the prior values')
+    assert.ok(host.querySelector('[aria-label="Game status refresh delayed. Retry"]'))
+    fail = false; final = true; now = 93_000; await act(async () => window.dispatchEvent(new dom.window.Event('focus')))
+    assert.match(score(), /Final, 40 to 32/)
+    assert.equal(host.querySelector('[aria-label="Game status refresh delayed. Retry"]'), null)
+    now = 124_000; await act(async () => window.dispatchEvent(new dom.window.Event('focus')))
+    assert.equal(calls, 4, 'A complete final slate stops mutable polling')
+  } finally { await act(async () => root.unmount()); host.remove(); Date.now = originalNow; globalThis.fetch = originalFetch }
 })
