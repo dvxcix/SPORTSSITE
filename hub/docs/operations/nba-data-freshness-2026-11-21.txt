@@ -41,8 +41,9 @@ collector, clock/freeze and market-signal regression harnesses passed 91/91 afte
 adding the new independent availability dependency to their fixtures. Pregame
 freeze checks passed 124/124; production source smoke passed 134/134. TypeScript
 and scoped ESLint passed. Complete-suite/build/live receipts are recorded below
-after verification. No historical data, migrations, secrets or feature/access
-flags are changed by this release.
+after verification. No historical research/odds values, migrations, secrets or
+feature/access flags are rewritten by this release. Retained-source lineup
+reads preserve their original upstream timestamps.
 
 Final pre-release checks: expanded NBA suite 746/746 and freeze suite 124/124;
 schedule/Live-mode interaction checks 26/26. TypeScript, scoped ESLint and the
@@ -58,3 +59,55 @@ Provider contract checked: https://nba.balldontlie.io/#projected-lineups
 The provider retains its final pregame snapshot after tip, with original update
 time; expected can remain expected. The separate actual lineup feed starts once
 the game begins. Both endpoint families support the existing /v1 aliases.
+
+Production verification — November 21, 2026, 10:43–10:48 UTC
+Source 3eccd6402aeb9a1e8ed38fba92b46f327a3cf802 is on GitHub main and deployed
+READY as dpl_QX6ukdgxD1Lwr1wMVRUEVcL5zQwp, assigned to www.slipsurge.com.
+Vercel's full production build completed successfully. The following metadata
+commit records this verified source ancestor without changing product behavior.
+
+Authenticated browser-to-API-to-source verification covered every November 21
+game: MIL–PHI, POR–NYK, LAC–DAL, MEM–MIN, NOP–SAS and BOS–SAC. The six research
+boards returned 209 roster players, 58 injury entries, 45 Out players with zero
+active quotes, 14,614 player offers and 11–12 game-line books per matchup. All
+six returned no board issues and unfrozen current pregame research. Observed
+full-board requests took 2.67–3.47 seconds, including browser navigation and
+inspection; these are spot measurements, not a latency service guarantee.
+The full-slate FanDuel Odds Board returned six games, 164 eligible players,
+complete=true and empty failed/unavailable/capture-warning lists. Its independent
+164-player count equals the 209-player roster minus the 45 Out players. The
+new lightweight schedule route returned all six exact matchups and current
+statuses. Shared provider injury-cache reads verified coverage for all six.
+
+Scheduled cloud runs at 10:43:50, 10:44:50 and 10:45:50 UTC used the released
+source. Each verified all 13 active/upcoming games' availability sources and had
+zero ordinary-market failures. No manual job replay was used. Those runs took
+2.89–4.29 seconds. New lineup counts remain honestly pending where the upstream
+source has not published one; confirmed and actual flows were verified against
+retained WAS–CHI and HOU–DEN sources plus transition/race tests. This morning's
+live games had not started, so changing live scores were exercised with the
+actual React component and simulated source responses, not claimed observed
+during a live game. Published desktop/mobile Light/Dark checks had no page
+overflow. The default theme and responsive overrides were restored.
+
+The November 6 general NBA delay banner (id 1) was disabled only after current
+ordinary-market and availability verification, using a guarded exact-message /
+updated-at comparison. Message/style/configuration were preserved. A fresh
+production page showed the notice removed. No other operational flags changed.
+
+Remaining provider limitation
+Some First Basket bookmakers still return quote timestamps over five minutes
+old. The new scheduled runs continue to report those First Basket failures;
+zero ordinary-market failures is not a claim that the entire collector is green.
+Expired quotes remain excluded, incomplete frames do not overwrite history,
+and no timestamp/age limit was loosened. Valid current sibling prices continue
+to be available through the existing reader. Upstream freshness cannot be
+manufactured by polling or by removing a warning.
+
+Final checks: NBA 746/746; pregame freeze 124/124; production source 134/134;
+TypeScript and scoped ESLint passed. Local production-source Webpack compile
+passed and Vercel's complete production build passed. Production runtime
+logs returned no error/fatal path groups in the first deployed check. Detailed
+local receipts: hub/docs/design/evidence/live/nba-freshness-*; screenshots:
+the task visualization directory, nba-freshness-live-*.jpg. PC browser viewport
+verification does not claim physical-phone or native-app certification.
