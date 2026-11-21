@@ -60,3 +60,28 @@ Provider semantics: market-level last_update is the original bookmaker price
 observation, and a closed/suspended market's timestamp can stop advancing.
 https://the-odds-api.com/liveapi/guides/v4/
 https://the-odds-api.com/sports-odds-data/update-intervals.html
+
+Production verification
+Initial source: 405a3bbb7e7b41652372357a261097cb4900f6d3.
+Deployment: dpl_ESWKP3F5jTQUgxsEJHpVBrPyEim4, READY with www.slipsurge.com.
+At 11:46:32 UTC, the member endpoint loaded all six games with 594 prices,
+all five supported books represented for every game, complete movement history
+and zero expired, invalid-clock or future quotes. Missing market types remain
+not posted; no unsupported prices or contracts were invented.
+
+The natural 11:46:50 UTC cloud run checked 13 upcoming games. Six matched games
+wrote 65 exact book/contract observations. Seven unlisted future games deferred.
+NOP/SAS Fanatics crossed the five-minute limit during the run: its whole-feed
+receipt stayed failed with 11 rejected outcomes, while 11 fresh sibling scopes
+still captured. This verifies the originally failing case in production rather
+than reporting false complete coverage. No manual job replay was needed.
+
+The live Court placed KCP in the priced section and grouped 15 unpriced players
+and seven unavailable players below it. Expanding Unavailable showed Jaylen
+Brown with Out status; his research remains accessible. The public desktop
+check caught a checkbox-column style overriding the divider button width.
+The follow-up scopes the divider styles above that rule, yielding full-width
+48px controls, and replaces the visual guide tooltip with an accessible
+description. Local browser verification confirmed the corrected dimensions.
+The release checklist records these two surfaces without changing owner-review
+history or marking unrelated work as newly reviewed.
