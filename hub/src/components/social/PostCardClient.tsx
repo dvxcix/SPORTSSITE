@@ -1,5 +1,7 @@
 'use client'
 
+import { memberTone } from '@/lib/memberIdentity'
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
@@ -632,13 +634,13 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         <div className="ss-post-body">
           <div className="ss-post-layout">
             {/* Avatar */}
-            <ProfileHoverTarget className="ss-post-avatar-trigger" profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+            <ProfileHoverTarget className="ss-post-avatar-trigger" profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
             <Link href={`/profile/${post.author.username}`} style={{ display: 'block', flexShrink: 0 }}>
               <MemberAvatar
                 src={post.author.avatar_url}
                 name={post.author.display_name || post.author.username}
                 size={46}
-                tone={post.author.tier === 'ultimate' ? 'ultimate' : post.author.tier === 'advanced' ? 'advanced' : post.author.account_type === 'creator' ? 'creator' : 'default'}
+                tone={memberTone(post.author)}
                 ringStyle={post.author.avatar_ring_style}
                 ringColor={post.author.avatar_ring_color}
               />
@@ -649,7 +651,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               {/* Header row */}
               <div className="ss-post-header">
                 <div className="ss-post-author-line">
-                  <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+                  <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
                   <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
@@ -1085,7 +1087,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             ))}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
+                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} tone={memberTone(profile)} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                 <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
                   <input
                     ref={commentInputRef}

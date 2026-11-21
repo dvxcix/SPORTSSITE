@@ -18,7 +18,6 @@ export function AchievementsSection({ achievements }: { achievements: Achievemen
     <section className="ss-profile-achievements">
       <div className="ss-profile-achievements-heading">
         <div>
-          <p>COLLECTION</p>
           <h2>Badges and achievements</h2>
         </div>
         <span>{achievements.length} earned</span>

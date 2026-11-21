@@ -9,7 +9,7 @@ export function ProductPageShell({ children, narrow = false, className = '' }: {
 
 export function ProductHero({ icon, eyebrow, title, description, status, actions }: {
   icon: ReactNode
-  eyebrow: string
+  eyebrow?: string
   title: string
   description: string
   status?: string
@@ -20,7 +20,7 @@ export function ProductHero({ icon, eyebrow, title, description, status, actions
       <div className={styles.heroIdentity}>
         <div className={styles.icon} aria-hidden="true">{icon}</div>
         <div>
-          <p className={styles.eyebrow}>{eyebrow}</p>
+          {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
           <h1 className={styles.title}>{title}</h1>
           <p className={styles.description}>{description}</p>
         </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { memberTone } from '@/lib/memberIdentity'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
@@ -162,7 +164,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         <input ref={bannerInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'banner'); e.target.value = '' }} />
         <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploading === 'banner'} className="ss-profile-editor-banner" aria-label="Change profile banner">
-          {form.banner_url ? <SafeImage src={form.banner_url} alt="" /> : <span>ADD A PROFILE BANNER</span>}
+          {form.banner_url ? <SafeImage src={form.banner_url} alt="" /> : <span>Add a cover photo</span>}
           <span className="ss-profile-editor-upload">{uploading === 'banner' ? <Loader2 size={17} className="animate-spin" /> : <Upload size={17} />} Change banner</span>
         </button>
         <div className="ss-profile-editor-identity">
@@ -185,6 +187,7 @@ export function ProfileForm({ profile }: { profile: any }) {
             src={form.avatar_url}
             name={form.display_name || form.username || 'You'}
             size={72}
+            tone={memberTone(profile)}
             ringStyle={form.avatar_ring_style}
             ringColor={form.avatar_ring_color}
           />

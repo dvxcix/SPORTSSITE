@@ -12,6 +12,8 @@ import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } fr
 import { EmojiText } from '@/components/social/EmojiText'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
+import { ResearchSavedActions } from '@/components/research/ResearchSavedActions'
+import { memberTone } from '@/lib/memberIdentity'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,8 +49,8 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
   const hotPicks = visible(rawHotPicks).sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0)).slice(0, 6)
 
   return (
-    <ProductPageShell>
-      <ProductHero icon={<TrendingUp size={23} />} eyebrow="Community board" title="Picks" description="Fresh picks and parlays from across the SlipSurge community." status={`${picks.length} recent`} actions={user ? <ProductAction href="/feed"><Plus size={14} /> Post a pick</ProductAction> : undefined} />
+    <ProductPageShell className="ss-member-picks-page">
+      <ProductHero icon={<TrendingUp size={23} />} title="Picks" description="From the community." actions={user ? <><ResearchSavedActions /><ProductAction href="/feed?pick=true"><Plus size={14} /> Post a pick</ProductAction></> : undefined} />
       <nav className="ss-picks-filters" aria-label="Filter picks by sport">
         {visibleSports.map(sport => {
           const logo = sportLogoUrl(sport)
@@ -65,7 +67,7 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
             const logo = teamLogo(post.sport, pick.team_abbr ?? pick.pick_team)
             const name = post.author?.display_name || post.author?.username || 'Member'
             return <Link href={`/posts/${post.id}`} key={post.id} className="ss-hot-pick">
-              <header><MemberAvatar src={post.author?.avatar_url} name={name} size={28} /><span>{name}</span><Flame size={13} /></header>
+              <header><MemberAvatar src={post.author?.avatar_url} name={name} size={28} tone={memberTone(post.author)} ringStyle={post.author?.avatar_ring_style} ringColor={post.author?.avatar_ring_color} /><span>{name}</span><Flame size={13} aria-hidden="true" /></header>
               <div>{logo && <Image src={logo} alt="" width={34} height={34} />}<strong><EmojiText text={pick.pick || post.content || 'Community pick'} /></strong></div>
               <footer><span>{post.sport}</span><span>{post.reaction_count ?? 0} reactions</span></footer>
             </Link>

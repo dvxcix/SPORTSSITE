@@ -1,6 +1,6 @@
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { nbaTeamLogo } from './nbaPaint'
-import { nbaTeamGradient } from './nbaTeamColors'
+import { nbaTeamColors, nbaTeamGradient } from './nbaTeamColors'
 
 // Local copy of the existing NFL team directory: no per-avatar database reads.
 // League identity is mandatory; BAL must never resolve through MLB by default.
@@ -48,4 +48,12 @@ export function sportTeamBackground(sport?: string | null, team?: string | null)
   if (!code) return 'var(--surface-2)'
   const [, primary, secondary] = NFL[code]
   return `radial-gradient(ellipse at 20% 0%, ${secondary}b8 0%, transparent 66%), linear-gradient(145deg, ${primary} 12%, ${primary}d9 54%, ${secondary}b3 100%)`
+}
+
+/** Optional atmosphere for headers, using the same verified colors as portraits. */
+export function sportTeamColors(sport?: string | null, team?: string | null): readonly [string, string] | null {
+  const league = sport?.trim().toLowerCase(), key = team?.trim().toUpperCase() ?? ''
+  if (league === 'nba') return NBA_CODES.has(own(NBA_ALIASES, key)) ? nbaTeamColors(key) : null
+  const code = league === 'nfl' ? nflCode(team) : null
+  return code ? [NFL[code][1], NFL[code][2]] : null
 }

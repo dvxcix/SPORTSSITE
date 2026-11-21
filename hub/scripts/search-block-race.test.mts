@@ -45,7 +45,7 @@ const stubs: Record<string, string> = {
   '@slipsurge/core/mlb-api': 'export const mlbHeadshot=()=>null;export const mlbTeamLogo=()=>null',
   '@/components/social/UserBadges': 'export const UserBadges=()=>null',
   '@/lib/sportLogos': 'export const sportLogoUrl=()=>null',
-  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null',
+  '@slipsurge/core/mlbTeamColors': 'export const getTeamLogoUrl=()=>null; export const getTeamColor=()=>"var(--surface-2)"',
   '@/components/shared/NflTeamLogo': 'export const NflTeamLogo=()=>null',
   '@/components/social/MemberAvatar': 'export const MemberAvatar=()=>null',
   '@/components/product/ProductPage': 'import React from "react";export const ProductHero=()=>null;export const ProductPageShell=({children})=>React.createElement("div",null,children)',

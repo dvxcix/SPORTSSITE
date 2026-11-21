@@ -1,5 +1,7 @@
 'use client'
 
+import { memberTone } from '@/lib/memberIdentity'
+
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { UserBadges } from './UserBadges'
@@ -14,6 +16,8 @@ export type MentionProfile = {
   username: string
   display_name: string | null
   avatar_url: string | null
+  tier?: string | null
+  account_type?: string | null
   avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
   avatar_ring_color?: string | null
   bio: string | null
@@ -25,7 +29,7 @@ export type MentionProfile = {
 export function MentionProfileCard({ profile }: { profile: MentionProfile }) {
   return <div className="ss-mention-profile-card">
     <div className="ss-mention-profile-top">
-      <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={42} ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
+      <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={42} tone={memberTone(profile)} ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
       <span className="ss-mention-profile-id"><strong>{profile.display_name || profile.username}{profile.is_verified ? <i aria-label="Verified">&#10003;</i> : null}</strong><small>@{profile.username}</small></span>
       <UserBadges userId={profile.id} size={18} maxVisible={3} />
     </div>

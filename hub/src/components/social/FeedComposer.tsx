@@ -1,5 +1,7 @@
 'use client'
 
+import { memberTone } from '@/lib/memberIdentity'
+
 import { useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
@@ -204,7 +206,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
   return (
     <div className="ss-feed-composer">
       <div className="ss-feed-composer-layout">
-        <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40}
+        <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40} tone={memberTone(profile)}
           ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
 
         <div className="ss-feed-composer-main">
@@ -379,7 +381,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
               />
               <EmojiPicker onSelect={insertAtCursor} />
               <GifPicker onSelect={setImageUrl} />
-              <button type="button" className="ss-composer-spoiler" data-active={isSpoiler} aria-pressed={isSpoiler} onClick={() => setIsSpoiler(value => !value)}>
+              <button type="button" className="ss-composer-spoiler" aria-label="Mark post as spoiler" title="Spoiler" data-active={isSpoiler} aria-pressed={isSpoiler} onClick={() => setIsSpoiler(value => !value)}>
                 <EyeOff size={14}/><span>Spoiler</span>
               </button>
             </div>

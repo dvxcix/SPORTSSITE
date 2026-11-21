@@ -174,9 +174,8 @@ function ShareWatchlistContent({ onClose, sport, itemIds, ownerId }: ShareWatchl
     >
       <div className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{sport ?? 'CROSS-SPORT'} RESEARCH</span>
           <h2 id="watchlist-share-title">Share watchlist</h2>
-          <p id="watchlist-share-description">Publish or export the current saved-board snapshot.</p>
+          <p id="watchlist-share-description">Share your saved picks.</p>
         </div>
         <button type="button" data-modal-autofocus onClick={onClose} className={styles.close} aria-label="Close share watchlist"><X size={18} /></button>
       </div>
@@ -197,7 +196,7 @@ function ShareWatchlistContent({ onClose, sport, itemIds, ownerId }: ShareWatchl
         <ShareOptionBtn label="Post to feed" onClick={postToFeed} busy={busy === 'feed'} disabled={!currentImage || currentError || !!busy} icon={<Send size={18} />} tone="primary" />
         <ShareOptionBtn label="Download" onClick={download} busy={busy === 'download'} disabled={!currentImage || currentError || !!busy} icon={<Download size={18} />} />
         <ShareOptionBtn label={copied ? 'Copied' : 'Copy image'} onClick={copyImage} busy={busy === 'copy'} disabled={!currentImage || currentError || !!busy} icon={copied ? <Check size={18} /> : <Copy size={18} />} tone={copied ? 'success' : 'default'} />
-        <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'} disabled={!currentImage || currentError || !!busy} icon={<Share size={18} />} />
+        <ShareOptionBtn label="Share image" onClick={nativeShare} busy={busy === 'native'} disabled={!currentImage || currentError || !!busy} icon={<Share size={18} />} />
       </div>
     </ModalSurface>
   )

@@ -9,7 +9,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { PostBetModal } from './PostBetModal'
 import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
-import { CheckCircle2, Share2, X } from 'lucide-react'
+import { CheckCircle2, Share2, Star, Trash2, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
@@ -27,19 +27,19 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
   const playerHref = watchlistPlayerHref(item)
 
   return (
-    <div style={{
+    <div className="ss-watchlist-row" data-status={item.status} style={{
       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
       borderBottom: '1px solid var(--border)',
-      opacity: item.status === 'posted' ? 0.55 : 1,
       background: selected ? 'var(--accent-dim)' : 'transparent',
     }}>
       {selectMode && item.status === 'pending' && (
-        <input
+        <label className="ss-watchlist-select"><input
           type="checkbox"
+          aria-label={`Select ${item.player_name}: ${item.prop_label}`}
           checked={selected}
           onChange={() => onToggleSelect(item.id)}
           style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--accent)', cursor: 'pointer' }}
-        />
+        /></label>
       )}
       <PlayerAvatar
         headshot={item.headshot_url}
@@ -77,16 +77,16 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
           ))}
         </div>
         {item.status === 'posted' && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginTop: 4, letterSpacing: '0.04em' }}>POSTED TO FEED</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginTop: 4 }}>Posted to Feed</div>
         )}
       </div>
       {!selectMode && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           {item.status === 'pending' && (
             <button
               onClick={() => onPostSingle(item)}
               style={{
-                fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 6, ...(item.sport.toLowerCase() === 'nba' ? { minHeight: 44, minWidth: 54 } : {}),
+                fontSize: 12, fontWeight: 600, padding: '5px 10px', borderRadius: 8, minHeight: 44, minWidth: 54,
                 background: 'var(--accent-fill)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
               }}
             >
@@ -94,14 +94,15 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
             </button>
           )}
           <button
+            aria-label={`Remove ${item.player_name}: ${item.prop_label}`}
             disabled={removing}
             onClick={async () => { setRemoving(true); try { await wl.remove(item.id) } finally { setRemoving(false) } }}
             style={{
-              fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
+              display: 'grid', placeItems: 'center', padding: 0, borderRadius: 8, minHeight: 44, minWidth: 44,
               background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)', cursor: 'pointer',
             }}
           >
-            Remove
+            <Trash2 size={15} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -215,8 +216,8 @@ export function WatchlistButton() {
         }}
       >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
-              <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>★ My Watchlist</span>
+            <div className="ss-saved-research-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
+              <h2 id="watchlist-panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 600, color: 'var(--text-1)' }}><Star size={18} aria-hidden="true" />Watchlist</h2>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
               <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>

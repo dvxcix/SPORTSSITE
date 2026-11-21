@@ -27,9 +27,9 @@ export function ResearchSavedActions({ nflMatrix = false }: { nflMatrix?: boolea
   const { signedIn } = useWatchlist()
   if (!signedIn) return null
 
-  return <div className={styles.actions} role="group" aria-label="Saved research">
+  return <div className={styles.actions} role="group" aria-label="Saved research" data-saved-research-header>
     {nflMatrix && <SavedAction label="Open NFL matrices" text="NFL Matrix" event="ss:open-nfl-matrices" icon={Grid3X3} />}
-    <SavedAction label="Open my picks" text="Picks" event="ss:open-my-picks" icon={ClipboardList} />
+    <SavedAction label="Open my picks" text="My picks" event="ss:open-my-picks" icon={ClipboardList} />
     <SavedAction label="Open watchlist" text="Watchlist" event="ss:open-watchlist" icon={Star} />
   </div>
 }

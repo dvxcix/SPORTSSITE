@@ -13,6 +13,8 @@ import Link from 'next/link'
 import { Zap, TrendingUp, Clock, Users, Compass } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { FeedSportFilter } from '@/components/social/FeedSportFilter'
+import { ResearchSavedActions } from '@/components/research/ResearchSavedActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,11 +68,11 @@ export default async function FeedPage({
         <div className="ss-feed-timeline">
           <header className="ss-feed-timeline-head">
             <div>
-              <p>COMMUNITY</p>
               <h1 id="feed-title">The Feed</h1>
             </div>
-            <Link href="/explore" className="ss-feed-explore"><Compass size={15} /><span>Explore</span></Link>
+            <div className="ss-member-header-actions"><ResearchSavedActions /><Link href="/explore" className="ss-feed-explore"><Compass size={15} /><span>Explore</span></Link></div>
           </header>
+          <div className="ss-feed-toolbar">
           <nav className="ss-feed-filters" aria-label="Feed filters">
             {filters.map(f => {
               const Icon = f.icon
@@ -87,9 +89,8 @@ export default async function FeedPage({
               )
             })}
           </nav>
-          <nav className="ss-feed-filters" aria-label="Feed sports">
-            {(['All', ...(mlbAccess ? ['MLB'] : []), 'NFL', 'NBA'] as const).map(league => <Link key={league} href={`/feed?filter=${filter}${league === 'All' ? '' : `&sport=${league}`}`} className={`ss-feed-filter ${(sport ?? 'All') === league ? 'is-active' : ''}`} aria-current={(sport ?? 'All') === league ? 'page' : undefined}>{league}</Link>)}
-          </nav>
+          <FeedSportFilter sport={sport} filter={filter} mlbAccess={mlbAccess} />
+          </div>
           {storiesEnabled && <StoriesBar />}
 
           <div className="ss-feed-composer-wrap">

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { SettingsSectionSelect } from './SettingsSectionSelect'
+import { ResearchSavedActions } from '@/components/research/ResearchSavedActions'
 import { AtSign, Bell, Compass, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Shield, SlidersHorizontal, Sparkles, UserRound, UserX } from 'lucide-react'
 
 const items = [
@@ -21,7 +22,7 @@ export function SettingsShell({ active, eyebrow, title, description, children }:
   active: string; eyebrow?: string; title: string; description: string; children: React.ReactNode
 }) {
   return <div className="ss-settings-shell">
-    <header className="ss-settings-hero"><div>{eyebrow && <p className="ss-settings-eyebrow">{eyebrow}</p>}<h1 id="settings-page-title">{title}</h1><p>{description}</p></div></header>
+    <header className="ss-settings-hero"><div>{eyebrow && <p className="ss-settings-eyebrow">{eyebrow}</p>}<h1 id="settings-page-title">{title}</h1><p>{description}</p></div><ResearchSavedActions /></header>
     <SettingsSectionSelect active={active} items={items.map(({ href, label }) => ({ href, label }))}/>
     <div className="ss-settings-layout">
       <nav className="ss-settings-nav" aria-label="Settings sections">

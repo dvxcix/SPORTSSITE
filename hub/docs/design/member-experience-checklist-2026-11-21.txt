@@ -1,0 +1,49 @@
+SlipSurge member experience · 2026-11-21
+
+43 surfaces / 172 layout checks passed. Publication pending the authorized production release.
+Each item: desktop light/dark, phone light/dark; no page overflow or unnamed controls; phone buttons at least 44px high.
+Interaction details, states, image/theme round trip and popover bounds: member-experience-polish-2026-11-21.json.
+
+[Ready to deploy] Feed · latest | /feed?filter=latest
+[Ready to deploy] Feed · top | /feed?filter=top
+[Ready to deploy] Feed · picks | /feed?filter=picks
+[Ready to deploy] Feed · following | /feed?filter=following
+[Ready to deploy] Feed · NBA | /feed?sport=NBA
+[Ready to deploy] Feed · NFL | /feed?sport=NFL
+[Ready to deploy] Composer · take | /feed
+[Ready to deploy] Composer · pick | /feed?pick=true
+[Ready to deploy] Composer · poll | /feed
+[Ready to deploy] Composer · research | /feed
+[Ready to deploy] Member profile · all | /profile/jordan-review?tab=all
+[Ready to deploy] Member profile · picks | /profile/jordan-review?tab=picks
+[Ready to deploy] Member profile · replies | /profile/jordan-review?tab=replies
+[Ready to deploy] Member profile · reposts | /profile/jordan-review?tab=reposts
+[Ready to deploy] Member profile · media | /profile/jordan-review?tab=media
+[Ready to deploy] Member profile · communities | /profile/jordan-review?tab=communities
+[Ready to deploy] Your profile | /profile/review-member
+[Ready to deploy] Picks · All | /picks
+[Ready to deploy] Picks · NBA | /picks?sport=NBA
+[Ready to deploy] Picks · NFL | /picks?sport=NFL
+[Ready to deploy] Settings · overview | /settings
+[Ready to deploy] Settings · profile | /settings/profile
+[Ready to deploy] Settings · research | /settings/research
+[Ready to deploy] Settings · interests | /settings/interests
+[Ready to deploy] Settings · connections | /settings/connections
+[Ready to deploy] Settings · account | /settings/account
+[Ready to deploy] Settings · security | /settings/security
+[Ready to deploy] Settings · notifications | /settings/notifications
+[Ready to deploy] Settings · privacy | /settings/privacy
+[Ready to deploy] Settings · blocked | /settings/blocked
+[Ready to deploy] Settings · membership | /settings/membership
+[Ready to deploy] My Picks · active | /feed
+[Ready to deploy] My Picks · history | /feed
+[Ready to deploy] Watchlist · saved | /picks
+[Ready to deploy] Watchlist · selection | /picks
+[Ready to deploy] Watchlist · post | /picks
+[Ready to deploy] Watchlist · share | /picks
+[Ready to deploy] Watchlist · clear-confirmation | /picks
+[Ready to deploy] Avatars, rings and badges | /design-review/identity
+[Ready to deploy] Member hover card | /feed
+[Ready to deploy] Member badge details | /profile/jordan-review
+[Ready to deploy] NBA game header | /sports/nba/900001
+[Ready to deploy] NFL game header | /sports/nfl/2030_12_BUF_KC

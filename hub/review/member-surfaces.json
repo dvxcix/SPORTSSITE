@@ -1,0 +1,303 @@
+[
+  {
+    "id": "feed:latest",
+    "label": "Feed · latest",
+    "group": "Member experience",
+    "href": "/feed?filter=latest",
+    "role": "member"
+  },
+  {
+    "id": "feed:top",
+    "label": "Feed · top",
+    "group": "Member experience",
+    "href": "/feed?filter=top",
+    "role": "member"
+  },
+  {
+    "id": "feed:picks",
+    "label": "Feed · picks",
+    "group": "Member experience",
+    "href": "/feed?filter=picks",
+    "role": "member"
+  },
+  {
+    "id": "feed:following",
+    "label": "Feed · following",
+    "group": "Member experience",
+    "href": "/feed?filter=following",
+    "role": "member"
+  },
+  {
+    "id": "feed:NBA",
+    "label": "Feed · NBA",
+    "group": "Member experience",
+    "href": "/feed?sport=NBA",
+    "role": "member"
+  },
+  {
+    "id": "feed:NFL",
+    "label": "Feed · NFL",
+    "group": "Member experience",
+    "href": "/feed?sport=NFL",
+    "role": "member"
+  },
+  {
+    "id": "composer:take",
+    "label": "Composer · take",
+    "group": "Member experience",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "composer:pick",
+    "label": "Composer · pick",
+    "group": "Member experience",
+    "href": "/feed?pick=true",
+    "role": "member"
+  },
+  {
+    "id": "composer:poll",
+    "label": "Composer · poll",
+    "group": "Member experience",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "composer:research",
+    "label": "Composer · research",
+    "group": "Member experience",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "profile:all",
+    "label": "Member profile · all",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=all",
+    "role": "member"
+  },
+  {
+    "id": "profile:picks",
+    "label": "Member profile · picks",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=picks",
+    "role": "member"
+  },
+  {
+    "id": "profile:replies",
+    "label": "Member profile · replies",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=replies",
+    "role": "member"
+  },
+  {
+    "id": "profile:reposts",
+    "label": "Member profile · reposts",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=reposts",
+    "role": "member"
+  },
+  {
+    "id": "profile:media",
+    "label": "Member profile · media",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=media",
+    "role": "member"
+  },
+  {
+    "id": "profile:communities",
+    "label": "Member profile · communities",
+    "group": "Member experience",
+    "href": "/profile/jordan-review?tab=communities",
+    "role": "member"
+  },
+  {
+    "id": "profile:own",
+    "label": "Your profile",
+    "group": "Member experience",
+    "href": "/profile/review-member",
+    "role": "member"
+  },
+  {
+    "id": "picks:All",
+    "label": "Picks · All",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "picks:NBA",
+    "label": "Picks · NBA",
+    "group": "Member experience",
+    "href": "/picks?sport=NBA",
+    "role": "member"
+  },
+  {
+    "id": "picks:NFL",
+    "label": "Picks · NFL",
+    "group": "Member experience",
+    "href": "/picks?sport=NFL",
+    "role": "member"
+  },
+  {
+    "id": "settings:overview",
+    "label": "Settings · overview",
+    "group": "Settings",
+    "href": "/settings",
+    "role": "member"
+  },
+  {
+    "id": "settings:profile",
+    "label": "Settings · profile",
+    "group": "Settings",
+    "href": "/settings/profile",
+    "role": "member"
+  },
+  {
+    "id": "settings:research",
+    "label": "Settings · research",
+    "group": "Settings",
+    "href": "/settings/research",
+    "role": "member"
+  },
+  {
+    "id": "settings:interests",
+    "label": "Settings · interests",
+    "group": "Settings",
+    "href": "/settings/interests",
+    "role": "member"
+  },
+  {
+    "id": "settings:connections",
+    "label": "Settings · connections",
+    "group": "Settings",
+    "href": "/settings/connections",
+    "role": "member"
+  },
+  {
+    "id": "settings:account",
+    "label": "Settings · account",
+    "group": "Settings",
+    "href": "/settings/account",
+    "role": "member"
+  },
+  {
+    "id": "settings:security",
+    "label": "Settings · security",
+    "group": "Settings",
+    "href": "/settings/security",
+    "role": "member"
+  },
+  {
+    "id": "settings:notifications",
+    "label": "Settings · notifications",
+    "group": "Settings",
+    "href": "/settings/notifications",
+    "role": "member"
+  },
+  {
+    "id": "settings:privacy",
+    "label": "Settings · privacy",
+    "group": "Settings",
+    "href": "/settings/privacy",
+    "role": "member"
+  },
+  {
+    "id": "settings:blocked",
+    "label": "Settings · blocked",
+    "group": "Settings",
+    "href": "/settings/blocked",
+    "role": "member"
+  },
+  {
+    "id": "settings:membership",
+    "label": "Settings · membership",
+    "group": "Settings",
+    "href": "/settings/membership",
+    "role": "member"
+  },
+  {
+    "id": "my-picks:active",
+    "label": "My Picks · active",
+    "group": "Member experience",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "my-picks:history",
+    "label": "My Picks · history",
+    "group": "Member experience",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "watchlist:saved",
+    "label": "Watchlist · saved",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "watchlist:selection",
+    "label": "Watchlist · selection",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "watchlist:post",
+    "label": "Watchlist · post",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "watchlist:share",
+    "label": "Watchlist · share",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "watchlist:clear-confirmation",
+    "label": "Watchlist · clear-confirmation",
+    "group": "Member experience",
+    "href": "/picks",
+    "role": "member"
+  },
+  {
+    "id": "identity:rings-badges",
+    "label": "Avatars, rings and badges",
+    "group": "Identity",
+    "href": "/design-review/identity",
+    "role": "member"
+  },
+  {
+    "id": "identity:profile-preview",
+    "label": "Member hover card",
+    "group": "Identity",
+    "href": "/feed",
+    "role": "member"
+  },
+  {
+    "id": "identity:badge-tooltip",
+    "label": "Member badge details",
+    "group": "Identity",
+    "href": "/profile/jordan-review",
+    "role": "member"
+  },
+  {
+    "id": "game:NBA",
+    "label": "NBA game header",
+    "group": "Game context",
+    "href": "/sports/nba/900001",
+    "role": "member"
+  },
+  {
+    "id": "game:NFL",
+    "label": "NFL game header",
+    "group": "Game context",
+    "href": "/sports/nfl/2030_12_BUF_KC",
+    "role": "member"
+  }
+]

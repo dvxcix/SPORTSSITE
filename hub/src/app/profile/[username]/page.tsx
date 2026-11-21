@@ -24,6 +24,12 @@ import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { visibleFavorites } from '@/lib/visibleFavorites'
 import { profileMetadata } from '@/lib/profileMetadata'
+import type { CSSProperties } from 'react'
+import { sportTeamColors } from '@/lib/sportTeamArtwork'
+import { memberTone } from '@/lib/memberIdentity'
+import { ResearchSavedActions } from '@/components/research/ResearchSavedActions'
+import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
+import { MLB_FAVORITE_TEAMS, resolveFavoriteTeam } from '@/lib/sportFavorites'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -82,7 +88,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     )
   }
 
-  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }, { data: profileReplies }, { data: profileCommunities }] = await Promise.all([
+  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }, { data: profileReplies }, { data: profileCommunities }, favoriteCatalog] = await Promise.all([
     fetchProfilePostsPage(supabase, { userId: profile.id, tab: postTab, pageSize: 20, hideMlb: MLB_HIBERNATING && viewer?.account_type !== 'admin' }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
@@ -95,6 +101,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     supabase.from('creator_products').select('id,title,description,price,product_type,status').eq('creator_id', profile.id).eq('status', 'active').order('created_at', { ascending: false }).limit(6),
     supabase.from('comments').select('id,content,created_at,post_id,parent_id,post:posts(id,content,author:users!posts_author_id_fkey(username,display_name,avatar_url))').eq('author_id', profile.id).order('created_at', { ascending: false }).limit(20),
     supabase.from('group_members').select('role,joined_at,group:groups(id,name,slug,description,avatar_url,emoji,member_count,is_public)').eq('user_id', profile.id).order('joined_at', { ascending: false }).limit(24),
+    visibleProfile.favorite_teams?.length ? getFavoriteCatalog(true).catch(() => MLB_FAVORITE_TEAMS) : Promise.resolve([]),
   ])
   const isCreatorProfile = hasCreatorAccess(profile.account_type, Boolean(creatorApproval))
   const achievements = (achievementRows ?? []).map((r: any) => r.badge).filter(Boolean)
@@ -162,22 +169,33 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const postsWithReactions = await attachUserReactions(rawPosts, authUser?.id)
   const mappedPosts = postsWithReactions
 
+  const favoriteBrand = (visibleProfile.favorite_teams ?? []).map((team: string) => {
+    const resolved = resolveFavoriteTeam(team, favoriteCatalog, visibleProfile.favorite_sports ?? [])
+    if (resolved) return sportTeamColors(resolved.sport, resolved.abbr)
+    const [sport, abbreviation] = team.split(':')
+    return sportTeamColors(sport, abbreviation)
+  }).find(Boolean)
+
   return (
     <div className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
       <div className="ss-member-profile overflow-hidden rounded-xl border border-[rgba(var(--line-rgb),0.09)] bg-[var(--surface)]">
       {/* Banner */}
-      <div className="h-44 sm:h-60 bg-[var(--surface-2)] relative overflow-hidden">
+      <div className={`ss-member-cover ${profile.banner_url ? 'has-image' : ''}`} style={favoriteBrand ? { '--atmosphere-primary': favoriteBrand[0], '--atmosphere-secondary': favoriteBrand[1] } as CSSProperties : undefined}>
         {profile.banner_url && <SafeImage src={profile.banner_url} alt="" className="h-full w-full object-cover" />}
       </div>
 
       {/* Profile header */}
       <div className="px-4 pb-5 sm:px-7 sm:pb-7">
-        <div className="relative z-10 flex flex-wrap items-end justify-between gap-3 -mt-12 sm:-mt-16 mb-5">
+        <div className="ss-profile-identity-row relative z-10 flex flex-wrap items-end justify-between gap-3 -mt-12 sm:-mt-16 mb-5">
           <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={112}
-            tone={profile.tier === 'ultimate' ? 'ultimate' : profile.tier === 'advanced' ? 'advanced' : profile.account_type === 'creator' ? 'creator' : 'default'}
+            tone={memberTone(profile)}
             ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
-          <div className="ss-member-profile-actions flex basis-full sm:basis-auto flex-wrap items-center justify-start sm:justify-end gap-2">
+          <div className="ss-member-profile-actions ss-profile-identity-actions flex basis-full sm:basis-auto flex-wrap items-center justify-start sm:justify-end gap-2">
+            <div className="ss-profile-utility-actions">
+            <ResearchSavedActions />
             <ProfileActions username={profile.username} />
+            </div>
+            <div className="ss-profile-relationship-actions">
             {isOwnProfile ? (
             <a href="/settings/profile"
               className="inline-flex items-center h-9 px-4 text-sm rounded-xl border border-[var(--border-2)] text-[var(--text-1)] hover:bg-[var(--surface-2)] font-bold transition-colors">
@@ -205,6 +223,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               Follow
             </a>
             )}
+            </div>
           </div>
         </div>
 
@@ -305,23 +324,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       )}
 
       <AchievementsSection achievements={achievements} />
-      <FavoritesSection teams={visibleProfile.favorite_teams ?? []} players={visibleProfile.favorite_players ?? []} sports={visibleProfile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} />
+      <FavoritesSection teams={visibleProfile.favorite_teams ?? []} players={visibleProfile.favorite_players ?? []} sports={visibleProfile.favorite_sports ?? []} mlbAccess={!MLB_HIBERNATING || viewer?.account_type === 'admin'} catalog={favoriteCatalog} />
 
       <div className="border-t border-[rgba(var(--line-rgb),0.07)]" />
 
       {canViewContent ? (
         <>
           {/* Tabs */}
-          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-[rgba(var(--line-rgb),0.075)] bg-[var(--surface)] p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] [scrollbar-width:none] sm:mx-6">
+          <nav aria-label="Profile content" className="ss-member-profile-tabs">
             {TABS.map(t => (
               <Link
                 key={t.key}
                 href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
-                className={`relative min-w-[78px] flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-semibold transition duration-200 sm:text-sm ${
-                  tab === t.key ? 'bg-[rgba(var(--contrast-rgb),0.085)] text-[var(--text-1)] shadow-[inset_0_1px_rgba(255,255,255,.06),0_7px_20px_rgba(0,0,0,.22)]' : 'text-[var(--text-3)] hover:bg-[rgba(var(--contrast-rgb),0.035)] hover:text-[var(--text-2)]'
-                }`}
+                aria-current={tab === t.key ? 'page' : undefined}
               >
-                {tab === t.key && <span className="absolute inset-x-6 -bottom-1.5 h-px bg-gradient-to-r from-transparent via-lime-300 to-transparent" />}
                 {t.label}
               </Link>
             ))}

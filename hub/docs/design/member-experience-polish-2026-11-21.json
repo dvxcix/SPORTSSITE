@@ -1,0 +1,4124 @@
+{
+  "title": "Member experience polish · 2026-11-21",
+  "state": "Verified locally; ready to deploy",
+  "baseCommit": "b6a2a8d8b47b2013af3a7174d24b9684c10d1d76",
+  "release": null,
+  "scopeCount": 43,
+  "layoutChecks": 172,
+  "tests": {
+    "feedVisibility": 28,
+    "memberIdentityAndSavedResearch": 38,
+    "crossSport": 44,
+    "productionSource": 134,
+    "researchUi": 37,
+    "optimizedBuild": "passed",
+    "typecheck": "passed",
+    "changedApplicationAndTestsLint": "passed"
+  },
+  "notes": [
+    "Original member photos and badge artwork retained.",
+    "Cached team directory resolves numeric NBA favorite IDs; catalog reads run alongside existing profile reads and are reused by FavoritesSection.",
+    "Read-only live smoke pending. Posting failure/success, pagination and account switches are covered with isolated fixtures.",
+    "No operational jobs, migrations, account/security changes, financial actions or member messages performed.",
+    "Native system-share delivery, real MFA setup and billing changes are outside this visual test.",
+    "The private review database adapter retains its three pre-existing explicit-any lint findings. Application and changed-test lint is clean.",
+    "Prior unrelated MLB source-contract failures remain outside this member-interface pass."
+  ],
+  "surfaces": [
+    {
+      "id": "feed:latest",
+      "label": "Feed · latest",
+      "group": "Member experience",
+      "href": "/feed?filter=latest",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "phone-light": {
+          "url": "/feed?filter=latest&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/feed?filter=latest&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?filter=latest&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?filter=latest&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "feed:top",
+      "label": "Feed · top",
+      "group": "Member experience",
+      "href": "/feed?filter=top",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?filter=top&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?filter=top&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?filter=top&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?filter=top&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "feed:picks",
+      "label": "Feed · picks",
+      "group": "Member experience",
+      "href": "/feed?filter=picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?filter=picks&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 594,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?filter=picks&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 594,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?filter=picks&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 594,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?filter=picks&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 594,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "feed:following",
+      "label": "Feed · following",
+      "group": "Member experience",
+      "href": "/feed?filter=following",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?filter=following&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 688,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?filter=following&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 688,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?filter=following&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 688,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?filter=following&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 688,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "feed:NBA",
+      "label": "Feed · NBA",
+      "group": "Member experience",
+      "href": "/feed?sport=NBA",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?sport=NBA&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 774,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?sport=NBA&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 774,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?sport=NBA&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 774,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?sport=NBA&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 774,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "feed:NFL",
+      "label": "Feed · NFL",
+      "group": "Member experience",
+      "href": "/feed?sport=NFL",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/feed?sport=NFL&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 570,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/feed?sport=NFL&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 570,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?sport=NFL&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 570,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?sport=NFL&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 570,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "composer:take",
+      "label": "Composer · take",
+      "group": "Member experience",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Selected take mode.",
+      "health": {
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "composer:pick",
+      "label": "Composer · pick",
+      "group": "Member experience",
+      "href": "/feed?pick=true",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Selected pick mode.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?pick=true&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 948,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?pick=true&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 948,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?pick=true&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 948,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?pick=true&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 948,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "composer:poll",
+      "label": "Composer · poll",
+      "group": "Member experience",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Selected poll mode.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 920,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 920,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 920,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 920,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "composer:research",
+      "label": "Composer · research",
+      "group": "Member experience",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Selected research mode.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:all",
+      "label": "Member profile · all",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=all",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=all&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=all&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=all&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=all&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:picks",
+      "label": "Member profile · picks",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=picks&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=picks&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=picks&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=picks&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:replies",
+      "label": "Member profile · replies",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=replies",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=replies&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 581,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=replies&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 581,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=replies&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 581,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=replies&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 581,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:reposts",
+      "label": "Member profile · reposts",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=reposts",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=reposts&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 587,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=reposts&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 587,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=reposts&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 587,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=reposts&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 587,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:media",
+      "label": "Member profile · media",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=media",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=media&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=media&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=media&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=media&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 586,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:communities",
+      "label": "Member profile · communities",
+      "group": "Member experience",
+      "href": "/profile/jordan-review?tab=communities",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/profile/jordan-review?tab=communities&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 592,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?tab=communities&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 592,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/profile/jordan-review?tab=communities&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 592,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?tab=communities&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 592,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "profile:own",
+      "label": "Your profile",
+      "group": "Member experience",
+      "href": "/profile/review-member",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/profile/review-member?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 500,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/profile/review-member?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 500,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/review-member?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 500,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/review-member?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 500,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "picks:All",
+      "label": "Picks · All",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "text": 310,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "text": 310,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "text": 310,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "text": 310,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "picks:NBA",
+      "label": "Picks · NBA",
+      "group": "Member experience",
+      "href": "/picks?sport=NBA",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?sport=NBA&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "text": 307,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?sport=NBA&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "text": 307,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?sport=NBA&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "text": 307,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?sport=NBA&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "text": 307,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "picks:NFL",
+      "label": "Picks · NFL",
+      "group": "Member experience",
+      "href": "/picks?sport=NFL",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?sport=NFL&reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "text": 158,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?sport=NFL&reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "text": 158,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?sport=NFL&reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "text": 158,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?sport=NFL&reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "text": 158,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:overview",
+      "label": "Settings · overview",
+      "group": "Settings",
+      "href": "/settings",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/settings?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing",
+            "Help"
+          ],
+          "text": 924,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/settings?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing",
+            "Help"
+          ],
+          "text": 924,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing",
+            "Help"
+          ],
+          "text": 924,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing",
+            "Help"
+          ],
+          "text": 924,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:profile",
+      "label": "Settings · profile",
+      "group": "Settings",
+      "href": "/settings/profile",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/settings/profile?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your profile",
+            "Profile completion",
+            "Favorite teams",
+            "Favorite NBA players"
+          ],
+          "text": 1041,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/settings/profile?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your profile",
+            "Profile completion",
+            "Favorite teams",
+            "Favorite NBA players"
+          ],
+          "text": 1041,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/profile?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your profile",
+            "Profile completion",
+            "Favorite teams",
+            "Favorite NBA players"
+          ],
+          "text": 1041,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/profile?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your profile",
+            "Profile completion",
+            "Favorite teams",
+            "Favorite NBA players"
+          ],
+          "text": 1041,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:research",
+      "label": "Settings · research",
+      "group": "Settings",
+      "href": "/settings/research",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/research?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your workspace"
+          ],
+          "text": 1248,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/research?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your workspace"
+          ],
+          "text": 1248,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/research?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your workspace"
+          ],
+          "text": 1248,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/research?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your workspace"
+          ],
+          "text": 1248,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:interests",
+      "label": "Settings · interests",
+      "group": "Settings",
+      "href": "/settings/interests",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/settings/interests?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Favorite teams",
+            "Favorite NBA players",
+            "Home mix",
+            "Market focus",
+            "Discovery"
+          ],
+          "text": 1165,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/settings/interests?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Favorite teams",
+            "Favorite NBA players",
+            "Home mix",
+            "Market focus",
+            "Discovery"
+          ],
+          "text": 1165,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/interests?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Favorite teams",
+            "Favorite NBA players",
+            "Home mix",
+            "Market focus",
+            "Discovery"
+          ],
+          "text": 1165,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/interests?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Favorite teams",
+            "Favorite NBA players",
+            "Home mix",
+            "Market focus",
+            "Discovery"
+          ],
+          "text": 1165,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:connections",
+      "label": "Settings · connections",
+      "group": "Settings",
+      "href": "/settings/connections",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/settings/connections?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "text": 661,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/settings/connections?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "text": 661,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/connections?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "text": 661,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/connections?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "text": 661,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:account",
+      "label": "Settings · account",
+      "group": "Settings",
+      "href": "/settings/account",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/account?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "text": 872,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/account?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "text": 872,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/account?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "text": 872,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/account?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "text": 872,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:security",
+      "label": "Settings · security",
+      "group": "Settings",
+      "href": "/settings/security",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/security?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "text": 744,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/security?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "text": 744,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/security?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "text": 744,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/security?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "text": 744,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:notifications",
+      "label": "Settings · notifications",
+      "group": "Settings",
+      "href": "/settings/notifications",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/notifications?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "text": 1314,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/notifications?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "text": 1314,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/notifications?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "text": 1314,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/notifications?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "text": 1314,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:privacy",
+      "label": "Settings · privacy",
+      "group": "Settings",
+      "href": "/settings/privacy",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/privacy?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "text": 741,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/privacy?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "text": 741,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/privacy?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "text": 741,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/privacy?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "text": 741,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:blocked",
+      "label": "Settings · blocked",
+      "group": "Settings",
+      "href": "/settings/blocked",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/blocked?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "text": 457,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/blocked?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "text": 457,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/blocked?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "text": 457,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/blocked?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "text": 457,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "settings:membership",
+      "label": "Settings · membership",
+      "group": "Settings",
+      "href": "/settings/membership",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-light": {
+          "url": "/settings/membership?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your SlipSurge membership",
+            "Connect Whop",
+            "Manage or Cancel"
+          ],
+          "text": 742,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/settings/membership?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Your SlipSurge membership",
+            "Connect Whop",
+            "Manage or Cancel"
+          ],
+          "text": 742,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/settings/membership?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your SlipSurge membership",
+            "Connect Whop",
+            "Manage or Cancel"
+          ],
+          "text": 742,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/settings/membership?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Your SlipSurge membership",
+            "Connect Whop",
+            "Manage or Cancel"
+          ],
+          "text": 742,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "my-picks:active",
+      "label": "My Picks · active",
+      "group": "Member experience",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 249,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 249,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 249,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 249,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "my-picks:history",
+      "label": "My Picks · history",
+      "group": "Member experience",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 253,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 253,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 253,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            " My Picks"
+          ],
+          "text": 253,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "watchlist:saved",
+      "label": "Watchlist · saved",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 214,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 214,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 214,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 214,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "watchlist:selection",
+      "label": "Watchlist · selection",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 230,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 230,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 230,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 230,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "watchlist:post",
+      "label": "Watchlist · post",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [],
+          "text": 165,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [],
+          "text": 165,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [],
+          "text": 165,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [],
+          "text": 165,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "watchlist:share",
+      "label": "Watchlist · share",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Share watchlist"
+          ],
+          "text": 79,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Share watchlist"
+          ],
+          "text": 79,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Share watchlist"
+          ],
+          "text": 79,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Share watchlist"
+          ],
+          "text": 79,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "watchlist:clear-confirmation",
+      "label": "Watchlist · clear-confirmation",
+      "group": "Member experience",
+      "href": "/picks",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls. Opened requested drawer state; no publication or destructive confirm.",
+      "health": {
+        "desktop-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 238,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 238,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/picks?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 238,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Watchlist"
+          ],
+          "text": 238,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "identity:rings-badges",
+      "label": "Avatars, rings and badges",
+      "group": "Identity",
+      "href": "/design-review/identity",
+      "role": "member",
+      "notes": "Final optimized build: four layouts, both themes, accessible controls.",
+      "health": {
+        "desktop-dark": {
+          "url": "/design-review/identity?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Avatars & badges",
+            "In context",
+            "Ring styles",
+            "Tiers & custom colours",
+            "Badge artwork",
+            "Unavailable images",
+            "Market symbols"
+          ],
+          "text": 721,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/design-review/identity?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Avatars & badges",
+            "In context",
+            "Ring styles",
+            "Tiers & custom colours",
+            "Badge artwork",
+            "Unavailable images",
+            "Market symbols"
+          ],
+          "text": 721,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/design-review/identity?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Avatars & badges",
+            "In context",
+            "Ring styles",
+            "Tiers & custom colours",
+            "Badge artwork",
+            "Unavailable images",
+            "Market symbols"
+          ],
+          "text": 721,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/design-review/identity?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Avatars & badges",
+            "In context",
+            "Ring styles",
+            "Tiers & custom colours",
+            "Badge artwork",
+            "Unavailable images",
+            "Market symbols"
+          ],
+          "text": 721,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "identity:profile-preview",
+      "label": "Member hover card",
+      "group": "Identity",
+      "href": "/feed",
+      "role": "member",
+      "notes": "Final build: keyboard profile previews on desktop and direct profile links on mobile",
+      "health": {
+        "desktop-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [],
+          "text": 99,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 1,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/feed?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Feed"
+          ],
+          "text": 883,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "identity:badge-tooltip",
+      "label": "Member badge details",
+      "group": "Identity",
+      "href": "/profile/jordan-review",
+      "role": "member",
+      "notes": "Final build: badge artwork and details remain available by keyboard in all four layouts",
+      "health": {
+        "desktop-light": {
+          "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Ultimate",
+            "Beta Tester",
+            "Favorite teams"
+          ],
+          "text": 767,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "game:NBA",
+      "label": "NBA game header",
+      "group": "Game context",
+      "href": "/sports/nba/900001",
+      "role": "member",
+      "notes": "Final build: both team palettes and verified logo fallback; research links retained",
+      "health": {
+        "desktop-light": {
+          "url": "/sports/nba/900001?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "NBA: New York Knicks vs Boston Celtics"
+          ],
+          "text": 261,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/sports/nba/900001?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "NBA: New York Knicks vs Boston Celtics"
+          ],
+          "text": 261,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/sports/nba/900001?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "NBA: New York Knicks vs Boston Celtics"
+          ],
+          "text": 261,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/sports/nba/900001?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "NBA: New York Knicks vs Boston Celtics"
+          ],
+          "text": 261,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    },
+    {
+      "id": "game:NFL",
+      "label": "NFL game header",
+      "group": "Game context",
+      "href": "/sports/nfl/2030_12_BUF_KC",
+      "role": "member",
+      "notes": "Final build: both team palettes and verified logo fallback; research links retained",
+      "health": {
+        "desktop-light": {
+          "url": "/sports/nfl/2030_12_BUF_KC?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "NFL: Buffalo Bills vs Kansas City Chiefs"
+          ],
+          "text": 232,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/sports/nfl/2030_12_BUF_KC?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "NFL: Buffalo Bills vs Kansas City Chiefs"
+          ],
+          "text": 232,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/sports/nfl/2030_12_BUF_KC?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "NFL: Buffalo Bills vs Kansas City Chiefs"
+          ],
+          "text": 232,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/sports/nfl/2030_12_BUF_KC?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "NFL: Buffalo Bills vs Kansas City Chiefs"
+          ],
+          "text": 232,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      },
+      "checks": {
+        "desktopLight": true,
+        "desktopDark": true,
+        "phoneLight": true,
+        "phoneDark": true
+      }
+    }
+  ],
+  "extra": [
+    {
+      "id": "popover-bounds",
+      "popoverChecks": [
+        {
+          "left": 339.3679504394531,
+          "right": 657.9654235839844,
+          "viewport": 1440,
+          "width": 318.59747314453125
+        },
+        {
+          "left": 338.9155578613281,
+          "right": 658.4178161621094,
+          "viewport": 1440,
+          "width": 319.50225830078125
+        }
+      ],
+      "badgeChecks": [
+        {
+          "view": "desktop-light",
+          "left": 366.7604370117187,
+          "right": 696.7604370117188,
+          "viewport": 1440,
+          "width": 330
+        },
+        {
+          "view": "desktop-dark",
+          "left": 366.7604370117187,
+          "right": 696.7604370117188,
+          "viewport": 1440,
+          "width": 330
+        },
+        {
+          "view": "phone-light",
+          "left": 23.748291015625,
+          "right": 323.564208984375,
+          "viewport": 390,
+          "width": 299.81591796875
+        },
+        {
+          "view": "phone-dark",
+          "left": 23.74853515625,
+          "right": 323.56396484375,
+          "viewport": 390,
+          "width": 299.8154296875
+        }
+      ]
+    },
+    {
+      "id": "account-menu",
+      "checks": [
+        {
+          "view": "desktop-light",
+          "buttons": [
+            {
+              "height": 34,
+              "label": "Use light theme",
+              "width": 126.66667175292967
+            },
+            {
+              "height": 34,
+              "label": "Use dark theme",
+              "width": 126.66667175292967
+            },
+            {
+              "height": 38,
+              "label": "Sign out",
+              "width": 266.66668701171875
+            }
+          ]
+        },
+        {
+          "view": "desktop-dark",
+          "buttons": [
+            {
+              "height": 34,
+              "label": "Use light theme",
+              "width": 126.66667175292967
+            },
+            {
+              "height": 34,
+              "label": "Use dark theme",
+              "width": 126.66667175292967
+            },
+            {
+              "height": 38,
+              "label": "Sign out",
+              "width": 266.66668701171875
+            }
+          ]
+        },
+        {
+          "view": "phone-light",
+          "buttons": [
+            {
+              "height": 44,
+              "label": "Use light theme",
+              "width": 162.6666717529297
+            },
+            {
+              "height": 44,
+              "label": "Use dark theme",
+              "width": 162.6666717529297
+            },
+            {
+              "height": 44,
+              "label": "Sign out",
+              "width": 338.66668701171875
+            }
+          ]
+        },
+        {
+          "view": "phone-dark",
+          "buttons": [
+            {
+              "height": 44,
+              "label": "Use light theme",
+              "width": 162.6666717529297
+            },
+            {
+              "height": 44,
+              "label": "Use dark theme",
+              "width": 162.6666717529297
+            },
+            {
+              "height": 44,
+              "label": "Sign out",
+              "width": 338.66668701171875
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "theme-image-ring-roundtrip",
+      "beforePhoto": "/review-assets/tatum.png",
+      "lightRing": {
+        "class": "ss-member-avatar is-ultimate ring-orbit ",
+        "loaded": 1040,
+        "outline": "drop-shadow(rgba(9, 18, 32, 0.35) 0px 0px 1px)",
+        "photo": "/review-assets/tatum.png",
+        "ring": "#ffffff"
+      },
+      "afterPhoto": "/review-assets/tatum.png",
+      "savedProfile": false
+    },
+    {
+      "id": "feed-filter-and-sticky",
+      "filterState": {
+        "sport": "NBA",
+        "topLink": "/feed?filter=top&sport=NBA",
+        "url": "/feed?filter=top&sport=NBA"
+      },
+      "sticky": [
+        {
+          "view": "desktop-light",
+          "headBottom": 128,
+          "top": 128
+        },
+        {
+          "view": "desktop-dark",
+          "headBottom": 128,
+          "top": 128
+        },
+        {
+          "view": "phone-light",
+          "headBottom": 124,
+          "top": 124
+        },
+        {
+          "view": "phone-dark",
+          "headBottom": 124,
+          "top": 124
+        }
+      ]
+    }
+  ]
+}

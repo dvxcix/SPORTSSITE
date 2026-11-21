@@ -1,0 +1,147 @@
+/* Member surfaces. Color belongs to identity and context; reading surfaces stay calm. */
+.ss-member-header-actions{display:flex;align-items:center;gap:8px;min-width:0}
+body:has([data-saved-research-header]) .ss-utility-dock-toggle,
+body:has([data-saved-research-header]) .ss-utility-dock-items{display:none}
+
+/* Keep initials behind the image while it loads, and after a failed image request. */
+.ss-member-avatar{filter:none;vertical-align:middle}
+.ss-member-avatar-media{box-shadow:0 0 0 2px var(--surface),0 3px 9px rgba(9,18,32,.16)}
+.ss-member-avatar-initials{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(145deg,color-mix(in srgb,var(--member-ring) 14%,var(--surface-3)),var(--surface-2));color:var(--text-1)}
+.ss-member-avatar-media img{position:absolute;inset:0;z-index:1}
+.ss-member-avatar:is(.ring-surge,.ring-orbit)::before{inset:-4px;border:0;background:conic-gradient(from 0deg,transparent 8%,var(--member-ring) 33%,color-mix(in srgb,var(--member-ring),white 30%) 44%,transparent 64%,var(--member-ring) 90%,transparent);mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));box-shadow:none}
+.ss-member-avatar.ring-orbit::before{inset:-5px;background:conic-gradient(transparent 0% 58%,var(--member-ring) 77%,color-mix(in srgb,var(--member-ring),white 30%) 83%,transparent 94%)}
+.ss-member-avatar.ring-pulse::before{inset:-4px;box-shadow:0 0 8px color-mix(in srgb,var(--member-ring) 30%,transparent)}
+.ss-member-avatar.ring-solid::before{inset:-4px;box-shadow:0 0 8px color-mix(in srgb,var(--member-ring) 20%,transparent)}
+.ss-member-avatar:not(.ring-none)::before{filter:drop-shadow(0 0 1px rgba(9,18,32,.35))}
+.ss-member-avatar .ss-member-presence{z-index:2;box-shadow:0 0 0 1px var(--surface)}
+
+/* Uploaded transparent wordmarks retain their original colors in either theme. */
+.ss-user-badge-shell,.ss-badge-tooltip-art{background:#111c29;border-color:#314253;box-shadow:inset 0 1px rgba(255,255,255,.08),0 1px 3px rgba(9,18,32,.12);color:#dce7ef}
+.ss-user-badge-shell:hover{background:#182638;border-color:#5d7790}
+.ss-user-badge-shell{border-radius:5px;overflow:visible}
+.ss-user-badge-icon{display:block;object-fit:contain;filter:none}
+.ss-user-badges{max-width:100%;gap:5px;align-items:center;vertical-align:middle}
+.ss-badge-tooltip{max-width:min(280px,calc(100vw - 48px));gap:10px}
+.ss-badge-tooltip small{font-size:12px;line-height:1.45;text-wrap:pretty}
+.ss-badge-tooltip-art{border:1px solid #314253;border-radius:7px;padding:5px;flex-shrink:0}
+
+/* A single sticky filter toolbar prevents the sport and timeline tabs overlapping. */
+.ss-feed-timeline{overflow:visible;box-shadow:none;background:var(--surface)}
+.ss-feed-timeline-head{min-height:64px;height:64px;padding:10px 16px;isolation:isolate;background:var(--surface);backdrop-filter:none}
+.ss-feed-timeline-head::before{position:absolute;z-index:-1;inset:0;pointer-events:none;background:radial-gradient(ellipse at 5% 100%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%);content:''}
+.ss-feed-timeline-head h1{font-size:22px;font-weight:650;letter-spacing:-.035em}
+.ss-feed-explore{min-height:44px;padding-inline:11px;border-radius:9px;background:var(--surface);border:1px solid var(--control-border)}
+.ss-feed-toolbar{position:sticky;top:calc(var(--banner-h,0px) + var(--topbar-h) + 64px);z-index:calc(var(--layer-sticky) + 1);display:flex;align-items:center;gap:8px;padding:0 12px 0 4px;border-bottom:1px solid var(--border);background:var(--surface)}
+.ss-feed-toolbar .ss-feed-filters{position:static;display:grid;flex:1;min-width:0;min-height:50px;border:0;background:transparent;backdrop-filter:none}
+.ss-feed-filter{min-width:0;min-height:50px;padding:0 8px;gap:6px;font-size:12px;font-weight:550}
+.ss-feed-filter.is-active::after{left:22%;right:22%;bottom:0;box-shadow:none}
+.ss-feed-sport-select{flex:0 0 auto;max-width:112px}
+.ss-feed-sport-select select{width:100%;min-height:40px;padding:7px 5px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2);color:var(--text-1);font:inherit;font-size:12px;cursor:pointer}
+.ss-feed-filter:focus-visible,.ss-feed-sport-select select:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.ss-feed-composer{padding:18px 16px}
+.ss-composer-modes>button{min-height:36px;border-radius:8px;font-weight:550}
+.ss-feed-composer-actions{gap:8px;align-items:center;flex-wrap:wrap}
+.ss-composer-tool{min-height:40px;min-width:40px}
+.ss-composer-sport-trigger,.ss-composer-visibility-trigger,.ss-composer-post-button{min-height:40px;border-radius:8px}
+.ss-post-card{box-shadow:none}
+.ss-post-author-line{min-width:0;row-gap:5px}
+.ss-post-header .ss-member-avatar{filter:none;transform:none}
+
+/* Team colors form a soft cover, with no overlay competing with profile text. */
+.ss-member-cover{--atmosphere-primary:#8ecf45;--atmosphere-secondary:#8270e8;position:relative;isolation:isolate;height:clamp(148px,17vw,210px);overflow:hidden;background:var(--surface-2)}
+.ss-member-cover:not(.has-image)::before{position:absolute;z-index:-1;inset:-20%;background:radial-gradient(ellipse at 15% 35%,color-mix(in srgb,var(--atmosphere-primary) 68%,transparent),transparent 59%),radial-gradient(ellipse at 87% 25%,color-mix(in srgb,var(--atmosphere-secondary) 58%,transparent),transparent 62%),linear-gradient(130deg,var(--surface-2),color-mix(in srgb,var(--atmosphere-primary) 22%,var(--surface)));animation:ss-member-wave 18s ease-in-out infinite alternate;content:''}
+.ss-member-cover::after{position:absolute;inset:0;pointer-events:none;border-bottom:1px solid color-mix(in srgb,var(--atmosphere-primary) 24%,var(--border));background:linear-gradient(0deg,color-mix(in srgb,var(--surface) 45%,transparent),transparent 65%);content:''}
+.ss-member-cover.has-image img{position:relative;z-index:0}
+.ss-member-profile{border-color:var(--border-2);border-radius:16px}
+.ss-member-profile h1{font-weight:650;letter-spacing:-.035em;overflow-wrap:anywhere}
+.ss-member-profile-actions{padding-top:16px;gap:8px}
+.ss-member-profile-actions :is(a,button){font-weight:550}
+.ss-profile-utility-actions{display:flex;align-items:center;gap:8px}
+.ss-member-profile-tabs{display:flex;gap:4px;overflow-x:auto;margin:16px 24px 0;padding:4px;border:1px solid var(--border-2);border-radius:11px;background:var(--surface-2);scrollbar-width:thin}
+.ss-member-profile-tabs>a{display:flex;flex:1 0 auto;min-width:74px;min-height:44px;align-items:center;justify-content:center;padding:0 12px;border:1px solid transparent;border-radius:8px;color:var(--text-2);font-size:13px;font-weight:550;transition:background 140ms ease,color 140ms ease}
+.ss-member-profile-tabs>a:hover{background:var(--surface-3);color:var(--text-1)}
+.ss-member-profile-tabs>a[aria-current=page]{background:var(--surface);border-color:var(--border-2);color:var(--text-1);box-shadow:0 1px 3px rgba(9,18,32,.06)}
+.ss-member-profile-tabs>a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ss-member-favorites{background:var(--surface)}
+.ss-member-favorites a{min-height:44px;background:var(--surface-2);box-shadow:none}
+.ss-favorite-team{--team-primary:var(--accent);--team-secondary:var(--accent);display:flex;align-items:center;gap:9px;padding:9px 13px 9px 10px;border:1px solid var(--border-2);border-radius:10px;background:linear-gradient(130deg,color-mix(in srgb,var(--team-primary) 12%,var(--surface)),color-mix(in srgb,var(--team-secondary) 5%,var(--surface)))!important;transition:border-color 140ms ease}
+.ss-favorite-team:hover{border-color:color-mix(in srgb,var(--team-primary) 45%,var(--border-2))}
+.ss-profile-achievements{background:var(--surface-2);box-shadow:none;border-color:var(--border);border-radius:12px}
+.ss-profile-achievements-heading{align-items:center}.ss-profile-achievements-heading h2{margin:0;font-size:14px;font-weight:600}
+.ss-profile-achievements-heading>span{padding:0;border:0;border-radius:0;background:none;font-weight:500}
+.ss-achievement-card{border-radius:11px;min-height:100px;background:var(--surface)}
+.ss-achievement-card-content{min-height:100px;padding:14px}.ss-achievement-icon{width:48px;height:48px;flex-basis:48px;border-radius:10px;border-color:#314253;background:#111c29;box-shadow:none;backdrop-filter:none}
+.ss-achievement-icon img{width:82%;height:82%;filter:none}.ss-achievement-card.has-art::after{background:linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 94%,transparent) 70%,color-mix(in srgb,var(--surface) 70%,transparent))}
+.ss-mention-profile-popover{padding:16px;box-shadow:var(--shadow-md);border-radius:12px;background:var(--surface);border-color:var(--border-2)}
+.ss-mention-profile-open{min-height:44px;border-radius:8px}
+
+.ss-member-picks-page>header{position:relative;isolation:isolate}
+.ss-member-picks-page>header::before{position:absolute;z-index:-1;inset:-12px 0 0;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%);pointer-events:none;content:''}
+.ss-picks-filters{gap:6px;padding-block:8px;scrollbar-width:thin}
+.ss-picks-filters a{min-height:44px;border-radius:9px;font-weight:550}
+.ss-hot-pick{min-width:242px;padding:16px;border-radius:13px;border-color:var(--border-2);box-shadow:none;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 5%,var(--surface)),var(--surface) 64%);transition:border-color 160ms ease,transform 160ms ease}
+.ss-hot-pick:hover{border-color:var(--border-3);transform:translateY(-2px);box-shadow:0 6px 20px rgba(9,18,32,.06)}
+.ss-hot-pick header{gap:10px;min-height:34px}.ss-hot-pick header>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ss-hot-pick>div strong{font-size:15px;line-height:1.45;font-weight:600}
+.ss-hot-pick footer{font-size:12px;letter-spacing:0;text-transform:none}
+
+/* Saved research uses the same drawer on every page and for every sport. */
+.ss-saved-research-drawer{max-height:100dvh;overscroll-behavior:contain;box-shadow:-16px 0 60px rgba(9,18,32,.14);padding-bottom:env(safe-area-inset-bottom)}
+.ss-saved-research-header{position:relative;isolation:isolate;min-height:80px;background:var(--surface)!important}
+.ss-saved-research-header::before{position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--accent) 12%,transparent),transparent 72%);content:'';pointer-events:none}
+.ss-saved-research-header>:is(h2,span[id]){font-size:18px!important;font-weight:600!important;letter-spacing:-.025em}
+.ss-saved-research-tabs{gap:4px!important;margin:0 12px 12px;padding:4px!important;border:1px solid var(--border-2);border-radius:10px;background:var(--surface-2)}
+.ss-saved-research-tabs button{flex:1;border:1px solid transparent;border-radius:7px;font-size:13px;font-weight:550}
+.ss-saved-research-tabs button[aria-pressed=true]{border-color:var(--border-2);background:var(--surface);color:var(--text-1)!important}
+.ss-saved-empty-action{margin-top:14px;padding:8px 14px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface-2);color:var(--text-1);font-size:13px}
+.ss-watchlist-row{gap:12px!important;padding:14px 16px!important}
+.ss-watchlist-row>div:has(>a)>a{font-size:13px!important;min-height:24px;white-space:normal!important;line-height:1.4}
+.ss-watchlist-row[data-status=posted]{background:var(--surface-2)!important}
+.ss-watchlist-select{display:grid;place-items:center;flex:0 0 44px;min-width:44px;min-height:44px;cursor:pointer}
+.ss-saved-research-drawer button{min-height:44px;touch-action:manipulation}
+.ss-saved-research-drawer :is(input,select,textarea):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ss-post-bet-dialog button{min-height:44px;min-width:44px;border-radius:9px}
+.ss-post-bet-dialog input,.ss-post-bet-dialog select{min-height:44px}
+.ss-post-bet-dialog :is(button,input,select):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* One settings title and one navigation control at each width. */
+.ss-settings-hero{position:relative;isolation:isolate;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:4px 0 20px}
+.ss-settings-hero::before{position:absolute;z-index:-1;inset:-20px -12px 0;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%);pointer-events:none;content:''}
+.ss-settings-hero>div:first-child{min-width:0}
+.ss-settings-hero h1{font-size:28px;font-weight:650;letter-spacing:-.035em}
+.ss-settings-hero p:not(.ss-settings-eyebrow){max-width:60ch;color:var(--text-2);font-size:13px;line-height:1.6}
+.ss-settings-nav a{min-height:44px;gap:10px;padding-inline:12px}
+.ss-settings-content{min-width:0}
+.ss-settings-content :is(h2,h3){letter-spacing:-.015em;text-wrap:pretty}
+.ss-settings-content label{line-height:1.5}
+.ss-settings-content :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select){min-height:44px}
+.ss-settings-content table{font-variant-numeric:tabular-nums}
+.ss-profile-ring-colors>button{min-width:36px;min-height:36px}
+.ss-profile-editor-banner{background:radial-gradient(ellipse at 12% 15%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),var(--surface-2)}
+
+@keyframes ss-member-wave{from{transform:translate3d(-2%,0,0) scale(1.02)}to{transform:translate3d(3%,4%,0) scale(1.09)}}
+@media(max-width:767px){
+  .ss-feed-timeline-head{height:64px;min-height:64px;padding-inline:12px}.ss-feed-timeline-head h1{font-size:20px}
+  .ss-member-header-actions{gap:6px}.ss-feed-explore{width:44px;padding:0;justify-content:center}.ss-feed-explore span{display:none}
+  .ss-feed-toolbar{top:calc(var(--banner-h,0px) + var(--topbar-h) + 64px);gap:4px;padding-right:8px}
+  .ss-feed-filter{min-height:48px;padding:0 4px;font-size:11.5px}.ss-feed-filter>svg{display:none}
+  .ss-feed-sport-select{max-width:98px}.ss-feed-sport-select select{min-height:44px;font-size:16px;padding-inline:5px}
+  .ss-feed-composer{padding:16px 12px}.ss-feed-composer-layout{gap:12px}.ss-composer-modes>button{min-height:44px;padding-inline:9px}
+  .ss-feed-composer-actions{flex-wrap:wrap}.ss-composer-tool{min-height:44px;min-width:44px}.ss-composer-sport-trigger,.ss-composer-visibility-trigger,.ss-composer-post-button{min-height:44px}
+  .ss-feed-composer-tools{gap:2px}.ss-feed-composer-tools button{min-width:44px;min-height:44px}.ss-composer-spoiler>span{display:none}.ss-feed-composer-submit{margin-left:auto}
+  .ss-follow-button.is-compact,.ss-theme-switch:not(.is-full) button{min-height:44px}
+  .ss-post-bet-dialog input,.ss-post-bet-dialog select{font-size:16px!important}
+  .ss-feed-composer textarea{font-size:16px}.ss-post-avatar-trigger .ss-member-avatar{transform:none!important;margin-right:0!important}
+  .ss-post-more,.ss-post-actions button,.ss-post-reactions button{min-width:44px;min-height:44px}
+  .ss-profile-identity-row{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:end;gap:12px}
+  .ss-profile-identity-actions{display:contents}.ss-profile-utility-actions{justify-self:end;gap:6px;padding-bottom:2px}
+  .ss-profile-relationship-actions{grid-column:1/-1;justify-self:end}.ss-profile-relationship-actions>div{justify-content:flex-end}
+  .ss-member-profile-tabs{margin-inline:12px}.ss-member-profile-tabs>a{font-size:12px;min-width:72px;padding-inline:10px}
+  .ss-member-profile-actions{gap:8px}.ss-member-profile{border-radius:13px}.ss-member-cover{height:154px}
+  .ss-hot-pick{min-width:238px;padding:14px}.ss-settings-hero{gap:10px;padding-bottom:16px}.ss-settings-hero h1{font-size:25px}
+  .ss-settings-hero p:not(.ss-settings-eyebrow){font-size:12px}.ss-settings-content :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:16px}
+  .ss-settings-content :is(button,[role=switch]){min-height:44px}.ss-profile-ring-colors>button{min-width:44px;min-height:44px}
+  .ss-watchlist-row{padding:14px 12px!important;gap:9px!important}
+}
+@media(prefers-reduced-motion:reduce){.ss-member-cover::before{animation:none}.ss-hot-pick,.ss-member-profile-tabs>a{transition:none}.ss-hot-pick:hover{transform:none}}
+@media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){.ss-account-appearance .ss-theme-switch button{min-height:44px}}

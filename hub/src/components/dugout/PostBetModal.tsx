@@ -45,7 +45,7 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   }
 
   return (
-    <ModalSurface open onClose={() => { if (!submitting.current) onClose() }} labelledBy="post-bet-title" backdropStyle={{ background: 'var(--overlay)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+    <ModalSurface open onClose={() => { if (!submitting.current) onClose() }} labelledBy="post-bet-title" backdropStyle={{ background: 'var(--overlay)', zIndex: 1500, alignItems: 'center', justifyContent: 'center', padding: 16 }} panelClassName="ss-post-bet-dialog" panelStyle={{ width: 'min(420px, 100%)', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 14, padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
           <button type="button" disabled={posting} onClick={() => { if (!submitting.current) onClose() }} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: posting ? 'default' : 'pointer' }}><X size={16} /></button>

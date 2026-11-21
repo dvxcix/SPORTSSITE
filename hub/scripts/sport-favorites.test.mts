@@ -196,6 +196,7 @@ test('public profiles display MLB, NFL and NBA favorites regardless of viewer me
       '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: viewer }) }) }) }) }) },
       '@/lib/nbaAccessPolicy': { hasNbaAccess }, '@/lib/sportFavorites': favorites,
       '@/lib/favoriteCatalog': { getFavoriteCatalog: async (allowNba: boolean) => catalog.filter(team => allowNba || team.sport !== 'nba') },
+      '@/lib/sportTeamArtwork': { sportTeamColors: () => ['#123456', '#abcdef'] },
     }
     const mod = { exports: {} as { FavoritesSection: (props: Record<string, unknown>) => Promise<React.ReactNode> } }
     new Function('require', 'exports', 'module', compiled)((key: string) => { assert.ok(key in imports, key); return imports[key] }, mod.exports, mod)

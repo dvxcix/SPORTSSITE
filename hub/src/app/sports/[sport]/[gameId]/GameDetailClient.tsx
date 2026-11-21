@@ -15,6 +15,8 @@ import { NFLQuarterScore } from '@/components/sports/NFLQuarterScore'
 import type { NflQuarterRow } from '@/lib/nflGameCenter'
 import { useNflGameRefresh } from '@/components/sports/useNflGameRefresh'
 import { gameCenterStatus, basketballQuarters } from '@/lib/gameCenterPresentation'
+import type { CSSProperties } from 'react'
+import { sportTeamColors, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
@@ -97,13 +99,21 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
   const stateStr = status?.type?.state ?? gameStatus.state
   const period = status?.period ?? status?.type?.period
   const clock = status?.displayClock ?? status?.type?.displayClock
+  const awayColors = sportTeamColors(sport, away?.team?.abbreviation)
+  const homeColors = sportTeamColors(sport, home?.team?.abbreviation)
+  const awayLogo = away?.team?.logo || sportTeamLogoUrl(sport, away?.team?.abbreviation)
+  const homeLogo = home?.team?.logo || sportTeamLogoUrl(sport, home?.team?.abbreviation)
 
   return (
-    <div style={{
+    <div className={styles.scoreboard} style={{
+      '--atmosphere-primary': awayColors?.[0] ?? 'var(--accent)',
+      '--atmosphere-secondary': homeColors?.[0] ?? 'var(--blue)',
+      '--atmosphere-away-secondary': awayColors?.[1] ?? 'var(--accent)',
+      '--atmosphere-home-secondary': homeColors?.[1] ?? 'var(--blue)',
       background: 'var(--surface)',
       border: `1px solid ${isLive ? 'rgba(255,77,106,0.35)' : 'var(--border)'}`,
       borderRadius: 18, padding: '24px 20px', marginBottom: 4,
-    }}>
+    } as CSSProperties}>
       {/* Status badge */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <span style={{
@@ -124,9 +134,9 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
         {/* Away team */}
         <div style={{ textAlign: 'center' }}>
-          {away?.team?.logo && (
+          {awayLogo && (
             <SafeImage
-              src={away.team.logo}
+              src={awayLogo}
               alt=""
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
             />
@@ -155,9 +165,9 @@ function Scoreboard({ summary, game, gameStatus, isLive, sport }: {
 
         {/* Home team */}
         <div style={{ textAlign: 'center' }}>
-          {home?.team?.logo && (
+          {homeLogo && (
             <SafeImage
-              src={home.team.logo}
+              src={homeLogo}
               alt=""
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
             />

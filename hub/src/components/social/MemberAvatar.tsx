@@ -48,7 +48,8 @@ export function MemberAvatar({
   return (
     <span className={`ss-member-avatar is-${tone} ring-${ringStyle || 'surge'} ${className}`} style={style} role="img" aria-label={`${name} avatar`}>
       <span className="ss-member-avatar-media">
-        <SafeImage src={src} alt="" width={size} height={size} fallback={<span>{initials}</span>} />
+        <span className="ss-member-avatar-initials" aria-hidden="true">{initials}</span>
+        <SafeImage src={src} alt="" width={size} height={size} loading={size >= 72 ? 'eager' : 'lazy'} fallback={null} />
       </span>
       {online && <span className="ss-member-presence" />}
     </span>

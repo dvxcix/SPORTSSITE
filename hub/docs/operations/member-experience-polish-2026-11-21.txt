@@ -1,0 +1,18 @@
+SlipSurge member experience rollout · 2026-11-21
+
+State: locally verified; production release pending.
+Base: b6a2a8d8b47b2013af3a7174d24b9684c10d1d76. Required recovered NFL ancestry retained.
+
+Feed: one sticky filter toolbar, sport selector retains the active filter, saved-research header actions, compact phone composer.
+Profiles: favorite-team color cover, compact action layout, six accessible activity tabs, calmer favorites and achievement cards.
+Identity: stable photo/initials, consistent tier and custom rings in composer/posts/hover/trending/settings, unchanged original badge art on a theme-independent backing; eager hero and badge loading.
+Picks/Watchlist: header access replaces duplicate floating controls while the same layout-owned drawers stay mounted; compact rows, named selection/removal controls, 44px actions and posting fields, clearer sharing copy. Exact saved NFL GSIS IDs now link to NFL profiles; other IDs are never guessed.
+Settings: compact header, consistent form spacing and controls, every section retained; phone account-menu and theme controls checked.
+Game context: both opponents’ primary/secondary colors on a neutral readable header, with league-correct team-logo fallback.
+
+Verification: 43 surfaces / 172 layout checks; Feed visibility 28/28; member/saved-research 38/38; cross-sport 44/44; production source 134/134; research UI 37/37. Optimized private build and TypeScript passed. Changed app/test ESLint passed. Existing private-fixture explicit-any findings (3) retained, not represented as a whole-repo lint pass. Existing unrelated MLB source-contract failures remain out of scope.
+React review: no new dependencies or per-avatar requests; cached directory lookup runs in parallel and is reused; existing auth/visibility, paging, posting, quote freshness and freeze logic retained. Focus, reduced-motion preview, tooltip bounds and a white-ring photo theme round trip were checked.
+
+Local review uses isolated data and blocked operational services. Live smoke is read-only; no messages, member posts, destructive confirmations, native-share delivery, MFA or billing changes are part of this release.
+
+Evidence: hub/docs/design/member-experience-polish-2026-11-21.json and member-experience-checklist-2026-11-21.txt.
