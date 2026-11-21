@@ -93,3 +93,4 @@ already blocked these quotes; the server response now excludes them too and
 marks the affected coverage partial. Delayed-history, tip-crossing and frozen
 archive regression tests cover this response boundary.
 Final response-boundary verification: 760/760 NBA tests, 124/124 freeze tests, TypeScript and scoped ESLint passed.
+Final keyboard/table polish: section labels and chevrons stay visible during horizontal scrolling; a 1280px browser check verified label-left = scrollport-left + 18px at scrollLeft 42, with no page overflow.
