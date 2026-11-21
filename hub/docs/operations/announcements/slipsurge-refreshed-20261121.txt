@@ -1,0 +1,37 @@
+Owner-approved What's new announcement — 2026-11-21
+
+Entry ID: 116d8d4f-0a27-4ea3-8dbd-d292cc1be83d
+Audience: all authenticated members, every membership tier.
+Approval: owner reviewed the local drawer/alert copy and artwork, then explicitly
+requested publication for everyone and desktop/mobile, light/dark verification.
+
+Canonical payload: slipsurge-refreshed-20261121.json
+Publication SQL: publish-slipsurge-refreshed-20261121.sql
+Artwork source: slipsurge-refreshed-20261121.svg
+Public image: /images/changelog/slipsurge-refreshed-20261121.png
+PNG SHA-256: 1da77de4d9f73b25d4a1f5b76bad56aefee351855a0449aeab397ad8143e9518
+
+The content and image are identical to the approved local preview. Only the
+asset URL and active publication state differ. No product component, entitlement,
+member preference, previous entry or previous dismissal is changed.
+
+Release order: push this approved source and static artwork to main, wait for the
+production asset to match the approved hash, then execute the guarded data insert.
+Do not replay historical migrations. The stable entry ID makes publication
+idempotent and does not reset anyone's dismissal on retry.
+
+Existing behavior:
+- ChangelogPopup loads active entries on page load for signed-in members.
+- All-member visibility uses the existing audience-aware SELECT policy.
+- The dismissal is private to the member and stored in changelog_dismissals.
+- UpdateCenter reads active entries independently of dismissals, so the update
+  remains in What's new after the member closes the alert.
+- Existing open tabs need a page reload or next full visit to load the alert.
+- Admins can edit the announcement in /admin/changelog.
+
+Preflight: GitHub main and live Vercel production both d4ffb95797e99a884338d37ee4384e8aa6b7c68d.
+Dedicated review checkout preserves the unrelated dirty working copy.
+Exact copy/hash/payload checks pass. Existing production source tests: 134/134.
+Private preview reviewed on desktop and 390x844 phone in light and dark themes.
+Publication and real browser dismissal/history checks must be verified against
+the entry ID above after activation; source presence alone is not publication.
