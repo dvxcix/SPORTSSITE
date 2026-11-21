@@ -286,7 +286,7 @@
 .priceQuote .priceNow b{font-weight:600;font-size:14px}
 .lineButton:has(.priceQuote){gap:6px;padding-block:3px}
 .table td{padding-block:10px;font-variant-numeric:tabular-nums}
-.table .heat{background:transparent;box-shadow:none;border-color:transparent;min-width:44px}
+.table .heat{min-width:44px}
 .table .heat small{color:var(--text-3)}
 .boardOptionsRow{display:none}
 .boardFilterSheet{display:flex;flex-direction:column;width:100%;max-height:calc(100dvh - 24px);border:1px solid var(--border-2);border-radius:16px 16px 0 0;background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-overlay)}

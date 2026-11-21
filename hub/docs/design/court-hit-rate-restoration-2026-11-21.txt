@@ -1,0 +1,10 @@
+Court hit-rate color restoration — 2026-11-21
+
+Removed the desktop table rule that erased L5/L10/L20 heat backgrounds and borders.
+The existing continuous red/green scale, hit/sample counts, neutral missing values
+and accessible theme-specific text remain intact. No data or model changes.
+
+Validation: 16/16 focused heat, chart and identity tests passed. Actual local Court
+cells show red/green computed fills in desktop dark/light and 390px phone dark/light;
+no document overflow. Existing contrast tests cover the entire scale in both themes.
+Production verification is recorded with the member-preferences release receipt.
