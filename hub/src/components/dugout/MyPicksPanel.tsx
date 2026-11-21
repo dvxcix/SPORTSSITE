@@ -36,6 +36,11 @@ export function MyPicksButton() {
 
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
+    const show = () => { setOpen(true); void refresh() }
+    window.addEventListener('ss:open-my-picks', show)
+    return () => window.removeEventListener('ss:open-my-picks', show)
+  }, [refresh])
+  useEffect(() => {
     const update = () => { void refresh() }
     window.addEventListener('ss:picks-updated', update)
     window.addEventListener('focus', update)

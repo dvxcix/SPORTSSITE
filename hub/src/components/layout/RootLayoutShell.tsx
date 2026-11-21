@@ -76,6 +76,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   // both places too, instead of only the one it happened to be built on.
   const showMatrixButton = path === '/dugout' || path === '/daily-recap'
   const showNflMatrixButton = path === '/the-sideline'
+  const toolsInResearchHeader = path === '/the-paint' || path === '/the-sideline'
 
   return (
     <>
@@ -98,7 +99,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       {!isDesktop && <MobileDock hidden={mobileNavOpen} onMenuClick={() => setMobileNavOpen(true)} />}
-      <UtilityDock>
+      <UtilityDock toolsInHeader={toolsInResearchHeader}>
         {showMatrixButton && <MatrixButton />}
         {showNflMatrixButton && <NflMatrixButton />}
         <MyPicksButton />

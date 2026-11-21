@@ -1,25 +1,27 @@
 .trigger { pointer-events: auto; display: grid; place-items: center; width: 76px; height: 80px; flex-shrink: 0; padding: 0; border: 0; border-radius: 18px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.float { display: block; width: 76px; height: 80px; animation: volt-float 6s ease-in-out infinite; }
-.character { display: block; width: 100%; height: 100%; overflow: visible; }
-.body { fill: #b4ff4d; }
+.float { display: block; width: 76px; height: 80px; }
+.character { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 6px rgb(0 0 0 / .48)); }
+:global([data-theme='light']) .character { filter: drop-shadow(0 5px 5px rgb(36 65 18 / .25)) drop-shadow(0 1px 1px rgb(23 42 12 / .2)); }
+.hover { animation: volt-float 6s ease-in-out infinite; }
 .trim { fill: none; stroke: #0a0a0b; stroke-linecap: round; }
 .eyes, .mouth { fill: #0a0a0b; }
 .number { font: 900 46px 'Arial Black', 'Helvetica Neue', Impact, sans-serif; fill: #0a0a0b; text-anchor: middle; letter-spacing: -2px; }
 .breath { transform-box: fill-box; transform-origin: 50% 100%; animation: volt-breathe 3.2s ease-in-out infinite; }
 .eyes rect { transform-box: fill-box; transform-origin: center; animation: volt-blink 4.2s infinite; }
-.shadow { fill: #000; opacity: .35; }
-:global([data-theme='light']) .shadow { opacity: .13; }
+.shadow { opacity: .75; transform-origin: 100px 197px; animation: volt-shadow 6s ease-in-out infinite; }
+:global([data-theme='light']) .shadow { opacity: .95; }
 .tooltip { padding: 14px 16px; border: 1px solid var(--border-2); border-radius: 12px; color: var(--text-1); background: var(--surface); box-shadow: var(--shadow-lg); }
 .tooltip strong { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 650; line-height: 1.3; }
 .tooltip strong span { color: var(--text-2); font-size: 12px; font-weight: 450; }
 .tooltip p { margin: 9px 0 0; color: var(--accent); font-size: 11px; font-weight: 650; letter-spacing: .12em; line-height: 1.4; }
 :global(body.ss-modal-open) .tooltip, :global(body:has(.ss-mobile-sidebar-backdrop)) .tooltip { display: none; }
-@keyframes volt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes volt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes volt-shadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.82); } }
 @keyframes volt-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, .975); } }
 @keyframes volt-blink { 0%, 91%, 100% { transform: scaleY(1); } 94.5% { transform: scaleY(.08); } }
 @media(max-width:767px), (max-width:1024px) and (any-pointer:coarse) {
   .trigger, .float { width: 64px; height: 68px; }
   .tooltip { padding: 12px 14px; }
 }
-@media(prefers-reduced-motion:reduce) { .float, .breath, .eyes rect { animation: none; } }
+@media(prefers-reduced-motion:reduce) { .hover, .shadow, .breath, .eyes rect { animation: none; } }

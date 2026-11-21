@@ -1,0 +1,47 @@
+Research header controls and VOLT depth — 2026-11-21
+
+Owner-requested follow-up: remove obstructive, duplicate floating saved-tool
+controls from The Court and The Sideline, put Picks and Watchlist in their
+headers, and improve the character's depth/shadow, particularly in light mode.
+
+Both workspaces now have shared Picks and Watchlist buttons. The Court's
+mislabelled saved-picks star was replaced by these controls; it previously
+opened Watchlist. The Sideline also has an explicit NFL Matrix header button.
+All views, including each Odds Board, use these workspace headers. Wide
+desktop controls include short labels; smaller displays use named 44px icons.
+Action hints use a small, single-line tooltip rather than the legacy Guide
+card. Enter activates the existing drawer; Escape restores the opener.
+The 320px NFL title is retained in full with its smaller league mark/type.
+
+The original layout-owned Picks, Watchlist and NFL Matrix instances remain
+mounted. Only their floating triggers/toggle are hidden in these two
+workspaces. Header controls open the existing portalled drawers. No duplicate
+subscriptions, duplicate panels, replacement data sources or additional
+per-page fetch loops were added. Elsewhere, the existing quick tools remain.
+Signed-out visitors retain VOLT without member-only controls.
+
+VOLT retains the supplied silhouette, jersey and number 7. Native SVG radial
+lighting gives the body/sleeves soft volume; the tuft has a subtle highlight.
+A stronger light-theme contact shadow separates it from pale surfaces. The
+ground shadow stays anchored and compresses while the body floats. Gradient
+and clip IDs are unique per instance. No images, dependencies, audio, AI
+services or backend integrations were added. Reduced motion stops the idle
+float, breathing, blink and shadow pulse.
+
+Validation: 24/24 saved-research, VOLT, modal and selector tests; 25/25 NFL UI
+tests; 134/134 production source checks; TypeScript and focused ESLint pass.
+The new integration checks open the real Picks/Watchlist components from a
+hidden dock host, assert one dialog outside the hidden host, dismiss via
+Escape and verify focus returns to the exact header opener. Tests preserve
+guest gating and the ordinary-page dock, and validate local SVG references.
+
+Browser review uses isolated fixture-only preview data, plus post-publication
+member checks. Desktop/phone widths, light/dark, both saved drawers, NFL
+Matrix, Odds Board access and unobstructed floating character are checked.
+No real picks, watchlist records, matrix records, settings other than the
+temporary light/dark preview choice, or database schema are mutated.
+Physical phone testing and changed OS reduced-motion settings are not claimed.
+
+This follow-up updates the existing Court, Sideline, Saved picks drawer and
+VOLT checklist entries; it does not introduce or remove research tools.
+Release evidence: docs/design/evidence/live/volt-header-*.

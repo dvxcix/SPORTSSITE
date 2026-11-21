@@ -1,0 +1,8 @@
+.actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:44px;min-height:44px;padding:0 12px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface);color:var(--text-2);font:inherit;font-size:12px;font-weight:550;line-height:1;cursor:pointer;transition:background 140ms ease,border-color 140ms ease,color 140ms ease}
+.actions button svg{flex-shrink:0}
+.actions button:hover{background:var(--surface-2);border-color:var(--border-3);color:var(--text-1)}
+.actions button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.hint{padding:8px 10px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-sm);text-align:center;font-size:12px;line-height:1.35}
+@media(max-width:1150px){.actions button{width:44px;padding:0}.actions button span{display:none}}
+@media(prefers-reduced-motion:reduce){.actions button{transition:none}}

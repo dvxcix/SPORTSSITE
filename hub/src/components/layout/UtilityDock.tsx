@@ -5,11 +5,13 @@ import { ChevronDown, Sparkles } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { VoltTeaser } from '@/components/volt/VoltTeaser'
 
-export function UtilityDock({ children, teaserOnly = false }: { children?: React.ReactNode; teaserOnly?: boolean }) {
+export function UtilityDock({ children, teaserOnly = false, toolsInHeader = false }: { children?: React.ReactNode; teaserOnly?: boolean; toolsInHeader?: boolean }) {
   const { signedIn } = useWatchlist()
   const [expanded, setExpanded] = useState(false)
 
-  const showTools = signedIn && !teaserOnly
+  const mountTools = signedIn && !teaserOnly
+  // Header buttons open these same layout-owned portals; keep their listeners mounted.
+  const showTools = mountTools && !toolsInHeader
 
   return (
     <div className={`ss-utility-dock ${showTools && expanded ? 'is-expanded' : ''} ${teaserOnly ? 'is-teaser-only' : ''}`}>
@@ -29,6 +31,7 @@ export function UtilityDock({ children, teaserOnly = false }: { children?: React
         .ss-utility-dock.is-expanded .ss-utility-dock-items {
           opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s;
         }
+        .ss-utility-dock-items[hidden] { display: none; }
         .ss-utility-dock .wl-fab, .ss-utility-dock .mp-fab, .ss-utility-dock .matrix-fab {
           position: static !important; right: auto !important; bottom: auto !important;
           transform: none !important; margin: 0; cursor: pointer !important;
@@ -70,7 +73,7 @@ export function UtilityDock({ children, teaserOnly = false }: { children?: React
           .ss-utility-dock-items, .ss-utility-dock-toggle { transition: none; }
         }
       `}</style>
-      {showTools && <div className="ss-utility-dock-items" aria-hidden={!expanded} inert={!expanded ? true : undefined}>{children}</div>}
+      {mountTools && <div className="ss-utility-dock-items" hidden={toolsInHeader} aria-hidden={!showTools || !expanded} inert={!showTools || !expanded ? true : undefined}>{children}</div>}
       <div className="ss-utility-dock-launchers">
       <VoltTeaser onActivate={() => setExpanded(false)} />
       {showTools && <>

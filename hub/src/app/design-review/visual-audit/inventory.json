@@ -4840,7 +4840,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4853,7 +4853,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/the-paint"
+      "docs/design/full-site-audit-2026-11-21.json#route:/the-paint",
+      "docs/operations/research-header-volt-depth-2026-11-21.txt"
     ],
     "release": {
       "state": "Live",
@@ -4904,7 +4905,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4918,7 +4919,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/operations/research-header-volt-depth-2026-11-21.txt"
     ],
     "release": {
       "state": "Live",
@@ -7317,7 +7319,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting.",
+    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7330,7 +7332,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer"
+      "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer",
+      "docs/operations/research-header-volt-depth-2026-11-21.txt"
     ],
     "release": {
       "state": "Live",
@@ -7597,7 +7600,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "volt-teaser-2026-11-21",
-    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled.",
+    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7609,7 +7612,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/operations/volt-teaser-2026-11-21.txt"
+      "docs/operations/volt-teaser-2026-11-21.txt",
+      "docs/operations/research-header-volt-depth-2026-11-21.txt"
     ],
     "release": {
       "state": "Live",

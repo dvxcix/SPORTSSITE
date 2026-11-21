@@ -89,3 +89,8 @@
 .matchupTeam img,.matchupTeam>span{width:26px;height:26px}
 @media(max-width:767px){.topBar{display:grid;padding:10px}.contextControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.selectControl{display:grid;gap:5px}.selectControl select{font-size:16px;min-width:0;max-width:100%}.schedulePicker{padding:10px;gap:8px}.dayRail{margin:0}.gameCards{grid-auto-columns:168px}.gameCards button{min-height:62px}.identity strong{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.progress{animation:none}.schedulePicker{transition:none}}
+.topBar{flex-wrap:wrap}
+.savedActions{margin-left:auto;min-width:0}
+.contextControls{flex-basis:100%;justify-content:flex-end}
+@media(max-width:767px){.topBar{grid-template-columns:minmax(0,1fr) auto;gap:8px}.boardHeading{grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.boardHeading>.identity{grid-column:1;grid-row:1}.boardHeading>.mobileTools{grid-column:1/-1;grid-row:3}.boardHeading>nav{grid-column:1/-1;grid-row:2}.savedActions{grid-column:2;grid-row:1;align-self:start}.boardHeading>.identity{padding-right:144px}.contextControls{grid-column:1/-1;grid-row:2}}
+@media(max-width:360px){.identity{gap:6px}.identity strong{font-size:14px}.nflMark{width:24px;height:24px;flex-basis:24px}}

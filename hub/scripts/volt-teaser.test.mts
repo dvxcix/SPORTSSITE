@@ -72,5 +72,11 @@ test('route changes and full-screen dialogs dismiss the teaser; the supplied jer
     await act(async()=>secondRoot.render(createElement(api.VoltCharacter,{jersey:'nba'})))
     const clips=[...document.querySelectorAll('clipPath[id]')].map(node=>node.id)
     assert.equal(clips.length,2);assert.equal(new Set(clips).size,2)
+    const ids=[...document.querySelectorAll('svg[data-jersey] [id]')].map(node=>node.id)
+    assert.equal(new Set(ids).size,ids.length)
+    for(const svg of document.querySelectorAll('svg[data-jersey]'))for(const node of svg.querySelectorAll('[fill^="url"],[clip-path^="url"]')){
+      const reference=(node.getAttribute('fill')??node.getAttribute('clip-path'))!.slice(5,-1)
+      assert.ok([...svg.querySelectorAll('[id]')].some(target=>target.id===reference),'gradient and clip references resolve within their own character')
+    }
   }finally{await act(async()=>secondRoot.unmount());secondHost.remove();await h.close()}
 })
