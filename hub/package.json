@@ -13,6 +13,7 @@
     "build:ui-review": "node scripts/start-ui-review.mjs build",
     "start:ui-review": "node scripts/start-ui-review.mjs start",
     "test:ui-framework": "node --import tsx --test scripts/ui-framework.test.mjs",
+    "test:research-ui": "node --import tsx --test scripts/research-tooltip.test.mts scripts/nba-deep-tools-ui.test.mts scripts/private-visual-review.test.mts scripts/visual-review-release.test.mts",
     "test:volt": "node --import tsx --test scripts/volt-teaser.test.mts scripts/research-saved-actions.test.mts scripts/ui-framework.test.mjs scripts/modal-surface-keyboard.test.mts scripts/nba-entity-select.test.mts",
     "build": "next build",
     "start": "next start",

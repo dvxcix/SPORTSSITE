@@ -1299,3 +1299,4 @@
  .page[data-nfl-workspace] .controlBar>button{width:100%;min-width:0;min-height:44px;justify-content:center}
 }
 :global(.ss-site-shell):has(.page[data-nfl-workspace]){overflow-x:clip}
+@media(max-width:767px){.marketValue{grid-template-columns:minmax(max-content,1fr) 44px}.marketSave,.marketSaved{width:44px;height:44px;min-width:44px;min-height:44px}}

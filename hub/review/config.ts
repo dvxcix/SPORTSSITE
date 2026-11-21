@@ -3,10 +3,12 @@ import type {NextConfig} from 'next'
 export function withPrivateDesignReview(base:NextConfig):NextConfig {
  const requested=process.env.SLIPSURGE_UI_REVIEW==='1'
  const privateBuild=requested&&process.env.SLIPSURGE_UI_REVIEW_BUILD==='1'&&!process.env.VERCEL
+ const reviewDist=process.env.SLIPSURGE_UI_REVIEW_DIST??'.next-private-ui-review'
+ if(privateBuild&&!/^\.next-private-[a-z0-9-]+$/.test(reviewDist))throw new Error('Private review output must stay in a local .next-private-* directory.')
  const active=requested&&(process.env.NODE_ENV==='development'||privateBuild)&&!process.env.VERCEL
  if(requested&&!active)throw new Error('Design review may run only with next dev or an explicit private local review build.')
  const root=process.cwd()
- return {...base,...(privateBuild?{distDir:'.next-private-ui-review'}:process.env.SLIPSURGE_UI_BUILD_CHECK==='1'?{distDir:'.next-ui-build-check'}:{}),env:{...base.env,NEXT_PUBLIC_DESIGN_REVIEW:active?'1':'0'},...(active?{
+ return {...base,...(privateBuild?{distDir:reviewDist}:process.env.SLIPSURGE_UI_BUILD_CHECK==='1'?{distDir:'.next-ui-build-check'}:{}),env:{...base.env,NEXT_PUBLIC_DESIGN_REVIEW:active?'1':'0'},...(active?{
   devIndicators:false,
   logging:{browserToTerminal:false},
   onDemandEntries:{maxInactiveAge:3_600_000,pagesBufferLength:200},

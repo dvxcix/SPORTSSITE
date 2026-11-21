@@ -12,7 +12,7 @@ const published=new Set(ledger.items)
 const releaseStatus=row=>['In progress','Queued'].includes(row.status)?row.status:row.release?.state==='Live'?'Live':['Review ready','Approved'].includes(row.status)?'Ready to deploy':row.status
 const checks={desktopDark:false,desktopLight:false,phoneDark:false,phoneLight:false,keyboard:false,motion:false,states:false,toolAccess:false}
 const rows=[]
-function add(item){rows.push({...item,status:'Queued',batch:null,notes:'',checks:{...checks},evidence:[],...old.get(item.id),release:published.has(item.id)?ledger.production:null})}
+function add(item){rows.push({...item,status:'Queued',batch:null,notes:'',checks:{...checks},evidence:[],...old.get(item.id),release:old.get(item.id)?.release??(published.has(item.id)?ledger.production:null)})}
 for(const file of files){const route='/'+file.slice('src/app/'.length,-'/page.tsx'.length).split('/').filter(p=>!p.startsWith('(')).join('/');add({id:'route:'+route,route,source:file,label:route==='/'?'Home':title(route.slice(1).replaceAll('/',' · ')),group:group(route),kind:'Page'})}
 const nba=[['research','The Court'],['odds-board','Odds Board'],['odds','Odds comparison'],['ladders','Ladders'],['movement','Market Story'],['first-basket','First basket'],['cheatsheets','Cheatsheets'],['score','SlipSurge Score'],['slate','Slate Edge'],['public','ThePublic'],['divergence','Cross-market'],['dvp','Defense × position'],['usage','Player trends'],['tracking','Game tracking'],['matchup','Matchup Lab'],['availability','Availability'],['game-markets','Game markets']]
 for(const [view,label] of nba)add({id:'nba:'+view,route:'/the-paint?view='+view,label:'NBA · '+label,group:'NBA',kind:'Workspace'})
@@ -28,6 +28,7 @@ for(const label of ['Touchdown tracker','Matrix library','Matrix community','Mat
 add({id:'shared:NBA score calculation drawer',route:'/the-paint?view=score',label:'NBA score calculation drawer',group:'Shared components',kind:'Shared surface'})
 add({id:'shared:NBA game-specific lineups',route:'/the-paint?view=game-markets',label:'NBA game-specific lineup cards',group:'Shared components',kind:'Shared surface'})
 add({id:'shared:Saved sportsbook picker',route:'/the-paint?view=odds',label:'Saved sportsbook picker and comparison links',group:'Shared components',kind:'Shared surface'})
+add({id:'shared:VOLT and Sparks teaser',route:null,source:'src/components/volt/VoltTeaser.tsx',label:'VOLT and Sparks teaser',group:'Shared components',kind:'Shared surface'})
 for(const label of ['Member identity, avatar rings and badges','Account menu','Global search','Notifications panel','What’s new and release popup','Saved picks drawer','NBA Matrix','NFL Matrix','Player comparison','Post composer','Comments and share','Image and video viewer','Confirmation dialogs','Empty, loading and error states'])add({id:'shared:'+label,route:label.startsWith('Member identity')?'/design-review/identity':null,label,group:'Shared components',kind:'Shared surface'})
 fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,JSON.stringify(rows,null,2)+'\n')
 const totals=Object.fromEntries([...new Set(rows.map(r=>r.group))].map(g=>[g,rows.filter(r=>r.group===g).length]))

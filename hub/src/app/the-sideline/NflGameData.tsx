@@ -34,18 +34,18 @@ export async function NflGameData({game}:{game:SidelineGame}) {
     <section className="rounded-lg border border-[rgba(var(--line-rgb),0.1)] p-3"><h3 className="font-semibold">Charting · FTN/nflverse</h3><p>{chartRows.length?chartRows.length+' charted events':'Not published / imported yet'}</p><p className="text-xs text-[var(--text-2)]">Fetched {formatStamp(charts?.fetched_at ?? null)}</p></section>
    </div>
    <p className="text-xs text-[var(--gold)]">Charting and Next Gen Stats have separate publication/qualification limits. Full route trees, coverage assignments and 22-player coordinates are not supplied by these feeds.</p>
-   {chartRows.length>0?<details><summary className="cursor-pointer py-2 font-semibold">Charted play features</summary>
+   {chartRows.length>0?<details><summary className="min-h-11 cursor-pointer py-3 font-semibold">Charted play features</summary>
     <div className="flex flex-wrap gap-2">{Object.entries(chartLabels).map(([field,label])=>{
       const known=chartRows.filter(r=>['TRUE','FALSE','1','0'].includes(r[field]?.toUpperCase()))
       const yes=known.filter(r=>['TRUE','1'].includes(r[field]?.toUpperCase())).length
       return <span key={field} className="rounded-lg border border-[rgba(var(--line-rgb),0.1)] px-3 py-2">{label}: {known.length?yes+' / '+known.length:'Unavailable'}</span>
     })}</div><p className="mt-2 text-xs text-[var(--text-2)]">Counts are over supplied charted events, not route participation or eligible-play rates.</p>
    </details>:null}
-   {snapRows.length>0?<details><summary className="cursor-pointer py-2 font-semibold">Player snap counts</summary>
-    <div className="max-h-80 overflow-auto"><table className="w-full text-left"><thead><tr>{['Player','Team','Offense','Defense','Special teams'].map(h=><th className="px-2 py-2" key={h} scope="col">{h}</th>)}</tr></thead>
+   {snapRows.length>0?<details><summary className="min-h-11 cursor-pointer py-3 font-semibold">Player snap counts</summary>
+    <div className="max-h-80 overflow-auto focus-visible:outline-2 focus-visible:outline-[var(--accent)]" role="region" aria-label="NFL player snap counts table" tabIndex={0}><table className="w-full text-left"><thead><tr>{['Player','Team','Offense','Defense','Special teams'].map(h=><th className="px-2 py-2" key={h} scope="col">{h}</th>)}</tr></thead>
     <tbody>{snapRows.map(r=><tr key={r.pfr_player_id} className="border-t border-[rgba(var(--line-rgb),0.1)]"><td className="px-2 py-2">{r.player}</td><td className="px-2">{r.team}</td><td className="px-2">{r.offense_snaps || '—'}</td><td className="px-2">{r.defense_snaps || '—'}</td><td className="px-2">{r.st_snaps || '—'}</td></tr>)}</tbody></table></div>
    </details>:null}
-   {plays.length>0?<details><summary className="cursor-pointer py-2 font-semibold">Full play feed ({plays.length} events)</summary>
+   {plays.length>0?<details><summary className="min-h-11 cursor-pointer py-3 font-semibold">Full play feed ({plays.length} events)</summary>
     <ol className="max-h-96 space-y-2 overflow-y-auto">{plays.map(p=><li key={String(p.id)} className="rounded-lg border border-[rgba(var(--line-rgb),0.1)] p-3">
      <span className="font-mono text-xs text-[var(--accent)]">Q{p.period} · {p.clock_display} · {p.away_score}–{p.home_score}</span>
      <p className="mt-1 break-words">{p.text || p.short_text || p.type_slug}</p>

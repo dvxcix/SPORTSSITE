@@ -2,6 +2,7 @@
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import type { FirstBasketRow } from '@/lib/nbaFirstBasketOdds'
 import { NBA_FIRST_MARKETS } from '@/lib/nbaFirstBasketMarkets'
 import { nbaPrice } from '@/lib/nbaPaint'
@@ -11,7 +12,6 @@ import { BookLogo, bookName } from '@/components/BookLogo'
 import { PaintPickActions } from './PaintPickActions'
 import { PaintPriceValue } from './PaintPrice'
 import { PlayerAvatar } from './PaintVisuals'
-import { PaintBookSelect } from './PaintEntitySelect'
 import styles from './paint.module.css'
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
 import { NBA_FIRST_PRICE_BOOKS, type NbaFirstBookCoverage } from '@/lib/nbaFirstBookMarkets'
@@ -100,14 +100,18 @@ export function PaintFirstBasketOdds({date,initialBook='all',preferredBooks=[]}:
       <label>Game<select aria-label="First-basket game" value={game} onChange={event=>{setGame(event.target.value);setTeam('all')}}><option value="all">Full NBA slate</option>{catalog.games.map(value=><option key={value.id} value={value.id}>{value.visitor_team.abbreviation} @ {value.home_team.abbreviation}</option>)}</select></label>
       <label>Team<select aria-label="First-basket team" value={team} onChange={event=>setTeam(event.target.value)}><option value="all">All teams</option>{catalog.teams.map(value=><option key={value.id} value={value.id}>{value.full_name}</option>)}</select></label>
       <label>Market<select aria-label="First-basket market" value={market} onChange={event=>setMarket(event.target.value)}><option value="all">All first-basket markets</option>{NBA_FIRST_MARKETS.map(value=><option key={value.key} value={value.key}>{value.label}</option>)}</select></label>
-      {book==='all'&&<ResearchBookFilter available={catalog.books} selected={bookFilter.books} onChange={bookFilter.setBooks}/>}
-      <PaintBookSelect label="First-basket sportsbook" value={book} onChange={setBook} books={catalog.books}/>
-      <label>Change from<select aria-label="First-basket movement baseline" value={basis} onChange={event=>setBasis(event.target.value)}><option value="opening">Opening capture</option><option value="previous">Previous capture</option></select></label>
-      <label>Movement<select aria-label="First-basket movement direction" value={direction} onChange={event=>setDirection(event.target.value)}><option value="all">All movement</option><option value="shortened">Shortened</option><option value="lengthened">Lengthened</option><option value="unchanged">Unchanged</option><option value="untracked">Awaiting comparison</option></select></label>
-      <label>Minimum Δ<select aria-label="Minimum first-basket change" value={minimum} onChange={event=>setMinimum(Number(event.target.value))}>{[0,.1,.25,.5,1,2,5].map(value=><option key={value} value={value}>{value===0?'Any change':`${value} pp`}</option>)}</select></label>
+      <ResearchBookFilter available={catalog.books} selected={book==='all'?bookFilter.books:[book]} onChange={books=>{setBook('all');bookFilter.setBooks(books)}}/>
       <label>Sort<select aria-label="Sort first-basket prices" value={sort} onChange={event=>setSort(event.target.value)}><option value="movement">Most movement</option><option value="lengthened">Most lengthened</option><option value="shortened">Most shortened</option><option value="price">Longest best price</option><option value="shortest">Shortest best price</option><option value="name">Player A–Z</option><option value="game">Game time</option></select></label>
       <input aria-label="Search first-basket players" placeholder="Find a player" value={query} onChange={event=>setQuery(event.target.value)}/>
     </div>
+    <details className={styles.marketSettings}>
+      <summary aria-label="First-basket movement filters"><SlidersHorizontal size={15}/><span>Movement</span>{(basis!=='opening'||direction!=='all'||minimum>0)&&<small>Filtered</small>}<ChevronDown size={14}/></summary>
+      <div className={styles.movementTools}>
+        <label>Change from<select aria-label="First-basket movement baseline" value={basis} onChange={event=>setBasis(event.target.value)}><option value="opening">Opening capture</option><option value="previous">Previous capture</option></select></label>
+        <label>Movement<select aria-label="First-basket movement direction" value={direction} onChange={event=>setDirection(event.target.value)}><option value="all">All movement</option><option value="shortened">Shortened</option><option value="lengthened">Lengthened</option><option value="unchanged">Unchanged</option><option value="untracked">Awaiting comparison</option></select></label>
+        <label>Minimum Δ<select aria-label="Minimum first-basket change" value={minimum} onChange={event=>setMinimum(Number(event.target.value))}>{[0,.1,.25,.5,1,2,5].map(value=><option key={value} value={value}>{value===0?'Any change':`${value} pp`}</option>)}</select></label>
+      </div>
+    </details>
     {error&&<p className={styles.notice} role="status">{error} <button onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
     {!slate&&!error&&<p className={styles.panelEmpty} role="status">Loading first-basket prices…</p>}
     {slate?.status==='connection_unavailable'&&<p className={styles.panelEmpty} role="status">First-basket prices unavailable.</p>}

@@ -1,0 +1,65 @@
+SlipSurge NBA / NFL interface polish - 2026-11-21
+
+Scope
+Owner authorized the NBA/NFL UI pass, testing and production publication.
+Baseline: c79da8f41cd93f1bfc9a3c3259274fddf930e6b1 on refreshed origin/main.
+Production preflight matched that source at dpl_BJW7kpUqg9VUqNB4h3E44p6YLFGz.
+Work is isolated from unrelated changes in the original checkout.
+
+Changes
+- Plain tooltips now show a compact label instead of inferred decorative cards.
+  Authored metric, player and book detail cards retain their actual information.
+  Pointer travel across the tooltip gap works; Escape dismisses the hint before
+  its parent drawer. Native touch controls activate without a hover overlay.
+- Court market format, outcome and target controls share a compact disclosure.
+  The same controls remain available in the mobile filter drawer.
+- First Basket has one sportsbook selector for one or several books. Secondary
+  movement filters are collapsed, retain their values and show a filtered state.
+  Game, team, market, sorting and player search remain directly available.
+- NBA date navigation and NBA profile favorites have 44px phone targets.
+  NFL player market save buttons have 44px phone targets and matching cell space.
+- NBA comparison, NFL slate ranking, snap-count and NFL profile tables expose
+  named, keyboard-focusable scroll regions. Existing sticky columns and table
+  scrolling remain intact. Removed redundant Signal Lab reading instructions.
+- The private audit can select the full NBA/NFL inventory. Its health receipts
+  include actual URLs, active dialogs, button names and table scroll access.
+  Audit routes stay unavailable without the private local build flag.
+- Checklist generation retains VOLT and independently verified release history.
+  Validation checks release ancestry rather than requiring all surfaces to have
+  the same original publication date.
+
+Review evidence
+docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt
+docs/design/nba-nfl-interface-polish-2026-11-21.json
+72 entries: route pages, workspaces, all six NBA drawer tabs, all three NFL
+drawer tabs, five cheatsheets, eight board configurations, eight Matchup Lab
+categories, four Slate Edge views, tracker, matrix/library/community/editor,
+column manager, comparison and game lines. Subviews were activated in the UI.
+All four layouts use actual app components with illustrative local fixtures:
+desktop 1440x1000 and phone 390x844, each light and dark. Final corrections were
+checked again after rebuilding. Dense chart point targets intentionally remain
+24px, with arrow/Home/End navigation and a visible value readout; inflating
+nearby plotted targets would overlap them. No page overflow or render failures.
+
+Validation
+- NBA regression: 762/762; durable pregame freeze: 124/124.
+- NFL UI: 25/25; NFL odds integration: 84/84.
+- Production source smoke: 134/134.
+- VOLT, saved actions, framework, modal and entity selector: 24/24.
+- Research UI interactions, tooltip behavior and private/release guards: 37/37.
+- Focused ESLint and TypeScript passed. Private optimized build passed.
+Logs and raw per-surface receipts: docs/design/evidence/live/nba-nfl-polish*.
+
+Limits and invariants
+This is browser viewport verification, not physical-device certification.
+Reduced-motion guards were retained; an OS motion-setting switch was not tested.
+The illustrative fixtures do not certify live source completeness or latency.
+No database mutation, collector replay, scoring formula, quote freshness rule,
+pregame cutoff, access rule, payment behavior or AI backend was changed.
+The unrelated older MLB/Dugout contract suite still has its two recorded
+baseline source assertions; this release does not claim to certify that suite.
+
+Publication
+Source and documentation are released through GitHub main. Deployment identity,
+production alias, browser spot checks and runtime observations are recorded in
+the release receipt after publication.

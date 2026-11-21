@@ -8,13 +8,16 @@ const rows=JSON.parse(await readFile(new URL('inventory.json',root),'utf8'))
 const ledger=JSON.parse(await readFile(new URL('release-ledger.json',root),'utf8'))
 
 test('verified completed surfaces are live, independently of owner visual approval',()=>{
-  assert.equal(rows.length,238)
+  assert.equal(rows.length,new Set(rows.map((row:any)=>row.id)).size)
+  assert.ok(rows.some((row:any)=>row.id==='shared:VOLT and Sparks teaser'),'Keep the separately published VOLT surface in the checklist')
   assert.equal(new Set(ledger.items).size,ledger.items.length)
-  assert.equal(rows.filter((row:any)=>releaseStatus(row)==='Live').length,ledger.items.length)
-  assert.equal(rows.filter((row:any)=>releaseStatus(row)==='Ready to deploy').length,rows.length-ledger.items.length)
+  const live=rows.filter((row:any)=>releaseStatus(row)==='Live')
+  assert.ok(live.length>=ledger.items.length)
+  for(const row of live){assert.match(row.release.commit,/^[a-f0-9]{40}$/);assert.match(row.release.deploymentId,/^dpl_/)}
+  assert.equal(rows.filter((row:any)=>releaseStatus(row)==='Ready to deploy').length,rows.length-live.length)
   assert.equal(rows.filter((row:any)=>releaseStatus(row)==='Queued').length,0)
   assert.equal(rows.filter((row:any)=>releaseStatus(row)==='In progress').length,0)
-  for(const id of ledger.items){const row=rows.find((row:any)=>row.id===id);assert.ok(row,id);assert.ok(['Review ready','Approved'].includes(row.status));assert.deepEqual(row.release,ledger.production)}
+  for(const id of ledger.items){const row=rows.find((row:any)=>row.id===id);assert.ok(row,id);assert.ok(['Review ready','Approved'].includes(row.status));assert.equal(row.release.state,'Live')}
   assert.equal(rows.filter((row:any)=>row.status==='Approved').length,10,'Do not invent additional owner approvals')
   for(const row of rows.filter((row:any)=>row.batch==='site-completion-2026-11-21')){
     assert.ok(Object.values(row.checks).every(Boolean),row.id)
@@ -47,7 +50,8 @@ test('the completion batch has individual four-layout receipts and bounded narro
 test('release ledger references a real production source ancestor and generated text agrees',async()=>{
   assert.match(ledger.production.commit,/^[a-f0-9]{40}$/)
   execFileSync('git',['merge-base','--is-ancestor',ledger.production.commit,'HEAD'])
+  for(const commit of new Set(rows.filter((row:any)=>releaseStatus(row)==='Live').map((row:any)=>row.release.commit)))execFileSync('git',['merge-base','--is-ancestor',String(commit),ledger.production.commit])
   const text=await readFile(new URL('../docs/design/page-by-page-checklist.txt',import.meta.url),'utf8')
-  assert.equal((text.match(/^\[Live\]/gm)??[]).length,ledger.items.length)
+  assert.equal((text.match(/^\[Live\]/gm)??[]).length,rows.filter((row:any)=>releaseStatus(row)==='Live').length)
   assert.doesNotMatch(text,/^\[(?:Review ready|Approved)\]/m)
 })

@@ -3399,7 +3399,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. /nba remains an alias to The Court; canonical workspace styling was reviewed in both themes.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. /nba remains an alias to The Court; canonical workspace styling was reviewed in both themes. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3412,7 +3412,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/nba"
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba"
     ],
     "release": {
       "state": "Live",
@@ -3431,7 +3432,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3444,7 +3445,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/nba/players/[id]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba/players/[id]",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba/players/[id]"
     ],
     "release": {
       "state": "Live",
@@ -3463,7 +3465,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3476,7 +3478,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/nba/teams/[id]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/nba/teams/[id]",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba/teams/[id]"
     ],
     "release": {
       "state": "Live",
@@ -3495,7 +3498,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3509,7 +3512,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nfl/players/[id]"
     ],
     "release": {
       "state": "Live",
@@ -3528,7 +3532,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3542,7 +3546,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nfl/teams/[abbr]"
     ],
     "release": {
       "state": "Live",
@@ -4840,7 +4845,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4854,7 +4859,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/the-paint",
-      "docs/operations/research-header-volt-depth-2026-11-21.txt"
+      "docs/operations/research-header-volt-depth-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/the-paint"
     ],
     "release": {
       "state": "Live",
@@ -4905,7 +4911,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4920,7 +4926,8 @@
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt",
-      "docs/operations/research-header-volt-depth-2026-11-21.txt"
+      "docs/operations/research-header-volt-depth-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/the-sideline"
     ],
     "release": {
       "state": "Live",
@@ -5002,7 +5009,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.\n2026-11-21 · First Basket freshness and market-first player order: exact book contracts advance independently, current API/direct prices expire without restamping, and priced players precede expandable unpriced/unavailable groups. Source status changes regroup automatically. 758 NBA, 124 freeze and 134 production checks passed; desktop/phone light/dark, lower-group drawer access and production six-game/five-book coverage verified. See nba-first-basket-freshness operations evidence. Desktop divider specificity corrected after the public check.\nFinal response-boundary verification: 760 NBA and 124 freeze tests pass, including expiry during movement-history loading, tip crossing and durable archive retention. Current quotes are rechecked at the final response clock.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.\n2026-11-21 · First Basket freshness and market-first player order: exact book contracts advance independently, current API/direct prices expire without restamping, and priced players precede expandable unpriced/unavailable groups. Source status changes regroup automatically. 758 NBA, 124 freeze and 134 production checks passed; desktop/phone light/dark, lower-group drawer access and production six-game/five-book coverage verified. See nba-first-basket-freshness operations evidence. Desktop divider specificity corrected after the public check.\nFinal response-boundary verification: 760 NBA and 124 freeze tests pass, including expiry during movement-history loading, tip crossing and durable archive retention. Current quotes are rechecked at the final response clock. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5019,7 +5026,8 @@
       "court-review/production-tests.txt · 134 source checks",
       "docs/operations/nba-board-accuracy-2026-11-20.txt",
       "docs/design/nba-game-markets-release-2026-11-21.txt",
-      "docs/operations/nba-first-basket-freshness-2026-11-21.txt"
+      "docs/operations/nba-first-basket-freshness-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:research"
     ],
     "release": {
       "state": "Live",
@@ -5037,7 +5045,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. 2026-11-20 accuracy follow-up: repaired the verified Nic Claxton alias, shortened shared open-board/injury/lineup refreshes, preserved freeze boundaries and exposed eligible injury badges. Owner review status is unchanged. 2026-11-21: shared game-market header added; Odds Board phone overflow fixed by containing screen-reader labels within the table scrollport. See the NBA game-markets release evidence; this does not certify unrelated workspaces.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5054,7 +5062,8 @@
       "page-review/component-tests.txt · 6 passed",
       "page-review/framework-tests.txt · 25 passed",
       "docs/operations/nba-board-accuracy-2026-11-20.txt",
-      "docs/design/nba-game-markets-release-2026-11-21.txt"
+      "docs/design/nba-game-markets-release-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:odds-board"
     ],
     "release": {
       "state": "Live",
@@ -5072,7 +5081,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5085,7 +5094,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:odds"
+      "docs/design/full-site-audit-2026-11-21.json#nba:odds",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:odds"
     ],
     "release": {
       "state": "Live",
@@ -5103,7 +5113,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5116,7 +5126,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:ladders"
+      "docs/design/full-site-audit-2026-11-21.json#nba:ladders",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:ladders"
     ],
     "release": {
       "state": "Live",
@@ -5134,7 +5145,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5147,7 +5158,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:movement"
+      "docs/design/full-site-audit-2026-11-21.json#nba:movement",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:movement"
     ],
     "release": {
       "state": "Live",
@@ -5165,7 +5177,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.\n2026-11-21 · First Basket freshness and market-first player order: exact book contracts advance independently, current API/direct prices expire without restamping, and priced players precede expandable unpriced/unavailable groups. Source status changes regroup automatically. 758 NBA, 124 freeze and 134 production checks passed; desktop/phone light/dark, lower-group drawer access and production six-game/five-book coverage verified. See nba-first-basket-freshness operations evidence. Desktop divider specificity corrected after the public check.\nFinal response-boundary verification: 760 NBA and 124 freeze tests pass, including expiry during movement-history loading, tip crossing and durable archive retention. Current quotes are rechecked at the final response clock.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.\n2026-11-21 · First Basket freshness and market-first player order: exact book contracts advance independently, current API/direct prices expire without restamping, and priced players precede expandable unpriced/unavailable groups. Source status changes regroup automatically. 758 NBA, 124 freeze and 134 production checks passed; desktop/phone light/dark, lower-group drawer access and production six-game/five-book coverage verified. See nba-first-basket-freshness operations evidence. Desktop divider specificity corrected after the public check.\nFinal response-boundary verification: 760 NBA and 124 freeze tests pass, including expiry during movement-history loading, tip crossing and durable archive retention. Current quotes are rechecked at the final response clock. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5179,7 +5191,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#nba:first-basket",
-      "docs/operations/nba-first-basket-freshness-2026-11-21.txt"
+      "docs/operations/nba-first-basket-freshness-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:first-basket"
     ],
     "release": {
       "state": "Live",
@@ -5197,7 +5210,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5210,7 +5223,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:cheatsheets"
+      "docs/design/full-site-audit-2026-11-21.json#nba:cheatsheets",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:cheatsheets"
     ],
     "release": {
       "state": "Live",
@@ -5228,7 +5242,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "NBA score, splits and lineups",
-    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5240,7 +5254,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:score"
     ],
     "release": {
       "state": "Live",
@@ -5258,7 +5273,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5271,7 +5286,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:slate"
+      "docs/design/full-site-audit-2026-11-21.json#nba:slate",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:slate"
     ],
     "release": {
       "state": "Live",
@@ -5289,7 +5305,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "NBA game markets · 2026-11-21",
-    "notes": "Icon counts, a compact desktop table and dedicated phone cards. Search, all sort directions, market filters, original row timestamps, zero counts, deltas and player analysis remain available. Verified in the compiled private review at desktop and phone sizes in both themes; owner approval remains separate.",
+    "notes": "Icon counts, a compact desktop table and dedicated phone cards. Search, all sort directions, market filters, original row timestamps, zero counts, deltas and player analysis remain available. Verified in the compiled private review at desktop and phone sizes in both themes; owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5301,7 +5317,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-game-markets-release-2026-11-21.txt"
+      "docs/design/nba-game-markets-release-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:public"
     ],
     "release": {
       "state": "Live",
@@ -5319,7 +5336,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5332,7 +5349,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:divergence"
+      "docs/design/full-site-audit-2026-11-21.json#nba:divergence",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:divergence"
     ],
     "release": {
       "state": "Live",
@@ -5350,7 +5368,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "NBA score, splits and lineups",
-    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5362,7 +5380,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:dvp"
     ],
     "release": {
       "state": "Live",
@@ -5380,7 +5399,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5393,7 +5412,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:usage"
+      "docs/design/full-site-audit-2026-11-21.json#nba:usage",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:usage"
     ],
     "release": {
       "state": "Live",
@@ -5411,7 +5431,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5424,7 +5444,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:tracking"
+      "docs/design/full-site-audit-2026-11-21.json#nba:tracking",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:tracking"
     ],
     "release": {
       "state": "Live",
@@ -5442,7 +5463,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5455,7 +5476,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:matchup"
+      "docs/design/full-site-audit-2026-11-21.json#nba:matchup",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:matchup"
     ],
     "release": {
       "state": "Live",
@@ -5473,7 +5495,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access.",
+    "notes": "Reviewed the actual NBA page/tool in all four layouts, retaining its market controls, tables, charts and player access. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5486,7 +5508,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#nba:availability"
+      "docs/design/full-site-audit-2026-11-21.json#nba:availability",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:availability"
     ],
     "release": {
       "state": "Live",
@@ -5504,7 +5527,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": "NBA score, splits and lineups",
-    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed.",
+    "notes": "2026-11-21: contained SVG score dial; selected-market weighted calculation drawer; workload and definite availability affect the existing score; all six component weights and market movement retained. Separate observed bet/money bars in team colors. Independent pregame source lineups retain original timestamps and game-specific slots; actual starters stay Live. Phone team panels stack. Source absence is explicit, never backfilled from Live. Keyboard focus return, reduced-motion guards, source failures and membership boundaries verified. User authorized rollout; individual visual approval is not assumed. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5516,7 +5539,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-score-splits-lineups-2026-11-21.txt"
+      "docs/design/nba-score-splits-lineups-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba:game-markets"
     ],
     "release": {
       "state": "Live",
@@ -5534,7 +5558,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": "NBA game markets · 2026-11-21",
-    "notes": "Visible moneyline, spread and total cards; book selector; keyboard/swipe controls; observed public pick/wager shares and aggregate activity. Independent phase-safe price loading on Odds Board. Existing team metrics and confirmed-starter links remain under Teams. Verified at 320/390/1440px and both themes. Missing captures stay unavailable; exact side counts are never invented.",
+    "notes": "Visible moneyline, spread and total cards; book selector; keyboard/swipe controls; observed public pick/wager shares and aggregate activity. Independent phase-safe price loading on Odds Board. Existing team metrics and confirmed-starter links remain under Teams. Verified at 320/390/1440px and both themes. Missing captures stay unavailable; exact side counts are never invented. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5546,7 +5570,8 @@
       "toolAccess": true
     },
     "evidence": [
-      "docs/design/nba-game-markets-release-2026-11-21.txt"
+      "docs/design/nba-game-markets-release-2026-11-21.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-surface:Game markets and public activity"
     ],
     "release": {
       "state": "Live",
@@ -5564,7 +5589,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5578,7 +5603,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:research"
     ],
     "release": {
       "state": "Live",
@@ -5596,7 +5622,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5614,7 +5640,8 @@
       "page-review/framework-tests.txt · 25 passed",
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:view=odds-board"
     ],
     "release": {
       "state": "Live",
@@ -5632,7 +5659,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5646,7 +5673,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:mode=cheatsheets"
     ],
     "release": {
       "state": "Live",
@@ -5664,7 +5692,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5678,7 +5706,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:mode=public"
     ],
     "release": {
       "state": "Live",
@@ -5696,7 +5725,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5710,7 +5739,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:mode=markets"
     ],
     "release": {
       "state": "Live",
@@ -5728,7 +5758,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5742,7 +5772,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl:mode=research"
     ],
     "release": {
       "state": "Live",
@@ -5760,7 +5791,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5774,7 +5805,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Overview"
     ],
     "release": {
       "state": "Live",
@@ -5792,7 +5824,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5806,7 +5838,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Game tracking"
     ],
     "release": {
       "state": "Live",
@@ -5824,7 +5857,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5838,7 +5871,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Ladders"
     ],
     "release": {
       "state": "Live",
@@ -5856,7 +5890,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5870,7 +5904,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Market Story"
     ],
     "release": {
       "state": "Live",
@@ -5888,7 +5923,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5902,7 +5937,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Shots"
     ],
     "release": {
       "state": "Live",
@@ -5920,7 +5956,7 @@
     "kind": "Panel",
     "status": "Approved",
     "batch": 2,
-    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation.",
+    "notes": "Owner authorized public rollout. Reviewed desktop and phone in light/dark using private illustrative data; boundaries at 320, 390, 768, 1024 and 1440px. Six sections retained. Keyboard chart/shot navigation, exact quote identity, search recovery, replay, unavailable contracts and frozen research covered. Reduced-motion CSS guards inspected; OS preference unchanged. Live save actions are covered by component tests, not real pick creation. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5934,7 +5970,8 @@
     "evidence": [
       "court-review/browser-checks.json",
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
-      "court-review/production-tests.txt · 134 source checks"
+      "court-review/production-tests.txt · 134 source checks",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:All odds"
     ],
     "release": {
       "state": "Live",
@@ -5952,7 +5989,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5966,7 +6003,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-cheatsheet:Market Edge"
     ],
     "release": {
       "state": "Live",
@@ -5984,7 +6022,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5998,7 +6036,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-cheatsheet:Exact-Line Hits"
     ],
     "release": {
       "state": "Live",
@@ -6016,7 +6055,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6030,7 +6069,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-cheatsheet:Explosive Plays"
     ],
     "release": {
       "state": "Live",
@@ -6048,7 +6088,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6062,7 +6102,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-cheatsheet:Run Gaps"
     ],
     "release": {
       "state": "Live",
@@ -6080,7 +6121,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live follow-up corrected Both Teams to the two selected matchup defenses; single-team samples and the league comparison pool are preserved. Regression coverage includes switching between both and one team.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live follow-up corrected Both Teams to the two selected matchup defenses; single-team samples and the league comparison pool are preserved. Regression coverage includes switching between both and one team. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6094,7 +6135,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-cheatsheet:Defense / DvP"
     ],
     "release": {
       "state": "Live",
@@ -6112,7 +6154,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6126,7 +6168,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:core"
     ],
     "release": {
       "state": "Live",
@@ -6144,7 +6187,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6158,7 +6201,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:touchdowns"
     ],
     "release": {
       "state": "Live",
@@ -6176,7 +6220,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6190,7 +6234,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:props"
     ],
     "release": {
       "state": "Live",
@@ -6208,7 +6253,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6222,7 +6267,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:usage"
     ],
     "release": {
       "state": "Live",
@@ -6240,7 +6286,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6254,7 +6300,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:tracking"
     ],
     "release": {
       "state": "Live",
@@ -6272,7 +6319,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6286,7 +6333,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:team"
     ],
     "release": {
       "state": "Live",
@@ -6304,7 +6352,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6318,7 +6366,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:all"
     ],
     "release": {
       "state": "Live",
@@ -6336,7 +6385,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6350,7 +6399,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-board:custom"
     ],
     "release": {
       "state": "Live",
@@ -6368,7 +6418,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6382,7 +6432,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:Matchup"
     ],
     "release": {
       "state": "Live",
@@ -6400,7 +6451,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6414,7 +6465,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:NFL Tracking"
     ],
     "release": {
       "state": "Live",
@@ -6432,7 +6484,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6446,7 +6498,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:Sportsbooks"
     ],
     "release": {
       "state": "Live",
@@ -6464,7 +6517,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6478,7 +6531,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Role command"
     ],
     "release": {
       "state": "Live",
@@ -6496,7 +6550,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6510,7 +6564,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Score zone"
     ],
     "release": {
       "state": "Live",
@@ -6528,7 +6583,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6542,7 +6597,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Receiving value"
     ],
     "release": {
       "state": "Live",
@@ -6560,7 +6616,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6574,7 +6630,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Route leverage"
     ],
     "release": {
       "state": "Live",
@@ -6592,7 +6649,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6606,7 +6663,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Ground game"
     ],
     "release": {
       "state": "Live",
@@ -6624,7 +6682,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6638,7 +6696,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:QB command"
     ],
     "release": {
       "state": "Live",
@@ -6656,7 +6715,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6670,7 +6729,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Explosive lanes"
     ],
     "release": {
       "state": "Live",
@@ -6688,7 +6748,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6702,7 +6762,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-matchup:Market signal"
     ],
     "release": {
       "state": "Live",
@@ -6720,7 +6781,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6734,7 +6795,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-edge:Slate Rankings"
     ],
     "release": {
       "state": "Live",
@@ -6752,7 +6814,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6766,7 +6828,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-edge:Matchup Lens"
     ],
     "release": {
       "state": "Live",
@@ -6784,7 +6847,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6798,7 +6861,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-edge:Model vs Market"
     ],
     "release": {
       "state": "Live",
@@ -6816,7 +6880,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6830,7 +6894,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-edge:Signal Lab"
     ],
     "release": {
       "state": "Live",
@@ -6848,7 +6913,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6862,7 +6927,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Touchdown tracker"
     ],
     "release": {
       "state": "Live",
@@ -6880,7 +6946,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6894,7 +6960,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Matrix library"
     ],
     "release": {
       "state": "Live",
@@ -6912,7 +6979,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6926,7 +6993,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Matrix community"
     ],
     "release": {
       "state": "Live",
@@ -6944,7 +7012,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6958,7 +7026,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Matrix editor"
     ],
     "release": {
       "state": "Live",
@@ -6976,7 +7045,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6990,7 +7059,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Column manager"
     ],
     "release": {
       "state": "Live",
@@ -7008,7 +7078,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7022,7 +7092,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Player comparison"
     ],
     "release": {
       "state": "Live",
@@ -7040,7 +7111,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7054,7 +7125,8 @@
     "evidence": [
       "docs/design/nfl-sideline-release-2026-11-20.txt",
       "sideline-review/browser-layout-audit.json",
-      "sideline-review/ui-final.txt"
+      "sideline-review/ui-final.txt",
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-tool:Game lines and capture replay"
     ],
     "release": {
       "state": "Live",

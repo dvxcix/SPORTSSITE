@@ -256,7 +256,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
       {seasonStats.length > 0 && (
         <section className={`${styles.panel} ${styles.panelPad}`}>
           <h2 className={styles.panelHeading}>Season performance</h2>
-          <div className={styles.tableWrap} tabIndex={0}><table className={styles.dataTable}>
+          <div className={styles.tableWrap} role="region" aria-label="NFL player season statistics" tabIndex={0}><table className={styles.dataTable}>
             <thead>
               <tr className="text-[var(--text-3)] text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>
@@ -365,7 +365,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
       {ngsRows.length > 0 && (
         <section className={`${styles.panel} ${styles.panelPad}`}>
           <h2 className={styles.panelHeading}>Next Gen Stats · recent games</h2>
-          <div className={styles.tableWrap} tabIndex={0}><table className={styles.dataTable}>
+          <div className={styles.tableWrap} role="region" aria-label="NFL player Next Gen statistics" tabIndex={0}><table className={styles.dataTable}>
             <thead>
               <tr className="text-[var(--text-3)] text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>

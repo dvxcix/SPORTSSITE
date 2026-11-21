@@ -599,6 +599,15 @@
 .marketGroupSection { margin-top: 8px; }
 .paint[data-court-workspace=research] .table .marketGroupRow td { padding: 0 !important; height: auto; width: auto; min-width: 0; max-width: none; background: var(--surface-2); }
 .paint[data-court-workspace=research] .table .marketGroupRow .marketGroupToggle { display: flex; width: 100%; height: auto; min-height: 48px; border-radius: 0; }
+.marketSettings{margin:8px 0;min-width:0}
+.marketSettings>summary{display:inline-flex;align-items:center;gap:8px;min-height:40px;max-width:100%;padding:8px 12px;list-style:none;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);color:var(--text-2);font-size:12px;cursor:pointer}
+.marketSettings>summary::-webkit-details-marker{display:none}.marketSettings>summary strong{font-weight:600;color:var(--text-1)}
+.marketSettings[open]>summary{border-color:var(--selected-border);background:var(--selected-bg)}.marketSettings[open]>summary>svg:last-child{transform:rotate(180deg)}
+.marketSettings>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.marketSettings>.movementTools{width:fit-content;max-width:100%;margin:8px 0;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+@media(max-width:767px){.marketSettings>summary{min-height:44px}.marketSettings>.movementTools{width:100%}}
+.firstBasketOdds>.marketSettings{margin:0 0 12px}
+@media(max-width:767px){.firstBasketOdds>.marketSettings>.movementTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:10px}.firstBasketOdds>.marketSettings>.movementTools>label{min-width:0;align-items:stretch}.firstBasketOdds>.marketSettings>.movementTools>label select{width:100%;min-width:0;min-height:44px;font-size:16px}}
 @media(min-width:768px) and (max-width:1350px){
  .header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
  .header>.identity{grid-column:1;grid-row:1}.header>.headerActions{grid-column:2;grid-row:1;justify-content:flex-end;margin:0}

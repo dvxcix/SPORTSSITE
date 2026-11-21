@@ -10,15 +10,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import {
-  Activity,
-  ArrowUpDown,
-  Flame,
-  Info,
-  MousePointerClick,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Info } from "lucide-react";
 import { BookLogo, normalizeVendor } from "@/components/BookLogo";
 import { cn } from "@/lib/utils";
 
@@ -69,71 +61,6 @@ function isTooltipCardData(value: TooltipValue): value is TooltipCardData {
   return !!value && typeof value === "object" && !React.isValidElement(value) && "title" in value;
 }
 
-function inferBook(text: string): string | null {
-  const lower = text.toLowerCase();
-  if (lower.includes("fanduel")) return "fanduel";
-  if (lower.includes("draftkings")) return "draftkings";
-  if (lower.includes("betmgm")) return "betmgm";
-  if (lower.includes("caesars") || lower.includes("william hill")) return "caesars";
-  if (lower.includes("betrivers")) return "betrivers";
-  if (lower.includes("fanatics")) return "fanatics";
-  if (lower.includes("pinnacle")) return "pinnacle";
-  return null;
-}
-
-function inferStringContent(text: string): TooltipCardData {
-  const lower = text.toLowerCase();
-  const book = inferBook(text);
-  const movement = /opened|opening|movement|current|now [+-]?\d/.test(lower);
-  const action = /click|tap|open |add |remove|save|return|move |expand|collapse/.test(lower);
-  const community = /community|pick count|followers|members/.test(lower);
-  const sorting = /sort|rank|order/.test(lower);
-  const power = /home run|\bfhr\b|\bhr\b|laser|moonshot|barrel|exit velocity|launch angle/.test(lower);
-  const stat = /rate|speed|stat|delta|season|recent|pitch|swing|bases|rbi|hits|runs/.test(lower);
-
-  let kind: TooltipCardData["kind"] = "info";
-  let eyebrow = "Guide";
-  let icon: React.ReactNode = <Info size={16} />;
-  if (book) {
-    kind = "sportsbook";
-    eyebrow = BOOK_LABELS[book] ?? "Sportsbook";
-    icon = <BookLogo vendor={book} size={18} />;
-  } else if (movement) {
-    kind = "market";
-    eyebrow = "Market movement";
-    icon = <TrendingUp size={16} />;
-  } else if (community) {
-    eyebrow = "Community activity";
-    icon = <Users size={16} />;
-  } else if (sorting) {
-    eyebrow = "Table control";
-    icon = <ArrowUpDown size={16} />;
-  } else if (action) {
-    kind = "action";
-    eyebrow = "Quick action";
-    icon = <MousePointerClick size={16} />;
-  } else if (power) {
-    kind = "stat";
-    eyebrow = "Power market";
-    icon = <Flame size={16} />;
-  } else if (stat) {
-    kind = "stat";
-    eyebrow = "Stat guide";
-    icon = <Activity size={16} />;
-  }
-
-  const parts = text.split(/\s[·•]\s/).filter(Boolean);
-  return {
-    kind,
-    eyebrow,
-    title: parts[0] || text,
-    description: parts.length > 1 ? parts.slice(1).join(" · ") : undefined,
-    book,
-    icon,
-    accent: book ? BOOK_ACCENTS[book] : undefined,
-  };
-}
-
 function TooltipArtwork({ data }: { data: TooltipCardData }) {
   const [imageFailed, setImageFailed] = useState(false);
   const book = data.book ? normalizeVendor(data.book) : null;
@@ -160,11 +87,12 @@ function TooltipArtwork({ data }: { data: TooltipCardData }) {
 }
 
 export function TooltipVisual({ content }: { content: TooltipValue }) {
-  if (!isTooltipCardData(content) && typeof content !== "string") {
+  if (typeof content === "string") return <span className="ss-tooltip-plain">{content}</span>;
+  if (!isTooltipCardData(content)) {
     return <div className="ss-tooltip-custom">{content}</div>;
   }
 
-  const data = typeof content === "string" ? inferStringContent(content) : content;
+  const data = content;
   const book = data.book ? normalizeVendor(data.book) : null;
   const accent = data.accent ?? (book ? BOOK_ACCENTS[book] : "var(--accent)");
 
@@ -173,8 +101,8 @@ export function TooltipVisual({ content }: { content: TooltipValue }) {
       <div className="ss-tooltip-main">
         <TooltipArtwork key={data.image?.src ?? book ?? String(data.kind)} data={data} />
         <div className="ss-tooltip-copy">
-          <span className="ss-tooltip-eyebrow">
-            <span>{data.eyebrow ?? (book ? BOOK_LABELS[book] : "SlipSurge guide")}</span>
+          {(data.eyebrow || book || data.team) && <span className="ss-tooltip-eyebrow">
+            <span>{data.eyebrow ?? (book ? BOOK_LABELS[book] : data.team?.label)}</span>
             {data.team?.logo ? (
               <span className="ss-tooltip-team-mark" aria-label={data.team.label}>
                 <Image
@@ -187,7 +115,7 @@ export function TooltipVisual({ content }: { content: TooltipValue }) {
                 />
               </span>
             ) : null}
-          </span>
+          </span>}
           <strong>{data.title}</strong>
           {data.description && <p>{data.description}</p>}
         </div>
@@ -226,10 +154,14 @@ function TooltipPortal({
   content,
   trigger,
   tooltipId,
+  onPointerEnter,
+  onPointerLeave,
 }: {
   content: TooltipValue;
   trigger: HTMLElement | null;
   tooltipId: string;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<TooltipPosition>({ left: 10, top: 10, placement: "top" });
@@ -259,8 +191,10 @@ function TooltipPortal({
       id={tooltipId}
       role="tooltip"
       data-placement={position.placement}
-      className="ss-tooltip-portal"
+      className={`ss-tooltip-portal${typeof content === "string" ? " is-plain" : ""}`}
       style={{ left: position.left, top: position.top }}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
     >
       <TooltipVisual content={content} />
     </div>,
@@ -304,6 +238,16 @@ export const Tooltip = ({
     closeTimer.current = setTimeout(() => setVisible(false), immediate ? 0 : 70);
   }, []);
 
+  useEffect(() => {
+    if (!visible) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault(); event.stopImmediatePropagation(); hide(true);
+    };
+    window.addEventListener("keydown", dismiss, true);
+    return () => window.removeEventListener("keydown", dismiss, true);
+  }, [hide, visible]);
+
   return (
     <span
       ref={setTrigger}
@@ -318,7 +262,7 @@ export const Tooltip = ({
     >
       {children}
       <>
-        {visible && trigger && <TooltipPortal content={content} trigger={trigger} tooltipId={tooltipId} />}
+        {visible && trigger && <TooltipPortal content={content} trigger={trigger} tooltipId={tooltipId} onPointerEnter={() => show(true)} onPointerLeave={() => hide(false)} />}
       </>
     </span>
   );
@@ -338,8 +282,19 @@ export function NativeTooltipProvider() {
   useEffect(() => {
     // Streamed React boundaries may hydrate after this provider. Touch only
     // the element the member actually interacts with, and restore it on exit.
-    let suppressed: {target:HTMLElement;title:string}|null=null;
-    const restore=()=>{if(suppressed){suppressed.target.setAttribute('title',suppressed.title);suppressed=null}};
+    let suppressed: {target:HTMLElement;title:string;hadTitle:boolean;fallbackLabel:boolean}|null=null;
+    let current: NativeActive = null;
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+    let touch = false;
+    const cancelClose = () => { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } };
+    const restore=()=>{if(suppressed){
+      if(suppressed.hadTitle)suppressed.target.setAttribute('title',suppressed.title);
+      const ids=(suppressed.target.getAttribute('aria-describedby')??'').split(/\s+/).filter(id=>id&&id!==tooltipId);
+      if(ids.length)suppressed.target.setAttribute('aria-describedby',ids.join(' '));else suppressed.target.removeAttribute('aria-describedby');
+      if(suppressed.fallbackLabel&&suppressed.target.getAttribute('aria-label')===suppressed.title)suppressed.target.removeAttribute('aria-label');
+      suppressed=null;
+    }};
+    const hide = () => {cancelClose();restore();current=null;setActive(null)};
     const findTarget = (eventTarget: EventTarget | null) => {
       if (!(eventTarget instanceof Element)) return null;
       const target = suppressed?.target.contains(eventTarget)?suppressed.target:eventTarget.closest<HTMLElement>("[title],[data-ss-native-tooltip]");
@@ -347,37 +302,50 @@ export function NativeTooltipProvider() {
       return target?.tagName === 'IFRAME' || target?.closest("[data-ss-tooltip-root]") ? null : target;
     };
     const show = (event: Event) => {
+      if(touch)return;
+      if(event.target instanceof Node&&document.getElementById(tooltipId)?.contains(event.target)){cancelClose();return;}
       const target = findTarget(event.target);
       const content = target===suppressed?.target?suppressed.title:target?.getAttribute('title')?.trim()||target?.dataset.ssNativeTooltip;
-      if (target && content) {if(target!==suppressed?.target){restore();suppressed={target,title:content};target.removeAttribute('title')};setActive({ target, content });}
+      if (target && content) {
+        cancelClose();
+        if(target!==suppressed?.target){
+          restore();
+          const fallbackLabel=!target.hasAttribute('aria-label')&&!target.hasAttribute('aria-labelledby')&&!target.textContent?.trim();
+          suppressed={target,title:content,hadTitle:target.hasAttribute('title'),fallbackLabel};
+          target.removeAttribute('title');
+          target.setAttribute('aria-describedby',[target.getAttribute('aria-describedby'),tooltipId].filter(Boolean).join(' '));
+          if(fallbackLabel)target.setAttribute('aria-label',content);
+        }
+        current={ target, content };setActive(current);
+      }
     };
     const leave = (event: MouseEvent) => {
-      setActive((current) => {
-        if (!current) return null;
-        if (event.relatedTarget instanceof Node && current.target.contains(event.relatedTarget)) return current;
-        restore();
-        return null;
-      });
+      if (!current) return;
+      if (event.relatedTarget instanceof Node && (current.target.contains(event.relatedTarget)||document.getElementById(tooltipId)?.contains(event.relatedTarget))) {cancelClose();return;}
+      cancelClose();closeTimer=setTimeout(hide,120);
     };
-    const hide = () => {restore();setActive(null)};
+    const pointer = (event: PointerEvent) => {touch=event.pointerType==='touch';if(!(event.target instanceof Node&&document.getElementById(tooltipId)?.contains(event.target)))hide()};
+    const mouse = (event: PointerEvent) => {if(event.pointerType==='mouse')touch=false};
 
     document.addEventListener("mouseover", show, true);
     document.addEventListener("mouseout", leave, true);
     document.addEventListener("focusin", show, true);
     document.addEventListener("focusout", hide, true);
-    document.addEventListener("pointerdown", hide, true);
-    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
-    document.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("pointerdown", pointer, true);
+    document.addEventListener("pointerover", mouse, true);
+    const handleKeyDown = (event: KeyboardEvent) => { if(event.key==='Tab')touch=false;if (event.key === "Escape"&&current) {event.preventDefault();event.stopImmediatePropagation();hide();} };
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      restore();
+      cancelClose();restore();
       document.removeEventListener("mouseover", show, true);
       document.removeEventListener("mouseout", leave, true);
       document.removeEventListener("focusin", show, true);
       document.removeEventListener("focusout", hide, true);
-      document.removeEventListener("pointerdown", hide, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
+      document.removeEventListener("pointerdown", pointer, true);
+      document.removeEventListener("pointerover", mouse, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, []);
+  }, [tooltipId]);
 
   return (
     <>

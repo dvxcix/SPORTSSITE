@@ -255,6 +255,20 @@ test('First Basket sorts signed movement and changes baseline without dropping t
   const rows=[row(1,'Alpha','fanduel',3,-1),row(1,'Alpha','draftkings',-5,-2),row(2,'Beta','fanduel',-4,2),row(3,'Gamma','fanduel',null,null)]
   const ui=await harness('PaintFirstBasketOdds',{date:board.game.date},{requestedDate:board.game.date,date:board.game.date,games:1,loaded:1,failed:0,status:'ready',unmatched:0,rows,fetchedAt:'2026-10-20T12:00:00Z'})
   const select=async(label:string,value:string)=>{
+    if(label==='First-basket sportsbook'){
+      const trigger=ui.host.querySelector('button[aria-label^="Show sportsbooks:"]')!
+      await act(async()=>trigger.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})))
+      await act(async()=>{await new Promise(resolve=>setTimeout(resolve,30))})
+      if(value==='all'){
+        const all=[...document.querySelectorAll('[role="menuitem"]')].find(option=>option.textContent==='All books')!
+        await act(async()=>all.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
+      }else{
+        const selected=[...document.querySelectorAll('[role="menuitemcheckbox"][data-state="checked"]')].filter(option=>option.textContent!=='FanDuel')
+        for(const option of selected)await act(async()=>option.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))
+      }
+      await act(async()=>document.activeElement?.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
+      return
+    }
     const node=ui.host.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement
     if(node){await act(async()=>{node.value=value;node.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});return}
     const trigger=ui.host.querySelector(`button[aria-label^="${label}:"]`)
@@ -269,6 +283,10 @@ test('First Basket sorts signed movement and changes baseline without dropping t
   const names=()=>[...ui.host.querySelectorAll('tbody tr>th strong')].map(node=>node.textContent)
   try {
     ui.succeed();await ui.click('Retry')
+    assert.equal(ui.host.querySelectorAll('button[aria-label^="Show sportsbooks:"]').length,1,'one selector handles single and multiple books')
+    const disclosure=ui.host.querySelector('summary[aria-label="First-basket movement filters"]')!
+    assert.ok(disclosure)
+    assert.equal(disclosure.parentElement?.hasAttribute('open'),false,'secondary movement filters start collapsed')
     assert.deepEqual(names(),['Alpha Player','Beta Player','Gamma Player'])
     assert.doesNotMatch(ui.host.textContent??'',/32 captures/,'legacy game totals never appear as per-price observation counts')
     await select('Sort first-basket prices','lengthened')
