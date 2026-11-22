@@ -1,5 +1,7 @@
 SlipSurge page-by-page visual review
 
+NFL availability follow-up: nfl-availability-ranking-2026-11-22.txt/json records the report-cache correction, precise game statuses, priced-only ranking pools, separated unlisted/unavailable research, independent expiry and refreshes across every NFL matchup research tool. 59 private browser receipts and 280 automated checks passed. Ready for authorized rollout; owner approvals remain unchanged.
+
 Creator/member business follow-up: creator-business-journey-2026-11-22.txt/json records discovery, joining, private invitations, group Posts/Picks/chat, business management and new-offer fee controls. 56 private layout checks and five 320px checks; 280 automated checks and 21 database scenario groups passed. Published as 0890bb6c / dpl_J7URfCgMNyR4j1MLTDQateWjybsi; 32 real live desktop/mobile light/dark checks passed. NFL Final and Hit/Miss correction is already live as 11ef9592.
 
 Social process follow-up: social-workflow-repair-2026-11-22.txt/json records 48 private layout checks, 52 live layout checks, every available public room, real member badge containment and scoped message replies. 18 affected checklist entries updated; all research tools retained. Published as 45b85c3b.

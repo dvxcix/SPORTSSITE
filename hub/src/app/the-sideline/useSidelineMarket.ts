@@ -9,6 +9,7 @@ import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import type { NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
 import { startNflPolling } from '@/lib/nflPolling'
 import { withGameAvailability } from '@/lib/nflAvailability'
+import { useNflAvailabilityBoard } from './useNflResearchBoard'
 
 export function useSidelineMarket(
   gameId: string,
@@ -151,7 +152,8 @@ export function useSidelineMarket(
     setSelectedAt(at)
   }, [timeline])
   const retry = () => { setError(''); setRefreshKey(value => value + 1) }
-  const board = useMemo(() => selectedAt == null ? current : withGameAvailability(frame?.board ?? current, current), [selectedAt, frame, current])
+  const selectedBoard = useMemo(() => selectedAt == null ? current : withGameAvailability(frame?.board ?? current, current), [selectedAt, frame, current])
+  const board = useNflAvailabilityBoard(selectedBoard)
   return {
     board, current, gameState, touchdowns, timeline, index, select, retry, error, oddsBoardPhase:oddsBoardOpen&&oddsBoardPhase?.gameId===gameId?oddsBoardPhase:null,
     loading: selectedAt != null && frame?.capturedAt !== selectedAt && !error,

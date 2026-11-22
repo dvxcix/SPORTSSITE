@@ -224,7 +224,7 @@ async function bdlGetOne<T>(path: string): Promise<T> {
   return payload.data as T
 }
 
-async function bdlGetPaged<T>(path: string, maxPages = 20): Promise<T[]> {
+async function bdlGetPaged<T>(path: string, maxPages = 20, freshness: 'live' | 'reference' = 'reference'): Promise<T[]> {
   const rows: T[] = []
   const signal = AbortSignal.timeout(15000)
   let cursor: string | null = null
@@ -232,17 +232,18 @@ async function bdlGetPaged<T>(path: string, maxPages = 20): Promise<T[]> {
     const joiner = path.includes('?') ? '&' : '?'
     const response: Response = await fetch(`${NFL_BDL_BASE}${path}${cursor ? `${joiner}cursor=${encodeURIComponent(cursor)}` : ''}`, {
       headers: bdlHeaders,
-      next: { revalidate: 3600 },
+      ...(freshness === 'live' ? { cache: 'no-store' as const } : { next: { revalidate: 3600 } }),
       signal,
     })
     if (!response.ok) throw new Error(`BDL NFL ${path} returned ${response.status}`)
     const payload: { data?: T[]; meta?: { next_cursor?: string | number | null } } = await response.json()
     rows.push(...(payload.data ?? []))
     const nextCursor: string | number | null | undefined = payload.meta?.next_cursor
-    if (nextCursor == null || nextCursor === '') break
+    if (nextCursor == null || nextCursor === '') return rows
+    if (String(nextCursor) === cursor) throw new Error('BDL NFL pagination repeated')
     cursor = String(nextCursor)
   }
-  return rows
+  throw new Error('BDL NFL pagination incomplete')
 }
 
 export async function getNflBdlGames(season: number, week: number, freshness: 'live' | 'reference' = 'reference'): Promise<ApiGame[]> {
@@ -259,7 +260,7 @@ export async function getNflBdlDesignations(season: number, week: number, teamId
   const params = new URLSearchParams({ season: String(season), week: String(week), per_page: '100' })
   params.append('season_types[]', String(phase))
   ids.forEach(id => params.append('team_ids[]', String(id)))
-  return bdlGetPaged<NflBdlDesignation>(`/player_designations?${params}`)
+  return bdlGetPaged<NflBdlDesignation>(`/player_designations?${params}`, 20, 'live')
 }
 
 export async function getNflBdlCurrentSeasonStats(season: number, teamIds: number[], phase?: 1 | 2): Promise<NflBdlPlayerStat[]> {

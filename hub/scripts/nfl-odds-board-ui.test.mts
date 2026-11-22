@@ -189,3 +189,15 @@ test('denied membership clears the table rather than using the last-seen view',a
     assert.equal(ui.host.querySelector('table'),null);assert.match(ui.host.textContent??'',/Odds Board access unavailable/)
   }finally{await ui.close()}
 })
+
+test('unavailable players are separated from priced rows and their reason is visible',async()=>{
+ const value={...payload,unavailablePlayers:[{gameId:'one',id:3,name:'Out Receiver',team:'SEA',position:'WR',status:'Out',injury:'Hamstring',headshot:null}]}
+ const ui=await mount(value)
+ try{
+  assert.doesNotMatch(ui.host.querySelector('tbody')!.textContent!,/Out Receiver/)
+  const group=[...ui.host.querySelectorAll('details')].find(item=>item.querySelector('summary')?.textContent?.includes('Unavailable for this game'))!
+  assert.ok(group)
+  assert.match(group.querySelector('summary')!.textContent!,/Unavailable for this game/)
+  assert.match(group.textContent!,/Out Receiver[\s\S]*Out · Hamstring/)
+ }finally{await ui.close()}
+})

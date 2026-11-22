@@ -10,6 +10,8 @@ import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { BookLogo } from '@/components/BookLogo'
 import { MarketMovement, PickCount } from '@/components/research/ResearchMetrics'
 import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
+import { nflHasCurrentMarket, nflMarketExclusion } from '@/lib/nflAvailability'
+import { useNflResearchBoard } from './useNflResearchBoard'
 import styles from './sidelineResearch.module.css'
 
 type Metric = { key: keyof SidelinePlayer; label: string; suffix?: string }
@@ -49,13 +51,14 @@ function MarketSignal({ player }: { player: SidelineOddsBoard['players'][number]
   </div>
 }
 
-export function SidelineMatchupLab({ lens, board }: { lens: SidelineLens; board: SidelineOddsBoard }) {
+export function SidelineMatchupLab({ lens, board: initialBoard, gameId }: { lens: SidelineLens; board: SidelineOddsBoard; gameId?: string }) {
+  const board = useNflResearchBoard(initialBoard, gameId)
   const [view, setView] = useState('Role command')
   const [window, setWindow] = useState<SidelineWindow>('season')
   const [search, setSearch] = useState('')
   const sample = lens.windows[window]
   const metrics = views[view]
-  const boardById = useMemo(() => new Map(board.players.map(player => [player.gsisId, player])), [board.players])
+  const boardById = useMemo(() => new Map(board.players.filter(player => !nflMarketExclusion(player, lens.season) && nflHasCurrentMarket(player)).map(player => [player.gsisId, player])), [board.players, lens.season])
   const teamAbbreviations = useMemo(() => new Set(sample.teams.map(team => team.team.abbr)), [sample.teams])
   const query = search.trim().toLowerCase()
   const players = useMemo(() => sample.players
@@ -65,6 +68,7 @@ export function SidelineMatchupLab({ lens, board }: { lens: SidelineLens; board:
       : (marketPrice(boardById.get(a.id), 'anytime_td') ?? 99999) - (marketPrice(boardById.get(b.id), 'anytime_td') ?? 99999)),
   [boardById, metrics, query, sample.players, teamAbbreviations])
   return <div className={styles.root} data-nfl-tool="matchup">
+    {board.availabilityStale ? <p role="status">Checking current player availability. Player rankings and prices are paused until verified.</p> : null}
     <header><h1>Matchup Lab</h1></header>
     <section className={styles.controls} aria-label="Matchup filters"><label>Player<input value={search} onChange={event => setSearch(event.target.value)} placeholder="Player, team or position" /></label><label>Window<select value={window} onChange={event => setWindow(event.target.value as SidelineWindow)}><option value="season">Season</option>{[1, 3, 5, 10].map(n => <option key={n} value={`l${n}`}>Last {n}</option>)}</select></label><span>{players.length} players</span></section>
     <ResearchSectionNav label="Matchup research categories" value={view} items={Object.keys(views).map(name=>({value:name,label:name}))} onChange={setView}/>

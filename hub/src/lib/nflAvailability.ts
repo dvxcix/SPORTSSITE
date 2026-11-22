@@ -10,6 +10,43 @@ const excluded = new Set(['O', 'OUT', 'IR', 'RES', 'INJURED RESERVE', 'RESERVE I
 const noRoster = new Set(['CUT', 'RLS', 'RELEASED', 'WAIVED', 'RET', 'RETIRED', 'NWT', 'RFA', 'UFA', 'TRC', 'TRD', 'TRT'])
 const practiceSquad = new Set(['DEV', 'PRACTICE SQUAD'])
 
+const statusLabels: Record<string, string> = {
+  O: 'Out', OUT: 'Out', IR: 'Injured reserve', RES: 'Reserve', 'INJURED RESERVE': 'Injured reserve',
+  'RESERVE INJURED': 'Injured reserve', PUP: 'Physically unable to perform', 'RESERVE PUP': 'Physically unable to perform',
+  NFI: 'Non-football injury', 'RESERVE NFI': 'Non-football injury', SUS: 'Suspended', SUSPENDED: 'Suspended',
+  INA: 'Inactive', INACTIVE: 'Inactive', DNP: 'Did not play', 'DID NOT PLAY': 'Did not play',
+  Q: 'Questionable', QUESTIONABLE: 'Questionable', D: 'Doubtful', DOUBTFUL: 'Doubtful',
+  CUT: 'Released', RLS: 'Released', NWT: 'Not with team', EXE: 'Exempt',
+  'OTHER TEAM': 'Other team', 'PRACTICE SQUAD': 'Practice squad',
+}
+const statusLabel = (status: string) => statusLabels[status] ?? status.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+
+/** No market, public-pick or baseline payload can escape through status metadata. */
+export function nflStatusPlayer(player: NflOddsPlayer): NflOddsPlayer {
+  return { id: player.id, teamId: player.teamId, name: player.name, team: player.team, position: player.position,
+    gsisId: player.gsisId, headshot: player.headshot, headshotFallbacks: player.headshotFallbacks, jersey: player.jersey,
+    rookieSeason: player.rookieSeason, lastSeason: player.lastSeason, latestTeam: player.latestTeam,
+    rosterStatus: player.rosterStatus, availability: player.availability, markets: [] }
+}
+
+export function nflHasCurrentMarket(player: NflOddsPlayer | null | undefined, propType?: string) {
+  return Boolean(player?.markets.some(market => (!propType || market.propType === propType) && market.offers.some(offer =>
+    !offer.isOpeningOnly && [offer.current?.odds, offer.current?.over, offer.current?.under]
+      .some(value => typeof value === 'number' && Number.isFinite(value) && Math.abs(value) >= 100))))
+}
+
+/** A failed refresh cannot renew an older report's authority. Frozen games are checked at capture, not today. */
+export function nflAvailabilityIsFresh(board: SidelineOddsBoard, now = Date.now()) {
+  const observed = Date.parse(board.availabilityObservedAt ?? '')
+  return Number.isFinite(observed) && observed <= now && now - observed < 90_000
+}
+
+export function withoutNflCurrentMarkets(board: SidelineOddsBoard): SidelineOddsBoard {
+  return { ...board, status: 'unavailable', availabilityStale: true,
+    availabilityPlayers: [...board.players, ...(board.availabilityPlayers ?? [])].map(nflStatusPlayer),
+    players: [], lastSeen: undefined, openingOnly: undefined }
+}
+
 function gameExclusion(availability: PlayerStatus['availability']) {
   const status = normalize(availability?.gameStatus)
   if (excluded.has(status)) return status === 'O' ? 'OUT' : status
@@ -50,6 +87,8 @@ export function filterNflMarkets(board: SidelineOddsBoard, excludedPlayers: Read
   return {
     ...board,
     players: board.players.filter(eligible),
+    availabilityPlayers: [...new Map([...(board.availabilityPlayers ?? []), ...board.players.filter(player => !eligible(player))]
+      .map(player => [nflMarketPlayerKey(player), nflStatusPlayer(player)])).values()],
     ...(board.lastSeen && { lastSeen: { ...board.lastSeen, offers: board.lastSeen.offers.filter(eligible) } }),
     ...(board.openingOnly && { openingOnly: { ...board.openingOnly, offers: board.openingOnly.offers.filter(eligible) } }),
   }
@@ -59,23 +98,27 @@ export function filterNflMarkets(board: SidelineOddsBoard, excludedPlayers: Read
 export function nflAvailability(player: PlayerStatus, gameday?: string, today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })) {
   const a = player.availability
   const gameStatus = gameExclusion(a)
-  if (gameStatus) return { eligible: false, label: gameStatus }
+  if (gameStatus) return { eligible: false, label: statusLabel(gameStatus) }
   const status = normalize(a?.gameStatus)
   if (!gameday || gameday >= today) {
     const marketExclusion = rosterMarketExclusion(player)
-    if (marketExclusion) return { eligible: false, label: marketExclusion }
+    if (marketExclusion) return { eligible: false, label: statusLabel(marketExclusion) }
   }
-  const label = status === 'Q' ? 'QUESTIONABLE' : status === 'D' ? 'DOUBTFUL' : status
-  return { eligible: true, label: label || (a?.starter ? 'STARTER' : a?.injury ? 'INJURY' : null) }
+  const label = a?.active === true ? 'Active' : status ? statusLabel(status) : a?.injury ? 'Status unconfirmed' : a?.starter ? 'Starter' : null
+  return { eligible: true, label }
 }
 
 /** Slider moves prices, not the selected game's latest availability. */
 export function withGameAvailability(frame: SidelineOddsBoard, current: SidelineOddsBoard): SidelineOddsBoard {
-  const players = new Map(current.players.map(player => [player.id, player]))
-  return { ...frame, players: frame.players.map(player => {
-    const latest = players.get(player.id)
+  const players = new Map([...(current.availabilityPlayers ?? []), ...current.players].map(player => [nflMarketPlayerKey(player), player]))
+  const merged = { ...frame, availabilityPlayers: current.availabilityPlayers,
+    availabilityObservedAt: current.availabilityObservedAt, availabilityCutoffAt: current.availabilityCutoffAt,
+    availabilityStale: current.availabilityStale, players: frame.players.map(player => {
+    const latest = players.get(nflMarketPlayerKey(player))
     return latest && latest.team === player.team
       ? { ...player, availability: latest.availability ?? player.availability, rosterStatus: latest.rosterStatus ?? player.rosterStatus }
       : player
   }) }
+  // A historical price frame cannot resurrect a player withdrawn for this game.
+  return filterNflMarkets(merged, new Set([...players.values()].filter(player => nflMarketExclusion(player)).map(nflMarketPlayerKey)))
 }

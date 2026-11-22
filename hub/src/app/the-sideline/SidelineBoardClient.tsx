@@ -2,7 +2,7 @@
 
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
 import { DEFAULT_RESEARCH_PREFERENCES, initialResearchBook, type ResearchPreferences } from '@/lib/researchPreferences'
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -13,7 +13,7 @@ const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.
 const NflOddsBoard = dynamic(() => import('./NflOddsBoard').then(module => module.NflOddsBoard))
 import { buildBoardHeat } from './boardHeat'
 import { teamMmHighlights } from './teamHighlights'
-import { nflAvailability, nflMarketExclusion } from '@/lib/nflAvailability'
+import { nflAvailability, nflHasCurrentMarket, nflMarketExclusion, nflMarketPlayerKey } from '@/lib/nflAvailability'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, bookName, normalizeVendor } from '@/components/BookLogo'
@@ -47,6 +47,8 @@ type SortEntry = { id: string; direction: 'asc' | 'desc' }
 type HighlightColor = 'lime' | 'cyan' | 'amber' | 'rose'
 type PlayerRow = SidelinePlayer & {
   eligible?: boolean
+  availabilityEligible?: boolean
+  marketAvailable?: boolean
   statusLabel?: string | null
   market: NflOddsPlayer | null
   hasTracking: boolean
@@ -293,6 +295,7 @@ function marketExpectation(row: PlayerRow) {
   const market = findMarket(row.market, propType)
   if (!market) return null
   const expectations = market.offers.flatMap(offer => {
+    if (offer.isOpeningOnly) return []
     const odds = offerCurrent(offer)
     const probability = americanImpliedProbability(odds)
     if (probability == null) return []
@@ -308,7 +311,7 @@ function addNflMmRanks(rows: PlayerRow[]) {
   const performanceRanks = new Map<string, number>()
   const groups = new Map<string, PlayerRow[]>()
   for (const row of rows) {
-    if (row.eligible === false) continue
+    if (row.eligible === false || marketExpectation(row) == null) continue
     const key = row.contextProp ?? 'anytime_td'
     groups.set(key, [...(groups.get(key) ?? []), row])
   }
@@ -1093,7 +1096,7 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
         <div>
           <strong>{team.name}</strong>
           <span>
-            vs {opponent.abbr} · {rows.filter(row => row.market).length} priced · {rows.filter(row => row.hasTracking).length} with production
+            vs {opponent.abbr} · {rows.filter(row => row.marketAvailable).length} priced · {rows.filter(row => row.hasTracking).length} with production
           </span>
         </div>
       </div>
@@ -1263,6 +1266,11 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                 {player.jersey!=null ? ` · #${player.jersey}` : ''}
               </small>
               <h2>{player.name}</h2>
+              <div className={styles.playerGameStatus}>
+                <span>{player.statusLabel ?? 'No game designation'}</span>
+                {player.market?.availability?.injury ? <span>{player.market.availability.injury}</span> : null}
+                {player.market?.availability?.updatedAt ? <time dateTime={player.market.availability.updatedAt}>Reported {new Date(player.market.availability.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET</time> : null}
+              </div>
             </div>
           </div>
           <div className={styles.modalHeaderActions}>
@@ -1293,7 +1301,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
               <div className={styles.modalHero}>
                 <div className={styles.scoreRing}>
                   <Image src="/brand-bolt.png" alt="" width={13} height={18} />
-                  <b>{activePlayer.hasTracking && !activePlayer.unavailableMetrics?.includes('index') ? activePlayer.index : '-'}</b>
+                  <b>{player.eligible !== false && activePlayer.hasTracking && !activePlayer.unavailableMetrics?.includes('index') ? activePlayer.index : '—'}</b>
                   <span>{activePlayer.contextLabel ?? 'ROLE'} SCORE</span>
                 </div>
                 <div>
@@ -1302,7 +1310,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                   <div className={styles.identityBadges}>
                     {activePlayer.rookieSeason === gameSeason ? <span>Rookie</span> : null}
                     {activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>Prior team: {activePlayer.sampleTeam}</span> : null}
-                    {activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus==='ACT'?'Active':activePlayer.rosterStatus}</span> : null}
+                    {player.eligible === false ? <span>{player.availabilityEligible === false ? 'Unavailable for this game' : 'No current quote for this market'}</span> : null}
                   </div>
                   {!activePlayer.hasTracking&&<p>{activePlayer.rookieSeason === gameSeason ? 'Production is unavailable until a qualifying game is recorded.' : 'No qualifying production in this window. Captured markets remain available.'}</p>}
                 </div>
@@ -1598,6 +1606,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
+  const [secondaryGroups, setSecondaryGroups] = useState<Set<string>>(() => new Set())
   const [view, setView] = useState<BoardView>(initialPreview ? 'props' : VIEW_OPTIONS.find(option=>option.id===initialView)?.id ?? 'core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [activeProp, setActiveProp] = useState('receiving_yards')
@@ -1760,14 +1769,15 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
 
   const baseRows = useMemo(() => {
     const matchupTeams = new Set([selected.away.abbr, selected.home.abbr].map(normalizedTeam))
-    const marketPlayers = board.players.filter(player => matchupTeams.has(normalizedTeam(player.team)))
+    const marketPlayers = [...new Map([...(board.availabilityPlayers ?? []), ...board.players]
+      .filter(player => matchupTeams.has(normalizedTeam(player.team))).map(player => [nflMarketPlayerKey(player), player])).values()]
     const trackingById = new Map(windowData.players.map(player => [player.id, player]))
     const trackingByName = new Map(windowData.players.map(player => [`${normalizedTeam(player.team)}:${normalizedName(player.name)}`, player]))
     const teamProfiles = new Map(windowData.teams.map(profile => [normalizedTeam(profile.team.abbr), profile]))
     const profileFor = (team: string) => teamProfiles.get(normalizedTeam(team)) ?? null
     const opponentFor = (team: string) => profileFor(normalizedTeam(team) === normalizedTeam(selected.away.abbr) ? selected.home.abbr : selected.away.abbr)
     const byId = new Map<string, PlayerRow>()
-    if (marketPlayers.length) {
+    {
       // The posted game board owns row membership. Historical samples enrich
       // those players, but must never pull a former player into a current team.
       for (const market of marketPlayers) {
@@ -1788,12 +1798,14 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           mm: null,
         })
       }
-    } else {
+    }
+    {
       // Before markets post, only retain players whose latest known roster is
       // one of the two teams in this game. The sample team is display context.
       for (const player of windowData.players) {
         const currentTeam = normalizedTeam(player.latestTeam || player.team)
         if (!matchupTeams.has(currentTeam)) continue
+        if ([...byId.values()].some(row => row.id === player.id || normalizedTeam(row.team) === currentTeam && normalizedName(row.name) === normalizedName(player.name))) continue
         byId.set(player.id, {
           ...player,
           team: currentTeam,
@@ -1820,10 +1832,13 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         const teamMoneyline = normalizedTeam(row.team) === normalizedTeam(selected.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
         const result = contextualNflScore(row, scoreProp, americanImpliedProbability(teamMoneyline ?? null), gameLine?.total ?? null)
         const status = nflAvailability({ availability: row.market?.availability, rosterStatus: row.market?.rosterStatus ?? row.rosterStatus }, selected.gameday)
+        const marketAvailable = nflHasCurrentMarket(row.market, result.context.propType)
         return {
           ...row,
-          eligible: status.eligible,
-          statusLabel: status.label,
+          eligible: status.eligible && marketAvailable,
+          availabilityEligible: status.eligible,
+          marketAvailable,
+          statusLabel: status.label ?? (!marketAvailable ? 'Unlisted' : null),
           baseIndex: row.index,
           index: result.score,
           contextLabel: result.context.label,
@@ -1984,6 +1999,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
       })
       .sort((a, b) => {
         if (a.eligible !== b.eligible) return a.eligible === false ? 1 : -1
+        if (a.availabilityEligible !== b.availabilityEligible) return a.availabilityEligible === false ? 1 : -1
         for (const sort of sorts) {
           const column = columnById.get(sort.id)
           if (!column) continue
@@ -2070,6 +2086,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const periodScores = periodScoreCopy(marketStory.gameState)
   return (
     <NflScorerProvider gameId={selectedId} events={marketStory.touchdowns}><div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`} data-nfl-workspace={view}>{view!=='odds-board'&&<h1 className="sr-only">The Sideline · NFL research</h1>}
+      {board.availabilityStale ? <p role="status">Checking current player availability. Rankings and prices are paused until the report is verified. <button type="button" onClick={marketStory.retry}>Retry</button></p> : null}
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}>
           <TeamLogo team={selected.away} size={28} />
@@ -2323,8 +2340,12 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                   <tbody>
                     {section.rows.map((player, index) => {
                       const compareActive = compareIds.includes(player.id)
+                      const groupKey = `${section.team.abbr}:${player.availabilityEligible === false ? 'unavailable' : 'unlisted'}`
+                      const secondaryOpen = player.eligible !== false || secondaryGroups.has(groupKey)
                       return (
-                        <tr
+                        <Fragment key={player.id}>
+                        {player.eligible === false && (index === 0 || section.rows[index - 1].eligible !== false || section.rows[index - 1].availabilityEligible !== player.availabilityEligible) ? <tr className={styles.secondaryPlayers}><td colSpan={displayColumns.length}><button type="button" aria-expanded={secondaryOpen} onClick={() => setSecondaryGroups(current => { const next = new Set(current); if (next.has(groupKey)) next.delete(groupKey); else next.add(groupKey); return next })}><ChevronDown size={14}/><strong>{player.availabilityEligible === false ? 'Unavailable for this game' : 'Unlisted in this market'}</strong><span>{section.rows.filter(row => row.eligible === false && row.availabilityEligible === player.availabilityEligible).length}</span></button><small>Research available · excluded from rankings</small></td></tr> : null}
+                        {secondaryOpen ? <tr
                           key={player.id}
                           id={`nfl-player-${selected.id}-${player.id}`}
                           className={`${eraser ? styles.eraserRow : ''} ${player.eligible === false ? styles.unavailableRow : ''}`}
@@ -2374,7 +2395,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                         {player.rookieSeason === selected.season ? ' · ROOKIE' : ''}
                                         {player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}
                                         {availabilityLabel(player) ? (
-                                          <mark className={styles.availabilityBadge} aria-label={player.market?.availability?.injury ?? availabilityLabel(player) ?? undefined}>
+                                          <mark className={styles.availabilityBadge} data-status={player.availabilityEligible === false ? 'out' : 'available'} title={[availabilityLabel(player), player.market?.availability?.injury].filter(Boolean).join(' · ')}>
                                             {availabilityLabel(player)}
                                           </mark>
                                         ) : null}
@@ -2409,7 +2430,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                               </td>
                             )
                           })}
-                        </tr>
+                        </tr> : null}
+                        </Fragment>
                       )
                     })}
                   </tbody>

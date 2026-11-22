@@ -99,6 +99,11 @@ export type SidelineOddsBoard = {
   source: 'live' | 'opening' | 'snapshot' | 'none'
   gameLines: NflGameLineBook[]
   players: NflOddsPlayer[]
+  /** Game-scoped identity/status only. Withdrawn or unlisted players never carry prices. */
+  availabilityPlayers?: NflOddsPlayer[]
+  availabilityObservedAt?: string
+  availabilityStale?: boolean
+  availabilityCutoffAt?: string
   picksCapturedAt?: string | null
   legacyUnverified?: boolean
   lastSeen?: {

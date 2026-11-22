@@ -110,3 +110,10 @@
 @media(max-width:720px){.primaryControls label{gap:0}.primaryControls .controlLabel{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
 
 @container(max-width:620px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.unavailablePlayers { margin: 16px 0 0; padding: 14px 16px; border: 1px solid var(--border-2); border-radius: 12px; background: var(--surface-2); color: var(--text-2); }
+.unavailablePlayers summary { display: flex; gap: 10px; align-items: center; min-height: 32px; cursor: pointer; font-weight: 650; }
+.unavailablePlayers summary > span { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.unavailablePlayers > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px; margin-top: 12px; }
+.unavailablePlayers > div > div { display: grid; gap: 5px; min-width: 0; padding: 12px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.unavailablePlayers strong { color: var(--text-1); font-size: 13px; }
+.unavailablePlayers div span { color: var(--text-3); font-size: 12px; }

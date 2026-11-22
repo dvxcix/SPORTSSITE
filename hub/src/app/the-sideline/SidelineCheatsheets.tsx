@@ -1,6 +1,8 @@
 'use client'
 
 import Image from 'next/image'
+import { nflHasCurrentMarket, nflMarketExclusion } from '@/lib/nflAvailability'
+import { useNflResearchBoard } from './useNflResearchBoard'
 import { useMemo, useState, type CSSProperties } from 'react'
 import { ArrowUpDown, Gauge, Route, Search, Shield, Sparkles, Target } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -133,7 +135,8 @@ function PlayerChips({ players }: { players: NflOddsPlayer[] }) {
   return <div className={styles.playerChips}>{players.slice(0, 4).map(player => <a href={player.gsisId ? `/nfl/players/${player.gsisId}` : undefined} aria-disabled={!player.gsisId} key={player.id}>{player.headshot ? <Image src={player.headshot} alt="" width={26} height={26} unoptimized /> : <i>{player.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</i>}<span><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></span></a>)}</div>
 }
 
-export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season} regular season` }: { lens: SidelineLens; board: SidelineOddsBoard; sampleLabel?: string; isAdmin?: boolean }) {
+export function SidelineCheatsheets({ lens, board: initialBoard, gameId, sampleLabel = `${lens.season} regular season` }: { lens: SidelineLens; board: SidelineOddsBoard; gameId?: string; sampleLabel?: string; isAdmin?: boolean }) {
+  const board = useNflResearchBoard(initialBoard, gameId)
   const [view, setView] = useState<View>('edge')
   const [prop, setProp] = useState('anytime_td')
   const [vendor, setVendor] = useState('fanduel')
@@ -146,9 +149,10 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
   const statsByName = useMemo(() => new Map(lens.players.map(player => [playerKey(player.name, player.team), player])), [lens.players])
   const statsByLooseName = useMemo(() => new Map(lens.players.map(player => [normalizeNflPlayerName(player.name), player])), [lens.players])
   const paired = useMemo(() => board.players
+    .filter(player => !nflMarketExclusion(player, lens.season) && nflHasCurrentMarket(player))
     .filter(market => (team === 'all' || market.team === team) && (!search.trim() || (market.name + ' ' + market.team + ' ' + market.position).toLowerCase().includes(search.trim().toLowerCase())))
     .map(market => ({ market, stats: (market.gsisId ? statsById.get(market.gsisId) : undefined) ?? statsByName.get(playerKey(market.name, market.team)) ?? statsByLooseName.get(normalizeNflPlayerName(market.name)) })),
-  [board.players, search, statsById, statsByLooseName, statsByName, team])
+  [board.players, lens.season, search, statsById, statsByLooseName, statsByName, team])
   const props = useMemo(() => Array.from(new Set(board.players.flatMap(player => player.markets.map(market => market.propType)).filter(key => PROP_FIELDS[key]))).sort((a, b) => (PROP_LABELS[a] ?? a).localeCompare(PROP_LABELS[b] ?? b)), [board.players])
   const vendors = useMemo(() => Array.from(new Set(board.players.flatMap(player => player.markets.flatMap(market => market.offers.map(offer => offer.vendor))))).sort(), [board.players])
   const changeSort = (key: string) => {
@@ -206,13 +210,13 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
   }, [direction, paired, sort])
   const explosiveMax = useMemo(() => Math.max(1, ...explosiveRows.flatMap(({ stats }) => [stats.deepTargets, stats.receiving20, stats.receiving30, stats.receiving40, stats.rushing10, stats.rushing20, stats.rushing30, stats.rushing40].map(value => value / Math.max(1, stats.games)))), [explosiveRows])
   const rosterByTeam = useMemo(() => new Map(teams.map(current => [current.abbr, board.players.filter(player => player.team === current.abbr)])), [board.players, teams])
-  const rushRoles = (abbr: string) => (rosterByTeam.get(abbr) ?? []).filter(player => ['RB', 'FB', 'QB'].includes(player.position) && player.availability?.didNotPlay !== true).sort((a, b) => {
+  const rushRoles = (abbr: string) => (rosterByTeam.get(abbr) ?? []).filter(player => ['RB', 'FB', 'QB'].includes(player.position) && !nflMarketExclusion(player, lens.season)).sort((a, b) => {
     const left = statsByLooseName.get(normalizeNflPlayerName(a.name))?.carryShare ?? 0
     const right = statsByLooseName.get(normalizeNflPlayerName(b.name))?.carryShare ?? 0
     return right - left
   })
   const offenseForDefense = (defense: string) => teams.find(item => item.abbr !== defense)?.abbr ?? ''
-  const affectedPlayers = (defense: string, position: string) => (rosterByTeam.get(offenseForDefense(defense)) ?? []).filter(player => player.position === position && player.availability?.didNotPlay !== true)
+  const affectedPlayers = (defense: string, position: string) => (rosterByTeam.get(offenseForDefense(defense)) ?? []).filter(player => player.position === position && !nflMarketExclusion(player, lens.season))
   const gapRows = useMemo(() => {
     const rows = lens.runGaps.filter(row => row.gap !== 'unspecified' && (team === 'all' || row.team === team))
     const metric = (row: typeof rows[number]) => sort === 'g-success' ? row.successRate : sort === 'g-explosive' ? row.explosiveRate : sort === 'g-volume' ? row.attempts : row.edge
@@ -229,6 +233,7 @@ export function SidelineCheatsheets({ lens, board, sampleLabel = `${lens.season}
   }, [direction, lens.dvp, lens.teams, sort, team])
 
   return <div className={styles.root}>
+    {board.availabilityStale ? <p role="status">Checking current player availability. Player rankings and prices are paused until verified.</p> : null}
     <header className={styles.hero}>
       <div className={styles.heroCopy}><h1>Cheatsheets</h1><p>{sampleLabel}</p></div>
       <div className={styles.heroTeams}>{teams.map(item => <TeamBadge team={item} key={item.abbr} />)}</div>

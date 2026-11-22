@@ -3,13 +3,13 @@ import { requireNflAccess } from '@/lib/nflAccess'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { nbaSharedCache } from '@/lib/nbaSharedCache'
 import { isNflOddsBoardLine, nflOddsBoardQuotes, nflOddsBoardTeam, type NflOddsBoardFrame, type NflOddsBoardQuote } from '@/lib/nflOddsBoard'
-import { getSidelineGames } from '@/app/the-sideline/data'
+import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { nflOddsBoardPicks, nflBoardPickKey, nflFilterPickLadder, type NflBoardPick } from '@/lib/nflOddsBoardPicks'
 import { fitNflResponsePicks, packNflBoardPicks, unpackNflBoardPicks } from '@/lib/nflOddsBoardBudget'
 import { nflMatchupTeam } from '@/lib/nflMatchupBoard'
-import { nflMarketPlayerKey, nflMarketExclusions } from '@/lib/nflAvailability'
+import { nflAvailability, nflAvailabilityIsFresh, nflMarketPlayerKey, nflMarketExclusions } from '@/lib/nflAvailability'
 import { attachNflFanduel } from '@/lib/nflFanduel'
 import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } from '@/lib/browserbaseSpendingPause'
@@ -249,7 +249,26 @@ export async function GET(request:NextRequest){
     mergePartial({date,games:pool.games,quotes:[]},pool,clocks)
     // Apply after merging so a carried quote cannot bring an excluded player back.
     const excluded = new Map(Object.entries({ ...pool.rosterExclusions, ...candidate.value.rosterExclusions }).map(([id, keys]) => [id, new Set(keys)]))
-    const eligibleQuotes = pool.quotes.filter(q => !excluded.get(q[0])?.has(nflMarketPlayerKey({ name: q[2], team: q[3] })))
+    // Prices and availability have different clocks. Recheck open games even
+    // when the price pool is cached; after kickoff only frozen evidence applies.
+    const availabilityUnavailable: string[] = []
+    let availabilityObservedAt = new Date().toISOString()
+    const unavailablePlayers: Array<{gameId:string;id:number;name:string;team:string;position:string;status:string;injury:string|null;headshot:string|null}> = []
+    await Promise.all(games.filter(game => { const stop = clocks.find(item => item.id === game.id)?.cutoff; return stop && Date.parse(stop) > Date.now() }).map(async game => {
+      try {
+        const { odds } = await getSidelineOddsBundle(game)
+        const evidence = [...odds.players, ...(odds.availabilityPlayers ?? [])]
+        if (odds.status !== 'ready' || !nflAvailabilityIsFresh(odds) || !evidence.some(player => player.availability)) throw new Error('Availability unavailable')
+        if (odds.availabilityObservedAt! < availabilityObservedAt) availabilityObservedAt = odds.availabilityObservedAt!
+        excluded.set(game.id, nflMarketExclusions(evidence, game.season))
+        for (const player of evidence) {
+          const status = nflAvailability(player, game.gameday)
+          if (status.eligible) continue
+          unavailablePlayers.push({gameId:game.id,id:player.id,name:player.name,team:player.team,position:player.position,status:status.label ?? 'Unavailable',injury:player.availability?.injury ?? null,headshot:nflBoardImage(player.headshot)})
+        }
+      } catch { availabilityUnavailable.push(game.id) }
+    }))
+    const eligibleQuotes = pool.quotes.filter(q => !availabilityUnavailable.includes(q[0]) && !excluded.get(q[0])?.has(nflMarketPlayerKey({ name: q[2], team: q[3] })))
     const markets=[...new Set(eligibleQuotes.map(q=>q[5]))].sort()
     const market=requestedMarket
     const books=[...new Set(eligibleQuotes.filter(q=>q[5]===market).map(q=>q[6]))].sort()
@@ -272,7 +291,7 @@ export async function GET(request:NextRequest){
     const future=starts.filter(item=>item.time>Date.now()).map(item=>item.time)
     const finished=new Set<string>(results.finalGames)
     const resultsPending=starts.some(item=>item.time<=Date.now()&&!finished.has(item.id)&&quotes.some(q=>q[0]===item.id))
-    const response=fitNflResponsePicks({date,games:pool.games,markets,books,market,book,quotes,picks,identities,teams,...results,resultsPending,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null})
+    const response=fitNflResponsePicks({date,games:pool.games,markets,books,market,book,quotes,picks,identities,teams,...results,resultsPending,unavailablePlayers,availabilityUnavailable,availabilityObservedAt,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null})
     if(Buffer.byteLength(JSON.stringify(response))>1024*1024)throw new Error('Odds board selection exceeds limit')
     return NextResponse.json(response,{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}})}

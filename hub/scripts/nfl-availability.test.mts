@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterNflMarkets, nflAvailability, nflMarketExclusions, withGameAvailability } from '../src/lib/nflAvailability'
+import { filterNflMarkets, nflAvailability, nflAvailabilityIsFresh, nflHasCurrentMarket, nflMarketExclusions, withGameAvailability, withoutNflCurrentMarkets } from '../src/lib/nflAvailability'
+import { attachNflDesignations } from '../src/lib/nflDesignations'
+import type { NflBdlDesignation } from '../src/lib/nflOdds'
 import { teamMmHighlights } from '../src/app/the-sideline/teamHighlights'
 import { EMPTY_SIDELINE_ODDS, type NflOddsPlayer } from '../src/lib/nflOddsTypes'
 
@@ -66,7 +68,71 @@ test('slider retains game availability without changing prices or mutating frame
   const frame = { ...EMPTY_SIDELINE_ODDS, players: [player] }
   const current = { ...frame, players: [{ ...player, availability: availability('Out') }] }
   const merged = withGameAvailability(frame, current)
-  assert.equal(nflAvailability(merged.players[0]).eligible, false)
+  assert.equal(merged.players.length, 0)
+  assert.equal(nflAvailability(merged.availabilityPlayers![0]).eligible, false)
   assert.equal(frame.players[0].availability, undefined)
-  assert.equal(merged.players[0].markets, player.markets)
+  assert.equal(frame.players[0].markets, player.markets)
+})
+
+test('injury text is explicitly unconfirmed; game-day active is distinct from an injury note', () => {
+  assert.equal(nflAvailability({ availability: availability(null) }).label, 'Status unconfirmed')
+  assert.equal(nflAvailability({ availability: availability(null, true) }).label, 'Active')
+  assert.equal(nflAvailability({ availability: availability('Q') }).label, 'Questionable')
+  assert.equal(nflAvailability({ availability: availability('D') }).label, 'Doubtful')
+  assert.equal(nflAvailability({ availability: availability('Q', true) }).label, 'Active')
+  assert.equal(nflAvailability({ availability: availability('out', true) }).eligible, false)
+  assert.equal(nflAvailability({ availability: availability('out') }).label, 'Out')
+})
+
+test('withdrawn player remains in quote-free status metadata and cannot return through a slider', () => {
+  const player: NflOddsPlayer = {id: 1, name: 'Test', team: 'PHI', position: 'WR', markets: [{key:'receiving_yards',propType:'receiving_yards',label:'Receiving',category:'receiving',line:25,offers:[{vendor:'fanduel',type:'milestone',line:25,openingLine:25,current:{odds:150},opening:null,updatedAt:null}]}], publicPicks:[{propType:'receiving_yards',label:'Receiving',rawMarket:'private',picks:2,capturedAt:'2026-11-22'}]}
+  const frame = {...EMPTY_SIDELINE_ODDS,players:[player]}
+  const current = filterNflMarkets({...frame,players:[{...player,availability:availability('out')}]},new Set([JSON.stringify(['PHI','test'])]))
+  assert.equal(current.players.length,0)
+  assert.equal(current.availabilityPlayers?.[0].name,'Test')
+  assert.deepEqual(current.availabilityPlayers?.[0].markets,[])
+  assert.equal(current.availabilityPlayers?.[0].publicPicks,undefined)
+  assert.equal(withGameAvailability(frame,current).players.length,0)
+  assert.equal(frame.players[0].markets.length,1)
+})
+
+test('missing or opening-only quotes do not qualify for current-market ranks', () => {
+  const player: NflOddsPlayer = {id:1,name:'Test',team:'PHI',position:'WR',markets:[]}
+  assert.equal(nflHasCurrentMarket(player),false)
+  const offer={vendor:'fanduel',type:'milestone' as const,line:25,openingLine:25,current:{odds:150},opening:null,updatedAt:null}
+  player.markets=[{key:'receiving_yards',propType:'receiving_yards',label:'Receiving',category:'receiving',line:25,offers:[{...offer,isOpeningOnly:true}]}]
+  assert.equal(nflHasCurrentMarket(player),false)
+  player.markets[0].offers=[offer]
+  assert.equal(nflHasCurrentMarket(player,'receiving_yards'),true)
+  assert.equal(nflHasCurrentMarket(player,'rushing_yards'),false)
+  player.markets[0].offers=[{...offer,current:{odds:NaN}}]
+  assert.equal(nflHasCurrentMarket(player),false)
+})
+
+test('game-specific reports include unquoted players, ignore other games, and refresh exact status', () => {
+  const player:NflOddsPlayer={id:1,name:'Test Player',team:'PHI',position:'WR',markets:[]}
+  const board={...EMPTY_SIDELINE_ODDS,bdlGameId:10,players:[player]}
+  const report:NflBdlDesignation={game_id:10,player:{id:1,first_name:'Test',last_name:'Player',position_abbreviation:'WR'},team:{id:2,abbreviation:'PHI'},game_status:'questionable',injury:'Knee',active:null}
+  const omitted={...report,player:{...report.player,id:2,first_name:'Unlisted'},game_status:'out'}
+  const enriched=attachNflDesignations(board,[report,omitted,{...report,game_id:9,active:false}])
+  assert.equal(enriched.players[0].availability?.gameStatus,'questionable')
+  assert.equal(enriched.availabilityPlayers?.[0].name,'Unlisted Player')
+  assert.equal(nflAvailability(enriched.availabilityPlayers![0]).eligible,false)
+  const active=attachNflDesignations(enriched,[{...report,game_status:null,active:true}])
+  assert.equal(nflAvailability(active.players[0]).label,'Active')
+  assert.equal(board.players[0].availability,undefined)
+})
+
+test('expiry blocks current markets without deleting status evidence or renewing old reports',()=>{
+ const at=Date.parse('2026-11-22T17:00:00Z'),board={...EMPTY_SIDELINE_ODDS,availabilityObservedAt:new Date(at).toISOString(),players:[{id:1,name:'Test',team:'KC',position:'WR',availability:availability('questionable'),markets:[]}]}
+ assert.equal(nflAvailabilityIsFresh(board,at+89999),true)
+ assert.equal(nflAvailabilityIsFresh(board,at+90000),false)
+ assert.equal(nflAvailabilityIsFresh(board,at-1),false)
+ assert.equal(nflAvailabilityIsFresh(EMPTY_SIDELINE_ODDS,at),false)
+ const withheld=withoutNflCurrentMarkets(board)
+ assert.equal(withheld.availabilityStale,true)
+ assert.equal(withheld.players.length,0)
+ assert.equal(withheld.availabilityPlayers?.[0].availability?.gameStatus,'questionable')
+ assert.equal(withheld.availabilityObservedAt,board.availabilityObservedAt)
+ assert.equal(board.players.length,1)
 })

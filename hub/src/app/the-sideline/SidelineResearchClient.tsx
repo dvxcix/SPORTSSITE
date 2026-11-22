@@ -18,15 +18,18 @@ import type { SidelineTeam } from './types'
 import styles from './sidelineResearch.module.css'
 import { gradeNflPublicProp, type NflPublicResult } from '@/lib/nflPublicResults'
 import { startNflPolling } from '@/lib/nflPolling'
+import { useNflAvailabilityBoard } from './useNflResearchBoard'
+import { nflAvailability } from '@/lib/nflAvailability'
 import { NflLastSeen } from './NflLastSeen'
 
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
 const stamp = (value: string | null | undefined) => value&&Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET' : 'Time unavailable'
 
 export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?: SidelineTeam }) {
+  const status = nflAvailability(player)
   const sources = [...new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((src): src is string => Boolean(src)))]
   const portrait=sources.reduceRight<ReactNode>((fallback,src)=><SafeImage key={src} src={src} alt={`${player.name} headshot`} width={56} height={56} fallback={fallback}/>,<span className={styles.initials} aria-label="Portrait unavailable">{player.name.split(' ').map(word=>word[0]).slice(0,2).join('')}</span>)
-  const body = <><span className={styles.portrait} style={team?{background:`linear-gradient(145deg,${team.color},${team.color2||'#15202b'})`}:undefined}>{portrait}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><NflScorerBadges player={player} /><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small></span></>
+  const body = <><span className={styles.portrait} style={team?{background:`linear-gradient(145deg,${team.color},${team.color2||'#15202b'})`}:undefined}>{portrait}<span className={styles.teamBadge}><NflTeamLogo abbr={player.team} logoUrl={team?.logo} size={22} /></span></span><span className={styles.playerName}><strong>{player.name}</strong><NflScorerBadges player={player} /><small>{player.team} · {player.position}{player.jersey != null ? ` · #${player.jersey}` : ''}</small>{status.label?<span className={styles.gameStatus} data-status={status.eligible?'available':'out'} title={[status.label,player.availability?.injury,player.availability?.updatedAt?stamp(player.availability.updatedAt):null].filter(Boolean).join(' · ')}>{status.label}</span>:null}</span></>
   return player.gsisId ? <Link prefetch={false} className={styles.identity} aria-label={`View ${player.name} NFL profile`} href={`/nfl/players/${encodeURIComponent(player.gsisId)}`}>{body}<span className={styles.profileArrow}>↗</span></Link> : <div className={styles.identity}>{body}</div>
 }
 const toneFor = (key: string) => /td|touchdown/.test(key) ? 'lime' : /rec/.test(key) ? 'cyan' : /rush/.test(key) ? 'amber' : 'violet'
@@ -40,7 +43,8 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
   board: SidelineOddsBoard; boardHref: string; title: string; mode: 'public' | 'markets'; teams: SidelineTeam[]
   gameId?: string; initialResults?: NflPublicResult | null; initialPreferences?: ResearchPreferences
 }) {
-  const [board, setBoard] = useState(initialBoard)
+  const [observedBoard, setBoard] = useState(initialBoard)
+  const board = useNflAvailabilityBoard(observedBoard)
   const [results, setResults] = useState(initialResults)
   const [refreshFailed, setRefreshFailed] = useState(false)
   const [marketRefreshFailed, setMarketRefreshFailed] = useState(false)
@@ -113,7 +117,7 @@ function ResearchView({ board: initialBoard, boardHref, title, mode, teams, game
   return <div className={styles.root} data-nfl-tool={mode}>
     <header><Link href={boardHref}>← The Sideline</Link><p className="sr-only">{title}</p><h1>{mode === 'public' ? 'The Public' : 'Sportsbooks'}</h1>
       <small>Odds captured: {stamp(board.capturedAt)} · Picks captured: {stamp(board.picksCapturedAt)}</small>
-      {marketRefreshFailed ? <p role="status">Market refresh delayed; showing the last captured prices and picks.</p> : null}
+      {board.availabilityStale ? <p role="status">Checking current player availability. Prices and player picks are paused until verified.</p> : marketRefreshFailed ? <p role="status">Market refresh delayed; showing the last captured prices and picks.</p> : null}
       {mode === 'public' ? <p className={styles.resultSummary} role="status">{results?.status === 'final' ? 'Final results' : results?.status === 'in_progress' ? 'Live results · refresh every 30s' : 'Game results'}{results ? ` · Updated ${stamp(results.updatedAt)}` : ' · Awaiting feed'}{refreshFailed ? ' · Refresh delayed; showing last update' : ''}</p> : null}
     </header>
     {mode === 'markets' ? <NflLastSeen board={board} /> : null}

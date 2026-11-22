@@ -59,3 +59,5 @@
 @media(max-width:767px){.root{padding:16px 12px 110px}.root>header h1{font-size:22px}.controls input,.controls select{font-size:16px;max-width:100%}.root .controls{gap:8px}.controls label{flex:1}.controls label:first-child{flex-basis:100%}.card{padding:14px 12px}.cards{grid-template-columns:minmax(0,1fr)}.bookGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.bookOffer{padding:10px}.portrait{width:48px;height:48px}}
 .identity .playerName strong{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
 .identity .playerName small{white-space:normal;line-height:1.4}
+.gameStatus { display: block; width: fit-content; max-width: 100%; margin-top: 4px; padding: 2px 5px; border: 1px solid var(--border-2); border-radius: 4px; color: var(--text-2); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.gameStatus[data-status='out'] { color: var(--red); border-color: color-mix(in srgb, var(--red) 35%, transparent); }

@@ -1,0 +1,564 @@
+{
+  "batch": "nfl-availability-ranking-2026-11-22",
+  "scope": "NFL availability, ranking eligibility and every matchup research surface",
+  "baseCommit": "de8cf6ab09e4cd712b506fc3f5313c0c8fdd4922",
+  "publication": {
+    "state": "Ready for rollout"
+  },
+  "automated": {
+    "nfl": 146,
+    "production": 134,
+    "failed": 0,
+    "lint": "passed",
+    "build": "passed"
+  },
+  "privateBrowser": {
+    "checks": 59,
+    "failures": 0,
+    "receipts": [
+      {
+        "layout": "phone-light",
+        "surface": "drawer:NFL Tracking",
+        "doc": 390,
+        "status": true,
+        "text": "KSBUF · WR · #17Khalil ShakirOutHamstringReported Nov 20, 11:00 AM ETBuffalo BillsNFL player sectionMatchupNFL TrackingSportsbooksMatchupNFL TrackingSportsbooksSeasonLast 1Last 3Last 5Last 10Targets8.5Receptions6.5Target share28%Carries4Carry share8%aDOT97Separation3.4YACOE1.8RYOE/A0.8Explosives2.4Pass yards0CPOE3.2",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "drawer:Sportsbooks",
+        "doc": 390,
+        "status": true,
+        "text": "KSBUF · WR · #17Khalil ShakirOutHamstringReported Nov 20, 11:00 AM ETBuffalo BillsNFL player sectionMatchupNFL TrackingSportsbooksMatchupNFL TrackingSportsbooksNo player markets posted in this capture.",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "drawer:Matchup",
+        "doc": 390,
+        "status": true,
+        "text": "KSBUF · WR · #17Khalil ShakirOutHamstringReported Nov 20, 11:00 AM ETBuffalo BillsNFL player sectionMatchupNFL TrackingSportsbooksMatchupNFL TrackingSportsbooksSeasonLast 1Last 3Last 5Last 10—Anytime TD SCORESeasonReceivingUnavailable for this gameVolume74Geometry72Red zone68Breakaway71Evidence88RZ looks3.1",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "sideline",
+        "doc": 380,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "rowCount": 6,
+        "visibleText": "ML\n\t\nYDS LINE\n\t\nATD:YDS\n\t\nBURST\n\t\nOPPS\n\t\nSHARE\n\t\nYARDS\n\t\nRZ LOOK\n\t\nTD\n\n\n1\nPatrick Mahomes\nQB · #15Active\n\t45\t0\t\n120\n\t\n+150\nOPEN +175\n\t\n120\n\t\n+150\nOPEN +175\n\t\n1.00\nIMPLIED P\n\t\n0.63\nIMPLIED P\n\t\nPASS\n249.5\n-110\nOPEN -105\n\t\n0.76\nIMPLIED P\n\t67\t33\t68.0%\t264\t3\t1\n\nUnlisted in this market\n1\nResearch available · excluded from rankings\n\n\nUnavailable for this game\n1\nResearch available · excluded from rankings",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "odds-board",
+        "doc": 380,
+        "headings": [
+          "NFL Odds Board"
+        ],
+        "rowCount": 3,
+        "visibleText": "BAL · RB · BAL @ PHI\nFinal\n0\n\t\nLast seen\n-110\nOpen\n-105\n+1.16 pp\n—\nMiss\t\nLast seen\n+105\nOpen\n+135\n+6.23 pp\n—\nMiss\n\nJC\nJames Cook\nBUF · RB · BUF @ KC\nFinal\n82\n\t\nLast seen\n-110\nOpen\n-105\n+1.16 pp\n—\nHit\t\nLast seen\n+105\nOpen\n+135\n+6.23 pp\n—\nHit\n\nSB\nSaquon Barkley\nPHI · RB · BAL @ PHI\nFinal\n82\n\t\nLast seen\n-110\nOpen\n-105\n+1.16 pp\n—\nHit\t\nLast seen\n+105\nOpen\n+135\n+6.23 pp\n—\nHit\nUnavailable for this game\n2",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "cheatsheets",
+        "doc": 380,
+        "headings": [
+          "Cheatsheets"
+        ],
+        "rowCount": 3,
+        "visibleText": "n\n\t\nHit Rate − Price\n↓\n\n\n1\nJC\nJames Cook\n🔥\n🥇\nBUF · RB · #17\nQuestionable\n\t1\nAnytime TD\n\t\n+195\n\t+205\t\n+1.1\npp\n\t\n87\n\t38.0%\t\n4/10\n40.0%\n\t+4.1pp\n38.0% modeled\n\n\n2\nJosh Allen\nBUF · QB · #17\nActive\n\t1\nAnytime TD\n\t\n+165\n\t+185\t\n+2.6\npp\n\t\n109\n\t38.0%\t\n4/10\n40.0%\n\t+0.3pp\n38.0% modeled\n\n\n3\nPatrick Mahomes\nKC · QB · #15\nActive\n\t1\nAnytime TD\n\t\n+150\n\t+175\t\n+3.6\npp\n\t\n120\n\t38.0%\t\n4/10\n40.0%\n\t-2.0pp\n38.0% modeled",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "matchup-lab",
+        "doc": 380,
+        "headings": [
+          "Matchup Lab"
+        ],
+        "rowCount": 0,
+        "visibleText": ".0%\nExplosive\n13.0%\nRZ TD\n61.0%\nExplosive allowed\n11.0%\nPatrick Mahomes\nKC · QB · #15\nActive\n10 games\nVolume score\n90\nTarget share\n0%\nCarry share\n8%\nSample confidence\n92\nJosh Allen\nBUF · QB · #17\nActive\n10 games\nVolume score\n86\nTarget share\n0%\nCarry share\n8%\nSample confidence\n91\nJC\nJames Cook\nBUF · RB · #17\nQuestionable\n10 games\nVolume score\n78\nTarget share\n27%\nCarry share\n72%\nSample confidence\n89",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "public",
+        "doc": 380,
+        "headings": [
+          "The Public"
+        ],
+        "rowCount": 0,
+        "visibleText": "e\n87\nreceptions\n3.6% of filtered picks\nAwaiting result\nCaptured ladder results · 2 lines\nOver 5.5\nO -110\nO -107\nO -104\nO -101\nNov 20, 11:00 AM ET\nPlayer profile ↗\n23\nJC\nJames Cook\nBUF · RB · #17\nQuestionable\n87\nreceiving yards\n3.6% of filtered picks\nAwaiting result\nCaptured ladder results · 2 lines\nOver 69.5\nO -110\nO -107\nO -104\nO -101\nNov 20, 11:00 AM ET\nPlayer profile ↗\nPrevious\nPage 1 of 1\nNext",
+        "width": 390
+      },
+      {
+        "layout": "phone-light",
+        "surface": "sportsbooks",
+        "doc": 380,
+        "headings": [
+          "Sportsbooks"
+        ],
+        "rowCount": 0,
+        "visibleText": "QB · #17\nActive\n4 books\nrushing yards\n69.5 under\nFanDuel\n-110\nNov 20, 11:00 AM ET\nDraftKings\n-113\nNov 20, 11:00 AM ET\nBetMGM\n-116\nNov 20, 11:00 AM ET\nCaesars\n-119\nNov 20, 11:00 AM ET\nJosh Allen\nBUF · QB · #17\nActive\n4 books\nrushing yards\n70\nFanDuel\n+105\nNov 20, 11:00 AM ET\nDraftKings\n+105\nNov 20, 11:00 AM ET\nBetMGM\n+105\nNov 20, 11:00 AM ET\nCaesars\n+105\nNov 20, 11:00 AM ET\nPrevious\nPage 1 of 2\nNext",
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "sideline",
+        "doc": 380,
+        "heading": "The Sideline · NFL research",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "odds-board",
+        "doc": 380,
+        "heading": "NFL Odds Board",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "cheatsheets",
+        "doc": 380,
+        "heading": "Cheatsheets",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "matchup-lab",
+        "doc": 380,
+        "heading": "Matchup Lab",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "public",
+        "doc": 380,
+        "heading": "The Public",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "sportsbooks",
+        "doc": 380,
+        "heading": "Sportsbooks",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "drawer:Matchup",
+        "doc": 390,
+        "status": true,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "drawer:NFL Tracking",
+        "doc": 390,
+        "status": true,
+        "width": 390
+      },
+      {
+        "layout": "phone-dark",
+        "surface": "drawer:Sportsbooks",
+        "doc": 390,
+        "status": true,
+        "width": 390
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "sideline",
+        "doc": 1430,
+        "heading": "The Sideline · NFL research",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "odds-board",
+        "doc": 1430,
+        "heading": "NFL Odds Board",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "cheatsheets",
+        "doc": 1430,
+        "heading": "Cheatsheets",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "matchup-lab",
+        "doc": 1430,
+        "heading": "Matchup Lab",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "public",
+        "doc": 1430,
+        "heading": "The Public",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "sportsbooks",
+        "doc": 1430,
+        "heading": "Sportsbooks",
+        "theme": "dark",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "drawer:Matchup",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "drawer:NFL Tracking",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-dark",
+        "surface": "drawer:Sportsbooks",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "sideline",
+        "doc": 1430,
+        "heading": "The Sideline · NFL research",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "odds-board",
+        "doc": 1430,
+        "heading": "NFL Odds Board",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheets",
+        "doc": 1430,
+        "heading": "Cheatsheets",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-lab",
+        "doc": 1430,
+        "heading": "Matchup Lab",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "public",
+        "doc": 1430,
+        "heading": "The Public",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "sportsbooks",
+        "doc": 1430,
+        "heading": "Sportsbooks",
+        "theme": "light",
+        "visibleOut": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "drawer:Matchup",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "drawer:NFL Tracking",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "drawer:Sportsbooks",
+        "doc": 1440,
+        "status": true,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Game Day",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:TDs",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Props",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Usage",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Tracking",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Team",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:All",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "board-tab:Custom",
+        "doc": 1430,
+        "outInHighlights": false,
+        "outInRankedRows": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheet-tab:Market Edge",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheet-tab:Exact-Line Hits",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheet-tab:Explosive Plays",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheet-tab:Run Gaps",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "cheatsheet-tab:Defense / DvP",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Role command",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Score zone",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Receiving value",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Route leverage",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Ground game",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:QB command",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Explosive lanes",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "desktop-light",
+        "surface": "matchup-tab:Market signal",
+        "doc": 1430,
+        "outVisible": false,
+        "width": 1440
+      },
+      {
+        "layout": "phone-320-light",
+        "surface": "drawer",
+        "dialog": 320,
+        "doc": 320,
+        "status": true,
+        "width": 320
+      },
+      {
+        "layout": "phone-320-dark",
+        "surface": "drawer",
+        "dialog": 320,
+        "doc": 320,
+        "status": true,
+        "width": 320
+      }
+    ]
+  },
+  "sourceChecks": {
+    "sameGameDesignations": true,
+    "fullPagination": true,
+    "noOneHourGameReportCache": true,
+    "currentReportExpirySeconds": 90,
+    "normalClientPollSeconds": 30,
+    "reportCacheSeconds": 15,
+    "originalPregameCutoffsPreserved": true,
+    "noJobReplay": true,
+    "noDatabaseMigration": true
+  },
+  "screenshots": [
+    "nfl-availability-final-phone-light.png",
+    "nfl-availability-final-phone-dark.png",
+    "nfl-availability-final-desktop-light.png",
+    "nfl-availability-final-desktop-dark.png",
+    "nfl-availability-final-320-light.png"
+  ],
+  "affectedInventory": [
+    "route:/the-sideline",
+    "nfl:research",
+    "nfl:view=odds-board",
+    "nfl:mode=cheatsheets",
+    "nfl:mode=public",
+    "nfl:mode=markets",
+    "nfl:mode=research",
+    "nfl-cheatsheet:Market Edge",
+    "nfl-cheatsheet:Exact-Line Hits",
+    "nfl-cheatsheet:Explosive Plays",
+    "nfl-cheatsheet:Run Gaps",
+    "nfl-cheatsheet:Defense / DvP",
+    "nfl-board:core",
+    "nfl-board:touchdowns",
+    "nfl-board:props",
+    "nfl-board:usage",
+    "nfl-board:tracking",
+    "nfl-board:team",
+    "nfl-board:all",
+    "nfl-board:custom",
+    "nfl-drawer:Matchup",
+    "nfl-drawer:NFL Tracking",
+    "nfl-drawer:Sportsbooks",
+    "nfl-matchup:Role command",
+    "nfl-matchup:Score zone",
+    "nfl-matchup:Receiving value",
+    "nfl-matchup:Route leverage",
+    "nfl-matchup:Ground game",
+    "nfl-matchup:QB command",
+    "nfl-matchup:Explosive lanes",
+    "nfl-matchup:Market signal",
+    "nfl-edge:Slate Rankings",
+    "nfl-edge:Matchup Lens",
+    "nfl-edge:Model vs Market",
+    "nfl-edge:Signal Lab",
+    "nfl-tool:Game lines and capture replay"
+  ],
+  "liveBrowser": []
+}

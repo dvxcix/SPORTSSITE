@@ -5,6 +5,7 @@ import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {act,createElement as h,type ReactNode} from 'react'
 import {makeLens,makeNflOdds,makeNflSlateEdge,getCachedSidelineCheatsheetLens,nflGames,storedGameState} from '../review/nfl'
+import {filterNflMarkets,nflMarketExclusions} from '../src/lib/nflAvailability'
 
 const require=createRequire(import.meta.url),{JSDOM}=require('jsdom')
 const win=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://slipsurge.invalid/the-sideline',pretendToBeVisual:true}).window
@@ -90,6 +91,37 @@ test('highlight cards never promote opening-only observations to a current quote
  try{for(const card of ui.host.querySelectorAll('button[data-signal]')){assert.match(card.textContent!,/Price unavailable/);assert.equal(card.querySelector('img[alt$=" logo"]:not([alt$="Bills logo"]):not([alt$="Chiefs logo"])'),null)}}finally{await ui.close();globalThis.fetch=old}
 })
 
+test('out and unlisted players stay below priced research, retain drawers, and cannot win highlights',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds(),out=odds.players.find(p=>p.name==='Khalil Shakir')!,unlisted=odds.players.find(p=>p.name==='Josh Allen')!,questionable=odds.players.find(p=>p.name==='James Cook')!
+ out.availability={gameStatus:'out',active:false,injury:'Hamstring',starter:null,didNotPlay:null,updatedAt:'2030-11-20T10:00:00Z'}
+ unlisted.markets=[]
+ questionable.availability={...out.availability,gameStatus:'questionable',active:null,injury:'Knee'}
+ const props={games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds:filterNflMarkets(odds,nflMarketExclusions(odds.players,2030)),gameState:storedGameState(),touchdowns:[],timeline:[]}
+ const ui=await mount(h(module.exports.SidelineBoardClient,props))
+ try{
+  const highlights=ui.host.querySelector('[aria-label="Buffalo Bills player highlights"]')!
+  assert.doesNotMatch(highlights.textContent!,/Josh Allen|Khalil Shakir/)
+  assert.ok(ui.host.querySelector('button[aria-label="Open James Cook"]'))
+  assert.equal(ui.host.querySelector('button[aria-label="Open Khalil Shakir"]'),null)
+  assert.equal(ui.host.querySelector('button[aria-label="Open Josh Allen"]'),null)
+  const groups=[...ui.host.querySelectorAll<HTMLButtonElement>('tbody button[aria-expanded]')]
+  const unavailable=groups.find(button=>button.textContent!.includes('Unavailable for this game'))!
+  await act(async()=>unavailable.click())
+  assert.equal(unavailable.getAttribute('aria-expanded'),'true')
+  await act(async()=>ui.host.querySelector<HTMLButtonElement>('button[aria-label="Open Khalil Shakir"]')!.click())
+  const dialog=document.querySelector('[role="dialog"]')!
+  assert.match(dialog.textContent!,/Out/);assert.match(dialog.textContent!,/Hamstring/)
+  assert.doesNotMatch(dialog.textContent!,/INJURY/)
+  await act(async()=>dialog.querySelector<HTMLButtonElement>('button[aria-label="Close player details"]')!.click())
+  await act(async()=>groups.find(button=>button.textContent!.includes('Unlisted in this market'))!.click())
+  assert.ok(ui.host.querySelector('button[aria-label="Open Josh Allen"]'))
+  out.availability={...out.availability,gameStatus:null,active:true,injury:null}
+  await ui.rerender(h(module.exports.SidelineBoardClient,{...props,key:'cleared',odds}))
+  assert.ok(ui.host.querySelector('button[aria-label="Open Khalil Shakir"]'),'a newly cleared quoted player returns to the main table')
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
 test('switching NFL player sections starts the next section at its beginning',async()=>{
  const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
  const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds:makeNflOdds(),gameState:storedGameState(),touchdowns:[],timeline:[]}))
@@ -102,6 +134,24 @@ test('switching NFL player sections starts the next section at its beginning',as
   assert.equal(body.scrollTop,0,'a shorter or longer section must not inherit the previous section scroll')
   assert.match(body.textContent!,/\+165/,'the sportsbook quotes remain accessible')
  }finally{await ui.close();globalThis.fetch=old}
+})
+
+test('an open game loses current rankings and quotes when availability expires, including after a failed refresh',async(context)=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>new Response('{}',{status:503})
+ const now=Date.now(),odds=makeNflOdds()
+ odds.availabilityObservedAt=new Date(now-89000).toISOString()
+ odds.availabilityCutoffAt=new Date(now+600000).toISOString()
+ context.mock.timers.enable({apis:['setTimeout','Date'],now})
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  assert.ok(ui.host.querySelector('button[data-signal="score"]'))
+  await act(async()=>context.mock.timers.tick(1001))
+  assert.equal(ui.host.querySelector('button[data-signal="score"]'),null)
+  assert.equal(ui.host.querySelector('button[aria-label^="Add Josh Allen"]'),null)
+  assert.match(ui.host.textContent!,/Checking current player availability/)
+  await act(async()=>context.mock.timers.tick(600000))
+  assert.equal(ui.host.querySelector('button[data-signal="score"]'),null,'crossing kickoff cannot resurrect a board that already expired')
+ }finally{await ui.close();context.mock.timers.reset();globalThis.fetch=old}
 })
 
 test('Sideline Edge retains the last good slate on refresh failure and Retry recovers it',async()=>{

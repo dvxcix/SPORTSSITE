@@ -5,7 +5,7 @@ import type { SidelineGame } from '@/app/the-sideline/types'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { contextualNflScore } from '@/lib/nflContextScore'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
-import { nflAvailability } from '@/lib/nflAvailability'
+import { nflAvailability, nflHasCurrentMarket } from '@/lib/nflAvailability'
 import { nflUnverifiedScoreInputs } from '@/lib/nflScoreIntegrity'
 import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED } from '@/lib/browserbaseSpendingPause'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
@@ -99,7 +99,7 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
     const teams = new Set([normalizedTeam(game.away.abbr), normalizedTeam(game.home.abbr)])
 
     const entries: NflSlateEdgeEntry[] = bundle.odds.players
-      .filter(player => teams.has(normalizedTeam(player.team)) && nflAvailability(player, game.gameday).eligible)
+      .filter(player => teams.has(normalizedTeam(player.team)) && nflAvailability(player, game.gameday).eligible && nflHasCurrentMarket(player))
       .map(player => {
         const tracked = (player.gsisId ? trackedById.get(player.gsisId) : null)
           ?? trackedByName.get(normalizeNflPlayerName(player.name))
@@ -111,7 +111,7 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
         const teamMoneyline = team === normalizedTeam(game.home.abbr) ? gameLine?.moneylineHome : gameLine?.moneylineAway
         const score = Object.fromEntries(NFL_SLATE_EDGE_MARKETS.map(item => [
           item.key,
-          tracked && !unverifiedEnvironment
+          tracked && !unverifiedEnvironment && nflHasCurrentMarket(player, item.key)
             ? contextualNflScore({ ...tracked, teamProfile, opponentProfile }, item.key, americanImpliedProbability(teamMoneyline ?? null), gameLine?.total ?? null).score
             : null,
         ])) as Record<NflSlateEdgeMarketKey, number | null>
@@ -148,11 +148,11 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
       })
 
     return { value: { complete: true as const, entries, ...(NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { verified: true as const } : {}), unavailableMarkets }, observedAt: new Date().toISOString() }
-}, ['nfl-slate-entries-v2-verified'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
+}, ['nfl-slate-entries-v3-available'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
 export function rankNflSlateEntries(entries: NflSlateEdgeEntry[], unavailableMarkets = new Set<NflSlateEdgeMarketKey>()) {
   for (const market of NFL_SLATE_EDGE_MARKETS) {
     if (unavailableMarkets.has(market.key)) { entries.forEach(entry => { entry.mm[market.key] = null }); continue }
-    const performance = entries.filter(entry => entry.score[market.key] != null)
+    const performance = entries.filter(entry => entry.score[market.key] != null && marketExpectation(entry.markets[market.key], market.key) != null)
       .sort((a, b) => (b.score[market.key] ?? -1) - (a.score[market.key] ?? -1))
     const sportsbook = entries
       .map(entry => ({ entry, expectation: marketExpectation(entry.markets[market.key], market.key) }))

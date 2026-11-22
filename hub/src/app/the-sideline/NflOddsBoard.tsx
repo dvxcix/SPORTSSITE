@@ -16,7 +16,7 @@ import styles from './nflOddsBoard.module.css'
 type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type Game={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type TeamVisual=[gameId:string,abbr:string,primary:string,secondary:string,logo:string|null]
-type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];teams?:TeamVisual[];finals?:NflBoardFinal[];finalGames?:string[];resultsUnavailable?:string[];resultsPending?:boolean;phaseToken:string;phaseObservedAt:string;nextStart:string|null}
+type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];teams?:TeamVisual[];finals?:NflBoardFinal[];finalGames?:string[];resultsUnavailable?:string[];resultsPending?:boolean;unavailablePlayers?:Array<{gameId:string;id:number;name:string;team:string;position:string;status:string;injury:string|null;headshot:string|null}>;availabilityUnavailable?:string[];phaseToken:string;phaseObservedAt:string;availabilityObservedAt?:string;nextStart:string|null}
 type Row={id:string;gameId:string;playerId:number;player:string;team:string;position:string;matchup:string;cells:Map<number,NflOddsBoardQuote>}
 const price=(n:number|null)=>n==null?'—':n>0?`+${n}`:String(n)
 const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bTds?\b/g,'Touchdowns')
@@ -34,7 +34,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   const raw=saved?.key===requestKey?saved.value:null
   const now=Math.max(clock,saved?.receivedAt??0,phase?.checkedAt??0)
   const trust=raw?nflOddsBoardTrust(raw,phase,openedAt,now,requireAfter):null
-  const confirmedPhaseChange=trust?.reason==='changed'||trust?.reason==='boundary'||trust?.reason==='invalid'
+  const confirmedPhaseChange=trust?.reason==='changed'||trust?.reason==='boundary'||trust?.reason==='invalid'||trust?.reason==='availability'
   const observedAt=raw?Date.parse(raw.phaseObservedAt):0
   const phaseAt=phase&&raw&&phase.token===raw.phaseToken&&phase.checkedAt>=openedAt?Date.parse(phase.observedAt??''):0
   const verifiedAt=Math.max(observedAt,Number.isFinite(phaseAt)?phaseAt:0)
@@ -65,7 +65,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
         pending=false
         if(!controller.signal.aborted){
           if(queued&&document.visibilityState==='visible'){queued=false;queueMicrotask(()=>void load())}
-          else {const delay=failures?Math.min(300000,30000*2**Math.min(failures-1,3))+Math.floor(Math.random()*10000):resultsPending?30000:nextStart==null?null:Math.min(300000+Math.floor(Math.random()*15000),Math.max(250,nextStart-Date.now()+250));if(delay!=null)timer=setTimeout(load,delay)}
+          else {const delay=failures?Math.min(300000,30000*2**Math.min(failures-1,3))+Math.floor(Math.random()*10000):resultsPending?30000:nextStart==null?null:Math.min(30000+Math.floor(Math.random()*1500),Math.max(250,nextStart-Date.now()+250));if(delay!=null)timer=setTimeout(load,delay)}
         }
       }
     }
@@ -73,7 +73,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     void load()
     return()=>{controller.abort();clearTimeout(timer);reload.current=()=>{}}
   },[date,market,vendor,requestKey])
-  useEffect(()=>{if(trust?.reason==='changed'&&phase?.token)reload.current()},[trust?.reason,phase?.token,phase?.observedAt])
+  useEffect(()=>{if(trust?.reason==='availability'||trust?.reason==='changed'&&phase?.token)reload.current()},[trust?.reason,phase?.token,phase?.observedAt])
   useEffect(()=>{
     const invalidate=()=>{const now=Date.now();flushSync(()=>{setClock(now);setRequireAfter(previous=>Math.max(previous,now))})}
     const visibility=()=>{if(document.visibilityState!=='visible'){wasHidden.current=true;return}if(wasHidden.current){wasHidden.current=false;invalidate()}}
@@ -156,10 +156,12 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     {!accessDenied&&!lastSeen&&errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!accessDenied&&!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {selectedGameHasPartialCoverage && <p role="status">Showing saved prices. Additional source coverage is incomplete for this game.</p>}
+    {!!payload?.availabilityUnavailable?.length && <p role="status">Checking player availability for {payload.games.filter(item=>payload.availabilityUnavailable?.includes(item.id)).map(item=>`${item.away} @ ${item.home}`).join(', ')}. Prices are withheld until verified.</p>}
     {!!payload?.resultsUnavailable?.length && <p role="status">Final results are being verified for {payload.games.filter(item=>payload.resultsUnavailable?.includes(item.id)).map(item=>`${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length && !!gamesWithoutPrices.length && <p role="status">No saved prices for this market and sportsbook in {gamesWithoutPrices.map(item => `${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length&&<OddsBoardGuide players={rows.length} className={styles.boardMeta}/>}
     {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label={scorerLabel ? `${scorerLabel} odds and movement` : "NFL milestone odds and movement"} tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{scorerLabel ?? `${line}+`}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line)),actual=finalValue(row),hit=actual!=null&&actual>=line;return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small className="sr-only">Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><div className={styles.quoteMeta}><MarketMovement value={move} precision={2}/><PickCount value={count?.[6]} estimated={count?.[7]===true}/></div>{actual!=null&&<span className={styles.result} data-result={hit?'hit':'miss'}>{hit?<Check size={13}/>:<X size={13}/>} {hit?'Hit':'Miss'}</span>}</td>})}</tr>)}</tbody></table></div>}
     {payload&&!rows.length&&<p role="status">{scorerLabel ? `No saved ${scorerLabel.toLowerCase()} prices for these filters.` : 'No milestone prices for these filters.'}</p>}
+    {!!payload?.unavailablePlayers?.length && <details className={styles.unavailablePlayers}><summary>Unavailable for this game <span>{payload.unavailablePlayers.filter(player=>(game==='all'||player.gameId===game)&&(team==='all'||player.team===team)&&(!search||player.name.toLowerCase().includes(search.toLowerCase()))).length}</span></summary><div>{payload.unavailablePlayers.filter(player=>(game==='all'||player.gameId===game)&&(team==='all'||player.team===team)&&(!search||player.name.toLowerCase().includes(search.toLowerCase()))).map(player=><div key={player.gameId+':'+player.id}><strong>{player.name}</strong><span>{player.team} · {player.position}</span><span>{player.status}{player.injury?` · ${player.injury}`:''}</span></div>)}</div></details>}
   </section>
 }

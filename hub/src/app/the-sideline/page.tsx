@@ -85,7 +85,7 @@ export default async function SidelinePage({ searchParams }: {
   if (mode === 'cheatsheets') {
     let lens = await getCachedSidelineCheatsheetLens(selected, sample)
     if (beganOpen && !nflPregameOpen(selected)) [market, lens] = await Promise.all([getSidelineOddsBundle(selected), getCachedSidelineCheatsheetLens(selected, sample)])
-    return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed?.filter(event => event.gameId === selected.id) ?? null}><SidelineCheatsheets lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
+    return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><LiveNflScorerProvider key={selected.id + sample} gameId={selected.id} events={touchdownFeed?.filter(event => event.gameId === selected.id) ?? null}><SidelineCheatsheets gameId={selected.id} lens={lens} board={market.odds} sampleLabel={nflSampleReference(selected.season, sample).label} isAdmin={gate.isAdmin} /></LiveNflScorerProvider></>
   }
   if (mode === 'public' || mode === 'markets') {
     const results = mode === 'public' ? await getNflPublicResults(selected, market.odds.bdlGameId).catch(() => null) : null
@@ -96,7 +96,7 @@ export default async function SidelinePage({ searchParams }: {
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
     boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   }
-  const roster = market.odds.players.map(player => ({
+  const roster = [...market.odds.players, ...(market.odds.availabilityPlayers ?? [])].map(player => ({
     id: player.gsisId ?? `bdl-${player.id}`,
     bdlId: player.id,
     teamId: player.teamId ?? null,
@@ -108,6 +108,6 @@ export default async function SidelinePage({ searchParams }: {
   if (beganOpen && !nflPregameOpen(selected)) [market, lens, weatherSummary] = await Promise.all([
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
-  if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
+  if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab gameId={selected.id} key={selected.id + sample} lens={lens} board={market.odds} /></>
   return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient initialPreferences={preferences} initialBook={typeof params.book==='string'?params.book:undefined} key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')+':'+(typeof params.book==='string'?params.book:'default')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
 }

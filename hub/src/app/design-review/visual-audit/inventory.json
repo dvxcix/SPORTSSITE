@@ -6943,7 +6943,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22 member follow-up: Top score and MM highlights now use shared player cards that open the matching drawer. Opening-only quotes remain unavailable; phone sample buttons are 44px. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22 member follow-up: Top score and MM highlights now use shared player cards that open the matching drawer. Opening-only quotes remain unavailable; phone sample buttons are 44px. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6987,6 +6987,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8009,7 +8016,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8051,6 +8058,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8061,7 +8075,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8109,6 +8123,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8119,7 +8140,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8161,6 +8182,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8171,7 +8199,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8213,6 +8241,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8223,7 +8258,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8265,6 +8300,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8275,7 +8317,7 @@
     "kind": "Workspace",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8317,6 +8359,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8585,7 +8634,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8627,6 +8676,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8637,7 +8693,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8679,6 +8735,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8689,7 +8752,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8731,6 +8794,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8741,7 +8811,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8783,6 +8853,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8793,7 +8870,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live follow-up corrected Both Teams to the two selected matchup defenses; single-team samples and the league comparison pool are preserved. Regression coverage includes switching between both and one team. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live follow-up corrected Both Teams to the two selected matchup defenses; single-team samples and the league comparison pool are preserved. Regression coverage includes switching between both and one team. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8835,6 +8912,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8845,7 +8929,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8887,6 +8971,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8897,7 +8988,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8939,6 +9030,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -8949,7 +9047,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8991,6 +9089,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9001,7 +9106,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9043,6 +9148,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9053,7 +9165,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9095,6 +9207,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9105,7 +9224,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9147,6 +9266,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9157,7 +9283,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9199,6 +9325,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9209,7 +9342,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9251,6 +9384,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9261,7 +9401,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9294,7 +9434,14 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
+    }
   },
   {
     "id": "nfl-drawer:NFL Tracking",
@@ -9304,7 +9451,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9337,7 +9484,14 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
+    }
   },
   {
     "id": "nfl-drawer:Sportsbooks",
@@ -9347,7 +9501,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9380,7 +9534,14 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
+    }
   },
   {
     "id": "nfl-matchup:Role command",
@@ -9390,7 +9551,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9432,6 +9593,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9442,7 +9610,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9484,6 +9652,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9494,7 +9669,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9536,6 +9711,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9546,7 +9728,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9588,6 +9770,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9598,7 +9787,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9640,6 +9829,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9650,7 +9846,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9692,6 +9888,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9702,7 +9905,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9744,6 +9947,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9754,7 +9964,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9796,6 +10006,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9806,7 +10023,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9848,6 +10065,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9858,7 +10082,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9900,6 +10124,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9910,7 +10141,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -9952,6 +10183,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -9962,7 +10200,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. Live full-slate requests reached the old 20-second client deadline. This overlay now allows a bounded 60 seconds and offers clear timeout recovery. Data-filled layouts were verified privately; live availability is recorded separately. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -10004,6 +10242,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {
@@ -10326,7 +10571,7 @@
     "kind": "Panel",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: NFL game-specific availability, priced ranking pools, separated unavailable/unlisted research, status context and independent report expiry repaired. See nfl-availability-ranking-2026-11-22.txt/json for exact browser and automated coverage; historical owner approvals retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -10368,6 +10613,13 @@
         "phone-dark",
         "phone-light"
       ]
+    },
+    "availabilityAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
+      "automated": "146 NFL + 134 production checks",
+      "publication": "Ready for rollout"
     }
   },
   {

@@ -1,0 +1,56 @@
+NFL availability and ranking repair — 22 November 2026
+
+Scope
+The Sideline, its player drawers, NFL Odds Board, Cheatsheets, Matchup Lab,
+The Public, Sportsbooks and the NFL Slate Edge ranking pool.
+
+Implemented
+- Removed the nested one-hour HTTP cache from game-specific NFL designation
+  requests. The separate reference-statistics cache remains unchanged.
+- Game reports are requested with season, week, season phase and matchup team
+  IDs. Every page must complete; repeated or exhausted pagination fails closed.
+- Pregame reports and enriched boards refresh through 15-second shared caches.
+  Existing visible/online client polling runs about every 30 seconds.
+- Out, inactive, suspended, reserve, practice-squad and invalid roster identities
+  cannot lead eligible player rankings or Most hidden/Most advertised cards.
+- Questionable and Doubtful remain distinct from Out. Game-day Active supersedes
+  an earlier Questionable designation. Contradictory explicit Out remains blocked.
+  A body-part note alone is labelled Status unconfirmed, never assumed Out/Active.
+- Ranked rows need a usable current quote for their score's market. Opening-only,
+  malformed and absent prices cannot qualify. MM compares the same priced pool.
+- Unlisted and unavailable players sit in separate collapsible sections below
+  current-market players. Research drawers and historical production remain
+  reachable. Withdrawn status metadata contains no odds, baselines or pick counts.
+- Drawer headers retain game status, injury reason and reported time across tabs.
+  Shared NFL player cards display the game designation too.
+- Price-history sliders retain this game's latest permitted status evidence;
+  a withdrawn player cannot return through an older price frame.
+- Odds Board rechecks open-game availability after cached quote merges. A cached
+  price or successful game-clock poll cannot renew an expired injury report.
+- An open game's report expires after 90 seconds without a verified observation.
+  Current player prices/ranks are withheld with a clear message. Existing valid
+  game lines remain governed by their separate quote validation.
+- Cheatsheets and Matchup Lab now poll the shared matchup feed. Public/Sportsbooks
+  and The Sideline use the same independent client-side availability expiry.
+- Slate Edge omits unavailable/unquoted players and requires the same market pool
+  for production and sportsbook ranks.
+
+Historical integrity
+Default pregame research, scores, MM and peer pools still freeze at the earliest
+known kickoff. Current roster/injury reports are not substituted into past games.
+No collector/job replay, new scheduled job, migration replay, payment change,
+feature flag change or secret change was performed.
+
+Verification
+146 NFL behavior/integration checks and 134 production source checks passed.
+The expiry interaction test verifies that a failed refresh removes current ranks
+and player quotes and that crossing kickoff cannot resurrect an expired board.
+Status transitions, post-merge exclusion, quote-free metadata, pagination,
+opening-only prices, historical cutoffs, access checks, drawers and all tools
+remain covered. Build, lint and browser receipts are recorded in the companion
+JSON; publication is only marked Live after the production deployment is Ready.
+
+Source limit
+Refresh speed does not guarantee that the upstream report changes immediately.
+Unknown designations stay explicit. Practice participation is never treated as a
+game-day inactive designation. Missing historical evidence is not invented.

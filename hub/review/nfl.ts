@@ -1,5 +1,6 @@
 import type {SidelineGame,SidelineGameState,SidelineLens,SidelinePlayer,SidelineTeam} from '../src/app/the-sideline/types'
 import type {SidelineOddsBoard} from '../src/lib/nflOddsTypes'
+import {filterNflMarkets,nflMarketExclusions} from '../src/lib/nflAvailability'
 import {REVIEW_DATE} from './database'
 import {observedAt} from './nba'
 import {NFL_SLATE_EDGE_MARKETS,type NflSlateEdgePayload,type NflSlateEdgeMarket,type NflSlateEdgeMarketKey} from '../src/lib/nflSlateEdge'
@@ -23,6 +24,16 @@ export function makeNflOdds(game=nflGames[0]):SidelineOddsBoard{
   player.publicPicks=player.markets.map(m=>({propType:m.propType,label:m.label,rawMarket:m.propType,picks:120-i*11,capturedAt:observedAt,line:m.line,side:'over',kind:m.category==='touchdowns'?'milestone':'over_under'}))
   player.markets.forEach(m=>{if(m.category==='touchdowns')return;const base=m.offers.slice();m.offers.push(...base.map(o=>({...o,type:'milestone' as const,line:Math.ceil(o.line??m.line??1),current:{odds:105},opening:{odds:135}})))})
  })
+ if(process.env.SLIPSURGE_NFL_AVAILABILITY_REVIEW==='1') {
+  const status=(gameStatus:string|null,active:boolean|null,injury:string|null)=>({gameStatus,active,injury,starter:null,didNotPlay:null,updatedAt:observedAt})
+  board.availabilityObservedAt=new Date().toISOString();board.availabilityCutoffAt='2030-11-20T20:20:00Z'
+  board.players.forEach(player=>{player.availability=status(null,true,null)})
+  if(board.players[2])board.players[2].markets=[]
+  if(board.players[3])board.players[3].availability=status('questionable',null,'Knee')
+  if(board.players[4])board.players[4].availability=status('out',false,'Hamstring')
+  if(board.players[5])board.players[5].availability=status(null,false,null)
+  return filterNflMarkets(board,nflMarketExclusions(board.players,2030))
+ }
  return board
 }
 export const storedGameState=(_game?:SidelineGame):SidelineGameState=>({status:'Scheduled',statusState:'scheduled',awayScore:null,homeScore:null,awayByPeriod:[],homeByPeriod:[],summary:null})

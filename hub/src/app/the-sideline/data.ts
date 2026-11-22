@@ -19,7 +19,8 @@ import { getNflWeather } from '@/lib/nflWeatherServer'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflMatchupBoard, nflMatchupTeam } from '@/lib/nflMatchupBoard'
-import { filterNflMarkets, nflMarketExclusions } from '@/lib/nflAvailability'
+import { filterNflMarkets, nflAvailabilityIsFresh, nflMarketExclusions, withoutNflCurrentMarkets } from '@/lib/nflAvailability'
+import { attachNflDesignations } from '@/lib/nflDesignations'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
 import { scheduledDate, type SidelineScheduleDay } from './scheduleNavigation'
 import { getNflBdlDesignations, getNflBdlGame, type NflBdlDesignation } from '@/lib/nflOdds'
@@ -191,22 +192,25 @@ const loadGameState = unstable_cache(async (bdlGameId: number): Promise<Sideline
   }
 }, ['sideline-bdl-game-state-v1'], { revalidate: 15, tags: ['sideline:nfl-live'] })
 
-const loadDesignations = unstable_cache(async (season: number, week: number, gameType: string, bdlGameId: number, teamIds: number[]): Promise<NflBdlDesignation[]> => {
+const loadDesignations = unstable_cache(async (season: number, week: number, gameType: string, bdlGameId: number, teamIds: number[]) => {
   const phase = gameType === 'PRE' ? 1 : gameType === 'REG' ? 2 : 3
   try {
-    return (await getNflBdlDesignations(season, week, teamIds, phase)).filter(row => row.game_id === bdlGameId)
+    const rows = (await getNflBdlDesignations(season, week, teamIds, phase)).filter(row => row.game_id === bdlGameId)
+    if (!rows.length) throw new NflPregameResearchUnavailable()
+    return { rows, observedAt: new Date().toISOString() }
   } catch {
     // Keep the last verified board through a designation outage. Saving a new
     // board without that evidence could restore previously withdrawn odds.
     throw new NflPregameResearchUnavailable()
   }
-}, ['sideline-bdl-designations-v2'], { revalidate: 60, tags: ['sideline:nfl-live'] })
+}, ['sideline-bdl-designations-v4'], { revalidate: 15, tags: ['sideline:nfl-live'] })
 
 // Observed on the Chargers' game-specific report while the provider still
 // listed Thompson as Doubtful: https://www.chargers.com/team/injury-report/
 const thompsonOutObservedAt = '2026-11-16T15:32:30.394Z'
 
-function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[], gameId: string) {
+function attachDesignations(board: SidelineOddsBoard, rows: NflBdlDesignation[], gameId: string, observedAt?: string) {
+  board = { ...attachNflDesignations(board, rows), availabilityObservedAt: observedAt }
   const hasClubReport = gameId === '2026_10_LAC_BAL' && Date.now() >= Date.parse(thompsonOutObservedAt)
   if (!rows.length && !hasClubReport) return board
   const byPlayer = new Map(rows.map(row => [row.player.id, row]))
@@ -260,16 +264,16 @@ const loadEnrichedPregameOdds = unstable_cache(async (game: SidelineGame) => {
   if (selected && (paused && supplement || selected.openingOnly)) inputs.push(attachNflTdBaselines(selected, baselines))
   const [identified, identifiedCurrent] = await enrichSidelineOddsBoards(game, inputs)
   const liveBoard = sidelinePublicBoard(nflMatchupBoard(attachNflPikkitSnapshot(identified, picks), game.away.abbr, game.home.abbr))
-  const designations = liveBoard.bdlGameId ? await loadDesignations(game.season, game.week, game.gameType, liveBoard.bdlGameId, liveBoard.players.flatMap(player => player.teamId ? [player.teamId] : [])) : []
-  const original = sidelinePublicBoard(attachDesignations(liveBoard, designations, game.id))
-  const currentBoard = identifiedCurrent ? sidelinePublicBoard(attachDesignations(nflMatchupBoard(attachNflPikkitSnapshot(identifiedCurrent, picks), game.away.abbr, game.home.abbr), designations, game.id)) : original
+  const report = liveBoard.bdlGameId ? await loadDesignations(game.season, game.week, game.gameType, liveBoard.bdlGameId, liveBoard.players.flatMap(player => player.teamId ? [player.teamId] : [])) : null
+  const original = sidelinePublicBoard(attachDesignations(liveBoard, report?.rows ?? [], game.id, report?.observedAt))
+  const currentBoard = identifiedCurrent ? sidelinePublicBoard(attachDesignations(nflMatchupBoard(attachNflPikkitSnapshot(identifiedCurrent, picks), game.away.abbr, game.home.abbr), report?.rows ?? [], game.id, report?.observedAt)) : original
   // An empty marker when unpaused also records that decision at capture time.
   const value: NflObservedOdds = NFL_PAUSED_PROJECTION_WRITES_ENABLED
     ? { ...original, pausedProjection: packNflPausedProjection(createNflPausedProjection(original, currentBoard, game.id)) }
     : original
   if (value.status !== 'ready' || !value.players.length) throw new NflPregameResearchUnavailable()
   return { value, observedAt: new Date().toISOString() }
-}, [`sideline-enriched-pregame-v5-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
+}, [`sideline-enriched-pregame-v7-paused-${NFL_PAUSED_PROJECTION_WRITES_ENABLED ? 'writer' : 'reader'}`], { revalidate: 15, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
 // The boundary check must run outside Next's cache: a cached pregame response
 // cannot substitute for another process's final snapshot after kickoff.
@@ -299,7 +303,10 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
     ? odds : visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff))
   const started = gameState?.statusState === 'in_progress' || gameState?.statusState === 'final'
   const pickCutoff = !started && Number.isFinite(cutoff) ? cutoff : null
-  return { odds: filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)), gameState, pickCutoff }
+  const eligible = { ...filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)),
+    ...(Number.isFinite(cutoff) ? { availabilityCutoffAt: new Date(cutoff).toISOString() } : {}) }
+  const stale = nflPregameOpen(game) && !nflAvailabilityIsFresh(odds)
+  return { odds: stale ? withoutNflCurrentMarkets(eligible) : eligible, gameState, pickCutoff: stale ? null : pickCutoff }
 }
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {

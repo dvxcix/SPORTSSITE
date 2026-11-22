@@ -7,14 +7,14 @@ import { createNflPausedProjection, packNflPausedProjection } from '../src/lib/n
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes'
 
 const require=createRequire(import.meta.url)
-const state={denied:false,aliasedMatchup:false,legacyFinal:false,finalFeed:null as null|Record<string,string>,cutoffs:[] as string[],clocks:0,schedules:0,reads:0,truncated:false,many:false,archiveDelay:false,archiveAborted:0,archiveActive:0,archivePeak:0,archive:null as null|{value:unknown;observedAt:string},capture:null as null|{board:unknown},publicPick:null as unknown,entries:new Map<string,unknown>(),baselines:new Map<string,unknown>(),tables:{} as Record<string,Array<{captured_at:string;board:unknown}>>}
+const state={availability:null as SidelineOddsBoard|null,denied:false,aliasedMatchup:false,legacyFinal:false,finalFeed:null as null|Record<string,string>,cutoffs:[] as string[],clocks:0,schedules:0,reads:0,truncated:false,many:false,archiveDelay:false,archiveAborted:0,archiveActive:0,archivePeak:0,archive:null as null|{value:unknown;observedAt:string},capture:null as null|{board:unknown},publicPick:null as unknown,entries:new Map<string,unknown>(),baselines:new Map<string,unknown>(),tables:{} as Record<string,Array<{captured_at:string;board:unknown}>>}
 ;(globalThis as typeof globalThis&{nflBoardRoute:typeof state}).nflBoardRoute=state
 const stubs:Record<string,string>={
   '@/lib/nflOddsBoardResultsServer':`export const readNflBoardFinals=async()=>({finals:[],finalGames:[],resultsUnavailable:[]})`,
   'server-only':'',
   'next/server':`export class NextResponse extends Response{static json(v,o={}){return new Response(JSON.stringify(v),{...o,headers:{'Content-Type':'application/json',...o.headers}})}}`,
   '@/lib/nflAccess':`export async function requireNflAccess(){return globalThis.nflBoardRoute.denied?{error:new Response('',{status:403})}:{userId:'test'}}`,
-  '@/app/the-sideline/data':`export const getSidelineGames=async()=>({date:'2020-11-02',games:Array.from({length:globalThis.nflBoardRoute.many?24:1},(_,i)=>({id:globalThis.nflBoardRoute.many?'game'+i:'game',gameday:'2020-11-02',gametime:'18:00',away:{abbr:globalThis.nflBoardRoute.aliasedMatchup?'LA':'SEA',color:'#002244',color2:'#69BE28',logo:'https://a.espncdn.com/seattle.png'},home:{abbr:globalThis.nflBoardRoute.aliasedMatchup?'WAS':'CHI',color:'#0B162A',color2:'#C83803',logo:'https://a.espncdn.com/chicago.png'}}))});export const getSidelineCapture=async()=>globalThis.nflBoardRoute.capture`,
+  '@/app/the-sideline/data':`export const getSidelineGames=async()=>({date:'2020-11-02',games:Array.from({length:globalThis.nflBoardRoute.many?24:1},(_,i)=>({id:globalThis.nflBoardRoute.many?'game'+i:'game',gameday:'2020-11-02',gametime:'18:00',away:{abbr:globalThis.nflBoardRoute.aliasedMatchup?'LA':'SEA',color:'#002244',color2:'#69BE28',logo:'https://a.espncdn.com/seattle.png'},home:{abbr:globalThis.nflBoardRoute.aliasedMatchup?'WAS':'CHI',color:'#0B162A',color2:'#C83803',logo:'https://a.espncdn.com/chicago.png'}}))});export const getSidelineCapture=async()=>globalThis.nflBoardRoute.capture;export const getSidelineOddsBundle=async()=>({odds:globalThis.nflBoardRoute.availability})`,
   '@/lib/nflPregameResearchData':`export const readNflPregameResearch=async()=>globalThis.nflBoardRoute.archive`,
   '@/lib/nflFanduel':`export const attachNflFanduel=(base)=>base`,
   '@/app/the-sideline/kickoff':`export const nflKickoffAt=()=>new Date('2020-11-02T23:00:00Z')`,
@@ -28,7 +28,7 @@ const compiled={exports:{} as {GET:(request:Request&{nextUrl:URL})=>Promise<Resp
 new Function('module','exports','require',bundled.outputFiles[0].text)(compiled,compiled.exports,require)
 const cutoff='2020-11-02T23:00:00.000Z',older='2020-11-02T22:00:00.000Z'
 const sample=(capturedAt:string,updatedAt:string,odds:number,version?:number)=>({captured_at:capturedAt,board:{bdlGameId:7,status:'ready',source:version==null?'live':'snapshot',capturedAt,gameLines:[],...(version==null?{}:{fanduelParserVersion:version}),players:[{id:4,name:'Test',team:'SEA',position:'WR',headshot:'https://static.www.nfl.com/headshot.png',headshotFallbacks:['https://a.espncdn.com/headshot.png'],privateField:'do not expose',markets:[{key:'receiving_yards:25',propType:'receiving_yards',label:'Receiving yards',category:'receiving',line:25,privateField:'do not expose',offers:[{vendor:'fanduel',type:'milestone',line:25,openingLine:25,current:{odds},opening:{odds:300},updatedAt,privateField:'do not expose'}]}]}]}})
-function reset(){state.denied=false;state.aliasedMatchup=false;state.legacyFinal=false;state.finalFeed=null;state.cutoffs=[cutoff];state.clocks=0;state.schedules=0;state.reads=0;state.truncated=false;state.many=false;state.archiveDelay=false;state.archiveAborted=0;state.archiveActive=0;state.archivePeak=0;state.archive=null;state.capture=null;state.publicPick=null;state.entries.clear();state.baselines.clear();state.tables={nfl_odds_snapshot_history:[sample('2020-11-02T21:30:00.000Z','2020-11-02T21:29:00.000Z',-140),sample('2020-11-02T20:30:00.000Z','2020-11-02T20:29:00.000Z',-110)],nfl_fanduel_capture_history:[]}}
+function reset(){state.availability=null;state.denied=false;state.aliasedMatchup=false;state.legacyFinal=false;state.finalFeed=null;state.cutoffs=[cutoff];state.clocks=0;state.schedules=0;state.reads=0;state.truncated=false;state.many=false;state.archiveDelay=false;state.archiveAborted=0;state.archiveActive=0;state.archivePeak=0;state.archive=null;state.capture=null;state.publicPick=null;state.entries.clear();state.baselines.clear();state.tables={nfl_odds_snapshot_history:[sample('2020-11-02T21:30:00.000Z','2020-11-02T21:29:00.000Z',-140),sample('2020-11-02T20:30:00.000Z','2020-11-02T20:29:00.000Z',-110)],nfl_fanduel_capture_history:[]}}
 function request(market='receiving_yards',book='fanduel'){const url=`https://www.slipsurge.com/api/the-sideline/odds-board?date=2020-11-02&market=${market}&book=${book}`;return compiled.exports.GET(Object.assign(new Request(url),{nextUrl:new URL(url)}))}
 test('authorization happens before any cache or database reads',async()=>{reset();state.denied=true;assert.equal((await request()).status,403);assert.equal(state.clocks,0);assert.equal(state.reads,0)})
 test('saved Anytime and First Touchdown prices populate separate market selections', async () => {
@@ -98,10 +98,41 @@ test('24 slow frozen games never exceed three simultaneous count reads',async()=
 test('open game joins the original public snapshot to the saved full ladder once for all members',async()=>{
  reset();const previous=Date.now;Date.now=()=>Date.parse('2020-11-02T22:00:00.000Z')
  try{
+  state.availability={...state.tables.nfl_odds_snapshot_history[0].board as SidelineOddsBoard,status:'ready',availabilityObservedAt:new Date(Date.now()).toISOString()}
+  state.availability.players[0].availability={gameStatus:null,active:true,injury:null,starter:null,didNotPlay:null,updatedAt:null}
   state.publicPick={captured_at:'2020-11-02T21:00:00.000Z',snapshot:{gameId:'game',gameDate:'2020-11-02',awayTeam:'SEA',homeTeam:'CHI',markets:[{propType:'receiving_yards',label:'Receiving Yards',rawLabel:'Receiving Yards',rawKey:'receiving_yards',players:[{playerName:'Test',playerKey:'Test',team:'SEA',picks:100}]}]}}
   const result=await(await request()).json();assert.deepEqual(result.picks,[['game',4,'SEA','receiving_yards','fanduel',25,100,true]])
   assert.equal((await request()).status,200);assert.equal(state.reads,2)
  }finally{Date.now=previous}
+})
+
+test('fresh game status overrides a cached price pool and reverses when the player is cleared',async()=>{
+  reset();const previous=Date.now;Date.now=()=>Date.parse('2020-11-02T22:00:00.000Z')
+  try{
+    const board=state.tables.nfl_odds_snapshot_history[0].board as SidelineOddsBoard
+    const status={gameStatus:'questionable',active:null,injury:'Knee',starter:null,didNotPlay:null,updatedAt:'2020-11-02T21:59:00Z'}
+    state.availability={...board,status:'ready',availabilityObservedAt:new Date(Date.now()).toISOString(),players:[{...board.players[0],availability:status}]}
+    assert.equal((await(await request()).json()).quotes.length,1)
+    state.availability={...state.availability,players:[],availabilityPlayers:[{...board.players[0],markets:[],availability:{...status,gameStatus:'out',active:false}}]}
+    const out=await(await request()).json()
+    assert.equal(out.quotes.length,0)
+    assert.equal(out.unavailablePlayers[0].status,'Out')
+    assert.equal(out.unavailablePlayers[0].injury,'Knee')
+    assert.equal(out.unavailablePlayers[0].markets,undefined)
+    state.availability={...board,status:'ready',availabilityObservedAt:new Date(Date.now()).toISOString(),players:[{...board.players[0],availability:{...status,gameStatus:null,active:true}}]}
+    assert.equal((await(await request()).json()).quotes.length,1)
+    assert.equal([...state.entries.keys()].filter(key=>key.includes('odds-board-candidate')).length,1)
+  }finally{Date.now=previous}
+})
+
+test('unverified current availability withholds quotes instead of assuming an injured player is active',async()=>{
+  reset();const previous=Date.now;Date.now=()=>Date.parse('2020-11-02T22:00:00.000Z')
+  try{
+    state.availability=null
+    const result=await(await request()).json()
+    assert.equal(result.quotes.length,0)
+    assert.deepEqual(result.availabilityUnavailable,['game'])
+  }finally{Date.now=previous}
 })
 test('source reads are shared while fresh clock checks remain per request',async()=>{reset();const first=await request();assert.equal(first.status,200);const result=await first.json();assert.equal(result.quotes.length,1);assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][10],-110);assert.equal(result.quotes[0][12],300);assert.equal(result.quotes[0][13],false);assert.equal(state.clocks,2);assert.equal(state.reads,2);assert.doesNotMatch(JSON.stringify(result),/privateField|do not expose/);assert.equal((await request()).status,200);assert.equal(state.clocks,3);assert.equal(state.reads,2)})
 test('a captured game designation suppresses both raw book quotes and carried cache quotes', async () => {
