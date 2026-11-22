@@ -17,3 +17,11 @@ earlier-cutoff case: ready board, original quote, no current roster substitution
 no archive mutation and no reopened pick cutoff.
 
 Production verification is recorded after the Git deployment becomes Ready.
+
+Published and live-verified
+GitHub main: 316b07aee9db213c6e0c091a1e8eeb48da5e4d69.
+Vercel: dpl_GpUL4xEBdbG4VVov5g5kcFkLYgdd, Ready, www.slipsurge.com assigned.
+Six live checks passed: JAX Game Day has 30 player rows across desktop/phone
+light/dark; Props has 14 rows; NYJ–LAC still has 27 current players and four
+secondary sections. No false feed-outage or paused-availability notice remains.
+

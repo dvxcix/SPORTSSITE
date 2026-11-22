@@ -1,0 +1,49 @@
+[
+  {
+    "layout": "desktop-dark",
+    "doc": 1430,
+    "outage": false,
+    "paused": false,
+    "rows": 30,
+    "width": 1440
+  },
+  {
+    "layout": "desktop-light",
+    "doc": 1430,
+    "outage": false,
+    "paused": false,
+    "rows": 30,
+    "width": 1440
+  },
+  {
+    "layout": "phone-light",
+    "doc": 380,
+    "outage": false,
+    "paused": false,
+    "rows": 30,
+    "width": 390
+  },
+  {
+    "layout": "phone-dark",
+    "doc": 380,
+    "outage": false,
+    "paused": false,
+    "rows": 30,
+    "width": 390
+  },
+  {
+    "layout": "phone-dark",
+    "surface": "JAX Props",
+    "outage": false,
+    "paused": false,
+    "rows": 14
+  },
+  {
+    "layout": "phone-dark",
+    "surface": "NYJ current board",
+    "outage": false,
+    "paused": false,
+    "rows": 27,
+    "unavailableSections": 4
+  }
+]
