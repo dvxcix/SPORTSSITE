@@ -15,7 +15,7 @@ import { buildBoardHeat } from './boardHeat'
 import { teamMmHighlights } from './teamHighlights'
 import { nflAvailability, nflMarketExclusion } from '@/lib/nflAvailability'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Columns3, Crosshair, Eraser, Eye, Highlighter, Layers3, Minus, MoveDown, MoveUp, Plus, RotateCcw, Sparkles, Star, X } from 'lucide-react'
 import { BookLogo, bookName, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import { ModalSurface } from '@/components/ui/ModalSurface'
@@ -1048,29 +1048,31 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
   }, [board, books, game.home.abbr, markets, onToggleSaved, pickMarkets, savedKeys])
 }
 
-function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: { team: SidelineTeam; opponent: SidelineTeam; rows: PlayerRow[]; board: SidelineOddsBoard; selectedWindow: SidelineWindow; side: 'away' | 'home'; savedCount: number; collapsed: boolean; onToggle: () => void; onSelectWindow: (window: SidelineWindow) => void }) {
+function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow, onSelectPlayer }: { team: SidelineTeam; opponent: SidelineTeam; rows: PlayerRow[]; board: SidelineOddsBoard; selectedWindow: SidelineWindow; side: 'away' | 'home'; savedCount: number; collapsed: boolean; onToggle: () => void; onSelectWindow: (window: SidelineWindow) => void; onSelectPlayer: (player: PlayerRow) => void }) {
   const topScore = [...rows].filter(row => row.hasTracking && row.eligible !== false && !row.unavailableMetrics?.includes('index')).sort((a, b) => b.index - a.index)[0]
   const contextLabels = Array.from(new Set(rows.map(row => row.contextLabel).filter(Boolean)))
   const contextLabel = contextLabels.length === 1 ? contextLabels[0]! : 'Role'
   const { advertised, hidden } = teamMmHighlights(rows)
   const fanduel = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const moneyline = side === 'home' ? fanduel?.moneylineHome : fanduel?.moneylineAway
-  const signal = (item: PlayerRow | undefined) => {
-    if (!item) return <b className={styles.noSignal}>No qualifying MM</b>
-    const offer = primaryMarketOffer(item.market, item.contextProp ?? 'anytime_td')
+  const signal = (label: string, item: PlayerRow | undefined, kind: 'score' | 'advertised' | 'hidden') => {
+    if (!item) return <div className={styles.signalEmpty}><small>{label}</small><span>{kind === 'score' ? 'No scored player' : 'No qualifying MM'}</span></div>
+    const pricedPlayer = item.market ? {...item.market,markets:item.market.markets.map(market=>({...market,offers:market.offers.filter(offer=>!offer.isOpeningOnly && americanImpliedProbability(offerCurrent(offer))!=null)}))} : null
+    const primary = primaryMarketOffer(pricedPlayer, item.contextProp ?? 'anytime_td')
+    const fallback = primary ? null : bestOffer(nflPrimaryMarket(pricedPlayer, item.contextProp ?? 'anytime_td'))
+    const offer = primary ?? (fallback ? {offer:fallback.offer,odds:fallback.current} : null)
+    const quoteLine = offer?.offer.line != null && !['anytime_td','first_td','anytime_td_1h'].includes(item.contextProp ?? 'anytime_td') ? offer.offer.type === 'milestone' ? `${offer.offer.line}+` : `Over ${offer.offer.line}` : ''
+    const quoteLabel = offer ? `${bookName(offer.offer.vendor)} ${quoteLine} ${oddsLabel(offer.odds)}` : 'Price unavailable'
     return (
-      <b className={styles.signalValue}>
-        <strong>{item.name}</strong>
-        <span>
-          MM {item.mm! > 0 ? '+' : ''}{item.mm}
+      <button type="button" className={styles.signalCard} data-signal={kind} onClick={() => onSelectPlayer(item)} aria-label={`${label}: ${item.name}, ${contextLabel}, ${kind === 'score' ? `score ${item.index} out of 100` : `MM ${item.mm! > 0 ? '+' : ''}${item.mm}`}, ${quoteLabel}. Open player breakdown`}>
+        <span className={styles.signalHeading}><small>{label}</small><ArrowUpRight size={14} aria-hidden="true" /></span>
+        <span className={styles.signalPlayer}><PlayerAvatar player={item} team={team} /><span><strong>{item.name}</strong><small>{item.position}{item.jersey != null ? ` · #${item.jersey}` : ''}</small></span></span>
+        <span className={styles.signalContext}>{contextLabel}</span>
+        <span className={styles.signalMetrics}>
+          <b>{kind === 'score' ? <>{item.index}<small>/100</small></> : <>MM {item.mm! > 0 ? '+' : ''}{item.mm}</>}</b>
+          {offer ? <span className={styles.signalQuote}><BookLogo vendor={offer.offer.vendor} size={17} /><span>{quoteLine && <small>{quoteLine} </small>}<strong>{oddsLabel(offer.odds)}</strong></span></span> : <small>Price unavailable</small>}
         </span>
-        {offer ? (
-          <em>
-            <BookLogo vendor={offer.offer.vendor} size={13} />
-            {oddsLabel(offer.odds)}
-          </em>
-        ) : null}
-      </b>
+      </button>
     )
   }
   return (
@@ -1111,22 +1113,10 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
           <span>Saved <b>{savedCount}</b></span>
         </div>
       </div>
-      <div className={styles.teamSignals} aria-label={`${team.name} player highlights`}>
-        <div>
-          <small>Top score <span>· {contextLabel}</span></small>
-          <b className={styles.signalValue}>
-            <strong>{topScore?.name ?? 'No scored player'}</strong>
-            <span>{topScore?.index ?? '—'} <em>/ 100</em></span>
-          </b>
-        </div>
-        <div className={styles.advertised}>
-          <small>Most advertised <span>· {contextLabel}</span></small>
-          {signal(advertised)}
-        </div>
-        <div className={styles.hidden}>
-          <small>Most hidden <span>· {contextLabel}</span></small>
-          {signal(hidden)}
-        </div>
+      <div className={styles.teamSignals} role="region" tabIndex={0} aria-label={`${team.name} player highlights`}>
+        {signal('Top score', topScore, 'score')}
+        {signal('Most advertised', advertised, 'advertised')}
+        {signal('Most hidden', hidden, 'hidden')}
       </div>
     </header>
   )
@@ -2290,6 +2280,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                 })
               }
               onSelectWindow={setWindowId}
+              onSelectPlayer={setExpanded}
             />
             {!collapsedTeams.has(section.team.abbr) ? (
               <div className={styles.tableScroller} key={`${view}:${roleFilter}`} role="region" aria-label={`${section.team.name} player statistics`} tabIndex={0}>

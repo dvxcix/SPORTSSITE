@@ -302,10 +302,10 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       )}
 
-      <button type="submit" disabled={saving || !!uploading}
+      <div className="ss-profile-savebar"><span>Changes apply after saving.</span><button type="submit" disabled={saving || !!uploading}
         className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${saved ? 'bg-[var(--green-fill)] text-[var(--on-status)]' : 'bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)]'} disabled:opacity-60`}>
         {saved ? <><Check size={16} /> Saved!</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Save Profile'}
-      </button>
+      </button></div>
     </form>
   )
 }

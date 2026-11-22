@@ -63,6 +63,33 @@ test('drawer never substitutes season production for an empty Last 1 sample; exa
 })
 
 
+test('team highlight cards retain player identity, use an observed alternate book and open the same drawer',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds()
+ const player=odds.players.find(p=>p.name==='Josh Allen')!
+ for(const market of player.markets){market.offers=market.offers.filter(o=>o.vendor!=='fanduel');if(market.propType==='anytime_td')market.offers.forEach(o=>{o.current={odds:200}})}
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  const rail=ui.host.querySelector('[aria-label="Buffalo Bills player highlights"]')!
+  const card=rail.querySelector<HTMLButtonElement>('button[data-signal="score"]')!
+  assert.ok(card);assert.match(card.textContent!,/Josh Allen/);assert.match(card.textContent!,/QB/);assert.match(card.textContent!,/\+200/)
+  assert.match(card.getAttribute('aria-label')!,/\+200/,'the accessible name retains the observed quote')
+  assert.ok(card.querySelector('img[alt="Josh Allen headshot"]'))
+  assert.ok(card.querySelector('img[alt="DraftKings logo"]')||card.querySelector('img[alt="BetMGM logo"]')||card.querySelector('img[alt="Caesars logo"]'))
+  assert.equal(rail.getAttribute('tabindex'),'0','the phone highlight rail remains keyboard scrollable')
+  await act(async()=>card.click())
+  assert.equal(document.querySelector('[role="dialog"]')!.getAttribute('aria-label'),'Josh Allen NFL breakdown')
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
+test('highlight cards never promote opening-only observations to a current quote',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds()
+ for(const player of odds.players)for(const market of player.markets)for(const offer of market.offers)offer.isOpeningOnly=true
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{for(const card of ui.host.querySelectorAll('button[data-signal]')){assert.match(card.textContent!,/Price unavailable/);assert.equal(card.querySelector('img[alt$=" logo"]:not([alt$="Bills logo"]):not([alt$="Chiefs logo"])'),null)}}finally{await ui.close();globalThis.fetch=old}
+})
+
 test('switching NFL player sections starts the next section at its beginning',async()=>{
  const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
  const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds:makeNflOdds(),gameState:storedGameState(),touchdowns:[],timeline:[]}))

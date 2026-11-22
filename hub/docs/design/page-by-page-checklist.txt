@@ -5,6 +5,8 @@ Checks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/
 Completed changes are Live in production. Owner visual feedback does not block the authorized rollout. Queued means unfinished overhaul work, not an unavailable tool.
 MLB remains hidden/off-season; its pages stay in the inventory.
 
+2026-11-22 member-page follow-up: member-visual-review-2026-11-22.txt/json records Feed, profiles, Picks/Watchlist, all settings pages and the NFL highlight cards individually. The affected inventory entries have dated follow-up notes; existing owner approvals and publication history are preserved.
+
 2026-11-22 detail pass: see ui-detail-pass-2026-11-22.txt and ui-detail-pass-2026-11-22.json in this directory.
 The inventory still contains 239 released surfaces, zero queued surfaces, and 229 awaiting owner visual feedback (10 owner-approved).
 This pass adds fresh route-boundary checks and explicit NBA/NFL drawer interaction checks. It does not replace previous release receipts with blanket visual approval.

@@ -1,0 +1,3332 @@
+{
+  "date": "2026-11-22",
+  "sourceBase": "30da960e8423be564d9aec84f20cf9f0415ec40c",
+  "scope": "Feed, profiles, Picks/Watchlist, settings, shared composer consumers and NFL highlights",
+  "environment": "compiled private fixture app; no live services",
+  "tests": {
+    "focused": {
+      "pass": 44,
+      "fail": 0
+    },
+    "productionSource": {
+      "pass": 134,
+      "fail": 0
+    },
+    "lint": "pass",
+    "optimizedFixtureBuild": "pass",
+    "typescript": "pass"
+  },
+  "routes": [
+    {
+      "group": "Feed",
+      "href": "/feed?filter=latest",
+      "title": "The Feed",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Feed",
+      "href": "/feed?filter=top",
+      "title": "The Feed",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Feed",
+      "href": "/feed?filter=picks",
+      "title": "The Feed",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Feed",
+      "href": "/feed?filter=following",
+      "title": "The Feed",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=all",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=picks",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=replies",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=reposts",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=media",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/jordan-review?tab=communities",
+      "title": "Jordan L.",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Jordan L.",
+            "Join Jordan L.",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Profiles",
+      "href": "/profile/review-member",
+      "title": "Your account",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Your account (@review-member) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Your account (@review-member) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Your account (@review-member) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your account",
+            "Badges and achievements",
+            "Favorite teams"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Your account (@review-member) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "Latest picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks?sport=NFL",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NFL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks?sport=NBA",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Trending picks",
+            "NBA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks?sport=NHL",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NHL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NHL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NHL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "NHL picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks?sport=Soccer",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Soccer picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Soccer picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Soccer picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "Soccer picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Picks",
+      "href": "/picks?sport=MMA",
+      "title": "Picks",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "MMA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "MMA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "MMA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Picks",
+            "MMA picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings",
+      "title": "Settings",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Settings",
+            "Account",
+            "Preferences",
+            "Creator",
+            "Billing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/profile",
+      "title": "Your profile",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/research",
+      "title": "Your workspace",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your workspace"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your workspace"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your workspace"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your workspace"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/interests",
+      "title": "Your interests",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Home mix",
+            "Market focus"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Home mix",
+            "Market focus"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Home mix",
+            "Market focus"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your interests",
+            "Sports",
+            "Teams & players",
+            "Home mix",
+            "Market focus"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/connections",
+      "title": "Connect your accounts",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Connect your accounts",
+            "",
+            "Discord",
+            "𝕏"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/account",
+      "title": "Account and security",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Account and security",
+            "Email address",
+            "Your data",
+            "Change password",
+            "Delete account"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/security",
+      "title": "Protect your SlipSurge account",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Protect your SlipSurge account",
+            "Two-factor authentication",
+            "Active sessions"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/notifications",
+      "title": "Notification center",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Notification center",
+            "Delivery timing"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/privacy",
+      "title": "Privacy and visibility",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Privacy and visibility"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/blocked",
+      "title": "Muted and blocked",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Muted and blocked",
+            "Muted accounts",
+            "Blocked accounts"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Settings",
+      "href": "/settings/membership",
+      "title": "Your SlipSurge membership",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your SlipSurge membership"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your SlipSurge membership"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your SlipSurge membership"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your SlipSurge membership"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Shared composer",
+      "href": "/groups/nba-lounge",
+      "title": "NBA Lounge",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "NBA Lounge"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "NBA Lounge · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "NBA Lounge"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "NBA Lounge · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "NBA Lounge"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "NBA Lounge · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "NBA Lounge"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "NBA Lounge · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "Shared composer",
+      "href": "/pages/slate-notes",
+      "title": "Slate Notes",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Slate Notes"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Slate Notes · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Slate Notes"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Slate Notes · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Slate Notes"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Slate Notes · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Slate Notes"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Slate Notes · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "NFL highlights",
+      "href": "/the-sideline",
+      "title": "The Sideline · NFL research",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "group": "NFL highlights",
+      "href": "/the-sideline?view=props",
+      "title": "The Sideline · NFL research",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research",
+            "Player props"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research",
+            "Player props"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research",
+            "Player props"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Sideline · NFL research",
+            "Player props"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "label": "Feed composer · Take",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Feed composer · Pick",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Feed composer · Poll",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Feed composer · Research",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Feed · grouped story viewer",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Feed · followers audience selected",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "The Feed"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Feed | SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Watchlist · saved rows",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Watchlist · selected parlay legs",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Watchlist · share preview",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Share watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Share watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Share watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Share watchlist"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "My Picks · active",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "My Picks · history",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "Jordan L. (@jordan-review) · SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Settings · avatar style library",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Settings · avatar style empty search",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Settings · Heat Check preview",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Avatar style"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "Settings · unsaved style selected",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            "Your profile",
+            "Profile completion"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "SlipSurge | Sports Research, Picks and Community",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "My Picks · final Active tab",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        }
+      ]
+    },
+    {
+      "label": "My Picks · final All tab",
+      "views": [
+        {
+          "view": "desktop-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "desktop-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 1440
+        },
+        {
+          "view": "phone-dark",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "dark",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        },
+        {
+          "view": "phone-light",
+          "brokenImages": [],
+          "headings": [
+            " My Picks"
+          ],
+          "loading": false,
+          "overflow": false,
+          "smallButtons": [],
+          "theme": "light",
+          "title": "The Sideline - SlipSurge",
+          "width": 390
+        }
+      ]
+    }
+  ],
+  "narrow": [
+    {
+      "href": "/feed",
+      "brokenImages": [],
+      "headings": [
+        "The Feed"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "title": "The Feed | SlipSurge",
+      "width": 320,
+      "extra": {
+        "composerHeight": 238.6666717529297,
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/profile/jordan-review",
+      "brokenImages": [],
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Favorite teams"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "title": "Jordan L. (@jordan-review) · SlipSurge",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/picks",
+      "brokenImages": [],
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "title": "SlipSurge | Sports Research, Picks and Community",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/settings/profile",
+      "brokenImages": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "title": "SlipSurge | Sports Research, Picks and Community",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/feed",
+      "brokenImages": [],
+      "headings": [
+        "The Feed"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "title": "The Feed | SlipSurge",
+      "width": 320,
+      "extra": {
+        "composerHeight": 238.6666717529297,
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/profile/jordan-review",
+      "brokenImages": [],
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Favorite teams"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "title": "Jordan L. (@jordan-review) · SlipSurge",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/picks",
+      "brokenImages": [],
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "title": "SlipSurge | Sports Research, Picks and Community",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    },
+    {
+      "href": "/settings/profile",
+      "brokenImages": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "title": "SlipSurge | Sports Research, Picks and Community",
+      "width": 320,
+      "extra": {
+        "saveOverlap": 0
+      }
+    }
+  ],
+  "storiesAndFocus": {
+    "storyProof": [
+      {
+        "view": "desktop-dark",
+        "slides": 3,
+        "text": [
+          "Research the role. Compare the market."
+        ]
+      },
+      {
+        "view": "desktop-light",
+        "slides": 3,
+        "text": [
+          "Research the role. Compare the market."
+        ]
+      },
+      {
+        "view": "phone-dark",
+        "slides": 3,
+        "text": [
+          "Research the role. Compare the market."
+        ]
+      },
+      {
+        "view": "phone-light",
+        "slides": 3,
+        "text": [
+          "Research the role. Compare the market."
+        ]
+      }
+    ],
+    "focusProof": [
+      {
+        "view": "desktop-dark",
+        "focusedAction": " Block @jordan-review",
+        "returned": "More actions for @jordan-review"
+      },
+      {
+        "view": "desktop-light",
+        "focusedAction": " Block @jordan-review",
+        "returned": "More actions for @jordan-review"
+      },
+      {
+        "view": "phone-dark",
+        "focusedAction": " Block @jordan-review",
+        "returned": "More actions for @jordan-review"
+      },
+      {
+        "view": "phone-light",
+        "focusedAction": " Block @jordan-review",
+        "returned": "More actions for @jordan-review"
+      }
+    ]
+  },
+  "avatarPreview": [
+    {
+      "view": "desktop-dark",
+      "radios": 1,
+      "preview": "YA\nHeat Check\nProfile · Feed · Chat\nYA\nYA"
+    },
+    {
+      "view": "desktop-light",
+      "radios": 1,
+      "preview": "YA\nHeat Check\nProfile · Feed · Chat\nYA\nYA"
+    },
+    {
+      "view": "phone-dark",
+      "radios": 1,
+      "preview": "YA\nHeat Check"
+    },
+    {
+      "view": "phone-light",
+      "radios": 1,
+      "preview": "YA\nHeat Check"
+    }
+  ],
+  "savebar": [
+    {
+      "view": "desktop-dark",
+      "overlap": 0,
+      "saveHeight": 65.47917175292969,
+      "saveWidth": 824.6666870117188
+    },
+    {
+      "view": "desktop-light",
+      "overlap": 0,
+      "saveHeight": 65.47917175292969,
+      "saveWidth": 824.6666870117188
+    },
+    {
+      "view": "phone-dark",
+      "overlap": 0,
+      "saveHeight": 63.47916793823242,
+      "saveWidth": 322.66668701171875
+    },
+    {
+      "view": "phone-light",
+      "overlap": 0,
+      "saveHeight": 63.47916793823242,
+      "saveWidth": 322.66668701171875
+    }
+  ],
+  "resolutions": [
+    "NFL sample controls were initially narrower than 40px; final NFL route receipts reflect the corrected 44px targets.",
+    "Save bar initially intersected VOLT; all final desktop/phone and 320px measurements have zero overlap.",
+    "My Picks history retains all owner posts, including pending picks; labels now explicitly say Active / All."
+  ],
+  "limits": [
+    "Illustrative local data; no live account writes or publication through the UI.",
+    "Phone dimensions are desktop browser viewports, not a physical-device certification.",
+    "Only the listed groups receive fresh follow-up review; historical owner approvals remain unchanged."
+  ]
+}

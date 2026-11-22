@@ -1,0 +1,24 @@
+SlipSurge member-page visual review — 22 November 2026
+
+Completed in this batch
+[Reviewed] Feed: Latest, Top, Picks and Following in desktop/phone and light/dark. Composer media tools and Post share one row on phones; audience and sport controls sit together. Repeated stories from the same author share one avatar, with every slide retained. Suggested-member names have room beside their badges.
+[Reviewed] Profiles: all six content tabs plus the member's own profile. Message and Follow remain primary; Share and Block are accessible from More actions. Arrow navigation and Escape focus restoration work. Phone avatars, utility controls and badges fit at 320px; counts use readable, stable formatting.
+[Reviewed] Picks: all six visible sport filters. Trending cards retain the player's headshot or team artwork, original selection, sportsbook and actual stored price. Team colours are restrained; empty reaction counts and repeated count labels are removed. Broken team artwork has a visible fallback.
+[Reviewed] Watchlist: larger contained portraits, readable player/market lines, exact book quotes, parlay selection and share preview. My Picks has Active and All views; All retains the existing full history, including active picks. No query or grading logic changed. Drawer close controls use the shared icon style.
+[Reviewed] Settings: all 11 pages in all four layouts. Avatar search, empty search, Heat Check previews and unsaved style selection work. The profile Save control stays accessible; VOLT moves above it instead of covering it. No live account preferences were saved during local tests.
+[Reviewed] The Sideline: Top score, Most advertised and Most hidden now use player cards with the shared team-colour headshot and team badge, position, contextual score/MM, observed sportsbook and exact quote. Cards open the same player's existing drawer. Missing qualifying candidates stay empty; opening-only observations never become current prices. The phone card rail scrolls independently; sample-window controls have 44px touch targets.
+[Reviewed] Shared composer consumers: group and page detail layouts.
+
+Verification
+- 44/44 focused functional, identity, avatar, story, visibility and quote checks pass.
+- 134/134 production source checks pass; focused ESLint and the optimized private build, including TypeScript, pass.
+- 32 route/tab cases x four layouts: 1440x1000 desktop and 390x844 phone, light/dark. No final page overflow, broken visible images or sub-40px visible buttons in the inspected scopes. The initially narrow NFL sample buttons were enlarged and rechecked.
+- Eight additional 320x844 checks cover Feed, profiles, Picks and profile settings in both themes. Profile Save/VOLT overlap is zero in all tested sizes.
+- Explicit interaction receipts cover composer modes, audience selection, all grouped story slides, profile menu focus, Watchlist selection/share, My Picks filters and avatar style search/preview.
+- Existing tools, access rules, MLB off-season visibility, frozen pregame research, scoring formulas and quote identities are preserved.
+
+Scope
+Local checks use illustrative fixtures with no production credentials. They validate presentation and the listed interactions; they are not certification of every real account, every live-data condition or physical phone. Real account writes, posting, blocking, clearing saved picks, billing and security changes are not part of the browser checks. Existing What’s new alerts are preserved without another announcement.
+
+Checklist interpretation
+The 239-surface inventory remains the published overhaul history. This batch adds dated individual follow-up evidence to its affected entries; it does not manufacture owner approvals or declare every remaining surface freshly reviewed. Further groups retain their earlier receipts for the next visual-review pass.

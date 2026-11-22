@@ -239,6 +239,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
             }}
           />
 
+          <div className="ss-composer-options">
           {/* The structured pick flow owns its sport selector while open. */}
           {!showPickForm && (
             <div className="ss-composer-sport-wrap" ref={sportMenuRef}>
@@ -257,6 +258,38 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
               </FloatingSurface>
             </div>
           )}
+
+              <div className="ss-composer-visibility" ref={visibilityMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setVisibilityOpen(v => !v)}
+                  className="ss-composer-visibility-trigger"
+                  aria-label={`Post audience: ${visibility === 'public' ? 'Public' : 'Followers'}`} aria-expanded={visibilityOpen} aria-haspopup="menu"
+                >
+                  {visibility === 'public' ? <Globe size={11} /> : <Users size={11} />}
+                  <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
+                  <ChevronDown size={11} />
+                </button>
+                <FloatingSurface open={visibilityOpen} anchorRef={visibilityMenuRef} onClose={() => setVisibilityOpen(false)} className="ss-composer-visibility-menu" width={180} role="menu" ariaLabel="Choose post audience">
+                    {([
+                      { key: 'public' as const, icon: <Globe size={12} />, label: 'Public', desc: 'Anyone can see this' },
+                      { key: 'followers' as const, icon: <Users size={12} />, label: 'Followers', desc: 'Only your followers' },
+                    ]).map(opt => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={visibility === opt.key}
+                        onClick={() => { setVisibility(opt.key); setVisibilityOpen(false) }}
+                        data-active={visibility === opt.key}
+                      >
+                        {opt.icon}
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                </FloatingSurface>
+              </div>
+          </div>
 
           {/* Structured pick form with same-sport and same-book parlay legs. */}
           {showPickForm && (
@@ -359,11 +392,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
             <p role="alert" className="ss-composer-error">{error}</p>
           )}
 
-          {/* Action bar — button labels ("Pick"/"Poll"/"Photo") hide below
-              sm and flexWrap is a safety net, since Pick+Poll+Photo+emoji
-              on the left plus Public+Post on the right doesn't fit on one
-              line under ~360px with labels shown, and used to just push
-              Post off the right edge of the screen with no wrap. */}
+          {/* Media tools and posting stay together at narrow widths. */}
           <div className="ss-feed-composer-actions">
             <div className="ss-feed-composer-tools">
               <input
@@ -386,36 +415,6 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
               </button>
             </div>
             <div className="ss-feed-composer-submit">
-              <div className="ss-composer-visibility" ref={visibilityMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setVisibilityOpen(v => !v)}
-                  className="ss-composer-visibility-trigger"
-                  aria-label={`Post audience: ${visibility === 'public' ? 'Public' : 'Followers'}`} aria-expanded={visibilityOpen} aria-haspopup="menu"
-                >
-                  {visibility === 'public' ? <Globe size={11} /> : <Users size={11} />}
-                  <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
-                  <ChevronDown size={11} />
-                </button>
-                <FloatingSurface open={visibilityOpen} anchorRef={visibilityMenuRef} onClose={() => setVisibilityOpen(false)} className="ss-composer-visibility-menu" width={180} role="menu" ariaLabel="Choose post audience">
-                    {([
-                      { key: 'public' as const, icon: <Globe size={12} />, label: 'Public', desc: 'Anyone can see this' },
-                      { key: 'followers' as const, icon: <Users size={12} />, label: 'Followers', desc: 'Only your followers' },
-                    ]).map(opt => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={visibility === opt.key}
-                        onClick={() => { setVisibility(opt.key); setVisibilityOpen(false) }}
-                        data-active={visibility === opt.key}
-                      >
-                        {opt.icon}
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
-                </FloatingSurface>
-              </div>
               {content.length > 400 && (
                 <span className="ss-composer-count" data-low={remaining < 50}>{remaining}</span>
               )}

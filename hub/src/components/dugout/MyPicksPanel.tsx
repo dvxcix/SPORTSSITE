@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { fetchMyPicks } from '@/lib/myPicks'
@@ -115,11 +115,11 @@ export function MyPicksButton() {
               <h2 id="my-picks-panel-title" style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ClipboardList size={16} /> My Picks
               </h2>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {view === 'active' ? 'active' : 'in history'}</span>
-              <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {view === 'active' ? 'active' : 'total'}</span>
+              <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}><X size={20} aria-hidden="true"/></button>
             </div>
             <nav className="ss-saved-research-tabs" aria-label="Pick status" style={{ display: 'flex', gap: 12, padding: 12 }}>
-              {(['active', 'history'] as const).map(tab => <button key={tab} type="button" aria-pressed={view === tab} onClick={() => { setView(tab); setLimit(50) }} style={{ minHeight: 44, padding: '8px 18px', color: view === tab ? 'var(--accent)' : 'var(--text-2)' }}>{tab === 'active' ? 'Active Picks' : 'History'}</button>)}
+              {(['active', 'history'] as const).map(tab => <button key={tab} type="button" aria-pressed={view === tab} onClick={() => { setView(tab); setLimit(50) }} style={{ minHeight: 44, padding: '8px 18px', color: view === tab ? 'var(--accent)' : 'var(--text-2)' }}>{tab === 'active' ? 'Active' : 'All'}</button>)}
             </nav>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {error && <div role="alert" style={{ padding: 16 }}>{error} <button type="button" onClick={() => void refresh()}>Retry</button></div>}
@@ -127,7 +127,7 @@ export function MyPicksButton() {
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>
               ) : items.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
-                  {view === 'active' ? 'No active picks yet.' : 'No picks in your history yet.'}<br /><button type="button" className="ss-saved-empty-action" onClick={() => { setOpen(false); window.dispatchEvent(new Event('ss:open-watchlist')) }}>Open Watchlist</button>
+                  {view === 'active' ? 'No active picks yet.' : 'No picks yet.'}<br /><button type="button" className="ss-saved-empty-action" onClick={() => { setOpen(false); window.dispatchEvent(new Event('ss:open-watchlist')) }}>Open Watchlist</button>
                 </div>
               ) : (
                 <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -5,6 +5,15 @@ import { resolve } from 'node:path'
 import { build } from 'esbuild'
 import { act, createElement, type ComponentType } from 'react'
 import { isStoryVideo, storyBackground, storyTextColor } from '../src/lib/storyPresentation'
+import { groupStories } from '../src/lib/storyGroups'
+
+test('one story entry per author retains all slides and the correct viewer start',()=>{
+  const rows=[{id:'a-new',author:{id:'a'}},{id:'b-new',author:{id:'b'}},{id:'a-old',author:{id:'a'}},{id:'unknown',author:null}]
+  const groups=groupStories(rows)
+  assert.deepEqual(groups.map(group=>({ids:group.stories.map(s=>s.id),start:group.start})),[{ids:['a-new','a-old'],start:0},{ids:['b-new'],start:2},{ids:['unknown'],start:3}])
+  assert.deepEqual(rows.map(row=>row.id),['a-new','b-new','a-old','unknown'],'source observations keep their original order')
+  assert.deepEqual(groupStories([]),[])
+})
 
 const require = createRequire(import.meta.url)
 const { JSDOM } = require('jsdom')

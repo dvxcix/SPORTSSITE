@@ -740,7 +740,7 @@
   },
   "src/components/social/StoriesBar.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 3
+      "count": 2
     }
   },
   "src/components/social/StoriesViewer.tsx": {

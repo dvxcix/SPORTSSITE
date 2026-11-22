@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BadgeCheck } from 'lucide-react'
+import { BadgeCheck, Users } from 'lucide-react'
 import { FollowButton } from './FollowButton'
 import { UserBadges } from './UserBadges'
 import { MemberAvatar } from './MemberAvatar'
@@ -43,9 +43,9 @@ export function SuggestedUsers({ users, currentUserId }: {
                 {u.display_name || u.username}
               </Link>
               {u.is_verified && <BadgeCheck size={14} aria-label="Verified" className="ss-suggested-verified" />}
-              <UserBadges userId={u.id} size={16} maxVisible={2} />
             </div>
-            <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString('en-US')} followers` : ''}</p>
+            <p>@{u.username}</p>
+            <div className="ss-suggested-meta"><UserBadges userId={u.id} size={14} maxVisible={2} />{typeof u.follower_count === 'number' && <span aria-label={`${u.follower_count.toLocaleString('en-US')} followers`}><Users size={12} aria-hidden="true"/>{u.follower_count.toLocaleString('en-US')}</span>}</div>
           </div>
           {currentUserId ? (
             <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} compact />

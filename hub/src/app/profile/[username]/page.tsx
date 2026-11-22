@@ -193,7 +193,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="ss-member-profile-actions ss-profile-identity-actions flex basis-full sm:basis-auto flex-wrap items-center justify-start sm:justify-end gap-2">
             <div className="ss-profile-utility-actions">
             <ResearchSavedActions />
-            <ProfileActions username={profile.username} />
+            <ProfileActions username={profile.username}>
+              {!isOwnProfile && authUser ? <BlockUserButton currentUserId={authUser.id} targetUserId={profile.id} targetUsername={profile.username} initialBlocked={false} variant="dropdown-item" /> : undefined}
+            </ProfileActions>
             </div>
             <div className="ss-profile-relationship-actions">
             {isOwnProfile ? (
@@ -208,13 +210,6 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 currentUserId={authUser.id}
                 targetUserId={profile.id}
                 initialFollowing={isFollowing}
-              />
-              <BlockUserButton
-                currentUserId={authUser.id}
-                targetUserId={profile.id}
-                targetUsername={profile.username}
-                initialBlocked={false}
-                variant="button"
               />
             </div>
           ) : (
@@ -290,10 +285,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
           {/* Stats */}
           <ProfileStats stats={[
-            { value: String(postsCount ?? 0), label: 'Posts' },
-            { value: String(repostsCount ?? 0), label: 'Reposts' },
-            { value: String(profile.following_count ?? 0), label: 'Following' },
-            { value: String(profile.follower_count ?? 0), label: 'Followers' },
+            { value: (postsCount ?? 0).toLocaleString('en-US'), label: 'Posts' },
+            { value: (repostsCount ?? 0).toLocaleString('en-US'), label: 'Reposts' },
+            { value: (profile.following_count ?? 0).toLocaleString('en-US'), label: 'Following' },
+            { value: (profile.follower_count ?? 0).toLocaleString('en-US'), label: 'Followers' },
             ...(total > 0 && canViewWinRate ? [
               { value: `${wins}–${losses}`, label: 'Pick Record', accent: true },
               { value: `${winPct}%`, label: 'Win Rate' },

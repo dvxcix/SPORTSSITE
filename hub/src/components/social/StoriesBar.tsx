@@ -8,6 +8,7 @@ import { StoriesViewer } from './StoriesViewer'
 import { MemberAvatar } from './MemberAvatar'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { groupStories } from '@/lib/storyGroups'
 
 export function StoriesBar() {
   const { profile } = useAuth()
@@ -34,7 +35,8 @@ export function StoriesBar() {
     load()
   }, [supabase])
 
-  const visibleStories = stories.filter(story => showMlb || story.sport?.toUpperCase() !== 'MLB')
+  const groups = groupStories(stories.filter(story => showMlb || story.sport?.toUpperCase() !== 'MLB'))
+  const visibleStories = groups.flatMap(group => group.stories)
 
   function openViewer(idx: number) {
     setViewerStart(idx)
@@ -55,16 +57,17 @@ export function StoriesBar() {
             </Link>
           )}
 
-          {visibleStories.map((s: any, i: number) => (
-            <button type="button" key={s.id} onClick={() => openViewer(i)} className="ss-story-item" aria-label={`View ${s.author?.display_name || s.author?.username || 'member'}'s story`}>
+          {groups.map(({stories:items,start}) => { const s=items[0]; return (
+            <button type="button" key={s.id} onClick={() => openViewer(start)} className="ss-story-item" aria-label={`View ${s.author?.display_name || s.author?.username || 'member'}'s ${items.length > 1 ? `${items.length} stories` : 'story'}`}>
               <div className="ss-story-ring">
                 <div>
                   <MemberAvatar src={s.author?.avatar_url} name={s.author?.display_name || s.author?.username || 'Member'} size={58} ringStyle={s.author?.avatar_ring_style} ringColor={s.author?.avatar_ring_color} />
                 </div>
               </div>
+              {items.length > 1 && <small className="ss-story-count" aria-hidden="true">{items.length}</small>}
               <span>{s.author?.display_name || s.author?.username}</span>
             </button>
-          ))}
+          )})}
         </div>
       </section>
 

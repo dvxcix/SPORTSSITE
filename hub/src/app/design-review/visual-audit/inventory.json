@@ -2734,7 +2734,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Feed filters and all four composer modes reviewed in four layouts. Grouped stories retain every slide; audience controls and suggested-member identity are clearer.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -2749,7 +2749,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/feed",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -2901,7 +2902,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -2915,7 +2916,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -3750,7 +3752,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3763,7 +3765,8 @@
     },
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
-      "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]"
+      "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -3878,7 +3881,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: All visible sport filters reviewed. Trending cards retain player/team artwork, source book and original price, with image fallback.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3892,7 +3895,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/picks",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4136,7 +4140,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Six tabs, own-profile layout and More actions reviewed. Arrow navigation and Escape restore focus. Phone identity controls fit at 320px.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4151,7 +4155,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/profile/[username]",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4301,7 +4306,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4315,7 +4320,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/account",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4335,7 +4341,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4350,7 +4356,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/blocked",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4370,7 +4377,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4384,7 +4391,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/connections",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4404,7 +4412,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4418,7 +4426,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/interests",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4438,7 +4447,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4452,7 +4461,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/membership",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4472,7 +4482,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4486,7 +4496,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/notifications",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4506,7 +4517,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4520,7 +4531,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4540,7 +4552,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4554,7 +4566,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/privacy",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4574,7 +4587,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4589,7 +4602,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/profile",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4609,7 +4623,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "2026-11-21 · Member workspace defaults",
-    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Verified actual UI at 1440px desktop and 390px phone in both themes. Save/reload, private preference persistence, cross-tab CAS conflict/recovery, single primary book, multiple comparison books, manual All books and shared comparison URL retention checked. Keyboard selection and Escape focus restoration checked. Reduced-motion rule reviewed; no physical-device claim. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4622,7 +4636,8 @@
     },
     "evidence": [
       "docs/design/member-workspace-preferences-release-2026-11-21.txt",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -4642,7 +4657,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4656,7 +4671,8 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/settings/security",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -5007,7 +5023,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": 3,
-    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt.",
+    "notes": "NFL visual batch 3: reviewed in desktop/phone browser layouts and light/dark themes. Every existing tool remains reachable. Data-boundary loading, missing values and error recovery are covered where applicable. Owner authorized rollout; individual-row owner approval remains separate. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22 member follow-up: Top score and MM highlights now use shared player cards that open the matching drawer. Opening-only quotes remain unavailable; phone sample buttons are 44px.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5023,7 +5039,8 @@
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt",
       "docs/operations/research-header-volt-depth-2026-11-21.txt",
-      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/the-sideline"
+      "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/the-sideline",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -7795,7 +7812,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "volt-teaser-2026-11-21",
-    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt.",
+    "notes": "Owner handoff character with silent idle animation and COMING SOON tooltip. Desktop/phone and light/dark checked; hover, focus, Escape, tap, outside press, route/modal dismissal and member quick tools verified. Reduced-motion CSS inspected; no AI/backend enabled. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. 2026-11-22 member follow-up: Profile Save/VOLT collision corrected and measured at zero overlap in both themes and desktop/phone/320px layouts.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7808,7 +7825,8 @@
     },
     "evidence": [
       "docs/operations/volt-teaser-2026-11-21.txt",
-      "docs/operations/research-header-volt-depth-2026-11-21.txt"
+      "docs/operations/research-header-volt-depth-2026-11-21.txt",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -7826,7 +7844,7 @@
     "kind": "Shared surface",
     "status": "Approved",
     "batch": 1,
-    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Profile geometry, suggested-member badges and avatar style search/Heat Check previews reviewed. Existing 50-decoration receipts remain intact.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -7843,7 +7861,8 @@
       "page-review/component-tests.txt · 6 passed",
       "page-review/framework-tests.txt · 25 passed",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -7993,7 +8012,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "Active pick, History and populated Watchlist reviewed. NBA profile links resolve to /nba/players/900110 in every layout. Controls, focus and Escape verified without deleting or posting. 2026-11-21 header follow-up: Picks/Watchlist moved to Court/Sideline headers, duplicate floating triggers removed there, NFL Matrix retained in its header. VOLT gains SVG volume and a stronger light-theme shadow. Existing drawers, guest gating, keyboard focus and reduced-motion guards preserved. See docs/operations/research-header-volt-depth-2026-11-21.txt. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Watchlist rows, selection and share preview plus My Picks Active/All filters reviewed in four layouts.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8008,7 +8027,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Saved picks drawer",
       "docs/operations/research-header-volt-depth-2026-11-21.txt",
-      "docs/design/member-experience-polish-2026-11-21.json"
+      "docs/design/member-experience-polish-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
@@ -8120,7 +8140,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "All four modes, NFL/NBA game and player selection, market/book and reversible draft leg verified. Phone selects use full width and 16px text. Nothing submitted. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist.",
+    "notes": "All four modes, NFL/NBA game and player selection, market/book and reversible draft leg verified. Phone selects use full width and 16px text. Nothing submitted. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four modes and audience selection reviewed; phone media tools and Post fit together. No real post was submitted.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8135,7 +8155,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Post composer",
       "docs/design/member-experience-polish-2026-11-21.json",
-      "docs/design/avatar-decoration-release-2026-11-21.json"
+      "docs/design/avatar-decoration-release-2026-11-21.json",
+      "docs/design/member-visual-review-2026-11-22.json"
     ],
     "release": {
       "state": "Live",

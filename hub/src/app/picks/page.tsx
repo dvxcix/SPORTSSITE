@@ -14,6 +14,11 @@ import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 import { ResearchSavedActions } from '@/components/research/ResearchSavedActions'
 import { memberTone } from '@/lib/memberIdentity'
+import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { BookLogo } from '@/components/BookLogo'
+import { sportTeamColors, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
+import { SafeImage } from '@/components/ui/SafeImage'
+import type { CSSProperties } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,21 +65,26 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
         })}
       </nav>
       {(hotPicks?.length ?? 0) > 0 && <section className="ss-picks-hot">
-        <ProductSectionHeader title="Trending picks" meta={`${hotPicks!.length} active`} />
+        <ProductSectionHeader title="Trending picks" meta={String(hotPicks!.length)} />
         <div className="ss-picks-hot-rail">
           {hotPicks!.map((post: any) => {
             const pick = post.pick_data ?? {}
-            const logo = teamLogo(post.sport, pick.team_abbr ?? pick.pick_team)
+            const team = pick.team_abbr ?? pick.pick_team ?? pick.team
+            const logo = sportTeamLogoUrl(post.sport, team) ?? teamLogo(post.sport, team)
+            const brand = sportTeamColors(post.sport, team)
+            const price = pick.combined_odds ?? pick.odds
+            const odds = price != null && Number.isFinite(Number(price)) && Math.abs(Number(price)) >= 100 ? `${Number(price)>0?'+':''}${price}` : null
+            const player = pick.player_name && (pick.player_id || pick.mlb_id || pick.headshot_url)
             const name = post.author?.display_name || post.author?.username || 'Member'
-            return <Link href={`/posts/${post.id}`} key={post.id} className="ss-hot-pick">
+            return <Link href={`/posts/${post.id}`} key={post.id} className="ss-hot-pick" style={brand ? {'--pick-primary':brand[0],'--pick-secondary':brand[1]} as CSSProperties : undefined}>
               <header><MemberAvatar src={post.author?.avatar_url} name={name} size={28} tone={memberTone(post.author)} ringStyle={post.author?.avatar_ring_style} ringColor={post.author?.avatar_ring_color} /><span>{name}</span><Flame size={13} aria-hidden="true" /></header>
-              <div>{logo && <Image src={logo} alt="" width={34} height={34} />}<strong><EmojiText text={pick.pick || post.content || 'Community pick'} /></strong></div>
-              <footer><span>{post.sport}</span><span>{post.reaction_count ?? 0} reactions</span></footer>
+              <div>{player ? <PlayerAvatar sport={post.sport} playerId={pick.player_id ?? pick.mlb_id} headshot={pick.headshot_url} teamAbbr={team} name={pick.player_name} size={44}/> : logo && <SafeImage src={logo} alt={team ?? ''} width={34} height={34} fallback={<span className="ss-hot-team-fallback">{team}</span>}/>}<span className="ss-hot-pick-copy">{player && <strong>{pick.player_name}</strong>}<span><EmojiText text={pick.prop_label || pick.pick || (Array.isArray(pick.legs) ? `${pick.legs.length}-leg parlay` : post.content) || 'Community pick'} /></span></span></div>
+              <footer><span>{post.sport}</span>{odds && <span className="ss-hot-pick-price">{pick.book && <BookLogo vendor={pick.book} size={17}/>}<strong>{odds}</strong></span>}{post.reaction_count > 0 && <span>{post.reaction_count} reactions</span>}</footer>
             </Link>
           })}
         </div>
       </section>}
-      <ProductSectionHeader title={activeSport === 'All' ? 'Latest picks' : `${activeSport} picks`} meta={picks.length ? `${picks.length} shown` : undefined} />
+      <ProductSectionHeader title={activeSport === 'All' ? 'Latest picks' : `${activeSport} picks`} meta={picks.length ? String(picks.length) : undefined} />
       {picks.length === 0
         ? <PageState kind="empty" title="No picks here yet" message="Be the first to share one with the community." actionLabel={user ? 'Create a post' : 'Sign in'} actionHref={user ? '/feed' : '/auth/login?next=/picks'} />
         : <div className="mx-auto flex max-w-3xl flex-col gap-3">{picks.map((post: any) => <PostCardClient key={post.id} post={post} />)}</div>}

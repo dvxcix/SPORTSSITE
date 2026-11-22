@@ -17,7 +17,7 @@ export function UtilityDock({ children, teaserOnly = false, toolsInHeader = fals
     <div className={`ss-utility-dock ${showTools && expanded ? 'is-expanded' : ''} ${teaserOnly ? 'is-teaser-only' : ''}`}>
       <style>{`
         .ss-utility-dock {
-          position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px) + var(--volt-resume-offset, 0px));
+          position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px) + var(--volt-resume-offset, 0px) + var(--volt-action-offset, 0px));
           z-index: var(--layer-floating); display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
           pointer-events: none;
         }
@@ -49,7 +49,7 @@ export function UtilityDock({ children, teaserOnly = false, toolsInHeader = fals
         @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
           .ss-utility-dock {
             right: 14px;
-            bottom: calc(var(--mobile-dock-clearance) - 8px + var(--volt-resume-offset, 0px));
+            bottom: calc(var(--mobile-dock-clearance) - 8px + var(--volt-resume-offset, 0px) + var(--volt-action-offset, 0px));
           }
           .ss-utility-dock-items { gap: 7px; }
           .ss-utility-dock.is-teaser-only { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }

@@ -520,6 +520,27 @@
 .signalValue em { font-size: 12px; font-style: normal; color: var(--text-2); }
 .signalValue > em { display: inline-flex; align-items: center; gap: 5px; color: var(--text-1); font-size: 12px; white-space: nowrap; }
 .noSignal { color: var(--text-3); font-size: 12px !important; font-weight: 700; }
+.page[data-nfl-workspace] .teamSignals { gap:8px; padding:10px; min-width:0; }
+.signalCard { display:grid; min-width:0; gap:10px; padding:12px; border:1px solid var(--border-2); border-radius:12px; background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--team-color) 12%,transparent),transparent 74%),var(--surface); color:var(--text-1); text-align:left; cursor:pointer; transition:border-color 150ms ease,background 150ms ease; scroll-snap-align:start; }
+.signalCard:hover { border-color:color-mix(in srgb,var(--team-color) 48%,var(--border-2)); background-color:var(--surface-2); }
+.signalCard:focus-visible,.teamSignals:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
+.signalHeading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text-3); }
+.page[data-nfl-workspace] .signalCard .signalHeading small { font-size:11px; font-weight:600; color:var(--text-2); }
+.signalPlayer { display:flex; min-width:0; align-items:center; gap:10px; }
+.signalPlayer>.avatar { width:48px; height:48px; flex:0 0 48px; }
+.signalPlayer>span:last-child { display:grid; min-width:0; gap:3px; }
+.signalPlayer strong { font-size:14px; font-weight:650; line-height:1.35; overflow-wrap:anywhere; }
+.page[data-nfl-workspace] .signalCard .signalPlayer small { font-size:11px; color:var(--text-3); }
+.signalContext { color:var(--text-2); font-size:11px; }
+.signalMetrics { display:flex; min-height:32px; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid var(--border); padding-top:8px; font-variant-numeric:tabular-nums; }
+.signalMetrics>b { display:inline-flex; align-items:baseline; gap:3px; overflow:visible; color:var(--accent); font-size:18px; line-height:1.2; }
+.signalMetrics>b>small { color:var(--text-3); font-size:10px; font-weight:500; }
+.signalCard[data-signal=advertised] .signalMetrics>b { color:var(--red); }
+.signalCard[data-signal=hidden] .signalMetrics>b { color:var(--green); }
+.signalQuote { display:inline-flex; align-items:center; gap:6px; color:var(--text-1); font-size:13px; }
+.signalQuote small { color:var(--text-2); font-size:11px; }
+.signalEmpty { min-height:160px; align-items:flex-start; border:1px dashed var(--border-2); border-radius:12px; color:var(--text-3); font-size:12px; }
+@media(prefers-reduced-motion:reduce){.signalCard{transition:none}}
 .teamSignals .advertised { background: linear-gradient(145deg, rgba(255, 102, 126, 0.12), transparent); }
 .teamSignals .advertised small { color: var(--red); }
 .teamSignals .advertised .signalValue > span { color: var(--red); }
@@ -1251,7 +1272,7 @@
  .page[data-nfl-workspace] .teamIdentity{gap:8px;padding:8px}
  .page[data-nfl-workspace] .teamIdentity strong{font-size:14px}
  .page[data-nfl-workspace] .teamSummaryControls{justify-content:space-between;padding:6px 10px;gap:8px;border-top:1px solid var(--border)}
- .page[data-nfl-workspace] .teamSignals{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .page[data-nfl-workspace] .teamSignals{grid-template-columns:repeat(3,minmax(230px,1fr));overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:10px;overscroll-behavior-x:contain;scrollbar-width:thin}
  .page[data-nfl-workspace] .teamSignals>div{min-height:80px;padding:8px}
  .page[data-nfl-workspace] .teamSignals small{line-height:1.4}
  .page[data-nfl-workspace] .signalValue{flex-wrap:wrap;gap:4px;font-size:12px}
@@ -1276,7 +1297,7 @@
 .modalWindows button[aria-pressed=true]{color:var(--accent);background:var(--selected-bg);border-color:var(--selected-border)}
 .metricCards meter::-webkit-meter-bar{border:0;border-radius:4px;background:var(--border-2)}
 .metricCards meter::-webkit-meter-optimum-value{border-radius:4px;background:var(--accent)}
-.page[data-nfl-workspace] .teamWindows button{min-height:44px}
+.page[data-nfl-workspace] .teamWindows button{min-height:44px;min-width:44px}
 .comparison{border-color:var(--border-2);background:var(--surface);box-shadow:none}
 .comparison button{min-width:44px;min-height:44px}
 

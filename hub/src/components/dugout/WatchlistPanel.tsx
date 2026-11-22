@@ -47,23 +47,23 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
         teamAbbr={item.team}
         sport={item.sport}
         name={item.player_name}
-        size={34}
+        size={44}
         showTeam={!!sportTeamLogoUrl(item.sport, item.team)}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="ss-watchlist-copy" style={{ flex: 1, minWidth: 0 }}>
         {playerHref ? (
           <Link
             href={playerHref}
-            style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
+            className="ss-watchlist-player" style={{ display: 'block', color: 'var(--text-1)', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
           >
             {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
           </Link>
         ) : (
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="ss-watchlist-player">
             {item.player_name} {item.sport.toLowerCase() !== 'nba' && item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
           </div>
         )}
-        <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginTop: 1 }}>{item.prop_label}</div>
+        <div className="ss-watchlist-market">{item.prop_label}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
           {item.book && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 5, padding: '2px 6px' }}>
@@ -219,7 +219,7 @@ export function WatchlistButton() {
             <div className="ss-saved-research-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
               <h2 id="watchlist-panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 600, color: 'var(--text-1)' }}><Star size={18} aria-hidden="true" />Watchlist</h2>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingItems.length} pending</span>
-              <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer' }}><X size={20} aria-hidden="true"/></button>
             </div>
             {postedId && <div role="status" aria-atomic="true" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 12px 12px', padding: '8px 10px', border: '1px solid var(--border-2)', borderRadius: 9, background: 'var(--accent-dim)' }}>
               <CheckCircle2 size={17} color="var(--accent)" aria-hidden="true"/>
