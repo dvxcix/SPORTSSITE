@@ -12,7 +12,10 @@ export function getWhopPlatform() {
 export function getWhopPlatformCompanyId() {
   const id = process.env.WHOP_PLATFORM_COMPANY_ID || process.env.WHOP_COMPANY_ID
   if (!id) throw new Error('WHOP_PLATFORM_COMPANY_ID is not configured')
-  return id
+  if (/^biz_[A-Za-z0-9]+$/.test(id)) return id
+  // The legacy environment stores the company suffix. Current account APIs return the full ID.
+  if (!process.env.WHOP_PLATFORM_COMPANY_ID && /^[A-Za-z0-9]+$/.test(id)) return 'biz_' + id
+  throw new Error('WHOP_PLATFORM_COMPANY_ID is invalid')
 }
 
 export function creatorFee(price: number, percentage: number) {

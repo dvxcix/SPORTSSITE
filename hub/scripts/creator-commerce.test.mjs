@@ -50,6 +50,15 @@ test('draft offer uses the current variant contract and cannot take payments bef
  const one=commerce.creatorOfferPayload({accountId:account,productId,creatorId,title:'Drop',description:null,price:10,recurring:false,fee:1,returnUrl:'https://www.slipsurge.com'})
  assert.equal(one.variant.billing_period,undefined);assert.equal(one.variant.renewal_price,undefined)
 })
+
+test('legacy company suffix normalizes to the current account ID without changing explicit platform identity',()=>{
+ const platform=env=>compile('src/lib/whopPlatform.ts',{'@whop/sdk':{},'./whopApi':api,'@/lib/platform':{PLATFORM_URL:'https://www.slipsurge.com'}},{process:{env}}).getWhopPlatformCompanyId()
+ assert.equal(platform({WHOP_COMPANY_ID:'lQsa02bB46YIlL'}),'biz_lQsa02bB46YIlL')
+ assert.equal(platform({WHOP_COMPANY_ID:'biz_lQsa02bB46YIlL'}),'biz_lQsa02bB46YIlL')
+ assert.equal(platform({WHOP_PLATFORM_COMPANY_ID:parent,WHOP_COMPANY_ID:'other'}),parent)
+ assert.throws(()=>platform({WHOP_PLATFORM_COMPANY_ID:'unprefixed',WHOP_COMPANY_ID:'legacy'}),/invalid/)
+ assert.throws(()=>platform({WHOP_COMPANY_ID:'bad/path'}),/invalid/)
+})
 test('provider requests pin the current API, keep idempotency in headers and abort the actual fetch', async () => {
  let call
  const whop=compile('src/lib/creatorWhop.ts',{'./whopApi':api,'./whopPlatform':{getWhopPlatformCompanyId:()=>parent},'./creatorCommerce':commerce},{
