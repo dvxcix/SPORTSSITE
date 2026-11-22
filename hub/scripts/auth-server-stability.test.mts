@@ -83,6 +83,15 @@ test('mobile bearer API bypasses the page-only onboarding gate', async () => {
   assert.equal(fixture.queryCalls, 0)
 })
 
+test('creator webhook reaches signature verification without opening creator or admin APIs', async () => {
+  const fixture = await proxyFixture({ result: { data: { user: null }, error: null } })
+  assert.equal((await fixture.run('/api/webhooks/whop-creator')).status, 200)
+  assert.equal(fixture.clientCalls, 0, 'Provider delivery does not require browser cookies')
+  for (const path of ['/api/creator/products', '/api/admin/creator-commerce', '/api/webhooks/whop-creator/extra']) {
+    assert.equal((await fixture.run(path)).status, 401, path)
+  }
+})
+
 test('offseason hides baseball pages and APIs from members while allowing administrators', async () => {
   const paths = ['/dugout', '/api/dugout/data', '/players/123', '/api/players/123', '/sports/mlb/123', '/api/matrices', '/api/matrix-marketplace', '/api/odds/mlb', '/api/search/sports']
   for (const path of paths) {

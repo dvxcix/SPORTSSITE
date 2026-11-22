@@ -31,6 +31,6 @@ export async function POST(request: Request) {
    await configureCreatorDelivery(admin)
    const test = await testCreatorDelivery(admin)
    await writeAdminAudit(admin, { actorUserId: user.id, action: 'creator.delivery_configured', targetType: 'creator_commerce', targetId: 'whop', details: { child_events: true, test_passed: test.success, test_status: test.status }, request })
-   return NextResponse.json({ deliveryReady: true, testPassed: test.success, testStatus: test.status }, { headers: { 'Cache-Control': 'private, no-store' } })
+   return NextResponse.json({ deliveryReady: test.success, testPassed: test.success, testStatus: test.status }, { headers: { 'Cache-Control': 'private, no-store' } })
  } catch (cause) { return safeApiError('creator-platform-connect', cause, 'Creator event delivery could not be configured. Check Whop webhook permissions, then retry.', 502) }
 }

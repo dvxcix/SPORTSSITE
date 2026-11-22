@@ -140,6 +140,7 @@ export async function updateSession(request: NextRequest) {
   if (
     request.nextUrl.pathname === '/api/webhooks/whop' ||
     request.nextUrl.pathname === '/api/webhooks/whop-addon' ||
+    request.nextUrl.pathname === '/api/webhooks/whop-creator' ||
     request.nextUrl.pathname === '/api/webhooks/resend'
   ) {
     return NextResponse.next({ request })

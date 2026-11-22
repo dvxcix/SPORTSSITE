@@ -3089,7 +3089,7 @@
     "group": "Community",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3181,7 +3181,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3264,7 +3264,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3310,7 +3310,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3358,7 +3358,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3404,7 +3404,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -3450,7 +3450,7 @@
     "group": "Creators & commerce",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -4028,7 +4028,7 @@
     "group": "Community",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -4078,7 +4078,7 @@
     "group": "Community",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -4127,7 +4127,7 @@
     "group": "Community",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -4174,7 +4174,7 @@
     "group": "Community",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,
@@ -6125,7 +6125,7 @@
     "group": "Settings",
     "kind": "Page",
     "status": "Review ready",
-    "batch": "creator-community-onboarding-2026-11-22",
+    "batch": "site-completion-2026-11-21",
     "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch.",
     "checks": {
       "desktopDark": true,

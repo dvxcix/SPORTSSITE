@@ -130,16 +130,25 @@ test('a failed access transaction is retried instead of acknowledged as success'
  await assert.rejects(handler.handleCreatorWebhook(admin,'evt_retry','membership.activated',{id:member.id,variant_id:product.whop_plan_id}))
 })
 test('webhook secrets are encrypted and unavailable to browser roles', async () => {
- let saved
- const admin=db(call=>call.op==='upsert'?(saved=call.values,{error:null}):({data:saved||null,error:null}))
+ let saved,testStatus=200,creates=0
+ const admin=db(call=>call.op==='upsert'?(saved=call.values,{error:null}):call.op==='update'?(Object.assign(saved,call.values),{error:null}):({data:saved||null,error:null}))
  const config=compile('src/lib/creatorWebhookConfig.ts',{'./creatorWhop':{creatorWhop:async(path,body)=>{
   if(path==='/accounts/me')return {id:parent}
-  if(path==='/webhooks')return {id:'hook_fixture',url:body.url,webhook_secret:'fixture-signing-secret'}
+  if(path==='/webhooks'){creates++;return {id:'hook_fixture',url:body.url,webhook_secret:'fixture-signing-secret'}}
+  if(path.endsWith('/test'))return {success:testStatus===200,status:testStatus}
   return {id:'hook_fixture',url:'https://www.slipsurge.com/api/webhooks/whop-creator',enabled:true,child_resource_events:true,resource_id:parent,events:config.CREATOR_EVENTS,api_version_date:api.WHOP_API_VERSION}
  }},'./whopPlatform':{getWhopPlatformCompanyId:()=>parent,PLATFORM_URL:'https://www.slipsurge.com'},'./whopApi':api},{process:{env:{WHOP_API_KEY:'fixture-key'}}})
  await config.configureCreatorDelivery(admin)
  assert.equal(saved.secret_ciphertext.includes('fixture-signing-secret'),false)
  assert.equal(await config.getCreatorWebhookSecret(admin),'fixture-signing-secret')
+ assert.equal(await config.creatorDeliveryReady(admin),false,'Configuration alone does not enable paid offers')
+ assert.equal((await config.testCreatorDelivery(admin)).success,true)
+ assert.equal(await config.creatorDeliveryReady(admin),true)
+ testStatus=401
+ assert.equal((await config.testCreatorDelivery(admin)).success,false)
+ assert.equal(await config.creatorDeliveryReady(admin),false,'A failed transport test closes paid publication')
+ await config.configureCreatorDelivery(admin)
+ assert.equal(creates,1,'Retrying delivery reuses the configured hook')
  const sql=read('supabase/migrations/20261122142312_creator_self_service_communities.sql')
  assert.match(sql,/revoke all on public.creator_provider_connections from public,anon,authenticated/)
  assert.match(sql,/alter table public.creator_provider_connections enable row level security/)

@@ -17,7 +17,12 @@ export async function testCreatorDelivery(admin: SupabaseClient) {
  if (error || data?.account_id !== getWhopPlatformCompanyId()) throw new Error('Creator delivery is not configured')
  // A provider-generated account.updated test validates real signatures without a purchase or financial account.
  const result = await creatorWhop<{ success: boolean; status: number }>(`/webhooks/${encodeURIComponent(data.webhook_id)}/test`, { event: 'account.updated' }, `slipsurge-delivery-test-${data.webhook_id}-${Math.floor(Date.now() / 30_000)}`)
- return { success: result.success && result.status === 200, status: result.status }
+ const success = result.success && result.status === 200
+ const { error: saveError } = await admin.from('creator_provider_connections').update({
+  delivery_verified_at: success ? new Date().toISOString() : null, last_test_status: result.status,
+ }).eq('provider', 'whop').eq('webhook_id', data.webhook_id)
+ if (saveError) throw new Error('Creator delivery verification could not be saved')
+ return { success, status: result.status }
 }
 function seal(secret: string) {
  const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', key(), iv)
@@ -36,7 +41,7 @@ export async function getCreatorWebhookSecret(admin: SupabaseClient) {
  if (error || !data) throw new Error('Creator webhook is not configured')
  return unseal(data.secret_ciphertext)
 }
-export async function creatorDeliveryReady(admin: SupabaseClient) {
+async function creatorHookReady(admin: SupabaseClient) {
  const { data, error } = await admin.from('creator_provider_connections').select('webhook_id,account_id').eq('provider', 'whop').maybeSingle()
  if (error || !data || data.account_id !== getWhopPlatformCompanyId()) return false
  // Also prove the stored secret is readable after a deployment/key change.
@@ -46,11 +51,16 @@ export async function creatorDeliveryReady(admin: SupabaseClient) {
    && hook.url === `${PLATFORM_URL}/api/webhooks/whop-creator` && hook.api_version_date === WHOP_API_VERSION
    && CREATOR_EVENTS.every(event => hook.events.includes(event))
 }
+export async function creatorDeliveryReady(admin: SupabaseClient) {
+ const { data, error } = await admin.from('creator_provider_connections').select('delivery_verified_at,last_test_status,updated_at').eq('provider', 'whop').maybeSingle()
+ if (error || !data?.delivery_verified_at || data.last_test_status !== 200 || Date.parse(data.delivery_verified_at) < Date.parse(data.updated_at)) return false
+ return creatorHookReady(admin)
+}
 export async function configureCreatorDelivery(admin: SupabaseClient) {
  const parent = getWhopPlatformCompanyId()
  const root = await creatorWhop<{ id: string }>('/accounts/me')
  if (root.id !== parent) throw new Error('Creator platform account mismatch')
- if (await creatorDeliveryReady(admin)) return
+ if (await creatorHookReady(admin)) return
  // Never alter the separate main-tier or add-on webhooks.
  const url = `${PLATFORM_URL}/api/webhooks/whop-creator`
  const hook = await creatorWhop<ProviderWebhook>('/webhooks', {
@@ -59,8 +69,8 @@ export async function configureCreatorDelivery(admin: SupabaseClient) {
  }, `slipsurge-creator-delivery-${parent}`)
  if (!hook.webhook_secret || !hook.id || hook.url !== url) throw new Error('Creator webhook secret unavailable')
  const { error } = await admin.from('creator_provider_connections').upsert({
-   provider: 'whop', account_id: parent, webhook_id: hook.id, secret_ciphertext: seal(hook.webhook_secret), updated_at: new Date().toISOString(),
+   provider: 'whop', account_id: parent, webhook_id: hook.id, secret_ciphertext: seal(hook.webhook_secret), updated_at: new Date().toISOString(),delivery_verified_at:null,last_test_status:null,
  }, { onConflict: 'provider' })
  if (error) throw new Error('Creator webhook configuration could not be saved')
- if (!await creatorDeliveryReady(admin)) throw new Error('Creator webhook verification failed')
+ if (!await creatorHookReady(admin)) throw new Error('Creator webhook verification failed')
 }
