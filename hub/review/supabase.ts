@@ -3,15 +3,15 @@ import {seedReviewSports} from './seed-sports'
 seedReviewSports()
 /* Query-compatible in-memory adapter. No URL, API key or network client exists. */
 class Query {
- filters:Array<(row:any)=>boolean>=[];one=false;limitBy=100;offset=0;operation='read';payload:any;sorts:Array<[string,boolean]>=[]
- constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>){}
+ filters:Array<(row:any)=>boolean>=[];filterArgs:Array<[string,unknown]>=[];one=false;limitBy=100;offset=0;operation='read';payload:any;sorts:Array<[string,boolean]>=[]
+ constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>,private service=false){}
  select(_columns?:string,options?:any){if(options?.head)this.limitBy=0;return this}
- eq(k:string,v:any){this.filters.push(row=>row[k]===v);return this}
+ eq(k:string,v:any){this.filters.push(row=>row[k]===v);this.filterArgs.push([k,v]);return this}
  neq(k:string,v:any){this.filters.push(row=>row[k]!==v);return this}
  in(k:string,values:any[]){this.filters.push(row=>values.includes(row[k]));return this}
  is(k:string,v:any){this.filters.push(row=>(row[k]??null)===v);return this}
  not(_k:string,_op:string,_v:any){return this}
- or(_filter:string){return this}
+ or(filter:string){const cursor=filter.match(/^created_at\.lt\.([^,]+),and\(created_at\.eq\.[^,]+,id\.lt\.([0-9a-f-]+)\)$/i);if(cursor)this.filters.push(row=>row.created_at<cursor[1]||row.created_at===cursor[1]&&row.id<cursor[2]);return this}
  match(value:any){for(const [k,v]of Object.entries(value))this.eq(k,v);return this}
  filter(k:string,op:string,v:any){return op==='eq'?this.eq(k,v):this}
  gt(k:string,v:any){this.filters.push(row=>row[k]>v);return this}
@@ -38,8 +38,22 @@ class Query {
  async result(){
   if(this.rolePromise)this.role=await this.rolePromise
   let all=table(this.name)
-  if(this.name==='creator_applications'&&this.role!=='creator')all=[]
+  if(this.name==='creator_applications'&&!this.service&&this.role!=='creator')all=[]
   if(this.name==='users')all=all.map(row=>row.id===authUser(this.role)?.id?{...row,...reviewProfile(this.role)}:row)
+  const viewer=authUser(this.role)?.id
+  const canView=(group:any)=>group&&(group.owner_id===viewer||(group.access_type||'free')==='free'&&(group.is_public||table('group_members').some(member=>member.group_id===group.id&&member.user_id===viewer))||group.access_type==='paid'&&table('creator_entitlements').some(member=>member.product_id===group.creator_product_id&&member.user_id===viewer&&['active','trialing'].includes(member.status)&&(!member.current_period_end||Date.parse(member.current_period_end)>Date.now())))
+  if(!this.service&&this.name==='groups')all=all.filter(canView)
+  if(!this.service&&['posts','channels','group_members'].includes(this.name))all=all.filter(row=>!row.group_id||canView(table('groups').find(group=>group.id===row.group_id)))
+  if(this.name==='group_members')all=all.map(row=>({...row,group:table('groups').find(group=>group.id===row.group_id),user:table('users').find(profile=>profile.id===row.user_id)}))
+  if(this.name==='creator_entitlements')all=all.map(row=>({...row,member:table('users').find(profile=>profile.id===row.user_id)}))
+  if(this.name==='posts')all=all.map(row=>({...row,author:row.author||table('users').find(profile=>profile.id===row.author_id)}))
+  if(this.name==='messages')all=all.map(row=>({...row,sender:row.sender||table('users').find(profile=>profile.id===row.sender_id)}))
+  if(typeof document!=='undefined'&&this.operation!=='read'&&['posts','messages','comments','group_member_preferences','group_channel_preferences'].includes(this.name)){
+   const response=await fetch('/api/review/mutation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table:this.name,operation:this.operation,payload:this.payload,filters:this.filterArgs})})
+   const body=await response.json()
+   if(!response.ok)return {data:null,error:{message:body.error||'Local fixture action failed'}}
+   if(this.operation==='insert'||this.operation==='upsert')this.payload=body.rows
+  }
   let rows=all.filter(row=>this.filters.every(test=>test(row)))
   if(this.operation==='insert'||this.operation==='upsert'){rows=(Array.isArray(this.payload)?this.payload:[this.payload]).map((r:any,i:number)=>({id:r.id??'00000000-0000-4000-8000-'+String(Date.now()+i).slice(-12),created_at:new Date().toISOString(),...r}));table(this.name).push(...rows)}
   if(this.operation==='update')rows.forEach(row=>Object.assign(row,this.payload))
@@ -53,7 +67,7 @@ class Query {
    if(this.operation!=='read')for(const post of table('posts'))post.comment_count=table('comments').filter(row=>row.post_id===post.id).length
   }
   if(this.operation!=='read')persistReviewTables()
-  for(const [key,asc]of this.sorts)rows.sort((a,b)=>String(a[key]??'').localeCompare(String(b[key]??''))*(asc?1:-1))
+  rows.sort((a,b)=>{for(const [key,asc]of this.sorts){const difference=String(a[key]??'').localeCompare(String(b[key]??''))*(asc?1:-1);if(difference)return difference}return 0})
   const count=rows.length;rows=rows.slice(this.offset,this.offset+this.limitBy)
   return {data:this.one?rows[0]??null:rows,error:null,count,status:200,statusText:'OK'}
  }
@@ -63,7 +77,7 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
  const role=reviewRole(options?.cookies),user=authUser(role),session=user?{user,access_token:'design-review-not-a-credential',refresh_token:'design-review-not-a-credential',expires_in:3600,token_type:'bearer'}:null
  const ok=(data:any={})=>Promise.resolve({data,error:null})
  const client:any={
-  from:(name:string)=>new Query(name,role,options?.rolePromise),
+  from:(name:string)=>new Query(name,role,options?.rolePromise,options?.service===true),
   rpc:(name:string,params?:any)=>{
    if(name==='get_my_channel_permissions')return ok({view:true,send:true,moderate:role==='admin'||role==='creator'})
    if(name==='get_my_community_permissions')return ok({view:true,send:true,create_invites:true,manage_channels:role==='admin'||role==='creator'})
@@ -74,6 +88,7 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
     persistReviewTables();return ok(id)
    }
    if(name==='set_group_membership'){
+    if(typeof document!=='undefined')return (async()=>{const response=await fetch('/api/review/membership',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});const body=await response.json();return response.ok?ok(body.member):{data:null,error:{message:body.error}}})()
     const rows=table('group_members'),index=rows.findIndex(row=>row.group_id===params.p_group_id&&row.user_id===user?.id)
     if(params.p_join&&index<0)rows.push({group_id:params.p_group_id,user_id:user?.id,role:'member',group:table('groups').find(g=>g.id===params.p_group_id)})
     if(!params.p_join&&index>=0)rows.splice(index,1)

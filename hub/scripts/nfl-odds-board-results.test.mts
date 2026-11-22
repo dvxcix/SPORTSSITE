@@ -25,7 +25,13 @@ test('first scorer and multiple touchdown markets keep their own contract',()=>{
  const td={...result,firstTdKnown:true,firstTd:{id:4,gsisId:null,name:'Test Player',team:'IND'}}
  assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('first_td',.5)],td),[[game.id,4,'IND',1]])
  assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('two_plus_td',2)],result),[[game.id,4,'IND',0]])
+ assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('three_plus_td',3)],result),[[game.id,4,'IND',0]])
  assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('first_td',.5)],result),[])
+})
+test('combined passing and rushing needs both actuals and never assumes missing yards are zero',()=>{
+ const full={...result,players:[{...result.players[0],stats:{passing_yards:200,rushing_yards:25}}]}
+ assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('passing_rushing_yards',225)],full),[[game.id,4,'IND',225]])
+ assert.deepEqual(nflBoardFinalValues(game.id,[marketQuote('passing_rushing_yards',225)],result),[])
 })
 test('foreign identities, non-finite values and conflicting finals fail closed',()=>{
  const key=JSON.stringify([game.id,4,'IND'])

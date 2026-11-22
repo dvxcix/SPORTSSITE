@@ -29,9 +29,10 @@ interface ChatRoomProps {
   currentUserId?: string
   canModerate?: boolean
   readOnly?: boolean
+  contextHref?: string
 }
 
-export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId, canModerate = false, readOnly = false }: ChatRoomProps) {
+export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId, canModerate = false, readOnly = false, contextHref }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -195,7 +196,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
       setInput('')
       setImageUrl('')
       setReplyingTo(null)
-      void notifyMentions(supabase, currentUserId, content, `/channels/${channelSlug}`, sent.id, 'a channel message').catch(() => {})
+      void notifyMentions(supabase, currentUserId, content, contextHref||`/channels/${channelSlug}`, sent.id, 'a channel message').catch(() => {})
       requestAnimationFrame(() => inputRef.current?.focus())
     } else {
       setSendError('Message not sent. Try again.')

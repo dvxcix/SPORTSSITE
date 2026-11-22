@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { attachUserReactions, getChannelMessages } from '@/lib/queries'
+import { getChannelMessages } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { PostCardClient } from '@/components/social/PostCardClient'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { GroupJoinButton } from '@/components/groups/GroupJoinButton'
 import { GroupInviteModal } from '@/components/groups/GroupInviteModal'
@@ -19,9 +18,12 @@ import { GroupChannelWorkspace, type GroupWorkspaceChannel } from '@/components/
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
-import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 import styles from './GroupPage.module.css'
 import { hasCurrentCreatorAccess } from '@/lib/creatorCommerce'
+import { publishedPaidCommunities, invitedCommunityEntry } from '@/lib/creatorCommunityDirectory'
+import { CommunityEntry } from '@/components/groups/CommunityEntry'
+import { groupFeedPage } from '@/lib/groupFeed'
+import { GroupPostFeed } from '@/components/groups/GroupPostFeed'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,8 +52,13 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     supabase.auth.getUser(),
     supabase.from('groups').select('*').eq('slug', slug).single(),
   ])
-  if (!group) notFound()
   const showMlb = await canViewMlb(supabase, user?.id)
+  if (!group) {
+    const [published,invitation]=await Promise.all([publishedPaidCommunities({slug}),user?invitedCommunityEntry(supabase,slug,user.id):Promise.resolve(null)])
+    const entry=invitation??published[0]
+    if(!entry||!showMlb&&entry.sport?.toUpperCase()==='MLB')notFound()
+    return <CommunityEntry entry={entry} signedIn={Boolean(user)}/>
+  }
   if (!showMlb && group.sport?.toUpperCase() === 'MLB') notFound()
 
   let isMember = false
@@ -96,26 +103,15 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
   // already worked.
   const canViewContent = group.is_public || isMember
 
-  const postsPromise = async () => {
-    if (!canViewContent) return []
-    const { data: rawPosts } = await supabase
-      .from('posts')
-      .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, tier, beta_access_active)')
-      .eq('group_id', group.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    const enriched = await attachUserReactions((rawPosts ?? []).filter(post => showMlb || post.sport?.toUpperCase() !== 'MLB'), user?.id)
-    return (await hydrateVisibleAuthorRecords(supabase, enriched)).posts
-  }
   const [
     { data: members },
-    posts,
+    postPage,
     { data: groupChannels },
     { data: memberPreferences },
     { data: channelPreferences },
   ] = await Promise.all([
     supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified)').eq('group_id', group.id).order('role').limit(8),
-    postsPromise(),
+    canViewContent?groupFeedPage(supabase,group.id,{picks:view==='picks',userId:user?.id,hideMlb:!showMlb}):Promise.resolve({posts:[],nextCursor:null,hasMore:false}),
     isMember
       ? supabase.from('channels').select('id,slug,name,description,icon,channel_kind,sort_order').eq('group_id', group.id).order('sort_order').order('created_at')
       : Promise.resolve({ data: [], error: null }),
@@ -137,7 +133,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       activeChannel ? supabase.rpc('get_my_channel_permissions', { p_channel_id: activeChannel.id }) : Promise.resolve({ data: null, error: null }),
     ])
     : [{ data: null }, { data: null }]
-  const chatMessages = activeChannel && canViewContent && isMember ? await getChannelMessages(activeChannel.id, 80) : []
+  const chatMessages = activeChannel && canViewContent && isMember && (view==='chat'||Boolean(requestedChannel)) ? await getChannelMessages(activeChannel.id, 80) : []
   const canModerate = Boolean((channelCapabilities as { moderate?: boolean } | null)?.moderate)
     || memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'
   const canSendChannel = Boolean((channelCapabilities as { send?: boolean } | null)?.send)
@@ -257,21 +253,12 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
         </div>
       ) : (
         <GroupWorkspaceTabs
-          postCount={posts.length}
-          initialTab={view === 'chat' || Boolean(requestedChannel) ? 'chat' : 'posts'}
+          postCount={postPage.posts.length}
+          initialTab={view === 'chat' || Boolean(requestedChannel) ? 'chat' : view==='picks'?'picks':'posts'}
           posts={<div className={styles.posts}>
             {canPost && user && <FeedComposer groupId={group.id} groupAudience={group.access_type === 'paid' || !group.is_public ? 'members' : 'public'} />}
-            {(posts?.length ?? 0) === 0 ? (
-              <div className={styles.emptyPosts}>
-                <p>💬</p>
-                <strong>No posts yet in this group</strong>
-                {!isMember && group.is_public && (
-                  <span>Join to post</span>
-                )}
-              </div>
-            ) : (
-              posts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)
-            )}
+            {!isMember&&group.is_public&&<p className="px-5 py-3 text-sm text-[var(--text-2)]">Join this community to post and chat.</p>}
+            <GroupPostFeed key={`${group.id}:${view==='picks'?'picks':'posts'}:${postPage.posts[0]?.id||'empty'}`} groupId={group.id} picks={view==='picks'} initialPosts={postPage.posts} initialCursor={postPage.nextCursor} initialHasMore={postPage.hasMore}/>
           </div>}
           chat={activeChannel && isMember ? (
             <GroupChannelWorkspace groupSlug={slug} channels={workspaceChannels} activeChannel={activeChannel}>
@@ -281,6 +268,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                   channelId={activeChannel.id}
                   channelSlug={activeChannel.slug}
                   channelName={activeChannel.name}
+                  contextHref={`/groups/${slug}?view=chat&channel=${encodeURIComponent(activeChannel.slug)}`}
                   initialMessages={chatMessages}
                   currentUserId={user?.id}
                   canModerate={canModerate}

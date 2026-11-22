@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export function GroupJoinButton({ groupId, initialMember, paidProductId }: {
@@ -14,6 +14,7 @@ export function GroupJoinButton({ groupId, initialMember, paidProductId }: {
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const pathname = usePathname()
+  const search = useSearchParams()
 
   async function toggle() {
     if (loading) return
@@ -29,7 +30,7 @@ export function GroupJoinButton({ groupId, initialMember, paidProductId }: {
         return
       }
       setMember(Boolean(data))
-      if (data) router.replace(`${pathname}?setup=community`, { scroll: false })
+      if (data) { const query=new URLSearchParams(search.toString());query.set('setup','community');router.replace(`${pathname}?${query}`, { scroll: false }) }
       else router.refresh()
     } catch {
       setError(member ? 'Could not leave the group.' : 'Could not join the group.')

@@ -24,11 +24,12 @@ export function verifiedNflBoardFinal(game: SidelineGame, feed: NflFinalFeed, no
 
 export function nflBoardFinalValues(gameId: string, quotes: readonly NflBoardResultQuote[], result: NflPublicResult): NflBoardFinal[] {
   if (result.status !== 'final') return []
+  const complete={...result,players:result.players.map(player=>({...player,stats:{...player.stats,passing_rushing_yards:player.stats.passing_yards!=null&&player.stats.rushing_yards!=null?player.stats.passing_yards+player.stats.rushing_yards:null}}))}
   const unique = new Map<string, NflBoardResultQuote>()
   for (const quote of quotes) if (quote[0] === gameId) unique.set(JSON.stringify([quote[1], quote[3]]), quote)
   return [...unique.values()].flatMap(q => {
-    const grade = gradeNflPublicProp(result, { id: q[1], name: q[2], team: q[3], position: q[4], markets: [] }, {
-      propType: q[5] === 'two_plus_td' ? 'anytime_td' : q[5], line: q[7], kind: 'milestone',
+    const grade = gradeNflPublicProp(complete, { id: q[1], name: q[2], team: q[3], position: q[4], markets: [] }, {
+      propType: ['two_plus_td','three_plus_td'].includes(q[5]) ? 'anytime_td' : q[5], line: q[7], kind: 'milestone',
     })
     return grade.actual == null || !['hit', 'miss'].includes(grade.state) ? [] : [[gameId, q[1], q[3], grade.actual] as NflBoardFinal]
   })

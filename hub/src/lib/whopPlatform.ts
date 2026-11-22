@@ -1,6 +1,7 @@
 import 'server-only'
 import Whop from '@whop/sdk'
 import { WHOP_API_URL, WHOP_SDK_API_VERSION } from './whopApi'
+import { creatorFeeAmount } from './creatorBusiness'
 export { PLATFORM_URL } from '@/lib/platform'
 
 export function getWhopPlatform() {
@@ -19,6 +20,6 @@ export function getWhopPlatformCompanyId() {
 }
 
 export function creatorFee(price: number, percentage: number) {
-  return Math.max(0.01, Math.min(price - 0.01, Math.round(price * percentage) / 100))
+  return creatorFeeAmount(price, percentage)
 }
 

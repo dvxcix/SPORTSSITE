@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export function GroupInviteResponse({ inviteId, invitedByUsername }: {
@@ -10,15 +9,16 @@ export function GroupInviteResponse({ inviteId, invitedByUsername }: {
   const [loading, setLoading] = useState(false)
   const [declined, setDeclined] = useState(false)
   const [error, setError] = useState('')
-  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
   async function accept() {
     setLoading(true)
     setError('')
     try {
-      const { error: responseError } = await supabase.rpc('respond_to_group_invite', { p_invite_id: inviteId, p_accept: true })
-      if (responseError) { setError('Could not accept invite — please try again.'); return }
+      const response=await fetch('/api/groups/invitations/respond',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteId,accept:true}),signal:AbortSignal.timeout(20000)})
+      const body=await response.json().catch(()=>({}))
+      if(!response.ok){setError(body.error||'Could not accept the invitation. Please retry.');return}
+      router.replace(`/groups/${encodeURIComponent(body.slug)}?setup=community`)
       router.refresh()
     } catch {
       setError('Could not accept invite — please try again.')
@@ -31,8 +31,9 @@ export function GroupInviteResponse({ inviteId, invitedByUsername }: {
     setLoading(true)
     setError('')
     try {
-      const { error: responseError } = await supabase.rpc('respond_to_group_invite', { p_invite_id: inviteId, p_accept: false })
-      if (responseError) { setError('Could not decline invite — please try again.'); return }
+      const response=await fetch('/api/groups/invitations/respond',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteId,accept:false}),signal:AbortSignal.timeout(20000)})
+      const body=await response.json().catch(()=>({}))
+      if(!response.ok){setError(body.error||'Could not decline the invitation. Please retry.');return}
       setDeclined(true)
     } catch {
       setError('Could not decline invite — please try again.')
@@ -47,18 +48,18 @@ export function GroupInviteResponse({ inviteId, invitedByUsername }: {
 
   return (
     <div className="bg-[var(--surface)] border border-[color-mix(in_srgb,var(--green)_30%,transparent)] rounded-xl px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--text-2)]">
-          {invitedByUsername ? `@${invitedByUsername} invited` : "You've been invited"} you to join this private group.
+          {invitedByUsername ? `@${invitedByUsername} invited you` : "You've been invited"} to join this community.
         </p>
         <div className="flex gap-2 shrink-0">
           <button type="button" onClick={decline} disabled={loading}
-            className="text-xs font-bold border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text-1)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+            className="min-h-11 text-sm font-semibold border border-[var(--border-2)] text-[var(--text-2)] hover:text-[var(--text-1)] px-4 py-2 rounded-lg transition-colors disabled:opacity-40">
             Decline
           </button>
           <button type="button" onClick={accept} disabled={loading}
-            className="text-xs font-bold bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
-            Accept
+            className="min-h-11 text-sm font-semibold bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] px-4 py-2 rounded-lg transition-colors disabled:opacity-40">
+            {loading?'Saving…':'Accept invitation'}
           </button>
         </div>
       </div>

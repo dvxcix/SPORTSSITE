@@ -1,57 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
-import { ArrowRight, LockKeyhole, MessageSquareText, Plus, Settings2, Users } from 'lucide-react'
-import { SafeImage } from '@/components/ui/SafeImage'
+import { Plus, Settings2, Users } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
-import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
-import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
+import { CommunityDirectory } from '@/components/groups/CommunityDirectory'
+import { publishedPaidCommunities, invitedCommunityEntries, type CommunityDirectoryEntry } from '@/lib/creatorCommunityDirectory'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
-type GroupCardData = { id: string; slug: string; name: string; description?: string | null; avatar_url?: string | null; emoji?: string | null; access_type?: string | null; member_count?: number | null }
-
-export const dynamic = 'force-dynamic'
-
+export const dynamic='force-dynamic'
 export default async function GroupsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, groupResult, membershipResult] = await Promise.all([
-    user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
-    supabase.from('groups').select('*').order('member_count', { ascending: false }).limit(50),
-    user ? supabase.from('group_members').select('group_id,group:groups(*)').eq('user_id', user.id) : Promise.resolve({ data: [], error: null }),
-  ])
-  if (groupResult.error || membershipResult.error) throw new Error('Groups could not be loaded. Try again.')
-  const creator = Boolean(user)
-  const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
-  const memberships = membershipResult.data ?? []
-  const joinedIds = new Set(memberships.map(row => row.group_id))
-  const joinedRows = memberships.flatMap(row => Array.isArray(row.group) ? row.group : row.group ? [row.group] : [])
-  const unique = new Map([...joinedRows, ...(groupResult.data ?? [])].map(group => [group.id, group]))
-  const allowedGroups = [...unique.values()].filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB')
-  const owned = allowedGroups.filter(group => group.owner_id === user?.id)
-  const joined = allowedGroups.filter(group => group.owner_id !== user?.id && joinedIds.has(group.id))
-  const discover = allowedGroups.filter(group => group.owner_id !== user?.id && !joinedIds.has(group.id) && group.is_public)
-
-  return (
-    <ProductPageShell>
-      <CommunityNav />
-      <ProductHero icon={<Users size={21}/>} eyebrow="Community" title="Groups" description="Find communities for games, markets and creators." actions={creator ? <><ProductAction href="/groups/create"><Plus size={15}/> New group</ProductAction><ProductAction href="/creators/studio"><Settings2 size={15}/> Studio</ProductAction></> : undefined}/>
-
-      {(creator || owned.length > 0) && <section className="mt-8">
-        <ProductSectionHeader title="Your communities" meta={`${owned.length} total`}/>
-        {owned.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <ProductPanel padded className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-semibold text-[var(--text-1)]">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">Create community <ArrowRight size={15}/></Link></ProductPanel>}
-      </section>}
-
-      {joined.length > 0 && <section className="mt-8"><ProductSectionHeader title="Joined groups" meta={`${joined.length} total`}/><div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{joined.map(group => <GroupCard key={group.id} group={group}/>)}</div></section>}
-      <section className="mt-10">
-        <ProductSectionHeader title="Public groups" meta="Discover"/>
-        {discover.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{discover.map(group => <GroupCard key={group.id} group={group} />)}</div> : <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-10 text-center"><Users className="mx-auto text-[var(--text-3)]"/><p className="mt-3 font-bold text-[var(--text-2)]">No public groups yet</p><p className="mt-1 text-sm text-[var(--text-3)]">Creator communities will appear here as they launch.</p></div>}
-      </section>
-    </ProductPageShell>
-  )
-}
-
-function GroupCard({ group, owner = false }: { group: GroupCardData; owner?: boolean }) {
-  return <Link href={`/groups/${group.slug}`} className="group min-w-0 flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--border-2)] hover:bg-[var(--surface-2)]">
-    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.05)] text-2xl"><SafeImage src={group.avatar_url} alt="" className="h-full w-full object-cover" fallback={group.emoji || '⚡'} /></div>
-    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-semibold text-[var(--text-1)]">{group.name}</h3>{owner && <span className="text-xs font-medium text-[var(--text-2)]">Owner</span>}{group.access_type !== 'free' && <span className="flex items-center gap-1 text-xs font-medium text-[var(--text-2)]"><LockKeyhole size={12}/> Paid</span>}</div><p className="mt-1 truncate text-sm text-[var(--text-2)]">{group.description || 'Creator community'}</p><p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-3)]"><span className="flex items-center gap-1"><Users size={12}/>{group.member_count ?? 0}</span><span className="flex items-center gap-1"><MessageSquareText size={12}/> Channel included</span></p></div><ArrowRight size={16} className="text-[var(--text-3)]"/>
-  </Link>
+ const client=await createClient()
+ const {data:{user}}=await client.auth.getUser()
+ const [groups,memberships,paid,invitations,showMlb]=await Promise.all([
+  client.from('groups').select('id,slug,name,description,sport,avatar_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public').order('member_count',{ascending:false}).limit(200),
+  user?client.from('group_members').select('group_id,group:groups(id,slug,name,description,sport,avatar_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public)').eq('user_id',user.id):Promise.resolve({data:[],error:null}),
+  publishedPaidCommunities(),
+  user?invitedCommunityEntries(client,user.id):Promise.resolve([]),
+  canViewMlb(client,user?.id),
+ ])
+ if(groups.error||memberships.error)throw new Error('Communities could not be loaded. Please retry.')
+ const joined=(memberships.data??[]).flatMap(row=>Array.isArray(row.group)?row.group:row.group?[row.group]:[]) as unknown as CommunityDirectoryEntry[]
+ const unique=new Map<string,CommunityDirectoryEntry>([...paid,...(groups.data??[]) as CommunityDirectoryEntry[],...joined].map(group=>[group.id,group]))
+ // Preserve the published price on an otherwise RLS-readable paid card.
+ for(const entry of paid)if(unique.has(entry.id))unique.set(entry.id,{...unique.get(entry.id)!,price:entry.price,billing_period_days:entry.billing_period_days,product_type:entry.product_type})
+ const allowed=(group:CommunityDirectoryEntry)=>showMlb||group.sport?.toUpperCase()!=='MLB'
+ return <ProductPageShell><CommunityNav/><ProductHero icon={<Users size={21}/>} eyebrow="Community" title="Groups" description="Find your people. Join a community for posts, picks and game-day chat." actions={user?<><ProductAction href="/groups/create"><Plus size={15}/> New group</ProductAction><ProductAction href="/creators/studio"><Settings2 size={15}/> Studio</ProductAction></>:undefined}/><CommunityDirectory groups={[...unique.values()].filter(allowed)} joinedIds={joined.filter(allowed).map(group=>group.id)} userId={user?.id??null} invitations={invitations.filter(allowed)}/></ProductPageShell>
 }

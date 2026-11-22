@@ -1,0 +1,1137 @@
+{
+  "date": "2026-11-22",
+  "state": "Validated; production release pending",
+  "scope": "Creator/member journey and SlipSurge business controls; urgent NFL final results",
+  "privateBrowser": [
+    {
+      "label": "discovery-desktop-dark",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Invitations 1",
+        "Your communities 2",
+        "Discover 2"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "label": "private-invitation-entry",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room",
+        "Your invitation is ready"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation",
+      "width": 1440
+    },
+    {
+      "label": "private-invitation-accepted",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation?setup=community",
+      "width": 1440
+    },
+    {
+      "label": "community-post-saved",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation",
+      "width": 1440
+    },
+    {
+      "label": "admin-desktop-dark",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "admin-desktop-light",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Jordan L."
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "admin-phone-light",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Jordan L."
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 390
+    },
+    {
+      "label": "fee-phone-light",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "fee-phone-dark-saved-fixture",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "studio-phone-dark",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "label": "final-build-pagination-oldest-reached",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/open-research-room",
+      "width": 390
+    },
+    {
+      "label": "confirmed-immediate-post-refresh",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Your communities 4",
+        "Discover 1"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/jordan-review",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Jordan L.",
+        "Choose your access"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/jordan-review",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/offers/00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The weekly research room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/offers/00000000-0000-4000-8000-000000000611",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Checking your membership"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups/film-room-invitation",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups/open-research-room?view=chat",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/open-research-room?view=chat",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Your communities 4",
+        "Discover 1"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/jordan-review",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Jordan L.",
+        "Choose your access"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/jordan-review",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/offers/00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The weekly research room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/offers/00000000-0000-4000-8000-000000000611",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Checking your membership"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups/film-room-invitation",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/film-room-invitation",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups/open-research-room?view=chat",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/open-research-room?view=chat",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups/nba-lounge/settings",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Group settings",
+        "Channels",
+        "Roles and permissions",
+        "Members and roles"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/nba-lounge/settings",
+      "width": 390
+    },
+    {
+      "label": "desktop-light:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Your communities 4",
+        "Discover 1"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/jordan-review",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Jordan L.",
+        "Choose your access"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/jordan-review",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/offers/00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The weekly research room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/offers/00000000-0000-4000-8000-000000000611",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/monetization",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Checking your membership"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups/film-room-invitation",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/film-room-invitation",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups/open-research-room?view=chat",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/open-research-room?view=chat",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups/nba-lounge/settings",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Group settings",
+        "Channels",
+        "Roles and permissions",
+        "Members and roles"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/nba-lounge/settings",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Your communities 4",
+        "Discover 1"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/jordan-review",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Jordan L.",
+        "Choose your access"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/jordan-review",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/offers/00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The weekly research room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/offers/00000000-0000-4000-8000-000000000611",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Checking your membership"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups/film-room-invitation",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "The film room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/film-room-invitation",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups/open-research-room?view=chat",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/open-research-room?view=chat",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups/nba-lounge/settings",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Group settings",
+        "Channels",
+        "Roles and permissions",
+        "Members and roles"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/nba-lounge/settings",
+      "width": 1440
+    },
+    {
+      "label": "phone-dark:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups/nba-lounge/settings",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Group settings",
+        "Channels",
+        "Roles and permissions",
+        "Members and roles"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/nba-lounge/settings",
+      "width": 390
+    },
+    {
+      "label": "narrow-320:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Your communities 4",
+        "Discover 1"
+      ],
+      "height": 740,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 320
+    },
+    {
+      "label": "narrow-320:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Your next step",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 740,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 320
+    },
+    {
+      "label": "narrow-320:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 740,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 320
+    },
+    {
+      "label": "narrow-320:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 740,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 320
+    },
+    {
+      "label": "narrow-320:/groups/open-research-room?view=chat",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Open research room"
+      ],
+      "height": 740,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/open-research-room?view=chat",
+      "width": 320
+    }
+  ],
+  "visualScreens": 56,
+  "narrowChecks": 5,
+  "automated": {
+    "regressions": 224,
+    "sharedSocialAuthNfl": 48,
+    "privateBoundaryAndChecklist": 8,
+    "databaseScenarioGroups": 21,
+    "failed": 0
+  },
+  "database": {
+    "migration": "20261122164203_creator_business_journey_controls",
+    "applied": true,
+    "liveRollbackPassed": true,
+    "unchangedFee": 10,
+    "leftoverFixtureProducts": 0,
+    "healthAdvisories": 0,
+    "securityAdvisories": "Existing four categories unchanged; no new touched-function findings"
+  },
+  "interactions": [
+    "Free community joining",
+    "Private invitation acceptance",
+    "Community rules/channels/notification onboarding",
+    "Immediate post display without navigation",
+    "Older posts beyond 20 through the oldest fixture",
+    "Dedicated Picks tab: seven pick posts",
+    "Group chat send and server-confirmed display",
+    "URL-backed channel/tab navigation",
+    "Paid offer draft and linked community creation in private fixtures",
+    "Creator search and detail selection",
+    "Provider status refresh in private fixtures",
+    "Reversible member hold and restore in private fixtures",
+    "Fee preview, review confirmation and saved fixture state"
+  ],
+  "limits": [
+    "No real Whop financial accounts, purchases, withdrawals, transfers or moderation actions were made for QA. Real creators must complete hosted Whop verification.",
+    "Public directory metadata is narrow; private content remains behind RLS. Discovery is a bounded recent catalog; direct published community links resolve individually.",
+    "Admin sections show up to 500 recent records; payment activity shows the latest 100. Creator Studio receipt metrics use the latest 1,000 events and USD only.",
+    "Illustrative social fixtures use a future clock. Immediate posting was verified in a new private community; full historical pagination was checked independently."
+  ],
+  "references": [
+    {
+      "app": "Meetup",
+      "url": "https://mobbin.com/screens/2b3b50f7-c02c-4905-9ffc-b78786087a4d?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp",
+      "decision": "Member roster and management"
+    },
+    {
+      "app": "Sweatpals",
+      "url": "https://mobbin.com/screens/0e134470-6887-49ce-8e9c-9a773caf7eca?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp",
+      "decision": "Search and status filters"
+    },
+    {
+      "app": "Meetup",
+      "url": "https://mobbin.com/screens/805d3596-cdcc-46f3-b0da-62286e0bb59e?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp",
+      "decision": "Searchable community cards"
+    },
+    {
+      "app": "Mintlify",
+      "url": "https://mobbin.com/screens/cf5d6317-25a2-43ab-8c24-af7a0b0c24e8?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp",
+      "decision": "Team management context; control placement is SlipSurge judgment"
+    }
+  ]
+}

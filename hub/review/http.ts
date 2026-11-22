@@ -13,11 +13,13 @@ import {nbaPackFullBoard} from '../src/lib/nbaFullOddsBoard'
 import {nbaOddsBoardPhaseHeader,nbaOddsBoardPhaseSignature} from '../src/lib/nbaOddsBoardPhase'
 import {nbaMilestoneSignals} from '../src/lib/nbaMilestoneSignals'
 import {DEFAULT_RESEARCH_PREFERENCES,validResearchPreferences} from '../src/lib/researchPreferences'
+import {creatorJourneyHttp} from './creator-journey-http'
 /** Complete interception of local review API requests. No request falls through to a real handler. */
 export async function reviewHttp(request:NextRequest){
  const path=request.nextUrl.pathname,q=request.nextUrl.searchParams
  const role=(request.cookies.get('ss_ui_review_role')?.value??'member') as ReviewRole
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
+ const creatorResponse=await creatorJourneyHttp(request,role);if(creatorResponse)return creatorResponse
  if(path==='/api/review/community'&&request.method==='POST'){
   const input=await request.json(),user=authUser(role)
   if(!user)return json({error:'Sign in required'},401)

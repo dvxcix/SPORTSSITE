@@ -21,7 +21,7 @@ export default async function CreatorStudioPage() {
   const ninetyDaysAgo = new Date(now - 90 * 86400_000).toISOString()
   const [{ data: profile }, { data: products }, { data: groups }, { data: entitlements }, { data: events }, { data: scheduledPosts }, { data: funnelEvents }, { data: creatorPosts }] = await Promise.all([
     admin.from('users').select('id,username,display_name,account_type,whop_connected_company_id,creator_commerce_status,follower_count').eq('id', user.id).single(),
-    supabase.from('creator_products').select('id,title,description,price,product_type,status,purchase_url,created_at,whop_plan_id').eq('creator_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('creator_products').select('id,title,description,price,product_type,status,purchase_url,created_at,whop_plan_id,platform_fee_amount').eq('creator_id', user.id).order('created_at', { ascending: false }),
     supabase.from('groups').select('id,name,slug,emoji,access_type,creator_product_id').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('creator_entitlements').select('id,status,created_at,updated_at,current_period_end,product_id').eq('creator_id', user.id),
     supabase.from('creator_commerce_events').select('id,event_type,amount,currency,status,created_at,product_id').eq('creator_id', user.id).order('created_at', { ascending: false }).limit(1000),
@@ -38,7 +38,7 @@ export default async function CreatorStudioPage() {
   const cutoff60 = now - 60 * 86400_000
   const inWindow = (value: string, start: number, end = now) => { const time = new Date(value).getTime(); return time >= start && time < end }
   const activeMembers = entitlementRows.filter(item => hasCurrentCreatorAccess(item)).length
-  const successfulPayments = commerceRows.filter(item => item.event_type === 'payment.succeeded' && item.amount && !['failed', 'refunded'].includes(item.status || ''))
+  const successfulPayments = commerceRows.filter(item => item.event_type === 'payment.succeeded' && item.amount != null && Number.isFinite(Number(item.amount)) && Number(item.amount)>=0 && (item.currency || 'usd').toLowerCase()==='usd' && item.status!=='failed')
   const revenue = successfulPayments.reduce((sum, item) => sum + Number(item.amount), 0)
   const revenue30 = successfulPayments.filter(item => inWindow(item.created_at, cutoff30)).reduce((sum, item) => sum + Number(item.amount), 0)
   const revenuePrevious30 = successfulPayments.filter(item => inWindow(item.created_at, cutoff60, cutoff30)).reduce((sum, item) => sum + Number(item.amount), 0)

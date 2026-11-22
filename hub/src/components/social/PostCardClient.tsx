@@ -39,7 +39,7 @@ import { CommentComposer } from './CommentComposer'
 import { CommentActions } from './CommentActions'
 
 interface PostCardClientProps {
-  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
+  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } | null } }
   index?: number
   // Set only by the dedicated /posts/[id] page — that's the one place the
   // card shouldn't navigate to itself on click, and where comments should

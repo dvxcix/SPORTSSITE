@@ -34,7 +34,7 @@ initial.blogs=initial.blog_posts.map(row=>({...row,author_id:REVIEW_USER_ID,auth
 initial.posts.forEach(row=>{row.author_id=row.user_id})
 initial.events.forEach(row=>Object.assign(row,{start_date:row.starts_at,end_date:row.ends_at,host:reviewProfile(),host_id:REVIEW_USER_ID,is_online:true,going_count:24,interested_count:18}))
 initial.pages.forEach(row=>Object.assign(row,{is_published:true,follower_count:78,category:'Sports',owner:reviewProfile()}))
-initial.creator_products=[{id:'review-offer',creator_id:jordan.id,title:'The weekly research room',description:'Illustrative member community and research notes for this private design review.',price:19,currency:'usd',product_type:'membership',billing_period_days:30,status:'active',creator:jordan,created_at:now}]
+initial.creator_products=[{id:'00000000-0000-4000-8000-000000000611',creator_id:jordan.id,title:'The weekly research room',description:'Illustrative member community and research notes for this private design review.',price:19,platform_fee_amount:1.9,currency:'usd',product_type:'membership',billing_period_days:30,status:'active',whop_plan_id:'plan_review_jordan',creator:jordan,created_at:now,updated_at:now}]
 initial.matrix_marketplace_listings=[{id:'00000000-0000-4000-8000-000000000101',author_id:jordan.id,author:jordan,title:'A focused research workspace',description:'Illustrative shared research layout for private review.',tags:['research','community'],matrix_type:'classic',color:'#b4ff4d',status:'published',copy_count:24,published_at:now,snapshot:{version:1,name:'Focused research',color:'#b4ff4d',element_code:'SS-REVIEW',matrix_type:'classic',match_mode:'all',match_any_count:null,pipeline_scope:null,factors:[{position:1,category:'production',field_key:'average',operator:'gte',value:20,recency:'l10'}],pipeline_steps:[]}}]
 const symbol=Symbol.for('slipsurge.private-design.database.20261121')
 const state=globalThis as typeof globalThis & {[symbol]:Record<string,any[]>}
@@ -57,7 +57,7 @@ for(const user of table('users')){if(user.account_type==='creator'){user.creator
 
 if(!table('creator_applications').length)table('creator_applications').push({id:'review-creator-approval',user_id:REVIEW_USER_ID,status:'approved',created_at:now})
 
-if(!table('groups').some(group=>group.slug==='jordan-research'))table('groups').push({...groups[0],id:'review-creator-group',slug:'jordan-research',name:'Jordan’s research room',owner_id:jordan.id,created_by:jordan.id,access_type:'free',member_count:84})
+if(!table('groups').some(group=>group.slug==='jordan-research'))table('groups').push({...groups[0],id:'00000000-0000-4000-8000-000000000203',slug:'jordan-research',name:'Jordan’s research room',owner_id:jordan.id,created_by:jordan.id,is_public:false,access_type:'paid',creator_product_id:'00000000-0000-4000-8000-000000000611',channel_id:'00000000-0000-4000-8000-000000000303',member_count:84})
 
 if(!table('watchlist_items').some(item=>item.id==='review-nba-selection'))table('watchlist_items').push({id:'review-nba-selection',user_id:REVIEW_USER_ID,sport:'NBA',game_pk:'900001',game_date:REVIEW_DATE,mlb_id:null,player_name:'Jayson Tatum',team:'BOS',position:'F',bats:null,headshot_url:'/review-assets/tatum.png',prop_key:'nba:900110:points:milestone:25:milestone',prop_label:'25+ points',line:'25',book:'fanduel',odds:-110,odds_by_book:{fanduel:-110,draftkings:-108},notes:'Illustrative saved selection',status:'pending',posted_pick_id:null,created_at:now,updated_at:now})
 // Populated drawer and identity states use local artwork and never call a live service.
@@ -79,4 +79,19 @@ if(!table('comments').length){
   }
 }
 
-if (!table('platform_settings').some(row=>row.key==='fee_independent_creator_pct')) table('platform_settings').push({key:'fee_independent_creator_pct',value:10})
+if (!table('platform_settings').some(row=>row.key==='fee_independent_creator_pct')) table('platform_settings').push({key:'fee_independent_creator_pct',value:10,updated_at:now})
+/* The creator/member journey uses realistic private, free and paid fixture states. */
+for(const group of table('groups')){group.access_type??='free';group.is_public??=true}
+for(const [groupId,channelId,slug,name,isPublic]of[
+ ['00000000-0000-4000-8000-000000000204','00000000-0000-4000-8000-000000000304','film-room-invitation','The film room',false],
+ ['00000000-0000-4000-8000-000000000205','00000000-0000-4000-8000-000000000305','open-research-room','Open research room',true],
+]as const){
+ if(!table('groups').some(group=>group.id===groupId))table('groups').push({...groups[0],id:groupId,slug,name,owner_id:maya.id,access_type:'free',is_public:isPublic,channel_id:channelId,description:isPublic?'Open NBA research and game-day conversations.':'A private community invitation for your account.'})
+ if(!table('channels').some(channel=>channel.id===channelId))table('channels').push({id:channelId,group_id:groupId,slug:'group-'+slug,name,channel_kind:'text',channel_type:'members_only',owner_id:maya.id,sort_order:0,created_at:now})
+}
+if(!table('channels').some(channel=>channel.id==='00000000-0000-4000-8000-000000000303'))table('channels').push({id:'00000000-0000-4000-8000-000000000303',group_id:'00000000-0000-4000-8000-000000000203',slug:'group-jordan-research',name:'Member conversation',channel_kind:'text',channel_type:'members_only',owner_id:jordan.id,creator_product_id:'00000000-0000-4000-8000-000000000611',sort_order:0,created_at:now})
+if(!table('group_invites').length)table('group_invites').push({id:'00000000-0000-4000-8000-000000000701',group_id:'00000000-0000-4000-8000-000000000204',invited_user_id:REVIEW_USER_ID,invited_by:maya.id,status:'pending',created_at:now})
+if(!table('creator_entitlements').length)table('creator_entitlements').push({id:'00000000-0000-4000-8000-000000000801',user_id:maya.id,creator_id:jordan.id,product_id:'00000000-0000-4000-8000-000000000611',status:'active',current_period_end:'2031-01-01T00:00:00Z',whop_membership_id:'mem_review_maya',created_at:now,admin_revoked_at:null})
+if(!table('creator_commerce_events').length)table('creator_commerce_events').push({id:'00000000-0000-4000-8000-000000000802',creator_id:jordan.id,product_id:'00000000-0000-4000-8000-000000000611',event_type:'payment.succeeded',amount:19,currency:'usd',status:'active',created_at:now})
+if(!table('posts').some(post=>post.group_id==='00000000-0000-4000-8000-000000000205'))for(let index=0;index<25;index++)table('posts').push({...posts[0],id:'00000000-0000-4000-8000-'+String(2000+index).padStart(12,'0'),group_id:'00000000-0000-4000-8000-000000000205',author_id:jordan.id,content:index===24?'The first research note in this community.':`Research note ${25-index}: review the matchup and compare the market.`,post_type:index%4===0?'pick':'text',pick_data:index%4===0?table('posts').find(post=>post.pick_data)?.pick_data:null,created_at:new Date(Date.parse(now)-index*60000).toISOString()})
+for(const profile of table('users'))if(profile.account_type==='creator'){profile.creator_commerce_status??='ready';profile.creator_commerce_updated_at??=now;profile.whop_connected_company_id??='biz_review_'+profile.username.replaceAll('-','');profile.avatar_ring_style='deco:bb-swish'}

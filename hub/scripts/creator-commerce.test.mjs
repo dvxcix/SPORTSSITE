@@ -19,6 +19,7 @@ const commerce = compile('src/lib/creatorCommerce.ts')
 const access = compile('src/lib/whopMembershipAccess.ts')
 const membership = compile('src/lib/creatorMembership.ts', { './whopMembershipAccess': access })
 const api = compile('src/lib/whopApi.ts')
+const business = compile('src/lib/creatorBusiness.ts')
 const parent = 'biz_platform', account = 'biz_creator'
 const creatorId = '00000000-0000-4000-8000-000000000001', buyerId = '00000000-0000-4000-8000-000000000002', productId = '00000000-0000-4000-8000-000000000003'
 const product = { id: productId, creator_id: creatorId, whop_plan_id: 'plan_creator', product_type: 'membership' }
@@ -52,7 +53,7 @@ test('draft offer uses the current variant contract and cannot take payments bef
 })
 
 test('legacy company suffix normalizes to the current account ID without changing explicit platform identity',()=>{
- const platform=env=>compile('src/lib/whopPlatform.ts',{'@whop/sdk':{},'./whopApi':api,'@/lib/platform':{PLATFORM_URL:'https://www.slipsurge.com'}},{process:{env}}).getWhopPlatformCompanyId()
+ const platform=env=>compile('src/lib/whopPlatform.ts',{'@whop/sdk':{},'./whopApi':api,'./creatorBusiness':business,'@/lib/platform':{PLATFORM_URL:'https://www.slipsurge.com'}},{process:{env}}).getWhopPlatformCompanyId()
  assert.equal(platform({WHOP_COMPANY_ID:'lQsa02bB46YIlL'}),'biz_lQsa02bB46YIlL')
  assert.equal(platform({WHOP_COMPANY_ID:'biz_lQsa02bB46YIlL'}),'biz_lQsa02bB46YIlL')
  assert.equal(platform({WHOP_PLATFORM_COMPANY_ID:parent,WHOP_COMPANY_ID:'other'}),parent)

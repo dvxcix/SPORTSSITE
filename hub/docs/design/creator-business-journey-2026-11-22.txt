@@ -1,0 +1,34 @@
+SlipSurge creator/member and business journey — 22 November 2026
+
+Implemented
+• Paid communities appear in discovery and creator storefronts using narrow published card metadata. Private free groups remain invitation-only.
+• Pending private invitations show an entry screen instead of 404. Authenticated, actor-bound acceptance enrolls the group and channel atomically; paid invitations still require current access.
+• Groups have URL-backed Posts, Picks and Live chat tabs, keyboard navigation and stable cursor pagination beyond the initial 20 posts. Group composer saves refresh the visible feed automatically. Channel mention destinations preserve their community context.
+• Offers show verified status honestly and let owners open their own space. Membership completion stops polling once resolved, limits requests, prevents duplicate billing opens and explains access holds.
+• Creator Studio retains saved offer fees, labels recent USD receipts accurately and exposes a closure retry for paused checkout links.
+• SlipSurge admin has a searchable roster of creators and free community owners, linked communities, offers, paid-through membership status, reversible access holds, provider readiness checks, recent receipts, member administration and audit links. Legacy applications remain available.
+• The fee editor previews a $20 split, requires review, supports 0–99.99%, rejects stale edits and audits changes atomically. Defaults affect newly saved offers. Existing offers and member terms retain their fee. The live default remains 10%.
+• Owner/admin offer publication shares provider readiness, event delivery and linked-community checks. Pausing first closes local checkout, then provider links; failed publication attempts compensate by closing stock.
+• Admin service reads require a real admin account and configured MFA assurance. Membership holds persist through later provider events; restoration rechecks the original Whop membership.
+• NFL Odds Board adds verified final stat totals and Hit/Miss rung outcomes without changing frozen pregame quotes. Thursday and prior-week browser checks passed; missing stats stay unavailable. Combined passing/rushing and three-plus-touchdown grading are included.
+
+Design decisions
+Problem | Reference | Change | Preserved
+Finding creators and member health | Meetup roster + Sweatpals status/search | searchable roster, filters, phone cards | applications, offers, members, all admin tools
+Finding communities and paid entry | Meetup community search | free/paid/sport filters and compact cards | private content access and original group links
+Business controls scattered across screens | Mintlify team context; placement is product judgment | direct fee, communities, members and audit links | existing destinations and SlipSurge tokens
+Delphi was inspected and dropped: its people list did not answer community discovery.
+No new UI library, typography, animation dependency or theme system was added. Existing avatars and decorations are used.
+
+Verification
+224 regression tests, 48 shared social/auth/NFL tests and eight boundary/checklist tests passed (280 automated checks). All 21 local database scenario groups passed. Strict changed application-source lint passed. The dynamic private query adapter retains its established any typing; its separate fixture lint disables only the preexisting any/unused-variable rules. The optimized private build compiled and passed TypeScript.
+Four layouts per 14 creator/community/admin screens: 56 DOM-bound layout receipts and individually settled screenshots, plus five 320px checks. Contact sheets were inspected for hierarchy, wrapping, contrast, avatar containment, controls and tables. No page horizontal overflow or broken content images were found. Empty/loading states and the key private interactions are recorded in the JSON.
+Live rollback-only SQL verified fee concurrency/audit/zero, existing fee preservation, provider-resistant access holds, verified restore, atomic private invites and active/expired content privacy. All test changes rolled back; fee remains 10, fixture products remaining 0.
+Applied migration: 20261122164203_creator_business_journey_controls. Do not replay historical migrations or this applied repair. Existing security advisories are unchanged; no new touched-function findings. Health advisory list is empty.
+
+Financial QA boundary
+No real creator financial account, charge, transfer, withdrawal, purchase or external member message was created. Private fixtures exercise UI state; real database checks are rollback-only. Real creators complete their own hosted Whop identity and payout verification. Existing signed transport verification is preserved.
+
+Artifacts
+The companion JSON contains individual receipts. Screenshots and the exact-template before/after board are in the task visualization directory as business-*-*.jpg and creator-business-comparison.html. The before screen uses the real baseline; the after uses illustrative private accounts. They compare structure, not business totals. The board is a standalone artifact and was not claimed as browser-rendered.
+Historical checklist batch attribution and ten owner approvals are preserved. This follow-up updates the affected entries without certifying unrelated pages anew.

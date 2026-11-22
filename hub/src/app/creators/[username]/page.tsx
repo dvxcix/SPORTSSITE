@@ -5,24 +5,33 @@ import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorStorefront.module.css'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { CreatorFunnelSignal } from '@/components/creator/CreatorFunnelSignal'
+import { publishedPaidCommunities } from '@/lib/creatorCommunityDirectory'
+import { canViewMlb } from '@/lib/mlbViewerAccess'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CreatorStorefront({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
   const supabase = await createClient()
-  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,banner_url,bio,follower_count').eq('username', username).single()
+  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,banner_url,bio,follower_count,is_verified,account_type').eq('username', username).single()
   if (!creator) notFound()
-  const [{ data: products }, { data: groups }] = await Promise.all([
+  const [productResult, groupResult, published, {data:{user}}] = await Promise.all([
     supabase.from('creator_products').select('id,title,description,price,currency,product_type,billing_period_days').eq('creator_id', creator.id).eq('status', 'active').order('price'),
-    supabase.from('groups').select('id,name,slug,emoji,description,access_type,creator_product_id').eq('owner_id', creator.id).order('created_at'),
+    supabase.from('groups').select('id,name,slug,emoji,description,access_type,creator_product_id,sport').eq('owner_id', creator.id).order('created_at'),
+    publishedPaidCommunities({creatorId:creator.id}),
+    supabase.auth.getUser(),
   ])
+  if(productResult.error||groupResult.error)throw new Error('Creator communities could not be loaded.')
+  const products=productResult.data??[]
+  const showMlb=await canViewMlb(supabase,user?.id)
+  const groups=[...new Map([...(groupResult.data??[]),...published].map(group=>[group.id,group])).values()].filter(group=>showMlb||group.sport?.toUpperCase()!=='MLB')
+  if(!['creator','admin'].includes(creator.account_type)&&!products.length&&!groups.length&&user?.id!==creator.id)notFound()
 
   return <div className={styles.page}>
     <CreatorFunnelSignal creatorId={creator.id} eventType="storefront_view" />
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
     <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 80%,transparent)),url(${creator.banner_url})` } : undefined}>
-      <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}><BadgeCheck size={15} /> SlipSurge creator</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
+      <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}>{creator.is_verified&&<BadgeCheck size={15}/>} {creator.is_verified?'Verified creator':'Creator community'}</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
       <p className={styles.bio}>{creator.bio || 'Premium sports content, research, and member community on SlipSurge.'}</p>
       <div className={styles.heroFeatures}><span><BarChart3 size={15} /> Research</span><span><BellRing size={15} /> Member alerts</span><span><MessageSquareText size={15} /> Private channels</span></div>
     </section>

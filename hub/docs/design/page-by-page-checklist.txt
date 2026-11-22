@@ -1,5 +1,7 @@
 SlipSurge page-by-page visual review
 
+Creator/member business follow-up: creator-business-journey-2026-11-22.txt/json records discovery, joining, private invitations, group Posts/Picks/chat, business management and new-offer fee controls. 56 private layout checks and five 320px checks; 280 automated checks and 21 database scenario groups passed. Production verification follows the authorized rollout. NFL Final and Hit/Miss correction is already live as 11ef9592.
+
 Social process follow-up: social-workflow-repair-2026-11-22.txt/json records 48 private layout checks, 52 live layout checks, every available public room, real member badge containment and scoped message replies. 18 affected checklist entries updated; all research tools retained. Published as 45b85c3b.
 
 Mobile identity follow-up: mobile-identity-followup-2026-11-22.txt/json records the badge, profile, saved-card and NBA/NFL drawer pass, with 130 unique private interaction receipts and 65 verified live checks. Published as 93cc63e1.

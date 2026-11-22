@@ -3,6 +3,7 @@
 import { memberTone } from '@/lib/memberIdentity'
 
 import { useMemo, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
@@ -34,6 +35,7 @@ interface FeedComposerProps {
 }
 
 export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
+  const router=useRouter()
   const { user, profile, loading: authLoading, authUnavailable } = useAuth()
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [content, setContent] = useState('')
@@ -155,7 +157,7 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
       }
       setContent(''); setLegs([]); setWager(''); setImageUrl(''); setIsSpoiler(false)
       setShowPickForm(false); setComposerMode('take'); setPosting(false)
-      onPost?.()
+      if(onPost)onPost();else router.refresh()
       return
     }
 
@@ -197,7 +199,7 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
     setShowPollForm(false)
     setComposerMode('take')
     setPosting(false)
-    onPost?.()
+    if(onPost)onPost();else router.refresh()
     } catch {
       setError('Failed to post. Try again.')
       setPosting(false)

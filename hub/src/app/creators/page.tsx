@@ -11,13 +11,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function CreatorsPage() {
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('users')
-    .select('id,username,display_name,avatar_url,bio,follower_count,creator_products!creator_products_creator_id_fkey!inner(id,title,description,price,product_type)')
+    .select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,bio,follower_count,creator_products!creator_products_creator_id_fkey!inner(id,title,description,price,product_type)')
     .in('account_type', ['creator', 'admin'])
     .eq('creator_products.status', 'active')
     .order('follower_count', { ascending: false })
     .limit(48)
+  if (error) throw new Error('Creator memberships could not be loaded. Please retry.')
   const creators = (data ?? []) as unknown as CreatorDirectoryItem[]
   return <div className={styles.page}>
     <section className={styles.hero} style={{ gridTemplateColumns: '1fr' }}>
