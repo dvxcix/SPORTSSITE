@@ -288,11 +288,17 @@ body:has(.ss-review-ribbon) .ss-site-sidebar,body:has(.ss-review-ribbon) .ss-des
 @media(max-width:767px){.batter-cost-filter-open{min-height:44px}}
 
 /* Small-screen conversation controls keep the writing field on its own row. */
-@media(max-width:767px){
-  .ss-chat-composer{grid-template-columns:repeat(4,44px);justify-content:end;gap:5px;padding:8px}
+.ss-chat-composer>.ss-mention-input-wrap{min-width:0}
+.ss-chat-composer textarea{width:100%;min-width:0;box-sizing:border-box}
+@media(max-width:1024px){
+  .ss-chat-composer{grid-template-columns:minmax(44px,1fr) repeat(3,44px);gap:5px;padding:8px}
+  .ss-chat-composer>:not(.ss-mention-input-wrap){justify-self:end}
   .ss-chat-composer>.ss-mention-input-wrap{grid-column:1/-1;min-width:0;width:100%}
   .ss-chat-composer textarea{min-height:48px;font-size:16px}
   .ss-chat-composer>button,.ss-chat-composer .ss-gif-trigger{min-width:44px;min-height:44px;width:44px;height:44px}
+  .ss-chat-composer button{min-width:44px;min-height:44px}
+}
+@media(max-width:767px){
   .ss-gif-trigger{min-width:44px;min-height:44px}
   .ss-dm-header-action{width:44px;height:44px;min-width:44px;flex-basis:44px}
   .ss-dm-message-meta{flex-wrap:wrap;gap:3px 6px}
@@ -309,7 +315,8 @@ body:has(.ss-review-ribbon) .ss-site-sidebar,body:has(.ss-review-ribbon) .ss-des
 @media(max-width:767px){.ss-admin-users td:first-child:not([colspan]){width:208px;min-width:208px;max-width:208px}.ss-admin-users td:first-child:not([colspan]) p{overflow-wrap:anywhere}.ss-admin-user-detail{position:sticky;left:16px;width:calc(100vw - 64px)}}
 /* Fixed-height conversations reserve the actual bottom navigation and review chrome. */
 .ss-dm-room{min-height:0;height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px))}
-@media(max-width:767px){.ss-dm-room{height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px))}.ss-community-room-layout{height:calc(100dvh - var(--banner-h,0px) - var(--topbar-h,64px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px) - 12px)}}
+.ss-community-room-layout{min-height:0;height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px))}
+@media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){.ss-dm-room{height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px))}.ss-community-room-layout{height:calc(100dvh - var(--banner-h,0px) - var(--topbar-h,64px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px) - 12px)}}
 
 @media(max-width:767px){.ss-topbar-search-clear,.ss-sidebar-close{width:44px!important;height:44px!important;min-width:44px;min-height:44px}.ss-topbar-search-input{padding-right:50px!important}.ss-topbar-notification-tabs [role=tab]{min-width:44px}.ss-site-main button[aria-label='Clear player comparison'],.ss-site-main button[aria-label='Delete workspace']{min-width:44px;min-height:44px}}
 

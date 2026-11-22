@@ -9,6 +9,7 @@ Changes in this release
 - Comment authors, badges, timestamps and actions now fit narrow phones. Deep threads cap indentation. Edit, delete, report and block stay in a compact, keyboard-accessible actions menu. Profile links remain available on avatars and names.
 - Member hover cards have a contained avatar, readable identity/badge layout and a clear profile link. Unknown follower counts are omitted. Hover cards stay out of phone navigation; the member's profile link still works. Existing decoration, ring, badge and privacy behavior is preserved.
 - Feed composers show a neutral loading state while authentication resolves, instead of flashing a false sign-in prompt. An unavailable account shows a retry state.
+- Channel chat uses the full available writing width on desktop, phone and short landscape, with separate touch controls below the field on smaller screens. Its room height subtracts all visible navigation/banner chrome; Send stays reachable. Seven compiled width/clearance checks pass, including 320px and 844x390.
 - DM and group-DM composers have a full-width writing row and separate media/send controls. Conversation height accounts for navigation and banners, keeping Send visible. VOLT and the resume prompt step aside while a text field is focused.
 - Community navigation reveals the current section when it would be offscreen. Feed/activity/hashtag counts use the correct singular form.
 - Admin Blogs, Stories, Events, Groups and Pages tables scroll instead of clipping columns, with named keyboard-focusable regions. Member rows are compact; Manage expands the original administrative controls. HR Intelligence's date and action no longer overlap. Creator administration has consistent outer spacing, and mobile breadcrumbs avoid wrapping group labels.
@@ -24,7 +25,7 @@ Verification
 - 19 chart, score, sorting and tooltip interaction checks pass.
 - 80 NBA/NFL access, odds-board and frozen-pregame checks pass. The old page harness was updated to supply the existing research-preferences dependency, preserving its original historical-price assertions.
 - Five onboarding checks pass, including server rendering before restoration, restored drafts, unavailable storage and returning from final review.
-- Focused ESLint and the optimized private build with TypeScript pass.
+- Seven audit/checklist checks pass. Focused ESLint and the optimized private build with TypeScript pass.
 - Forty additional 320px/short-landscape viewport checks pass in both themes. Send stays above the bottom navigation in the inspected conversations. Additional interaction receipts cover setup steps, media/error states, share previews, visible comparison cards and keyboard chart scrolling.
 
 Practical limits

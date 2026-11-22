@@ -32,6 +32,10 @@
     "onboarding": {
       "pass": 5,
       "fail": 0
+    },
+    "auditAndReleaseChecklist": {
+      "pass": 7,
+      "fail": 0
     }
   },
   "limits": [
@@ -6158,6 +6162,7 @@
       "kind": "Page",
       "layouts": {
         "desktop-dark": {
+          "case": "channel-composer-width-final",
           "brokenImages": [],
           "characters": 181,
           "error": false,
@@ -6173,9 +6178,15 @@
           "unnamed": 0,
           "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
           "wideTables": [],
-          "width": 1440
+          "width": 1440,
+          "columns": "726.667px 34px 34px 34px 34px",
+          "composerWidth": 912,
+          "dockTop": 1000,
+          "sendBottom": 979.3333740234376,
+          "writingWidth": 726.6666870117188
         },
         "desktop-light": {
+          "case": "channel-composer-width-final",
           "brokenImages": [],
           "characters": 181,
           "error": false,
@@ -6191,9 +6202,15 @@
           "unnamed": 0,
           "url": "/channels/nba?reviewTheme=light&reviewMatrix=1",
           "wideTables": [],
-          "width": 1440
+          "width": 1440,
+          "columns": "726.667px 34px 34px 34px 34px",
+          "composerWidth": 912,
+          "dockTop": 1000,
+          "sendBottom": 979.3333740234376,
+          "writingWidth": 726.6666870117188
         },
         "phone-dark": {
+          "case": "channel-composer-width-final",
           "brokenImages": [],
           "characters": 181,
           "error": false,
@@ -6209,9 +6226,15 @@
           "unnamed": 0,
           "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
           "wideTables": [],
-          "width": 390
+          "width": 390,
+          "columns": "197.667px 44px 44px 44px",
+          "composerWidth": 362,
+          "dockTop": 770,
+          "sendBottom": 715.3333740234375,
+          "writingWidth": 344.66668701171875
         },
         "phone-light": {
+          "case": "channel-composer-width-final",
           "brokenImages": [],
           "characters": 181,
           "error": false,
@@ -6227,7 +6250,12 @@
           "unnamed": 0,
           "url": "/channels/nba?reviewTheme=light&reviewMatrix=1",
           "wideTables": [],
-          "width": 390
+          "width": 390,
+          "columns": "197.667px 44px 44px 44px",
+          "composerWidth": 362,
+          "dockTop": 770,
+          "sendBottom": 715.3333740234375,
+          "writingWidth": 344.66668701171875
         }
       }
     },
@@ -24785,6 +24813,183 @@
       "url": "/feed?reviewTheme=light&reviewMatrix=1",
       "wideTables": [],
       "width": 1440
+    }
+  ],
+  "channelComposerChecks": [
+    {
+      "case": "channel-composer-width-final",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390,
+      "columns": "197.667px 44px 44px 44px",
+      "composerWidth": 362,
+      "dockTop": 770,
+      "sendBottom": 715.3333740234375,
+      "writingWidth": 344.66668701171875
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390,
+      "columns": "197.667px 44px 44px 44px",
+      "composerWidth": 362,
+      "dockTop": 770,
+      "sendBottom": 715.3333740234375,
+      "writingWidth": 344.66668701171875
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440,
+      "columns": "726.667px 34px 34px 34px 34px",
+      "composerWidth": 912,
+      "dockTop": 1000,
+      "sendBottom": 979.3333740234376,
+      "writingWidth": 726.6666870117188
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440,
+      "columns": "726.667px 34px 34px 34px 34px",
+      "composerWidth": 912,
+      "dockTop": 1000,
+      "sendBottom": 979.3333740234376,
+      "writingWidth": 726.6666870117188
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "narrow-phone-dark",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320,
+      "columns": "127.667px 44px 44px 44px",
+      "composerWidth": 292,
+      "dockTop": 666,
+      "sendBottom": 611.3333740234375,
+      "writingWidth": 274.66668701171875
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "narrow-phone-light",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320,
+      "columns": "127.667px 44px 44px 44px",
+      "composerWidth": 292,
+      "dockTop": 666,
+      "sendBottom": 611.3333740234375,
+      "writingWidth": 274.66668701171875
+    },
+    {
+      "case": "channel-composer-width-final",
+      "view": "landscape-phone-dark",
+      "brokenImages": [],
+      "characters": 181,
+      "error": false,
+      "headings": [
+        "NBA conversation"
+      ],
+      "height": 390,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/nba?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 844,
+      "columns": "161.042px 44px 44px 44px",
+      "composerWidth": 325.375,
+      "dockTop": 390,
+      "sendBottom": 367.3333435058594,
+      "writingWidth": 308.04168701171875
     }
   ]
 }

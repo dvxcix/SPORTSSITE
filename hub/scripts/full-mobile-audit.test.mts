@@ -34,3 +34,14 @@ test('narrow and short-height checks preserve message clearance and owner approv
  for(const row of audit.narrowChecks){assert.equal(row.overflow,false);assert.equal(row.error,false);if(row.send)assert.ok(row.send.bottom<=row.dockTop)}
  assert.equal(inventory.filter((row:any)=>row.status==='Approved').length,10)
 })
+
+test('channel writing space and Send stay usable at desktop, phone and short landscape sizes',()=>{
+ assert.equal(audit.channelComposerChecks.length,7)
+ for(const row of audit.channelComposerChecks){
+  assert.equal(row.theme,row.view.endsWith('light')?'light':'dark',row.view)
+  assert.equal(row.overflow,false,row.view)
+  assert.equal(row.error,false,row.view)
+  assert.ok(row.writingWidth>=row.composerWidth*(row.width<=1024?0.9:0.7),row.view+' writing width')
+  assert.ok(row.sendBottom<=row.dockTop,row.view+' Send clearance')
+ }
+})
