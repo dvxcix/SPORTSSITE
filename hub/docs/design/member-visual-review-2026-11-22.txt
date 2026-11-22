@@ -22,3 +22,7 @@ Local checks use illustrative fixtures with no production credentials. They vali
 
 Checklist interpretation
 The 239-surface inventory remains the published overhaul history. This batch adds dated individual follow-up evidence to its affected entries; it does not manufacture owner approvals or declare every remaining surface freshly reviewed. Further groups retain their earlier receipts for the next visual-review pass.
+
+Production verification
+Published UI source 1909e42c and final clearance correction 8cbd283a are on GitHub main. Both deployments reached READY on www.slipsurge.com. The signed-in browser rechecked Feed, a real member profile, Picks, Watchlist, My Picks, profile settings and NFL highlights across desktop/phone and both themes (28 route/surface receipts). All 12 highlight links opened the matching player drawer. My Picks All rendered the real account history after loading; the live Watchlist was empty, with populated behavior covered locally.
+Live testing caught a resume banner overlapping Save Profile. The follow-up CSS correction passed another optimized build and all 134 production source checks. With the actual resume banner present, Save Profile was visible and had zero overlap with both the banner and VOLT at 1440px, 390px and 320px in both themes (six receipts). The original dark theme was restored; temporary tabs and servers were closed. No profile, post, watchlist or billing/security action was submitted.

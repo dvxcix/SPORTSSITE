@@ -3328,5 +3328,558 @@
     "Illustrative local data; no live account writes or publication through the UI.",
     "Phone dimensions are desktop browser viewports, not a physical-device certification.",
     "Only the listed groups receive fresh follow-up review; historical owner approvals remain unchanged."
-  ]
+  ],
+  "production": {
+    "host": "https://www.slipsurge.com",
+    "uiCommit": "1909e42ceae86f8718e2cb53fafe7cc79a753478",
+    "uiDeployment": "dpl_4K3xwi5zKkXiPFjTSEMo6f2Ab31G",
+    "clearanceCommit": "8cbd283a6a2f7430b644d683afa53878074dc4be",
+    "clearanceDeployment": "dpl_AuPfbhiHeGbehc5NwEJZ4XJRfvwn",
+    "status": "READY with production aliases; verified in the signed-in browser",
+    "source": "1909e42ceae86f8718e2cb53fafe7cc79a753478",
+    "clearanceSource": "8cbd283a6a2f7430b644d683afa53878074dc4be",
+    "routes": [
+      {
+        "group": "Feed",
+        "brokenImages": [],
+        "headings": [
+          "The Feed"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "The Feed | SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "Feed",
+        "brokenImages": [],
+        "headings": [
+          "The Feed"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "The Feed | SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "Profile",
+        "brokenImages": [],
+        "headings": [
+          "Geeejpg",
+          "Badges and achievements",
+          "Favorite teams"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "Geeejpg (@geeejpg) · SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "Profile",
+        "brokenImages": [],
+        "headings": [
+          "Geeejpg",
+          "Badges and achievements",
+          "Favorite teams"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "Geeejpg (@geeejpg) · SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "Picks",
+        "brokenImages": [],
+        "headings": [
+          "Picks",
+          "Trending picks",
+          "Latest picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Picks",
+        "brokenImages": [],
+        "headings": [
+          "Picks",
+          "Trending picks",
+          "Latest picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "Watchlist",
+        "brokenImages": [],
+        "headings": [
+          "Watchlist"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Watchlist",
+        "brokenImages": [],
+        "headings": [
+          "Watchlist"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "My Picks",
+        "brokenImages": [],
+        "headings": [
+          " My Picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "My Picks",
+        "brokenImages": [],
+        "headings": [
+          " My Picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "Settings profile",
+        "brokenImages": [],
+        "headings": [
+          "Your profile",
+          "Profile completion"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Settings profile",
+        "brokenImages": [],
+        "headings": [
+          "Your profile",
+          "Profile completion"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "NFL highlights",
+        "brokenImages": [],
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "The Sideline - SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "NFL highlights",
+        "brokenImages": [],
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "light",
+        "title": "The Sideline - SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "NFL highlights",
+        "brokenImages": [],
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "The Sideline - SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "NFL highlights",
+        "brokenImages": [],
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "The Sideline - SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "Feed",
+        "brokenImages": [],
+        "headings": [
+          "The Feed"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "The Feed | SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "Feed",
+        "brokenImages": [],
+        "headings": [
+          "The Feed"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "The Feed | SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "Profile",
+        "brokenImages": [],
+        "headings": [
+          "Geeejpg",
+          "Badges and achievements",
+          "Favorite teams"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "Geeejpg (@geeejpg) · SlipSurge",
+        "width": 1440
+      },
+      {
+        "group": "Profile",
+        "brokenImages": [],
+        "headings": [
+          "Geeejpg",
+          "Badges and achievements",
+          "Favorite teams"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "Geeejpg (@geeejpg) · SlipSurge",
+        "width": 390
+      },
+      {
+        "group": "Picks",
+        "brokenImages": [],
+        "headings": [
+          "Picks",
+          "Trending picks",
+          "Latest picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Watchlist",
+        "brokenImages": [],
+        "headings": [
+          "Watchlist"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Picks",
+        "brokenImages": [],
+        "headings": [
+          "Picks",
+          "Trending picks",
+          "Latest picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "Watchlist",
+        "brokenImages": [],
+        "headings": [
+          "Watchlist"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "My Picks",
+        "brokenImages": [],
+        "headings": [
+          " My Picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "My Picks",
+        "brokenImages": [],
+        "headings": [
+          " My Picks"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      },
+      {
+        "group": "Settings profile",
+        "brokenImages": [],
+        "headings": [
+          "Your profile",
+          "Profile completion"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 1440
+      },
+      {
+        "group": "Settings profile",
+        "brokenImages": [],
+        "headings": [
+          "Your profile",
+          "Profile completion"
+        ],
+        "loading": false,
+        "overflow": false,
+        "smallButtons": [],
+        "theme": "dark",
+        "title": "SlipSurge | Sports Research, Picks and Community",
+        "width": 390
+      }
+    ],
+    "nflLinks": [
+      {
+        "theme": "light",
+        "width": 1440,
+        "kind": "score",
+        "player": "Trey McBride",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "light",
+        "width": 1440,
+        "kind": "advertised",
+        "player": "Simi Fehoko",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "light",
+        "width": 1440,
+        "kind": "hidden",
+        "player": "Teagan Quitoriano",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "light",
+        "width": 390,
+        "kind": "score",
+        "player": "Trey McBride",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "light",
+        "width": 390,
+        "kind": "advertised",
+        "player": "Simi Fehoko",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "light",
+        "width": 390,
+        "kind": "hidden",
+        "player": "Teagan Quitoriano",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 1440,
+        "kind": "score",
+        "player": "Trey McBride",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 1440,
+        "kind": "advertised",
+        "player": "Simi Fehoko",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 1440,
+        "kind": "hidden",
+        "player": "Teagan Quitoriano",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 390,
+        "kind": "score",
+        "player": "Trey McBride",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 390,
+        "kind": "advertised",
+        "player": "Simi Fehoko",
+        "opensMatchingDrawer": true
+      },
+      {
+        "theme": "dark",
+        "width": 390,
+        "kind": "hidden",
+        "player": "Teagan Quitoriano",
+        "opensMatchingDrawer": true
+      }
+    ],
+    "saveResumeClearance": [
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 923.4791870117188,
+        "saveBottom": 908.0000457763672,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "dark",
+        "width": 1440
+      },
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 707.4791870117188,
+        "saveBottom": 656.0000419616699,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "dark",
+        "width": 390
+      },
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 923.4791870117188,
+        "saveBottom": 908.0000457763672,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "light",
+        "width": 1440
+      },
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 707.4791870117188,
+        "saveBottom": 656.0000419616699,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "light",
+        "width": 390
+      },
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 707.4791870117188,
+        "saveBottom": 656.0000419616699,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "dark",
+        "width": 320
+      },
+      {
+        "offset": "76px",
+        "resumePresent": true,
+        "resumeTop": 707.4791870117188,
+        "saveBottom": 656.0000419616699,
+        "saveResumeOverlap": 0,
+        "saveVisible": true,
+        "saveVoltOverlap": 0,
+        "theme": "light",
+        "width": 320
+      }
+    ],
+    "watchlist": "Live account empty; populated selection and share exercised in local fixtures",
+    "myPicks": "All rendered 13 real saved picks after load",
+    "profileMenu": "Share autofocus; arrow to Block; Escape restores trigger; no share or block submitted"
+  }
 }
