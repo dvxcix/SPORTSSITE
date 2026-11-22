@@ -25,3 +25,7 @@
 @media(max-width:600px){.communityCards{grid-template-columns:1fr}.communityCover{height:110px}.sectionHeading .heroActions{width:100%}.sectionHeading .heroActions>a{flex:1}.studioNav{margin-left:-4px;margin-right:-4px}.heroActions{display:flex}.heroActions>*{flex:1}.productList>article{padding:16px}.wizardSteps{gap:10px}.stats small{line-height:1.4}.panel{padding:18px}}
 
 .studioNav{scrollbar-width:none}.studioNav::-webkit-scrollbar{display:none}@media(max-width:600px){.hero{gap:16px}.hero h1{margin-top:0}.studioNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px 0;overflow:visible}.studioNav a{min-width:0;min-height:46px;padding:8px 4px;font-size:12px;line-height:1.35;white-space:normal;text-align:center}.heroActions{gap:8px}.launch h2{font-size:20px}}
+
+/* First-time creators reach the form before an empty catalogue on narrow screens. */
+.workspace>article{align-self:start}.productList>.empty{display:grid}
+@media(max-width:1100px){.workspace[data-empty-products]>aside{order:-1}}
