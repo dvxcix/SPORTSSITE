@@ -23,7 +23,7 @@ Verification
 - Four additional 320px route checks; no horizontal overflow or broken visible images.
 - Actual private UI exercised channel send/edit/reply/soft-delete, group chat
   send/edit/reply, recipient search, selected-member chips and direct-message send.
-- 39 focused regression tests and 134 production source checks passed.
+- 42 focused regression tests and 134 production source checks passed.
 - Changed production TypeScript/React lint passed. Optimized local build and typecheck passed.
 - Real authenticated database roles passed rollback-only group create/join,
   channel send, direct send, group conversation create/send and history reads.
@@ -44,3 +44,8 @@ navigation: https://mobbin.com/screens/b7e81ab9-f974-4887-81da-b30970ced873
 
 Detailed layout receipts and release verification:
 docs/design/social-workflow-repair-2026-11-22.json
+
+Live follow-up: the first deployment exposed PGRST200 on the reply-to self
+relationship in the live REST schema cache. Cache refresh alone did not resolve
+it. Channel, DM and group replies now use separate context-scoped, ordinary-RLS
+queries. Deleted or inaccessible reply bodies are omitted. No grants were widened.

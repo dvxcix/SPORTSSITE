@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DMRoom, type DMMessage } from '@/components/chat/DMRoom'
 import { authVisibilityUnavailable, isBlockedEitherWay } from '@/lib/blocks'
+import { attachMessageReplies } from '@/lib/messageReplies'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
 
   const { data: history, error: historyError } = await supabase
     .from('messages')
-    .select('id, content, created_at, edited_at, is_deleted, sender_id, reply_to_id, forwarded_from_id, media_urls, reaction_count, sender:users!messages_sender_id_fkey(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), reply_to:messages!messages_reply_to_id_fkey(id, content, sender_id)')
+    .select('id, content, created_at, edited_at, is_deleted, sender_id, reply_to_id, forwarded_from_id, media_urls, reaction_count, sender:users!messages_sender_id_fkey(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
     .or(
       `and(sender_id.eq.${user.id},dm_recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},dm_recipient_id.eq.${user.id})`
     )
@@ -42,11 +43,12 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     .limit(100)
   if (historyError) throw new Error('Conversation could not be loaded. Try again.')
   history?.reverse()
+  const messages = await attachMessageReplies(supabase, (history ?? []) as unknown as DMMessage[], { userId: user.id, partnerId: partner.id })
 
   const historyIds = (history ?? []).map(message => message.id)
   const { data: pins } = historyIds.length
     ? await supabase.from('message_pins').select('message_id').eq('user_id', user.id).in('message_id', historyIds)
     : { data: [] }
 
-  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={(history ?? []) as unknown as DMMessage[]} initialPinnedMessageIds={(pins ?? []).map(pin => pin.message_id)} />
+  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={messages} initialPinnedMessageIds={(pins ?? []).map(pin => pin.message_id)} />
 }

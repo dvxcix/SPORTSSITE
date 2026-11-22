@@ -6,6 +6,7 @@ import { build } from 'esbuild'
 import { act, createElement as h } from 'react'
 import { loadChannelHistory } from '../src/lib/channelHistory.ts'
 import { searchMessageRecipients } from '../src/lib/messageRecipients.ts'
+import { attachMessageReplies } from '../src/lib/messageReplies.ts'
 
 const require = createRequire(import.meta.url), { JSDOM } = require('jsdom')
 const win = new JSDOM('<!doctype html><html><body></body></html>', { url:'https://slipsurge.invalid/messages/new', pretendToBeVisual:true }).window
@@ -18,6 +19,7 @@ class Query {
   op='read'; payload:any
   constructor(readonly table:string){}
   select(value?:string){calls.push(['select',this.table,value]);return this}eq(...args:any[]){calls.push(['eq',...args]);return this}neq(...args:any[]){calls.push(['neq',...args]);return this}or(...args:any[]){calls.push(['or',...args]);return this}not(...args:any[]){calls.push(['not',...args]);return this}order(...args:any[]){calls.push(['order',...args]);return this}limit(...args:any[]){calls.push(['limit',...args]);return this}range(){return this}single(){return this}
+  in(...args:any[]){calls.push(['in',...args]);return this}
   insert(payload:any){this.op='insert';this.payload=payload;return this}update(payload:any){this.op='update';this.payload=payload;return this}upsert(payload:any){this.op='upsert';this.payload=payload;return this}
   then(done:any,fail:any){calls.push(['execute',this.table,this.op,this.payload]);return (this.op==='insert'?new Promise(resolve=>pending.push({resolve,payload:this.payload})):Promise.resolve({data:this.table==='blocks'?[]:history,error:readError})).then(done,fail)}
 }
@@ -63,6 +65,14 @@ test('full directory search remains scoped to willing recipients and fails close
  calls.length=0;history=[member];const rows=await searchMessageRecipients(client,'00000000-0000-4000-8000-000000000001','member,or(%)')
  assert.equal(rows.length,1);assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='allow_dms'&&c[2]===true));assert.match(calls.find(c=>c[0]==='or'&&String(c[1]).startsWith('username'))[1],/ilike\."/)
  readError={message:'denied'};await assert.rejects(()=>searchMessageRecipients(client,'00000000-0000-4000-8000-000000000001','member'));readError=null
+})
+for (const [name,scope,column] of [['channel',{channelId:'channel'},'channel_id'],['group',{conversationId:'group'},'conversation_id'],['direct',{userId:'me',partnerId:'partner'},null]] as const) test(`${name} replies use a separate scoped RLS query and preserve missing reply privacy`,async()=>{
+ calls.length=0;history=[{id:'reply',content:'Scoped context',sender_id:'other'}]
+ const rows=await attachMessageReplies(client,[{reply_to_id:'reply'},{reply_to_id:'not-visible'}],scope)
+ assert.equal((rows[0] as any).reply_to.content,'Scoped context');assert.equal((rows[1] as any).reply_to,null)
+ const selection=calls.find(c=>c[0]==='select')[2];assert.doesNotMatch(selection,/reply_to:messages|reply_to:group_messages/)
+ if(column)assert.ok(calls.some(c=>c[0]==='eq'&&c[1]===column));else assert.match(calls.find(c=>c[0]==='or')[1],/sender_id.eq.me,dm_recipient_id.eq.partner/)
+ readError={code:'42501'};await assert.rejects(()=>attachMessageReplies(client,[{reply_to_id:'reply'}],scope));readError=null
 })
 test('successful channel send appears immediately without a realtime echo',async()=>{
  const ui=await mount(room());try{const field=ui.host.querySelector('textarea')!;await enter(field,'Fresh message');await submit(ui.host);assert.equal(pending.length,1);await act(async()=>pending[0].resolve({data:{id:'sent',content:'Fresh message',created_at:new Date().toISOString(),sender_id:'me'},error:null}));assert.equal(field.value,'');assert.match(ui.host.querySelector('.ss-chat-messages')!.textContent!,/Fresh message/)}finally{await ui.close()}

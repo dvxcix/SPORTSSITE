@@ -1150,10 +1150,16 @@
     "https://mobbin.com/screens/b7e81ab9-f974-4887-81da-b30970ced873"
   ],
   "tests": {
-    "focused": 39,
+    "focused": 42,
     "productionSource": 134,
     "productionLint": "passed",
     "optimizedBuild": "passed",
     "typecheck": "passed"
+  },
+  "liveFollowup": {
+    "initialDeployment": "dpl_g6kh8DGBeEAGFhgmZThgGXzdJbab",
+    "caught": "PGRST200 on self-referencing reply embeds through the live REST API",
+    "correction": "Separate RLS-scoped reply lookups for channel, direct and group history; deleted and inaccessible reply bodies omitted",
+    "schemaCacheRefresh": true
   }
 }
