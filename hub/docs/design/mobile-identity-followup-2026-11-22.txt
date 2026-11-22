@@ -22,4 +22,4 @@ Limits
 - No scoring formulas, odds freshness gates, frozen pregame data, access tiers or tool routes changed.
 
 Production
-Pending the authorized main push and live verification.
+Published from GitHub main as 93cc63e10bebfb6fce0a0b0949703cccfaa9efef. Vercel dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK is READY and owns www.slipsurge.com. Verified 2026-11-22T12:28:51.897Z. All 65 live receipts pass: profile identity/details, Feed comments, Picks/My Picks history, Watchlist and every NBA/NFL drawer tab in four theme/layout combinations, plus the six-stat/two-row mobile profile check. No live write actions were submitted. The before/after board uses actual matching profile captures. An embedded standalone HTML and captured JPG are saved in the visualization output.
