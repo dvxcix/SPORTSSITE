@@ -786,7 +786,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/admin/design-system",
@@ -1810,7 +1811,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/admin/nfl-access",
@@ -2638,7 +2640,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/admin/settings/social-login",
@@ -4358,7 +4361,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/creators/[username]",
@@ -4642,7 +4646,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/creators",
@@ -4710,7 +4715,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/creators/payouts",
@@ -4770,7 +4776,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/creators/studio",
@@ -4858,7 +4865,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/daily-recap",
@@ -5778,7 +5786,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/groups",
@@ -5842,7 +5851,8 @@
         "motion": "Shared reduced-motion CSS contract; story pause/error tests",
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
-      }
+      },
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
     },
     {
       "id": "route:/hashtag/[tag]",

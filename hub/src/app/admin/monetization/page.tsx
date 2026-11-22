@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { BadgeDollarSign, ExternalLink, Layers3, Users, WalletCards } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { creatorAdminAuth } from '@/lib/creatorAdminAuth'
-import { creatorFeePercentage, recentCreatorReceipts } from '@/lib/creatorBusiness'
+import { recentCreatorReceipts } from '@/lib/creatorBusiness'
 import { hasCurrentCreatorAccess } from '@/lib/creatorCommerce'
+import { WhopFeeSchedule } from '@/components/admin/WhopFeeSchedule'
 import { MonetizationSettingsForm } from '@/components/admin/MonetizationSettingsForm'
 
 export const dynamic = 'force-dynamic'
@@ -14,15 +15,14 @@ export default async function AdminMonetizationPage() {
   const auth = await creatorAdminAuth()
   if ('error' in auth) redirect(auth.status===401?'/auth/login':'/settings/security')
   const admin = auth.admin
-  const [creatorsResult, productsResult, entitlementsResult, eventsResult, settingResult] = await Promise.all([
+  const [creatorsResult, productsResult, entitlementsResult, eventsResult] = await Promise.all([
     admin.from('users').select('id,username,display_name,whop_connected_company_id,creator_commerce_status').in('account_type', ['creator','admin']).order('display_name'),
     admin.from('creator_products').select('id,creator_id,title,price,currency,product_type,status,updated_at').order('updated_at', { ascending: false }),
     admin.from('creator_entitlements').select('id,creator_id,product_id,status,current_period_end').in('status', activeStatuses),
     admin.from('creator_commerce_events').select('id,creator_id,product_id,event_type,amount,currency,status,created_at').order('created_at', { ascending: false }).limit(100),
-    admin.from('platform_settings').select('value,updated_at').eq('key', 'fee_independent_creator_pct').maybeSingle(),
   ])
 
-  if ([creatorsResult,productsResult,entitlementsResult,eventsResult,settingResult].some(result=>result.error)) throw new Error('Commerce data could not be loaded. Please retry.')
+  if ([creatorsResult,productsResult,entitlementsResult,eventsResult].some(result=>result.error)) throw new Error('Commerce data could not be loaded. Please retry.')
   const creators = creatorsResult.data ?? []
   const products = productsResult.data ?? []
   const entitlements = (entitlementsResult.data ?? []).filter(member=>hasCurrentCreatorAccess(member))
@@ -52,8 +52,8 @@ export default async function AdminMonetizationPage() {
       </div>
 
       <section className="mb-8">
-        <div className="mb-3"><h2 className="text-lg font-semibold text-[var(--text-1)]">Platform fee</h2><p className="mt-1 text-sm text-[var(--text-2)]">Set the default SlipSurge share for new creator offers.</p></div>
-        <MonetizationSettingsForm initial={{ fee_independent_creator_pct: creatorFeePercentage(settingResult.data?.value), updatedAt: settingResult.data?.updated_at??null }} />
+        <div className="mb-3"><h2 className="text-lg font-semibold text-[var(--text-1)]">Whop fees</h2><p className="mt-1 text-sm text-[var(--text-2)]">The existing Whop account fee policy applies to creator payments.</p></div>
+        <MonetizationSettingsForm /><WhopFeeSchedule creators={creators}/>
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">

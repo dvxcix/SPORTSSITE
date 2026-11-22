@@ -1,7 +1,10 @@
 import { CheckCircle2, WalletCards, XCircle } from 'lucide-react'
+import { creatorPlatformHealth } from '@/lib/creatorPlatformHealth'
+import { CreatorPlatformPanel } from '@/app/creators/studio/CreatorPlatformPanel'
 
 // Server component so configuration values never reach the browser.
-export default function AdminPaymentsSettingsPage() {
+export default async function AdminPaymentsSettingsPage() {
+  const platform = await creatorPlatformHealth()
   const groups = [
     {
       title: 'SlipSurge memberships',
@@ -15,8 +18,8 @@ export default function AdminPaymentsSettingsPage() {
       title: 'Creator platform',
       description: 'Connected creator companies, marketplace checkout, balances, and payouts.',
       checks: [
-        { label: 'Whop platform API key', envVar: 'WHOP_PLATFORM_API_KEY', present: !!process.env.WHOP_PLATFORM_API_KEY },
-        { label: 'Whop platform company ID', envVar: 'WHOP_PLATFORM_COMPANY_ID', present: !!process.env.WHOP_PLATFORM_COMPANY_ID },
+        { label: 'Whop platform API credentials', envVar: 'Platform key or shared Whop key', present: platform.apiConfigured },
+        { label: 'Whop platform account', envVar: 'Platform account or shared Whop account', present: platform.companyConfigured },
       ],
     },
     {
@@ -35,6 +38,7 @@ export default function AdminPaymentsSettingsPage() {
         <span className="grid h-10 w-10 place-items-center rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]"><WalletCards size={19} /></span>
         <div><h1 className="text-xl font-semibold text-[var(--text-1)]">Whop payments</h1><p className="mt-1 text-sm text-[var(--text-2)]">SlipSurge uses Whop exclusively for platform memberships, creator checkout, billing, and payouts.</p></div>
       </div>
+      <section className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className="font-semibold">Creator payments · {platform.verified && platform.accountMatches ? 'Connected' : platform.apiConfigured ? 'Verification needed' : 'Not configured'}</h2><p className="mt-2 text-sm text-[var(--text-2)]">Fees are managed in Whop. SlipSurge adds no separate application fee to creator offers.</p><CreatorPlatformPanel /></section>
 
       <div className="grid gap-4">
         {groups.map(group => <section key={group.title} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">

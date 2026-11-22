@@ -34,7 +34,7 @@ initial.blogs=initial.blog_posts.map(row=>({...row,author_id:REVIEW_USER_ID,auth
 initial.posts.forEach(row=>{row.author_id=row.user_id})
 initial.events.forEach(row=>Object.assign(row,{start_date:row.starts_at,end_date:row.ends_at,host:reviewProfile(),host_id:REVIEW_USER_ID,is_online:true,going_count:24,interested_count:18}))
 initial.pages.forEach(row=>Object.assign(row,{is_published:true,follower_count:78,category:'Sports',owner:reviewProfile()}))
-initial.creator_products=[{id:'00000000-0000-4000-8000-000000000611',creator_id:jordan.id,title:'The weekly research room',description:'Illustrative member community and research notes for this private design review.',price:19,platform_fee_amount:1.9,currency:'usd',product_type:'membership',billing_period_days:30,status:'active',whop_plan_id:'plan_review_jordan',creator:jordan,created_at:now,updated_at:now}]
+initial.creator_products=[{id:'00000000-0000-4000-8000-000000000611',creator_id:jordan.id,title:'The weekly research room',description:'Illustrative member community and research notes for this private design review.',price:19,platform_fee_amount:0,currency:'usd',product_type:'membership',billing_period_days:30,status:'active',whop_plan_id:'plan_review_jordan',creator:jordan,created_at:now,updated_at:now}]
 initial.matrix_marketplace_listings=[{id:'00000000-0000-4000-8000-000000000101',author_id:jordan.id,author:jordan,title:'A focused research workspace',description:'Illustrative shared research layout for private review.',tags:['research','community'],matrix_type:'classic',color:'#b4ff4d',status:'published',copy_count:24,published_at:now,snapshot:{version:1,name:'Focused research',color:'#b4ff4d',element_code:'SS-REVIEW',matrix_type:'classic',match_mode:'all',match_any_count:null,pipeline_scope:null,factors:[{position:1,category:'production',field_key:'average',operator:'gte',value:20,recency:'l10'}],pipeline_steps:[]}}]
 const symbol=Symbol.for('slipsurge.private-design.database.20261121')
 const state=globalThis as typeof globalThis & {[symbol]:Record<string,any[]>}
@@ -79,7 +79,7 @@ if(!table('comments').length){
   }
 }
 
-if (!table('platform_settings').some(row=>row.key==='fee_independent_creator_pct')) table('platform_settings').push({key:'fee_independent_creator_pct',value:10,updated_at:now})
+if (!table('platform_settings').some(row=>row.key==='fee_independent_creator_pct')) table('platform_settings').push({key:'fee_independent_creator_pct',value:0,updated_at:now})
 /* The creator/member journey uses realistic private, free and paid fixture states. */
 for(const group of table('groups')){group.access_type??='free';group.is_public??=true}
 for(const [groupId,channelId,slug,name,isPublic]of[
@@ -95,3 +95,8 @@ if(!table('creator_entitlements').length)table('creator_entitlements').push({id:
 if(!table('creator_commerce_events').length)table('creator_commerce_events').push({id:'00000000-0000-4000-8000-000000000802',creator_id:jordan.id,product_id:'00000000-0000-4000-8000-000000000611',event_type:'payment.succeeded',amount:19,currency:'usd',status:'active',created_at:now})
 if(!table('posts').some(post=>post.group_id==='00000000-0000-4000-8000-000000000205'))for(let index=0;index<25;index++)table('posts').push({...posts[0],id:'00000000-0000-4000-8000-'+String(2000+index).padStart(12,'0'),group_id:'00000000-0000-4000-8000-000000000205',author_id:jordan.id,content:index===24?'The first research note in this community.':`Research note ${25-index}: review the matchup and compare the market.`,post_type:index%4===0?'pick':'text',pick_data:index%4===0?table('posts').find(post=>post.pick_data)?.pick_data:null,created_at:new Date(Date.parse(now)-index*60000).toISOString()})
 for(const profile of table('users'))if(profile.account_type==='creator'){profile.creator_commerce_status??='ready';profile.creator_commerce_updated_at??=now;profile.whop_connected_company_id??='biz_review_'+profile.username.replaceAll('-','');profile.avatar_ring_style='deco:bb-swish'}
+
+/* Creator storefront journey fixtures. No provider accounts or real payment operations. */
+if(!table('creator_products').some(row=>row.creator_id===REVIEW_USER_ID))table('creator_products').push({id:'00000000-0000-4000-8000-000000000612',creator_id:REVIEW_USER_ID,title:'Weekend research club',description:'Weekly matchup notes, game-day picks and community chat.',price:24,platform_fee_amount:0,currency:'usd',product_type:'membership',billing_period_days:30,status:'draft',whop_plan_id:'plan_review_owner',created_at:now,updated_at:now})
+for(const group of table('groups'))group.access_type??='free'
+if(!table('creator_discord_integrations').length)table('creator_discord_integrations').push({id:'00000000-0000-4000-8000-000000000891',group_id:groups[0].id,creator_id:REVIEW_USER_ID,guild_id:'123456789012345678',guild_name:'NBA Lounge',role_id:'123456789012345679',role_name:'Court members',invite_url:'https://discord.gg/review-only',enabled:true})

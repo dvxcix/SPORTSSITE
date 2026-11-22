@@ -52,7 +52,14 @@ export async function handleCreatorWebhook(admin: SupabaseClient, eventId: strin
  if (ownerError || !creator?.whop_connected_company_id || membership.id !== membershipId || membership.variant_id !== product.whop_plan_id || membership.account?.id !== creator.whop_connected_company_id
    || (metadata.slipsurge_product_id && metadata.slipsurge_product_id !== product.id)
    || (metadata.slipsurge_creator_id && metadata.slipsurge_creator_id !== product.creator_id)) throw new Error('Creator provider ownership mismatch')
- const buyer = entitlement?.user_id || text(membership.metadata?.internal_user_id) || text(metadata.internal_user_id)
+ let buyer = entitlement?.user_id || text(membership.metadata?.internal_user_id) || text(metadata.internal_user_id)
+ // A direct Whop purchase may have no SlipSurge checkout metadata. Match only a verified OAuth identity.
+ if (!buyer && membership.user_id) {
+   const linked = await admin.from('users').select('id').eq('whop_user_id', membership.user_id).maybeSingle()
+   if (linked.error) throw new Error('Verified Whop identity lookup failed')
+   buyer = linked.data?.id
+   if (!buyer) return true // The member can link Whop and restore this subscription later.
+ }
  if (!buyer || !UUID.test(buyer) || (entitlement && metadata.internal_user_id && metadata.internal_user_id !== buyer)) throw new Error('Creator buyer identity unavailable')
  const state = creatorMembershipState(membership, product.product_type === 'membership')
  const money = type === 'payment.succeeded' ? creatorMoney(data.subtotal) || creatorMoney(data.total) : null

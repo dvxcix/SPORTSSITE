@@ -1,3 +1,5 @@
+import { CreatorDiscordClaim } from '@/components/creator/CreatorDiscordClaim'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getChannelMessages } from '@/lib/queries'
 import { notFound } from 'next/navigation'
@@ -123,6 +125,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       : Promise.resolve({ data: [], error: null }),
   ])
 
+  const {data:discordAccess}=isMember?await createAdminClient().from('creator_discord_integrations').select('guild_name,role_name,invite_url').eq('group_id',group.id).eq('enabled',true).maybeSingle():{data:null}
   const workspaceChannels = (groupChannels ?? []) as GroupWorkspaceChannel[]
   const activeChannel = workspaceChannels.find(item => item.slug === requestedChannel)
     ?? workspaceChannels.find(item => item.id === group.channel_id)
@@ -191,7 +194,8 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
             )}
             {user && isMember && (
-              <GroupMemberOnboarding
+
+        <GroupMemberOnboarding
                 triggerLabel={isOwner ? 'Preferences' : undefined}
                 groupId={group.id}
                 groupName={group.name}
@@ -244,6 +248,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       </div>
 
       <div className={styles.divider} />
+      {isMember&&discordAccess&&<CreatorDiscordClaim groupId={group.id} slug={group.slug} guildName={discordAccess.guild_name} roleName={discordAccess.role_name} inviteUrl={discordAccess.invite_url}/>}
 
       {!canViewContent ? (
         <div className={styles.locked}>
@@ -252,7 +257,8 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
           <span>Only members can see posts and chat here. Ask a member to invite you.</span>
         </div>
       ) : (
-        <GroupWorkspaceTabs
+
+      <GroupWorkspaceTabs
           postCount={postPage.posts.length}
           initialTab={view === 'chat' || Boolean(requestedChannel) ? 'chat' : view==='picks'?'picks':'posts'}
           posts={<div className={styles.posts}>

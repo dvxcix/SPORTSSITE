@@ -46,10 +46,10 @@ test('account readiness requires correct parent, active account and explicit car
 test('draft offer uses the current variant contract and cannot take payments before publish', () => {
  const payload=commerce.creatorOfferPayload({accountId:account,productId,creatorId,title:'Research club',description:'Notes',price:20,recurring:true,fee:2,returnUrl:'https://www.slipsurge.com/creators/access/complete'})
  assert.equal(payload.account_id,account);assert.equal(payload.variant.billing_type,'renewal');assert.equal(payload.variant.billing_period,30)
- assert.equal(payload.variant.application_fee_amount,2);assert.equal(payload.variant.stock,0);assert.equal(payload.variant.unlimited_stock,false)
+ assert.equal(payload.variant.application_fee_amount,undefined);assert.equal(payload.variant.stock,0);assert.equal(payload.variant.unlimited_stock,false)
  assert.equal(payload.plan,undefined);assert.equal(payload['Idempotency-Key'],undefined)
  const one=commerce.creatorOfferPayload({accountId:account,productId,creatorId,title:'Drop',description:null,price:10,recurring:false,fee:1,returnUrl:'https://www.slipsurge.com'})
- assert.equal(one.variant.billing_period,undefined);assert.equal(one.variant.renewal_price,undefined)
+ assert.equal(one.variant.expiration_days,30);assert.equal(one.variant.application_fee_amount,undefined);assert.equal(one.variant.billing_period,undefined);assert.equal(one.variant.renewal_price,undefined)
 })
 
 test('legacy company suffix normalizes to the current account ID without changing explicit platform identity',()=>{

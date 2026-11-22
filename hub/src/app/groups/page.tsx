@@ -11,8 +11,8 @@ export default async function GroupsPage() {
  const client=await createClient()
  const {data:{user}}=await client.auth.getUser()
  const [groups,memberships,paid,invitations,showMlb]=await Promise.all([
-  client.from('groups').select('id,slug,name,description,sport,avatar_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public').order('member_count',{ascending:false}).limit(200),
-  user?client.from('group_members').select('group_id,group:groups(id,slug,name,description,sport,avatar_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public)').eq('user_id',user.id):Promise.resolve({data:[],error:null}),
+  client.from('groups').select('id,slug,name,description,sport,avatar_url,banner_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public').order('member_count',{ascending:false}).limit(200),
+  user?client.from('group_members').select('group_id,group:groups(id,slug,name,description,sport,avatar_url,banner_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public)').eq('user_id',user.id):Promise.resolve({data:[],error:null}),
   publishedPaidCommunities(),
   user?invitedCommunityEntries(client,user.id):Promise.resolve([]),
   canViewMlb(client,user?.id),

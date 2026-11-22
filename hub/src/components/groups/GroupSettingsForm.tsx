@@ -25,7 +25,7 @@ type EditableGroup = {
   access_type?: string | null
 }
 
-export function GroupSettingsForm({ group }: { group: EditableGroup }) {
+export function GroupSettingsForm({ group, showDangerZone = true }: { group: EditableGroup; showDangerZone?: boolean }) {
   const { profile } = useAuth()
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
@@ -49,10 +49,12 @@ export function GroupSettingsForm({ group }: { group: EditableGroup }) {
   async function selectImage(kind: 'avatar' | 'banner', file?: File) {
     if (!file) return
     setUploading(kind); setError('')
-    const result = await uploadMedia(file, kind === 'avatar' ? 'avatars' : 'banners')
-    if ('error' in result) setError(result.error)
-    else setForm(current => ({ ...current, [kind === 'avatar' ? 'avatar_url' : 'banner_url']: result.publicUrl }))
-    setUploading('')
+    try {
+      const result = await uploadMedia(file, kind === 'avatar' ? 'avatars' : 'banners')
+      if ('error' in result) setError(result.error)
+      else { setForm(current => ({ ...current, [kind === 'avatar' ? 'avatar_url' : 'banner_url']: result.publicUrl })); setSaved(false) }
+    } catch { setError('Image could not be uploaded. Try again.') }
+    finally { setUploading('') }
   }
 
   async function save(event: React.FormEvent) {
@@ -155,7 +157,7 @@ export function GroupSettingsForm({ group }: { group: EditableGroup }) {
         {saved ? <><Check size={15} /> Saved</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Save size={16} /> Save changes</>}
       </button>
 
-      <section className="ss-danger-card">
+      {showDangerZone&&<section className="ss-danger-card">
         <h3 className="font-bold text-[var(--red)] mb-2">Danger Zone</h3>
         <p className="text-xs text-[var(--text-3)] mb-3">Permanently delete this group and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (
@@ -170,7 +172,7 @@ export function GroupSettingsForm({ group }: { group: EditableGroup }) {
             <Trash2 size={14} /> Delete group
           </button>
         )}
-      </section>
+      </section>}
     </form>
   )
 }

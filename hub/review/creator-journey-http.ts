@@ -5,6 +5,17 @@ import {readFeedCursor} from '../src/lib/feedPagination'
 export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
  const path=request.nextUrl.pathname,user=authUser(role),profile=reviewProfile(role)
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
+ if(path==='/api/creator/members')return json({members:table('creator_entitlements').filter(row=>row.creator_id===user?.id).map(row=>({...row,product:table('creator_products').find(product=>product.id===row.product_id),member:table('users').find(member=>member.id===row.user_id)}))})
+ if(path==='/api/admin/creator-fees')return json({rows:[{label:'platform processing',percentage:2,fixed:null,source:'Illustrative review'}],checkedAt:new Date().toISOString()})
+ if(/^\/api\/creator\/products\/[^/]+\/restore$/.test(path))return json({state:'link_required'})
+ if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true})
+ if(/^\/api\/groups\/[^/]+\/discord$/.test(path)){
+  const groupId=path.split('/')[3]
+  if(request.method==='GET'&&request.nextUrl.searchParams.has('guildId'))return json({guildId:request.nextUrl.searchParams.get('guildId'),guildName:'NBA Lounge',roles:[{id:'123456789012345679',name:'Court members'}]})
+  if(request.method==='GET')return json({configured:true,applicationId:null,integration:table('creator_discord_integrations').find(row=>row.group_id===groupId&&row.enabled)||null})
+  if(request.method==='POST'){const body=await request.json();const row=table('creator_discord_integrations').find(row=>row.group_id===groupId);if(row)Object.assign(row,{guild_id:body.guildId,role_id:body.roleId,invite_url:body.inviteUrl,enabled:true});return json({ok:true})}
+  if(request.method==='DELETE'){const row=table('creator_discord_integrations').find(row=>row.group_id===groupId);if(row)row.enabled=false;return json({ok:true})}
+ }
  if(path==='/api/review/mutation'&&request.method==='POST'){
   if(!user)return json({error:'Sign in required.'},401)
   const input=await request.json(),allowed=['posts','messages','comments','group_member_preferences','group_channel_preferences']
@@ -34,12 +45,7 @@ export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
   invite.status=input.accept?'accepted':'declined';if(input.accept)enroll(group,true)
   return json({accepted:input.accept,slug:group.slug})
  }
- if(path==='/api/admin/platform-settings'&&request.method==='PATCH'){
-  if(role!=='admin')return json({error:'Admin access required.'},403)
-  const input=await request.json(),setting=table('platform_settings').find(row=>row.key==='fee_independent_creator_pct')!
-  if(setting.updated_at!==input.expectedUpdatedAt)return json({error:'The rate changed. Reload before saving.'},409)
-  setting.value=input.value;setting.updated_at=new Date().toISOString();return json({setting})
- }
+ if(path==='/api/admin/platform-settings'&&request.method==='PATCH')return json({error:'Creator fees are managed in Whop.'},410)
  if(path==='/api/admin/creators/manage'&&request.method==='POST'){
   if(role!=='admin')return json({error:'Admin access required.'},403)
   const input=await request.json()

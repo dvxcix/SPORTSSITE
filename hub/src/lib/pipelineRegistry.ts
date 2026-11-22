@@ -62,6 +62,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'nfl-sync-advanced', label: 'NFL advanced statistics', schedule: 'Every 3 hours', staleAfterMinutes: 210, area: 'NFL data' },
   { name: 'nfl-compute-dvp', label: 'NFL defense vs position', schedule: 'Twice daily', staleAfterMinutes: daily, area: 'NFL data' },
   { name: 'whop-reconcile', label: 'Whop plan reconciliation', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'Billing' },
+  { name: 'creator-discord', label: 'Creator Discord membership access', schedule: 'Every minute; active roles rechecked every 5 minutes', staleAfterMinutes: everyMinute, area: 'Billing' },
   { name: 'whop-addon-reconcile', label: 'Whop add-on reconciliation', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'Billing' },
   { name: 'replay-operational-retries', label: 'External delivery replay', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'Maintenance' },
   { name: 'process-contact-recap-exports', label: 'Contact recap exports', schedule: 'Every minute', staleAfterMinutes: 5, area: 'Maintenance' },

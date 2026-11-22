@@ -1,0 +1,154 @@
+{
+  "date": "2026-11-23",
+  "scope": "Creator storefronts, communities, Whop access and Discord delivery",
+  "state": "Implemented; final release verification in progress",
+  "supersedes": "The local percentage-fee editor and 10% statements in creator-business-journey-2026-11-22 are historical and retired.",
+  "checklist": [
+    {
+      "id": "workspace",
+      "change": "Separate Overview, Products, Communities, Members, Content, Payments & settings; six visible mobile sections",
+      "status": "Implemented"
+    },
+    {
+      "id": "products",
+      "change": "Details, Pricing, Review; 7/30/90/365-day recurring or finite one-time access; durable draft retries and publication guards",
+      "status": "Implemented"
+    },
+    {
+      "id": "fees",
+      "change": "No additional application_fee_amount; local fee retired; provider fee schedule read-only in business administration",
+      "status": "Tested"
+    },
+    {
+      "id": "connection",
+      "change": "Admin connection uses the runtime credential/account fallback and an actual account health check",
+      "status": "Tested"
+    },
+    {
+      "id": "branding",
+      "change": "Creator banner and profile identity; independent community banner/avatar editing in Studio and onboarding",
+      "status": "Implemented"
+    },
+    {
+      "id": "discovery",
+      "change": "Branded free/paid community cards, search and sport filters; membership options lead the storefront",
+      "status": "Implemented"
+    },
+    {
+      "id": "restore",
+      "change": "Verified Whop identity restores only the exact child-account product membership; active paused-product members retain an entry point",
+      "status": "Tested"
+    },
+    {
+      "id": "members",
+      "change": "Searchable paid-member roster with effective expiry status; retained invitations, community roles and channels",
+      "status": "Implemented"
+    },
+    {
+      "id": "discord-setup",
+      "change": "Verified Discord identity and server management; bot hierarchy and safe role mapping; creator-specific validated invite",
+      "status": "Tested"
+    },
+    {
+      "id": "discord-access",
+      "change": "Whop verification before paid role delivery, admin holds, expiry, identity unlink, community deletion, durable retry and lease/version fencing",
+      "status": "Tested"
+    },
+    {
+      "id": "content",
+      "change": "Posts, Picks and Live chat retained; content calendar in its own area; private post/chat and publishing journey exercised",
+      "status": "Private browser tested"
+    },
+    {
+      "id": "release",
+      "change": "Canonical GitHub main, Ready Vercel production, live desktop/mobile Light/Dark checks",
+      "status": "Pending release verification"
+    }
+  ],
+  "automated": {
+    "creatorTests": 53,
+    "transactionTests": "Isolated PGlite Postgres, actual migration SQL, complete rollback",
+    "productionSmoke": 134,
+    "typecheck": "Passed",
+    "sourceLint": "Passed",
+    "fixtureLint": "Existing any-based adapter linted with only no-explicit-any disabled"
+  },
+  "database": {
+    "project": "hkldweedwnxartkfhror",
+    "migrations": [
+      "20261122213606_creator_discord_delivery",
+      "20261122225744_creator_discord_verified_delivery"
+    ],
+    "liveVerification": "RLS enabled; browser table/function writes denied; fee editor execution retired; scoped queue leases and persisted access gates confirmed; zero fixture products/integrations/jobs",
+    "liveRollbackConnector": "Did not execute: connector confirmation expired twice. Transaction behavior was instead verified in isolated Postgres. No production test mutation is claimed."
+  },
+  "limits": [
+    "No real financial account, purchase, payout, external member post/message or Discord role was created for QA.",
+    "Creators perform their own Whop identity/payout verification and Discord bot consent.",
+    "Existing unrelated database advisories and frozen sports research were left outside this release."
+  ],
+  "references": [
+    {
+      "app": "Whop product setup",
+      "url": "https://mobbin.com/flows/46526620-883c-4d77-9e27-cdc5483d5490?tab=screens"
+    },
+    {
+      "app": "Whop community",
+      "url": "https://mobbin.com/screens/fe9ec45c-697b-4d40-aa50-d2a51c47661b"
+    },
+    {
+      "app": "Whop discovery",
+      "url": "https://mobbin.com/screens/edbdc844-5a99-4d6b-afeb-33b9a331abf4"
+    },
+    {
+      "app": "Buy Me a Coffee creator workspace",
+      "url": "https://mobbin.com/screens/d39e3c28-e4a6-4144-8e8a-8fa5cc5324bf"
+    },
+    {
+      "app": "DubClub discovery",
+      "url": "https://dubclub.win/discover/"
+    },
+    {
+      "app": "Whop official current API contract",
+      "url": "https://api.whop.com/api/v1/openapi.json"
+    },
+    {
+      "app": "Discord permissions and role hierarchy",
+      "url": "https://docs.discord.com/developers/topics/permissions"
+    }
+  ],
+  "designDecisions": [
+    {
+      "problem": "One long Studio mixed billing, community management, analytics and a large calendar",
+      "decision": "Six work areas and a staged product form; all six navigation links visible on phones",
+      "references": [
+        "Whop product setup",
+        "Buy Me a Coffee creator workspace"
+      ],
+      "preserved": "Publishing, pause/retry, payouts, analytics and scheduled content"
+    },
+    {
+      "problem": "Community discovery lacked branding and paid member entry",
+      "decision": "Branded community cards with free/paid access, search and sport filters; discovery leads the Community page",
+      "references": [
+        "Whop discovery",
+        "Whop community",
+        "DubClub discovery"
+      ],
+      "preserved": "Private free-space privacy, invitations, posts, picks and chat"
+    },
+    {
+      "problem": "Generic storefront content pushed membership options below secondary blocks",
+      "decision": "Memberships lead the storefront; community cards and about sections have direct navigation",
+      "references": [
+        "Whop community",
+        "DubClub discovery"
+      ],
+      "preserved": "Creator identity, brand assets, product pricing and member destinations"
+    }
+  ],
+  "droppedReferences": [
+    "HubSpot, Zendesk and Jira app marketplaces: wrong discovery domain.",
+    "Patreon physical-merchandise flow: irrelevant physical delivery steps."
+  ]
+}

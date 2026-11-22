@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { syncDiscordIdentity } from '@/lib/discord'
 import { extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,7 @@ export async function POST() {
     .eq('id', user.id)
   if (updateError) return NextResponse.json({ error: 'Could not update profile identities' }, { status: 500 })
 
+  await syncDiscordIdentity(admin, user.id)
   return NextResponse.json({ identities: next }, {
     headers: { 'Cache-Control': 'private, no-store, max-age=0' },
   })

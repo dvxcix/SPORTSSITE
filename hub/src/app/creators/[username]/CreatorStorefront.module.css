@@ -14,3 +14,7 @@
 
 /* Keep commerce readable in the same application shell. */
 .page{background:var(--bg)}.hero{border-radius:10px;box-shadow:none;background:var(--surface);padding:24px}.hero h1{font-size:32px;line-height:1.15;letter-spacing:-.025em}.hero>div>span,.eyebrow,.kicker{letter-spacing:0;text-transform:none}.card,.panel,.section,.locked{border-radius:10px;box-shadow:none}.actions>a,.actions>button,.productActions>button{min-height:44px;border-radius:8px;box-shadow:none}.stats{gap:10px}@media(max-width:767px){.hero{padding:18px}.hero h1{font-size:27px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats>div{padding:14px}.hero p{font-size:14px}}
+
+.storeCover{height:clamp(150px,20vw,260px);overflow:hidden;margin-bottom:-1px;border:1px solid var(--border);border-radius:16px 16px 0 0}.storeCover img{width:100%;height:100%;object-fit:cover}.storeCover+.hero{border-radius:0 0 16px 16px}.storeCommunities{margin:30px 0}.storeCommunities>h2{font-size:22px;font-weight:650;letter-spacing:-.02em}
+
+.storeNav{display:flex;gap:20px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:1px solid var(--border)}.storeNav a{display:inline-flex;align-items:center;min-height:44px;color:var(--text-1);font-size:14px;font-weight:550}.storeNav a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.storeCommunities>h2{margin-bottom:18px}.content,.storeCommunities,.about{scroll-margin-top:130px}.about a{display:inline-flex;align-items:center;min-height:44px;margin-top:10px;color:var(--accent);font-size:13px}

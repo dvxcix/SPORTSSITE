@@ -32,15 +32,16 @@ export function hasCurrentCreatorAccess(record: { status: string; current_period
     && (record.current_period_end == null || Date.parse(record.current_period_end) > now)
 }
 
-export function creatorOfferPayload(input: { accountId: string; productId: string; creatorId: string; title: string; description: string | null; price: number; recurring: boolean; fee: number; returnUrl: string }) {
+export function creatorOfferPayload(input: { accountId: string; productId: string; creatorId: string; title: string; description: string | null; price: number; recurring: boolean; billingDays?: number; returnUrl: string }) {
   const metadata = { slipsurge_product_id: input.productId, slipsurge_creator_id: input.creatorId }
   return {
     account_id: input.accountId, redirect_url: input.returnUrl, metadata,
     variant: {
       title: input.title, description: input.description, initial_price: input.price,
       billing_type: input.recurring ? 'renewal' : 'one_time',
-      ...(input.recurring ? { billing_period: 30, renewal_price: input.price } : {}),
-      currency: 'usd', application_fee_amount: input.fee, metadata,
+      ...(input.recurring ? { billing_period: input.billingDays ?? 30, renewal_price: input.price } : { expiration_days: input.billingDays ?? 30 }),
+      // Whop account fees already include the platform's agreed share. Do not add an application fee.
+      currency: 'usd', metadata,
       visibility: 'hidden', stock: 0, unlimited_stock: false,
     },
   }

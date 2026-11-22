@@ -62,14 +62,10 @@ test('a failed local publish compensates by closing provider stock',async()=>{
  assert.equal(fixture.provider.length,2);assert.equal(fixture.provider[1].body.unlimited_stock,false);assert.equal(fixture.provider[1].body.stock,0)
 })
 test('missing offers cannot return a successful update',async()=>{await assert.rejects(offerFixture({missing:true}).run('active'),error=>error.status===404)})
-test('fee endpoint rejects coerced values and stale admin forms',async()=>{
- const admin=db(()=>({data:null,error:{code:'40001'}}))
- const route=compile('src/app/api/admin/platform-settings/route.ts',{'next/server':json,'@/lib/creatorAdminAuth':{creatorAdminAuth:async()=>({user:{id:userId},admin})},'@/lib/creatorBusiness':business,'@/lib/safeApiError':{safeApiError:()=>Response.json({error:'Unavailable'},{status:503})}})
- const request=value=>new Request('https://www.slipsurge.com/api/admin/platform-settings',{method:'PATCH',body:JSON.stringify(value)})
- for(const value of['',null,'10',100])assert.equal((await route.PATCH(request({key:'fee_independent_creator_pct',value,expectedUpdatedAt:'2026-11-22T00:00:00Z'}))).status,400)
- assert.equal(admin.calls.length,0)
- assert.equal((await route.PATCH(request({key:'fee_independent_creator_pct',value:12.5,expectedUpdatedAt:'2026-11-22T00:00:00Z'}))).status,409)
- assert.equal(admin.calls[0].rpc,'creator_admin_update_fee');assert.equal(admin.calls[0].args.p_actor,userId)
+test('retired local fee endpoint cannot add a second platform percentage',async()=>{
+ const admin=db(()=>{throw new Error('No local fee writes allowed')})
+ const route=compile('src/app/api/admin/platform-settings/route.ts',{'next/server':json,'@/lib/creatorAdminAuth':{creatorAdminAuth:async()=>({user:{id:userId},admin})}})
+ assert.equal((await route.PATCH()).status,410);assert.equal(admin.calls.length,0)
 })
 test('fee and access management are service-only invokers, with persisted holds and atomic audit writes',()=>{
  const sql=read('supabase/migrations/20261122164203_creator_business_journey_controls.sql')

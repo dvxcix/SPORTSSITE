@@ -15,14 +15,12 @@ function requestClock() {
 export default async function CreatorStudioPage() {
   const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/auth/login?next=/creators/studio')
   const admin = createAdminClient()
-  const { data: fee, error: feeError } = await admin.from('platform_settings').select('value').eq('key', 'fee_independent_creator_pct').single()
-  if (feeError || !Number.isFinite(Number(fee?.value))) throw new Error('Creator platform fee could not be loaded.')
   const now = requestClock()
   const ninetyDaysAgo = new Date(now - 90 * 86400_000).toISOString()
   const [{ data: profile }, { data: products }, { data: groups }, { data: entitlements }, { data: events }, { data: scheduledPosts }, { data: funnelEvents }, { data: creatorPosts }] = await Promise.all([
     admin.from('users').select('id,username,display_name,account_type,whop_connected_company_id,creator_commerce_status,follower_count').eq('id', user.id).single(),
-    supabase.from('creator_products').select('id,title,description,price,product_type,status,purchase_url,created_at,whop_plan_id,platform_fee_amount').eq('creator_id', user.id).order('created_at', { ascending: false }),
-    supabase.from('groups').select('id,name,slug,emoji,access_type,creator_product_id').eq('owner_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('creator_products').select('id,title,description,price,product_type,status,purchase_url,created_at,whop_plan_id,platform_fee_amount,billing_period_days').eq('creator_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('groups').select('id,name,slug,emoji,access_type,creator_product_id,description,sport,avatar_url,banner_url,is_public,rules').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('creator_entitlements').select('id,status,created_at,updated_at,current_period_end,product_id').eq('creator_id', user.id),
     supabase.from('creator_commerce_events').select('id,event_type,amount,currency,status,created_at,product_id').eq('creator_id', user.id).order('created_at', { ascending: false }).limit(1000),
     supabase.from('creator_scheduled_posts').select('id,group_id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').eq('creator_id', user.id).in('status', ['draft', 'scheduled', 'failed']).order('scheduled_for', { ascending: true }).limit(50),
@@ -82,5 +80,5 @@ export default async function CreatorStudioPage() {
       }
     }),
   }
-  return <CreatorStudioClient profile={{ username: profile.username, account_type: profile.account_type }} feePercentage={Number(fee.value)} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={(scheduledPosts ?? []).filter(post => !MLB_HIBERNATING || profile.account_type === 'admin' || post.sport?.toUpperCase() !== 'MLB')} mlbAccess={!MLB_HIBERNATING || profile.account_type === 'admin'} />
+  return <CreatorStudioClient profile={{ username: profile.username, account_type: profile.account_type }} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={(scheduledPosts ?? []).filter(post => !MLB_HIBERNATING || profile.account_type === 'admin' || post.sport?.toUpperCase() !== 'MLB')} mlbAccess={!MLB_HIBERNATING || profile.account_type === 'admin'} />
 }

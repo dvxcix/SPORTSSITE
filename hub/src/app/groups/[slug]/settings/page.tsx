@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
+import { CreatorDiscordSetup } from '@/components/creator/CreatorDiscordSetup'
 import { GroupSettingsForm } from '@/components/groups/GroupSettingsForm'
 import Link from 'next/link'
 import { ArrowLeft, Settings2 } from 'lucide-react'
@@ -63,7 +64,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       <Link href={`/groups/${slug}`} className="ss-flow-back"><ArrowLeft size={15} /> {group.name}</Link>
       <header className="ss-flow-heading"><span><Settings2 size={19} /></span><div><p>Community controls</p><h1>Group settings</h1></div></header>
       <nav className="ss-settings-jump" aria-label="Community settings sections">{isOwner && <a href="#profile">Overview</a>}{canManageChannels && <a href="#channels">Channels</a>}{canManageRoles && <a href="#roles">Roles</a>}{canManageMembers && <a href="#members">Members</a>}</nav>
-      {isOwner && <div id="profile"><GroupSettingsForm group={group} /></div>}
+      {isOwner && <div id="profile"><GroupSettingsForm group={group} /><CreatorDiscordSetup groupId={group.id}/></div>}
       {canManageChannels && <div id="channels"><GroupChannelManager groupId={group.id} primaryChannelId={group.channel_id} initialChannels={(channels ?? []) as ManagedGroupChannel[]} /></div>}
       {canManageRoles && <GroupRoleManager groupId={group.id} initialRoles={(roles ?? []) as CommunityRole[]} initialAssignments={(assignments ?? []) as CommunityRoleAssignment[]} initialOverrides={(overrides ?? []) as CommunityChannelOverride[]} members={memberRows} channels={(channels ?? []) as ManagedGroupChannel[]} />}
       {canManageMembers && <div id="members"><GroupMemberManager groupId={group.id} initialMembers={memberRows} canChangeSystemRoles={isOwner} /></div>}

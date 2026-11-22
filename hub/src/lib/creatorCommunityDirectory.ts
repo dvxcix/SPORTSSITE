@@ -2,10 +2,10 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from './supabase/admin'
 
-const ENTRY_FIELDS='id,slug,name,description,sport,avatar_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public'
-export type CommunityDirectoryEntry={id:string;slug:string;name:string;description:string|null;sport:string|null;avatar_url:string|null;emoji:string|null;member_count:number;owner_id:string;creator_product_id:string|null;access_type:string;is_public:boolean;price?:number;billing_period_days?:number|null;product_type?:string;invitationId?:string}
+const ENTRY_FIELDS='id,slug,name,description,sport,avatar_url,banner_url,emoji,member_count,owner_id,creator_product_id,access_type,is_public'
+export type CommunityDirectoryEntry={id:string;slug:string;name:string;description:string|null;sport:string|null;avatar_url:string|null;banner_url?:string|null;emoji:string|null;member_count:number;owner_id:string;creator_product_id:string|null;access_type:string;is_public:boolean;price?:number;billing_period_days?:number|null;product_type?:string;invitationId?:string}
 function directoryCard(group:CommunityDirectoryEntry):CommunityDirectoryEntry{
- return {id:group.id,slug:group.slug,name:group.name,description:group.description,sport:group.sport,avatar_url:group.avatar_url,emoji:group.emoji,member_count:group.member_count,owner_id:group.owner_id,creator_product_id:group.creator_product_id,access_type:group.access_type,is_public:group.is_public}
+ return {id:group.id,slug:group.slug,name:group.name,description:group.description,sport:group.sport,avatar_url:group.avatar_url,banner_url:group.banner_url,emoji:group.emoji,member_count:group.member_count,owner_id:group.owner_id,creator_product_id:group.creator_product_id,access_type:group.access_type,is_public:group.is_public}
 }
 
 /** Publication exposes this small directory card, never content, rules, rosters or private free spaces. */

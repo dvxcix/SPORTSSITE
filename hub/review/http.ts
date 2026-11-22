@@ -37,7 +37,7 @@ export async function reviewHttp(request:NextRequest){
  if(/^\/api\/creator\/products\/[^/]+\/access$/.test(path))return json({active:true,status:'active',destination:'/groups/nba-lounge',name:'NBA Lounge'})
  if(path==='/api/creator/products'&&request.method==='POST'){
   const input=await request.json(),rows=table('creator_products')
-  if(!rows.some(row=>row.id===input.requestId))rows.push({id:input.requestId,creator_id:authUser(role)?.id,title:input.title,description:input.description,price:input.price,currency:'usd',product_type:input.productType,status:'draft',whop_plan_id:'plan_review',created_at:new Date().toISOString()})
+  if(!rows.some(row=>row.id===input.requestId))rows.push({id:input.requestId,creator_id:authUser(role)?.id,title:input.title,description:input.description,price:input.price,currency:'usd',product_type:input.productType,billing_period_days:input.billingDays||30,status:'draft',whop_plan_id:'plan_review',created_at:new Date().toISOString()})
   return json({id:input.requestId,status:'draft'})
  }
  if(path==='/api/creator/products'&&request.method==='PATCH'){

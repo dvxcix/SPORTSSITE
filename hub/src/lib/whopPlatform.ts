@@ -1,7 +1,6 @@
 import 'server-only'
 import Whop from '@whop/sdk'
 import { WHOP_API_URL, WHOP_SDK_API_VERSION } from './whopApi'
-import { creatorFeeAmount } from './creatorBusiness'
 export { PLATFORM_URL } from '@/lib/platform'
 
 export function getWhopPlatform() {
@@ -19,7 +18,9 @@ export function getWhopPlatformCompanyId() {
   throw new Error('WHOP_PLATFORM_COMPANY_ID is invalid')
 }
 
-export function creatorFee(price: number, percentage: number) {
-  return creatorFeeAmount(price, percentage)
+export function whopPlatformConfiguration() {
+  let companyConfigured = false
+  try { companyConfigured = !!getWhopPlatformCompanyId() } catch { /* Invalid and missing IDs are both unconfigured. */ }
+  return { apiConfigured: !!(process.env.WHOP_PLATFORM_API_KEY || process.env.WHOP_API_KEY), companyConfigured }
 }
 

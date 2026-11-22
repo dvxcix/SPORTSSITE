@@ -1,0 +1,43 @@
+SlipSurge creator storefront and membership journey | 23 November 2026
+
+This replaces the previous local percentage-fee editor. Whop account fees already apply; no separate application_fee_amount is sent. No existing creator offers needed repricing: live preflight found zero products.
+
+Implemented checklist
+- workspace: Separate Overview, Products, Communities, Members, Content, Payments & settings; six visible mobile sections
+- products: Details, Pricing, Review; 7/30/90/365-day recurring or finite one-time access; durable draft retries and publication guards
+- fees: No additional application_fee_amount; local fee retired; provider fee schedule read-only in business administration
+- connection: Admin connection uses the runtime credential/account fallback and an actual account health check
+- branding: Creator banner and profile identity; independent community banner/avatar editing in Studio and onboarding
+- discovery: Branded free/paid community cards, search and sport filters; membership options lead the storefront
+- restore: Verified Whop identity restores only the exact child-account product membership; active paused-product members retain an entry point
+- members: Searchable paid-member roster with effective expiry status; retained invitations, community roles and channels
+- discord-setup: Verified Discord identity and server management; bot hierarchy and safe role mapping; creator-specific validated invite
+- discord-access: Whop verification before paid role delivery, admin holds, expiry, identity unlink, community deletion, durable retry and lease/version fencing
+- content: Posts, Picks and Live chat retained; content calendar in its own area; private post/chat and publishing journey exercised
+- release: Canonical GitHub main, Ready Vercel production, live desktop/mobile Light/Dark checks
+
+Validation
+134/134 production smoke checks and 53/53 creator-commerce tests passed. The actual two migrations also passed isolated Postgres transaction tests for owner-only configuration, private paid access, admin holds, late webhooks, unchanged-state checks, delivery leases, version changes, retry backoff, expiry and deletion cleanup. All fixtures rolled back.
+TypeScript and changed application source lint passed. The established any-based private review adapters were checked separately with their no-explicit-any rule disabled. Private review builds use no service credentials.
+Live database inspection verified RLS, service-only write/function privileges, retired local-fee execution, queue scope, stored-state gating and zero fixture products/integrations/jobs. The connector's live rollback confirmation expired twice; no live rollback execution is claimed. The transaction tests were moved to isolated Postgres.
+The new queue tables intentionally have no browser RLS policies. The two related informational advisor notices reflect their server-only design.
+
+Browser review
+Private built application exercised staged product creation, paid-community creation, publication, member post creation, group chat send, member filtering, Whop-link entry, creator Discord setup and member role-claim UI. These operations used illustrative data only. Desktop and 390px phone layouts were checked in Light and Dark. Final live route receipts are appended to the companion JSON after rollout.
+
+References
+Whop product setup: https://mobbin.com/flows/46526620-883c-4d77-9e27-cdc5483d5490?tab=screens
+Whop community: https://mobbin.com/screens/fe9ec45c-697b-4d40-aa50-d2a51c47661b
+Whop discovery: https://mobbin.com/screens/edbdc844-5a99-4d6b-afeb-33b9a331abf4
+Buy Me a Coffee creator workspace: https://mobbin.com/screens/d39e3c28-e4a6-4144-8e8a-8fa5cc5324bf
+DubClub discovery: https://dubclub.win/discover/
+Whop official current API contract: https://api.whop.com/api/v1/openapi.json
+Discord permissions and role hierarchy: https://docs.discord.com/developers/topics/permissions
+
+Scope limits
+- No real financial account, purchase, payout, external member post/message or Discord role was created for QA.
+- Creators perform their own Whop identity/payout verification and Discord bot consent.
+- Existing unrelated database advisories and frozen sports research were left outside this release.
+
+Applied migrations: 20261122213606_creator_discord_delivery, 20261122225744_creator_discord_verified_delivery. Do not replay these or historical migrations.
+Publication: awaiting the final canonical-main deployment receipt.

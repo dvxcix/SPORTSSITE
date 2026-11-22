@@ -45,7 +45,8 @@ class Query {
   if(!this.service&&this.name==='groups')all=all.filter(canView)
   if(!this.service&&['posts','channels','group_members'].includes(this.name))all=all.filter(row=>!row.group_id||canView(table('groups').find(group=>group.id===row.group_id)))
   if(this.name==='group_members')all=all.map(row=>({...row,group:table('groups').find(group=>group.id===row.group_id),user:table('users').find(profile=>profile.id===row.user_id)}))
-  if(this.name==='creator_entitlements')all=all.map(row=>({...row,member:table('users').find(profile=>profile.id===row.user_id)}))
+  if(this.name==='creator_products')all=all.map(row=>({...row,creator:row.creator_id===viewer?reviewProfile(this.role):table('users').find(profile=>profile.id===row.creator_id)}))
+  if(this.name==='creator_entitlements')all=all.map(row=>({...row,product:table('creator_products').find(product=>product.id===row.product_id),member:table('users').find(profile=>profile.id===row.user_id)}))
   if(this.name==='posts')all=all.map(row=>({...row,author:row.author||table('users').find(profile=>profile.id===row.author_id)}))
   if(this.name==='messages')all=all.map(row=>({...row,sender:row.sender||table('users').find(profile=>profile.id===row.sender_id)}))
   if(typeof document!=='undefined'&&this.operation!=='read'&&['posts','messages','comments','group_member_preferences','group_channel_preferences'].includes(this.name)){
