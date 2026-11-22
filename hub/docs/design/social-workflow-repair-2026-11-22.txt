@@ -49,3 +49,9 @@ Live follow-up: the first deployment exposed PGRST200 on the reply-to self
 relationship in the live REST schema cache. Cache refresh alone did not resolve
 it. Channel, DM and group replies now use separate context-scoped, ordinary-RLS
 queries. Deleted or inaccessible reply bodies are omitted. No grants were widened.
+
+Published source: 45b85c3bd93132044dc3e339fa81309a3e52ba65
+Production: dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A (READY; www.slipsurge.com)
+52 live layout receipts, all six public rooms, live authenticated member search,
+watchlist entry and narrow-phone badge containment passed. 18 checklist entries
+updated. Existing owner approvals preserved.

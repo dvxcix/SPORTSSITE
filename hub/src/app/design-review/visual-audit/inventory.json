@@ -3000,7 +3000,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3014,13 +3014,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/bookmarks",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/bookmarks"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/bookmarks",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3044,7 +3045,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3058,13 +3059,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/channels/[slug]",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/channels/[slug]"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/channels/[slug]",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3088,7 +3090,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3102,13 +3104,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/channels",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/channels"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/channels",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3132,7 +3135,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3146,13 +3149,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/community",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/community"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/community",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3754,7 +3758,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Feed filters and all four composer modes reviewed in four layouts. Grouped stories retain every slide; audience controls and suggested-member identity are clearer. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Feed filters and all four composer modes reviewed in four layouts. Grouped stories retain every slide; audience controls and suggested-member identity are clearer. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3772,13 +3776,14 @@
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/feed",
-      "docs/design/mobile-identity-followup-2026-11-22.json#route:/feed"
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/feed",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -3973,7 +3978,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3989,13 +3994,14 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/[slug]"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/[slug]",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -4020,7 +4026,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4035,13 +4041,14 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/[slug]/settings",
       "docs/design/avatar-decoration-release-2026-11-21.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/[slug]/settings"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/[slug]/settings",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -4066,7 +4073,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4080,13 +4087,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups/create",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/create"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups/create",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4110,7 +4118,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4124,13 +4132,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/groups",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/groups",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4419,7 +4428,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4433,13 +4442,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/[username]",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/[username]"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/[username]",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4463,7 +4473,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4477,13 +4487,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/group/[id]",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/group/[id]"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/group/[id]",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4507,7 +4518,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4521,13 +4532,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages/new",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/new"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/new",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4551,7 +4563,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4565,13 +4577,14 @@
     "evidence": [
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/messages",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/messages",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -5300,7 +5313,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: All visible sport filters reviewed. Trending cards retain player/team artwork, source book and original price, with image fallback. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: All visible sport filters reviewed. Trending cards retain player/team artwork, source book and original price, with image fallback. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5317,13 +5330,14 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/picks",
-      "docs/design/mobile-identity-followup-2026-11-22.json#route:/picks"
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/picks",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "member-experience-2026-11-21",
@@ -5646,7 +5660,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Six tabs, own-profile layout and More actions reviewed. Arrow navigation and Escape restore focus. Phone identity controls fit at 320px. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Six tabs, own-profile layout and More actions reviewed. Arrow navigation and Escape restore focus. Phone identity controls fit at 320px. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -5664,13 +5678,14 @@
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/profile/[username]",
-      "docs/design/mobile-identity-followup-2026-11-22.json#route:/profile/[username]"
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/profile/[username]",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -6240,7 +6255,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Reviewed field labels, appearance, account controls, readable inputs and touch targets; credentials and access were not changed. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Four-layout follow-up review completed. Profile editing also has a reachable Save bar, avatar previews and unobstructed VOLT placement. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -6257,13 +6272,14 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/profile"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/profile",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -10436,7 +10452,7 @@
     "kind": "Shared surface",
     "status": "Approved",
     "batch": 1,
-    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Profile geometry, suggested-member badges and avatar style search/Heat Check previews reviewed. Existing 50-decoration receipts remain intact. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Ring stacking, original artwork proportions, paired tier ink, badge request recovery and all assignment pages. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch. Member experience pass: individual four-layout and interaction receipts recorded in the scoped checklist. 2026-11-22 member follow-up: Profile geometry, suggested-member badges and avatar style search/Heat Check previews reviewed. Existing 50-decoration receipts remain intact. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -10456,13 +10472,14 @@
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#shared:Member identity, avatar rings and badges",
-      "docs/design/mobile-identity-followup-2026-11-22.json#shared:Member identity, avatar rings and badges"
+      "docs/design/mobile-identity-followup-2026-11-22.json#shared:Member identity, avatar rings and badges",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -10522,7 +10539,7 @@
     "kind": "Shared surface",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Ctrl+K closes top-bar suggestions, opens one focused command dialog, and finds The Court. Empty results and Escape tested. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit.",
+    "notes": "Ctrl+K closes top-bar suggestions, opens one focused command dialog, and finds The Court. Empty results and Escape tested. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -10537,13 +10554,14 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#shared:Global search",
       "docs/design/avatar-decoration-release-2026-11-21.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#shared:Global search"
+      "docs/design/full-mobile-audit-2026-11-22.json#shared:Global search",
+      "docs/design/social-workflow-repair-2026-11-22.json"
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+      "verifiedAt": "2026-11-22T13:33:13.202Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",

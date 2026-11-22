@@ -2,7 +2,11 @@
   "date": "2026-11-22",
   "scope": "Social discovery, member badges, channels, direct and group messaging, group directories and creation",
   "release": {
-    "state": "Prepared"
+    "state": "Live",
+    "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
+    "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
+    "verifiedAt": "2026-11-22T13:33:13.202Z",
+    "url": "https://www.slipsurge.com"
   },
   "privateLayouts": [
     {
@@ -1153,13 +1157,1303 @@
     "focused": 42,
     "productionSource": 134,
     "productionLint": "passed",
-    "optimizedBuild": "passed",
-    "typecheck": "passed"
+    "optimizedBuild": "Passed locally and on the live Vercel source",
+    "typecheck": "Passed"
   },
   "liveFollowup": {
     "initialDeployment": "dpl_g6kh8DGBeEAGFhgmZThgGXzdJbab",
     "caught": "PGRST200 on self-referencing reply embeds through the live REST API",
     "correction": "Separate RLS-scoped reply lookups for channel, direct and group history; deleted and inaccessible reply bodies omitted",
-    "schemaCacheRefresh": true
+    "schemaCacheRefresh": true,
+    "resolved": true
+  },
+  "liveLayouts": [
+    {
+      "label": "Feed",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 5285,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Community",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 763,
+      "error": false,
+      "headings": [
+        "Community",
+        "Communities to join",
+        "Join the conversation",
+        "Upcoming"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/community",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Groups",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 321,
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Launch your first community",
+        "Public groups"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/groups",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Admin group creation",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 294,
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/groups/create",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Live rooms",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 601,
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "No channels yet",
+        "Available channels",
+        "MLB General",
+        "Picks Room",
+        "HR Alert Room",
+        "Odds Movement"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Public channel",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 318,
+      "error": false,
+      "headings": [
+        "General Sports"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels/general-sports",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Inbox",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 1560,
+      "error": false,
+      "headings": [
+        "Messages",
+        "Inbox"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "New conversation",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages/new",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Feed",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 5285,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Community",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 763,
+      "error": false,
+      "headings": [
+        "Community",
+        "Communities to join",
+        "Join the conversation",
+        "Upcoming"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/community",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Groups",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 321,
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Launch your first community",
+        "Public groups"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/groups",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Admin group creation",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 294,
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/groups/create",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Live rooms",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 601,
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "No channels yet",
+        "Available channels",
+        "MLB General",
+        "Picks Room",
+        "HR Alert Room",
+        "Odds Movement"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Public channel",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 318,
+      "error": false,
+      "headings": [
+        "General Sports"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/general-sports",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Inbox",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1560,
+      "error": false,
+      "headings": [
+        "Messages",
+        "Inbox"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "New conversation",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages/new",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "label": "Feed",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 5285,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Community",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 763,
+      "error": false,
+      "headings": [
+        "Community",
+        "Communities to join",
+        "Join the conversation",
+        "Upcoming"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/community",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Groups",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 321,
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Launch your first community",
+        "Public groups"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/groups",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Admin group creation",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 294,
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/groups/create",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Live rooms",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 601,
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "No channels yet",
+        "Available channels",
+        "MLB General",
+        "Picks Room",
+        "HR Alert Room",
+        "Odds Movement"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Public channel",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 318,
+      "error": false,
+      "headings": [
+        "General Sports"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/channels/general-sports",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Inbox",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 1560,
+      "error": false,
+      "headings": [
+        "Messages",
+        "Inbox"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "New conversation",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages/new",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Feed",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 5285,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Community",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 763,
+      "error": false,
+      "headings": [
+        "Community",
+        "Communities to join",
+        "Join the conversation",
+        "Upcoming"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/community",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Groups",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 321,
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Launch your first community",
+        "Public groups"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/groups",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Admin group creation",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 294,
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/groups/create",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Live rooms",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 601,
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "No channels yet",
+        "Available channels",
+        "MLB General",
+        "Picks Room",
+        "HR Alert Room",
+        "Odds Movement"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Public channel",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 318,
+      "error": false,
+      "headings": [
+        "General Sports"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/general-sports",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "Inbox",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 1560,
+      "error": false,
+      "headings": [
+        "Messages",
+        "Inbox"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "label": "New conversation",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages/new",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 2688,
+      "error": false,
+      "headings": [
+        "Geeejpg",
+        "Badges and achievements",
+        "Beta Tester",
+        "Ultimate",
+        "Favorite teams"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/geeejpg",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 8102,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 293,
+      "error": false,
+      "headings": [
+        "Bookmarks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/bookmarks",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "characters": 869,
+      "error": false,
+      "headings": [
+        "Your profile",
+        "Profile completion",
+        "Favorite teams",
+        "Favorite NBA players"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/settings/profile",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 2688,
+      "error": false,
+      "headings": [
+        "Geeejpg",
+        "Badges and achievements",
+        "Beta Tester",
+        "Ultimate",
+        "Favorite teams"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/geeejpg",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 8102,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 293,
+      "error": false,
+      "headings": [
+        "Bookmarks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/bookmarks",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "characters": 853,
+      "error": false,
+      "headings": [
+        "Your profile",
+        "Profile completion",
+        "Favorite teams",
+        "Favorite NBA players"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/settings/profile",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 2688,
+      "error": false,
+      "headings": [
+        "Geeejpg",
+        "Badges and achievements",
+        "Beta Tester",
+        "Ultimate",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/geeejpg",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 8102,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 293,
+      "error": false,
+      "headings": [
+        "Bookmarks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/bookmarks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "brokenImages": [],
+      "characters": 869,
+      "error": false,
+      "headings": [
+        "Your profile",
+        "Profile completion",
+        "Favorite teams",
+        "Favorite NBA players"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/settings/profile",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 2688,
+      "error": false,
+      "headings": [
+        "Geeejpg",
+        "Badges and achievements",
+        "Beta Tester",
+        "Ultimate",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/geeejpg",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 8102,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 293,
+      "error": false,
+      "headings": [
+        "Bookmarks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/bookmarks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "characters": 869,
+      "error": false,
+      "headings": [
+        "Your profile",
+        "Profile completion",
+        "Favorite teams",
+        "Favorite NBA players"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/settings/profile",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "kind": "Existing direct conversation",
+      "brokenImages": [],
+      "characters": 297,
+      "error": false,
+      "headings": [
+        "Existing direct conversation"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages/[existing-member]",
+      "wideTables": [],
+      "width": 1440,
+      "messageCount": 2,
+      "layout": "desktop-light"
+    },
+    {
+      "kind": "Existing direct conversation",
+      "brokenImages": [],
+      "characters": 297,
+      "error": false,
+      "headings": [
+        "Existing direct conversation"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages/[existing-member]",
+      "wideTables": [],
+      "width": 1440,
+      "messageCount": 2,
+      "layout": "desktop-dark"
+    },
+    {
+      "kind": "Existing direct conversation",
+      "brokenImages": [],
+      "characters": 297,
+      "error": false,
+      "headings": [
+        "Existing direct conversation"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/messages/[existing-member]",
+      "wideTables": [],
+      "width": 390,
+      "messageCount": 2,
+      "layout": "phone-light"
+    },
+    {
+      "kind": "Existing direct conversation",
+      "brokenImages": [],
+      "characters": 297,
+      "error": false,
+      "headings": [
+        "Existing direct conversation"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/messages/[existing-member]",
+      "wideTables": [],
+      "width": 390,
+      "messageCount": 2,
+      "layout": "phone-dark"
+    }
+  ],
+  "liveRoomChecks": [
+    {
+      "brokenImages": [],
+      "characters": 486,
+      "error": false,
+      "headings": [
+        "MLB General"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/mlb-general",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "brokenImages": [],
+      "characters": 316,
+      "error": false,
+      "headings": [
+        "Picks Room"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/picks-room",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "brokenImages": [],
+      "characters": 506,
+      "error": false,
+      "headings": [
+        "HR Alert Room"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/hr-alert",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "brokenImages": [],
+      "characters": 333,
+      "error": false,
+      "headings": [
+        "Odds Movement"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/odds-movement",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "brokenImages": [],
+      "characters": 341,
+      "error": false,
+      "headings": [
+        "Fantasy Baseball"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/fantasy-baseball",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "brokenImages": [],
+      "characters": 318,
+      "error": false,
+      "headings": [
+        "General Sports"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/channels/general-sports",
+      "wideTables": [],
+      "width": 390
+    }
+  ],
+  "liveComponentChecks": {
+    "search": {
+      "left": 10,
+      "overflow": false,
+      "right": 380,
+      "viewport": 390,
+      "width": 370
+    },
+    "watchlist": {
+      "brokenImages": [],
+      "characters": 183,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed",
+      "wideTables": [],
+      "width": 390
+    },
+    "recipientApi": {
+      "ok": true,
+      "found": true,
+      "columns": [
+        "id",
+        "username",
+        "display_name",
+        "avatar_url",
+        "avatar_ring_style",
+        "avatar_ring_color",
+        "is_verified"
+      ]
+    },
+    "badgeNarrow": {
+      "art": [
+        {
+          "outside": false
+        },
+        {
+          "outside": false
+        },
+        {
+          "outside": false
+        }
+      ],
+      "left": 10,
+      "right": 310,
+      "viewport": 320,
+      "width": 300
+    }
   }
 }
