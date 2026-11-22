@@ -1,6 +1,6 @@
 SlipSurge page-by-page visual review
 
-Messaging and popover follow-up: social-interaction-followup-2026-11-22.txt/json records draft preservation, reconnect recovery, composition-key handling, scoped realtime/history reconciliation, targeted edit/delete rollback and resizing/keyboard-safe shared popovers. 22 private browser checks and 210 automated checks passed. Production verification pending. Existing owner approvals and the 240 published surfaces remain unchanged.
+Messaging and popover follow-up: social-interaction-followup-2026-11-22.txt/json records draft preservation, reconnect recovery, composition-key handling, scoped realtime/history reconciliation, targeted edit/delete rollback and resizing/keyboard-safe shared popovers. 22 private browser checks, 28 live checks and 218 functional/source checks passed, plus four release-ledger checks. Published as 32d086b0 plus 8f24ebf1 / dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C. All six public rooms are accessible. Existing owner approvals and the 240 published surfaces remain unchanged.
 
 NFL availability follow-up: nfl-availability-ranking-2026-11-22.txt/json records the report-cache correction, precise game statuses, priced-only ranking pools, separated unlisted/unavailable research, independent expiry and refreshes across every NFL matchup research tool. 59 private browser receipts and 280 automated checks passed. Published as a4ce9104 / dpl_3uKzDaazc7pCrFFQvawooTrFifG8. All 37 live checks passed, including historical Final 58/Hit/Miss. Owner approvals remain unchanged.
 
@@ -10,7 +10,7 @@ Social process follow-up: social-workflow-repair-2026-11-22.txt/json records 48 
 
 Mobile identity follow-up: mobile-identity-followup-2026-11-22.txt/json records the badge, profile, saved-card and NBA/NFL drawer pass, with 130 unique private interaction receipts and 65 verified live checks. Published as 93cc63e1.
 
-Latest verified production: a4ce9104 / dpl_3uKzDaazc7pCrFFQvawooTrFifG8. 240 released surfaces, zero queued; ten existing owner approvals preserved.
+Latest verified production: 8f24ebf1 / dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C. 240 released surfaces, zero queued; ten existing owner approvals preserved.
 
 Latest full-site follow-up: 22 November 2026. All 239 surfaces have individual four-layout receipts in docs/design/full-mobile-audit-2026-11-22.json; latest rollout verification is recorded in docs/design/full-mobile-audit-2026-11-22.txt.
 

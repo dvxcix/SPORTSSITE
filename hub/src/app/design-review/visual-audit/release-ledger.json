@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
-    "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
-    "verifiedAt": "2026-11-22T18:42:04.066Z",
+    "commit": "8f24ebf18570c38745269111eac84595c84f552b",
+    "deploymentId": "dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C",
+    "verifiedAt": "2026-11-22T20:51:12.874Z",
     "url": "https://www.slipsurge.com"
   },
   "items": [
@@ -297,6 +297,15 @@
       "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
       "verifiedAt": "2026-11-22T02:56:55.259Z",
       "url": "https://www.slipsurge.com"
+    },
+    {
+      "state": "Live",
+      "commit": "8f24ebf18570c38745269111eac84595c84f552b",
+      "deploymentId": "dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C",
+      "verifiedAt": "2026-11-22T20:51:12.874Z",
+      "url": "https://www.slipsurge.com",
+      "evidence": "docs/design/social-interaction-followup-2026-11-22.json",
+      "scope": "Conversation recovery, draft safety, shared popover placement and channel discovery"
     }
   ],
   "nflAvailability": {
@@ -305,5 +314,22 @@
     "liveBrowser": 37,
     "automated": 280,
     "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
+  },
+  "socialInteraction": {
+    "state": "Live",
+    "commit": "8f24ebf18570c38745269111eac84595c84f552b",
+    "deploymentId": "dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C",
+    "verifiedAt": "2026-11-22T20:51:12.874Z",
+    "url": "https://www.slipsurge.com",
+    "items": [
+      "route:/channels",
+      "route:/channels/[slug]",
+      "route:/messages/[username]",
+      "route:/messages/group/[id]",
+      "route:/feed"
+    ],
+    "evidence": "docs/design/social-interaction-followup-2026-11-22.json",
+    "privateChecks": 22,
+    "liveChecks": 28
   }
 }

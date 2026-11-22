@@ -8,14 +8,16 @@
     "Shared popovers",
     "Feed badge details"
   ],
-  "status": "Private verification passed; production verification pending",
+  "status": "Published and live-verified",
   "tests": {
     "interaction": 58,
     "shared": 18,
     "production": 134,
     "typecheck": "passed",
     "eslint": "passed",
-    "optimizedBuild": "passed"
+    "optimizedBuild": "passed",
+    "access": 8,
+    "releaseLedger": 4
   },
   "privateChecks": [
     {
@@ -325,5 +327,310 @@
     "Writes and delayed/offline cases use private fixtures; no messages or invitations were sent to real members.",
     "No production schema, collectors, financial accounts or product alerts changed.",
     "Existing 240 released surfaces and ten owner approvals preserved."
+  ],
+  "production": {
+    "state": "Live",
+    "commit": "8f24ebf18570c38745269111eac84595c84f552b",
+    "deploymentId": "dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C",
+    "verifiedAt": "2026-11-22T20:51:12.874Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "messagingSource": "32d086b0e08533012123d4871ee0cc5291e67c46",
+  "liveChecks": [
+    {
+      "label": "Feed-desktop-dark-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 760.9791870117188,
+          "inside": true,
+          "label": "Member badges",
+          "left": 375.9479370117187,
+          "right": 675.9479370117188,
+          "top": 522.8541870117188
+        }
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "Feed-desktop-light-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 760.9791870117188,
+          "inside": true,
+          "label": "Member badges",
+          "left": 375.9479370117187,
+          "right": 675.9479370117188,
+          "top": 522.8541870117188
+        }
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "Feed-phone-light-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 638.8958435058594,
+          "inside": true,
+          "label": "Member badges",
+          "left": 10,
+          "right": 310,
+          "top": 400.7708435058594
+        }
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "Feed-phone-dark-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 638.8958435058594,
+          "inside": true,
+          "label": "Member badges",
+          "left": 10,
+          "right": 310,
+          "top": 400.7708435058594
+        }
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "DM-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "DM-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "DM-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "DM-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "DM-desktop-dark-GIF-expanded",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 943,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 1040,
+          "right": 1430,
+          "top": 491
+        }
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "directory-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "directory-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "directory-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "directory-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "channel-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "channel-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "channel-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "channel-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "public-room:mlb-general",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "public-room:picks-room",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "public-room:hr-alert",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "public-room:odds-movement",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "public-room:fantasy-baseball",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "public-room:general-sports",
+      "composer": true,
+      "connectionError": 0
+    },
+    {
+      "label": "JAX-NYG-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "JAX-NYG-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "JAX-NYG-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "JAX-NYG-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "JAX-NYG-board",
+      "outage": false,
+      "rows": 30,
+      "selected": true
+    }
+  ],
+  "directoryCorrection": "Verified-user, server-only membership lookup restores all six public rooms; channel rows continue to use the ordinary authenticated RLS client. No grants or policies changed.",
+  "screenshots": [
+    "jax-nyg-live-final.jpg"
   ]
 }

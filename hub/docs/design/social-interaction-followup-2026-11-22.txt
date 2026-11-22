@@ -35,7 +35,7 @@ are controlled component fixtures; browser writes used the isolated local adapte
 No real member messages/invitations were sent. No schema, collectors, payments or
 product alerts changed. This follow-up does not declare every live flow bug-free.
 The original inventory remains 240 released surfaces, zero queued, ten existing
-owner approvals. Production verification will be recorded after Ready.
+owner approvals. Production verification is recorded below.
 
 Live follow-up discovered during production verification
 The Channels directory selected private membership fields through the ordinary
@@ -47,3 +47,15 @@ Missing/failed membership reads show recovery instead of an empty directory.
 Five new directory tests plus three existing visibility tests pass; purchased,
 admin-granted, beta/admin and free/community access rules remain unchanged.
 No grants or policies were broadened.
+
+Published and verified
+Messaging source: 32d086b0e08533012123d4871ee0cc5291e67c46.
+Final channel discovery correction: 8f24ebf18570c38745269111eac84595c84f552b.
+Vercel: dpl_HQhqXJUxgwiYC81WKWxc9YihFx3C, READY, www.slipsurge.com assigned.
+28 live receipts: Feed badge panels, direct messages, channel discovery and
+General Sports chat in desktop/phone and light/dark, a contained GIF picker,
+all six public rooms with visible composers, and JAX–NYG in all four layouts.
+JAX–NYG has 30 player rows and no false feed-outage warning. Private group
+sending/editing/reply/member-settings checks passed; no real member sends were
+used for this live follow-up. 84 focused tests, 134 production checks and four
+release-ledger checks pass. Existing owner approvals remain unchanged.
