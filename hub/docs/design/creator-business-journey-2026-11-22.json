@@ -1,6 +1,6 @@
 {
   "date": "2026-11-22",
-  "state": "Validated; production release pending",
+  "state": "Live; real desktop/mobile light/dark verified",
   "scope": "Creator/member journey and SlipSurge business controls; urgent NFL final results",
   "privateBrowser": [
     {
@@ -1133,5 +1133,684 @@
       "url": "https://mobbin.com/screens/cf5d6317-25a2-43ab-8c24-af7a0b0c24e8?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp",
       "decision": "Team management context; control placement is SlipSurge judgment"
     }
-  ]
+  ],
+  "release": {
+    "state": "Live",
+    "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+    "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+    "verifiedAt": "2026-11-22T17:37:13.484Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "liveBrowser": [
+    {
+      "label": "desktop-dark:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Discover 0"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "label": "desktop-dark:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/monetization",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Discover 0"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "label": "phone-light:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/admin/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Discover 0"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "label": "phone-light:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator operations",
+        "People & communities",
+        "Creator details"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/monetization",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Monetization",
+        "Platform fee",
+        "Recent Whop commerce"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/monetization",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/admin/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Manage communities"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/admin/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Groups",
+        "Discover 0"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/groups/create",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/studio",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts",
+        "Create a paid offer",
+        "Balance & payouts",
+        "Recent commerce",
+        "Creator analytics"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "label": "phone-dark:/creators/payouts",
+      "alerts": [],
+      "brokenImages": 0,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 390
+    }
+  ],
+  "nflLiveBrowser": [
+    {
+      "label": "desktop-dark-thursday",
+      "columns": [
+        "Player",
+        "25+",
+        "30+",
+        "40+",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+"
+      ],
+      "finals": [
+        "Final 58"
+      ],
+      "height": 1000,
+      "hit": 4,
+      "miss": 8,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "desktop-light-thursday",
+      "columns": [
+        "Player",
+        "25+",
+        "30+",
+        "40+",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+"
+      ],
+      "finals": [
+        "Final 58"
+      ],
+      "height": 1000,
+      "hit": 4,
+      "miss": 8,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "phone-light-thursday",
+      "columns": [
+        "Player",
+        "25+",
+        "30+",
+        "40+",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+"
+      ],
+      "finals": [
+        "Final 58"
+      ],
+      "height": 844,
+      "hit": 4,
+      "miss": 8,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "phone-dark-thursday",
+      "columns": [
+        "Player",
+        "25+",
+        "30+",
+        "40+",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+"
+      ],
+      "finals": [
+        "Final 58"
+      ],
+      "height": 844,
+      "hit": 4,
+      "miss": 8,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "desktop-dark-week10",
+      "columns": [
+        "Player",
+        "5+",
+        "10+",
+        "15+",
+        "20+",
+        "25+",
+        "30+",
+        "40+",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+"
+      ],
+      "finals": [
+        "Final 26",
+        "Final 0",
+        "Final 127",
+        "Final 44",
+        "Final 5",
+        "Final 62",
+        "Final 42",
+        "Final 8",
+        "Final 83",
+        "Final 8",
+        "Final 27",
+        "Final 24",
+        "Final 44"
+      ],
+      "height": 1000,
+      "hit": 62,
+      "miss": 72,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "prior-sunday-chase-final-231",
+      "columns": [
+        "Player",
+        "50+",
+        "60+",
+        "70+",
+        "80+",
+        "90+",
+        "100+",
+        "110+",
+        "125+",
+        "150+",
+        "175+"
+      ],
+      "finals": [
+        "Final 231"
+      ],
+      "height": 1000,
+      "hit": 10,
+      "miss": 0,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    }
+  ],
+  "productionDataPreserved": {
+    "fee": 10,
+    "legacyApplications": 12,
+    "creatorProducts": 0,
+    "communities": 0,
+    "paidMemberships": 0,
+    "testProducts": 0
+  },
+  "productionLegacyDisclosure": {
+    "expanded": true,
+    "applicationCards": 12
+  }
 }

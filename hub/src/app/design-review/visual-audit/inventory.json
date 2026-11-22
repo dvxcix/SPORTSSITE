@@ -536,7 +536,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -556,15 +556,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -890,7 +890,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -910,15 +910,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -1288,7 +1288,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -1308,15 +1308,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3190,7 +3190,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3212,15 +3212,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3238,7 +3238,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "creator-community-onboarding-2026-11-22",
-    "notes": "2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3257,15 +3257,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3329,7 +3329,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3352,16 +3352,16 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3379,7 +3379,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3401,15 +3401,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3427,7 +3427,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3449,15 +3449,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3475,7 +3475,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3497,15 +3497,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -4055,7 +4055,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22 member follow-up: Shared composer consumer checked in desktop/phone and light/dark. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4080,16 +4080,16 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -4107,7 +4107,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4131,16 +4131,16 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -4158,7 +4158,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4181,15 +4181,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -4207,7 +4207,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -4230,15 +4230,15 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
-      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
-      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -8061,7 +8061,7 @@
     "kind": "Workspace",
     "status": "Approved",
     "batch": 1,
-    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json.",
+    "notes": "Compact prices, original animated count mark, signed movement, single symbol guide and mobile Tools access. Existing data and access behavior retained. Browser checks use private illustrative data at 320, 390, 768, 1024 and 1440px; desktop/phone light and dark. Motion fallback checked in the preview and CSS media guard; the OS preference was not changed. Owner authorized public rollout with The Court batch.\n2026-11-21 · Member workspace defaults: saved primary/comparison display-book defaults integrated; all tools preserved. Court heat fills restored and contrast-tested. See member-workspace-preferences release evidence. 2026-11-21 NBA/NFL follow-up: actual tool activated in four layouts; compact tooltips, disclosures, table scrolling, touch controls and tool access checked. See docs/design/nba-nfl-interface-polish-checklist-2026-11-21.txt. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -8087,9 +8087,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
+      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
+      "verifiedAt": "2026-11-22T17:37:13.484Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8102,7 +8102,7 @@
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-business-journey",
-      "environment": "compiled private UI; rollback-only live database verification; production pending",
+      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
       "layouts": [
         "desktop-dark",
         "desktop-light",
