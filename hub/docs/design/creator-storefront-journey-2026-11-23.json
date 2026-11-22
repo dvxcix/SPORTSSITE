@@ -1,12 +1,12 @@
 {
   "date": "2026-11-23",
   "scope": "Creator storefronts, communities, Whop access and Discord delivery",
-  "state": "Implemented; final release verification in progress",
+  "state": "Published; production UI verified; real payment and external Discord transactions not performed for QA",
   "supersedes": "The local percentage-fee editor and 10% statements in creator-business-journey-2026-11-22 are historical and retired.",
   "checklist": [
     {
       "id": "workspace",
-      "change": "Separate Overview, Products, Communities, Members, Content, Payments & settings; six visible mobile sections",
+      "change": "Separate Overview, Products, Communities, Members, Content, Payments & settings; six visible mobile sections; first-product form precedes the empty catalogue on narrow screens",
       "status": "Implemented"
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "id": "branding",
-      "change": "Creator banner and profile identity; independent community banner/avatar editing in Studio and onboarding",
+      "change": "Creator banner and profile identity; independent community banner/avatar editing in Studio and onboarding; storefront identity uses a solid surface beneath the separate cover",
       "status": "Implemented"
     },
     {
@@ -62,7 +62,7 @@
     {
       "id": "release",
       "change": "Canonical GitHub main, Ready Vercel production, live desktop/mobile Light/Dark checks",
-      "status": "Pending release verification"
+      "status": "Verified live"
     }
   ],
   "automated": {
@@ -71,7 +71,8 @@
     "productionSmoke": 134,
     "typecheck": "Passed",
     "sourceLint": "Passed",
-    "fixtureLint": "Existing any-based adapter linted with only no-explicit-any disabled"
+    "fixtureLint": "Existing any-based adapter linted with only no-explicit-any disabled",
+    "finalRun": "53/53 creator tests plus isolated SQL transactions and 134/134 production smoke checks passed against final released source."
   },
   "database": {
     "project": "hkldweedwnxartkfhror",
@@ -79,7 +80,7 @@
       "20261122213606_creator_discord_delivery",
       "20261122225744_creator_discord_verified_delivery"
     ],
-    "liveVerification": "RLS enabled; browser table/function writes denied; fee editor execution retired; scoped queue leases and persisted access gates confirmed; zero fixture products/integrations/jobs",
+    "liveVerification": "At preflight: RLS enabled; browser table/function writes denied; fee editor execution retired; scoped queue leases and persisted access gates confirmed. No QA fixture products, integrations or jobs were left behind.",
     "liveRollbackConnector": "Did not execute: connector confirmation expired twice. Transaction behavior was instead verified in isolated Postgres. No production test mutation is claimed."
   },
   "limits": [
@@ -150,5 +151,70 @@
   "droppedReferences": [
     "HubSpot, Zendesk and Jira app marketplaces: wrong discovery domain.",
     "Patreon physical-merchandise flow: irrelevant physical delivery steps."
-  ]
+  ],
+  "production": {
+    "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+    "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+    "url": "https://www.slipsurge.com",
+    "state": "READY",
+    "verifiedAt": "2026-11-22T23:34:28Z",
+    "source": "GitHub main",
+    "browser": [
+      {
+        "route": "/creators/studio?section=products",
+        "checks": [
+          "Desktop Dark and Light; staged form; all six workspace destinations",
+          "Phone 390px: all six workspace links visible; no document overflow",
+          "Live Details → Pricing → Review: USD 12, 7-day finite access; no save submitted"
+        ]
+      },
+      {
+        "route": "/creators/studio?section=settings",
+        "checks": [
+          "Phone Dark: compact readiness, storefront identity, connected accounts and payouts",
+          "Ready to accept payments returned by the real Whop account"
+        ]
+      },
+      {
+        "route": "/community",
+        "checks": [
+          "Desktop Light and phone Light/Dark; discovery appears before destination cards",
+          "Paid access filter, search and Clear filters work",
+          "All existing group/chat/discussion destinations remain reachable"
+        ]
+      },
+      {
+        "route": "/creators/parlayparty",
+        "checks": [
+          "Phone Light/Dark: real cover, decorated avatar, solid identity surface, membership/community anchors",
+          "Draft products remain private; existing owner community is available"
+        ]
+      },
+      {
+        "route": "/admin/settings/payments",
+        "checks": [
+          "Live server health reports Creator payments · Connected",
+          "Runtime fallback credentials and account are Configured"
+        ]
+      },
+      {
+        "route": "/admin/monetization",
+        "checks": [
+          "Read-only effective fee schedule loads from Whop",
+          "Platform and connected creator account selection both return provider fees",
+          "No duplicate application percentage editor"
+        ]
+      }
+    ],
+    "console": "No production page error entries observed. Earlier failed private dev-server chunk loads remain recorded separately.",
+    "qaWrites": "No production test products, groups, purchases, payouts, posts, messages or external Discord roles were created. Existing live content was preserved."
+  },
+  "visualEvidence": {
+    "comparison": "creator-studio-comparison.html",
+    "desktop": "creator-studio-after.jpg",
+    "phoneLight": "creator-live-mobile-storefront-light.jpg",
+    "phoneDark": "creator-live-mobile-storefront-dark.jpg",
+    "connection": "creator-live-whop-connection-light.jpg",
+    "note": "Standalone comparison embeds real captures at 1280×720; old landing is compared with the new Products workspace. The HTML preserves capture resolution."
+  }
 }

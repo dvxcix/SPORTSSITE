@@ -40,4 +40,8 @@ Scope limits
 - Existing unrelated database advisories and frozen sports research were left outside this release.
 
 Applied migrations: 20261122213606_creator_discord_delivery, 20261122225744_creator_discord_verified_delivery. Do not replay these or historical migrations.
-Publication: awaiting the final canonical-main deployment receipt.
+Publication: GitHub main 7f9df496e689bc2b1c9a46956df2641c0404ac28. READY Vercel deployment dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U is assigned to www.slipsurge.com. Verified 22 November 2026 at 23:34 UTC (23 November local).
+
+Published verification
+Desktop Creator Studio was reviewed in Light and Dark. Phone 390px Studio, community discovery and the real creator storefront were checked without document overflow. All six Studio destinations remain visible. The live product form reached its review step with a USD 12, seven-day one-payment offer; Save draft was not submitted. Search, Paid filtering and Clear filters worked. Admin health returned Connected and both root and connected-creator fee schedule reads returned actual Whop data. Final source tests passed 53/53 plus SQL transactions and 134/134 production smoke checks.
+The last visual corrections put the first product form ahead of the empty catalogue on narrow screens and removed the repeated cover image behind the creator identity. Existing live content was preserved. No financial transaction or external Discord role assignment is claimed. The self-contained before/after HTML embeds the actual captures; use it for the full-resolution comparison.

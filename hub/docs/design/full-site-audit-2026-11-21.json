@@ -787,7 +787,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/admin/design-system",
@@ -1812,7 +1818,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/admin/nfl-access",
@@ -2641,7 +2653,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/admin/settings/social-login",
@@ -4362,7 +4380,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/creators/[username]",
@@ -4647,7 +4671,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/creators",
@@ -4716,7 +4746,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/creators/payouts",
@@ -4777,7 +4813,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/creators/studio",
@@ -4866,7 +4908,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/daily-recap",
@@ -5787,7 +5835,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/groups",
@@ -5852,7 +5906,13 @@
         "states": "Applicable populated, empty, unavailable, recovery or callback state; no operational submissions",
         "toolAccess": "Navigation and controls preserved"
       },
-      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json"
+      "followUp": "docs/design/creator-storefront-journey-2026-11-23.json",
+      "followUpRelease": {
+        "state": "Published and production UI verified",
+        "commit": "7f9df496e689bc2b1c9a46956df2641c0404ac28",
+        "deploymentId": "dpl_EfBWWLZNMYb2u56y4pF6cXNhvf6U",
+        "verifiedAt": "2026-11-22T23:34:28Z"
+      }
     },
     {
       "id": "route:/hashtag/[tag]",
